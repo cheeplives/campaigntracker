@@ -6,22 +6,24 @@ and a travel planner for overland, orbital and interstellar trips.
 
 PHP 8 + MySQL on the server, plain JavaScript in the browser. No build step or frameworks.
 
-## Install on DreamHost
+Players sign in with **Google or GitHub**, the same way as the Sinless app on the same domain, and new accounts wait for an admin to approve them.
 
-1. **Create a database.** In the DreamHost panel go to *Websites → MySQL Databases*. Create a database, a user and a hostname (e.g. `mysql.yourdomain.com`).
-2. **Upload the files.** Put the contents of this folder in your site directory, either the root or a subfolder like `~/yourdomain.com/chronicle/`. Use SFTP or the file manager.
-3. **Configure.** Copy `lib/config.sample.php` to `lib/config.php` and fill in the four database values.
-4. **Install.** Visit `https://yourdomain.com/chronicle/install.php` and create your admin (GM) account.
-5. **Lock the installer.** In `lib/config.php` set `'allow_install' => false`, or delete `install.php`.
-6. **Use HTTPS.** Turn on DreamHost's free Let's Encrypt certificate so logins are encrypted.
+## Install
 
-`lib/.htaccess` blocks web access to the config and library files. DreamHost runs Apache, so it works without further setup.
+The full runbook (OAuth apps, config fields, upgrading an older install) is in [docs/DEPLOY.md](docs/DEPLOY.md). In short:
+
+1. **Create a MySQL database** in your host's panel, or reuse the Sinless database so the two apps share accounts and one approval queue (fresh installs only).
+2. **Deploy with git:** `git clone https://github.com/cheeplives/campaigntracker.git chronicle` inside your web root. Updates are `./deploy.sh` (pull + PHP syntax check).
+3. **Configure:** copy `api/config.example.php` to `~/chronicle-config.php` (above the web root; `api/config.php` also works) and fill in the database, `base_url`, the Google/GitHub client ids and secrets, and your email under `admin_identities`.
+4. **Add the callback** `<base_url>/api/auth/callback.php` to your Google OAuth client (as a second redirect URI next to Sinless's) and register a GitHub OAuth app for it.
+5. **Install:** open `<base_url>/install.php` and press *Install or upgrade*, then set `'allow_install' => false`.
+6. **Sign in** with the email in `admin_identities`. You're approved as admin straight away; everyone else appears under *Users* to approve.
 
 ## Using it
 
-- **Users** (admins only): create accounts for your players.
+- **Users** (admins only): approve or revoke people after their first sign-in. Accounts from before Google/GitHub sign-in show as *not linked yet*; enter the player's email and their first sign-in with it takes over the old account and its campaigns.
 - **New campaign:** pick a preset (Gregorian for the Northern or Southern Hemisphere, Imperial Calendar, Starship clock, or a blank custom calendar), a starting date, and the seasons. Each season has a name, a climate (spring, summer, autumn, winter or none) and a first month and day; a table shows which season every month falls in. Each campaign has its own calendar, regions, holidays and settings.
-- **Members tab:** add players to the campaign, or add a co-GM.
+- **Members tab:** add an approved player, or a co-GM, by the email they sign in with.
 - **Pass time** (GM, top of every campaign page): move ahead by shifts, days, weeks, months or years. You can also label the passed shifts, e.g. "Coach journey". Weather is generated for each day as time passes, and stays fixed once generated. Each day's weather is its forecast; the four shifts vary within it (cooler overnight, wind easing at night, rain thinning to drizzle, morning fog lifting, afternoon storms), never worse than the forecast except where a colder shift turns rain to snow. Shift weather is worked out from the stored day, so older days get it too.
 - **Calendar:** month grid or week view with all four shifts. Click any day to drill down to weather, moons, holidays, per-shift activity, visibility and events.
 - **Day page** (GM): change the day's region, edit or re-roll the weather, and write public notes and GM-only notes. For each shift you can enter activity and private notes, override visibility, or make that shift "now".
@@ -52,14 +54,19 @@ Hover over any visibility badge to see this breakdown.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `assets/` | The app (`engine.js` = calendar/weather/visibility/travel math, `app.js` = UI) |
-| `api.php` | JSON API; enforces GM vs player permissions and secret filtering |
-| `install.php` | One-time table setup + first admin |
-| `lib/schema.sql` | Database tables |
-| `lib/config.sample.php` | Copy to `lib/config.php` |
+| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark before first paint, `fonts/` = self-hosted fonts |
+| `api/index.php` | JSON API for campaign data; enforces GM vs player permissions and secret filtering |
+| `api/auth/` | Google/GitHub sign-in (`login`, `callback`, `me`, `logout`), the same flow as Sinless |
+| `api/lib.php` | Shared server library ported from Sinless: config lookup, sessions, CSRF, rate limits, OAuth helpers |
+| `api/config.example.php` | Copy to `~/chronicle-config.php` or `api/config.php` |
+| `install.php` | Creates tables, or upgrades an older install |
+| `db/schema.sql`, `db/migrations/` | Database tables, and one-time upgrades for existing installs |
+| `tests/` | Playwright browser tests, run in five browsers on GitHub Actions ([tests/README.md](tests/README.md)) |
+| `deploy.sh` | `git pull` + PHP syntax check, run on the server |
 
 ## Notes
 
 - Every day is stored by an absolute day number. Editing a calendar re-labels existing days instead of moving their data.
 - The Imperial preset's weekday alignment and moon starting phases are arbitrary. Adjust them in Settings if your campaign has canon dates.
-- Security: passwords are hashed with `password_hash`, and every query uses prepared statements. Each change needs a CSRF token. The session cookie is HttpOnly and SameSite=Strict. Logins are rate-limited. User text is never inserted as HTML.
+- Shared with Sinless: the sign-in flow, the users and rate-limit tables, the server library, error bodies (`{"error": "code", "message": "…"}`), the UI kit in `static/kit.js` and the CSS token names (`--bg --panel --panel-2 --line --text --dim --accent --on-accent --ok --bad --disp --body --mono`).
+- Security: every query uses prepared statements, every change needs a CSRF token, and the session cookie is HttpOnly and SameSite=Lax with idle and absolute timeouts. Sign-in is rate-limited per IP in the database. `.htaccess` forces HTTPS and sends HSTS, CSP and framing headers, and blocks the config, `db/`, `tests/` and `.git`. User text is never inserted as HTML.

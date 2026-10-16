@@ -1,0 +1,56 @@
+# Cross-browser tests
+
+Automated checks that Campaign Chronicle behaves the same in **Chromium**
+(Chrome, Edge), **Firefox** and **WebKit** (Safari, and every browser on
+iPhone/iPad), on desktop and phone-sized screens. Set up the same way as
+Sinless's suite, with PHP and MySQL added because this app has a server.
+
+They run on GitHub Actions on every push and pull request
+(`.github/workflows/browser-tests.yml`), one job per project:
+
+| Project | Engine | Emulates |
+|---|---|---|
+| `chromium` | Chromium | desktop Chrome / Edge |
+| `firefox` | Gecko | desktop Firefox |
+| `webkit` | WebKit | desktop Safari |
+| `mobile-safari` | WebKit | iPhone 13 (touch, 390px) |
+| `mobile-chrome` | Chromium | Pixel 7 (touch, 412px) |
+
+A failed job uploads a `report-<project>` artifact with the HTML report,
+screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
+
+## What's covered
+
+- **signin**: the signed-out screen shows the Google and GitHub buttons and
+  keeps the page you were going to; the API refuses anyone signed out; a new
+  account waits for approval and gets in once approved; a revoked account is
+  locked out; the admin identity is approved as admin; an account from before
+  Google/GitHub sign-in is taken over by the email an admin linked to it;
+  sign-in starts are rate-limited per IP.
+- **campaign**: a GM creates a campaign and every tab renders with no script
+  errors; members are added by sign-in email, only once approved; players never
+  receive secret events.
+- **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),
+  and Cancel keeps the item; the light/dark toggle is remembered; fonts load
+  from this site only.
+- **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
+  season, weather, visibility and travel results in the browser as under Node.
+
+Tests sign in through `tests/support/login.php`, which runs the same
+`sign_in_identity()` as the real OAuth callback with a made-up identity. It
+only works when the config sets `'test_login' => true` and the request comes
+from this machine, and `.htaccess` returns 404 for `tests/` on a real site.
+
+## Running locally (needs Node 18+, PHP 8 with pdo_mysql, and MySQL or MariaDB)
+
+```sh
+cd tests
+npm ci
+npx playwright install --with-deps     # first time: downloads the three browsers
+DB_USER=root DB_PASSWORD=secret npx playwright test                 # all projects
+DB_USER=root DB_PASSWORD=secret npx playwright test --project=firefox
+```
+
+Each run drops and recreates the `chronicle_test` database (override with
+`DB_NAME`, `DB_HOST`, `DB_PORT`) from `db/schema.sql`, using the `mysql`
+command-line client. The config starts `php -S` on port 8755 for the repo root.
