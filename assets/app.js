@@ -289,14 +289,29 @@
       seasonWrap.replaceChildren(h('h3', {}, 'Seasons'),
         hemi ? h('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`) : null, seasons);
     };
-    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); });
-    drawStart(); drawSeasons();
+    const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
+    const climateWrap = h('div');
+    let climateSel;
+    const drawClimate = () => {
+      climateSel = climateSelect(homeRegion().settings.climate || 'temperate', { name: 'climate' });
+      const hint = h('small', { class: 'muted' });
+      const sync = () => {
+        const k = E.KOPPEN[climateSel.value.replace('koppen:', '')];
+        hint.textContent = k ? `Typical of ${k.where}. ` : '';
+        hint.textContent += `Sets the baseline weather by season for "${homeRegion().name}"; each region can have its own climate (Regions tab).`;
+      };
+      climateSel.addEventListener('change', sync); sync();
+      climateSel.querySelector('option[value=koppen_custom]').remove(); climateSel.querySelector('option[value=custom]').remove(); // built later, per region
+      climateWrap.replaceChildren(h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Home region climate'), climateSel, hint));
+    };
+    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); drawClimate(); });
+    drawStart(); drawSeasons(); drawClimate();
     const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
     const f = h('form', { class: 'card narrow' }, h('h1', {}, 'New campaign'),
       field('Name', h('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', h('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).'),
-      startWrap, field('Starting shift', shiftSel), seasonWrap,
+      startWrap, field('Starting shift', shiftSel), climateWrap, seasonWrap,
       h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
@@ -305,7 +320,7 @@
         const r = await post('campaign_create', {
           name: v.name, description: v.description, calendar: { ...p.calendar, seasons: seasons.getSeasons() }, settings: { ...p.settings },
           current_shift: picker.getAbs() * 4 + Number(v.shift),
-          regions: p.regions, holidays: p.holidays,
+          regions: p.regions.map(r => r === homeRegion() ? { ...r, settings: { ...r.settings, climate: v.climate } } : r), holidays: p.holidays,
         });
         location.hash = `#/c/${r.id}`;
       } catch (err) { toast(err.message, true); }
@@ -785,19 +800,129 @@
     mount(...campaignHeader('regions'), list,
       h('p', { class: 'muted pad' }, 'A region sets the climate (weather odds by season), the light source (sun and moons, artificial lighting, or none), and a terrain modifier to visibility — e.g. −1 under forest canopy.'));
   }
+  function climateName(s) {
+    if (s.climate === 'custom') return 'Custom climate';
+    if (s.climate === 'koppen_custom') return `${s.custom_climate?.label || 'Custom climate'}${s.custom_climate?.koppen ? ` (from ${s.custom_climate.koppen})` : ''}`;
+    return E.climateFor({ settings: s }).label;
+  }
   function regionSummary(r) {
     const s = r.settings || {};
-    const clim = s.climate === 'custom' ? 'Custom climate' : (E.CLIMATES[s.climate]?.label || 'Temperate');
+    const clim = climateName(s);
     const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [2, 4, 5, 4]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
     return [clim, (s.hemisphere || 'north') !== (cal().hemisphere || 'north') ? `${s.hemisphere === 'south' ? 'Southern' : 'Northern'} hemisphere` : null, light, s.terrain_mod ? `Terrain ${s.terrain_mod > 0 ? '+' : ''}${s.terrain_mod}` : null].filter(Boolean).join(' · ');
   }
+
+  // ------------------------------------------------------------ climate picker
+  const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'];
+  /** Climate select: Köppen classes by group, the simple setting climates, and the two custom modes. */
+  function climateSelect(value, attrs) {
+    const opt = (v, l) => h('option', { value: v, selected: v === value }, l);
+    const groups = Object.entries(E.KOPPEN_GROUPS).map(([g, gl]) => h('optgroup', { label: `Köppen ${g} · ${gl}` },
+      Object.entries(E.KOPPEN).filter(([code]) => code[0] === g).map(([code, k]) => opt(`koppen:${code}`, `${code} · ${k.label}`))));
+    return h('select', attrs || {}, groups,
+      h('optgroup', { label: 'Simple & setting climates' }, Object.entries(E.CLIMATES).map(([k, c]) => opt(k, c.label))),
+      h('optgroup', { label: 'Custom' }, opt('koppen_custom', 'Custom Köppen build-out'), opt('custom', 'Custom (raw JSON)')));
+  }
+  /** Season-by-season baseline: typical highs, how wet, and the likeliest weather. */
+  function climateBaseline(clim) {
+    const unit = tempUnit() === 'none' ? 'C' : tempUnit();
+    const rows = [...SEASON_ORDER, 'any'].filter(k => clim.seasons[k]).map(k => {
+      const sd = clim.seasons[k], tot = Object.values(sd.w).reduce((a, b) => a + b, 0) || 1;
+      const odds = Object.entries(sd.w).filter(([t, w]) => w > 0 && E.WEATHER[t]).sort((a, b) => b[1] - a[1]).slice(0, 4)
+        .map(([t, w]) => `${E.WEATHER[t].icon} ${E.WEATHER[t].label} ${Math.round(w / tot * 100)}%`).join(', ');
+      const desc = clim.base?.[k] ? E.describeBaseline(clim.base[k], unit) : `Highs ${E.fmtTemp(sd.t[0], unit)} to ${E.fmtTemp(sd.t[1], unit)}`;
+      return h('tr', {}, h('td', {}, h('span', { class: `season s-${k === 'any' ? 'none' : k}` }, k === 'any' ? 'No season' : SEASON_LABELS[k])), h('td', {}, desc), h('td', { class: 'muted' }, odds));
+    });
+    return h('table', { class: 'tbl baseline' }, h('tbody', {}, rows));
+  }
+  /** Builder for a custom climate: start from Köppen letters, then tune each season's baseline. */
+  function koppenBuilder(cc, onChange) {
+    let base = cc?.base ? JSON.parse(JSON.stringify(cc.base)) : E.koppenBase('Cfb');
+    let from = cc?.koppen || 'Cfb';
+    const name = h('input', { value: cc?.label || `Custom ${from}`, 'aria-label': 'Climate name', maxlength: 80 });
+    const letter = (opts, v, lbl) => select(Object.entries(opts).map(([k, l]) => [k, `${k} · ${l}`]), v, { 'aria-label': lbl });
+    const lettersWrap = h('span', { class: 'row' });
+    const codeOut = h('strong', {});
+    const group = select(Object.entries(E.KOPPEN_GROUPS).map(([g, l]) => [g, `${g} · ${l}`]), from[0], { 'aria-label': 'Köppen group' });
+    let second, third;
+    const code = () => E.koppenCode(group.value, second.value, third ? third.value : '');
+    const drawLetters = (pre = '') => {
+      const [L2, L3] = E.KOPPEN_LETTERS[group.value];
+      second = letter(L2, pre[1] in L2 ? pre[1] : Object.keys(L2)[0], 'Precipitation pattern');
+      third = L3 ? letter(L3, pre[2] in L3 ? pre[2] : Object.keys(L3)[0], 'Temperature') : null;
+      lettersWrap.replaceChildren(group, second, third);
+      syncCode();
+    };
+    const syncCode = () => {
+      const c = code();
+      codeOut.textContent = c ? `${c} · ${E.KOPPEN[c].label}` : 'Not a Köppen class';
+      codeOut.title = c ? `e.g. ${E.KOPPEN[c].where}` : '';
+      load.disabled = !c;
+    };
+    const load = btn('Load baseline', () => {
+      const c = code(); if (!c) return;
+      if (name.value.trim() === `Custom ${from}` || !name.value.trim()) name.value = `Custom ${c}`;
+      from = c; base = E.koppenBase(c); drawTable(); onChange();
+    }, 'small');
+    const num = (v, k, i, attrs) => h('input', { type: 'number', value: v, step: k === 't' ? 1 : 0.5, 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
+    const scale = (v, k, max, lbl) => h('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
+    const table = h('table', { class: 'tbl builder' });
+    const drawTable = () => table.replaceChildren(
+      h('thead', {}, h('tr', {}, ['Season', 'Highs from °C', 'to °C', 'Precipitation 0–5', 'Storms 0–3', 'Fog 0–3', 'Dust 0–3'].map(x => h('th', {}, x)))),
+      h('tbody', {}, SEASON_ORDER.map(k => {
+        const p = base[k];
+        return h('tr', { 'data-s': k }, h('td', {}, h('span', { class: `season s-${k}` }, SEASON_LABELS[k])),
+          h('td', {}, num(p.t[0], 't', 0, { 'aria-label': `${k} lowest high` })), h('td', {}, num(p.t[1], 't', 1, { 'aria-label': `${k} highest high` })),
+          h('td', {}, scale(p.wet, 'wet', 5, `${k} precipitation`)),
+          ...['storm', 'fog', 'dust'].map(x => h('td', {}, scale(p[x], x, 3, `${k} ${x}`))));
+      })));
+    const read = () => {
+      for (const tr of table.querySelectorAll('tbody tr')) {
+        const p = base[tr.dataset.s];
+        for (const el of tr.querySelectorAll('[data-k]')) {
+          const v = Number(el.value) || 0;
+          if (el.dataset.k === 't') p.t[Number(el.dataset.i)] = Math.round(v);
+          else p[el.dataset.k] = Math.max(0, Math.min(el.dataset.k === 'wet' ? 5 : 3, v));
+        }
+      }
+    };
+    group.addEventListener('change', () => drawLetters());
+    lettersWrap.addEventListener('change', e => { if (e.target !== group) syncCode(); });
+    drawLetters(from); drawTable();
+    table.addEventListener('change', () => { read(); onChange(); });
+    name.addEventListener('input', onChange);
+    const wrap = h('div', { class: 'builderwrap' },
+      field('Climate name', name),
+      h('div', { class: 'field' }, h('span', { class: 'lbl' }, 'Start from a Köppen class'), h('span', { class: 'row' }, lettersWrap, codeOut, load),
+        h('small', { class: 'muted' }, 'Pick the group, precipitation pattern and temperature letters, then load that class\'s baseline and tune any season below. Highs are daytime highs; precipitation runs from 0 (arid) to 5 (torrential), storms, fog and dust from 0 (never) to 3 (frequent). Storms in freezing weather become blizzards.')),
+      table);
+    wrap.getClimate = () => { read(); return { label: name.value.trim() || 'Custom climate', koppen: from, base: JSON.parse(JSON.stringify(base)) }; };
+    return wrap;
+  }
+
   function regionForm(r = { settings: {} }) {
     const s = r.settings || {};
-    const climate = select([...Object.entries(E.CLIMATES).map(([k, c]) => [k, c.label]), ['custom', 'Custom (JSON)']], s.climate || 'temperate', { name: 'climate' });
+    const climate = climateSelect(s.climate || 'temperate', { name: 'climate' });
     const custom = h('textarea', { name: 'custom_climate', rows: 8, class: 'mono',
-      value: JSON.stringify(s.custom_climate || E.CLIMATES.temperate, null, 1) });
+      value: JSON.stringify(s.climate === 'custom' && s.custom_climate ? s.custom_climate : E.CLIMATES.temperate, null, 1) });
     const customWrap = field('Custom climate', custom, 'Seasons: spring/summer/autumn/winter/any. t = [low, high] °C; w = weather weights. Weather keys: ' + Object.keys(E.WEATHER).join(', '));
-    const syncCustom = () => (customWrap.style.display = climate.value === 'custom' ? '' : 'none');
+    const baseline = h('div', {});
+    const builder = koppenBuilder(s.climate === 'koppen_custom' ? s.custom_climate : null, () => drawBaseline());
+    const baselineWrap = h('details', { open: true, class: 'field' }, h('summary', {}, 'Baseline weather by season'), baseline,
+      h('small', { class: 'muted' }, 'Each day\'s weather is rolled against these odds for the season it falls in, then drifts from the day before.'));
+    const drawBaseline = () => {
+      const v = climate.value;
+      if (v === 'custom') return baseline.replaceChildren();
+      const clim = v === 'koppen_custom' ? E.buildClimate(builder.getClimate().base, builder.getClimate()) : E.climateFor({ settings: { climate: v } });
+      const k = v.startsWith('koppen:') ? E.KOPPEN[v.slice(7)] : null;
+      baseline.replaceChildren(...clean([k ? h('p', { class: 'muted' }, `${k.label}. Typical of ${k.where}.`) : null, climateBaseline(clim)]));
+    };
+    const syncCustom = () => {
+      customWrap.style.display = climate.value === 'custom' ? '' : 'none';
+      builder.style.display = climate.value === 'koppen_custom' ? '' : 'none';
+      baselineWrap.style.display = climate.value === 'custom' ? 'none' : '';
+      drawBaseline();
+    };
     climate.addEventListener('change', syncCustom); syncCustom();
     const lv = s.light_levels || [2, 4, 5, 4];
     const f = h('form', { class: 'card' }, h('h3', {}, r.id ? `Edit ${r.name}` : 'New region'),
@@ -810,7 +935,7 @@
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' })),
         field('Artificial light per shift (0–5)', h('span', { class: 'row' }, shiftNames().map((n, i) =>
           h('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', title: n }))), 'Overnight / Dawn / Noon / Dusk — used when Light source is Artificial')),
-      customWrap,
+      customWrap, builder, baselineWrap,
       field('Description', h('textarea', { name: 'description', rows: 2, value: r.description || '' })),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
     f.addEventListener('submit', async e => {
@@ -821,6 +946,7 @@
       if (v.climate === 'custom') {
         try { settingsOut.custom_climate = JSON.parse(v.custom_climate); } catch { return toast('Custom climate is not valid JSON', true); }
       }
+      if (v.climate === 'koppen_custom') settingsOut.custom_climate = builder.getClimate();
       try {
         await post('region_save', { id: r.id, name: v.name, description: v.description, settings: settingsOut }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();

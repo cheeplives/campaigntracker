@@ -150,3 +150,6 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
 .seasonrow { margin-top: 4px; flex-wrap: nowrap; gap: 6px; } .seasonrow > input, .seasonrow > select { width: auto; min-width: 0; }
 .seasonrow input.grow { flex: 1 1 110px; } .seasonrow select[data-k=month] { flex: 0 1 150px; } .seasonrow select[data-k=type] { flex: 0 1 120px; }
 .seasonmap { max-height: 320px; overflow: auto; } .seasonmap .tbl td { padding: 3px 6px; }
+.builderwrap { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 6px 0; }
+.tbl.builder td, .tbl.builder th { padding: 3px 4px; } .tbl.builder select { max-width: 9rem; }
+.tbl.baseline td { padding: 4px 6px; vertical-align: top; } .tbl.baseline td:first-child { width: 1%; }
