@@ -206,12 +206,15 @@
     return E.moons(cal(), d).map(m => h('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
       h('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
-  function weatherText(w) {
+  const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
+  function weatherText(w, what = FORECAST_TIP) {
     if (!w) return h('span', { class: 'muted' }, 'No weather recorded');
     const def = E.WEATHER[w.type] || {};
     const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
-    return h('span', { class: 'wx', 'data-tip': `Today's weather${mods.length ? `: ${mods.join(', ')}` : ', no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
+    return h('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
+  /** The weather in each of day d's four shifts, worked out from the day's forecast w. */
+  const shiftWx = (d, region, w) => E.shiftWeather(cal(), S.camp.seed, region, d, w);
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
@@ -400,8 +403,8 @@
       let dayRow = null;
       try { dayRow = (await fetchRange(d, d)).days.get(d) || null; } catch { /* ignore */ }
       const region = regionById(dayRow?.region_id) || currentRegion();
-      const w = dayRow?.weather || null;
-      const v = E.visibility(c, region, w, d, sh, null);
+      const w = dayRow?.weather || null, sw = shiftWx(d, region, w)[sh] || null;
+      const v = E.visibility(c, region, sw, d, sh, null);
       const hol = E.holidaysOn(c, S.holidays, d);
       head.replaceChildren(...clean([
         h('div', { class: 'now-main' },
@@ -410,7 +413,8 @@
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
           h('div', { class: 'now-time' },
             h('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
-            h('span', { class: 'now-meta' }, region ? h('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ', weatherText(w), ' ', visPill(v), ' ', moonBadges(d),
+            h('span', { class: 'now-meta' }, region ? h('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
+              weatherText(sw, `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
               hol.map(holidayChip)))),
         isGM() ? passTimeWidget() : null]));
     };
@@ -557,17 +561,17 @@
     const rows = [];
     for (let d = from; d <= to; d++) {
       const row = data.days.get(d), w = row?.weather, sh = dayShifts(data, d);
-      const reg = regionById(row?.region_id) || currentRegion();
+      const reg = regionById(row?.region_id) || currentRegion(), sws = shiftWx(d, reg, w);
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
       rows.push(h('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
         h('div', { class: 'wr-date' }, h('strong', {}, E.fmtDate(c, d)), h('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
           hol.map(holidayChip), evs.map(evLine)),
         h('div', { class: 'wr-shifts' }, [0, 1, 2, 3].map(i => {
           const s = sh[i] || {};
-          const v = E.visibility(c, reg, w, d, i, s.visibility_override);
+          const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
           const isNow = d * 4 + i === nowShift();
           return h('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? 'This is the current shift' : null },
-            h('div', { class: 'sb-head' }, h('span', {}, names[i]), visPill(v)),
+            h('div', { class: 'sb-head' }, h('span', {}, names[i], sw ? h('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
             h('div', { class: 'sb-act' }, s.activity || h('span', { class: 'muted' }, '—')));
         }))));
     }
@@ -597,7 +601,7 @@
       h('div', { class: 'kv' },
         h('div', {}, h('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
         h('div', {}, h('span', { class: 'lbl' }, 'Region'), region ? h('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
-        h('div', {}, h('span', { class: 'lbl' }, 'Weather'), weatherText(w)),
+        h('div', {}, h('span', { class: 'lbl' }, 'Forecast', tip(FORECAST_TIP)), weatherText(w)),
         h('div', {}, h('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => h('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? h('div', {}, h('span', { class: 'lbl' }, 'Holidays'), hol.map(x => h('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? h('div', {}, h('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
@@ -606,7 +610,8 @@
     if (isGM()) overview.append(dayEditor(d, row, region, w));
 
     // --- shifts
-    const shiftCards = h('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, w)));
+    const sws = shiftWx(d, region, w);
+    const shiftCards = h('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null)));
 
     // --- events
     const evCard = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h3', {}, 'Events'),
@@ -658,12 +663,13 @@
     return f;
   }
 
-  function shiftCard(d, i, s, region, w) {
+  function shiftCard(d, i, s, region, sw) {
     const c = cal(), names = shiftNames();
-    const v = E.visibility(c, region, w, d, i, s.visibility_override);
+    const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
     const card = h('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
       h('div', { class: 'row spread' }, h('h4', {}, names[i], isNow ? h('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
+      sw ? h('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`)) : null,
       h('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
       card.append(h('p', { class: 'pre' }, s.activity || h('span', { class: 'muted' }, 'No activity recorded.')));
