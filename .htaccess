@@ -1,0 +1,8 @@
+# Block web access to git metadata and repo housekeeping files
+# (needed when the site is deployed with `git clone` / `git pull`).
+RedirectMatch 404 /\.git
+<FilesMatch "^(\.gitignore|README\.md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</FilesMatch>
