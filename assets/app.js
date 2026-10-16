@@ -112,7 +112,11 @@
   const settings = () => S.camp.settings || (S.camp.settings = {});
   const regionById = id => S.regions.find(r => r.id === Number(id)) || null;
   const currentRegion = () => regionById(settings().current_region) || S.regions[0] || null;
-  const tempUnit = () => settings().temp_unit || 'C';
+  /** Campaign default (set by the GM) for anyone who hasn't picked their own units. */
+  const campTempUnit = () => (S.camp && settings().temp_unit) || 'C';
+  const tempUnit = () => S.user?.prefs?.temp_unit || campTempUnit();
+  const tempSym = unit => E.TEMP_UNITS[unit]?.sym.trim() || '°C';
+  const TEMP_OPTIONS = [...Object.entries(E.TEMP_UNITS).map(([k, u]) => [k, `${u.label} (${u.sym.trim()})`]), ['none', 'Hide temperatures']];
   const shiftNames = () => E.shiftNames(cal());
 
   async function loadCampaign(cid, force) {
@@ -258,6 +262,15 @@
   }
 
   function viewAccount() {
+    const prefs = h('form', { class: 'card narrow' }, h('h2', {}, 'Preferences'),
+      field('Temperature units', select([['', 'Campaign default'], ...TEMP_OPTIONS], S.user.prefs?.temp_unit || '', { name: 'temp_unit' }),
+        'Only changes what you see. Each campaign\'s GM sets the default for players who leave this alone.'),
+      h('button', { class: 'primary' }, 'Save'));
+    prefs.addEventListener('submit', async e => {
+      e.preventDefault();
+      const v = formData(prefs).temp_unit;
+      try { S.user.prefs = (await post('prefs_save', { temp_unit: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
+    });
     const f = h('form', { class: 'card narrow' }, h('h2', {}, 'Change password'),
       field('Current password', h('input', { name: 'current', type: 'password', required: true })),
       field('New password', h('input', { name: 'new', type: 'password', minlength: 8, required: true })),
@@ -266,7 +279,7 @@
       e.preventDefault();
       try { await post('password', formData(f)); toast('Password changed'); f.reset(); } catch (err) { toast(err.message, true); }
     });
-    mount(f);
+    mount(prefs, f);
   }
 
   async function viewAdmin() {
@@ -607,15 +620,15 @@
     const regSel = select([['', '— (current region)'], ...S.regions.map(r => [r.id, r.name])], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
-    const tVal = w && typeof w.temp === 'number' ? (tUnit === 'F' ? Math.round(w.temp * 9 / 5 + 32) : w.temp) : '';
-    const temp = h('input', { type: 'number', name: 'temp', value: tVal, class: 'w-num' });
+    const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
+    const temp = h('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, n]), w?.wind || 0, { name: 'wind' });
     const notes = h('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
     const gmn = h('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
     const f = h('form', { class: 'dayedit' },
       h('div', { class: 'grid2' },
         field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
-        field('Weather', h('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : `°${tUnit}`, tipped(wind, 'Wind strength')), null,
+        field('Weather', h('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           'Set the day\'s weather by hand. Rain, fog, snow and the like lower visibility; see the shift cards below for the exact effect.'),
         field('Day notes (players can see)', notes),
         field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
@@ -634,7 +647,7 @@
       let weather = null;
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
-        if (t !== null && tUnit === 'F') t = Math.round((t - 32) * 5 / 9);
+        if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
         weather = { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) };
       }
       try {
@@ -907,6 +920,7 @@
   function koppenBuilder(cc, onChange) {
     let base = cc?.base ? JSON.parse(JSON.stringify(cc.base)) : E.koppenBase('Cfb');
     let from = cc?.koppen || 'Cfb';
+    const unit = tempUnit() === 'none' ? 'C' : tempUnit(), sym = tempSym(unit);
     const name = h('input', { value: cc?.label || `Custom ${from}`, 'aria-label': 'Climate name', maxlength: 80 });
     const letter = (opts, v, lbl) => select(Object.entries(opts).map(([k, l]) => [k, `${k} · ${l}`]), v, { 'aria-label': lbl });
     const lettersWrap = h('span', { class: 'row' });
@@ -932,11 +946,11 @@
       if (name.value.trim() === `Custom ${from}` || !name.value.trim()) name.value = `Custom ${c}`;
       from = c; base = E.koppenBase(c); drawTable(); onChange();
     }, 'small'), 'Fill the table below with this Köppen class\'s typical seasons. Replaces what is there');
-    const num = (v, k, i, attrs) => h('input', { type: 'number', value: v, step: k === 't' ? 1 : 0.5, 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
+    const num = (v, k, i, attrs) => h('input', { type: 'number', value: E.toTempUnit(v, unit, 1), step: unit === 'C' ? 1 : 'any', 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
     const scale = (v, k, max, lbl) => h('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
     const table = h('table', { class: 'tbl builder' });
     const drawTable = () => table.replaceChildren(
-      h('thead', {}, h('tr', {}, [['Season'], ['Highs from °C', 'The coolest typical daytime high in this season'], ['to °C', 'The warmest typical daytime high in this season'],
+      h('thead', {}, h('tr', {}, [['Season'], [`Highs from ${sym}`, 'The coolest typical daytime high in this season'], [`to ${sym}`, 'The warmest typical daytime high in this season'],
         ['Precipitation 0–5', '0 arid, 1 very dry, 2 light, 3 moderate, 4 wet, 5 very wet. Below freezing it falls as snow'],
         ['Storms 0–3', 'How often thunderstorms (or blizzards, when freezing) roll in: 0 never, 3 often'],
         ['Fog 0–3', 'How often fog or mist settles: 0 never, 3 often'], ['Dust 0–3', 'How often dust or sandstorms blow: 0 never, 3 often']]
@@ -953,7 +967,7 @@
         const p = base[tr.dataset.s];
         for (const el of tr.querySelectorAll('[data-k]')) {
           const v = Number(el.value) || 0;
-          if (el.dataset.k === 't') p.t[Number(el.dataset.i)] = Math.round(v);
+          if (el.dataset.k === 't') { if (el.value !== '') p.t[Number(el.dataset.i)] = Math.round(E.fromTempUnit(v, unit)); }
           else p[el.dataset.k] = Math.max(0, Math.min(el.dataset.k === 'wet' ? 5 : 3, v));
         }
       }
@@ -1232,7 +1246,8 @@
         field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' }), null,
           'New days roll their weather here. Same as "Party is here" on the Regions tab'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
-        field('Temperature', select([['C', '°C'], ['F', '°F'], ['none', 'Hide temperatures']], st.temp_unit || 'C', { name: 'temp_unit' }), null, 'How temperatures are shown everywhere in this campaign'),
+        field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
+          'Used for anyone who hasn\'t chosen their own units'),
         field('Players see future weather', h('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
         field('Players can add events', h('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),

@@ -525,9 +525,22 @@
     return { type, temp, wind, season: sea.name, streak };
   }
 
+  // Temperatures are stored in °C; these convert for display and input.
+  const TEMP_UNITS = {
+    C: { label: 'Celsius', sym: '°C', from: c => c, to: v => v },
+    F: { label: 'Fahrenheit', sym: '°F', from: c => c * 9 / 5 + 32, to: v => (v - 32) * 5 / 9 },
+    K: { label: 'Kelvin', sym: ' K', from: c => c + 273.15, to: v => v - 273.15 },
+    R: { label: 'Rankine', sym: '°R', from: c => (c + 273.15) * 9 / 5, to: v => v * 5 / 9 - 273.15 },
+    Re: { label: 'Réaumur', sym: '°Ré', from: c => c * 4 / 5, to: v => v * 5 / 4 },
+  };
+  const tempDef = unit => TEMP_UNITS[unit] || TEMP_UNITS.C;
+  /** °C -> the unit's value, rounded to `dp` decimals. */
+  function toTempUnit(c, unit, dp = 0) { const f = 10 ** dp; return Math.round(tempDef(unit).from(c) * f) / f; }
+  /** A value in the unit -> °C. */
+  function fromTempUnit(v, unit) { return tempDef(unit).to(v); }
   function fmtTemp(c, unit) {
     if (unit === 'none' || typeof c !== 'number') return '';
-    return unit === 'F' ? `${Math.round(c * 9 / 5 + 32)}°F` : `${c}°C`;
+    return `${toTempUnit(c, unit)}${tempDef(unit).sym}`;
   }
   function weatherLabel(w, unit) {
     if (!w) return '';
@@ -832,7 +845,7 @@
     SHIFT_KEYS, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
-    genWeather, weatherLabel, fmtTemp, visibility, climateFor, mod,
+    genWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS,
   };

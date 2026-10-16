@@ -61,11 +61,24 @@ function me(): ?array {
             $st = db()->prepare('SELECT id, username, display_name, is_admin FROM users WHERE id=?');
             $st->execute([$_SESSION['uid']]);
             $u = $st->fetch() ?: null;
-            if ($u) { $u['id'] = (int)$u['id']; $u['is_admin'] = (bool)$u['is_admin']; }
+            if ($u) { $u['id'] = (int)$u['id']; $u['is_admin'] = (bool)$u['is_admin']; $u['prefs'] = (object)user_prefs($u['id']); }
         }
     }
     return $u;
 }
+/** Per-user display preferences. Older installs may not have the table yet, so a missing table reads as no prefs. */
+function user_prefs(int $uid): array {
+    try {
+        $st = db()->prepare('SELECT prefs_json FROM user_prefs WHERE user_id=?');
+        $st->execute([$uid]);
+        $p = dec($st->fetchColumn() ?: null);
+    } catch (PDOException $e) {
+        if ($e->getCode() !== '42S02') throw $e;
+        $p = null;
+    }
+    return is_array($p) ? $p : [];
+}
+const TEMP_UNITS = ['C', 'F', 'K', 'R', 'Re', 'none'];
 function need_login(): array { $u = me(); if (!$u) fail('Not logged in', 401); return $u; }
 function need_admin(): array { $u = need_login(); if (!$u['is_admin']) fail('Admins only', 403); return $u; }
 
@@ -152,6 +165,18 @@ try {
         if (strlen($new) < 8) fail('New password must be at least 8 characters');
         db()->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($new, PASSWORD_DEFAULT), $u['id']]);
         out(['ok' => true]);
+
+    case 'prefs_save':
+        $u = need_login();
+        $unit = p('temp_unit');
+        if ($unit !== null && !in_array($unit, TEMP_UNITS, true)) fail('Unknown temperature unit');
+        $prefs = user_prefs($u['id']);
+        if ($unit === null) unset($prefs['temp_unit']); else $prefs['temp_unit'] = $unit;
+        // Created here as well as in schema.sql so existing installs pick it up without re-running the installer.
+        db()->exec('CREATE TABLE IF NOT EXISTS user_prefs (user_id INT UNSIGNED PRIMARY KEY, prefs_json TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+        db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
+            ->execute([$u['id'], json_encode((object)$prefs)]);
+        out(['prefs' => (object)$prefs]);
 
     // ===== user admin =====
     case 'users':
