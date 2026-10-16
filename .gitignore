@@ -1,0 +1,9 @@
+# Your real database credentials — never commit
+lib/config.php
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
