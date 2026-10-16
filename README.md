@@ -22,7 +22,7 @@ PHP 8 + MySQL on the server, plain JavaScript in the browser. No build step or f
 - **Users** (admins only): create accounts for your players.
 - **New campaign:** pick a preset (Gregorian for the Northern or Southern Hemisphere, Imperial Calendar, Starship clock, or a blank custom calendar), a starting date, and the seasons. Each season has a name, a climate (spring, summer, autumn, winter or none) and a first month and day; a table shows which season every month falls in. Each campaign has its own calendar, regions, holidays and settings.
 - **Members tab:** add players to the campaign, or add a co-GM.
-- **Pass time** (GM, top of every campaign page): move ahead by shifts, days, weeks, months or years. You can also label the passed shifts, e.g. "Coach journey". Weather is generated for each day as time passes, and stays fixed once generated.
+- **Pass time** (GM, top of every campaign page): move ahead by shifts, days, weeks, months or years. You can also label the passed shifts, e.g. "Coach journey". Weather is generated for each day as time passes, and stays fixed once generated. Each day's weather is its forecast; the four shifts vary within it (cooler overnight, wind easing at night, rain thinning to drizzle, morning fog lifting, afternoon storms), never worse than the forecast except where a colder shift turns rain to snow. Shift weather is worked out from the stored day, so older days get it too.
 - **Calendar:** month grid or week view with all four shifts. Click any day to drill down to weather, moons, holidays, per-shift activity, visibility and events.
 - **Day page** (GM): change the day's region, edit or re-roll the weather, and write public notes and GM-only notes. For each shift you can enter activity and private notes, override visibility, or make that shift "now".
 - **Events:** single-day or multi-day, all day or in one shift. GMs can mark an event **Secret** so players never receive it; this is filtered on the server. Players can add notes to any event they can see.
@@ -42,7 +42,7 @@ PHP 8 + MySQL on the server, plain JavaScript in the browser. No build step or f
 The score starts from a base value for the shift: overnight 0, dawn 3, noon 5, dusk 3. Artificially lit regions use their own level for each shift instead. Then:
 
 - **Moonlight:** at night, up to +2 depending on how much of the moons is lit, reduced by cloud cover.
-- **Weather:** a modifier such as fog −3, or a blizzard −4 by day.
+- **Weather:** that shift's weather, with a modifier such as fog −3, or a blizzard −4 by day.
 - **Terrain:** the region's modifier.
 - **GM override:** if set on that shift, it replaces the result.
 

@@ -525,6 +525,88 @@
     return { type, temp, wind, season: sea.name, streak };
   }
 
+  // ---------------------------------------------------------------- weather by shift
+  // The day's weather is the forecast: its type is the worst the day gets, its temp the daytime high and its
+  // wind the strongest. Each shift either matches it or eases off to one of these milder neighbours.
+  const SHIFT_VARIANTS = {
+    clear: ['partly'], partly: ['clear', 'overcast'], overcast: ['partly'], drizzle: ['overcast', 'partly'],
+    rain: ['drizzle', 'overcast'], storm: ['rain', 'overcast'], fog: ['overcast', 'partly', 'clear'],
+    snow: ['overcast', 'partly'], heavysnow: ['snow', 'overcast'], blizzard: ['heavysnow', 'snow'],
+    hail: ['rain', 'overcast'], haze: ['clear'], sandstorm: ['haze', 'clear'],
+    still: ['damp'], damp: ['still'], drafty: ['still'], dust: ['drafty', 'still'],
+    flicker: ['nominal'], redalert: ['flicker'], blackout: ['redalert', 'flicker'], ionstorm: ['flicker', 'nominal'],
+    radiation: ['nominal'], flare: ['nominal'], debris: ['nominal'],
+  };
+  // Which shift the forecast peaks in: storms, hail, haze and dust build in the afternoon heat; fog is thickest at dawn.
+  const SHIFT_PEAK = { storm: [2, 3], hail: [2], haze: [2], sandstorm: [2, 3], fog: [1] };
+  // Temperature at each shift as a share of the day's high-to-low swing below the high (Noon holds the high).
+  const SHIFT_COOL = [0.9, 0.5, 0, 0.35];
+
+  /** Typical difference between the daytime high and the overnight low, in °C, before cloud cover. */
+  function diurnalRange(clim, sea) {
+    if (clim === CLIMATES.underground || clim === CLIMATES.ship || clim === CLIMATES.vacuum) return 0;
+    const k = clim.koppen || '';
+    if (k) {
+      const g = k[0];
+      if (g === 'B') return k[1] === 'W' ? 16 : 13;
+      if (g === 'E') return 5;
+      if (g === 'A') return 8;
+      if (k[1] === 's' && sea === 'summer') return 13; // dry Mediterranean summers swing hard
+      return g === 'D' ? 11 : 9;
+    }
+    const R = { temperate: 9, arctic: 6, desert: 16, tropical: 8, mountain: 12, maritime: 6, swamp: 7 };
+    for (const key in R) if (clim === CLIMATES[key]) return R[key];
+    return 9;
+  }
+  // Cloud and rain keep the night warm and the day cool, so they shrink the swing.
+  const CLOUD_DAMP = { clear: 1, haze: 1, partly: 0.85, sandstorm: 0.7, rain: 0.45, storm: 0.45, heavysnow: 0.45, blizzard: 0.45, hail: 0.45 };
+
+  /**
+   * Weather for each of the 4 shifts of absolute day d, worked out from that day's weather w.
+   * Deterministic for the same day and forecast, so nothing extra is stored. Returns [] when w is empty.
+   */
+  function shiftWeather(cal, seed, region, d, w) {
+    if (!w || !w.type) return [];
+    const clim = climateFor(region);
+    const sea = season(cal, d, region && region.settings && region.settings.hemisphere);
+    const rng = rngFor(`${seed}|shifts|${d}|${w.type}|${w.temp}|${w.wind}`);
+    const variants = SHIFT_VARIANTS[w.type] || [];
+    const peaks = SHIFT_PEAK[w.type] || [0, 1, 2, 3];
+    const peak = peaks[Math.floor(rng() * peaks.length)];
+    const fogLifts = w.type === 'fog';
+
+    // Walk out from the peak shift: each step may ease off to a milder neighbour, and stays eased once it has.
+    const types = [];
+    types[peak] = w.type;
+    for (const dir of [-1, 1]) {
+      let cur = w.type;
+      for (let i = peak + dir; i >= 0 && i < 4; i += dir) {
+        const ease = fogLifts && i >= 2 ? 0.85 : 0.4;
+        if (variants.length && rng() < ease) {
+          const pool = cur === w.type ? variants : variants.slice(variants.indexOf(cur));
+          cur = pool[Math.min(pool.length - 1, Math.floor(rng() * rng() * pool.length))] || cur;
+        }
+        types[i] = cur;
+      }
+    }
+
+    const hasTemp = typeof w.temp === 'number';
+    const range = diurnalRange(clim, sea.type) * (CLOUD_DAMP[w.type] ?? 0.55) * (w.wind >= 2 ? 0.8 : 1);
+    const calm = range === 0;
+    return types.map((type, i) => {
+      let temp = null;
+      if (hasTemp) temp = Math.min(w.temp, Math.round(w.temp - range * SHIFT_COOL[i] + (calm || i === 2 ? 0 : rng() * 2 - 1)));
+      const def = WEATHER[type] || {};
+      // a colder shift can turn the day's rain to snow (a thunderstorm only as far as heavy snow)
+      if (temp !== null && def.precip === 'rain' && temp <= 0 && def.snowAs) type = type === 'storm' ? 'heavysnow' : def.snowAs;
+      if (temp !== null && def.precip === 'snow' && temp >= 3 && def.rainAs) type = def.rainAs;
+      let wind = w.wind || 0;
+      if (i !== peak && wind > 0 && rng() < (i === 0 ? 0.6 : 0.35)) wind -= 1; // nights are calmer
+      if ((WEATHER[type] || {}).wind) wind = Math.max(wind, WEATHER[type].wind);
+      return { type, temp, wind: Math.min(wind, Math.max(w.wind || 0, (WEATHER[type] || {}).wind || 0)) };
+    });
+  }
+
   // Temperatures are stored in °C; these convert for display and input.
   const TEMP_UNITS = {
     C: { label: 'Celsius', sym: '°C', from: c => c, to: v => v },
@@ -845,7 +927,7 @@
     SHIFT_KEYS, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
-    genWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS,
   };
