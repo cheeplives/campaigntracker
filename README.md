@@ -20,7 +20,7 @@ PHP 8 + MySQL on the server, plain JavaScript in the browser. No build step or f
 ## Using it
 
 - **Users** (admins only): create accounts for your players.
-- **New campaign:** pick a preset (Gregorian, Imperial Calendar, Starship clock, or a blank custom calendar) and a starting date. Each campaign has its own calendar, regions, holidays and settings.
+- **New campaign:** pick a preset (Gregorian for the Northern or Southern Hemisphere, Imperial Calendar, Starship clock, or a blank custom calendar), a starting date, and the seasons. Each season has a name, a climate (spring, summer, autumn, winter or none) and a first month and day; a table shows which season every month falls in. Each campaign has its own calendar, regions, holidays and settings.
 - **Members tab:** add players to the campaign, or add a co-GM.
 - **Pass time** (GM, top of every campaign page): move ahead by shifts, days, weeks, months or years. You can also label the passed shifts, e.g. "Coach journey". Weather is generated for each day as time passes, and stays fixed once generated.
 - **Calendar:** month grid or week view with all four shifts. Click any day to drill down to weather, moons, holidays, per-shift activity, visibility and events.
@@ -34,7 +34,7 @@ PHP 8 + MySQL on the server, plain JavaScript in the browser. No build step or f
   - FTL: a fixed jump duration, or a speed in light-years per day.
 - **Regions:** each region sets a climate, a hemisphere, a light source (sun and moons, artificial, or none) and a terrain modifier to visibility. The *Party is here* button sets the region used for new days.
 - **Holidays:** same date every year, Nth weekday of a month, one-time, or every N days. Each can last several days and can be secret.
-- **Settings:** time scale, temperature units, whether players see future weather, whether players may add events, and a full calendar editor. The editor covers months, festival days that sit outside the week, leap rules, seasons, moons (including erratic ones like Morrslieb), shift names, date format and hours per day.
+- **Settings:** time scale, temperature units, whether players see future weather, whether players may add events, and a full calendar editor. The editor covers months, festival days that sit outside the week, leap rules, seasons (with the hemisphere their dates are for; regions in the other hemisphere get the opposite season), moons (including erratic ones like Morrslieb), shift names, date format and hours per day.
 
 ## How visibility is scored (0 Pitch black … 5 Bright)
 

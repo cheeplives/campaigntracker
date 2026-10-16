@@ -281,21 +281,29 @@
       S.camp = saved;
       startWrap.replaceChildren(field('Starting date', picker, 'You can change "now" at any time later.'));
     };
-    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); });
-    drawStart();
+    const seasonWrap = h('div');
+    let seasons;
+    const drawSeasons = () => {
+      seasons = seasonEditor(tmpCal());
+      const hemi = E.PRESETS[preset].calendar.hemisphere;
+      seasonWrap.replaceChildren(h('h3', {}, 'Seasons'),
+        hemi ? h('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`) : null, seasons);
+    };
+    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); });
+    drawStart(); drawSeasons();
     const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
     const f = h('form', { class: 'card narrow' }, h('h1', {}, 'New campaign'),
       field('Name', h('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', h('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).'),
-      startWrap, field('Starting shift', shiftSel),
+      startWrap, field('Starting shift', shiftSel), seasonWrap,
       h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       const p = E.PRESETS[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
-          name: v.name, description: v.description, calendar: p.calendar, settings: { ...p.settings },
+          name: v.name, description: v.description, calendar: { ...p.calendar, seasons: seasons.getSeasons() }, settings: { ...p.settings },
           current_shift: picker.getAbs() * 4 + Number(v.shift),
           regions: p.regions, holidays: p.holidays,
         });
@@ -358,12 +366,15 @@
     const c = cal(), st = vs();
     const body = h('div', { class: 'card' });
     const anchor = st.anchor;
-    let from, to, title;
+    let from, to, title, seasonLine = null;
     if (st.mode === 'month') {
       const p = E.fromAbs(c, anchor);
       from = E.toAbs(c, p.year, p.month, 1);
       to = from + E.monthLength(c, p.year, p.month) - 1;
       title = `${c.months[p.month].name} ${E.yearLabel(c, p.year)}`;
+      const segs = (c.seasons || []).length ? E.monthSeasons(c, p.year)[p.month].seasons : [];
+      if (segs.length) seasonLine = h('div', { class: 'seasonline' }, segs.map((x, i) =>
+        h('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
     } else {
       // walk back to the first weekday, then forward through a full week (festival days have no weekday)
       const wl = E.weekLength(c);
@@ -392,7 +403,7 @@
         btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small')),
       h('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small')));
 
-    mount(...campaignHeader('calendar'), toolbar, body);
+    mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
     body.append(h('p', { class: 'muted' }, 'Loading…'));
     const data = await fetchRange(from, to);
     const missing = []; for (let d = from; d <= to; d++) if (!data.days.get(d)?.weather) missing.push(d);
@@ -778,7 +789,7 @@
     const s = r.settings || {};
     const clim = s.climate === 'custom' ? 'Custom climate' : (E.CLIMATES[s.climate]?.label || 'Temperate');
     const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [2, 4, 5, 4]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
-    return [clim, s.hemisphere === 'south' ? 'Southern hemisphere' : null, light, s.terrain_mod ? `Terrain ${s.terrain_mod > 0 ? '+' : ''}${s.terrain_mod}` : null].filter(Boolean).join(' · ');
+    return [clim, (s.hemisphere || 'north') !== (cal().hemisphere || 'north') ? `${s.hemisphere === 'south' ? 'Southern' : 'Northern'} hemisphere` : null, light, s.terrain_mod ? `Terrain ${s.terrain_mod > 0 ? '+' : ''}${s.terrain_mod}` : null].filter(Boolean).join(' · ');
   }
   function regionForm(r = { settings: {} }) {
     const s = r.settings || {};
@@ -793,7 +804,8 @@
       h('div', { class: 'grid2' },
         field('Name', h('input', { name: 'name', value: r.name || '', required: true })),
         field('Climate', climate),
-        field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern (seasons flipped)']], s.hemisphere || 'north', { name: 'hemisphere' })),
+        field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
+          `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
         field('Light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial (ship, station, city lights)'], ['none', 'None (caves, deep space)']], s.lighting || 'natural', { name: 'lighting' })),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' })),
         field('Artificial light per shift (0–5)', h('span', { class: 'row' }, shiftNames().map((n, i) =>
@@ -902,17 +914,67 @@
     mount(...campaignHeader('members'), card);
   }
 
+  // ------------------------------------------------------------ season editor
+  const SEASON_LABELS = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', none: 'None (no climate change)' };
+  const seasonChip = s => h('span', { class: `season s-${s.type || 'none'}` }, s.name || '—');
+  /** Editable list of seasons (name, climate type, start month & day) with a live month-by-month preview. */
+  function seasonEditor(c) {
+    const rows = h('div', { class: 'seasonrows' });
+    const preview = h('div', { class: 'seasonmap' });
+    const monthOpts = c.months.map((m, i) => [i, `${i + 1}. ${m.name}`]);
+    const read = () => [...rows.children].map(r => ({
+      name: r.querySelector('[data-k=name]').value.trim(),
+      type: r.querySelector('[data-k=type]').value,
+      month: Number(r.querySelector('[data-k=month]').value),
+      day: Math.max(1, Number(r.querySelector('[data-k=day]').value) || 1),
+    }));
+    const redraw = () => {
+      const test = { ...c, seasons: read().filter(s => s.name) };
+      let map;
+      try { E.prep(test); map = E.monthSeasons(test); } catch { return; }
+      preview.replaceChildren(h('table', { class: 'tbl' }, h('tbody', {}, map.map(({ month, seasons }) =>
+        h('tr', {}, h('td', {}, c.months[month].name), h('td', {}, test.seasons.length
+          ? seasons.map(x => h('span', { class: 'seasonseg' }, seasonChip(x), seasons.length > 1 ? ` ${x.from}–${x.to}` : ''))
+          : h('span', { class: 'muted' }, 'No seasons')))))));
+    };
+    const addRow = (s = { name: '', type: 'none', month: 0, day: 1 }) => {
+      const month = select(monthOpts, s.month, { 'data-k': 'month', 'aria-label': 'Start month' });
+      const day = h('input', { type: 'number', min: 1, value: s.day || 1, class: 'w-day', 'data-k': 'day', 'aria-label': 'Start day' });
+      const syncMax = () => { const mo = c.months[month.value]; day.max = Number(mo.days) + Number(mo.leapDays || 0); };
+      month.addEventListener('change', syncMax); syncMax();
+      const row = h('div', { class: 'row seasonrow' },
+        h('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
+        select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate' }),
+        month, day,
+        btn('✕', () => { row.remove(); redraw(); }, 'small link'));
+      rows.append(row);
+    };
+    (c.seasons || []).forEach(s => addRow(s));
+    const wrap = h('div', { class: 'seasoned' }, h('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
+      h('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small'),
+        h('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
+      h('details', { open: true }, h('summary', {}, 'Seasons by month'), preview));
+    wrap.addEventListener('input', redraw);
+    wrap.addEventListener('change', redraw);
+    redraw();
+    wrap.getSeasons = () => {
+      const list = read();
+      if (list.some(s => !s.name)) throw new Error('Every season needs a name');
+      return list;
+    };
+    return wrap;
+  }
+
   // ------------------------------------------------------------ settings tab
   function calToText(c) {
     return {
       weekdays: (c.weekdays || []).join(', '),
       months: c.months.map(m => [m.name, m.days, m.leapDays || 0, m.intercalary ? 'festival' : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
-      seasons: (c.seasons || []).map(s => [s.name, s.type, s.month + 1, s.day].join(', ')).join('\n'),
       moons: (c.moons || []).map(m => [m.name, m.cycle, m.ref || 0, m.brightness ?? 1, m.color || '#e8e4d8', m.erratic ? 'erratic' : ''].filter((x, i) => i < 5 || x).join(', ')).join('\n'),
       shiftNames: E.shiftNames(c).join(', '),
     };
   }
-  function textToCal(v, base) {
+  function textToCal(v, base, seasons) {
     const lines = s => s.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.split(',').map(x => x.trim()));
     const c = { ...base };
     c.name = v.cal_name; c.epochYear = Number(v.epochYear) || 0; c.yearSuffix = v.yearSuffix;
@@ -928,7 +990,7 @@
     if (!c.months.length) throw new Error('Add at least one month');
     const every = Number(v.leap_every);
     c.leap = every > 0 ? { every, skip: Number(v.leap_skip) || 0, unskip: Number(v.leap_unskip) || 0 } : null;
-    c.seasons = lines(v.seasons).map(([name, type, month, day]) => ({ name, type: (type || 'none').toLowerCase(), month: Math.max(0, (Number(month) || 1) - 1), day: Number(day) || 1 }));
+    c.hemisphere = v.cal_hemisphere; c.seasons = seasons;
     c.moons = lines(v.moons).map(([name, cycle, ref, bright, color, erratic]) => ({ name, cycle: Number(cycle) || 28, ref: Number(ref) || 0, brightness: bright === undefined ? 1 : Number(bright), color: color || '#e8e4d8', erratic: /err/i.test(erratic || '') }));
     c.shiftNames = v.shiftNames.split(',').map(x => x.trim()).slice(0, 4);
     return c;
@@ -958,6 +1020,7 @@
     });
 
     const L = c.leap || {};
+    const seasons = seasonEditor(c);
     const calForm = h('form', { class: 'card' }, h('h2', {}, 'Calendar'),
       h('p', { class: 'muted' }, 'Changing the calendar re-labels every stored day: records stay attached to the same absolute day number, not to a month name.'),
       h('div', { class: 'grid2' },
@@ -975,7 +1038,11 @@
         field('Leap year every N years (0 = none)', h('input', { type: 'number', name: 'leap_every', value: L.every || 0 })),
         field('…except every N years', h('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 })),
         field('…unless every N years', h('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }))),
-      field('Seasons — one per line: Name, type, month #, day', ta('seasons', t.seasons, 4), 'type = spring, summer, autumn, winter or none (controls which climate table is used)'),
+      h('h3', {}, 'Seasons'),
+      field('Season dates are for the', select([['north', 'Northern hemisphere'], ['south', 'Southern hemisphere']], c.hemisphere || 'north', { name: 'cal_hemisphere' }),
+        'Regions in the other hemisphere get the opposite season'),
+      seasons,
+      h('small', { class: 'muted' }, 'Start months use the saved month list; save month changes first, then adjust seasons.'),
       field('Moons — one per line: Name, cycle days, reference day, brightness 0–1, color[, erratic]', ta('moons', t.moons, 3), 'Reference day = an absolute day number when the moon is new. Today is absolute day ' + today() + '.'),
       h('details', {}, h('summary', {}, 'Advanced: raw calendar JSON'), ta('raw', JSON.stringify(c, null, 1), 12),
         h('small', { class: 'muted' }, 'If you edit this box, it is saved instead of the fields above.')),
@@ -987,7 +1054,7 @@
       try {
         let newCal;
         if (v.raw !== rawInitial) newCal = JSON.parse(v.raw);
-        else newCal = textToCal(v, c);
+        else newCal = textToCal(v, c, seasons.getSeasons());
         const test = JSON.parse(JSON.stringify(newCal)); E.prep(test); E.fmtDate(test, today());
         await post('campaign_update', { calendar: newCal }, S.camp.id);
         await loadCampaign(S.camp.id, true); toast('Calendar saved'); route();

@@ -140,3 +140,13 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
   .jump { margin-left: 0; }
   h1 { font-size: 1.5rem; }
 }
+
+/* seasons */
+.season { display: inline-block; font-size: .78rem; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel2); white-space: nowrap; }
+.season.s-spring { border-color: #6fb37a; color: #6fb37a; } .season.s-summer { border-color: #d9a441; color: #d9a441; }
+.season.s-autumn { border-color: #c0632b; color: #c0632b; } .season.s-winter { border-color: #6fa3d0; color: #6fa3d0; }
+.seasonseg { margin-right: 10px; white-space: nowrap; }
+.seasonline { margin: -4px 0 10px; }
+.seasonrow { margin-top: 4px; flex-wrap: nowrap; gap: 6px; } .seasonrow > input, .seasonrow > select { width: auto; min-width: 0; }
+.seasonrow input.grow { flex: 1 1 110px; } .seasonrow select[data-k=month] { flex: 0 1 150px; } .seasonrow select[data-k=type] { flex: 0 1 120px; }
+.seasonmap { max-height: 320px; overflow: auto; } .seasonmap .tbl td { padding: 3px 6px; }

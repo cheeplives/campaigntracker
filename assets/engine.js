@@ -143,17 +143,52 @@
   }
 
   // ---------------------------------------------------------------- seasons
+  const SEASON_TYPES = ['spring', 'summer', 'autumn', 'winter', 'none'];
+  const SEASON_FLIP = { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' };
+
+  /** Season start days of a year, sorted by day-of-year. */
+  function seasonStarts(cal, year) {
+    return (cal.seasons || []).map(s => {
+      const m = clamp(Number(s.month) || 0, 0, cal.months.length - 1);
+      const day = clamp(Number(s.day) || 1, 1, monthLength(cal, year, m));
+      return { s, month: m, day, doy: toAbs(cal, year, m, day) - yearStart(cal, year) };
+    }).sort((a, b) => a.doy - b.doy);
+  }
+
+  /**
+   * Season on absolute day d. Season dates are written for the calendar's own hemisphere
+   * (cal.hemisphere, default north); a region in the other hemisphere gets the opposite season.
+   */
   function season(cal, d, hemisphere) {
-    const list = cal.seasons || [];
-    if (!list.length) return { name: '', type: 'none' };
+    if (!(cal.seasons || []).length) return { name: '', type: 'none' };
     const p = fromAbs(cal, d);
-    const starts = list.map(s => ({ s, doy: toAbs(cal, p.year, clamp(s.month, 0, cal.months.length - 1), s.day || 1) - yearStart(cal, p.year) }))
-      .sort((a, b) => a.doy - b.doy);
+    const starts = seasonStarts(cal, p.year);
     let cur = starts[starts.length - 1].s; // wraps from previous year
     for (const x of starts) if (x.doy <= p.doy) cur = x.s;
-    let type = cur.type || 'none';
-    if (hemisphere === 'south') type = { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' }[type] || type;
-    return { name: cur.name, type };
+    let name = cur.name, type = cur.type || 'none';
+    if (hemisphere && hemisphere !== (cal.hemisphere || 'north') && SEASON_FLIP[type]) {
+      type = SEASON_FLIP[type];
+      const twin = cal.seasons.find(s => s.type === type);
+      if (twin) name = twin.name;
+    }
+    return { name, type };
+  }
+
+  /**
+   * Which seasons each month of a year falls in: [{ month, seasons: [{ name, type, from, to }] }],
+   * where from/to are day numbers within the month.
+   */
+  function monthSeasons(cal, year = cal.epochYear) {
+    return cal.months.map((mo, m) => {
+      const len = monthLength(cal, year, m), out = [];
+      for (let day = 1; day <= len; day++) {
+        const s = season(cal, toAbs(cal, year, m, day));
+        const last = out[out.length - 1];
+        if (last && last.name === s.name && last.type === s.type) last.to = day;
+        else out.push({ name: s.name, type: s.type, from: day, to: day });
+      }
+      return { month: m, seasons: out };
+    });
   }
 
   // ---------------------------------------------------------------- moons
@@ -543,11 +578,21 @@
   }
 
   // ---------------------------------------------------------------- presets
-  const PRESETS = {
-    gregorian: {
-      label: 'Gregorian (real-world)',
+  // Astronomical seasons (equinox/solstice dates). Month indexes are 0-based.
+  const GREGORIAN_SEASONS = {
+    north: [
+      { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
+      { name: 'Autumn', type: 'autumn', month: 8, day: 22 }, { name: 'Winter', type: 'winter', month: 11, day: 21 }],
+    south: [
+      { name: 'Autumn', type: 'autumn', month: 2, day: 20 }, { name: 'Winter', type: 'winter', month: 5, day: 21 },
+      { name: 'Spring', type: 'spring', month: 8, day: 22 }, { name: 'Summer', type: 'summer', month: 11, day: 21 }],
+  };
+  function gregorianPreset(hemisphere) {
+    const north = hemisphere === 'north';
+    return {
+      label: `Gregorian (real-world, ${north ? 'Northern' : 'Southern'} Hemisphere)`,
       calendar: {
-        name: 'Gregorian', epochYear: 1, yearSuffix: '', weekdayOffset: 1, lighting: 'natural',
+        name: 'Gregorian', epochYear: 1, yearSuffix: '', weekdayOffset: 1, lighting: 'natural', hemisphere,
         weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         months: [
           { name: 'January', days: 31 }, { name: 'February', days: 28, leapDays: 1 }, { name: 'March', days: 31 },
@@ -555,22 +600,25 @@
           { name: 'July', days: 31 }, { name: 'August', days: 31 }, { name: 'September', days: 30 },
           { name: 'October', days: 31 }, { name: 'November', days: 30 }, { name: 'December', days: 31 }],
         leap: { every: 4, skip: 100, unskip: 400 },
-        seasons: [
-          { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
-          { name: 'Autumn', type: 'autumn', month: 8, day: 22 }, { name: 'Winter', type: 'winter', month: 11, day: 21 }],
+        seasons: GREGORIAN_SEASONS[hemisphere],
         // reference = a known new moon (6 Jan 2000, 18:14 UTC) expressed as an absolute day
         moons: [{ name: 'Moon', cycle: 29.530588, ref: 730124.76, brightness: 1, color: '#e8e4d8' }],
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 2026, month: 9, day: 16 },
-      regions: [{ name: 'Temperate lowlands', current: true, settings: { climate: 'temperate', hemisphere: 'north', lighting: 'natural', terrain_mod: 0 } }],
+      regions: [{ name: 'Temperate lowlands', current: true, settings: { climate: 'temperate', hemisphere, lighting: 'natural', terrain_mod: 0 } }],
       holidays: [
         { name: "New Year's Day", color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
         { name: 'Thanksgiving (US)', color: '#c0632b', rule: { type: 'nth_weekday', month: 10, weekday: 4, n: 4, span: 1 } },
         { name: 'Christmas Eve & Day', color: '#2e8b57', rule: { type: 'fixed', month: 11, day: 24, span: 2 } },
       ],
-      settings: { time_unit: 'day', temp_unit: 'F' },
-    },
+      settings: { time_unit: 'day', temp_unit: north ? 'F' : 'C' },
+    };
+  }
+
+  const PRESETS = {
+    gregorian: gregorianPreset('north'),
+    gregorian_south: gregorianPreset('south'),
 
     imperial: {
       label: 'Imperial Calendar (Warhammer Fantasy)',
@@ -579,7 +627,7 @@
         weekdays: ['Wellentag', 'Aubentag', 'Marktag', 'Backertag', 'Bezahltag', 'Konistag', 'Angestag', 'Festag'],
         months: [
           { name: 'Hexenstag', days: 1, intercalary: true },
-          { name: 'Nachhexen', days: 32 }, { name: 'Jahrdrung', days: 33 },
+          { name: 'Nachexen', days: 32 }, { name: 'Jahrdrung', days: 33 },
           { name: 'Mitterfruhl', days: 1, intercalary: true },
           { name: 'Pflugzeit', days: 33 }, { name: 'Sigmarzeit', days: 33 }, { name: 'Sommerzeit', days: 33 },
           { name: 'Sonnstill', days: 1, intercalary: true },
@@ -591,9 +639,11 @@
           { name: 'Mondstille', days: 1, intercalary: true },
           { name: 'Vorhexen', days: 33 }],
         leap: null,
+        hemisphere: 'north',
+        // first days of the seasons per the Imperial Calendar: Nachexen 17, Sigmarzeit 18, Nachgeheim 17, Kaldezeit 18
         seasons: [
-          { name: 'Spring', type: 'spring', month: 3, day: 1 }, { name: 'Summer', type: 'summer', month: 7, day: 1 },
-          { name: 'Autumn', type: 'autumn', month: 12, day: 1 }, { name: 'Winter', type: 'winter', month: 16, day: 1 }],
+          { name: 'Spring', type: 'spring', month: 1, day: 17 }, { name: 'Summer', type: 'summer', month: 5, day: 18 },
+          { name: 'Autumn', type: 'autumn', month: 10, day: 17 }, { name: 'Winter', type: 'winter', month: 14, day: 18 }],
         moons: [
           { name: 'Mannslieb', cycle: 25, ref: 0, brightness: 1, color: '#e8e4d8' },
           { name: 'Morrslieb', cycle: 31, ref: 7, brightness: 0.5, color: '#9fd27a', erratic: true }],
@@ -654,7 +704,7 @@
   const Engine = {
     SHIFT_KEYS, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
-    yearLabel, fmtDate, fmtShift, addMonths, season, moons, moonPhase, holidaysOn, holidayActive,
+    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, weatherLabel, fmtTemp, visibility, climateFor, mod,
     travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS,
   };
