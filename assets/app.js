@@ -77,7 +77,11 @@
   const settings = () => S.camp.settings || (S.camp.settings = {});
   const regionById = id => S.regions.find(r => r.id === Number(id)) || null;
   const currentRegion = () => regionById(settings().current_region) || S.regions[0] || null;
-  const tempUnit = () => settings().temp_unit || 'C';
+  /** Campaign default (set by the GM) for anyone who hasn't picked their own units. */
+  const campTempUnit = () => (S.camp && settings().temp_unit) || 'C';
+  const tempUnit = () => S.user?.prefs?.temp_unit || campTempUnit();
+  const tempSym = unit => E.TEMP_UNITS[unit]?.sym.trim() || '°C';
+  const TEMP_OPTIONS = [...Object.entries(E.TEMP_UNITS).map(([k, u]) => [k, `${u.label} (${u.sym.trim()})`]), ['none', 'Hide temperatures']];
   const shiftNames = () => E.shiftNames(cal());
 
   async function loadCampaign(cid, force) {
@@ -217,6 +221,15 @@
   }
 
   function viewAccount() {
+    const prefs = h('form', { class: 'card narrow' }, h('h2', {}, 'Preferences'),
+      field('Temperature units', select([['', 'Campaign default'], ...TEMP_OPTIONS], S.user.prefs?.temp_unit || '', { name: 'temp_unit' }),
+        'Only changes what you see. Each campaign\'s GM sets the default for players who leave this alone.'),
+      h('button', { class: 'primary' }, 'Save'));
+    prefs.addEventListener('submit', async e => {
+      e.preventDefault();
+      const v = formData(prefs).temp_unit;
+      try { S.user.prefs = (await post('prefs_save', { temp_unit: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
+    });
     const f = h('form', { class: 'card narrow' }, h('h2', {}, 'Change password'),
       field('Current password', h('input', { name: 'current', type: 'password', required: true })),
       field('New password', h('input', { name: 'new', type: 'password', minlength: 8, required: true })),
@@ -225,7 +238,7 @@
       e.preventDefault();
       try { await post('password', formData(f)); toast('Password changed'); f.reset(); } catch (err) { toast(err.message, true); }
     });
-    mount(f);
+    mount(prefs, f);
   }
 
   async function viewAdmin() {
@@ -552,15 +565,15 @@
     const regSel = select([['', '— (current region)'], ...S.regions.map(r => [r.id, r.name])], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
-    const tVal = w && typeof w.temp === 'number' ? (tUnit === 'F' ? Math.round(w.temp * 9 / 5 + 32) : w.temp) : '';
-    const temp = h('input', { type: 'number', name: 'temp', value: tVal, class: 'w-num' });
+    const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
+    const temp = h('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, n]), w?.wind || 0, { name: 'wind' });
     const notes = h('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
     const gmn = h('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
     const f = h('form', { class: 'dayedit' },
       h('div', { class: 'grid2' },
         field('Region for this day', regSel),
-        field('Weather', h('span', { class: 'row' }, wSel, temp, tUnit === 'none' ? '' : `°${tUnit}`, wind)),
+        field('Weather', h('span', { class: 'row' }, wSel, temp, tUnit === 'none' ? '' : tempSym(tUnit), wind)),
         field('Day notes (players can see)', notes),
         field('GM notes 🔒', gmn)),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save day'),
@@ -577,7 +590,7 @@
       let weather = null;
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
-        if (t !== null && tUnit === 'F') t = Math.round((t - 32) * 5 / 9);
+        if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
         weather = { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) };
       }
       try {
@@ -839,6 +852,7 @@
   function koppenBuilder(cc, onChange) {
     let base = cc?.base ? JSON.parse(JSON.stringify(cc.base)) : E.koppenBase('Cfb');
     let from = cc?.koppen || 'Cfb';
+    const unit = tempUnit() === 'none' ? 'C' : tempUnit(), sym = tempSym(unit);
     const name = h('input', { value: cc?.label || `Custom ${from}`, 'aria-label': 'Climate name', maxlength: 80 });
     const letter = (opts, v, lbl) => select(Object.entries(opts).map(([k, l]) => [k, `${k} · ${l}`]), v, { 'aria-label': lbl });
     const lettersWrap = h('span', { class: 'row' });
@@ -864,11 +878,11 @@
       if (name.value.trim() === `Custom ${from}` || !name.value.trim()) name.value = `Custom ${c}`;
       from = c; base = E.koppenBase(c); drawTable(); onChange();
     }, 'small');
-    const num = (v, k, i, attrs) => h('input', { type: 'number', value: v, step: k === 't' ? 1 : 0.5, 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
+    const num = (v, k, i, attrs) => h('input', { type: 'number', value: E.toTempUnit(v, unit, 1), step: unit === 'C' ? 1 : 'any', 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
     const scale = (v, k, max, lbl) => h('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
     const table = h('table', { class: 'tbl builder' });
     const drawTable = () => table.replaceChildren(
-      h('thead', {}, h('tr', {}, ['Season', 'Highs from °C', 'to °C', 'Precipitation 0–5', 'Storms 0–3', 'Fog 0–3', 'Dust 0–3'].map(x => h('th', {}, x)))),
+      h('thead', {}, h('tr', {}, ['Season', `Highs from ${sym}`, `to ${sym}`, 'Precipitation 0–5', 'Storms 0–3', 'Fog 0–3', 'Dust 0–3'].map(x => h('th', {}, x)))),
       h('tbody', {}, SEASON_ORDER.map(k => {
         const p = base[k];
         return h('tr', { 'data-s': k }, h('td', {}, h('span', { class: `season s-${k}` }, SEASON_LABELS[k])),
@@ -881,7 +895,7 @@
         const p = base[tr.dataset.s];
         for (const el of tr.querySelectorAll('[data-k]')) {
           const v = Number(el.value) || 0;
-          if (el.dataset.k === 't') p.t[Number(el.dataset.i)] = Math.round(v);
+          if (el.dataset.k === 't') { if (el.value !== '') p.t[Number(el.dataset.i)] = Math.round(E.fromTempUnit(v, unit)); }
           else p[el.dataset.k] = Math.max(0, Math.min(el.dataset.k === 'wet' ? 5 : 3, v));
         }
       }
@@ -1131,7 +1145,7 @@
         field('Name', h('input', { name: 'name', value: S.camp.name, required: true })),
         field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' })),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
-        field('Temperature', select([['C', '°C'], ['F', '°F'], ['none', 'Hide temperatures']], st.temp_unit || 'C', { name: 'temp_unit' })),
+        field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page'),
         field('Players see future weather', h('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather })),
         field('Players can add events', h('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),
       field('Description', h('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
