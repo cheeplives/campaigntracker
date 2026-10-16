@@ -143,17 +143,52 @@
   }
 
   // ---------------------------------------------------------------- seasons
+  const SEASON_TYPES = ['spring', 'summer', 'autumn', 'winter', 'none'];
+  const SEASON_FLIP = { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' };
+
+  /** Season start days of a year, sorted by day-of-year. */
+  function seasonStarts(cal, year) {
+    return (cal.seasons || []).map(s => {
+      const m = clamp(Number(s.month) || 0, 0, cal.months.length - 1);
+      const day = clamp(Number(s.day) || 1, 1, monthLength(cal, year, m));
+      return { s, month: m, day, doy: toAbs(cal, year, m, day) - yearStart(cal, year) };
+    }).sort((a, b) => a.doy - b.doy);
+  }
+
+  /**
+   * Season on absolute day d. Season dates are written for the calendar's own hemisphere
+   * (cal.hemisphere, default north); a region in the other hemisphere gets the opposite season.
+   */
   function season(cal, d, hemisphere) {
-    const list = cal.seasons || [];
-    if (!list.length) return { name: '', type: 'none' };
+    if (!(cal.seasons || []).length) return { name: '', type: 'none' };
     const p = fromAbs(cal, d);
-    const starts = list.map(s => ({ s, doy: toAbs(cal, p.year, clamp(s.month, 0, cal.months.length - 1), s.day || 1) - yearStart(cal, p.year) }))
-      .sort((a, b) => a.doy - b.doy);
+    const starts = seasonStarts(cal, p.year);
     let cur = starts[starts.length - 1].s; // wraps from previous year
     for (const x of starts) if (x.doy <= p.doy) cur = x.s;
-    let type = cur.type || 'none';
-    if (hemisphere === 'south') type = { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' }[type] || type;
-    return { name: cur.name, type };
+    let name = cur.name, type = cur.type || 'none';
+    if (hemisphere && hemisphere !== (cal.hemisphere || 'north') && SEASON_FLIP[type]) {
+      type = SEASON_FLIP[type];
+      const twin = cal.seasons.find(s => s.type === type);
+      if (twin) name = twin.name;
+    }
+    return { name, type };
+  }
+
+  /**
+   * Which seasons each month of a year falls in: [{ month, seasons: [{ name, type, from, to }] }],
+   * where from/to are day numbers within the month.
+   */
+  function monthSeasons(cal, year = cal.epochYear) {
+    return cal.months.map((mo, m) => {
+      const len = monthLength(cal, year, m), out = [];
+      for (let day = 1; day <= len; day++) {
+        const s = season(cal, toAbs(cal, year, m, day));
+        const last = out[out.length - 1];
+        if (last && last.name === s.name && last.type === s.type) last.to = day;
+        else out.push({ name: s.name, type: s.type, from: day, to: day });
+      }
+      return { month: m, seasons: out };
+    });
   }
 
   // ---------------------------------------------------------------- moons
@@ -294,6 +329,126 @@
       any: { t: [-150, 120], w: { nominal: 12, flare: 1, debris: 1, ionstorm: 0.5, radiation: 0.8 } } } },
   };
 
+  // ---------------------------------------------------------------- Köppen climates
+  // Baselines per Köppen–Geiger code, one entry per season (winter, spring, summer, autumn):
+  // [low, high] = range of typical daytime highs in °C; wet 0–5 (0 arid … 5 torrential);
+  // storm / fog / dust 0–3 (how often thunderstorms or blizzards, fog, and dust storms turn up).
+  // Figures are rounded from representative stations (WorldClim / openclimatemap.org monthly normals).
+  // Tropical wet and dry seasons follow the sun: the wet season is "summer", the dry season "winter".
+  const KOPPEN_GROUPS = {
+    A: 'Tropical', B: 'Arid', C: 'Temperate', D: 'Continental', E: 'Polar',
+  };
+  // Allowed second and third letters per group, with what each letter means.
+  const KOPPEN_LETTERS = {
+    A: [{ f: 'rainforest (wet all year)', m: 'monsoon (short dry season)', w: 'savanna (dry winter)', s: 'savanna (dry summer)' }, null],
+    B: [{ W: 'desert', S: 'steppe (semi-arid)' }, { h: 'hot', k: 'cold' }],
+    C: [{ f: 'no dry season', s: 'dry summer', w: 'dry winter' }, { a: 'hot summer', b: 'warm summer', c: 'cool summer' }],
+    D: [{ f: 'no dry season', s: 'dry summer', w: 'dry winter' }, { a: 'hot summer', b: 'warm summer', c: 'subarctic', d: 'extremely cold winter' }],
+    E: [{ T: 'tundra', F: 'ice cap' }, null],
+  };
+  const sb = (lo, hi, wet, storm = 0, fog = 0, dust = 0) => ({ t: [lo, hi], wet, storm, fog, dust });
+  const KOPPEN = {
+    Af:  { label: 'Tropical rainforest', where: 'Singapore, Amazon basin, Congo basin', s: [sb(28, 32, 4, 2.5, 1), sb(28, 33, 4, 2.5, 1), sb(28, 32, 4.5, 3, 1), sb(28, 32, 4, 2.5, 1)] },
+    Am:  { label: 'Tropical monsoon', where: 'Miami, Kerala, Myanmar coast', s: [sb(27, 31, 1.5, 0.5), sb(29, 34, 2, 1.5), sb(27, 31, 4.5, 3), sb(28, 32, 3, 2)] },
+    Aw:  { label: 'Tropical savanna (dry winter)', where: 'Darwin, Lagos, Bangkok, Rio de Janeiro', s: [sb(28, 33, 0.5, 0, 0.5, 0.5), sb(31, 36, 1.5, 1.5, 0, 0.5), sb(29, 33, 4, 3), sb(29, 33, 2.5, 2)] },
+    As:  { label: 'Tropical savanna (dry summer)', where: 'Chennai, Mombasa, Hawaii leeward coasts', s: [sb(27, 31, 3.5, 1.5), sb(30, 34, 1.5, 1), sb(30, 35, 0.5, 0.5, 0, 0.5), sb(28, 32, 2.5, 1.5)] },
+    BWh: { label: 'Hot desert', where: 'Cairo, Dubai, Phoenix, the Sahara', s: [sb(18, 25, 0.3, 0, 0.5, 1), sb(26, 35, 0.15, 0.2, 0, 1.5), sb(35, 44, 0.1, 0.3, 0, 2), sb(27, 36, 0.15, 0.2, 0, 1)] },
+    BWk: { label: 'Cold desert', where: 'Gobi, Ladakh, Great Basin, Patagonia', s: [sb(-5, 6, 0.3, 0, 0.5, 0.5), sb(10, 22, 0.4, 0.3, 0, 1.5), sb(24, 34, 0.3, 0.5, 0, 1), sb(8, 20, 0.3, 0.2, 0, 1)] },
+    BSh: { label: 'Hot semi-arid steppe', where: 'Sahel, Alice Springs, Karachi, Monterrey', s: [sb(20, 27, 0.4, 0, 0.3, 1), sb(28, 36, 0.5, 0.5, 0, 1.5), sb(32, 39, 1.3, 1.5, 0, 1), sb(27, 34, 0.7, 0.7, 0, 0.5)] },
+    BSk: { label: 'Cold semi-arid steppe', where: 'Denver, Madrid outskirts, Kazakh steppe, Ulaanbaatar plains', s: [sb(0, 9, 0.7, 0, 0.5, 0.3), sb(12, 22, 1, 1, 0, 0.7), sb(25, 33, 0.8, 1.5, 0, 0.5), sb(12, 22, 0.7, 0.3, 0.3, 0.3)] },
+    Csa: { label: 'Hot-summer Mediterranean', where: 'Athens, Seville, Rome, Los Angeles inland', s: [sb(12, 17, 2.5, 0.5, 1), sb(19, 26, 1.2, 0.5, 0.3), sb(30, 36, 0.15, 0.3), sb(21, 28, 1.5, 0.7, 0.3)] },
+    Csb: { label: 'Warm-summer Mediterranean', where: 'San Francisco, Porto, Cape Town', s: [sb(12, 16, 3, 0.3, 1.5), sb(16, 21, 1.5, 0.2, 1.5), sb(20, 26, 0.3, 0, 2.5), sb(17, 23, 1.5, 0.2, 2)] },
+    Csc: { label: 'Cold-summer Mediterranean', where: 'Highlands of the Cascades and Andes', s: [sb(2, 7, 3, 0.5, 1.5), sb(6, 12, 2, 0.3, 1.5), sb(12, 17, 0.4, 0.2, 1), sb(7, 12, 2, 0.3, 1.5)] },
+    Cwa: { label: 'Monsoon-influenced humid subtropical', where: 'Hong Kong, Delhi, Guangzhou', s: [sb(16, 22, 0.4, 0, 1, 0.3), sb(24, 32, 1.5, 1.5, 0.5), sb(30, 34, 4.5, 3), sb(24, 30, 2, 1.5)] },
+    Cwb: { label: 'Subtropical highland', where: 'Mexico City, Johannesburg, Bogotá-style highlands', s: [sb(18, 22, 0.3, 0, 0.5, 0.3), sb(22, 27, 1.5, 1.5), sb(21, 25, 3.5, 2.5, 0.5), sb(20, 24, 1.5, 1, 0.5)] },
+    Cwc: { label: 'Cold subtropical highland', where: 'High Andean and Himalayan valleys', s: [sb(8, 13, 0.3, 0, 1), sb(12, 17, 1.5, 1), sb(12, 16, 3, 2, 1.5), sb(10, 15, 1.5, 0.5, 1)] },
+    Cfa: { label: 'Humid subtropical', where: 'Atlanta, Shanghai, Buenos Aires, Sydney', s: [sb(7, 14, 2.5, 0.3, 1), sb(17, 25, 2.5, 1.5, 0.5), sb(29, 33, 3, 2.5, 0.3), sb(17, 26, 2.3, 1, 1)] },
+    Cfb: { label: 'Temperate oceanic', where: 'London, Paris, Melbourne, Seattle', s: [sb(5, 10, 3, 0.2, 2), sb(11, 18, 2.5, 0.5, 1), sb(19, 25, 2, 1, 0.5), sb(11, 18, 3, 0.5, 2)] },
+    Cfc: { label: 'Subpolar oceanic', where: 'Faroe Islands, Reykjavík coast, Tierra del Fuego', s: [sb(1, 5, 3.5, 0.8, 1.5), sb(4, 9, 3, 0.3, 1.5), sb(10, 14, 3, 0.2, 2), sb(5, 10, 3.5, 0.8, 1.5)] },
+    Dsa: { label: 'Hot-summer continental (dry summer)', where: 'Hakkari, eastern Anatolia, Utah valleys', s: [sb(-3, 4, 2.5, 0.5, 1), sb(10, 19, 2, 1), sb(27, 34, 0.3, 0.5, 0, 0.5), sb(12, 21, 1, 0.3, 0.5)] },
+    Dsb: { label: 'Warm-summer continental (dry summer)', where: 'Iranian plateau towns, eastern Cascades', s: [sb(-6, 1, 2.5, 0.5, 1), sb(6, 14, 2, 0.7), sb(21, 27, 0.4, 0.5), sb(7, 15, 1.2, 0.3, 0.5)] },
+    Dsc: { label: 'Subarctic (dry summer)', where: 'High Sierra and Anatolian uplands', s: [sb(-15, -5, 2.5, 0.8, 0.5), sb(-2, 8, 2, 0.5), sb(14, 19, 0.5, 0.5), sb(0, 8, 1.5, 0.3, 0.5)] },
+    Dsd: { label: 'Extremely cold subarctic (dry summer)', where: 'Rare: high eastern Siberia', s: [sb(-40, -28, 1, 1, 0.5), sb(-12, 0, 0.8, 0.3), sb(14, 20, 0.5, 0.3), sb(-10, 0, 0.8, 0.5)] },
+    Dwa: { label: 'Monsoon-influenced hot-summer continental', where: 'Beijing, Seoul', s: [sb(-2, 4, 0.3, 0, 0.5, 1), sb(14, 22, 1, 0.5, 0, 1.5), sb(28, 32, 4, 2.5, 0.5), sb(13, 22, 1, 0.3, 1)] },
+    Dwb: { label: 'Monsoon-influenced warm-summer continental', where: 'Vladivostok, northern Korea', s: [sb(-12, -5, 0.3, 0, 0.3), sb(6, 14, 1.2, 0.3, 1.5), sb(20, 25, 3.5, 2, 1.5), sb(6, 14, 1.2, 0.3, 0.5)] },
+    Dwc: { label: 'Monsoon-influenced subarctic', where: 'Mongolia, Chita, Tibetan uplands', s: [sb(-25, -14, 0.2, 0.3, 0.3, 0.3), sb(0, 12, 0.6, 0.3, 0, 1), sb(20, 25, 2.5, 1.5), sb(-2, 10, 0.6, 0.3)] },
+    Dwd: { label: 'Monsoon-influenced extremely cold subarctic', where: 'Oymyakon region', s: [sb(-48, -35, 0.2, 0.3, 1), sb(-15, 0, 0.4, 0.2), sb(16, 22, 2, 1), sb(-14, -2, 0.5, 0.3)] },
+    Dfa: { label: 'Hot-summer humid continental', where: 'Chicago, Kyiv-area plains, Toronto outskirts', s: [sb(-4, 3, 2, 1, 1), sb(10, 19, 2.5, 1.5, 0.5), sb(26, 31, 2.5, 2.5), sb(11, 20, 2, 0.5, 1)] },
+    Dfb: { label: 'Warm-summer humid continental', where: 'Moscow, Toronto, Warsaw, Minneapolis', s: [sb(-9, -1, 2, 1, 1), sb(6, 15, 2, 0.7, 0.5), sb(20, 25, 2.5, 1.5, 0.3), sb(5, 13, 2.2, 0.3, 1.5)] },
+    Dfc: { label: 'Subarctic (boreal taiga)', where: 'Fairbanks, Arkhangelsk, northern Scandinavia', s: [sb(-25, -12, 1.5, 1.2, 0.5), sb(-5, 8, 1.2, 0.5, 0.5), sb(16, 22, 2, 1), sb(-3, 6, 1.8, 0.5, 1)] },
+    Dfd: { label: 'Extremely cold subarctic', where: 'Yakutsk, Verkhoyansk', s: [sb(-45, -32, 0.7, 0.5, 1.5), sb(-15, 2, 0.6, 0.2), sb(18, 25, 1.5, 0.8), sb(-12, 0, 0.8, 0.3, 0.5)] },
+    ET:  { label: 'Tundra', where: 'Alaska North Slope, Norilsk, Svalbard coast', s: [sb(-30, -18, 1, 1.5), sb(-15, -3, 1, 1, 0.5), sb(2, 10, 1.5, 0.3, 2.5), sb(-8, 0, 1.5, 1, 1.5)] },
+    EF:  { label: 'Ice cap', where: 'Antarctica, interior Greenland', s: [sb(-60, -35, 0.4, 2.5), sb(-40, -20, 0.4, 2), sb(-20, -5, 0.5, 1, 0.5), sb(-40, -20, 0.4, 2)] },
+  };
+  const KOPPEN_SEASONS = ['winter', 'spring', 'summer', 'autumn'];
+  const WET_LABELS = ['Arid', 'Very dry', 'Light', 'Moderate', 'Wet', 'Very wet'];
+
+  /** Weather weights for one season's baseline (see KOPPEN). Snow appears on its own when highs are near or below freezing. */
+  function baselineWeights(p) {
+    const [lo, hi] = p.t, mid = (lo + hi) / 2, wet = clamp(Number(p.wet) || 0, 0, 5);
+    const storm = Number(p.storm) || 0, fog = Number(p.fog) || 0, dust = Number(p.dust) || 0;
+    const cold = mid <= 1, frosty = lo <= 2;
+    const w = {
+      clear: Math.max(0.4, 5 - wet), partly: wet ? 3 : 2, overcast: 0.3 + 0.7 * wet,
+      drizzle: wet >= 0.5 ? 0.5 * wet : 0.05, rain: wet >= 1 ? 0.4 * wet * (wet > 3 ? 1.4 : 1) : 0.05 * wet,
+      storm: cold ? 0 : storm * 0.8, fog: fog * 1.1,
+      haze: mid >= 27 && wet < 2.5 ? 2.5 - wet : 0, sandstorm: dust * 0.6,
+      hail: storm >= 1.5 && mid >= 8 && mid <= 30 ? 0.25 : 0,
+    };
+    if (frosty) {
+      const share = clamp((3 - lo) / Math.max(1, hi - lo + 3), 0.2, 1); // how much of the season is cold enough
+      w.snow = (0.6 * wet + 0.4) * share * 2;
+      w.heavysnow = 0.35 * wet * share * 2;
+      w.blizzard = (storm * 0.6 + 0.1 * wet) * share;
+      if (cold) { w.drizzle *= 0.3; w.rain *= 0.3; }
+    }
+    for (const k in w) w[k] = Math.round(w[k] * 100) / 100;
+    return w;
+  }
+
+  /** Baselines (keyed winter/spring/summer/autumn) into the engine's climate shape. */
+  function buildClimate(base, meta = {}) {
+    const seasons = {};
+    for (const k of KOPPEN_SEASONS) {
+      const p = base[k];
+      seasons[k] = { t: [Math.min(p.t[0], p.t[1]), Math.max(p.t[0], p.t[1])], w: baselineWeights(p) };
+    }
+    const avg = f => KOPPEN_SEASONS.reduce((s, k) => s + f(base[k]), 0) / 4;
+    seasons.any = { t: [Math.round(avg(p => p.t[0])), Math.round(avg(p => p.t[1]))],
+      w: baselineWeights({ t: [avg(p => p.t[0]), avg(p => p.t[1])], wet: avg(p => p.wet), storm: avg(p => p.storm), fog: avg(p => p.fog), dust: avg(p => p.dust) }) };
+    const g = (meta.koppen || '')[0];
+    return { label: meta.label || 'Custom climate', koppen: meta.koppen || '', base,
+      persistence: g === 'B' ? 0.6 : g === 'E' ? 0.55 : 0.45, seasons };
+  }
+
+  /** Editable season baselines for a Köppen code, keyed winter/spring/summer/autumn (a fresh copy). */
+  function koppenBase(code) {
+    const k = KOPPEN[code]; if (!k) return null;
+    const out = {};
+    KOPPEN_SEASONS.forEach((s, i) => (out[s] = JSON.parse(JSON.stringify(k.s[i]))));
+    return out;
+  }
+  const _kCache = {}, _customCache = new WeakMap();
+  function koppenClimate(code) {
+    if (!KOPPEN[code]) return null;
+    return _kCache[code] || (_kCache[code] = buildClimate(koppenBase(code), { koppen: code, label: `${code} · ${KOPPEN[code].label}` }));
+  }
+  /** Köppen code from letters, or '' when the combination isn't a Köppen class. */
+  function koppenCode(group, second, third) {
+    const L = KOPPEN_LETTERS[group]; if (!L || !L[0][second]) return '';
+    if (L[1] && !L[1][third]) return '';
+    const code = group + second + (L[1] ? third : '');
+    return KOPPEN[code] ? code : '';
+  }
+  /** Readable one-liner for a season baseline, e.g. "Highs 11–18°C · Wet · storms". */
+  function describeBaseline(p, unit) {
+    const parts = [`Highs ${fmtTemp(p.t[0], unit)} to ${fmtTemp(p.t[1], unit)}`, WET_LABELS[Math.round(clamp(p.wet, 0, 5))]];
+    if (p.storm >= 1) parts.push((p.t[0] + p.t[1]) / 2 <= 1 ? 'blizzards' : 'thunderstorms');
+    if (p.fog >= 1) parts.push('fog');
+    if (p.dust >= 1) parts.push('dust storms');
+    return parts.join(' · ');
+  }
+
   function hashStr(s) {
     let h = 2166136261 >>> 0;
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -317,7 +472,14 @@
   }
   function climateFor(region) {
     const s = (region && region.settings) || {};
-    if (s.climate === 'custom' && s.custom_climate && s.custom_climate.seasons) return s.custom_climate;
+    const cc = s.custom_climate;
+    if (s.climate === 'koppen_custom' && cc && cc.base) {
+      // rebuilt from the baselines so weather tuning in this file reaches saved custom climates
+      if (!_customCache.has(cc)) _customCache.set(cc, buildClimate(cc.base, cc));
+      return _customCache.get(cc);
+    }
+    if (s.climate === 'custom' && cc && cc.seasons) return cc;
+    if (String(s.climate).startsWith('koppen:')) return koppenClimate(s.climate.slice(7)) || CLIMATES.temperate;
     return CLIMATES[s.climate] || CLIMATES.temperate;
   }
 
@@ -543,11 +705,21 @@
   }
 
   // ---------------------------------------------------------------- presets
-  const PRESETS = {
-    gregorian: {
-      label: 'Gregorian (real-world)',
+  // Astronomical seasons (equinox/solstice dates). Month indexes are 0-based.
+  const GREGORIAN_SEASONS = {
+    north: [
+      { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
+      { name: 'Autumn', type: 'autumn', month: 8, day: 22 }, { name: 'Winter', type: 'winter', month: 11, day: 21 }],
+    south: [
+      { name: 'Autumn', type: 'autumn', month: 2, day: 20 }, { name: 'Winter', type: 'winter', month: 5, day: 21 },
+      { name: 'Spring', type: 'spring', month: 8, day: 22 }, { name: 'Summer', type: 'summer', month: 11, day: 21 }],
+  };
+  function gregorianPreset(hemisphere) {
+    const north = hemisphere === 'north';
+    return {
+      label: `Gregorian (real-world, ${north ? 'Northern' : 'Southern'} Hemisphere)`,
       calendar: {
-        name: 'Gregorian', epochYear: 1, yearSuffix: '', weekdayOffset: 1, lighting: 'natural',
+        name: 'Gregorian', epochYear: 1, yearSuffix: '', weekdayOffset: 1, lighting: 'natural', hemisphere,
         weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         months: [
           { name: 'January', days: 31 }, { name: 'February', days: 28, leapDays: 1 }, { name: 'March', days: 31 },
@@ -555,22 +727,25 @@
           { name: 'July', days: 31 }, { name: 'August', days: 31 }, { name: 'September', days: 30 },
           { name: 'October', days: 31 }, { name: 'November', days: 30 }, { name: 'December', days: 31 }],
         leap: { every: 4, skip: 100, unskip: 400 },
-        seasons: [
-          { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
-          { name: 'Autumn', type: 'autumn', month: 8, day: 22 }, { name: 'Winter', type: 'winter', month: 11, day: 21 }],
+        seasons: GREGORIAN_SEASONS[hemisphere],
         // reference = a known new moon (6 Jan 2000, 18:14 UTC) expressed as an absolute day
         moons: [{ name: 'Moon', cycle: 29.530588, ref: 730124.76, brightness: 1, color: '#e8e4d8' }],
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 2026, month: 9, day: 16 },
-      regions: [{ name: 'Temperate lowlands', current: true, settings: { climate: 'temperate', hemisphere: 'north', lighting: 'natural', terrain_mod: 0 } }],
+      regions: [{ name: 'Temperate lowlands', current: true, settings: { climate: 'temperate', hemisphere, lighting: 'natural', terrain_mod: 0 } }],
       holidays: [
         { name: "New Year's Day", color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
         { name: 'Thanksgiving (US)', color: '#c0632b', rule: { type: 'nth_weekday', month: 10, weekday: 4, n: 4, span: 1 } },
         { name: 'Christmas Eve & Day', color: '#2e8b57', rule: { type: 'fixed', month: 11, day: 24, span: 2 } },
       ],
-      settings: { time_unit: 'day', temp_unit: 'F' },
-    },
+      settings: { time_unit: 'day', temp_unit: north ? 'F' : 'C' },
+    };
+  }
+
+  const PRESETS = {
+    gregorian: gregorianPreset('north'),
+    gregorian_south: gregorianPreset('south'),
 
     imperial: {
       label: 'Imperial Calendar (Warhammer Fantasy)',
@@ -579,7 +754,7 @@
         weekdays: ['Wellentag', 'Aubentag', 'Marktag', 'Backertag', 'Bezahltag', 'Konistag', 'Angestag', 'Festag'],
         months: [
           { name: 'Hexenstag', days: 1, intercalary: true },
-          { name: 'Nachhexen', days: 32 }, { name: 'Jahrdrung', days: 33 },
+          { name: 'Nachexen', days: 32 }, { name: 'Jahrdrung', days: 33 },
           { name: 'Mitterfruhl', days: 1, intercalary: true },
           { name: 'Pflugzeit', days: 33 }, { name: 'Sigmarzeit', days: 33 }, { name: 'Sommerzeit', days: 33 },
           { name: 'Sonnstill', days: 1, intercalary: true },
@@ -591,9 +766,11 @@
           { name: 'Mondstille', days: 1, intercalary: true },
           { name: 'Vorhexen', days: 33 }],
         leap: null,
+        hemisphere: 'north',
+        // first days of the seasons per the Imperial Calendar: Nachexen 17, Sigmarzeit 18, Nachgeheim 17, Kaldezeit 18
         seasons: [
-          { name: 'Spring', type: 'spring', month: 3, day: 1 }, { name: 'Summer', type: 'summer', month: 7, day: 1 },
-          { name: 'Autumn', type: 'autumn', month: 12, day: 1 }, { name: 'Winter', type: 'winter', month: 16, day: 1 }],
+          { name: 'Spring', type: 'spring', month: 1, day: 17 }, { name: 'Summer', type: 'summer', month: 5, day: 18 },
+          { name: 'Autumn', type: 'autumn', month: 10, day: 17 }, { name: 'Winter', type: 'winter', month: 14, day: 18 }],
         moons: [
           { name: 'Mannslieb', cycle: 25, ref: 0, brightness: 1, color: '#e8e4d8' },
           { name: 'Morrslieb', cycle: 31, ref: 7, brightness: 0.5, color: '#9fd27a', erratic: true }],
@@ -654,8 +831,9 @@
   const Engine = {
     SHIFT_KEYS, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
-    yearLabel, fmtDate, fmtShift, addMonths, season, moons, moonPhase, holidaysOn, holidayActive,
+    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, weatherLabel, fmtTemp, visibility, climateFor, mod,
+    KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
