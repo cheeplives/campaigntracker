@@ -1,16 +1,43 @@
--- RPG Campaign Tracker schema (MySQL 5.7+ / 8.x, InnoDB, utf8mb4)
+-- Campaign Chronicle schema (MySQL 5.7+ / 8.x or MariaDB 10.3+, InnoDB, utf8mb4).
+-- Fresh install: mysql -u <user> -p <database> < db/schema.sql  (or run install.php).
+-- Existing install: run the files in db/migrations/ you have not run yet, in order.
 
+-- users: one row per OAuth provider identity, identical to the Sinless app's
+-- users table. Point both apps at one database and they share accounts and the
+-- approval queue. Keyed on the provider's stable user id, never on email.
+-- New sign-ups land as 'pending' until an admin approves them.
+-- provider 'legacy' marks an account from before OAuth sign-in (see
+-- db/migrations/001_oauth_signin.sql); it is claimed by the first sign-in whose
+-- verified email matches the email an admin entered for it.
 CREATE TABLE IF NOT EXISTS users (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(64) NOT NULL UNIQUE,
-  display_name VARCHAR(100) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  is_admin TINYINT(1) NOT NULL DEFAULT 0,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  provider          VARCHAR(16)  NOT NULL,              -- 'google' | 'github' | 'legacy'
+  provider_user_id  VARCHAR(191) NOT NULL,              -- stable id at the provider
+  email             VARCHAR(191) NOT NULL,
+  display_name      VARCHAR(191) NOT NULL DEFAULT '',
+  avatar_url        VARCHAR(512) NOT NULL DEFAULT '',
+  status            ENUM('pending','approved','revoked') NOT NULL DEFAULT 'pending',
+  is_admin          TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  approved_at       DATETIME     NULL DEFAULT NULL,
+  last_login_at     DATETIME     NULL DEFAULT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_provider_identity (provider, provider_user_id),
+  KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fixed-window counters for lib.php rate_limit(), also identical to Sinless's.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  bucket        VARCHAR(32)  NOT NULL,
+  id            VARCHAR(64)  NOT NULL,
+  window_start  INT UNSIGNED NOT NULL,
+  hits          INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (bucket, id),
+  KEY idx_window (window_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_prefs (
-  user_id INT UNSIGNED PRIMARY KEY,
+  user_id BIGINT UNSIGNED PRIMARY KEY,
   prefs_json TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -23,7 +50,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   settings_json TEXT NOT NULL,
   current_shift BIGINT NOT NULL DEFAULT 0,
   seed INT UNSIGNED NOT NULL DEFAULT 1,
-  created_by INT UNSIGNED NULL,
+  created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -31,7 +58,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
 
 CREATE TABLE IF NOT EXISTS campaign_members (
   campaign_id INT UNSIGNED NOT NULL,
-  user_id INT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
   role ENUM('gm','player') NOT NULL DEFAULT 'player',
   PRIMARY KEY (campaign_id, user_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -92,7 +119,7 @@ CREATE TABLE IF NOT EXISTS events (
   title VARCHAR(200) NOT NULL,
   body TEXT,
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
-  created_by INT UNSIGNED NULL,
+  created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_events_day (campaign_id, abs_day),
@@ -103,7 +130,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS event_notes (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   event_id INT UNSIGNED NOT NULL,
-  user_id INT UNSIGNED NULL,
+  user_id BIGINT UNSIGNED NULL,
   body TEXT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,

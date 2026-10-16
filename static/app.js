@@ -1,84 +1,27 @@
 /* Campaign Chronicle — browser app (plain JS, no build step).
- * All user-supplied text is inserted with textContent (via h()), never innerHTML.
- * Permissions are enforced by api.php; the UI only hides controls a role can't use. */
+ * All user-supplied text is inserted with textContent (via el()), never innerHTML.
+ * Permissions are enforced by api/index.php; the UI only hides controls a role can't use.
+ * Sign-in is Google/GitHub with an admin approval queue, the same as Sinless (api/auth/). */
 (function () {
   'use strict';
   const E = window.Engine;
 
-  // ------------------------------------------------------------ DOM helpers
-  function h(tag, attrs, ...kids) {
-    const el = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs || {})) {
-      if (v === null || v === undefined || v === false) continue;
-      if (k === 'class') el.className = v;
-      else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
-      else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
-      else if (k === 'value') el.value = v;
-      else if (k === 'checked') el.checked = !!v;
-      else el.setAttribute(k, v === true ? '' : v);
-    }
-    for (const kid of kids.flat(Infinity)) {
-      if (kid === null || kid === undefined || kid === false) continue;
-      el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
-    }
-    return el;
-  }
-  const $ = (s, el = document) => el.querySelector(s);
+  const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog } = KIT;
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
   function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
-  function toast(msg, bad) {
-    const t = $('#toast');
-    t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
-    clearTimeout(toast._t); toast._t = setTimeout(() => (t.className = ''), 3200);
-  }
   function field(label, input, hint, tipText) {
-    return h('label', { class: 'field' }, h('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? h('small', { class: 'muted' }, hint) : null);
+    return el('label', { class: 'field' }, el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? el('small', { class: 'muted' }, hint) : null);
   }
-
-  // ------------------------------------------------------------ tooltips
-  // Any element with data-tip shows a tooltip on hover (and on keyboard focus). The "?" icons from tip()
-  // also open on tap, so touch screens can read them. One floating box, kept inside the viewport.
-  /** A small "?" icon that explains the thing next to it. */
-  function tip(text) {
-    return h('span', { class: 'tip', tabindex: 0, role: 'button', 'aria-label': text, 'data-tip': text,
-      onclick: e => { e.preventDefault(); e.stopPropagation(); showTip(e.currentTarget); },
-      onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showTip(e.currentTarget); } } }, '?');
-  }
-  let tipBox = null, tipEl = null;
-  function showTip(el) {
-    if (!tipBox) document.body.append(tipBox = h('div', { id: 'tipbox', role: 'tooltip' }));
-    tipEl = el;
-    tipBox.textContent = el.dataset.tip;
-    tipBox.className = 'show';
-    const r = el.getBoundingClientRect(), bw = tipBox.offsetWidth, bh = tipBox.offsetHeight;
-    const x = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8));
-    const y = r.bottom + 8 + bh > innerHeight - 8 && r.top - bh - 8 > 0 ? r.top - bh - 8 : r.bottom + 8;
-    tipBox.style.left = `${x}px`; tipBox.style.top = `${y}px`;
-  }
-  function hideTip() { tipEl = null; if (tipBox) tipBox.className = ''; }
-  const tipTarget = e => (e.target instanceof Element ? e.target.closest('[data-tip]') : null);
-  const canHover = matchMedia('(hover: hover)');
-  document.addEventListener('mouseover', e => {
-    if (!canHover.matches) return; // touch: only the "?" icons open, on tap
-    const el = tipTarget(e);
-    if (el) { if (el !== tipEl) showTip(el); } else if (tipEl) hideTip();
-  });
-  document.addEventListener('focusin', e => { const el = tipTarget(e); if (el && el.matches(':focus-visible')) showTip(el); });
-  document.addEventListener('focusout', hideTip);
-  document.addEventListener('click', e => { if (!tipTarget(e)) hideTip(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
-  window.addEventListener('scroll', hideTip, true);
   function select(options, value, attrs) {
-    return h('select', attrs || {}, options.map(([v, l]) => h('option', { value: v, selected: String(v) === String(value) }, l)));
+    return el('select', attrs || {}, options.map(([v, l]) => el('option', { value: v, selected: String(v) === String(value) }, l)));
   }
-  const btn = (label, onclick, cls, tipText) => h('button', { type: 'button', class: cls || '', onclick, 'data-tip': tipText }, label);
-  const tipped = (el, text) => { el.dataset.tip = text; return el; };
+  const btn = (label, onclick, cls, tipText) => el('button', { type: 'button', class: cls || '', onclick, 'data-tip': tipText }, label);
   function formData(form) {
     const o = {};
-    for (const el of form.elements) {
-      if (!el.name) continue;
-      o[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+    for (const f of form.elements) {
+      if (!f.name) continue;
+      o[f.name] = f.type === 'checkbox' ? f.checked : f.value;
     }
     return o;
   }
@@ -90,16 +33,19 @@
   }
 
   // ------------------------------------------------------------ API
-  const S = { user: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
+  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
+  /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
+  const APP_VERSION = '2';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
-    const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: {} };
+    const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
-    const res = await fetch('api.php?' + qs, opt);
+    const res = await fetch('api/index.php?' + qs, opt);
     let data;
     try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
-    if (res.status === 401 && action !== 'login') { S.user = null; location.hash = '#/login'; }
-    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    // Signed out, or access changed while the page was open: go back through the gate.
+    if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
+    if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
     return data;
   }
   const post = (action, body, cid) => api(action, { query: cid ? { cid } : {}, body });
@@ -195,33 +141,33 @@
 
   // ------------------------------------------------------------ shared widgets
   function visPill(v) {
-    return h('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this shift.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
+    return el('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this shift.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
   }
   const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Noon and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
-  const roleBadge = role => h('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
-  const secretTag = () => h('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
-  const holidayChip = x => h('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
+  const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
+  const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
+  const holidayChip = x => el('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
   function moonBadges(d) {
-    return E.moons(cal(), d).map(m => h('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
-      h('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
+    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
+      el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
   function weatherText(w, what = FORECAST_TIP) {
-    if (!w) return h('span', { class: 'muted' }, 'No weather recorded');
+    if (!w) return el('span', { class: 'muted' }, 'No weather recorded');
     const def = E.WEATHER[w.type] || {};
     const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
-    return h('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
+    return el('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
   /** The weather in each of day d's four shifts, worked out from the day's forecast w. */
   const shiftWx = (d, region, w) => E.shiftWeather(cal(), S.camp.seed, region, d, w);
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
-    const y = h('input', { type: 'number', value: p.year, class: 'w-year', 'aria-label': 'Year' });
+    const y = el('input', { type: 'number', value: p.year, class: 'w-year', 'aria-label': 'Year' });
     const m = select(c.months.map((mo, i) => [i, mo.name]), p.month, { 'aria-label': 'Month' });
-    const d = h('input', { type: 'number', min: 1, value: p.day, class: 'w-day', 'aria-label': 'Day' });
-    const wrap = h('span', { class: 'datepick' }, d, m, y);
+    const d = el('input', { type: 'number', min: 1, value: p.day, class: 'w-day', 'aria-label': 'Day' });
+    const wrap = el('span', { class: 'datepick' }, d, m, y);
     wrap.getAbs = () => {
       const yy = Number(y.value), mm = Number(m.value);
       const len = E.monthLength(c, yy, mm);
@@ -233,102 +179,128 @@
   // ------------------------------------------------------------ top nav
   function renderNav() {
     const n = $('#topnav');
-    if (!S.user) { n.replaceChildren(); return; }
     n.replaceChildren(...clean([
-      h('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns'),
-      S.user.is_admin ? h('a', { href: '#/admin', 'data-tip': 'Create and manage accounts (site admins only)' }, 'Users') : null,
-      h('a', { href: '#/account', 'data-tip': 'Your account: change your password' }, S.user.display_name),
-      btn('Log out', async () => {
-        await post('logout', {}).catch(() => {});
-        S.user = null; S.camp = null;
-        try { S.csrf = (await api('me')).csrf; } catch { /* fresh token comes with the next page load */ }
-        location.hash = '#/login'; route();
-      }, 'link'),
+      S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
+      S.user?.is_admin ? el('a', { href: '#/admin', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
+      S.user ? el('a', { href: '#/account', 'data-tip': `Signed in as ${S.user.email}. Your display preferences` }, S.user.name || S.user.email) : null,
+      themeToggle(),
+      S.user || S.pending ? btn('Sign out', signOut, 'link') : null,
     ]));
   }
 
-  // ------------------------------------------------------------ login / account / admin
-  function viewLogin() {
-    const f = h('form', { class: 'card narrow' },
-      h('h1', {}, 'Sign in'),
-      field('Username', h('input', { name: 'username', autocomplete: 'username', required: true })),
-      field('Password', h('input', { name: 'password', type: 'password', autocomplete: 'current-password', required: true })),
-      h('button', { class: 'primary' }, 'Sign in'));
-    f.addEventListener('submit', async e => {
-      e.preventDefault();
-      try {
-        const r = await post('login', formData(f));
-        S.user = r.user; S.csrf = r.csrf; location.hash = '#/'; renderNav(); route();
-      } catch (err) { toast(err.message, true); }
-    });
-    mount(f);
+  // ------------------------------------------------------------ theme (same control and storage scheme as Sinless)
+  const THEME_KEY = 'chronicle:theme';
+  function themeToggle() {
+    const isLight = () => document.documentElement.dataset.theme === 'light';
+    const b = btn(isLight() ? '☀' : '🌙', () => {
+      const t = isLight() ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+      try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: just this page */ }
+      b.textContent = t === 'light' ? '☀' : '🌙';
+    }, 'theme-toggle', 'Toggle light / dark mode');
+    b.setAttribute('aria-label', 'Toggle light / dark mode');
+    return b;
+  }
+
+  // ------------------------------------------------------------ sign-in gate / account / admin
+  const PROVIDER_LABEL = { google: 'Google', github: 'GitHub' };
+  async function signOut() {
+    await fetch('api/auth/logout.php', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': S.csrf } }).catch(() => {});
+    S.user = null; S.camp = null; S.pending = null;
+    location.hash = '#/';
+    boot();
+  }
+  /** Sign-in card: one button per configured provider. Returns here after OAuth. */
+  function viewLogin(providers) {
+    const ret = encodeURIComponent(location.pathname + location.search + location.hash);
+    mount(el('div', { class: 'card narrow auth-card' },
+      el('h1', {}, 'Campaign Chronicle'),
+      el('p', { class: 'muted' }, 'Sign in to see your campaigns. It\'s the same Google or GitHub sign-in as Sinless.'),
+      providers.length
+        ? el('div', { class: 'auth-buttons' }, providers.map(p => el('a', { class: `button primary btn-oauth ${p}`, href: `api/auth/login.php?provider=${p}&return=${ret}` }, `Sign in with ${PROVIDER_LABEL[p] || p}`)))
+        : el('p', { class: 'bad' }, 'No sign-in providers are set up on the server yet.'),
+      new URLSearchParams(location.search).has('auth_error') ? el('p', { class: 'bad' }, 'Sign-in didn\'t complete. Please try again.') : null));
+  }
+  let pendingTimer = null;
+  /** Signed in but not (or no longer) approved. Polls, and lets them in once an admin approves. */
+  function viewPending(u) {
+    const revoked = u.status === 'revoked';
+    mount(el('div', { class: 'card narrow auth-card' },
+      el('h1', {}, revoked ? 'Access removed' : 'Awaiting approval'),
+      el('p', {}, revoked
+        ? 'An administrator has removed your access. Your notes are kept if it is restored.'
+        : 'Your account has been created and is waiting for the site admin to approve it. You\'ll get in automatically once approved, with no need to reload.'),
+      el('p', { class: 'muted' }, `Signed in as ${u.email}`),
+      btn('Sign out', signOut)));
+    clearTimeout(pendingTimer);
+    if (!revoked) pendingTimer = setTimeout(boot, 20000);
   }
 
   function viewAccount() {
-    const prefs = h('form', { class: 'card narrow' }, h('h2', {}, 'Preferences'),
+    const prefs = el('form', { class: 'card narrow' }, el('h2', {}, 'Preferences'),
+      el('p', { class: 'muted' }, `Signed in as ${S.user.email}. Your name comes from your Google or GitHub account.`),
       field('Temperature units', select([['', 'Campaign default'], ...TEMP_OPTIONS], S.user.prefs?.temp_unit || '', { name: 'temp_unit' }),
         'Only changes what you see. Each campaign\'s GM sets the default for players who leave this alone.'),
-      h('button', { class: 'primary' }, 'Save'));
+      el('button', { class: 'primary' }, 'Save'));
     prefs.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(prefs).temp_unit;
       try { S.user.prefs = (await post('prefs_save', { temp_unit: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
-    const f = h('form', { class: 'card narrow' }, h('h2', {}, 'Change password'),
-      field('Current password', h('input', { name: 'current', type: 'password', required: true })),
-      field('New password', h('input', { name: 'new', type: 'password', minlength: 8, required: true })),
-      h('button', { class: 'primary' }, 'Save'));
-    f.addEventListener('submit', async e => {
-      e.preventDefault();
-      try { await post('password', formData(f)); toast('Password changed'); f.reset(); } catch (err) { toast(err.message, true); }
-    });
-    mount(prefs, f);
+    mount(prefs);
   }
 
+  const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
   async function viewAdmin() {
     const { users } = await api('users');
-    const editForm = (u = {}) => {
-      const f = h('form', { class: 'card' }, h('h3', {}, u.id ? `Edit ${u.username}` : 'New user'),
-        h('div', { class: 'grid2' },
-          field('Username', h('input', { name: 'username', value: u.username || '', required: true })),
-          field('Display name', h('input', { name: 'display_name', value: u.display_name || '' })),
-          field(u.id ? 'New password (blank = keep)' : 'Password', h('input', { name: 'password', type: 'password', minlength: 8, required: !u.id })),
-          field('Site admin', h('input', { type: 'checkbox', name: 'is_admin', checked: !!Number(u.is_admin) }), 'Admins can manage users and act as GM in every campaign')),
-        h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Save'), btn('Cancel', () => viewAdmin())));
-      f.addEventListener('submit', async e => {
-        e.preventDefault();
-        try { await post('user_save', { ...formData(f), id: u.id }); toast('Saved'); viewAdmin(); } catch (err) { toast(err.message, true); }
-      });
-      return f;
+    const act = (label, fn, cls, tipText) => btn(label, async () => {
+      try { if (await fn() !== false) viewAdmin(); } catch (err) { toast(err.message, true); }
+    }, `small ${cls || ''}`, tipText);
+    const row = u => {
+      const legacy = u.provider === 'legacy';
+      const self = Number(u.id) === S.user.id;
+      return el('tr', {},
+        el('td', {}, el('strong', {}, u.display_name || '(no name)'), Number(u.is_admin) ? el('span', { class: 'role gm' }, 'Admin') : null),
+        el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
+          el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
+        el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
+        el('td', { class: 'actions' },
+          legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
+            const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
+            if (email === null) return false;
+            await post('user_email', { id: u.id, email });
+          }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
+          !self && u.status !== 'approved' ? act('Approve', () => post('user_status', { id: u.id, status: 'approved' }), 'primary', 'Let them in. A GM can then add them to a campaign by email') : null,
+          !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
+          !self ? act('Delete', async () => {
+            if (!await confirmDialog(`Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`, { ok: 'Delete', danger: true })) return false;
+            await post('user_delete', { id: u.id });
+          }, 'danger', 'Delete this account. Their campaign memberships go with it') : null));
     };
-    const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Users'), btn('+ New user', () => mount(editForm()), 'primary')),
-      h('table', { class: 'tbl' }, h('tr', {}, h('th', {}, 'Username'), h('th', {}, 'Name'), h('th', {}, 'Admin'), h('th', {})),
-        users.map(u => h('tr', {}, h('td', {}, u.username), h('td', {}, u.display_name), h('td', {}, Number(u.is_admin) ? 'Yes' : ''),
-          h('td', { class: 'actions' }, tipped(btn('Edit', () => mount(editForm(u)), 'small'), 'Change name, password or admin rights'),
-            u.id !== S.user.id ? btn('Delete', async () => {
-              if (!confirm(`Delete user ${u.username}?`)) return;
-              try { await post('user_delete', { id: u.id }); viewAdmin(); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Delete this account. Their campaign memberships go with it') : null)))));
-    mount(list, h('p', { class: 'muted pad' }, 'Create accounts for your players here, then add them to a campaign from its Members tab.'));
+    const pending = users.filter(u => u.status === 'pending').length;
+    mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
+      pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
+      el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
+      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM adds them to a campaign by email from its Members tab. Admins are set in the server config (admin_identities).'));
   }
 
   // ------------------------------------------------------------ campaign list / create
   async function viewCampaigns() {
     const { campaigns } = await api('campaigns');
     S.camp = null;
-    const list = h('div', { class: 'card' },
-      h('div', { class: 'row spread' }, h('h1', {}, 'Your campaigns'), btn('+ New campaign', viewCreate, 'primary')),
-      campaigns.length ? h('ul', { class: 'camplist' }, campaigns.map(c =>
-        h('li', {}, h('a', { href: `#/c/${c.id}` }, h('strong', {}, c.name), roleBadge(c.role)),
-          c.description ? h('p', { class: 'muted' }, c.description) : null)))
-        : h('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.'));
+    const list = el('div', { class: 'card' },
+      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', viewCreate, 'primary')),
+      campaigns.length ? el('ul', { class: 'camplist' }, campaigns.map(c =>
+        el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
+          c.description ? el('p', { class: 'muted' }, c.description) : null)))
+        : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.'));
     mount(list);
   }
 
   function viewCreate() {
     let preset = 'gregorian';
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
-    const startWrap = h('div');
+    const startWrap = el('div');
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(E.PRESETS[preset].calendar)); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
@@ -338,20 +310,20 @@
       S.camp = saved;
       startWrap.replaceChildren(field('Starting date', picker, 'You can change "now" at any time later.'));
     };
-    const seasonWrap = h('div');
+    const seasonWrap = el('div');
     let seasons;
     const drawSeasons = () => {
       seasons = seasonEditor(tmpCal());
       const hemi = E.PRESETS[preset].calendar.hemisphere;
-      seasonWrap.replaceChildren(h('h3', {}, 'Seasons'),
-        hemi ? h('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`) : null, seasons);
+      seasonWrap.replaceChildren(el('h3', {}, 'Seasons'),
+        hemi ? el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`) : null, seasons);
     };
     const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
-    const climateWrap = h('div');
+    const climateWrap = el('div');
     let climateSel;
     const drawClimate = () => {
       climateSel = climateSelect(homeRegion().settings.climate || 'temperate', { name: 'climate' });
-      const hint = h('small', { class: 'muted' });
+      const hint = el('small', { class: 'muted' });
       const sync = () => {
         const k = E.KOPPEN[climateSel.value.replace('koppen:', '')];
         hint.textContent = k ? `Typical of ${k.where}. ` : '';
@@ -359,18 +331,18 @@
       };
       climateSel.addEventListener('change', sync); sync();
       climateSel.querySelector('option[value=koppen_custom]').remove(); climateSel.querySelector('option[value=custom]').remove(); // built later, per region
-      climateWrap.replaceChildren(h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Home region climate', tip(CLIMATE_TIP)), climateSel, hint));
+      climateWrap.replaceChildren(el('label', { class: 'field' }, el('span', { class: 'lbl' }, 'Home region climate', tip(CLIMATE_TIP)), climateSel, hint));
     };
     presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); drawClimate(); });
     drawStart(); drawSeasons(); drawClimate();
     const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
-    const f = h('form', { class: 'card narrow' }, h('h1', {}, 'New campaign'),
-      field('Name', h('input', { name: 'name', required: true, maxlength: 150 })),
-      field('Description', h('textarea', { name: 'description', rows: 2 })),
+    const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
+      field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
+      field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
         'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
       startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
-      h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
+      el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       const p = E.PRESETS[preset], v = formData(f);
@@ -398,7 +370,7 @@
   };
   function campaignHeader(active) {
     const c = cal(), d = today(), sh = E.mod(nowShift(), 4);
-    const head = h('section', { class: 'nowbar' });
+    const head = el('section', { class: 'nowbar' });
     const draw = async () => {
       let dayRow = null;
       try { dayRow = (await fetchRange(d, d)).days.get(d) || null; } catch { /* ignore */ }
@@ -407,33 +379,33 @@
       const v = E.visibility(c, region, sw, d, sh, null);
       const hol = E.holidaysOn(c, S.holidays, d);
       head.replaceChildren(...clean([
-        h('div', { class: 'now-main' },
-          h('div', { class: 'now-title' }, h('h1', {}, S.camp.name), h('span', { class: `role ${S.role}`, 'data-tip': isGM()
+        el('div', { class: 'now-main' },
+          el('div', { class: 'now-title' }, el('h1', {}, S.camp.name), el('span', { class: `role ${S.role}`, 'data-tip': isGM()
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
-          h('div', { class: 'now-time' },
-            h('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
-            h('span', { class: 'now-meta' }, region ? h('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
+          el('div', { class: 'now-time' },
+            el('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
+            el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
               weatherText(sw, `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
               hol.map(holidayChip)))),
         isGM() ? passTimeWidget() : null]));
     };
     draw();
-    const tabs = h('nav', { class: 'tabs' }, TABS.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => h('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l)));
+    const tabs = el('nav', { class: 'tabs' }, TABS.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => el('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l)));
     return [head, tabs];
   }
 
   function passTimeWidget() {
     const def = { day: 'shift', week: 'day', month: 'week' }[settings().time_unit || 'day'] || 'shift';
-    const amt = h('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });
+    const amt = el('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });
     const unit = select([['shift', 'shift(s)'], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit',
       'data-tip': 'A day has four shifts. Months and years follow this campaign\'s calendar' });
-    const act = h('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow',
+    const act = el('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow',
       'data-tip': 'Written into every shift that passes, e.g. "Marching to Altdorf". Shifts that already have an activity keep it' });
     const go = btn('Pass time ▶', null, 'primary', 'Move "now" forward and roll weather for every new day');
     go.addEventListener('click', busy(go, async () => {
       const n = unitShifts(unit.value, Number(amt.value) || 0);
-      if (Math.abs(n) > 4 * 3650 && !confirm(`That jumps ${Math.round(Math.abs(n) / 4)} days. Continue?`)) return;
+      if (Math.abs(n) > 4 * 3650 && !await confirmDialog(`That jumps ${Math.round(Math.abs(n) / 4)} days. Continue?`)) return;
       await passShifts(n, act.value.trim());
       vs().anchor = today();
       toast(`Now: ${E.fmtShift(cal(), nowShift())}`);
@@ -441,7 +413,7 @@
     }));
     const back = btn('◀ 1 shift', null, 'small', 'Step back one shift. Recorded weather, notes and activities stay');
     back.addEventListener('click', busy(back, async () => { await passShifts(-1); route(); }));
-    return h('div', { class: 'passtime' }, h('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, go, back);
+    return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, go, back);
   }
 
   // ------------------------------------------------------------ calendar tab
@@ -450,7 +422,7 @@
 
   async function viewCalendar() {
     const c = cal(), st = vs();
-    const body = h('div', { class: 'card' });
+    const body = el('div', { class: 'card' });
     const anchor = st.anchor;
     let from, to, title, seasonLine = null;
     if (st.mode === 'month') {
@@ -459,8 +431,8 @@
       to = from + E.monthLength(c, p.year, p.month) - 1;
       title = `${c.months[p.month].name} ${E.yearLabel(c, p.year)}`;
       const segs = (c.seasons || []).length ? E.monthSeasons(c, p.year)[p.month].seasons : [];
-      if (segs.length) seasonLine = h('div', { class: 'seasonline' }, segs.map((x, i) =>
-        h('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
+      if (segs.length) seasonLine = el('div', { class: 'seasonline' }, segs.map((x, i) =>
+        el('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
     } else {
       // walk back to the first weekday, then forward through a full week (festival days have no weekday)
       const wl = E.weekLength(c);
@@ -481,16 +453,16 @@
       route();
     };
     const jump = datePicker(anchor);
-    const toolbar = h('div', { class: 'calbar' },
-      btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), h('h2', {}, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
+    const toolbar = el('div', { class: 'calbar' },
+      btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), el('h2', {}, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
       btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
-      h('span', { class: 'seg' },
+      el('span', { class: 'seg' },
         btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
         btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', 'One row per day showing every shift, its visibility and activity')),
-      h('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
+      el('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
 
     mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
-    body.append(h('p', { class: 'muted' }, 'Loading…'));
+    body.append(el('p', { class: 'muted' }, 'Loading…'));
     const data = await fetchRange(from, to);
     const missing = []; for (let d = from; d <= to; d++) if (!data.days.get(d)?.weather) missing.push(d);
     const content = st.mode === 'month' ? monthGrid(from, to, data) : weekList(from, to, data);
@@ -498,7 +470,7 @@
     if (isGM() && missing.length) {
       const g = btn(`Generate weather for ${missing.length} day(s) here`, null, 'small', 'Roll weather now for the days shown that have none yet, using each day\'s region');
       g.addEventListener('click', busy(g, async () => { await ensureWeather(from, to); route(); }));
-      body.append(h('div', { class: 'row' }, g, h('small', { class: 'muted' }, 'Days are generated automatically as time passes; this forecasts ahead. Players only see future weather if you allow it in Settings.')));
+      body.append(el('div', { class: 'row' }, g, el('small', { class: 'muted' }, 'Days are generated automatically as time passes; this forecasts ahead. Players only see future weather if you allow it in Settings.')));
     }
   }
 
@@ -519,7 +491,7 @@
     return out;
   }
 
-  const evLine = e => h('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
+  const evLine = e => el('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
     Number(e.is_secret) ? '🔒 ' : '• ', e.title);
   function dayCell(d, data, compact) {
     const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
@@ -530,30 +502,30 @@
     if (d < today()) cls.push('past');
     if (p.intercalary) cls.push('festival');
     if (evs.length || hol.length) cls.push('has-ev');
-    return h('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
-      h('div', { class: 'dc-top' }, h('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
-        h('span', { class: 'dc-icons' }, def ? h('span', { 'data-tip': E.weatherLabel(w, tempUnit()) }, def.icon) : null,
-          compact ? null : keyMoonPhases(d).map(m => h('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)))),
-      hol.map(x => h('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
+    return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
+      el('div', { class: 'dc-top' }, el('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
+        el('span', { class: 'dc-icons' }, def ? el('span', { 'data-tip': E.weatherLabel(w, tempUnit()) }, def.icon) : null,
+          compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)))),
+      hol.map(x => el('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
       evs.slice(0, 3).map(evLine),
-      evs.length > 3 ? h('div', { class: 'muted small', 'data-tip': evs.slice(3).map(e => e.title).join('\n') }, `+${evs.length - 3} more`) : null,
-      row?.has_notes ? h('div', { class: 'muted small', 'data-tip': 'This day has notes. Open it to read them' }, '📝') : null);
+      evs.length > 3 ? el('div', { class: 'muted small', 'data-tip': evs.slice(3).map(e => e.title).join('\n') }, `+${evs.length - 3} more`) : null,
+      row?.has_notes ? el('div', { class: 'muted small', 'data-tip': 'This day has notes. Open it to read them' }, '📝') : null);
   }
 
   function monthGrid(from, to, data) {
     const c = cal(), wl = E.weekLength(c);
     const p = E.fromAbs(c, from);
     if (c.months[p.month].intercalary || !c.weekdays.length) {
-      return h('div', { class: 'grid-free', style: { gridTemplateColumns: `repeat(${Math.min(wl, to - from + 1)}, minmax(0,1fr))` } },
+      return el('div', { class: 'grid-free', style: { gridTemplateColumns: `repeat(${Math.min(wl, to - from + 1)}, minmax(0,1fr))` } },
         Array.from({ length: to - from + 1 }, (_, i) => dayCell(from + i, data)));
     }
     const lead = E.weekday(c, from) || 0;
     const cells = [];
-    for (let i = 0; i < lead; i++) cells.push(h('div', { class: 'daycell empty' }));
+    for (let i = 0; i < lead; i++) cells.push(el('div', { class: 'daycell empty' }));
     for (let d = from; d <= to; d++) cells.push(dayCell(d, data));
-    return h('div', {},
-      h('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => h('div', { 'data-tip': n }, n.slice(0, 3)))),
-      h('div', { class: 'grid', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, cells));
+    return el('div', {},
+      el('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => el('div', { 'data-tip': n }, n.slice(0, 3)))),
+      el('div', { class: 'grid', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, cells));
   }
 
   function weekList(from, to, data) {
@@ -563,19 +535,19 @@
       const row = data.days.get(d), w = row?.weather, sh = dayShifts(data, d);
       const reg = regionById(row?.region_id) || currentRegion(), sws = shiftWx(d, reg, w);
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
-      rows.push(h('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
-        h('div', { class: 'wr-date' }, h('strong', {}, E.fmtDate(c, d)), h('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
+      rows.push(el('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
+        el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
           hol.map(holidayChip), evs.map(evLine)),
-        h('div', { class: 'wr-shifts' }, [0, 1, 2, 3].map(i => {
+        el('div', { class: 'wr-shifts' }, [0, 1, 2, 3].map(i => {
           const s = sh[i] || {};
           const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
           const isNow = d * 4 + i === nowShift();
-          return h('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? 'This is the current shift' : null },
-            h('div', { class: 'sb-head' }, h('span', {}, names[i], sw ? h('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
-            h('div', { class: 'sb-act' }, s.activity || h('span', { class: 'muted' }, '—')));
+          return el('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? 'This is the current shift' : null },
+            el('div', { class: 'sb-head' }, el('span', {}, names[i], sw ? el('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
+            el('div', { class: 'sb-act' }, s.activity || el('span', { class: 'muted' }, '—')));
         }))));
     }
-    return h('div', { class: 'weeklist' }, rows);
+    return el('div', { class: 'weeklist' }, rows);
   }
 
   // ------------------------------------------------------------ day drill-down
@@ -590,35 +562,35 @@
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
 
-    const nav = h('div', { class: 'calbar' },
-      h('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
-      h('h2', {}, E.fmtDate(c, d)),
-      h('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
+    const nav = el('div', { class: 'calbar' },
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
+      el('h2', {}, E.fmtDate(c, d)),
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
       btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'));
 
     // --- overview card
-    const overview = h('div', { class: 'card' },
-      h('div', { class: 'kv' },
-        h('div', {}, h('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
-        h('div', {}, h('span', { class: 'lbl' }, 'Region'), region ? h('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
-        h('div', {}, h('span', { class: 'lbl' }, 'Forecast', tip(FORECAST_TIP)), weatherText(w)),
-        h('div', {}, h('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => h('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
-        hol.length ? h('div', {}, h('span', { class: 'lbl' }, 'Holidays'), hol.map(x => h('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
-        d === today() ? h('div', {}, h('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
-      !isGM() && row.notes ? h('div', { class: 'notes' }, h('span', { class: 'lbl' }, 'Notes'), h('p', { class: 'pre' }, row.notes)) : null);
+    const overview = el('div', { class: 'card' },
+      el('div', { class: 'kv' },
+        el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
+        el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
+        el('div', {}, el('span', { class: 'lbl' }, 'Forecast', tip(FORECAST_TIP)), weatherText(w)),
+        el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
+        hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
+        d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
+      !isGM() && row.notes ? el('div', { class: 'notes' }, el('span', { class: 'lbl' }, 'Notes'), el('p', { class: 'pre' }, row.notes)) : null);
 
     if (isGM()) overview.append(dayEditor(d, row, region, w));
 
     // --- shifts
     const sws = shiftWx(d, region, w);
-    const shiftCards = h('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null)));
+    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null)));
 
     // --- events
-    const evCard = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h3', {}, 'Events'),
+    const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
       (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
-      r.events.length ? r.events.map(e => eventView(e, d)) : h('p', { class: 'muted' }, 'No events on this day.'));
+      r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
-    mount(...campaignHeader('calendar'), nav, overview, h('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
+    mount(...campaignHeader('calendar'), nav, overview, el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
   }
 
   function dayEditor(d, row, region, w) {
@@ -626,18 +598,18 @@
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
     const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
-    const temp = h('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
+    const temp = el('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, n]), w?.wind || 0, { name: 'wind' });
-    const notes = h('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
-    const gmn = h('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
-    const f = h('form', { class: 'dayedit' },
-      h('div', { class: 'grid2' },
+    const notes = el('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
+    const gmn = el('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
+    const f = el('form', { class: 'dayedit' },
+      el('div', { class: 'grid2' },
         field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
-        field('Weather', h('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
+        field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           'Set the day\'s weather by hand. Rain, fog, snow and the like lower visibility; see the shift cards below for the exact effect.'),
         field('Day notes (players can see)', notes),
         field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
-      h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save day'),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save day'),
         tipped(btn('🎲 Re-roll weather', async () => {
           const reg = regionById(regSel.value) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
@@ -667,23 +639,23 @@
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
-    const card = h('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
-      h('div', { class: 'row spread' }, h('h4', {}, names[i], isNow ? h('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
-      sw ? h('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`)) : null,
-      h('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
+    const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
+      el('div', { class: 'row spread' }, el('h4', {}, names[i], isNow ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
+      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`)) : null,
+      el('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
-      card.append(h('p', { class: 'pre' }, s.activity || h('span', { class: 'muted' }, 'No activity recorded.')));
+      card.append(el('p', { class: 'pre' }, s.activity || el('span', { class: 'muted' }, 'No activity recorded.')));
       return card;
     }
-    const act = h('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift', 'data-tip': 'Players can see this' });
-    const gmn = h('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
+    const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift', 'data-tip': 'Players can see this' });
+    const gmn = el('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
     const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
     const save = btn('Save', null, 'small primary', 'Save this shift\'s activity, notes and visibility');
     save.addEventListener('click', busy(save, async () => {
       await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value }, S.camp.id);
       toast(`${names[i]} saved`); route();
     }));
-    card.append(act, gmn, h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Visibility ', ov,
+    card.append(act, gmn, el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
       tip('Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this shift, e.g. a magical darkness or a burning city.')), save,
       !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small', 'Move the campaign clock to this shift') : null));
     return card;
@@ -693,33 +665,33 @@
     const names = shiftNames(), c = cal();
     const mine = Number(e.created_by) === S.user.id;
     const span = e.end_day !== null && e.end_day !== undefined ? ` (${E.fmtDate(c, Number(e.abs_day), { noWeekday: true })} → ${E.fmtDate(c, Number(e.end_day), { noWeekday: true })})` : '';
-    const box = h('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
-    const notesList = h('div', { class: 'enotes' }, (e.notes || []).map(n => h('div', { class: 'enote' },
-      h('div', { class: 'pre' }, n.body),
-      h('small', { class: 'muted' }, `— ${n.author || 'unknown'}, ${n.created_at}`,
+    const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
+    const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote' },
+      el('div', { class: 'pre' }, n.body),
+      el('small', { class: 'muted' }, `— ${n.author || 'unknown'}, ${n.created_at}`,
         (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
-          if (!confirm('Delete this note?')) return;
+          if (!await confirmDialog('Delete this note?')) return;
           try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'link small'), 'Delete this note') : null))));
-    const noteIn = h('textarea', { rows: 2, placeholder: 'Add a note…' });
+    const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…' });
     const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
     addNote.addEventListener('click', busy(addNote, async () => {
       if (!noteIn.value.trim()) return;
       await post('note_add', { event_id: e.id, body: noteIn.value }, S.camp.id); route();
     }));
     box.append(...[
-      h('div', { class: 'row spread' },
-        h('h4', {}, Number(e.is_secret) ? secretTag() : null, e.title),
-        h('small', { class: 'muted' }, e.shift !== null && e.shift !== undefined ? names[e.shift] : 'All day', span)),
-      e.body ? h('p', { class: 'pre' }, e.body) : null,
-      h('small', { class: 'muted' }, `Added by ${e.author || 'unknown'}`),
-      (isGM() || mine) ? h('div', { class: 'row' },
+      el('div', { class: 'row spread' },
+        el('h4', {}, Number(e.is_secret) ? secretTag() : null, e.title),
+        el('small', { class: 'muted' }, e.shift !== null && e.shift !== undefined ? names[e.shift] : 'All day', span)),
+      e.body ? el('p', { class: 'pre' }, e.body) : null,
+      el('small', { class: 'muted' }, `Added by ${e.author || 'unknown'}`),
+      (isGM() || mine) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
         btn('Delete', async () => {
-          if (!confirm(`Delete "${e.title}"?`)) return;
+          if (!await confirmDialog(`Delete "${e.title}"?`)) return;
           try { await post('event_delete', { id: e.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Delete this event and its notes')) : null,
-      notesList, h('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
+      notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
 
@@ -728,15 +700,15 @@
     const start = Number(e.abs_day ?? d);
     const lasts = e.end_day !== null && e.end_day !== undefined ? Number(e.end_day) - start + 1 : 1;
     const startPick = datePicker(start);
-    const f = h('form', { class: 'event editing' },
-      h('div', { class: 'grid2' },
-        field('Title', h('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
+    const f = el('form', { class: 'event editing' },
+      el('div', { class: 'grid2' },
+        field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
         field('Shift', select([['', 'All day'], ...names.map((n, i) => [i, n])], e.shift ?? '', { name: 'shift' }), null, 'When in the day it happens. "All day" for things that span the whole day'),
         field('Starts', startPick),
-        field('Lasts (days)', h('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
-        isGM() ? field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), null, 'Players won\'t see this event or its notes') : null),
-      field('Details', h('textarea', { name: 'body', rows: 4, value: e.body || '' })),
-      h('div', { class: 'row' }, h('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
+        field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
+        isGM() ? field('Secret (GM only)', el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), null, 'Players won\'t see this event or its notes') : null),
+      field('Details', el('textarea', { name: 'body', rows: 4, value: e.body || '' })),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
       const v = formData(f), a = startPick.getAbs(), n = Math.max(1, Number(v.lasts) || 1);
@@ -750,7 +722,7 @@
 
   // ------------------------------------------------------------ travel tab
   function viewTravel() {
-    const out = h('div', { class: 'travel-out' });
+    const out = el('div', { class: 'travel-out' });
     const modeSel = select([
       ['ground', 'Overland / sea / air (speed × hours per day)'],
       ['hohmann', 'Orbital transfer (Hohmann, minimum fuel)'],
@@ -758,48 +730,48 @@
       ['relativistic', 'Interstellar at relativistic speed'],
       ['ftl', 'FTL / jump drive'],
     ], 'ground', { class: 'travel-mode' });
-    const fieldsWrap = h('div', { class: 'grid2' });
+    const fieldsWrap = el('div', { class: 'grid2' });
     const unitSel = () => select([['km', 'km'], ['mi', 'miles'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
     const drawFields = () => {
       const m = modeSel.value;
       const F = [];
       if (m === 'ground') {
-        F.push(field('Distance', h('input', { name: 'distance', type: 'number', step: 'any', value: 60 }), 'Any unit — miles, km, leagues…'),
-          field('Speed per hour (same unit)', h('input', { name: 'speed', type: 'number', step: 'any', value: 3 }), 'Walking ≈ 3 mph / 5 km/h; horse ≈ 5–6 mph; sailing ship ≈ 4–8 knots'),
-          field('Travel hours per day', h('input', { name: 'hours_per_day', type: 'number', step: 'any', value: 8 }), '24 for ships that sail around the clock'),
+        F.push(field('Distance', el('input', { name: 'distance', type: 'number', step: 'any', value: 60 }), 'Any unit — miles, km, leagues…'),
+          field('Speed per hour (same unit)', el('input', { name: 'speed', type: 'number', step: 'any', value: 3 }), 'Walking ≈ 3 mph / 5 km/h; horse ≈ 5–6 mph; sailing ship ≈ 4–8 knots'),
+          field('Travel hours per day', el('input', { name: 'hours_per_day', type: 'number', step: 'any', value: 8 }), '24 for ships that sail around the clock'),
           field('Terrain multiplier', select([[1, 'Road / open water ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
             'Multiplies the travel time for slow going. ×2 means the trip takes twice as long'));
       } else if (m === 'hohmann') {
-        const sys = h('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => h('option', { value: k }, s.label)));
-        const r1 = h('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = h('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
-        const b1 = h('select', {}), b2 = h('select', {});
+        const sys = el('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => el('option', { value: k }, s.label)));
+        const r1 = el('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = el('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
+        const b1 = el('select', {}), b2 = el('select', {});
         const fill = () => {
           const s = E.SYSTEMS[sys.value];
           const opts = [['', 'custom…'], ...Object.entries(s.bodies).map(([n, r]) => [r, n])];
           const names = opts.map(o => o[1]);
           const pick = [names.indexOf('Earth'), names.indexOf('Mars')];
-          [b1, b2].forEach((b, k) => { b.replaceChildren(...opts.map(([v, l]) => h('option', { value: v }, l))); b.selectedIndex = pick[k] > 0 ? pick[k] : Math.min(opts.length - 1, k + 1); });
+          [b1, b2].forEach((b, k) => { b.replaceChildren(...opts.map(([v, l]) => el('option', { value: v }, l))); b.selectedIndex = pick[k] > 0 ? pick[k] : Math.min(opts.length - 1, k + 1); });
           r1.value = b1.value; r2.value = b2.value;
           lbl1.firstChild.textContent = `From orbit radius (${s.unit})`; lbl2.firstChild.textContent = `To orbit radius (${s.unit})`;
         };
         b1.addEventListener('change', () => { if (b1.value) r1.value = b1.value; });
         b2.addEventListener('change', () => { if (b2.value) r2.value = b2.value; });
-        const lbl1 = field('From', h('span', { class: 'row' }, b1, r1)), lbl2 = field('To', h('span', { class: 'row' }, b2, r2));
+        const lbl1 = field('From', el('span', { class: 'row' }, b1, r1)), lbl2 = field('To', el('span', { class: 'row' }, b2, r2));
         sys.addEventListener('change', fill);
         F.push(field('Central body', sys, null, 'The star or planet both orbits go around. Pick a body from the lists or type an orbit radius'), lbl1, lbl2);
         setTimeout(fill);
       } else if (m === 'brachistochrone' || m === 'relativistic') {
-        F.push(field('Distance', h('span', { class: 'row' }, h('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.24 : 1.5 }), (() => { const u = unitSel(); if (m === 'relativistic') u.value = 'LY'; return u; })()),
+        F.push(field('Distance', el('span', { class: 'row' }, el('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.24 : 1.5 }), (() => { const u = unitSel(); if (m === 'relativistic') u.value = 'LY'; return u; })()),
           'Earth–Mars ranges 0.5–2.5 AU; Alpha Centauri is 4.24 LY'),
-          field('Acceleration (g)', h('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
-          field('Speed cap (fraction of light, optional)', h('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates',
+          field('Acceleration (g)', el('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
+          field('Speed cap (fraction of light, optional)', el('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates',
             '0.1 means a tenth of the speed of light. Leave empty to burn all the way to the midpoint'));
       } else {
         const kind = select([['rate', 'Speed in light-years per day'], ['fixed', 'Fixed duration per jump']], 'rate', { name: 'ftl_kind' });
         F.push(field('FTL type', kind, null, 'Speed: the trip scales with distance. Fixed: every jump takes the same time, however far'),
-          field('Distance (LY)', h('input', { name: 'distance', type: 'number', step: 'any', value: 10 })),
-          field('FTL speed (LY per day)', h('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
-          field('Fixed jump duration (hours)', h('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
+          field('Distance (LY)', el('input', { name: 'distance', type: 'number', step: 'any', value: 10 })),
+          field('FTL speed (LY per day)', el('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
+          field('Fixed jump duration (hours)', el('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
       }
       fieldsWrap.replaceChildren(...F);
       out.replaceChildren();
@@ -808,12 +780,12 @@
     drawFields();
 
     const regOpts = [['', '— no change —'], ...S.regions.map(r => [r.id, r.name])];
-    const fromName = h('input', { placeholder: 'Origin (e.g. Earth)' }), toName = h('input', { placeholder: 'Destination (e.g. Mars)' });
+    const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const travelReg = select(regOpts, ''), arriveReg = select(regOpts, '');
-    const f = h('form', { class: 'card' }, h('h2', {}, 'Travel planner'),
+    const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
       field('Mode', modeSel, null, 'Overland: distance ÷ speed, in travel hours per day. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
       fieldsWrap,
-      h('div', { class: 'row' }, h('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
+      el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
     let result = null;
     f.addEventListener('submit', e => {
@@ -821,18 +793,18 @@
       try {
         const q = formData(f);
         result = E.travel(modeSel.value, q);
-        out.replaceChildren(h('div', { class: 'result' },
-          h('h3', {}, `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
-          h('ul', {}, result.lines.map(l => h('li', {}, l))),
-          result.worldHours ? h('p', { class: 'muted' }, 'The tracker follows the party, so it advances by ship time unless you pick world time below.') : null),
-          isGM() ? departForm() : h('p', { class: 'muted' }, 'Only the GM can advance time.'));
-      } catch (err) { out.replaceChildren(h('p', { class: 'bad' }, err.message)); }
+        out.replaceChildren(el('div', { class: 'result' },
+          el('h3', {}, `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
+          el('ul', {}, result.lines.map(l => el('li', {}, l))),
+          result.worldHours ? el('p', { class: 'muted' }, 'The tracker follows the party, so it advances by ship time unless you pick world time below.') : null),
+          isGM() ? departForm() : el('p', { class: 'muted' }, 'Only the GM can advance time.'));
+      } catch (err) { out.replaceChildren(el('p', { class: 'bad' }, err.message)); }
     });
 
     const departForm = () => {
-      const useWorld = h('input', { type: 'checkbox' });
+      const useWorld = el('input', { type: 'checkbox' });
       const shiftsFor = () => E.hoursToShifts(cal(), useWorld.checked && result.worldHours ? result.worldHours : result.hours);
-      const info = h('small', { class: 'muted' });
+      const info = el('small', { class: 'muted' });
       const upd = () => {
         const n = shiftsFor();
         info.textContent = `${n} shifts (${(n / 4).toFixed(1)} days). Arrive: ${E.fmtShift(cal(), nowShift() + n)}`;
@@ -851,13 +823,13 @@
         toast(`Arrived: ${E.fmtShift(cal(), nowShift())}`);
         location.hash = `#/c/${S.camp.id}/calendar`;
       }));
-      return h('div', { class: 'depart' }, h('h3', {}, 'Make the trip'),
-        h('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
+      return el('div', { class: 'depart' }, el('h3', {}, 'Make the trip'),
+        el('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
           field('Region while travelling', travelReg, 'e.g. "Ship interior" so transit days get shipboard conditions'),
           field('Region on arrival', arriveReg, null, 'The party is moved here when the trip ends'),
           result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
-        info, h('div', { class: 'row' }, go),
-        h('small', { class: 'muted' }, 'Labels every passed shift with the trip (without overwriting existing activity) and logs a multi-day travel event.'));
+        info, el('div', { class: 'row' }, go),
+        el('small', { class: 'muted' }, 'Labels every passed shift with the trip (without overwriting existing activity) and logs a multi-day travel event.'));
     };
     mount(...campaignHeader('travel'), f);
   }
@@ -865,21 +837,21 @@
   // ------------------------------------------------------------ regions tab
   function viewRegions() {
     const cur = settings().current_region;
-    const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Regions'),
+    const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Regions'),
       isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary small', 'Add a place with its own climate, light source and terrain') : null),
-      S.regions.map(r => h('div', { class: 'listrow' },
-        h('div', {}, h('strong', {}, r.name), r.id === Number(cur) ? h('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
-          h('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? h('div', { class: 'small pre' }, r.description) : null),
-        isGM() ? h('div', { class: 'actions' },
+      S.regions.map(r => el('div', { class: 'listrow' },
+        el('div', {}, el('strong', {}, r.name), r.id === Number(cur) ? el('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
+          el('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? el('div', { class: 'small pre' }, r.description) : null),
+        isGM() ? el('div', { class: 'actions' },
           r.id !== Number(cur) ? btn('Party is here', async () => { await setCurrentRegion(r.id); await ensureWeather(today(), today()); toast(`Party moved to ${r.name}`); await loadCampaign(S.camp.id, true); route(); }, 'small',
             'Move the party here. Days from now on use this region\'s climate, light and terrain') : null,
           btn('Edit', () => list.after(regionForm(r)), 'small', 'Change this region\'s climate, light and terrain'),
           btn('Delete', async () => {
-            if (!confirm(`Delete region ${r.name}? Days recorded there keep their weather.`)) return;
+            if (!await confirmDialog(`Delete region ${r.name}? Days recorded there keep their weather.`)) return;
             await post('region_delete', { id: r.id }, S.camp.id); await loadCampaign(S.camp.id, true); route();
           }, 'small danger', 'Delete this region. Days already recorded there keep their weather')) : null)));
     mount(...campaignHeader('regions'), list,
-      h('p', { class: 'muted pad' }, 'A region sets the climate (weather odds by season), the light source (sun and moons, artificial lighting, or none), and a terrain modifier to visibility — e.g. −1 under forest canopy.'));
+      el('p', { class: 'muted pad' }, 'A region sets the climate (weather odds by season), the light source (sun and moons, artificial lighting, or none), and a terrain modifier to visibility — e.g. −1 under forest canopy.'));
   }
   function climateName(s) {
     if (s.climate === 'custom') return 'Custom climate';
@@ -903,12 +875,12 @@
   const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'];
   /** Climate select: Köppen classes by group, the simple setting climates, and the two custom modes. */
   function climateSelect(value, attrs) {
-    const opt = (v, l) => h('option', { value: v, selected: v === value }, l);
-    const groups = Object.entries(E.KOPPEN_GROUPS).map(([g, gl]) => h('optgroup', { label: `Köppen ${g} · ${gl}` },
+    const opt = (v, l) => el('option', { value: v, selected: v === value }, l);
+    const groups = Object.entries(E.KOPPEN_GROUPS).map(([g, gl]) => el('optgroup', { label: `Köppen ${g} · ${gl}` },
       Object.entries(E.KOPPEN).filter(([code]) => code[0] === g).map(([code, k]) => opt(`koppen:${code}`, `${code} · ${k.label}`))));
-    return h('select', attrs || {}, groups,
-      h('optgroup', { label: 'Simple & setting climates' }, Object.entries(E.CLIMATES).map(([k, c]) => opt(k, c.label))),
-      h('optgroup', { label: 'Custom' }, opt('koppen_custom', 'Custom Köppen build-out'), opt('custom', 'Custom (raw JSON)')));
+    return el('select', attrs || {}, groups,
+      el('optgroup', { label: 'Simple & setting climates' }, Object.entries(E.CLIMATES).map(([k, c]) => opt(k, c.label))),
+      el('optgroup', { label: 'Custom' }, opt('koppen_custom', 'Custom Köppen build-out'), opt('custom', 'Custom (raw JSON)')));
   }
   /** Season-by-season baseline: typical highs, how wet, and the likeliest weather. */
   function climateBaseline(clim) {
@@ -918,19 +890,19 @@
       const odds = Object.entries(sd.w).filter(([t, w]) => w > 0 && E.WEATHER[t]).sort((a, b) => b[1] - a[1]).slice(0, 4)
         .map(([t, w]) => `${E.WEATHER[t].icon} ${E.WEATHER[t].label} ${Math.round(w / tot * 100)}%`).join(', ');
       const desc = clim.base?.[k] ? E.describeBaseline(clim.base[k], unit) : `Highs ${E.fmtTemp(sd.t[0], unit)} to ${E.fmtTemp(sd.t[1], unit)}`;
-      return h('tr', {}, h('td', {}, h('span', { class: `season s-${k === 'any' ? 'none' : k}` }, k === 'any' ? 'No season' : SEASON_LABELS[k])), h('td', {}, desc), h('td', { class: 'muted' }, odds));
+      return el('tr', {}, el('td', {}, el('span', { class: `season s-${k === 'any' ? 'none' : k}` }, k === 'any' ? 'No season' : SEASON_LABELS[k])), el('td', {}, desc), el('td', { class: 'muted' }, odds));
     });
-    return h('table', { class: 'tbl baseline' }, h('tbody', {}, rows));
+    return el('table', { class: 'tbl baseline' }, el('tbody', {}, rows));
   }
   /** Builder for a custom climate: start from Köppen letters, then tune each season's baseline. */
   function koppenBuilder(cc, onChange) {
     let base = cc?.base ? JSON.parse(JSON.stringify(cc.base)) : E.koppenBase('Cfb');
     let from = cc?.koppen || 'Cfb';
     const unit = tempUnit() === 'none' ? 'C' : tempUnit(), sym = tempSym(unit);
-    const name = h('input', { value: cc?.label || `Custom ${from}`, 'aria-label': 'Climate name', maxlength: 80 });
+    const name = el('input', { value: cc?.label || `Custom ${from}`, 'aria-label': 'Climate name', maxlength: 80 });
     const letter = (opts, v, lbl) => select(Object.entries(opts).map(([k, l]) => [k, `${k} · ${l}`]), v, { 'aria-label': lbl });
-    const lettersWrap = h('span', { class: 'row' });
-    const codeOut = h('strong', {});
+    const lettersWrap = el('span', { class: 'row' });
+    const codeOut = el('strong', {});
     const group = select(Object.entries(E.KOPPEN_GROUPS).map(([g, l]) => [g, `${g} · ${l}`]), from[0], { 'aria-label': 'Köppen group' });
     let second, third;
     const code = () => E.koppenCode(group.value, second.value, third ? third.value : '');
@@ -952,29 +924,29 @@
       if (name.value.trim() === `Custom ${from}` || !name.value.trim()) name.value = `Custom ${c}`;
       from = c; base = E.koppenBase(c); drawTable(); onChange();
     }, 'small'), 'Fill the table below with this Köppen class\'s typical seasons. Replaces what is there');
-    const num = (v, k, i, attrs) => h('input', { type: 'number', value: E.toTempUnit(v, unit, 1), step: unit === 'C' ? 1 : 'any', 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
-    const scale = (v, k, max, lbl) => h('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
-    const table = h('table', { class: 'tbl builder' });
+    const num = (v, k, i, attrs) => el('input', { type: 'number', value: E.toTempUnit(v, unit, 1), step: unit === 'C' ? 1 : 'any', 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
+    const scale = (v, k, max, lbl) => el('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
+    const table = el('table', { class: 'tbl builder' });
     const drawTable = () => table.replaceChildren(
-      h('thead', {}, h('tr', {}, [['Season'], [`Highs from ${sym}`, 'The coolest typical daytime high in this season'], [`to ${sym}`, 'The warmest typical daytime high in this season'],
+      el('thead', {}, el('tr', {}, [['Season'], [`Highs from ${sym}`, 'The coolest typical daytime high in this season'], [`to ${sym}`, 'The warmest typical daytime high in this season'],
         ['Precipitation 0–5', '0 arid, 1 very dry, 2 light, 3 moderate, 4 wet, 5 very wet. Below freezing it falls as snow'],
         ['Storms 0–3', 'How often thunderstorms (or blizzards, when freezing) roll in: 0 never, 3 often'],
         ['Fog 0–3', 'How often fog or mist settles: 0 never, 3 often'], ['Dust 0–3', 'How often dust or sandstorms blow: 0 never, 3 often']]
-        .map(([x, t]) => h('th', {}, x, t ? tip(t) : null)))),
-      h('tbody', {}, SEASON_ORDER.map(k => {
+        .map(([x, t]) => el('th', {}, x, t ? tip(t) : null)))),
+      el('tbody', {}, SEASON_ORDER.map(k => {
         const p = base[k];
-        return h('tr', { 'data-s': k }, h('td', {}, h('span', { class: `season s-${k}` }, SEASON_LABELS[k])),
-          h('td', {}, num(p.t[0], 't', 0, { 'aria-label': `${k} lowest high` })), h('td', {}, num(p.t[1], 't', 1, { 'aria-label': `${k} highest high` })),
-          h('td', {}, scale(p.wet, 'wet', 5, `${k} precipitation`)),
-          ...['storm', 'fog', 'dust'].map(x => h('td', {}, scale(p[x], x, 3, `${k} ${x}`))));
+        return el('tr', { 'data-s': k }, el('td', {}, el('span', { class: `season s-${k}` }, SEASON_LABELS[k])),
+          el('td', {}, num(p.t[0], 't', 0, { 'aria-label': `${k} lowest high` })), el('td', {}, num(p.t[1], 't', 1, { 'aria-label': `${k} highest high` })),
+          el('td', {}, scale(p.wet, 'wet', 5, `${k} precipitation`)),
+          ...['storm', 'fog', 'dust'].map(x => el('td', {}, scale(p[x], x, 3, `${k} ${x}`))));
       })));
     const read = () => {
       for (const tr of table.querySelectorAll('tbody tr')) {
         const p = base[tr.dataset.s];
-        for (const el of tr.querySelectorAll('[data-k]')) {
-          const v = Number(el.value) || 0;
-          if (el.dataset.k === 't') { if (el.value !== '') p.t[Number(el.dataset.i)] = Math.round(E.fromTempUnit(v, unit)); }
-          else p[el.dataset.k] = Math.max(0, Math.min(el.dataset.k === 'wet' ? 5 : 3, v));
+        for (const inp of tr.querySelectorAll('[data-k]')) {
+          const v = Number(inp.value) || 0;
+          if (inp.dataset.k === 't') { if (inp.value !== '') p.t[Number(inp.dataset.i)] = Math.round(E.fromTempUnit(v, unit)); }
+          else p[inp.dataset.k] = Math.max(0, Math.min(inp.dataset.k === 'wet' ? 5 : 3, v));
         }
       }
     };
@@ -983,10 +955,10 @@
     drawLetters(from); drawTable();
     table.addEventListener('change', () => { read(); onChange(); });
     name.addEventListener('input', onChange);
-    const wrap = h('div', { class: 'builderwrap' },
+    const wrap = el('div', { class: 'builderwrap' },
       field('Climate name', name),
-      h('div', { class: 'field' }, h('span', { class: 'lbl' }, 'Start from a Köppen class'), h('span', { class: 'row' }, lettersWrap, codeOut, load),
-        h('small', { class: 'muted' }, 'Pick the group, precipitation pattern and temperature letters, then load that class\'s baseline and tune any season below. Highs are daytime highs; precipitation runs from 0 (arid) to 5 (torrential), storms, fog and dust from 0 (never) to 3 (frequent). Storms in freezing weather become blizzards.')),
+      el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Start from a Köppen class'), el('span', { class: 'row' }, lettersWrap, codeOut, load),
+        el('small', { class: 'muted' }, 'Pick the group, precipitation pattern and temperature letters, then load that class\'s baseline and tune any season below. Highs are daytime highs; precipitation runs from 0 (arid) to 5 (torrential), storms, fog and dust from 0 (never) to 3 (frequent). Storms in freezing weather become blizzards.')),
       table);
     wrap.getClimate = () => { read(); return { label: name.value.trim() || 'Custom climate', koppen: from, base: JSON.parse(JSON.stringify(base)) }; };
     return wrap;
@@ -1000,9 +972,9 @@
   /** One 0–5 box per shift for artificial lighting, each with its shift name and a live label. */
   function lightLevels(lv) {
     const natural = [0, 3, 5, 3];
-    return h('span', { class: 'lightlv' }, shiftNames().map((n, i) => {
-      const out = h('small', { class: 'muted' });
-      const input = h('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', 'aria-label': `${n} light level`,
+    return el('span', { class: 'lightlv' }, shiftNames().map((n, i) => {
+      const out = el('small', { class: 'muted' });
+      const input = el('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', 'aria-label': `${n} light level`,
         'data-tip': `${n}: how well lit this shift is, 0 (pitch black) to 5 (bright). Sun & moons would give ${natural[i]} here.` });
       const sync = () => {
         const v = Math.max(0, Math.min(5, Math.round(Number(input.value) || 0)));
@@ -1010,26 +982,26 @@
         out.dataset.tip = `${E.VIS_LABELS[v]}: ${LIGHT_EXAMPLES[v]}`;
       };
       input.addEventListener('input', sync); sync();
-      return h('span', {}, h('span', { class: 'small' }, n), input, out);
+      return el('span', {}, el('span', { class: 'small' }, n), input, out);
     }));
   }
 
   function regionForm(r = { settings: {} }) {
     const s = r.settings || {};
     const climate = climateSelect(s.climate || 'temperate', { name: 'climate' });
-    const custom = h('textarea', { name: 'custom_climate', rows: 8, class: 'mono',
+    const custom = el('textarea', { name: 'custom_climate', rows: 8, class: 'mono',
       value: JSON.stringify(s.climate === 'custom' && s.custom_climate ? s.custom_climate : E.CLIMATES.temperate, null, 1) });
     const customWrap = field('Custom climate', custom, 'Seasons: spring/summer/autumn/winter/any. t = [low, high] °C; w = weather weights. Weather keys: ' + Object.keys(E.WEATHER).join(', '));
-    const baseline = h('div', {});
+    const baseline = el('div', {});
     const builder = koppenBuilder(s.climate === 'koppen_custom' ? s.custom_climate : null, () => drawBaseline());
-    const baselineWrap = h('details', { open: true, class: 'field' }, h('summary', {}, 'Baseline weather by season'), baseline,
-      h('small', { class: 'muted' }, 'Each day\'s weather is rolled against these odds for the season it falls in, then drifts from the day before.'));
+    const baselineWrap = el('details', { open: true, class: 'field' }, el('summary', {}, 'Baseline weather by season'), baseline,
+      el('small', { class: 'muted' }, 'Each day\'s weather is rolled against these odds for the season it falls in, then drifts from the day before.'));
     const drawBaseline = () => {
       const v = climate.value;
       if (v === 'custom') return baseline.replaceChildren();
       const clim = v === 'koppen_custom' ? E.buildClimate(builder.getClimate().base, builder.getClimate()) : E.climateFor({ settings: { climate: v } });
       const k = v.startsWith('koppen:') ? E.KOPPEN[v.slice(7)] : null;
-      baseline.replaceChildren(...clean([k ? h('p', { class: 'muted' }, `${k.label}. Typical of ${k.where}.`) : null, climateBaseline(clim)]));
+      baseline.replaceChildren(...clean([k ? el('p', { class: 'muted' }, `${k.label}. Typical of ${k.where}.`) : null, climateBaseline(clim)]));
     };
     const syncCustom = () => {
       customWrap.style.display = climate.value === 'custom' ? '' : 'none';
@@ -1043,9 +1015,9 @@
     const lightLv = lightLevels(lv);
     const syncLight = () => lightLv.classList.toggle('off', lightSel.value !== 'artificial');
     lightSel.addEventListener('change', syncLight); syncLight();
-    const f = h('form', { class: 'card' }, h('h3', {}, r.id ? `Edit ${r.name}` : 'New region'),
-      h('div', { class: 'grid2' },
-        field('Name', h('input', { name: 'name', value: r.name || '', required: true })),
+    const f = el('form', { class: 'card' }, el('h3', {}, r.id ? `Edit ${r.name}` : 'New region'),
+      el('div', { class: 'grid2' },
+        field('Name', el('input', { name: 'name', value: r.name || '', required: true })),
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
@@ -1054,8 +1026,8 @@
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
         field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
       customWrap, builder, baselineWrap,
-      field('Description', h('textarea', { name: 'description', rows: 2, value: r.description || '' })),
-      h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
+      field('Description', el('textarea', { name: 'description', rows: 2, value: r.description || '' })),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(f);
@@ -1085,42 +1057,42 @@
     return '?';
   }
   function viewHolidays() {
-    const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Holidays & recurring days'),
+    const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Holidays & recurring days'),
       isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary small', 'Add a festival, feast day or any other recurring date') : null),
-      S.holidays.length ? S.holidays.map(x => h('div', { class: 'listrow' },
-        h('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
-          h('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? h('div', { class: 'small pre' }, x.description) : null),
-        isGM() ? h('div', { class: 'actions' }, btn('Edit', () => list.after(holidayForm(x)), 'small', 'Change this holiday'),
-          btn('Delete', async () => { if (!confirm(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger', 'Remove this holiday from the calendar')) : null))
-        : h('p', { class: 'muted' }, 'No holidays yet.'));
+      S.holidays.length ? S.holidays.map(x => el('div', { class: 'listrow' },
+        el('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
+          el('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? el('div', { class: 'small pre' }, x.description) : null),
+        isGM() ? el('div', { class: 'actions' }, btn('Edit', () => list.after(holidayForm(x)), 'small', 'Change this holiday'),
+          btn('Delete', async () => { if (!await confirmDialog(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger', 'Remove this holiday from the calendar')) : null))
+        : el('p', { class: 'muted' }, 'No holidays yet.'));
     mount(...campaignHeader('holidays'), list);
   }
   function holidayForm(x = { rule: { type: 'fixed', month: 0, day: 1, span: 1 }, color: '#b8860b' }) {
     const c = cal(), r = x.rule || {};
     const type = select([['fixed', 'Same date every year'], ['nth_weekday', 'Nth weekday of a month'], ['once', 'One time only'], ['every_n', 'Every N days']], r.type, { name: 'type' });
     const monthSel = select(c.months.map((m, i) => [i, m.name]), r.month ?? 0, { name: 'month' });
-    const dayIn = h('input', { type: 'number', min: 1, name: 'day', value: r.day || 1 });
+    const dayIn = el('input', { type: 'number', min: 1, name: 'day', value: r.day || 1 });
     const wdSel = select(c.weekdays.map((w, i) => [i, w]), r.weekday ?? 0, { name: 'weekday' });
     const nSel = select([[1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [5, '5th'], [-1, 'Last']], r.n ?? 1, { name: 'n' });
     const oncePick = datePicker(r.abs_day ?? today()), startPick = datePicker(r.start ?? today());
-    const interval = h('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
+    const interval = el('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
     const parts = {
       month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel), n: field('Which one', nSel),
       once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval, null, 'Counted in days, ignoring months and years. Good for market days or a comet'),
     };
     const show = { fixed: ['month', 'day'], nth_weekday: ['n', 'weekday', 'month'], once: ['once'], every_n: ['start', 'interval'] };
-    const sync = () => Object.entries(parts).forEach(([k, el]) => (el.style.display = show[type.value].includes(k) ? '' : 'none'));
+    const sync = () => Object.entries(parts).forEach(([k, part]) => (part.style.display = show[type.value].includes(k) ? '' : 'none'));
     type.addEventListener('change', sync);
-    const f = h('form', { class: 'card' }, h('h3', {}, x.id ? `Edit ${x.name}` : 'New holiday'),
-      h('div', { class: 'grid2' },
-        field('Name', h('input', { name: 'name', value: x.name || '', required: true })),
+    const f = el('form', { class: 'card' }, el('h3', {}, x.id ? `Edit ${x.name}` : 'New holiday'),
+      el('div', { class: 'grid2' },
+        field('Name', el('input', { name: 'name', value: x.name || '', required: true })),
         field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date'),
         ...Object.values(parts),
-        field('Lasts (days)', h('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
-        field('Color', h('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
-        field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }), null, 'Players won\'t see this holiday on the calendar')),
-      field('Description', h('textarea', { name: 'description', rows: 2, value: x.description || '' })),
-      h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save holiday'), btn('Cancel', () => f.remove(), 'small')));
+        field('Lasts (days)', el('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
+        field('Color', el('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
+        field('Secret (GM only)', el('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }), null, 'Players won\'t see this holiday on the calendar')),
+      field('Description', el('textarea', { name: 'description', rows: 2, value: x.description || '' })),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save holiday'), btn('Cancel', () => f.remove(), 'small')));
     sync();
     f.addEventListener('submit', async e => {
       e.preventDefault();
@@ -1140,33 +1112,33 @@
 
   // ------------------------------------------------------------ members tab
   function viewMembers() {
-    const card = h('div', { class: 'card' }, h('h2', {}, 'Members'),
-      S.members.map(m => h('div', { class: 'listrow' },
-        h('div', {}, h('strong', {}, m.display_name), m.username ? h('span', { class: 'muted' }, ` (${m.username})`) : null,
-          h('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
-        isGM() ? h('div', { class: 'actions' }, btn('Remove', async () => {
-          if (!confirm(`Remove ${m.display_name} from this campaign?`)) return;
+    const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
+      S.members.map(m => el('div', { class: 'listrow' },
+        el('div', {}, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+          el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
+        isGM() ? el('div', { class: 'actions' }, btn('Remove', async () => {
+          if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
           try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Take them out of this campaign. Their account stays')) : null)));
     if (isGM()) {
-      const f = h('form', { class: 'row' }, h('input', { name: 'username', placeholder: 'Username', required: true }),
-        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'data-tip': 'A co-GM has the same powers as you, including secrets' }), h('button', { class: 'primary small' }, 'Add member'));
+      const f = el('form', { class: 'row' }, el('input', { name: 'email', type: 'email', placeholder: 'Their sign-in email', required: true, class: 'grow' }),
+        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'data-tip': 'A co-GM has the same powers as you, including secrets' }), el('button', { class: 'primary small' }, 'Add member'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
         try { await post('member_add', formData(f), S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
       });
-      card.append(h('h3', {}, 'Add a member'), f, h('small', { class: 'muted' }, 'The account must exist first — site admins create accounts under Users.'));
+      card.append(el('h3', {}, 'Add a member'), f, el('small', { class: 'muted' }, 'Use the email they sign in with. They need to have signed in once and been approved by the site admin.'));
     }
     mount(...campaignHeader('members'), card);
   }
 
   // ------------------------------------------------------------ season editor
   const SEASON_LABELS = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', none: 'None (no climate change)' };
-  const seasonChip = s => h('span', { class: `season s-${s.type || 'none'}` }, s.name || '—');
+  const seasonChip = s => el('span', { class: `season s-${s.type || 'none'}` }, s.name || '—');
   /** Editable list of seasons (name, climate type, start month & day) with a live month-by-month preview. */
   function seasonEditor(c) {
-    const rows = h('div', { class: 'seasonrows' });
-    const preview = h('div', { class: 'seasonmap' });
+    const rows = el('div', { class: 'seasonrows' });
+    const preview = el('div', { class: 'seasonmap' });
     const monthOpts = c.months.map((m, i) => [i, `${i + 1}. ${m.name}`]);
     const read = () => [...rows.children].map(r => ({
       name: r.querySelector('[data-k=name]').value.trim(),
@@ -1178,28 +1150,28 @@
       const test = { ...c, seasons: read().filter(s => s.name) };
       let map;
       try { E.prep(test); map = E.monthSeasons(test); } catch { return; }
-      preview.replaceChildren(h('table', { class: 'tbl' }, h('tbody', {}, map.map(({ month, seasons }) =>
-        h('tr', {}, h('td', {}, c.months[month].name), h('td', {}, test.seasons.length
-          ? seasons.map(x => h('span', { class: 'seasonseg' }, seasonChip(x), seasons.length > 1 ? ` ${x.from}–${x.to}` : ''))
-          : h('span', { class: 'muted' }, 'No seasons')))))));
+      preview.replaceChildren(el('table', { class: 'tbl' }, el('tbody', {}, map.map(({ month, seasons }) =>
+        el('tr', {}, el('td', {}, c.months[month].name), el('td', {}, test.seasons.length
+          ? seasons.map(x => el('span', { class: 'seasonseg' }, seasonChip(x), seasons.length > 1 ? ` ${x.from}–${x.to}` : ''))
+          : el('span', { class: 'muted' }, 'No seasons')))))));
     };
     const addRow = (s = { name: '', type: 'none', month: 0, day: 1 }) => {
       const month = select(monthOpts, s.month, { 'data-k': 'month', 'aria-label': 'Start month' });
-      const day = h('input', { type: 'number', min: 1, value: s.day || 1, class: 'w-day', 'data-k': 'day', 'aria-label': 'Start day' });
+      const day = el('input', { type: 'number', min: 1, value: s.day || 1, class: 'w-day', 'data-k': 'day', 'aria-label': 'Start day' });
       const syncMax = () => { const mo = c.months[month.value]; day.max = Number(mo.days) + Number(mo.leapDays || 0); };
       month.addEventListener('change', syncMax); syncMax();
-      const row = h('div', { class: 'row seasonrow' },
-        h('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
+      const row = el('div', { class: 'row seasonrow' },
+        el('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
         select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate', 'data-tip': 'Which season\'s weather odds regions use while this season lasts' }),
         month, day,
         btn('✕', () => { row.remove(); redraw(); }, 'small link', 'Remove this season'));
       rows.append(row);
     };
     (c.seasons || []).forEach(s => addRow(s));
-    const wrap = h('div', { class: 'seasoned' }, h('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
-      h('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small', 'Add another season, such as a monsoon or a festival winter'),
-        h('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
-      h('details', { open: true }, h('summary', {}, 'Seasons by month'), preview));
+    const wrap = el('div', { class: 'seasoned' }, el('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
+      el('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small', 'Add another season, such as a monsoon or a festival winter'),
+        el('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
+      el('details', { open: true }, el('summary', {}, 'Seasons by month'), preview));
     wrap.addEventListener('input', redraw);
     wrap.addEventListener('change', redraw);
     redraw();
@@ -1243,22 +1215,22 @@
   }
 
   function viewSettings() {
-    if (!isGM()) { mount(...campaignHeader('settings'), h('div', { class: 'card' }, h('p', {}, 'Only the GM can change campaign settings.'))); return; }
+    if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
     const st = settings(), c = cal(), t = calToText(c);
-    const ta = (name, value, rows) => h('textarea', { name, rows: rows || 4, value, class: 'mono' });
-    const general = h('form', { class: 'card' }, h('h2', {}, 'Campaign'),
-      h('div', { class: 'grid2' },
-        field('Name', h('input', { name: 'name', value: S.camp.name, required: true })),
+    const ta = (name, value, rows) => el('textarea', { name, rows: rows || 4, value, class: 'mono' });
+    const general = el('form', { class: 'card' }, el('h2', {}, 'Campaign'),
+      el('div', { class: 'grid2' },
+        field('Name', el('input', { name: 'name', value: S.camp.name, required: true })),
         field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' }), null,
           'New days roll their weather here. Same as "Party is here" on the Regions tab'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
         field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
           'Used for anyone who hasn\'t chosen their own units'),
-        field('Players see future weather', h('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
+        field('Players see future weather', el('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
-        field('Players can add events', h('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),
-      field('Description', h('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
-      h('button', { class: 'primary' }, 'Save campaign settings'));
+        field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),
+      field('Description', el('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
+      el('button', { class: 'primary' }, 'Save campaign settings'));
     general.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(general);
@@ -1270,35 +1242,35 @@
 
     const L = c.leap || {};
     const seasons = seasonEditor(c);
-    const calForm = h('form', { class: 'card' }, h('h2', {}, 'Calendar'),
-      h('p', { class: 'muted' }, 'Changing the calendar re-labels every stored day: records stay attached to the same absolute day number, not to a month name.'),
-      h('div', { class: 'grid2' },
-        field('Calendar name', h('input', { name: 'cal_name', value: c.name || '' })),
-        field('Year label suffix', h('input', { name: 'yearSuffix', value: c.yearSuffix || '' }), 'e.g. IC, AD, MY'),
-        field('First year (epoch)', h('input', { type: 'number', name: 'epochYear', value: c.epochYear }), null, 'The year number of the calendar\'s very first day'),
-        field('Weekday of epoch day 1 (0 = first weekday)', h('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
+    const calForm = el('form', { class: 'card' }, el('h2', {}, 'Calendar'),
+      el('p', { class: 'muted' }, 'Changing the calendar re-labels every stored day: records stay attached to the same absolute day number, not to a month name.'),
+      el('div', { class: 'grid2' },
+        field('Calendar name', el('input', { name: 'cal_name', value: c.name || '' })),
+        field('Year label suffix', el('input', { name: 'yearSuffix', value: c.yearSuffix || '' }), 'e.g. IC, AD, MY'),
+        field('First year (epoch)', el('input', { type: 'number', name: 'epochYear', value: c.epochYear }), null, 'The year number of the calendar\'s very first day'),
+        field('Weekday of epoch day 1 (0 = first weekday)', el('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
           'Shifts the whole weekday cycle. Change it to line up a known date with the right weekday'),
-        field('Date format', h('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year'),
-        field('Hours per day', h('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), 'Used to turn travel hours into shifts'),
+        field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year'),
+        field('Hours per day', el('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), 'Used to turn travel hours into shifts'),
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
-        field('Shift names (4, comma-separated)', h('input', { name: 'shiftNames', value: t.shiftNames }), null,
+        field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), null,
           'Rename the four shifts, in order: the overnight one, then morning, midday and evening. Their lighting stays tied to that order')),
       field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
       field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl)'),
-      h('div', { class: 'grid3' },
-        field('Leap year every N years (0 = none)', h('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
-        field('…except every N years', h('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
-        field('…unless every N years', h('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }), null, 'Years divisible by this are leap years again. Gregorian: 400')),
-      h('h3', {}, 'Seasons'),
+      el('div', { class: 'grid3' },
+        field('Leap year every N years (0 = none)', el('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
+        field('…except every N years', el('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
+        field('…unless every N years', el('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }), null, 'Years divisible by this are leap years again. Gregorian: 400')),
+      el('h3', {}, 'Seasons'),
       field('Season dates are for the', select([['north', 'Northern hemisphere'], ['south', 'Southern hemisphere']], c.hemisphere || 'north', { name: 'cal_hemisphere' }),
         'Regions in the other hemisphere get the opposite season'),
       seasons,
-      h('small', { class: 'muted' }, 'Start months use the saved month list; save month changes first, then adjust seasons.'),
+      el('small', { class: 'muted' }, 'Start months use the saved month list; save month changes first, then adjust seasons.'),
       field('Moons — one per line: Name, cycle days, reference day, brightness 0–1, color[, erratic]', ta('moons', t.moons, 3), 'Reference day = an absolute day number when the moon is new. Today is absolute day ' + today() + '.'),
-      h('details', {}, h('summary', {}, 'Advanced: raw calendar JSON'), ta('raw', JSON.stringify(c, null, 1), 12),
-        h('small', { class: 'muted' }, 'If you edit this box, it is saved instead of the fields above.')),
-      h('button', { class: 'primary' }, 'Save calendar'));
+      el('details', {}, el('summary', {}, 'Advanced: raw calendar JSON'), ta('raw', JSON.stringify(c, null, 1), 12),
+        el('small', { class: 'muted' }, 'If you edit this box, it is saved instead of the fields above.')),
+      el('button', { class: 'primary' }, 'Save calendar'));
     const rawInitial = calForm.elements.raw.value;
     calForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -1314,14 +1286,14 @@
     });
 
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
-    const danger = h('div', { class: 'card' }, h('h2', {}, 'Tools'),
-      h('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
-        if (!confirm('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
+    const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
+      el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
+        if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
         await post('campaign_update', { calendar: E.PRESETS[presetSel.value].calendar }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
       }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
-      h('div', { class: 'row' }, btn('Delete this campaign', async () => {
-        const typed = prompt(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`);
+      el('div', { class: 'row' }, btn('Delete this campaign', async () => {
+        const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
         if (typed !== 'DELETE') return;
         await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/';
       }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
@@ -1331,10 +1303,10 @@
   // ------------------------------------------------------------ router
   async function route() {
     const parts = (location.hash.replace(/^#\/?/, '') || '').split('/');
+    if (!S.user) return; // boot() shows the sign-in or waiting screen
     renderNav();
     try {
-      if (!S.user) { if (parts[0] !== 'login') location.hash = '#/login'; return viewLogin(); }
-      if (parts[0] === 'login' || parts[0] === '') return await viewCampaigns();
+      if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return viewAccount();
       if (parts[0] === 'admin') return await viewAdmin();
       if (parts[0] === 'c') {
@@ -1346,14 +1318,35 @@
       }
       await viewCampaigns();
     } catch (err) {
-      mount(h('div', { class: 'card narrow' }, h('h2', {}, 'Something went wrong'), h('p', {}, err.message), h('a', { href: '#/' }, 'Back to campaigns')));
+      if (!S.user) return;
+      mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Something went wrong'), el('p', {}, err.message), el('a', { href: '#/' }, 'Back to campaigns')));
     }
   }
 
-  window.addEventListener('hashchange', route);
-  (async () => {
-    try { const r = await api('me'); S.user = r.user; S.csrf = r.csrf; }
-    catch (e) { mount(h('div', { class: 'card narrow' }, h('h2', {}, 'Cannot reach the server'), h('p', {}, e.message, ' — did you run install.php?'))); return; }
+  /** Ask the server who we are (the same probe as Sinless), then show the gate or the app. */
+  async function boot() {
+    clearTimeout(pendingTimer);
+    let res, data;
+    try {
+      res = await fetch('api/auth/me.php', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      data = await res.json();
+    } catch (e) {
+      S.user = null; renderNav();
+      mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Cannot reach the server'), el('p', {}, 'Check that the config is in place and install.php has been run.')));
+      return;
+    }
+    if (res.status === 401) { S.user = null; S.pending = null; renderNav(); return viewLogin(data.providers || []); }
+    if (!res.ok) { S.user = null; renderNav(); return mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Server error'), el('p', {}, data.message || data.error || `Error ${res.status}`))); }
+    S.csrf = data.csrf;
+    if (data.status !== 'approved') { S.user = null; S.pending = data; renderNav(); return viewPending(data); }
+    S.pending = null;
+    const first = !S.user;
+    S.user = { ...data, id: Number(data.id) };
+    if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);
     route();
-  })();
+  }
+
+  window.addEventListener('hashchange', route);
+  $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
+  boot();
 })();

@@ -1,8 +1,57 @@
-# Block web access to git metadata and repo housekeeping files
-# (needed when the site is deployed with `git clone` / `git pull`).
-RedirectMatch 404 /\.git
-<FilesMatch "^(\.gitignore|README\.md)$">
-  <IfModule mod_authz_core.c>
-    Require all denied
-  </IfModule>
+# .htaccess — Apache config for the hosted (PHP) deployment.
+# Ignored by GitHub Pages and by `php -S` / static servers, so it only takes
+# effect on the real Apache host. Needs mod_rewrite + mod_headers (standard on
+# most shared hosting).
+
+# --- Force HTTPS -----------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# --- Security headers (site-wide) ------------------------------------------
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # CSP: everything from same origin, the same policy as Sinless. No
+  # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
+  # STYLE attributes produced by el() need 'unsafe-inline' in style-src. Fonts
+  # are self-hosted in static/fonts/.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+</IfModule>
+
+# --- Don't serve secrets / SQL / docs / tooling / dotfiles -----------------
+<FilesMatch "^config\.php$">
+  Require all denied
 </FilesMatch>
+<FilesMatch "\.(sql|md|py|sh)$">
+  Require all denied
+</FilesMatch>
+# Block dotfile *names* (e.g. .htaccess, .gitignore).
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+# Block the .git *directory* itself. A request for /.git/HEAD asks for a
+# non-dot filename inside a dot-directory, which the FilesMatch above does NOT
+# catch — without this the whole repo/history would be downloadable when the
+# clone lives under the web root. `.well-known` is left reachable so ACME/
+# Let's Encrypt still works.
+<IfModule mod_alias.c>
+  RedirectMatch 404 (?:^|/)\.git
+</IfModule>
+# The browser-test harness (tests/, including its test-only sign-in), the
+# schema/migrations (db/) and CI config ship in the repo but are not part of the site.
+<IfModule mod_alias.c>
+  RedirectMatch 404 (?:^|/)(?:tests|db|docs|\.github)(?:/|$)
+</IfModule>
+# Fallback if mod_alias is unavailable (returns 403 instead of 404).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule (?:^|/)\.git - [F,L]
+</IfModule>
+
+Options -Indexes

@@ -1,0 +1,13 @@
+{
+  "name": "campaign-chronicle-browser-tests",
+  "private": true,
+  "description": "Cross-browser tests for Campaign Chronicle (Chromium, Firefox, WebKit), set up like Sinless's. Not part of the app; never deployed.",
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}

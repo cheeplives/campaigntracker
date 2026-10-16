@@ -1,0 +1,73 @@
+# Cross-browser tests: the same Playwright suite (tests/) in Chromium, Firefox
+# and WebKit (Safari's engine), desktop and phone. Same matrix as Sinless's
+# workflow, plus PHP and MySQL because this app has a server. See tests/README.md.
+name: Browser tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false          # one engine failing must not hide another's result
+      matrix:
+        include:
+          - { project: chromium,      browser: chromium }
+          - { project: firefox,       browser: firefox }
+          - { project: webkit,        browser: webkit }
+          - { project: mobile-safari, browser: webkit }
+          - { project: mobile-chrome, browser: chromium }
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ci
+      DB_NAME: chronicle_test
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo_mysql, curl
+          coverage: none
+      - run: find ../api ../install.php ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test --project=${{ matrix.project }}
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.project }}
+          path: |
+            tests/playwright-report/
+            tests/test-results/
+          retention-days: 14

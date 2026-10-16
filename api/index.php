@@ -1,25 +1,23 @@
 <?php
 /**
- * RPG Campaign Tracker — JSON API.
- * Every request: api.php?a=<action>[&cid=<campaign id>...]
+ * Campaign Chronicle — JSON API for campaign data.
+ * Every request: api/index.php?a=<action>[&cid=<campaign id>...]
  * POST bodies are JSON and must carry the X-CSRF-Token header.
+ * Sign-in lives in api/auth/ (Google/GitHub, shared with Sinless); every action
+ * here needs an approved account.
  * All permission checks (GM vs player, secret filtering) happen here, never only in the browser.
  */
 declare(strict_types=1);
-require __DIR__ . '/lib/bootstrap.php';
-
-security_headers();
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-start_session();
+require __DIR__ . '/lib.php';
 
 // ---------- helpers ----------
-function out($data, int $code = 200): void {
-    http_response_code($code);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
-    exit;
+function out($data, int $code = 200): void { json_out($data, $code); }
+const ERROR_CODES = [400 => 'bad_request', 403 => 'forbidden', 404 => 'not_found', 405 => 'method_not_allowed',
+    409 => 'conflict', 413 => 'payload_too_large', 500 => 'server_error'];
+/** Fail with a human message; the machine code follows the HTTP status unless given. */
+function fail(string $msg, int $code = 400, ?string $err = null): void {
+    json_error($code, $err ?? (ERROR_CODES[$code] ?? 'error'), $msg);
 }
-function fail(string $msg, int $code = 400): void { out(['error' => $msg], $code); }
 
 function body(): array {
     static $b = null;
@@ -53,40 +51,30 @@ function json_in($v, int $max = 200_000): string {
 }
 function dec(?string $s) { return $s === null || $s === '' ? null : json_decode($s, true); }
 
-function me(): ?array {
-    static $u = false;
-    if ($u === false) {
-        $u = null;
-        if (!empty($_SESSION['uid'])) {
-            $st = db()->prepare('SELECT id, username, display_name, is_admin FROM users WHERE id=?');
-            $st->execute([$_SESSION['uid']]);
-            $u = $st->fetch() ?: null;
-            if ($u) { $u['id'] = (int)$u['id']; $u['is_admin'] = (bool)$u['is_admin']; $u['prefs'] = (object)user_prefs($u['id']); }
-        }
+/** The signed-in, approved user, with id and is_admin typed. */
+function me(): array {
+    static $u = null;
+    if ($u === null) {
+        $u = require_approved();
+        $u['id'] = (int)$u['id'];
+        $u['is_admin'] = (bool)(int)$u['is_admin'];
     }
     return $u;
 }
-/** Per-user display preferences. Older installs may not have the table yet, so a missing table reads as no prefs. */
 function user_prefs(int $uid): array {
-    try {
-        $st = db()->prepare('SELECT prefs_json FROM user_prefs WHERE user_id=?');
-        $st->execute([$uid]);
-        $p = dec($st->fetchColumn() ?: null);
-    } catch (PDOException $e) {
-        if ($e->getCode() !== '42S02') throw $e;
-        $p = null;
-    }
+    $st = db()->prepare('SELECT prefs_json FROM user_prefs WHERE user_id=?');
+    $st->execute([$uid]);
+    $p = dec($st->fetchColumn() ?: null);
     return is_array($p) ? $p : [];
 }
 const TEMP_UNITS = ['C', 'F', 'K', 'R', 'Re', 'none'];
-function need_login(): array { $u = me(); if (!$u) fail('Not logged in', 401); return $u; }
-function need_admin(): array { $u = need_login(); if (!$u['is_admin']) fail('Admins only', 403); return $u; }
+function need_admin(): array { $u = me(); if (!$u['is_admin']) fail('Admins only', 403, 'not_admin'); return $u; }
 
 /** Returns 'gm' | 'player' for the current user in campaign $cid, or fails. Site admins are GMs everywhere. */
 function role(int $cid): string {
     static $cache = [];
     if (isset($cache[$cid])) return $cache[$cid];
-    $u = need_login();
+    $u = me();
     $st = db()->prepare('SELECT id FROM campaigns WHERE id=?');
     $st->execute([$cid]);
     if (!$st->fetch()) fail('Campaign not found', 404);
@@ -113,96 +101,61 @@ function floordiv4(int $n): int { return (int)floor($n / 4); }
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
-$publicActions = ['me', 'login'];
+require_method('GET', 'POST');
+if ($method === 'POST') require_csrf();
 
-if ($method === 'POST') {
-    $tok = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!hash_equals($_SESSION['csrf'], $tok)) fail('Security token mismatch — reload the page', 419);
-} elseif ($method !== 'GET') {
-    fail('Method not allowed', 405);
-}
-
-$readActions = ['me', 'campaigns', 'campaign', 'days', 'day', 'users'];
+$readActions = ['campaigns', 'campaign', 'days', 'day', 'users'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
-if ($method === 'POST' && in_array($action, $readActions, true) && $action !== 'me') fail('Use GET for this action', 405);
+if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
 try {
     switch ($action) {
 
-    // ===== auth =====
-    case 'me':
-        out(['user' => me(), 'csrf' => $_SESSION['csrf']]);
-
-    case 'login':
-        $now = time();
-        $_SESSION['fails'] = array_values(array_filter($_SESSION['fails'] ?? [], fn($t) => $t > $now - 600));
-        if (count($_SESSION['fails']) >= 8) fail('Too many attempts. Wait 10 minutes.', 429);
-        $st = db()->prepare('SELECT id, password_hash FROM users WHERE username=?');
-        $st->execute([str_in(p('username'), 64, false)]);
-        $row = $st->fetch();
-        if (!$row || !password_verify((string)p('password', ''), $row['password_hash'])) {
-            $_SESSION['fails'][] = $now;
-            usleep(600000);
-            fail('Wrong username or password', 401);
-        }
-        session_regenerate_id(true);
-        $_SESSION['uid'] = (int)$row['id'];
-        $_SESSION['fails'] = [];
-        $_SESSION['csrf'] = bin2hex(random_bytes(32));
-        out(['user' => me(), 'csrf' => $_SESSION['csrf']]);
-
-    case 'logout':
-        $_SESSION = [];
-        session_destroy();
-        out(['ok' => true]);
-
-    case 'password':
-        $u = need_login();
-        $st = db()->prepare('SELECT password_hash FROM users WHERE id=?');
-        $st->execute([$u['id']]);
-        if (!password_verify((string)p('current', ''), (string)$st->fetchColumn())) fail('Current password is wrong', 403);
-        $new = (string)p('new', '');
-        if (strlen($new) < 8) fail('New password must be at least 8 characters');
-        db()->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($new, PASSWORD_DEFAULT), $u['id']]);
-        out(['ok' => true]);
-
+    // ===== account =====
     case 'prefs_save':
-        $u = need_login();
+        $u = me();
         $unit = p('temp_unit');
         if ($unit !== null && !in_array($unit, TEMP_UNITS, true)) fail('Unknown temperature unit');
         $prefs = user_prefs($u['id']);
         if ($unit === null) unset($prefs['temp_unit']); else $prefs['temp_unit'] = $unit;
-        // Created here as well as in schema.sql so existing installs pick it up without re-running the installer.
-        db()->exec('CREATE TABLE IF NOT EXISTS user_prefs (user_id INT UNSIGNED PRIMARY KEY, prefs_json TEXT NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);
 
     // ===== user admin =====
+    // Same queue as Sinless: new sign-ins wait as 'pending' until approved here.
+    // Admin rights come only from admin_identities in the config (or a migrated account).
     case 'users':
         need_admin();
-        out(['users' => db()->query('SELECT id, username, display_name, is_admin, created_at FROM users ORDER BY username')->fetchAll()]);
+        out(['users' => db()->query("SELECT id, provider, email, display_name, status, is_admin, created_at, last_login_at FROM users ORDER BY status = 'pending' DESC, display_name")->fetchAll()]);
 
-    case 'user_save':
+    case 'user_status':
         $admin = need_admin();
-        $id = p('id') ? int_in(p('id'), 1) : null;
-        $username = trim((string)str_in(p('username'), 64, false));
-        $display = trim((string)str_in(p('display_name'), 100, false)) ?: $username;
-        $isAdmin = p('is_admin') ? 1 : 0;
-        $pw = (string)p('password', '');
-        if (!preg_match('/^[A-Za-z0-9_.\-]{2,64}$/', $username)) fail('Username: 2–64 letters, numbers, _ . -');
-        if ($pw !== '' && strlen($pw) < 8) fail('Password must be at least 8 characters');
-        if ($id) {
-            if ($id === $admin['id'] && !$isAdmin) fail("You can't remove your own admin rights");
-            db()->prepare('UPDATE users SET username=?, display_name=?, is_admin=? WHERE id=?')->execute([$username, $display, $isAdmin, $id]);
-            if ($pw !== '') db()->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($pw, PASSWORD_DEFAULT), $id]);
-        } else {
-            if ($pw === '') fail('Password required for a new user');
-            db()->prepare('INSERT INTO users (username, display_name, password_hash, is_admin) VALUES (?,?,?,?)')
-                ->execute([$username, $display, password_hash($pw, PASSWORD_DEFAULT), $isAdmin]);
-            $id = (int)db()->lastInsertId();
-        }
-        out(['ok' => true, 'id' => $id]);
+        rate_limit('admin', 'u' . $admin['id'], 60, 60);
+        $id = int_in(p('id'), 1);
+        $status = p('status');
+        if (!in_array($status, ['approved', 'revoked'], true)) fail('Status must be approved or revoked');
+        if ($id === $admin['id']) fail("You can't change your own access");
+        $st = db()->prepare('SELECT email, display_name, status, is_admin FROM users WHERE id=?');
+        $st->execute([$id]);
+        $t = $st->fetch();
+        if (!$t) fail('User not found', 404);
+        if ($status === 'revoked' && (int)$t['is_admin']) fail("Admins can't be revoked here. Remove them from admin_identities first.");
+        if ($t['status'] === $status) out(['ok' => true]);
+        db()->prepare('UPDATE users SET status=?, approved_at=IF(?=\'approved\', NOW(), approved_at) WHERE id=?')->execute([$status, $status, $id]);
+        send_account_email($status, (string)$t['email'], (string)$t['display_name']);
+        out(['ok' => true]);
+
+    case 'user_email': // link a pre-OAuth account: the first sign-in with this verified email takes it over
+        $admin = need_admin();
+        $id = int_in(p('id'), 1);
+        $email = trim((string)str_in(p('email'), 191, false));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) fail("That doesn't look like an email address");
+        $st = db()->prepare('SELECT provider FROM users WHERE id=?');
+        $st->execute([$id]);
+        if ($st->fetchColumn() !== 'legacy') fail('Only accounts from before Google/GitHub sign-in can be linked by email');
+        db()->prepare("UPDATE users SET email=? WHERE id=? AND provider='legacy'")->execute([$email, $id]);
+        out(['ok' => true]);
 
     case 'user_delete':
         $admin = need_admin();
@@ -213,7 +166,7 @@ try {
 
     // ===== campaigns =====
     case 'campaigns':
-        $u = need_login();
+        $u = me();
         if ($u['is_admin']) {
             $rows = db()->query("SELECT id, name, description, 'gm' AS role FROM campaigns ORDER BY name")->fetchAll();
         } else {
@@ -240,14 +193,14 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.username, u.display_name, m.role FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members]);
 
     case 'campaign_create':
-        $u = need_login();
+        $u = me();
         $name = trim((string)str_in(p('name'), 150, false));
         if ($name === '') fail('Name required');
         $cal = json_in(p('calendar'));
@@ -302,10 +255,10 @@ try {
     // ===== members =====
     case 'member_add':
         $cid = cid(); need_gm($cid);
-        $st = db()->prepare('SELECT id FROM users WHERE username=?');
-        $st->execute([str_in(p('username'), 64, false)]);
+        $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND status='approved'");
+        $st->execute([trim((string)str_in(p('email'), 191, false))]);
         $uid = $st->fetchColumn();
-        if (!$uid) fail('No user with that username. Ask the site admin to create the account first.', 404);
+        if (!$uid) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
         $role = p('role') === 'gm' ? 'gm' : 'player';
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
         out(['ok' => true]);
@@ -553,11 +506,11 @@ try {
         out(['ok' => true]);
 
     default:
-        fail('Unknown action', 404);
+        fail('Unknown action', 404, 'unknown_action');
     }
 } catch (PDOException $e) {
     if (db()->inTransaction()) db()->rollBack();
     if ($e->getCode() === '23000') fail('That conflicts with existing data (duplicate name?)', 409);
-    error_log('rpg-tracker: ' . $e->getMessage());
+    error_log('campaign-chronicle: ' . $e->getMessage());
     fail('Database error', 500);
 }
