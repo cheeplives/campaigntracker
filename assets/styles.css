@@ -153,3 +153,15 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
 .builderwrap { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 6px 0; }
 .tbl.builder td, .tbl.builder th { padding: 3px 4px; } .tbl.builder select { max-width: 9rem; }
 .tbl.baseline td { padding: 4px 6px; vertical-align: top; } .tbl.baseline td:first-child { width: 1%; }
+
+/* tooltips */
+.tip { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 50%;
+  border: 1px solid var(--muted); color: var(--muted); font: 600 .68rem/1 var(--sans); text-transform: none; letter-spacing: 0; cursor: help; vertical-align: middle; }
+.tip:hover, .tip:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+#tipbox { position: fixed; z-index: 50; max-width: min(320px, calc(100vw - 16px)); padding: 8px 10px; border-radius: 7px; pointer-events: none;
+  background: var(--ink); color: var(--bg); font: 400 .82rem/1.4 var(--sans); white-space: pre-line; box-shadow: 0 4px 14px rgb(0 0 0 / .35);
+  opacity: 0; visibility: hidden; transition: opacity .12s; }
+#tipbox.show { opacity: 1; visibility: visible; }
+.lightlv { display: flex; gap: 8px; flex-wrap: wrap; }
+.lightlv > span { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.lightlv.off { opacity: .5; }

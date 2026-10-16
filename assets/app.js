@@ -26,19 +26,54 @@
   const $ = (s, el = document) => el.querySelector(s);
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
-  function mount(...kids) { const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
+  function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
   function toast(msg, bad) {
     const t = $('#toast');
     t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
     clearTimeout(toast._t); toast._t = setTimeout(() => (t.className = ''), 3200);
   }
-  function field(label, input, hint) {
-    return h('label', { class: 'field' }, h('span', { class: 'lbl' }, label), input, hint ? h('small', { class: 'muted' }, hint) : null);
+  function field(label, input, hint, tipText) {
+    return h('label', { class: 'field' }, h('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? h('small', { class: 'muted' }, hint) : null);
   }
+
+  // ------------------------------------------------------------ tooltips
+  // Any element with data-tip shows a tooltip on hover (and on keyboard focus). The "?" icons from tip()
+  // also open on tap, so touch screens can read them. One floating box, kept inside the viewport.
+  /** A small "?" icon that explains the thing next to it. */
+  function tip(text) {
+    return h('span', { class: 'tip', tabindex: 0, role: 'button', 'aria-label': text, 'data-tip': text,
+      onclick: e => { e.preventDefault(); e.stopPropagation(); showTip(e.currentTarget); },
+      onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showTip(e.currentTarget); } } }, '?');
+  }
+  let tipBox = null, tipEl = null;
+  function showTip(el) {
+    if (!tipBox) document.body.append(tipBox = h('div', { id: 'tipbox', role: 'tooltip' }));
+    tipEl = el;
+    tipBox.textContent = el.dataset.tip;
+    tipBox.className = 'show';
+    const r = el.getBoundingClientRect(), bw = tipBox.offsetWidth, bh = tipBox.offsetHeight;
+    const x = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8));
+    const y = r.bottom + 8 + bh > innerHeight - 8 && r.top - bh - 8 > 0 ? r.top - bh - 8 : r.bottom + 8;
+    tipBox.style.left = `${x}px`; tipBox.style.top = `${y}px`;
+  }
+  function hideTip() { tipEl = null; if (tipBox) tipBox.className = ''; }
+  const tipTarget = e => (e.target instanceof Element ? e.target.closest('[data-tip]') : null);
+  const canHover = matchMedia('(hover: hover)');
+  document.addEventListener('mouseover', e => {
+    if (!canHover.matches) return; // touch: only the "?" icons open, on tap
+    const el = tipTarget(e);
+    if (el) { if (el !== tipEl) showTip(el); } else if (tipEl) hideTip();
+  });
+  document.addEventListener('focusin', e => { const el = tipTarget(e); if (el && el.matches(':focus-visible')) showTip(el); });
+  document.addEventListener('focusout', hideTip);
+  document.addEventListener('click', e => { if (!tipTarget(e)) hideTip(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+  window.addEventListener('scroll', hideTip, true);
   function select(options, value, attrs) {
     return h('select', attrs || {}, options.map(([v, l]) => h('option', { value: v, selected: String(v) === String(value) }, l)));
   }
-  const btn = (label, onclick, cls) => h('button', { type: 'button', class: cls || '', onclick }, label);
+  const btn = (label, onclick, cls, tipText) => h('button', { type: 'button', class: cls || '', onclick, 'data-tip': tipText }, label);
+  const tipped = (el, text) => { el.dataset.tip = text; return el; };
   function formData(form) {
     const o = {};
     for (const el of form.elements) {
@@ -160,16 +195,22 @@
 
   // ------------------------------------------------------------ shared widgets
   function visPill(v) {
-    return h('span', { class: `vis v${v.score}`, title: v.parts.join(' · ') }, `👁 ${v.score} ${v.label}`);
+    return h('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this shift.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
   }
+  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Noon and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
+  const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
+  const roleBadge = role => h('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
+  const secretTag = () => h('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
+  const holidayChip = x => h('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
   function moonBadges(d) {
-    return E.moons(cal(), d).map(m => h('span', { class: 'moon', title: `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit)` },
+    return E.moons(cal(), d).map(m => h('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
       h('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
   function weatherText(w) {
     if (!w) return h('span', { class: 'muted' }, 'No weather recorded');
     const def = E.WEATHER[w.type] || {};
-    return h('span', { class: 'wx' }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
+    const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
+    return h('span', { class: 'wx', 'data-tip': `Today's weather${mods.length ? `: ${mods.join(', ')}` : ', no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
@@ -191,9 +232,9 @@
     const n = $('#topnav');
     if (!S.user) { n.replaceChildren(); return; }
     n.replaceChildren(...clean([
-      h('a', { href: '#/' }, 'Campaigns'),
-      S.user.is_admin ? h('a', { href: '#/admin' }, 'Users') : null,
-      h('a', { href: '#/account' }, S.user.display_name),
+      h('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns'),
+      S.user.is_admin ? h('a', { href: '#/admin', 'data-tip': 'Create and manage accounts (site admins only)' }, 'Users') : null,
+      h('a', { href: '#/account', 'data-tip': 'Your account: change your password' }, S.user.display_name),
       btn('Log out', async () => {
         await post('logout', {}).catch(() => {});
         S.user = null; S.camp = null;
@@ -260,11 +301,11 @@
     const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Users'), btn('+ New user', () => mount(editForm()), 'primary')),
       h('table', { class: 'tbl' }, h('tr', {}, h('th', {}, 'Username'), h('th', {}, 'Name'), h('th', {}, 'Admin'), h('th', {})),
         users.map(u => h('tr', {}, h('td', {}, u.username), h('td', {}, u.display_name), h('td', {}, Number(u.is_admin) ? 'Yes' : ''),
-          h('td', { class: 'actions' }, btn('Edit', () => mount(editForm(u)), 'small'),
+          h('td', { class: 'actions' }, tipped(btn('Edit', () => mount(editForm(u)), 'small'), 'Change name, password or admin rights'),
             u.id !== S.user.id ? btn('Delete', async () => {
               if (!confirm(`Delete user ${u.username}?`)) return;
               try { await post('user_delete', { id: u.id }); viewAdmin(); } catch (err) { toast(err.message, true); }
-            }, 'small danger') : null)))));
+            }, 'small danger', 'Delete this account. Their campaign memberships go with it') : null)))));
     mount(list, h('p', { class: 'muted pad' }, 'Create accounts for your players here, then add them to a campaign from its Members tab.'));
   }
 
@@ -275,7 +316,7 @@
     const list = h('div', { class: 'card' },
       h('div', { class: 'row spread' }, h('h1', {}, 'Your campaigns'), btn('+ New campaign', viewCreate, 'primary')),
       campaigns.length ? h('ul', { class: 'camplist' }, campaigns.map(c =>
-        h('li', {}, h('a', { href: `#/c/${c.id}` }, h('strong', {}, c.name), h('span', { class: `role ${c.role}` }, c.role === 'gm' ? 'GM' : 'Player')),
+        h('li', {}, h('a', { href: `#/c/${c.id}` }, h('strong', {}, c.name), roleBadge(c.role)),
           c.description ? h('p', { class: 'muted' }, c.description) : null)))
         : h('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.'));
     mount(list);
@@ -315,7 +356,7 @@
       };
       climateSel.addEventListener('change', sync); sync();
       climateSel.querySelector('option[value=koppen_custom]').remove(); climateSel.querySelector('option[value=custom]').remove(); // built later, per region
-      climateWrap.replaceChildren(h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Home region climate'), climateSel, hint));
+      climateWrap.replaceChildren(h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Home region climate', tip(CLIMATE_TIP)), climateSel, hint));
     };
     presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); drawClimate(); });
     drawStart(); drawSeasons(); drawClimate();
@@ -323,8 +364,9 @@
     const f = h('form', { class: 'card narrow' }, h('h1', {}, 'New campaign'),
       field('Name', h('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', h('textarea', { name: 'description', rows: 2 })),
-      field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).'),
-      startWrap, field('Starting shift', shiftSel), climateWrap, seasonWrap,
+      field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
+        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
+      startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
       h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
@@ -343,6 +385,14 @@
 
   // ------------------------------------------------------------ campaign shell
   const TABS = [['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TAB_TIPS = {
+    calendar: 'Month and week views of days, weather, visibility, moons and events',
+    travel: 'Work out how long a journey takes, then pass that much time',
+    regions: 'Places with their own climate, light source and terrain',
+    holidays: 'Festivals and recurring days shown on the calendar',
+    members: 'Who plays in this campaign, and who can GM it',
+    settings: 'Campaign options and the calendar itself (GM only)',
+  };
   function campaignHeader(active) {
     const c = cal(), d = today(), sh = E.mod(nowShift(), 4);
     const head = h('section', { class: 'nowbar' });
@@ -355,24 +405,28 @@
       const hol = E.holidaysOn(c, S.holidays, d);
       head.replaceChildren(...clean([
         h('div', { class: 'now-main' },
-          h('div', { class: 'now-title' }, h('h1', {}, S.camp.name), h('span', { class: `role ${S.role}` }, isGM() ? 'GM view' : 'Player view')),
+          h('div', { class: 'now-title' }, h('h1', {}, S.camp.name), h('span', { class: `role ${S.role}`, 'data-tip': isGM()
+            ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
+            : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
           h('div', { class: 'now-time' },
-            h('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
-            h('span', { class: 'now-meta' }, region ? `📍 ${region.name}` : null, ' ', weatherText(w), ' ', visPill(v), ' ', moonBadges(d),
-              hol.map(x => h('span', { class: 'chip', style: { background: x.color } }, x.name))))),
+            h('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
+            h('span', { class: 'now-meta' }, region ? h('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ', weatherText(w), ' ', visPill(v), ' ', moonBadges(d),
+              hol.map(holidayChip)))),
         isGM() ? passTimeWidget() : null]));
     };
     draw();
-    const tabs = h('nav', { class: 'tabs' }, TABS.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => h('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '' }, l)));
+    const tabs = h('nav', { class: 'tabs' }, TABS.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => h('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l)));
     return [head, tabs];
   }
 
   function passTimeWidget() {
     const def = { day: 'shift', week: 'day', month: 'week' }[settings().time_unit || 'day'] || 'shift';
-    const amt = h('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount' });
-    const unit = select([['shift', 'shift(s)'], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit' });
-    const act = h('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow' });
-    const go = btn('Pass time ▶', null, 'primary');
+    const amt = h('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });
+    const unit = select([['shift', 'shift(s)'], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit',
+      'data-tip': 'A day has four shifts. Months and years follow this campaign\'s calendar' });
+    const act = h('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow',
+      'data-tip': 'Written into every shift that passes, e.g. "Marching to Altdorf". Shifts that already have an activity keep it' });
+    const go = btn('Pass time ▶', null, 'primary', 'Move "now" forward and roll weather for every new day');
     go.addEventListener('click', busy(go, async () => {
       const n = unitShifts(unit.value, Number(amt.value) || 0);
       if (Math.abs(n) > 4 * 3650 && !confirm(`That jumps ${Math.round(Math.abs(n) / 4)} days. Continue?`)) return;
@@ -381,9 +435,9 @@
       toast(`Now: ${E.fmtShift(cal(), nowShift())}`);
       route();
     }));
-    const back = btn('◀ 1 shift', null, 'small');
+    const back = btn('◀ 1 shift', null, 'small', 'Step back one shift. Recorded weather, notes and activities stay');
     back.addEventListener('click', busy(back, async () => { await passShifts(-1); route(); }));
-    return h('div', { class: 'passtime' }, h('span', { class: 'lbl' }, 'Pass time'), amt, unit, act, go, back);
+    return h('div', { class: 'passtime' }, h('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, go, back);
   }
 
   // ------------------------------------------------------------ calendar tab
@@ -424,12 +478,12 @@
     };
     const jump = datePicker(anchor);
     const toolbar = h('div', { class: 'calbar' },
-      btn('◀', () => step(-1), 'small'), h('h2', {}, title), btn('▶', () => step(1), 'small'),
-      btn('Today', () => { st.anchor = today(); route(); }, 'small'),
+      btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), h('h2', {}, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
+      btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
       h('span', { class: 'seg' },
-        btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small'),
-        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small')),
-      h('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small')));
+        btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
+        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', 'One row per day showing every shift, its visibility and activity')),
+      h('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
 
     mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
     body.append(h('p', { class: 'muted' }, 'Loading…'));
@@ -438,7 +492,7 @@
     const content = st.mode === 'month' ? monthGrid(from, to, data) : weekList(from, to, data);
     body.replaceChildren(content);
     if (isGM() && missing.length) {
-      const g = btn(`Generate weather for ${missing.length} day(s) here`, null, 'small');
+      const g = btn(`Generate weather for ${missing.length} day(s) here`, null, 'small', 'Roll weather now for the days shown that have none yet, using each day\'s region');
       g.addEventListener('click', busy(g, async () => { await ensureWeather(from, to); route(); }));
       body.append(h('div', { class: 'row' }, g, h('small', { class: 'muted' }, 'Days are generated automatically as time passes; this forecasts ahead. Players only see future weather if you allow it in Settings.')));
     }
@@ -461,6 +515,8 @@
     return out;
   }
 
+  const evLine = e => h('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
+    Number(e.is_secret) ? '🔒 ' : '• ', e.title);
   function dayCell(d, data, compact) {
     const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
     const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
@@ -472,12 +528,12 @@
     if (evs.length || hol.length) cls.push('has-ev');
     return h('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
       h('div', { class: 'dc-top' }, h('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
-        h('span', { class: 'dc-icons' }, def ? h('span', { title: E.weatherLabel(w, tempUnit()) }, def.icon) : null,
-          compact ? null : keyMoonPhases(d).map(m => h('span', { title: `${m.name}: ${m.label}` }, m.icon)))),
-      hol.map(x => h('div', { class: 'chip', style: { background: x.color } }, x.name)),
-      evs.slice(0, 3).map(e => h('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : '') }, Number(e.is_secret) ? '🔒 ' : '• ', e.title)),
-      evs.length > 3 ? h('div', { class: 'muted small' }, `+${evs.length - 3} more`) : null,
-      row?.has_notes ? h('div', { class: 'muted small' }, '📝') : null);
+        h('span', { class: 'dc-icons' }, def ? h('span', { 'data-tip': E.weatherLabel(w, tempUnit()) }, def.icon) : null,
+          compact ? null : keyMoonPhases(d).map(m => h('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)))),
+      hol.map(x => h('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
+      evs.slice(0, 3).map(evLine),
+      evs.length > 3 ? h('div', { class: 'muted small', 'data-tip': evs.slice(3).map(e => e.title).join('\n') }, `+${evs.length - 3} more`) : null,
+      row?.has_notes ? h('div', { class: 'muted small', 'data-tip': 'This day has notes. Open it to read them' }, '📝') : null);
   }
 
   function monthGrid(from, to, data) {
@@ -492,7 +548,7 @@
     for (let i = 0; i < lead; i++) cells.push(h('div', { class: 'daycell empty' }));
     for (let d = from; d <= to; d++) cells.push(dayCell(d, data));
     return h('div', {},
-      h('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => h('div', { title: n }, n.slice(0, 3)))),
+      h('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => h('div', { 'data-tip': n }, n.slice(0, 3)))),
       h('div', { class: 'grid', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, cells));
   }
 
@@ -505,13 +561,12 @@
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
       rows.push(h('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
         h('div', { class: 'wr-date' }, h('strong', {}, E.fmtDate(c, d)), h('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
-          hol.map(x => h('span', { class: 'chip', style: { background: x.color } }, x.name)),
-          evs.map(e => h('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : '') }, Number(e.is_secret) ? '🔒 ' : '• ', e.title))),
+          hol.map(holidayChip), evs.map(evLine)),
         h('div', { class: 'wr-shifts' }, [0, 1, 2, 3].map(i => {
           const s = sh[i] || {};
           const v = E.visibility(c, reg, w, d, i, s.visibility_override);
           const isNow = d * 4 + i === nowShift();
-          return h('div', { class: 'shiftbox' + (isNow ? ' now' : '') },
+          return h('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? 'This is the current shift' : null },
             h('div', { class: 'sb-head' }, h('span', {}, names[i]), visPill(v)),
             h('div', { class: 'sb-act' }, s.activity || h('span', { class: 'muted' }, '—')));
         }))));
@@ -535,16 +590,16 @@
       h('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       h('h2', {}, E.fmtDate(c, d)),
       h('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
-      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small'));
+      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'));
 
     // --- overview card
     const overview = h('div', { class: 'card' },
       h('div', { class: 'kv' },
-        h('div', {}, h('span', { class: 'lbl' }, 'Season'), sea.name || '—'),
-        h('div', {}, h('span', { class: 'lbl' }, 'Region'), region ? region.name : '—'),
+        h('div', {}, h('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
+        h('div', {}, h('span', { class: 'lbl' }, 'Region'), region ? h('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
         h('div', {}, h('span', { class: 'lbl' }, 'Weather'), weatherText(w)),
         h('div', {}, h('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => h('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
-        hol.length ? h('div', {}, h('span', { class: 'lbl' }, 'Holidays'), hol.map(x => h('div', {}, h('span', { class: 'chip', style: { background: x.color } }, x.name), x.description ? ` ${x.description}` : ''))) : null,
+        hol.length ? h('div', {}, h('span', { class: 'lbl' }, 'Holidays'), hol.map(x => h('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? h('div', {}, h('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
       !isGM() && row.notes ? h('div', { class: 'notes' }, h('span', { class: 'lbl' }, 'Notes'), h('p', { class: 'pre' }, row.notes)) : null);
 
@@ -555,10 +610,10 @@
 
     // --- events
     const evCard = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h3', {}, 'Events'),
-      (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small') : null),
+      (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
       r.events.length ? r.events.map(e => eventView(e, d)) : h('p', { class: 'muted' }, 'No events on this day.'));
 
-    mount(...campaignHeader('calendar'), nav, overview, h('h3', { class: 'pad' }, 'Shifts'), shiftCards, evCard);
+    mount(...campaignHeader('calendar'), nav, overview, h('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
   }
 
   function dayEditor(d, row, region, w) {
@@ -572,19 +627,21 @@
     const gmn = h('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
     const f = h('form', { class: 'dayedit' },
       h('div', { class: 'grid2' },
-        field('Region for this day', regSel),
-        field('Weather', h('span', { class: 'row' }, wSel, temp, tUnit === 'none' ? '' : tempSym(tUnit), wind)),
+        field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+        field('Weather', h('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
+          'Set the day\'s weather by hand. Rain, fog, snow and the like lower visibility; see the shift cards below for the exact effect.'),
         field('Day notes (players can see)', notes),
-        field('GM notes 🔒', gmn)),
+        field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save day'),
-        btn('🎲 Re-roll weather', async () => {
+        tipped(btn('🎲 Re-roll weather', async () => {
           const reg = regionById(regSel.value) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
           await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: nw, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
           route();
-        }, 'small'),
-        d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small') : null));
+        }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
+        d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small',
+          'Move the campaign clock to this day, keeping the same shift') : null));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       let weather = null;
@@ -606,22 +663,23 @@
     const v = E.visibility(c, region, w, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
     const card = h('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
-      h('div', { class: 'row spread' }, h('h4', {}, names[i], isNow ? h('span', { class: 'nowtag' }, 'NOW') : null), visPill(v)),
-      h('small', { class: 'muted' }, v.parts.join(' · ')));
+      h('div', { class: 'row spread' }, h('h4', {}, names[i], isNow ? h('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
+      h('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
       card.append(h('p', { class: 'pre' }, s.activity || h('span', { class: 'muted' }, 'No activity recorded.')));
       return card;
     }
-    const act = h('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift' });
-    const gmn = h('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒' });
+    const act = h('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift', 'data-tip': 'Players can see this' });
+    const gmn = h('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
     const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
-    const save = btn('Save', null, 'small primary');
+    const save = btn('Save', null, 'small primary', 'Save this shift\'s activity, notes and visibility');
     save.addEventListener('click', busy(save, async () => {
       await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value }, S.camp.id);
       toast(`${names[i]} saved`); route();
     }));
-    card.append(act, gmn, h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Visibility ', ov), save,
-      !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small') : null));
+    card.append(act, gmn, h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Visibility ', ov,
+      tip('Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this shift, e.g. a magical darkness or a burning city.')), save,
+      !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small', 'Move the campaign clock to this shift') : null));
     return card;
   }
 
@@ -633,28 +691,28 @@
     const notesList = h('div', { class: 'enotes' }, (e.notes || []).map(n => h('div', { class: 'enote' },
       h('div', { class: 'pre' }, n.body),
       h('small', { class: 'muted' }, `— ${n.author || 'unknown'}, ${n.created_at}`,
-        (isGM() || Number(n.user_id) === S.user.id) ? btn('delete', async () => {
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
           if (!confirm('Delete this note?')) return;
           try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'link small') : null))));
+        }, 'link small'), 'Delete this note') : null))));
     const noteIn = h('textarea', { rows: 2, placeholder: 'Add a note…' });
-    const addNote = btn('Add note', null, 'small');
+    const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
     addNote.addEventListener('click', busy(addNote, async () => {
       if (!noteIn.value.trim()) return;
       await post('note_add', { event_id: e.id, body: noteIn.value }, S.camp.id); route();
     }));
     box.append(...[
       h('div', { class: 'row spread' },
-        h('h4', {}, Number(e.is_secret) ? h('span', { class: 'secret-tag' }, '🔒 SECRET') : null, e.title),
+        h('h4', {}, Number(e.is_secret) ? secretTag() : null, e.title),
         h('small', { class: 'muted' }, e.shift !== null && e.shift !== undefined ? names[e.shift] : 'All day', span)),
       e.body ? h('p', { class: 'pre' }, e.body) : null,
       h('small', { class: 'muted' }, `Added by ${e.author || 'unknown'}`),
       (isGM() || mine) ? h('div', { class: 'row' },
-        btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small'),
+        btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
         btn('Delete', async () => {
           if (!confirm(`Delete "${e.title}"?`)) return;
           try { await post('event_delete', { id: e.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger')) : null,
+        }, 'small danger', 'Delete this event and its notes')) : null,
       notesList, h('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
@@ -667,10 +725,10 @@
     const f = h('form', { class: 'event editing' },
       h('div', { class: 'grid2' },
         field('Title', h('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
-        field('Shift', select([['', 'All day'], ...names.map((n, i) => [i, n])], e.shift ?? '', { name: 'shift' })),
+        field('Shift', select([['', 'All day'], ...names.map((n, i) => [i, n])], e.shift ?? '', { name: 'shift' }), null, 'When in the day it happens. "All day" for things that span the whole day'),
         field('Starts', startPick),
-        field('Lasts (days)', h('input', { type: 'number', name: 'lasts', min: 1, value: lasts })),
-        isGM() ? field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) })) : null),
+        field('Lasts (days)', h('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
+        isGM() ? field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), null, 'Players won\'t see this event or its notes') : null),
       field('Details', h('textarea', { name: 'body', rows: 4, value: e.body || '' })),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
     f.addEventListener('submit', async ev => {
@@ -703,7 +761,8 @@
         F.push(field('Distance', h('input', { name: 'distance', type: 'number', step: 'any', value: 60 }), 'Any unit — miles, km, leagues…'),
           field('Speed per hour (same unit)', h('input', { name: 'speed', type: 'number', step: 'any', value: 3 }), 'Walking ≈ 3 mph / 5 km/h; horse ≈ 5–6 mph; sailing ship ≈ 4–8 knots'),
           field('Travel hours per day', h('input', { name: 'hours_per_day', type: 'number', step: 'any', value: 8 }), '24 for ships that sail around the clock'),
-          field('Terrain multiplier', select([[1, 'Road / open water ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' })));
+          field('Terrain multiplier', select([[1, 'Road / open water ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
+            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long'));
       } else if (m === 'hohmann') {
         const sys = h('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => h('option', { value: k }, s.label)));
         const r1 = h('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = h('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
@@ -721,16 +780,17 @@
         b2.addEventListener('change', () => { if (b2.value) r2.value = b2.value; });
         const lbl1 = field('From', h('span', { class: 'row' }, b1, r1)), lbl2 = field('To', h('span', { class: 'row' }, b2, r2));
         sys.addEventListener('change', fill);
-        F.push(field('Central body', sys), lbl1, lbl2);
+        F.push(field('Central body', sys, null, 'The star or planet both orbits go around. Pick a body from the lists or type an orbit radius'), lbl1, lbl2);
         setTimeout(fill);
       } else if (m === 'brachistochrone' || m === 'relativistic') {
         F.push(field('Distance', h('span', { class: 'row' }, h('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.24 : 1.5 }), (() => { const u = unitSel(); if (m === 'relativistic') u.value = 'LY'; return u; })()),
           'Earth–Mars ranges 0.5–2.5 AU; Alpha Centauri is 4.24 LY'),
           field('Acceleration (g)', h('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
-          field('Speed cap (fraction of light, optional)', h('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates'));
+          field('Speed cap (fraction of light, optional)', h('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates',
+            '0.1 means a tenth of the speed of light. Leave empty to burn all the way to the midpoint'));
       } else {
         const kind = select([['rate', 'Speed in light-years per day'], ['fixed', 'Fixed duration per jump']], 'rate', { name: 'ftl_kind' });
-        F.push(field('FTL type', kind),
+        F.push(field('FTL type', kind, null, 'Speed: the trip scales with distance. Fixed: every jump takes the same time, however far'),
           field('Distance (LY)', h('input', { name: 'distance', type: 'number', step: 'any', value: 10 })),
           field('FTL speed (LY per day)', h('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
           field('Fixed jump duration (hours)', h('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
@@ -745,8 +805,9 @@
     const fromName = h('input', { placeholder: 'Origin (e.g. Earth)' }), toName = h('input', { placeholder: 'Destination (e.g. Mars)' });
     const travelReg = select(regOpts, ''), arriveReg = select(regOpts, '');
     const f = h('form', { class: 'card' }, h('h2', {}, 'Travel planner'),
-      field('Mode', modeSel), fieldsWrap,
-      h('div', { class: 'row' }, h('button', { class: 'primary' }, 'Calculate')), out);
+      field('Mode', modeSel, null, 'Overland: distance ÷ speed, in travel hours per day. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
+      fieldsWrap,
+      h('div', { class: 'row' }, h('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
     let result = null;
     f.addEventListener('submit', e => {
@@ -771,7 +832,7 @@
         info.textContent = `${n} shifts (${(n / 4).toFixed(1)} days). Arrive: ${E.fmtShift(cal(), nowShift() + n)}`;
       };
       useWorld.addEventListener('change', upd); upd();
-      const go = btn('Depart — pass this much time', null, 'primary');
+      const go = btn('Depart — pass this much time', null, 'primary', 'Pass the travel time, label each passed shift with the trip, and log it as an event');
       go.addEventListener('click', busy(go, async () => {
         const n = shiftsFor();
         if (n <= 0) throw new Error('Trip is shorter than one shift');
@@ -787,8 +848,8 @@
       return h('div', { class: 'depart' }, h('h3', {}, 'Make the trip'),
         h('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
           field('Region while travelling', travelReg, 'e.g. "Ship interior" so transit days get shipboard conditions'),
-          field('Region on arrival', arriveReg),
-          result.worldHours ? field('Advance by outside-world time instead', useWorld) : null),
+          field('Region on arrival', arriveReg, null, 'The party is moved here when the trip ends'),
+          result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
         info, h('div', { class: 'row' }, go),
         h('small', { class: 'muted' }, 'Labels every passed shift with the trip (without overwriting existing activity) and logs a multi-day travel event.'));
     };
@@ -799,17 +860,18 @@
   function viewRegions() {
     const cur = settings().current_region;
     const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Regions'),
-      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary small') : null),
+      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary small', 'Add a place with its own climate, light source and terrain') : null),
       S.regions.map(r => h('div', { class: 'listrow' },
-        h('div', {}, h('strong', {}, r.name), r.id === Number(cur) ? h('span', { class: 'nowtag' }, 'PARTY IS HERE') : null,
-          h('div', { class: 'muted small' }, regionSummary(r)), r.description ? h('div', { class: 'small pre' }, r.description) : null),
+        h('div', {}, h('strong', {}, r.name), r.id === Number(cur) ? h('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
+          h('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? h('div', { class: 'small pre' }, r.description) : null),
         isGM() ? h('div', { class: 'actions' },
-          r.id !== Number(cur) ? btn('Party is here', async () => { await setCurrentRegion(r.id); await ensureWeather(today(), today()); toast(`Party moved to ${r.name}`); await loadCampaign(S.camp.id, true); route(); }, 'small') : null,
-          btn('Edit', () => list.after(regionForm(r)), 'small'),
+          r.id !== Number(cur) ? btn('Party is here', async () => { await setCurrentRegion(r.id); await ensureWeather(today(), today()); toast(`Party moved to ${r.name}`); await loadCampaign(S.camp.id, true); route(); }, 'small',
+            'Move the party here. Days from now on use this region\'s climate, light and terrain') : null,
+          btn('Edit', () => list.after(regionForm(r)), 'small', 'Change this region\'s climate, light and terrain'),
           btn('Delete', async () => {
             if (!confirm(`Delete region ${r.name}? Days recorded there keep their weather.`)) return;
             await post('region_delete', { id: r.id }, S.camp.id); await loadCampaign(S.camp.id, true); route();
-          }, 'small danger')) : null)));
+          }, 'small danger', 'Delete this region. Days already recorded there keep their weather')) : null)));
     mount(...campaignHeader('regions'), list,
       h('p', { class: 'muted pad' }, 'A region sets the climate (weather odds by season), the light source (sun and moons, artificial lighting, or none), and a terrain modifier to visibility — e.g. −1 under forest canopy.'));
   }
@@ -817,6 +879,12 @@
     if (s.climate === 'custom') return 'Custom climate';
     if (s.climate === 'koppen_custom') return `${s.custom_climate?.label || 'Custom climate'}${s.custom_climate?.koppen ? ` (from ${s.custom_climate.koppen})` : ''}`;
     return E.climateFor({ settings: s }).label;
+  }
+  function lightSummary(r) {
+    const s = r.settings || {};
+    if ((s.lighting || 'natural') !== 'artificial') return null;
+    const lv = s.light_levels || [2, 4, 5, 4];
+    return 'Artificial light by shift:\n' + shiftNames().map((n, i) => `${n}: ${lv[i]} ${E.VIS_LABELS[lv[i]] || ''}`).join('\n');
   }
   function regionSummary(r) {
     const s = r.settings || {};
@@ -870,19 +938,23 @@
     const syncCode = () => {
       const c = code();
       codeOut.textContent = c ? `${c} · ${E.KOPPEN[c].label}` : 'Not a Köppen class';
-      codeOut.title = c ? `e.g. ${E.KOPPEN[c].where}` : '';
+      codeOut.dataset.tip = c ? `Typical of ${E.KOPPEN[c].where}` : '';
       load.disabled = !c;
     };
-    const load = btn('Load baseline', () => {
+    const load = tipped(btn('Load baseline', () => {
       const c = code(); if (!c) return;
       if (name.value.trim() === `Custom ${from}` || !name.value.trim()) name.value = `Custom ${c}`;
       from = c; base = E.koppenBase(c); drawTable(); onChange();
-    }, 'small');
+    }, 'small'), 'Fill the table below with this Köppen class\'s typical seasons. Replaces what is there');
     const num = (v, k, i, attrs) => h('input', { type: 'number', value: E.toTempUnit(v, unit, 1), step: unit === 'C' ? 1 : 'any', 'data-k': k, 'data-i': i, class: 'w-num', ...attrs });
     const scale = (v, k, max, lbl) => h('input', { type: 'number', min: 0, max, step: 'any', value: Number(v) || 0, 'data-k': k, class: 'w-num', 'aria-label': lbl });
     const table = h('table', { class: 'tbl builder' });
     const drawTable = () => table.replaceChildren(
-      h('thead', {}, h('tr', {}, ['Season', `Highs from ${sym}`, `to ${sym}`, 'Precipitation 0–5', 'Storms 0–3', 'Fog 0–3', 'Dust 0–3'].map(x => h('th', {}, x)))),
+      h('thead', {}, h('tr', {}, [['Season'], [`Highs from ${sym}`, 'The coolest typical daytime high in this season'], [`to ${sym}`, 'The warmest typical daytime high in this season'],
+        ['Precipitation 0–5', '0 arid, 1 very dry, 2 light, 3 moderate, 4 wet, 5 very wet. Below freezing it falls as snow'],
+        ['Storms 0–3', 'How often thunderstorms (or blizzards, when freezing) roll in: 0 never, 3 often'],
+        ['Fog 0–3', 'How often fog or mist settles: 0 never, 3 often'], ['Dust 0–3', 'How often dust or sandstorms blow: 0 never, 3 often']]
+        .map(([x, t]) => h('th', {}, x, t ? tip(t) : null)))),
       h('tbody', {}, SEASON_ORDER.map(k => {
         const p = base[k];
         return h('tr', { 'data-s': k }, h('td', {}, h('span', { class: `season s-${k}` }, SEASON_LABELS[k])),
@@ -914,6 +986,28 @@
     return wrap;
   }
 
+  const LIGHT_TIP = 'Only used when the light source is Artificial. Each box is the base visibility of one shift, every day, before weather and terrain:\n'
+    + '0 Pitch black: no light at all\n1 Very dark: emergency strips, a single torch\n2 Dim: night-cycle lighting, a lamplit room\n'
+    + '3 Fair: like dawn or dusk outdoors\n4 Good: normal working lights\n5 Bright: daylight-strength lighting or floodlights\n'
+    + 'The default 2 / 4 / 5 / 4 is a ship or station that dims its lights at night. Weather (such as Emergency lighting) and the terrain modifier still adjust the result, and a GM override on a shift replaces it.';
+  const LIGHT_EXAMPLES = ['no light at all', 'emergency strips, a single torch', 'night-cycle lighting, a lamplit room', 'like dawn or dusk outdoors', 'normal working lights', 'daylight-strength lighting'];
+  /** One 0–5 box per shift for artificial lighting, each with its shift name and a live label. */
+  function lightLevels(lv) {
+    const natural = [0, 3, 5, 3];
+    return h('span', { class: 'lightlv' }, shiftNames().map((n, i) => {
+      const out = h('small', { class: 'muted' });
+      const input = h('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', 'aria-label': `${n} light level`,
+        'data-tip': `${n}: how well lit this shift is, 0 (pitch black) to 5 (bright). Sun & moons would give ${natural[i]} here.` });
+      const sync = () => {
+        const v = Math.max(0, Math.min(5, Math.round(Number(input.value) || 0)));
+        out.textContent = `${v} · ${E.VIS_LABELS[v]}`;
+        out.dataset.tip = `${E.VIS_LABELS[v]}: ${LIGHT_EXAMPLES[v]}`;
+      };
+      input.addEventListener('input', sync); sync();
+      return h('span', {}, h('span', { class: 'small' }, n), input, out);
+    }));
+  }
+
   function regionForm(r = { settings: {} }) {
     const s = r.settings || {};
     const climate = climateSelect(s.climate || 'temperate', { name: 'climate' });
@@ -939,16 +1033,20 @@
     };
     climate.addEventListener('change', syncCustom); syncCustom();
     const lv = s.light_levels || [2, 4, 5, 4];
+    const lightSel = select([['natural', 'Sun & moons'], ['artificial', 'Artificial (ship, station, city lights)'], ['none', 'None (caves, deep space)']], s.lighting || 'natural', { name: 'lighting' });
+    const lightLv = lightLevels(lv);
+    const syncLight = () => lightLv.classList.toggle('off', lightSel.value !== 'artificial');
+    lightSel.addEventListener('change', syncLight); syncLight();
     const f = h('form', { class: 'card' }, h('h3', {}, r.id ? `Edit ${r.name}` : 'New region'),
       h('div', { class: 'grid2' },
         field('Name', h('input', { name: 'name', value: r.name || '', required: true })),
-        field('Climate', climate),
+        field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
-        field('Light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial (ship, station, city lights)'], ['none', 'None (caves, deep space)']], s.lighting || 'natural', { name: 'lighting' })),
-        field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' })),
-        field('Artificial light per shift (0–5)', h('span', { class: 'row' }, shiftNames().map((n, i) =>
-          h('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', title: n }))), 'Overnight / Dawn / Noon / Dusk — used when Light source is Artificial')),
+        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at noon.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
+        field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
+          'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
+        field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
       customWrap, builder, baselineWrap,
       field('Description', h('textarea', { name: 'description', rows: 2, value: r.description || '' })),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
@@ -982,12 +1080,12 @@
   }
   function viewHolidays() {
     const list = h('div', { class: 'card' }, h('div', { class: 'row spread' }, h('h2', {}, 'Holidays & recurring days'),
-      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary small') : null),
+      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary small', 'Add a festival, feast day or any other recurring date') : null),
       S.holidays.length ? S.holidays.map(x => h('div', { class: 'listrow' },
-        h('div', {}, h('span', { class: 'chip', style: { background: x.color } }, x.name), x.is_secret ? h('span', { class: 'secret-tag' }, '🔒 SECRET') : null,
+        h('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
           h('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? h('div', { class: 'small pre' }, x.description) : null),
-        isGM() ? h('div', { class: 'actions' }, btn('Edit', () => list.after(holidayForm(x)), 'small'),
-          btn('Delete', async () => { if (!confirm(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger')) : null))
+        isGM() ? h('div', { class: 'actions' }, btn('Edit', () => list.after(holidayForm(x)), 'small', 'Change this holiday'),
+          btn('Delete', async () => { if (!confirm(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger', 'Remove this holiday from the calendar')) : null))
         : h('p', { class: 'muted' }, 'No holidays yet.'));
     mount(...campaignHeader('holidays'), list);
   }
@@ -1002,7 +1100,7 @@
     const interval = h('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
     const parts = {
       month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel), n: field('Which one', nSel),
-      once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval),
+      once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval, null, 'Counted in days, ignoring months and years. Good for market days or a comet'),
     };
     const show = { fixed: ['month', 'day'], nth_weekday: ['n', 'weekday', 'month'], once: ['once'], every_n: ['start', 'interval'] };
     const sync = () => Object.entries(parts).forEach(([k, el]) => (el.style.display = show[type.value].includes(k) ? '' : 'none'));
@@ -1010,10 +1108,11 @@
     const f = h('form', { class: 'card' }, h('h3', {}, x.id ? `Edit ${x.name}` : 'New holiday'),
       h('div', { class: 'grid2' },
         field('Name', h('input', { name: 'name', value: x.name || '', required: true })),
-        field('Repeats', type), ...Object.values(parts),
-        field('Lasts (days)', h('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 })),
-        field('Color', h('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' })),
-        field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }))),
+        field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date'),
+        ...Object.values(parts),
+        field('Lasts (days)', h('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
+        field('Color', h('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
+        field('Secret (GM only)', h('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }), null, 'Players won\'t see this holiday on the calendar')),
       field('Description', h('textarea', { name: 'description', rows: 2, value: x.description || '' })),
       h('div', { class: 'row' }, h('button', { class: 'primary small' }, 'Save holiday'), btn('Cancel', () => f.remove(), 'small')));
     sync();
@@ -1037,14 +1136,15 @@
   function viewMembers() {
     const card = h('div', { class: 'card' }, h('h2', {}, 'Members'),
       S.members.map(m => h('div', { class: 'listrow' },
-        h('div', {}, h('strong', {}, m.display_name), m.username ? h('span', { class: 'muted' }, ` (${m.username})`) : null, h('span', { class: `role ${m.role}` }, m.role === 'gm' ? 'GM' : 'Player')),
+        h('div', {}, h('strong', {}, m.display_name), m.username ? h('span', { class: 'muted' }, ` (${m.username})`) : null,
+          h('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
         isGM() ? h('div', { class: 'actions' }, btn('Remove', async () => {
           if (!confirm(`Remove ${m.display_name} from this campaign?`)) return;
           try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger')) : null)));
+        }, 'small danger', 'Take them out of this campaign. Their account stays')) : null)));
     if (isGM()) {
       const f = h('form', { class: 'row' }, h('input', { name: 'username', placeholder: 'Username', required: true }),
-        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role' }), h('button', { class: 'primary small' }, 'Add member'));
+        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'data-tip': 'A co-GM has the same powers as you, including secrets' }), h('button', { class: 'primary small' }, 'Add member'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
         try { await post('member_add', formData(f), S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
@@ -1084,14 +1184,14 @@
       month.addEventListener('change', syncMax); syncMax();
       const row = h('div', { class: 'row seasonrow' },
         h('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
-        select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate' }),
+        select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate', 'data-tip': 'Which season\'s weather odds regions use while this season lasts' }),
         month, day,
-        btn('✕', () => { row.remove(); redraw(); }, 'small link'));
+        btn('✕', () => { row.remove(); redraw(); }, 'small link', 'Remove this season'));
       rows.append(row);
     };
     (c.seasons || []).forEach(s => addRow(s));
     const wrap = h('div', { class: 'seasoned' }, h('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
-      h('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small'),
+      h('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small', 'Add another season, such as a monsoon or a festival winter'),
         h('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
       h('details', { open: true }, h('summary', {}, 'Seasons by month'), preview));
     wrap.addEventListener('input', redraw);
@@ -1143,10 +1243,13 @@
     const general = h('form', { class: 'card' }, h('h2', {}, 'Campaign'),
       h('div', { class: 'grid2' },
         field('Name', h('input', { name: 'name', value: S.camp.name, required: true })),
-        field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' })),
+        field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' }), null,
+          'New days roll their weather here. Same as "Party is here" on the Regions tab'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
-        field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page'),
-        field('Players see future weather', h('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather })),
+        field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
+          'Used for anyone who hasn\'t chosen their own units'),
+        field('Players see future weather', h('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
+          'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
         field('Players can add events', h('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),
       field('Description', h('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
       h('button', { class: 'primary' }, 'Save campaign settings'));
@@ -1166,18 +1269,21 @@
       h('div', { class: 'grid2' },
         field('Calendar name', h('input', { name: 'cal_name', value: c.name || '' })),
         field('Year label suffix', h('input', { name: 'yearSuffix', value: c.yearSuffix || '' }), 'e.g. IC, AD, MY'),
-        field('First year (epoch)', h('input', { type: 'number', name: 'epochYear', value: c.epochYear })),
-        field('Weekday of epoch day 1 (0 = first weekday)', h('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 })),
+        field('First year (epoch)', h('input', { type: 'number', name: 'epochYear', value: c.epochYear }), null, 'The year number of the calendar\'s very first day'),
+        field('Weekday of epoch day 1 (0 = first weekday)', h('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
+          'Shifts the whole weekday cycle. Change it to line up a known date with the right weekday'),
         field('Date format', h('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year'),
         field('Hours per day', h('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), 'Used to turn travel hours into shifts'),
-        field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override'),
-        field('Shift names (4, comma-separated)', h('input', { name: 'shiftNames', value: t.shiftNames }))),
+        field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
+          'Used for any region that doesn\'t set its own. See the Light source help on a region'),
+        field('Shift names (4, comma-separated)', h('input', { name: 'shiftNames', value: t.shiftNames }), null,
+          'Rename the four shifts, in order: the overnight one, then morning, midday and evening. Their lighting stays tied to that order')),
       field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
       field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl)'),
       h('div', { class: 'grid3' },
-        field('Leap year every N years (0 = none)', h('input', { type: 'number', name: 'leap_every', value: L.every || 0 })),
-        field('…except every N years', h('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 })),
-        field('…unless every N years', h('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }))),
+        field('Leap year every N years (0 = none)', h('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
+        field('…except every N years', h('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
+        field('…unless every N years', h('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }), null, 'Years divisible by this are leap years again. Gregorian: 400')),
       h('h3', {}, 'Seasons'),
       field('Season dates are for the', select([['north', 'Northern hemisphere'], ['south', 'Southern hemisphere']], c.hemisphere || 'north', { name: 'cal_hemisphere' }),
         'Regions in the other hemisphere get the opposite season'),
@@ -1203,16 +1309,16 @@
 
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
     const danger = h('div', { class: 'card' }, h('h2', {}, 'Tools'),
-      h('div', { class: 'row' }, presetSel, btn('Replace calendar with preset', async () => {
+      h('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
         if (!confirm('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
         await post('campaign_update', { calendar: E.PRESETS[presetSel.value].calendar }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
-      }, 'small')),
+      }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
       h('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = prompt(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`);
         if (typed !== 'DELETE') return;
         await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/';
-      }, 'small danger')));
+      }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
     mount(...campaignHeader('settings'), general, calForm, danger);
   }
 
