@@ -25,7 +25,11 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.locator("input[name=distance]").fill("1000");
   await expect(page.locator("input[name=speed]")).toHaveValue("850");
   // One units switch at the top converts every box and relabels the samples.
-  const units = page.locator("select.travel-units");
+  const units = { selectOption: v => page.locator(".travel-units").getByLabel(v === "imperial" ? "Imperial" : "Metric").check() };
+  await expect(page.locator(".travel-units").getByLabel("Metric")).toBeChecked();
+  // The units sit in the planner's header, against its right edge.
+  const ub = await page.locator(".travel-units").boundingBox(), cb = await page.locator("form.card").first().boundingBox();
+  expect(cb.x + cb.width - (ub.x + ub.width)).toBeLessThan(24);
   await units.selectOption("imperial");
   await expect(page.locator("input[name=speed]")).toHaveValue("528");
   await expect(page.locator("input[name=distance]")).toHaveValue("621");
@@ -47,6 +51,14 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   const sb = await sample.boundingBox(), db = await page.locator("input[name=distance]").boundingBox();
   if (Math.abs(sb.y - db.y) < sb.height) expect(Math.abs(sb.y - db.y)).toBeLessThan(2);
   await expect(page.locator("select[name=shifts]")).toHaveValue("2");
+  await expect(page.locator("select[name=shifts] option")).toHaveText(["1 shift", "2 shifts", "3 shifts", "4 shifts"]);
+  // On a wide screen the distance and speed boxes are a quarter narrower than the shifts box, and the sample list wider.
+  const wid = async sel => (await page.locator(sel).boundingBox()).width;
+  if (await wid("select[name=shifts]") > 150 && (await sample.boundingBox()).y === (await page.locator("select[name=shifts]").boundingBox()).y) {
+    expect(await wid("input[name=distance]") / await wid("select[name=shifts]")).toBeCloseTo(0.75, 1);
+    expect(await wid("input[name=speed]") / await wid("select[name=shifts]")).toBeCloseTo(0.75, 1);
+    expect(await wid("select[aria-label=Sample]")).toBeGreaterThan(await wid("select[name=shifts]"));
+  }
   await expect(page.locator("input[name=hours_per_day]")).toHaveCount(0);
   await page.getByRole("button", { name: "Calculate" }).click();
   await expect(page.locator(".result")).toContainText("12.0 hours moving at 5/h = 2.0 shifts of 6 h");
