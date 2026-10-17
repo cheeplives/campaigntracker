@@ -54,7 +54,7 @@ Hover over any visibility badge to see this breakdown.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark before first paint, `fonts/` = self-hosted fonts |
+| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark mode and colour theme before first paint, `fonts/` = self-hosted fonts |
 | `api/index.php` | JSON API for campaign data; enforces GM vs player permissions and secret filtering |
 | `api/auth/` | Google/GitHub sign-in (`login`, `callback`, `me`, `logout`), the same flow as Sinless |
 | `api/lib.php` | Shared server library ported from Sinless: config lookup, sessions, CSRF, rate limits, OAuth helpers |

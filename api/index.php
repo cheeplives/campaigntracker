@@ -68,6 +68,8 @@ function user_prefs(int $uid): array {
     return is_array($p) ? $p : [];
 }
 const TEMP_UNITS = ['C', 'F', 'K', 'R', 'Re', 'none'];
+/** Colour themes (data-scheme blocks in static/style.css, SCHEMES in static/app.js). */
+const SCHEMES = ['parchment', 'nightsky', 'console', 'arctic', 'wildwood'];
 function need_admin(): array { $u = me(); if (!$u['is_admin']) fail('Admins only', 403, 'not_admin'); return $u; }
 
 /** Returns 'gm' | 'player' for the current user in campaign $cid, or fails. Site admins are GMs everywhere. */
@@ -113,11 +115,19 @@ try {
 
     // ===== account =====
     case 'prefs_save':
+        // Only the keys sent are changed, so the theme picker and the units form don't overwrite each other.
         $u = me();
-        $unit = p('temp_unit');
-        if ($unit !== null && !in_array($unit, TEMP_UNITS, true)) fail('Unknown temperature unit');
         $prefs = user_prefs($u['id']);
-        if ($unit === null) unset($prefs['temp_unit']); else $prefs['temp_unit'] = $unit;
+        if (array_key_exists('temp_unit', body())) {
+            $unit = p('temp_unit');
+            if ($unit !== null && !in_array($unit, TEMP_UNITS, true)) fail('Unknown temperature unit');
+            if ($unit === null) unset($prefs['temp_unit']); else $prefs['temp_unit'] = $unit;
+        }
+        if (array_key_exists('scheme', body())) {
+            $scheme = p('scheme');
+            if ($scheme !== null && !in_array($scheme, SCHEMES, true)) fail('Unknown theme');
+            if ($scheme === null) unset($prefs['scheme']); else $prefs['scheme'] = $scheme;
+        }
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);
