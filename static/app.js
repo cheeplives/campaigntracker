@@ -163,7 +163,7 @@
     return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
   }
 
-  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Noon and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
+  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Midday and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
@@ -359,7 +359,7 @@
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM adds them to a campaign by email from its Members tab. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM picks them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -375,11 +375,29 @@
     mount(list);
   }
 
+  /** Seasons moved from one month list to another, each starting at the same share of the year. */
+  function spreadSeasons(seasons, from, to) {
+    const len = ms => ms.reduce((t, m) => t + Number(m.days), 0);
+    return seasons.map(s => {
+      let d = from.slice(0, s.month).reduce((t, m) => t + Number(m.days), 0) + s.day - 1, month = 0;
+      d = Math.floor(d * len(to) / len(from));
+      while (d >= to[month].days) d -= to[month++].days;
+      return { ...s, month, day: d + 1 };
+    });
+  }
+
   function viewCreate() {
     let preset = 'gregorian';
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
     const startWrap = el('div');
-    const tmpCal = () => { const c = JSON.parse(JSON.stringify(E.PRESETS[preset].calendar)); E.prep(c); return c; };
+    // the Custom preset's months, set on this form: how many there are and each one's length
+    let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
+    /** The preset's calendar, with the custom months (and seasons spread over them) when Custom is picked. */
+    const presetCal = () => {
+      const c = E.PRESETS[preset].calendar;
+      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
+    };
+    const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
       const p = E.PRESETS[preset], c = tmpCal();
@@ -411,22 +429,56 @@
       climateSel.querySelector('option[value=koppen_custom]').remove(); climateSel.querySelector('option[value=custom]').remove(); // built later, per region
       climateWrap.replaceChildren(el('label', { class: 'field' }, el('span', { class: 'lbl' }, 'Home region climate', tip(CLIMATE_TIP)), climateSel, hint));
     };
-    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); drawClimate(); });
-    drawStart(); drawSeasons(); drawClimate();
+    const monthsWrap = el('div');
+    const drawMonths = () => {
+      if (preset !== 'custom') return monthsWrap.replaceChildren();
+      const rows = el('div', { class: 'monthrows' });
+      const count = el('input', { type: 'number', min: 1, max: 100, value: customMonths.length, class: 'w-day', name: 'month_count' });
+      const addRow = (m, i) => rows.append(el('div', { class: 'row monthrow' },
+        el('input', { value: m.name, 'data-k': 'name', 'aria-label': `Month ${i + 1} name`, class: 'grow', placeholder: `Month ${i + 1}` }),
+        el('input', { type: 'number', min: 1, max: 1000, value: m.days, class: 'w-day', 'data-k': 'days', 'aria-label': `Month ${i + 1} days` }),
+        el('small', { class: 'muted' }, 'days')));
+      const read = () => [...rows.children].map((r, i) => ({
+        name: r.querySelector('[data-k=name]').value.trim() || `Month ${i + 1}`,
+        days: Math.max(1, Math.min(1000, Math.round(Number(r.querySelector('[data-k=days]').value) || 1))),
+      }));
+      const total = el('small', { class: 'muted' });
+      const sync = () => {
+        customMonths = read();
+        total.textContent = `${customMonths.length} month${customMonths.length === 1 ? '' : 's'}, ${customMonths.reduce((t, m) => t + m.days, 0)} days a year.`;
+        drawStart(); drawSeasons();
+      };
+      customMonths.forEach(addRow);
+      count.addEventListener('change', () => {
+        const n = Math.max(1, Math.min(100, Math.round(Number(count.value) || 1)));
+        count.value = n;
+        const len = rows.lastChild ? rows.lastChild.querySelector('[data-k=days]').value : 30;
+        while (rows.children.length > n) rows.lastChild.remove();
+        while (rows.children.length < n) addRow({ name: `Month ${rows.children.length + 1}`, days: len }, rows.children.length);
+        sync();
+      });
+      rows.addEventListener('change', sync);
+      sync();
+      monthsWrap.replaceChildren(el('h3', {}, 'Months'),
+        field('Number of months', count, null, 'How many months make up a year. Each one can have its own number of days below.'),
+        el('small', { class: 'muted' }, 'Name · days in the month'), rows, total);
+    };
+    presetSel.addEventListener('change', () => { preset = presetSel.value; drawMonths(); drawStart(); drawSeasons(); drawClimate(); });
+    drawMonths(); drawStart(); drawSeasons(); drawClimate();
     const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
     const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
         'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
-      startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
+      monthsWrap, startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       const p = E.PRESETS[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
-          name: v.name, description: v.description, calendar: { ...p.calendar, seasons: seasons.getSeasons() }, settings: { ...p.settings },
+          name: v.name, description: v.description, calendar: { ...presetCal(), seasons: seasons.getSeasons() }, settings: { ...p.settings },
           current_shift: picker.getAbs() * 4 + Number(v.shift),
           regions: p.regions.map(r => r === homeRegion() ? { ...r, settings: { ...r.settings, climate: v.climate } } : r), holidays: p.holidays,
         });
@@ -649,7 +701,9 @@
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
       btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'),
-      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'));
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'),
+      btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
+        'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here'));
 
     // --- overview card
     const overview = el('div', { class: 'card' },
@@ -1159,7 +1213,7 @@
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
-        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at noon.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
+        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at midday.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
         field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
@@ -1259,13 +1313,38 @@
           try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Take them out of this campaign. Their account stays')) : null)));
     if (isGM()) {
-      const f = el('form', { class: 'row' }, el('input', { name: 'email', type: 'email', placeholder: 'Their sign-in email', required: true, class: 'grow' }),
-        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'data-tip': 'A co-GM has the same powers as you, including secrets' }), el('button', { class: 'primary small' }, 'Add member'));
+      // Pick from the site's approved accounts, or type a full email for someone not in the list.
+      let candidates = [];
+      const q = el('input', { name: 'q', type: 'search', placeholder: 'Search people, or type their sign-in email', autocomplete: 'off', 'aria-label': 'Find a person to add', class: 'grow' });
+      const role = select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'aria-label': 'Role', 'data-tip': 'A co-GM has the same powers as you, including secrets' });
+      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'Registered people' });
+      const add = async body => {
+        try { await post('member_add', { ...body, role: role.value }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+      };
+      const matches = () => {
+        const t = q.value.trim().toLowerCase();
+        return t ? candidates.filter(u => (u.display_name || '').toLowerCase().includes(t) || (u.email || '').toLowerCase().includes(t)) : candidates;
+      };
+      const renderList = () => {
+        const m = matches();
+        list.replaceChildren(...(m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
+          el('div', {}, el('strong', {}, u.display_name || u.email), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
+          el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email} to this campaign`))))
+          : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Everyone registered is already in this campaign. Add someone new by their sign-in email.')]),
+          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null);
+      };
+      q.addEventListener('input', renderList);
+      const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
-        try { await post('member_add', formData(f), S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+        const v = q.value.trim();
+        const m = matches();
+        if (v.includes('@')) return add({ email: v });
+        if (v && m.length === 1) return add({ user_id: m[0].id });
+        toast('Pick someone from the list, or type their full sign-in email.', true);
       });
-      card.append(el('h3', {}, 'Add a member'), f, el('small', { class: 'muted' }, 'Use the email they sign in with. They need to have signed in once and been approved by the site admin.'));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, 'Everyone who has signed in and been approved by the site admin is listed. Someone new needs to sign in once and be approved first.'));
+      api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
     }
     mount(...campaignHeader('members'), card);
   }

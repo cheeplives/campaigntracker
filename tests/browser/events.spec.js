@@ -22,7 +22,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await form.getByRole("checkbox", { name: /^All day/ }).uncheck();
   await form.getByRole("combobox", { name: /^Shift Start/ }).selectOption({ label: "Dawn" });
   await expect(form.getByRole("combobox", { name: /^Shift End/ })).toHaveValue("1");   // follows Shift Start
-  await form.getByRole("combobox", { name: /^Shift End/ }).selectOption({ label: "Noon" });
+  await form.getByRole("combobox", { name: /^Shift End/ }).selectOption({ label: "Midday" });
   await form.getByRole("button", { name: "Battle", exact: true }).click();
   await form.getByLabel("New tag name").fill("Siege");
   await form.getByRole("button", { name: "+ Add tag" }).click();
@@ -31,7 +31,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await expect(page.getByText("Event saved")).toBeVisible();
 
   const ev = page.locator(".event", { hasText: "Skirmish at the ford" });
-  await expect(ev).toContainText("Dawn → Noon");
+  await expect(ev).toContainText("Dawn → Midday");
   await expect(ev.locator(".chip.tag")).toHaveText(["Battle", "Siege"]);
   const { json } = await api(page, "campaign", undefined, cid);
   expect(json.tags.find(t => t.name === "Siege").id).not.toBeNull();

@@ -3,14 +3,14 @@
  * Pure functions with no DOM access, so the same file can be tested in Node.
  *
  * Time model: every in-game day has an integer "absolute day" (day 0 = first day of the
- * calendar's epoch year). A day has 4 shifts: 0 Overnight, 1 Dawn, 2 Noon, 3 Dusk.
+ * calendar's epoch year). A day has 4 shifts: 0 Overnight, 1 Dawn, 2 Midday, 3 Dusk.
  * The campaign "now" is stored as an absolute shift = absDay * 4 + shift.
  */
 (function (root) {
   'use strict';
 
-  const SHIFT_KEYS = ['overnight', 'dawn', 'noon', 'dusk'];
-  const DEFAULT_SHIFT_NAMES = ['Overnight', 'Dawn', 'Noon', 'Dusk'];
+  const SHIFT_KEYS = ['overnight', 'dawn', 'midday', 'dusk'];
+  const DEFAULT_SHIFT_NAMES = ['Overnight', 'Dawn', 'Midday', 'Dusk'];
   const VIS_LABELS = ['Pitch black', 'Very dark', 'Dim', 'Fair', 'Good', 'Bright'];
   const MOON_PHASES = [
     ['New', '🌑'], ['Waxing crescent', '🌒'], ['First quarter', '🌓'], ['Waxing gibbous', '🌔'],
@@ -72,7 +72,9 @@
   /** Festival (intercalary) days sit outside the weekday cycle unless marked keepWeekday (like the Shire's Yule days). */
   function inWeek(m) { return !m.intercalary || !!m.keepWeekday; }
   function shiftNames(cal) {
-    const n = cal.shiftNames || [];
+    let n = cal.shiftNames || [];
+    // campaigns made before the rename saved the old defaults; they get the new ones
+    if (n.join() === 'Overnight,Dawn,Noon,Dusk') n = [];
     return DEFAULT_SHIFT_NAMES.map((d, i) => n[i] || d);
   }
 
@@ -575,7 +577,7 @@
   };
   // Which shift the forecast peaks in: storms, hail, haze and dust build in the afternoon heat; fog is thickest at dawn.
   const SHIFT_PEAK = { storm: [2, 3], hail: [2], haze: [2], sandstorm: [2, 3], fog: [1] };
-  // Temperature at each shift as a share of the day's high-to-low swing below the high (Noon holds the high).
+  // Temperature at each shift as a share of the day's high-to-low swing below the high (Midday holds the high).
   const SHIFT_COOL = [0.9, 0.5, 0, 0.35];
 
   /** Typical difference between the daytime high and the overnight low, in °C, before cloud cover. */
@@ -1011,7 +1013,7 @@
     },
 
     custom: {
-      label: 'Custom (start from a blank 12×30 calendar)',
+      label: 'Custom (choose your own months and their lengths)',
       calendar: {
         name: 'Custom calendar', epochYear: 1, yearSuffix: '', weekdayOffset: 0, lighting: 'natural',
         weekdays: ['Firstday', 'Seconday', 'Thirdday', 'Fourthday', 'Fifthday', 'Sixthday', 'Restday'],

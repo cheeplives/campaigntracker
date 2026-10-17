@@ -28,13 +28,18 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Google/GitHub sign-in is taken over by the email an admin linked to it;
   sign-in starts are rate-limited per IP.
 - **campaign**: a GM creates a campaign and every tab renders with no script
-  errors; members are added by sign-in email, only once approved; players never
-  receive secret events.
+  errors; a custom calendar is created with its own number of months, each
+  with its own length; members are added by sign-in email, only once approved; players never
+  receive secret events; a GM picks people from the approved accounts not yet in
+  the campaign, which only GMs can list.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves.
+- **export**: the day page's Export button downloads the day as Markdown; the
+  GM's file has secret events and GM notes, a player's has neither and leaves
+  out the weather of shifts that haven't happened yet.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),
   and Cancel keeps the item; the light/dark toggle is remembered; a colour theme picked
   from the top bar is remembered and follows the account to a new device; fonts load
