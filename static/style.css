@@ -204,5 +204,6 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
   .tbl.users tr:first-child { display: none; }
   .tbl.users tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .tbl.users td { border: 0; padding: 2px 0; }
-  .tbl.users td.actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .tbl.users td.act { grid-column: 1 / -1; }
+  .tbl.users td.act .actions { justify-content: flex-start; }
 }

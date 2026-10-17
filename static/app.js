@@ -264,7 +264,7 @@
         el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
           el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
         el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
-        el('td', { class: 'actions' },
+        el('td', { class: 'act' }, el('div', { class: 'actions' },
           legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
             const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
             if (email === null) return false;
@@ -275,7 +275,7 @@
           !self ? act('Delete', async () => {
             if (!await confirmDialog(`Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`, { ok: 'Delete', danger: true })) return false;
             await post('user_delete', { id: u.id });
-          }, 'danger', 'Delete this account. Their campaign memberships go with it') : null));
+          }, 'danger', 'Delete this account. Their campaign memberships go with it') : null)));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),

@@ -58,6 +58,21 @@ test("the admin identity is approved and made admin on first sign-in", async ({ 
   expectNoErrors(errors);
 });
 
+test("the Users screen keeps each person's buttons on their own row", async ({ page, browser }) => {
+  const who = person("Rowan");
+  await signIn(page, who);
+  await approve(browser, who.email);
+  await signIn(page, ADMIN);
+  await page.goto("index.html#/admin");
+  await expect(page.getByRole("row").filter({ hasText: who.email })).toBeVisible();
+  // Every cell of a row shares its bottom edge, including the admin's empty action cell.
+  const ragged = await page.$$eval(".tbl.users tr", rows => rows.filter(r => {
+    const bottoms = [...r.children].map(c => Math.round(c.getBoundingClientRect().bottom));
+    return getComputedStyle(r).display === "table-row" && new Set(bottoms).size > 1;
+  }).length);
+  expect(ragged).toBe(0);
+});
+
 test("an account from before OAuth is taken over by its linked email", async ({ page }) => {
   const who = person("Lena");
   sql(`INSERT INTO users (provider, provider_user_id, email, display_name, status) VALUES ('legacy', 'legacy-${who.id}', '', 'Old Lena', 'approved');
