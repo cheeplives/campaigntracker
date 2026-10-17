@@ -1090,8 +1090,11 @@
     const modeSel = select(modes, 'overland', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
     // One Metric / Imperial choice for every distance and speed box below; the maths itself always runs in km.
-    const units = select([['metric', 'Metric (km, km/h)'], ['imperial', 'Imperial (miles, mph)']], campTempUnit() === 'F' ? 'imperial' : 'metric', { class: 'travel-units' });
-    const KM_MI = 1.609344, imp = () => units.value === 'imperial';
+    const startUnits = campTempUnit() === 'F' ? 'imperial' : 'metric';
+    const units = el('div', { class: 'travel-units', role: 'radiogroup', 'aria-label': 'Units', 'data-tip': 'Metric or Imperial for every distance and speed in the planner' },
+      [['metric', 'Metric'], ['imperial', 'Imperial']].map(([v, l]) =>
+        el('label', {}, el('input', { type: 'radio', name: 'travel_units', value: v, checked: v === startUnits }), l)));
+    const KM_MI = 1.609344, imp = () => units.querySelector('input:checked').value === 'imperial';
     const unitSel = () => select([imp() ? ['mi', 'miles'] : ['km', 'km'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
     const shiftH = () => E.slotHours(cal());
     const num = x => +x.toPrecision(3);
@@ -1129,9 +1132,10 @@
         // The options are just the counts; what they mean goes in the hint under the box.
         const perDay = select(Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]),
           m === 'sea' ? n : hourMode() ? Math.min(8, n) : n === 2 ? 1 : 2, { name: 'shifts' });
-        const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch keep sailing around the clock (${n} hours)` : `About 8 hours is a normal day's travel; ${n} keeps going around the clock`)
-          : n === 2 ? (m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock (2 shifts)' : `1 shift (${+h.toFixed(2)} h) is a normal day's travel; 2 keep going around the clock`)
-          : m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock (4 shifts)' : `2 shifts (${+(2 * h).toFixed(2)} h) is a normal day's travel, 3 a forced march, 4 round the clock`;
+        const hh = `${+h.toFixed(2)} h each. `;
+        const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch sail all ${n}` : m === 'overland' ? 'About 8 is a normal day' : `${n} keeps going around the clock`)
+          : n === 2 ? hh + (m === 'sea' ? 'Ships with a crew on watch sail both' : m === 'overland' ? '1 is a normal day' : '2 keeps going around the clock')
+          : hh + (m === 'sea' ? 'Ships with a crew on watch sail all 4' : m === 'overland' ? '2 is a normal day, 3 a forced march' : '4 keeps going around the clock');
         F.push(field('Sample speed', samples, 'Average speeds for the real thing, including rests. Fills in the speed'),
           field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
           field(`Speed (${speedUnit})`, speed),
@@ -1184,6 +1188,7 @@
           field('FTL speed (LY per day)', el('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
           field('Fixed jump duration (hours)', el('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
       }
+      fieldsWrap.classList.toggle('travel-speed', E.SPEED_MODES.includes(m));
       fieldsWrap.replaceChildren(...F.filter(Boolean));
       out.replaceChildren();
     };
@@ -1203,8 +1208,7 @@
     });
 
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
-    const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
-      field('Units', units, null, 'Metric or Imperial for every distance and speed in the planner'),
+    const f = el('form', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Travel planner'), units),
       field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive.`),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
