@@ -25,7 +25,11 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.locator("input[name=distance]").fill("1000");
   await expect(page.locator("input[name=speed]")).toHaveValue("850");
   // One units switch at the top converts every box and relabels the samples.
-  const units = page.locator("select.travel-units");
+  const units = { selectOption: v => page.locator(".travel-units").getByLabel(v === "imperial" ? "Imperial" : "Metric").check() };
+  await expect(page.locator(".travel-units").getByLabel("Metric")).toBeChecked();
+  // The units sit in the planner's header, against its right edge.
+  const ub = await page.locator(".travel-units").boundingBox(), cb = await page.locator("form.card").first().boundingBox();
+  expect(cb.x + cb.width - (ub.x + ub.width)).toBeLessThan(24);
   await units.selectOption("imperial");
   await expect(page.locator("input[name=speed]")).toHaveValue("528");
   await expect(page.locator("input[name=distance]")).toHaveValue("621");

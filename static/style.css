@@ -88,7 +88,7 @@ input, select, textarea, button, .button {
   font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; max-width: 100%;
 }
 textarea { width: 100%; resize: vertical; }
-input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-color: var(--accent); }
 input[type=color] { padding: 2px; height: 36px; width: 60px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button, .button { cursor: pointer; display: inline-block; font-weight: 500; }
@@ -135,6 +135,8 @@ button.on { background: var(--accent); color: var(--on-accent); }
 /* calendar */
 .calbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .calbar h2 { margin: 0 6px; }
+.travel-units { display: flex; gap: 12px; margin-bottom: .4em; }
+.travel-units label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 .seg { display: inline-flex; } .seg button { border-radius: 0; } .seg button:first-child { border-radius: 7px 0 0 7px; } .seg button:last-child { border-radius: 0 7px 7px 0; }
 .jump { display: inline-flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 .grid-head, .grid, .grid-free { display: grid; gap: 4px; }
