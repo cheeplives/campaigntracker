@@ -13,7 +13,8 @@ test("a GM creates a campaign and every tab renders", async ({ page, browser }) 
   await page.getByLabel("Name", { exact: true }).fill("The Long Road");
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("heading", { name: "The Long Road" })).toBeVisible();
-  for (const tab of ["Calendar", "Travel", "Regions", "Holidays", "Members", "Settings"]) {
+  await expect(page.locator(".tabs a.on")).toHaveText("Current Day");
+  for (const tab of ["Calendar", "Travel", "Regions", "Holidays", "Members", "Settings", "Current Day"]) {
     await page.getByRole("navigation").getByRole("link", { name: tab, exact: true }).click();
     await expect(page.locator(".tabs a.on")).toHaveText(tab);
   }

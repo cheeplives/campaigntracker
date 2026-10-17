@@ -30,6 +30,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **campaign**: a GM creates a campaign and every tab renders with no script
   errors; members are added by sign-in email, only once approved; players never
   receive secret events.
+- **current-day**: a campaign opens on the Current Day tab and the GM's browser
+  saves today's shift weather; players get today's weather only up to the current
+  shift (never the forecast), nothing for later days, and everything once allowed.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),

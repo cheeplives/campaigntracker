@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '4';
+  const APP_VERSION = '5';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -96,10 +96,15 @@
     const out = [];
     for (let d = from; d <= to; d++) {
       const row = days.get(d);
-      if (row && row.weather) { prev = row.weather; continue; }
+      if (row && row.weather) {
+        // stored before shift weather was saved, or the engine has changed it since: refresh the copy players get
+        const fresh = withShiftWx(d, regionById(row.region_id) || currentRegion(), row.weather);
+        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts)) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
+        prev = row.weather; continue;
+      }
       const reg = (row && regionById(row.region_id)) || region;
       const w = E.genWeather(cal(), S.camp.seed, reg, d, prev, 0);
-      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: w });
+      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: withShiftWx(d, reg, w) });
       prev = w;
     }
     for (let i = 0; i < out.length; i += 1000) await post('days_save', { days: out.slice(i, i + 1000) }, S.camp.id);
@@ -173,14 +178,23 @@
       el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
+  const SO_FAR_TIP = 'The weather this shift. The rest of today\'s weather shows up as each shift comes round.';
   function weatherText(w, what = FORECAST_TIP) {
     if (!w) return el('span', { class: 'muted' }, 'No weather recorded');
+    if (w.partial && what === FORECAST_TIP) what = SO_FAR_TIP;
     const def = E.WEATHER[w.type] || {};
     const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
     return el('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
-  /** The weather in each of day d's four shifts, worked out from the day's forecast w. */
-  const shiftWx = (d, region, w) => E.shiftWeather(cal(), S.camp.seed, region, d, w);
+  /** The weather in each of day d's four shifts, worked out from the day's forecast w. On today, a player
+   * without future weather gets only the shifts so far from the server (w.partial), never the forecast. */
+  const shiftWx = (d, region, w) => w?.partial ? w.shifts : E.shiftWeather(cal(), S.camp.seed, region, d, w);
+  /** Day weather as the GM saves it: the forecast plus its four shifts, so the server can hand players
+   * today's shifts one at a time without sending the forecast. */
+  function withShiftWx(d, region, w) {
+    const { shifts, ...forecast } = w;
+    return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast) };
+  }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
@@ -423,8 +437,9 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
+    today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     travel: 'Work out how long a journey takes, then pass that much time',
     regions: 'Places with their own climate, light source and terrain',
@@ -448,9 +463,9 @@
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
           el('div', { class: 'now-time' },
-            el('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
+            el('a', { href: `#/c/${S.camp.id}/today`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
-              weatherText(sw, `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
+              weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
               hol.map(holidayChip)))),
         isGM() ? passTimeWidget() : null]));
     };
@@ -619,7 +634,8 @@
   }
 
   // ------------------------------------------------------------ day drill-down
-  async function viewDay(d) {
+  /** current: the Current Day tab, which shows today with the current shift up front. */
+  async function viewDay(d, current = false) {
     const c = cal(), names = shiftNames();
     const r = await api('day', { query: { cid: S.camp.id, d } });
     const row = r.day || {};
@@ -630,18 +646,20 @@
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
 
-    const nav = el('div', { class: 'calbar' },
+    const toCalendar = btn(current ? 'Show in calendar' : 'Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
+      current ? 'Open the calendar on this day' : 'Return to the calendar, showing this day');
+    const nav = current ? el('div', { class: 'calbar' }, el('h2', {}, E.fmtDate(c, d)), toCalendar) : el('div', { class: 'calbar' },
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
-      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'));
+      toCalendar);
 
     // --- overview card
     const overview = el('div', { class: 'card' },
       el('div', { class: 'kv' },
         el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
         el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
-        el('div', {}, el('span', { class: 'lbl' }, 'Forecast', tip(FORECAST_TIP)), weatherText(w)),
+        el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
@@ -651,14 +669,36 @@
 
     // --- shifts
     const sws = shiftWx(d, region, w);
-    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null)));
+    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i])));
 
     // --- events
     const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
       (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
       r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
-    mount(...campaignHeader('calendar'), nav, overview, el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
+    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? nowHero(d, region, sws, shifts) : null, overview,
+      el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
+  }
+
+  /** The Current Day tab's banner: the shift the campaign clock is on, large, and the day's four shifts at a glance. */
+  function nowHero(d, region, sws, shifts) {
+    const c = cal(), names = shiftNames(), sh = E.mod(nowShift(), 4);
+    const sw = sws[sh] || null, def = sw ? E.WEATHER[sw.type] || {} : null;
+    const v = E.visibility(c, region, sw, d, sh, shifts[sh]?.visibility_override);
+    return el('section', { class: 'card dayhero' },
+      el('div', { class: 'dh-now' },
+        el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
+        el('div', {},
+          el('div', { class: 'lbl' }, 'Now'),
+          el('div', { class: 'dh-shift' }, names[sh]),
+          el('div', {}, weatherText(sw, `Weather this ${names[sh]}`), ' ', visPill(v)),
+          shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, shifts[sh].activity) : null)),
+      el('div', { class: 'dh-strip' }, [0, 1, 2, 3].map(i => {
+        const x = sws[i] || null, cls = ['dh-step'];
+        if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
+        return el('div', { class: cls.join(' '), 'data-tip': x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}` : `${names[i]}: weather not known yet` },
+          el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i]));
+      })));
   }
 
   function dayEditor(d, row, region, w) {
@@ -682,7 +722,7 @@
           const reg = regionById(regSel.value) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
-          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: nw, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value }, S.camp.id);
           route();
         }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
         d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small',
@@ -693,7 +733,7 @@
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
         if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
-        weather = { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) };
+        weather = withShiftWx(d, regionById(regSel.value) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
       try {
         await post('day_update', { abs_day: d, region_id: regSel.value || null, weather, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
@@ -703,13 +743,15 @@
     return f;
   }
 
-  function shiftCard(d, i, s, region, sw) {
+  /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
+  function shiftCard(d, i, s, region, sw, hiddenWx) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
     const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
       el('div', { class: 'row spread' }, el('h4', {}, names[i], isNow ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
-      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`)) : null,
+      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
+        : hiddenWx ? el('div', { class: 'small muted', 'data-tip': 'Players see each shift\'s weather once the campaign clock reaches it' }, 'Weather not known yet') : null,
       el('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
       card.append(el('p', { class: 'pre' }, s.activity || el('span', { class: 'muted' }, 'No activity recorded.')));
@@ -1388,9 +1430,10 @@
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
         await loadCampaign(cid);
-        const tab = parts[2] || 'calendar';
+        const tab = parts[2] || 'today';
         if (tab === 'day') return await viewDay(Number(parts[3]));
-        return await ({ calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewCalendar)();
+        const viewToday = () => viewDay(today(), true);
+        return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
       }
       await viewCampaigns();
     } catch (err) {
