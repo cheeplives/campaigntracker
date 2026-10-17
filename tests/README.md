@@ -48,6 +48,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   star pickers fill the light-years between two systems; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions.
+- **time-modes**: four shifts, two shifts (Day and Night) and hours each have
+  their slot names, weather quarters and travel maths; switching a campaign's mode
+  moves the clock, shift activities, shift notes and timed events to the same time
+  of day; in hours mode the day page, pass-time box and travel planner count hours.
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
