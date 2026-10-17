@@ -78,6 +78,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-dir
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 16px; }
 .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 4px 16px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.field[hidden] { display: none; }
 .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--dim); font-weight: 600; }
 .inline { display: inline-flex; gap: 6px; align-items: center; }
 
@@ -147,6 +148,12 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .dc-icons { font-size: .85rem; white-space: nowrap; }
 .evline { font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .evline.secret { color: var(--secret); }
+.evdot { color: var(--dim); }
+.etags { margin: 2px 0 4px; }
+.weekrow .chip.tag { margin-top: 3px; }
+.tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+button.tagopt { padding: 2px 10px; font-size: .8rem; border-radius: 99px; border: 1px solid var(--tag); background: transparent; color: var(--text); }
+button.tagopt.on { background: var(--tag); color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
 
 .weeklist { display: flex; flex-direction: column; gap: 8px; }
 .weekrow { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; color: var(--text); }
@@ -178,6 +185,10 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .shiftcard.now { border: 2px solid var(--accent); }
 .shiftcard .actpick { align-self: flex-start; max-width: 100%; }
 .shiftcard .actpick + textarea + small:empty { display: none; }
+.shiftnotes { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
+.shiftnotes .enotes { margin-top: 0; }
+.shiftnotes .enotes:empty { display: none; }
+.charname { font-style: italic; }
 .event { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; background: var(--panel-2); }
 .event.secret { border-left: 4px solid var(--secret); }
 .event.editing { border-color: var(--accent); }

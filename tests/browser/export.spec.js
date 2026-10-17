@@ -37,10 +37,12 @@ test("a day exports to Markdown, and players get only what they can see", async 
   await signIn(pp, player);
   await approve(browser, player.email);
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  await api(pp, "member_character", { character_name: "Kestrel" }, cid);
+  await api(pp, "shift_note_add", { abs_day: 2, shift: 2, body: "Bought rope" }, cid);
   const perrors = watchErrors(pp);
   await pp.goto(`index.html#/c/${cid}/day/2`);
   const pmd = await exportDay(pp);
-  for (const s of ["The party reached town", "### Market day", "**Activity:** Haggle", "player view"]) expect(pmd).toContain(s);
+  for (const s of ["The party reached town", "### Market day", "**Activity:** Haggle", "- Bought rope — *Kestrel, ", "player view"]) expect(pmd).toContain(s);
   for (const s of ["Hidden ambush", "Bandits are watching", "Prices are rigged", "GM notes"]) expect(pmd).not.toContain(s);
   // Dawn is now; the later shifts' weather stays unknown to players.
   const later = pmd.split("### Midday")[1];
