@@ -4,7 +4,7 @@ const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
 
 const shift = (type, temp) => ({ type, temp, wind: 1 });
-const STORMY = { type: "storm", temp: 20, wind: 2, shift_order: "overnight", shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
+const STORMY = { type: "storm", temp: 20, wind: 2, shift_order: "dawn", shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
 
 test("a campaign opens on the Current Day tab, and the GM's browser saves today's shift weather", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -19,7 +19,7 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   await expect(page.locator(".shiftcard.now")).toHaveCount(1);
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
-  expect((await today()).shift_order).toBe("overnight");
+  expect((await today()).shift_order).toBe("dawn");
   await page.getByRole("button", { name: "Show in calendar" }).click();
   await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
   expectNoErrors(errors);
@@ -30,7 +30,7 @@ test("players see today's weather only up to the current shift", async ({ page, 
   const gm = person("Eli"), player = person("Fay");
   await signIn(page, gm);
   await approve(browser, gm.email);
-  const cid = await makeCampaign(page, `Shift weather ${gm.id}`); // now = day 2, first shift
+  const cid = await makeCampaign(page, `Shift weather ${gm.id}`); // now = day 2, Dawn
   expect((await api(page, "days_save", { days: [1, 2, 3].map(d => ({ abs_day: d, weather: STORMY })) }, cid)).status).toBe(200);
 
   const pctx = await browser.newContext();
@@ -48,8 +48,8 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect(range.find(x => x.abs_day === 2).weather.shifts).toHaveLength(1);
   expect(JSON.stringify(range.filter(x => x.abs_day >= 2))).not.toContain("storm");
 
-  // A copy saved in a different shift order than the calendar's is never handed out.
-  expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: { ...STORMY, shift_order: "dawn" } }] }, cid)).status).toBe(200);
+  // A copy saved in the old Overnight-first order (or with no order) is never handed out.
+  expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: { ...STORMY, shift_order: "overnight" } }] }, cid)).status).toBe(200);
   expect(await day(2)).toBeNull();
   const { shift_order, ...unmarked } = STORMY;
   expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: unmarked }] }, cid)).status).toBe(200);
@@ -58,6 +58,9 @@ test("players see today's weather only up to the current shift", async ({ page, 
 
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
+  // Days run Dawn first, so at Dawn the player has Dawn's weather and nothing after it.
+  await expect(pp.locator(".shiftcard h4").first()).toHaveText(/^Dawn/);
+  await expect(pp.locator(".shiftcard").first()).not.toContainText("Weather not known yet");
   await expect(pp.locator(".shiftcard").filter({ hasText: "Weather not known yet" })).toHaveCount(3);
 
   // Two shifts later the player has three shifts' weather, still not the forecast.
@@ -66,7 +69,10 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect(w.shifts).toEqual(STORMY.shifts.slice(0, 3));
   expect(w.type).toBe("storm");
   await pp.reload();
+  await expect(pp.locator(".shiftcard.now h4")).toContainText("Dusk");
   await expect(pp.locator(".shiftcard").filter({ hasText: "Weather not known yet" })).toHaveCount(1);
+  await expect(pp.locator(".shiftcard").last()).toContainText("Overnight");
+  await expect(pp.locator(".shiftcard").last()).toContainText("Weather not known yet");
 
   // The GM still gets the whole day, and so do players once the GM allows future weather.
   expect((await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.weather).toEqual(STORMY);
