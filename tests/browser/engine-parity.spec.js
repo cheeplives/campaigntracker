@@ -41,3 +41,21 @@ test("engine.js: browser matches Node", async ({ page }) => {
   const inBrowser = await page.evaluate(`(${workload.toString()})(window.Engine)`);
   expect(inBrowser).toEqual(workload(Engine));
 });
+
+test("Middle-earth: Shire Reckoning dates and weekdays", () => {
+  const p = Engine.PRESETS.middleearth;
+  const cal = JSON.parse(JSON.stringify(p.calendar));
+  Engine.prep(cal);
+  // every year starts on Sterday, and Overlithe only comes in leap years
+  for (const y of [1418, 1419, 1420, 1500]) {
+    expect(Engine.fmtDate(cal, Engine.yearStart(cal, y))).toBe(`Sterday, 2 Yule, ${y} S.R.`);
+  }
+  expect([1419, 1420, 1500].map(y => Engine.yearLength(cal, y))).toEqual([365, 366, 365]);
+  // Bilbo's party, 22 Halimath 1401, was a Thursday (Mersday)
+  expect(Engine.fmtDate(cal, Engine.toAbs(cal, 1401, 13, 22))).toBe("Mersday, 22 Halimath 1401 S.R.");
+  expect(Engine.fmtDate(cal, Engine.toAbs(cal, 1420, 8, 1))).toBe("Mid-year's Day, 1420 S.R.");
+  expect(Engine.weekday(cal, Engine.toAbs(cal, 1420, 9, 1))).toBeNull();
+  const rohan = p.regions.find(r => r.name === "Rohan");
+  expect(Engine.climateFor(rohan).koppen).toBe("Dfb");
+  for (const r of p.regions) expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
+});
