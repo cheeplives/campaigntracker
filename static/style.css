@@ -153,8 +153,10 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .etags { margin: 2px 0 4px; }
 .weekrow .chip.tag { margin-top: 3px; }
 .tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
-button.tagopt { padding: 2px 10px; font-size: .8rem; border-radius: 99px; border: 1px solid var(--tag); background: transparent; color: var(--text); }
-button.tagopt.on { background: var(--tag); color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+/* Unpicked: an outline in the tag's colour, dimmed. Picked: filled with the colour, bold, ticked. */
+button.tagopt { padding: 2px 10px; font-size: .8rem; border-radius: 99px; border: 2px solid var(--tag); background: transparent; color: var(--dim); opacity: .75; }
+button.tagopt:hover { opacity: 1; color: var(--text); }
+button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacity: 1; text-shadow: 0 1px 1px rgba(0,0,0,.35); box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--tag); }
 
 .weeklist { display: flex; flex-direction: column; gap: 8px; }
 .weekrow { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; color: var(--text); }
