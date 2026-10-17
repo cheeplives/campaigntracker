@@ -411,9 +411,25 @@ $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'days', 'day', 'downtimes', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
+
+// A GM's change to a campaign bumps campaigns.updated_at, which open pages poll ('changed') to tell
+// players the calendar has changed. days_save is left out: it is the GM's browser storing generated
+// weather on its own, which players' pages already work out the same way.
+$touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
+    'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
+    'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete'];
+if ($method === 'POST' && in_array($action, $touchActions, true)) {
+    register_shutdown_function(function () {
+        if (http_response_code() >= 400) return;
+        try {
+            $cid = (int)($_GET['cid'] ?? p('cid'));
+            if ($cid > 0 && role($cid) === 'gm') db()->prepare('UPDATE campaigns SET updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$cid]);
+        } catch (Throwable $e) { /* the change itself is saved; only the notice is lost */ }
+    });
+}
 
 try {
     switch ($action) {
@@ -499,7 +515,7 @@ try {
         $camp = [
             'id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'],
             'calendar' => dec($c['calendar_json']), 'settings' => (object)(dec($c['settings_json']) ?: []),
-            'current_shift' => (int)$c['current_shift'], 'seed' => (int)$c['seed'],
+            'current_shift' => (int)$c['current_shift'], 'seed' => (int)$c['seed'], 'changed' => (string)$c['updated_at'],
         ];
         $st = db()->prepare('SELECT id, name, settings_json, description FROM regions WHERE campaign_id=? ORDER BY name');
         $st->execute([$cid]);
@@ -513,6 +529,13 @@ try {
         $members = $st->fetchAll();
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid)]);
+
+    case 'changed': // polled by open pages: a new value means a GM changed something since
+        $cid = cid();
+        role($cid);
+        $st = db()->prepare('SELECT updated_at FROM campaigns WHERE id=?');
+        $st->execute([$cid]);
+        out(['changed' => (string)$st->fetchColumn()]);
 
     case 'campaign_create':
         $u = me();

@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '7';
+  const APP_VERSION = '8';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -46,9 +46,48 @@
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
     if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
+    if (body) ownWrite();
     return data;
   }
   const post = (action, body, cid) => api(action, { query: cid ? { cid } : {}, body });
+
+  // ------------------------------------------------------------ change notices
+  // An open campaign page asks the server every so often whether a GM has changed the campaign
+  // (api 'changed', which a GM's save bumps). If so it offers a Refresh in a banner; it never
+  // reloads by itself, so nothing being typed is lost.
+  const CHANGE_POLL_MS = 30000;
+  let writeSeq = 0, checking = false;
+  /** After this page saves something, take the new stamp as seen so our own change isn't announced. */
+  function ownWrite() {
+    if (!S.camp?.id) return;
+    const seq = ++writeSeq, cid = S.camp.id;
+    api('changed', { query: { cid } }).then(r => { if (seq === writeSeq && S.camp?.id === cid) S.camp.changed = r.changed; }).catch(() => {});
+  }
+  async function checkForChanges() {
+    const cid = S.camp?.id;
+    if (!cid || !S.user || checking || document.hidden || !location.hash.startsWith(`#/c/${cid}`) || $('#change-banner')) return;
+    checking = true;
+    const seq = writeSeq;
+    try {
+      const r = await api('changed', { query: { cid } });
+      // a save from this page since the check started: its own stamp, not someone else's change
+      if (seq === writeSeq && S.camp?.id === cid && r.changed !== S.camp.changed) showChangeBanner(r.changed);
+    } catch { /* offline for a moment: try again next time */ } finally { checking = false; }
+  }
+  function showChangeBanner(stamp) {
+    if ($('#change-banner')) return;
+    const refresh = async () => {
+      hideChangeBanner();
+      try { await loadCampaign(S.camp.id, true); await route(); } catch (e) { toast(e.message, true); }
+    };
+    $('.topbar').append(el('div', { id: 'change-banner', role: 'status', 'aria-live': 'polite' },
+      el('span', {}, isGM() ? 'This campaign was changed by another GM or in another tab.' : 'The GM updated the calendar.'),
+      btn('Refresh', refresh, 'primary small', 'Load the changes. Save anything you are typing first.'),
+      btn('✕', () => { if (S.camp) S.camp.changed = stamp; hideChangeBanner(); }, 'link', 'Dismiss until the next change')));
+  }
+  function hideChangeBanner() { $('#change-banner')?.remove(); }
+  setInterval(checkForChanges, CHANGE_POLL_MS);
+  document.addEventListener('visibilitychange', checkForChanges);
 
   // ------------------------------------------------------------ campaign helpers
   const isGM = () => S.role === 'gm';
@@ -76,6 +115,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || [];
     E.prep(S.camp.calendar);
+    hideChangeBanner();
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
   }
 

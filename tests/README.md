@@ -61,6 +61,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
+- **changes**: a player's open page offers a Refresh banner after the GM saves a
+  change, and Refresh loads it on the same tab; a player's own note and the GM's
+  own saves don't announce themselves.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),
   and Cancel keeps the item; the light/dark toggle is remembered; a colour theme picked
   from the top bar is remembered and follows the account to a new device; fonts load
