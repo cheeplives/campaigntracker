@@ -30,7 +30,8 @@ const DayExport = (() => {
     const now = Number(camp.current_shift), today = Math.floor(now / 4);
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, ctx.holidays, d);
-    const sws = E.shiftWeather(c, camp.seed, region, d, w);
+    // a player's today comes as the shifts so far (w.partial), without the forecast
+    const sws = w?.partial ? w.shifts : E.shiftWeather(c, camp.seed, region, d, w);
     const shifts = {}; (data.shifts || []).forEach(x => (shifts[x.shift] = x));
     // Players don't learn the weather of a shift that hasn't happened yet.
     const hideWx = i => !gm && !s.players_see_future_weather && d * 4 + i > now;
@@ -42,7 +43,7 @@ const DayExport = (() => {
     L.push('');
     const wxDef = w ? E.WEATHER[w.type] || {} : null;
     L.push([
-      `**Forecast** ${w ? `${wxDef.icon || ''} ${E.weatherLabel(w, unit)}`.trim() : 'not known'}`,
+      `**${w?.partial ? 'Weather now' : 'Forecast'}** ${w ? `${wxDef.icon || ''} ${E.weatherLabel(w, unit)}`.trim() : 'not known'}`,
       ...E.moons(c, d).map(m => `**${m.name}** ${m.icon} ${m.label} (${Math.round(m.illum * 100)}%)`),
       d === today ? `**Now** ${names[E.mod(now, 4)]}` : null,
     ].filter(Boolean).join(' · '));

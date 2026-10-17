@@ -16,7 +16,7 @@ test("a day exports to Markdown, and players get only what they can see", async 
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Export ${gm.id}`);
-  // The campaign starts on day 2 (shift 8, Overnight); day 3 is in the future.
+  // The campaign starts on day 2 (shift 8, Dawn); day 3 is in the future.
   await api(page, "event_save", { abs_day: 2, shift: 1, title: "Market day", body: "Stalls along the river" }, cid);
   await api(page, "event_save", { abs_day: 2, title: "Hidden ambush", is_secret: true }, cid);
   await api(page, "day_update", { abs_day: 2, notes: "The party reached town", gm_notes: "Bandits are watching" }, cid);
@@ -25,7 +25,7 @@ test("a day exports to Markdown, and players get only what they can see", async 
   await page.goto(`index.html#/c/${cid}/day/2`);
   const md = await exportDay(page);
   expect(md).toMatch(/^# /);
-  for (const s of ["## Notes", "The party reached town", "## GM notes 🔒", "Bandits are watching", "## Shifts", "### Overnight (now)",
+  for (const s of ["## Notes", "The party reached town", "## GM notes 🔒", "Bandits are watching", "## Shifts", "### Dawn (now)",
     "**Activity:** Haggle", "Prices are rigged", "## Events", "### Market day", "Stalls along the river", "### Hidden ambush 🔒", "GM view"])
     expect(md).toContain(s);
   expect(md).toMatch(/\*\*Forecast\*\* \S/);
@@ -42,9 +42,9 @@ test("a day exports to Markdown, and players get only what they can see", async 
   const pmd = await exportDay(pp);
   for (const s of ["The party reached town", "### Market day", "**Activity:** Haggle", "player view"]) expect(pmd).toContain(s);
   for (const s of ["Hidden ambush", "Bandits are watching", "Prices are rigged", "GM notes"]) expect(pmd).not.toContain(s);
-  // Overnight is now; the later shifts' weather stays unknown to players.
-  const later = pmd.split("### Dawn")[1];
-  expect(pmd.split("### Dawn")[0]).not.toContain("**Weather** not known yet");
+  // Dawn is now; the later shifts' weather stays unknown to players.
+  const later = pmd.split("### Midday")[1];
+  expect(pmd.split("### Midday")[0]).not.toContain("**Weather** not known yet");
   expect(later).toContain("**Weather** not known yet");
   expect(later).not.toContain("**Visibility**");
   await pctx.close();

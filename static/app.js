@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '4';
+  const APP_VERSION = '5';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -96,10 +96,15 @@
     const out = [];
     for (let d = from; d <= to; d++) {
       const row = days.get(d);
-      if (row && row.weather) { prev = row.weather; continue; }
+      if (row && row.weather) {
+        // stored before shift weather was saved, or the engine has changed it since: refresh the copy players get
+        const fresh = withShiftWx(d, regionById(row.region_id) || currentRegion(), row.weather);
+        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts) || fresh.shift_order !== row.weather.shift_order) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
+        prev = row.weather; continue;
+      }
       const reg = (row && regionById(row.region_id)) || region;
       const w = E.genWeather(cal(), S.camp.seed, reg, d, prev, 0);
-      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: w });
+      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: withShiftWx(d, reg, w) });
       prev = w;
     }
     for (let i = 0; i < out.length; i += 1000) await post('days_save', { days: out.slice(i, i + 1000) }, S.camp.id);
@@ -149,7 +154,7 @@
     const groups = Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, label]) => el('optgroup', { label },
       E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`))));
     const sel = el('select', { class: 'actpick', 'aria-label': 'Add an action',
-      'data-tip': 'Common things to spend a shift doing, from the Year Zero Engine and Perilous Wilds travel rules. Picking one adds it to the activity; you can still type anything' },
+      'data-tip': 'Common things to spend a shift doing on a journey. Picking one adds it to the activity; you can still type anything' },
       el('option', { value: '' }, '+ Add an action…'), groups);
     sel.addEventListener('change', () => {
       const a = E.SHIFT_ACTIONS.find(x => x.name === sel.value);
@@ -163,7 +168,7 @@
     return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
   }
 
-  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Midday and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
+  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Dawn, Midday, Dusk and Overnight, in that order). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
@@ -183,18 +188,28 @@
     return a === b && (e.end_day === null || e.end_day === undefined) ? names[a] : `${names[a]} → ${names[b]}`;
   }
   function moonBadges(d) {
-    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
+    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the dusk and overnight shifts under sun & moons lighting.` },
       el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
+  const SO_FAR_TIP = 'The weather this shift. The rest of today\'s weather shows up as each shift comes round.';
   function weatherText(w, what = FORECAST_TIP) {
     if (!w) return el('span', { class: 'muted' }, 'No weather recorded');
+    if (w.partial && what === FORECAST_TIP) what = SO_FAR_TIP;
     const def = E.WEATHER[w.type] || {};
     const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
     return el('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
-  /** The weather in each of day d's four shifts, worked out from the day's forecast w. */
-  const shiftWx = (d, region, w) => E.shiftWeather(cal(), S.camp.seed, region, d, w);
+  /** The weather in each of day d's four shifts, worked out from the day's forecast w. On today, a player
+   * without future weather gets only the shifts so far from the server (w.partial), never the forecast. */
+  const shiftWx = (d, region, w) => w?.partial ? w.shifts : E.shiftWeather(cal(), S.camp.seed, region, d, w);
+  /** Day weather as the GM saves it: the forecast plus its four shifts, so the server can hand players
+   * today's shifts one at a time without sending the forecast. shift_order records the calendar's shift
+   * order they were saved in; the server ignores a copy saved in another order. */
+  function withShiftWx(d, region, w) {
+    const { shifts, shift_order, ...forecast } = w;
+    return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast), shift_order: cal().shiftOrder || 'overnight' };
+  }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
@@ -465,7 +480,7 @@
     };
     presetSel.addEventListener('change', () => { preset = presetSel.value; drawMonths(); drawStart(); drawSeasons(); drawClimate(); });
     drawMonths(); drawStart(); drawSeasons(); drawClimate();
-    const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
+    const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 1, { name: 'shift' });
     const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
@@ -489,8 +504,9 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
+    today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     travel: 'Work out how long a journey takes, then pass that much time',
     regions: 'Places with their own climate, light source and terrain',
@@ -514,9 +530,9 @@
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
           el('div', { class: 'now-time' },
-            el('a', { href: `#/c/${S.camp.id}/day/${d}`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
+            el('a', { href: `#/c/${S.camp.id}/today`, class: 'now-date', 'data-tip': 'The current shift and date in the campaign. Click to open today' }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
-              weatherText(sw, `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
+              weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
               hol.map(holidayChip)))),
         isGM() ? passTimeWidget() : null]));
     };
@@ -685,7 +701,8 @@
   }
 
   // ------------------------------------------------------------ day drill-down
-  async function viewDay(d) {
+  /** current: the Current Day tab, which shows today with the current shift up front. */
+  async function viewDay(d, current = false) {
     const c = cal(), names = shiftNames();
     const r = await api('day', { query: { cid: S.camp.id, d } });
     const row = r.day || {};
@@ -696,21 +713,24 @@
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
 
-    const nav = el('div', { class: 'calbar' },
+    const toCalendar = btn(current ? 'Show in calendar' : 'Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
+      current ? 'Open the calendar on this day' : 'Return to the calendar, showing this day');
+    const exportBtn = btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
+      'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here');
+    const nav = current ? el('div', { class: 'calbar' }, el('h2', {}, E.fmtDate(c, d)), toCalendar, exportBtn) : el('div', { class: 'calbar' },
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
-      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'),
+      toCalendar,
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'),
-      btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
-        'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here'));
+      exportBtn);
 
     // --- overview card
     const overview = el('div', { class: 'card' },
       el('div', { class: 'kv' },
         el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
         el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
-        el('div', {}, el('span', { class: 'lbl' }, 'Forecast', tip(FORECAST_TIP)), weatherText(w)),
+        el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), 4)]) : null),
@@ -720,14 +740,36 @@
 
     // --- shifts
     const sws = shiftWx(d, region, w);
-    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null)));
+    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i])));
 
     // --- events
     const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
       (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
       r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
-    mount(...campaignHeader('calendar'), nav, overview, el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
+    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? nowHero(d, region, sws, shifts) : null, overview,
+      el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
+  }
+
+  /** The Current Day tab's banner: the shift the campaign clock is on, large, and the day's four shifts at a glance. */
+  function nowHero(d, region, sws, shifts) {
+    const c = cal(), names = shiftNames(), sh = E.mod(nowShift(), 4);
+    const sw = sws[sh] || null, def = sw ? E.WEATHER[sw.type] || {} : null;
+    const v = E.visibility(c, region, sw, d, sh, shifts[sh]?.visibility_override);
+    return el('section', { class: 'card dayhero' },
+      el('div', { class: 'dh-now' },
+        el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
+        el('div', {},
+          el('div', { class: 'lbl' }, 'Now'),
+          el('div', { class: 'dh-shift' }, names[sh]),
+          el('div', {}, weatherText(sw, `Weather this ${names[sh]}`), ' ', visPill(v)),
+          shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, shifts[sh].activity) : null)),
+      el('div', { class: 'dh-strip' }, [0, 1, 2, 3].map(i => {
+        const x = sws[i] || null, cls = ['dh-step'];
+        if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
+        return el('div', { class: cls.join(' '), 'data-tip': x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}` : `${names[i]}: weather not known yet` },
+          el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i]));
+      })));
   }
 
   function dayEditor(d, row, region, w) {
@@ -751,7 +793,7 @@
           const reg = regionById(regSel.value) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
-          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: nw, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value }, S.camp.id);
           route();
         }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
         d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small',
@@ -762,7 +804,7 @@
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
         if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
-        weather = { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) };
+        weather = withShiftWx(d, regionById(regSel.value) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
       try {
         await post('day_update', { abs_day: d, region_id: regSel.value || null, weather, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
@@ -772,13 +814,15 @@
     return f;
   }
 
-  function shiftCard(d, i, s, region, sw) {
+  /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
+  function shiftCard(d, i, s, region, sw, hiddenWx) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
     const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
       el('div', { class: 'row spread' }, el('h4', {}, names[i], isNow ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is on this shift' }, 'NOW') : null), visPill(v)),
-      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`)) : null,
+      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
+        : hiddenWx ? el('div', { class: 'small muted', 'data-tip': 'Players see each shift\'s weather once the campaign clock reaches it' }, 'Weather not known yet') : null,
       el('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
       card.append(el('p', { class: 'pre' }, s.activity || el('span', { class: 'muted' }, 'No activity recorded.')));
@@ -1053,13 +1097,13 @@
   function lightSummary(r) {
     const s = r.settings || {};
     if ((s.lighting || 'natural') !== 'artificial') return null;
-    const lv = s.light_levels || [2, 4, 5, 4];
+    const lv = s.light_levels || [4, 5, 4, 2];
     return 'Artificial light by shift:\n' + shiftNames().map((n, i) => `${n}: ${lv[i]} ${E.VIS_LABELS[lv[i]] || ''}`).join('\n');
   }
   function regionSummary(r) {
     const s = r.settings || {};
     const clim = climateName(s);
-    const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [2, 4, 5, 4]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
+    const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [4, 5, 4, 2]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
     return [clim, (s.hemisphere || 'north') !== (cal().hemisphere || 'north') ? `${s.hemisphere === 'south' ? 'Southern' : 'Northern'} hemisphere` : null, light, s.terrain_mod ? `Terrain ${s.terrain_mod > 0 ? '+' : ''}${s.terrain_mod}` : null].filter(Boolean).join(' · ');
   }
 
@@ -1157,13 +1201,13 @@
   }
 
   const LIGHT_TIP = 'Only used when the light source is Artificial. Each box is the base visibility of one shift, every day, before weather and terrain:\n'
-    + '0 Pitch black: no light at all\n1 Very dark: emergency strips, a single torch\n2 Dim: night-cycle lighting, a lamplit room\n'
-    + '3 Fair: like dawn or dusk outdoors\n4 Good: normal working lights\n5 Bright: daylight-strength lighting or floodlights\n'
-    + 'The default 2 / 4 / 5 / 4 is a ship or station that dims its lights at night. Weather (such as Emergency lighting) and the terrain modifier still adjust the result, and a GM override on a shift replaces it.';
-  const LIGHT_EXAMPLES = ['no light at all', 'emergency strips, a single torch', 'night-cycle lighting, a lamplit room', 'like dawn or dusk outdoors', 'normal working lights', 'daylight-strength lighting'];
+    + '0 Pitch black: no light at all\n1 Very dark: emergency strips, a single torch, dusk outdoors\n2 Dim: night-cycle lighting, a lamplit room\n'
+    + '3 Fair: like dawn outdoors\n4 Good: normal working lights\n5 Bright: daylight-strength lighting or floodlights\n'
+    + 'The default 4 / 5 / 4 / 2 is a ship or station that dims its lights at night. Weather (such as Emergency lighting) and the terrain modifier still adjust the result, and a GM override on a shift replaces it.';
+  const LIGHT_EXAMPLES = ['no light at all', 'emergency strips, a single torch, dusk outdoors', 'night-cycle lighting, a lamplit room', 'like dawn outdoors', 'normal working lights', 'daylight-strength lighting'];
   /** One 0–5 box per shift for artificial lighting, each with its shift name and a live label. */
   function lightLevels(lv) {
-    const natural = [0, 3, 5, 3];
+    const natural = [3, 5, 1, 0];
     return el('span', { class: 'lightlv' }, shiftNames().map((n, i) => {
       const out = el('small', { class: 'muted' });
       const input = el('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', 'aria-label': `${n} light level`,
@@ -1202,7 +1246,7 @@
       drawBaseline();
     };
     climate.addEventListener('change', syncCustom); syncCustom();
-    const lv = s.light_levels || [2, 4, 5, 4];
+    const lv = s.light_levels || [4, 5, 4, 2];
     const lightSel = select([['natural', 'Sun & moons'], ['artificial', 'Artificial (ship, station, city lights)'], ['none', 'None (caves, deep space)']], s.lighting || 'natural', { name: 'lighting' });
     const lightLv = lightLevels(lv);
     const syncLight = () => lightLv.classList.toggle('off', lightSel.value !== 'artificial');
@@ -1213,7 +1257,7 @@
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
-        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at midday.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
+        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 3 at dawn, 5 at midday, 1 at dusk (plus up to +1 for moonlight), 0 overnight (plus up to +2 for moonlight).\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
         field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
@@ -1474,7 +1518,7 @@
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
         field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), null,
-          'Rename the four shifts, in order: the overnight one, then morning, midday and evening. Their lighting stays tied to that order')),
+          'Rename the four shifts, in order: morning, midday, evening, then the overnight one. Their lighting stays tied to that order')),
       field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
       field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl), or "festival weekday" for named days that keep their weekday (like 2 Yule). Days can be 0 for a leap-only day (like Overlithe: 0, 1, festival)'),
       el('div', { class: 'grid3' },
@@ -1531,9 +1575,10 @@
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
         await loadCampaign(cid);
-        const tab = parts[2] || 'calendar';
+        const tab = parts[2] || 'today';
         if (tab === 'day') return await viewDay(Number(parts[3]));
-        return await ({ calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewCalendar)();
+        const viewToday = () => viewDay(today(), true);
+        return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
       }
       await viewCampaigns();
     } catch (err) {

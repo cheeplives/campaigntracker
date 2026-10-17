@@ -88,7 +88,75 @@ function role(int $cid): string {
     return $cache[$cid] = $r;
 }
 function need_gm(int $cid): void { if (role($cid) !== 'gm') fail('Only the GM can do that', 403); }
-function cid(): int { $c = $_GET['cid'] ?? p('cid'); if ($c === null) fail('Missing campaign id'); return int_in($c, 1); }
+function cid(): int {
+    $c = $_GET['cid'] ?? p('cid');
+    if ($c === null) fail('Missing campaign id');
+    $cid = int_in($c, 1);
+    dawn_first($cid);
+    return $cid;
+}
+
+/** Mark a calendar as storing its shifts Dawn first (see dawn_first()). */
+function stamp_cal(string $json): string {
+    $cal = dec($json);
+    if (!is_array($cal)) return $json;
+    $cal['shiftOrder'] = 'dawn';
+    return json_encode($cal, JSON_UNESCAPED_UNICODE);
+}
+/** [a, b, c, d] in Overnight-first order -> [b, c, d, a] in Dawn-first order. */
+function rotate_shift_list($a) {
+    if (!is_array($a) || !$a) return $a;
+    return array_map(fn($i) => $a[($i + 1) % 4] ?? null, [0, 1, 2, 3]);
+}
+/**
+ * Days used to run Overnight (0), Dawn, Midday, Dusk; now they run Dawn (0), Midday, Dusk, Overnight (3),
+ * the overnight shift being the night after the day. Every absolute shift moves back by one, so the
+ * night that came before day d is now the last shift of day d-1, and Dawn of day d stays on day d.
+ * Runs once per campaign, the first time it is used after the change, and marks the calendar when done.
+ */
+function dawn_first(int $cid): void {
+    static $done = [];
+    if (isset($done[$cid])) return;
+    $done[$cid] = true;
+    $pdo = db();
+    $st = $pdo->prepare('SELECT calendar_json FROM campaigns WHERE id=?');
+    $st->execute([$cid]);
+    $cal = dec((string)$st->fetchColumn());
+    if (!is_array($cal) || ($cal['shiftOrder'] ?? '') === 'dawn') return;
+    $pdo->beginTransaction();
+    try {
+        $st = $pdo->prepare('SELECT calendar_json FROM campaigns WHERE id=? FOR UPDATE');
+        $st->execute([$cid]);
+        $cal = dec((string)$st->fetchColumn());
+        if (!is_array($cal) || ($cal['shiftOrder'] ?? '') === 'dawn') { $pdo->commit(); return; }
+        foreach (['shiftNames', 'lightLevels'] as $k) if (isset($cal[$k])) $cal[$k] = rotate_shift_list($cal[$k]);
+        $cal['shiftOrder'] = 'dawn';
+        $pdo->prepare('UPDATE campaigns SET calendar_json=?, current_shift=current_shift-1 WHERE id=?')
+            ->execute([json_encode($cal, JSON_UNESCAPED_UNICODE), $cid]);
+        $st = $pdo->prepare('SELECT id, settings_json FROM regions WHERE campaign_id=?');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $r) {
+            $s = dec($r['settings_json']);
+            if (!is_array($s) || empty($s['light_levels'])) continue;
+            $s['light_levels'] = rotate_shift_list($s['light_levels']);
+            $pdo->prepare('UPDATE regions SET settings_json=? WHERE id=?')->execute([json_encode($s, JSON_UNESCAPED_UNICODE), $r['id']]);
+        }
+        // Park every row at shift+10 first so no remapped row lands on a key that hasn't moved yet.
+        foreach (['shifts', 'events'] as $t) {
+            $pdo->prepare("UPDATE $t SET shift=shift+10 WHERE campaign_id=? AND shift IS NOT NULL")->execute([$cid]);
+        }
+        $pdo->prepare('UPDATE shifts SET abs_day=abs_day-1, shift=3 WHERE campaign_id=? AND shift=10')->execute([$cid]);
+        // A one-day overnight event moves to the day before; a longer one starts a day earlier and ends where it did.
+        $pdo->prepare('UPDATE events SET end_day=IF(end_day=abs_day, end_day-1, end_day), abs_day=abs_day-1, shift=3 WHERE campaign_id=? AND shift=10')->execute([$cid]);
+        foreach (['shifts', 'events'] as $t) {
+            $pdo->prepare("UPDATE $t SET shift=shift-11 WHERE campaign_id=? AND shift BETWEEN 11 AND 13")->execute([$cid]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
 
 function campaign_row(int $cid): array {
     $st = db()->prepare('SELECT * FROM campaigns WHERE id=?');
@@ -99,6 +167,28 @@ function campaign_row(int $cid): array {
 }
 function campaign_settings(int $cid): array { return dec(campaign_row($cid)['settings_json']) ?: []; }
 function floordiv4(int $n): int { return (int)floor($n / 4); }
+/** The calendar's shift order: 'dawn' once a day runs Dawn first, 'overnight' for the original order. */
+function shift_order(array $campaign): string { return (string)((dec($campaign['calendar_json']) ?: [])['shiftOrder'] ?? 'overnight'); }
+
+/**
+ * A day's weather as this user may see it. Players without future weather get nothing for days after
+ * today, and for today only the shifts up to the current one: the weather fields are the current
+ * shift's, never the day's forecast (which is the worst the day brings, so it would give later shifts
+ * away). The shifts come from the copy the GM's browser saves with the forecast, and only count if it
+ * was saved in the calendar's current shift order ($shiftOrder); otherwise players get nothing.
+ */
+function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFuture, string $shiftOrder) {
+    $w = dec($json);
+    $today = floordiv4($currentShift);
+    if (!$hideFuture || $w === null || $ad < $today) return $w;
+    if ($ad > $today) return null;
+    $shifts = is_array($w['shifts'] ?? null) ? array_values($w['shifts']) : [];
+    $seen = array_slice($shifts, 0, $currentShift - 4 * $today + 1);
+    $now = end($seen);
+    if (count($shifts) !== 4 || !is_array($now) || ($w['shift_order'] ?? null) !== $shiftOrder) return null;
+    return ['type' => $now['type'] ?? null, 'temp' => $now['temp'] ?? null, 'wind' => $now['wind'] ?? 0,
+        'season' => $w['season'] ?? null, 'shifts' => $seen, 'partial' => true];
+}
 
 /** Tags every campaign is offered before anyone creates their own: name => colour. */
 const STARTER_TAGS = [
@@ -270,7 +360,7 @@ try {
         $u = me();
         $name = trim((string)str_in(p('name'), 150, false));
         if ($name === '') fail('Name required');
-        $cal = json_in(p('calendar'));
+        $cal = stamp_cal(json_in(p('calendar')));
         $settings = json_in(p('settings') ?: []);
         $pdo = db();
         $pdo->beginTransaction();
@@ -301,7 +391,7 @@ try {
         $name = p('name') !== null ? trim((string)str_in(p('name'), 150, false)) : $c['name'];
         if ($name === '') fail('Name required');
         $desc = p('description', $c['description']);
-        $cal = p('calendar') !== null ? json_in(p('calendar')) : $c['calendar_json'];
+        $cal = p('calendar') !== null ? stamp_cal(json_in(p('calendar'))) : $c['calendar_json'];
         $settings = p('settings') !== null ? json_in(p('settings')) : $c['settings_json'];
         db()->prepare('UPDATE campaigns SET name=?, description=?, calendar_json=?, settings_json=? WHERE id=?')
             ->execute([$name, str_in($desc, 5000), $cal, $settings, $cid]);
@@ -405,6 +495,7 @@ try {
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv4((int)$c['current_shift']);
         $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
+        $order = shift_order($c);
 
         $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes FROM days WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
         $st->execute([$cid, $from, $to]);
@@ -414,7 +505,7 @@ try {
             $days[] = [
                 'abs_day' => $ad,
                 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => ($hideFuture && $ad > $today) ? null : dec($d['weather_json']),
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order),
                 'has_notes' => ($d['notes'] ?? '') !== '' || ($isGm && ($d['gm_notes'] ?? '') !== ''),
             ];
         }
@@ -440,9 +531,10 @@ try {
         $d = $st->fetch() ?: null;
         $day = null;
         if ($d) {
-            $hide = !$isGm && empty($settings['players_see_future_weather']) && $ad > $today;
+            $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
+            $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => $hide ? null : dec($d['weather_json']), 'notes' => $d['notes']];
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order), 'notes' => $d['notes']];
             if ($isGm) $day['gm_notes'] = $d['gm_notes'];
         }
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');

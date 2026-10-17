@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS days (
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Four shifts per day: 0 overnight, 1 dawn, 2 midday, 3 dusk.
+-- Four shifts per day: 0 dawn, 1 midday, 2 dusk, 3 overnight (the night after the day).
+-- Campaigns from before that order are moved over on first use (dawn_first() in api/index.php).
 CREATE TABLE IF NOT EXISTS shifts (
   campaign_id INT UNSIGNED NOT NULL,
   abs_day BIGINT NOT NULL,

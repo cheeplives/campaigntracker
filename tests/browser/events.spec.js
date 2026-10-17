@@ -10,7 +10,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Events ${gm.id}`);
   // An event as saved before shift ranges and tags existed.
-  await api(page, "event_save", { abs_day: 3, title: "Old watch", shift: 1 }, cid);
+  await api(page, "event_save", { abs_day: 3, title: "Old watch", shift: 0 }, cid);
 
   await page.goto(`index.html#/c/${cid}/day/3`);
   await expect(page.locator(".event", { hasText: "Old watch" })).toContainText("Dawn");
@@ -21,7 +21,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await form.getByLabel("Title", { exact: true }).fill("Skirmish at the ford");
   await form.getByRole("checkbox", { name: /^All day/ }).uncheck();
   await form.getByRole("combobox", { name: /^Shift Start/ }).selectOption({ label: "Dawn" });
-  await expect(form.getByRole("combobox", { name: /^Shift End/ })).toHaveValue("1");   // follows Shift Start
+  await expect(form.getByRole("combobox", { name: /^Shift End/ })).toHaveValue("0");   // follows Shift Start
   await form.getByRole("combobox", { name: /^Shift End/ }).selectOption({ label: "Midday" });
   await form.getByRole("button", { name: "Battle", exact: true }).click();
   await form.getByLabel("New tag name").fill("Siege");
@@ -37,9 +37,9 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   expect(json.tags.find(t => t.name === "Siege").id).not.toBeNull();
   const day = await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=3`)).json();
   const saved = day.events.find(e => e.title === "Skirmish at the ford");
-  expect([Number(saved.shift), Number(saved.shift_end)]).toEqual([1, 2]);
+  expect([Number(saved.shift), Number(saved.shift_end)]).toEqual([0, 1]);
   const old = day.events.find(e => e.title === "Old watch");
-  expect([Number(old.shift), Number(old.shift_end), old.tags]).toEqual([1, 1, []]);
+  expect([Number(old.shift), Number(old.shift_end), old.tags]).toEqual([0, 0, []]);
 
   // Shift End before Shift Start on a one-day event is refused.
   expect((await api(page, "event_save", { abs_day: 3, title: "Backwards", shift: 2, shift_end: 1 }, cid)).status).toBe(400);
