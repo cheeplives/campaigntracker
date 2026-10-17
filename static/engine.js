@@ -914,16 +914,18 @@
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 1418, month: 13, day: 23 }, // Frodo leaves Bag End
-      // Climates follow the Köppen climate map of Middle-earth on r/imaginarymaps (Rohan: Dfb).
-      // Tolkien put Hobbiton at about Oxford's latitude and Minas Tirith at Florence's.
+      // Climates follow the Köppen climate map of Middle-earth on r/imaginarymaps (c5mzt9). Umbar and Far Harad
+      // lie south of that map, so theirs are inferred.
       regions: [
         ['The Shire', 'Cfb', 0], ['Bree-land', 'Cfb', 0], ['Old Forest', 'Cfb', -1], ['Lindon & the Grey Havens', 'Cfb', 0],
-        ['Eriador wilds (Lone-lands, Weathertop)', 'Cfb', 0], ['Rivendell', 'Cfb', -1], ['Dunland', 'Cfb', 0],
+        ['Eriador wilds (Lone-lands, Weathertop)', 'Cfb', 0], ['Dunland', 'Cfb', 0],
+        ['Rhudaur & the Trollshaws', 'Dfb', 0], ['Rivendell', 'Dfb', -1],
         ['Misty Mountains (high passes)', 'ET', 0], ['Angmar & the Ettenmoors', 'Dfc', 0], ['Forodwaith', 'ET', 1],
-        ['Lothlórien', 'Cfb', -1], ['Fangorn Forest', 'Dfb', -1], ['Rohan', 'Dfb', 0], ['Mirkwood', 'Dfb', -2],
-        ['Dale & Erebor', 'Dfb', 0], ['Iron Hills', 'Dfc', 0], ['Rhûn', 'BSk', 0],
-        ['Anórien & Minas Tirith', 'Cfa', 0], ['Ithilien', 'Csa', -1], ['Lebennin & Belfalas (Dol Amroth)', 'Csa', 0],
-        ['Mordor: Gorgoroth', 'BWk', 0], ['Mordor: Nurn', 'BSk', 0], ['Umbar', 'BSh', 0],
+        ['Lothlórien', 'Dfb', -1], ['Fangorn Forest', 'Dfb', -1], ['Rohan', 'Dfb', 0], ['Mirkwood', 'Dfb', -2],
+        ['Dale & Erebor', 'Dfc', 0], ['Iron Hills', 'Dfc', 0], ['Rhûn', 'BSk', 0],
+        ['Anórien', 'Dfa', 0], ['Minas Tirith & Lossarnach', 'Csa', 0], ['Ithilien', 'Csa', -1],
+        ['Lebennin & Belfalas (Dol Amroth)', 'Csa', 0], ['South Gondor (Harondor)', 'BSh', 0],
+        ['Mordor: Gorgoroth', 'BWk', 0], ['Mordor: Nurn', 'BWk', 0], ['Umbar', 'BWh', 0],
         ['Near Harad', 'BWh', 1], ['Far Harad', 'Aw', 0],
       ].map(([name, code, terrain], i) => ({
         name, ...(i ? {} : { current: true }),
