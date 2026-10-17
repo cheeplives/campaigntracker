@@ -14,14 +14,26 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
 
   // A campaign with no genre saved keeps every mode.
   const mode = page.locator("select.travel-mode");
-  await expect(mode.locator("option")).toHaveCount(5);
+  await expect(mode.locator("option")).toHaveCount(7);
 
-  // Overland: a sample fills the speed; 60 km at 5 km/h is 12 hours, two 6-hour shifts, done in one day.
+  // Each speed mode lists only its own samples, and the first one is filled in.
   const sample = page.getByLabel("Sample", { exact: true });
+  await mode.selectOption("air");
+  await expect(page.locator("input[name=speed]")).toHaveValue("15");
+  await expect(sample.locator("option", { hasText: "Horseback" })).toHaveCount(0);
   await sample.selectOption({ label: "Airliner at cruise: 850 km/h · 528 mph" });
   await expect(page.locator("input[name=speed]")).toHaveValue("850");
   await page.getByLabel("Sample units").selectOption("mi");
   await expect(page.locator("input[name=speed]")).toHaveValue("528");
+  await mode.selectOption("sea");
+  await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(1);
+  await expect(sample.locator("option", { hasText: "Airliner" })).toHaveCount(0);
+  await expect(page.locator("select[name=shifts]")).toHaveValue("4");
+  await expect(page.locator("select[name=terrain]")).toHaveCount(0);
+
+  // Overland: 60 km at 5 km/h is 12 hours, two 6-hour shifts, done in one day.
+  await mode.selectOption("overland");
+  await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(0);
   await page.getByLabel("Sample units").selectOption("km");
   await sample.selectOption({ label: "Walking / marching (average adult): 5 km/h · 3.11 mph" });
   await expect(page.locator("select[name=shifts]")).toHaveValue("2");
@@ -50,22 +62,25 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await expect(page.locator("input[name=distance]")).toHaveValue("0.52");
   await expect(page.locator("select[name=unit]")).toHaveValue("AU");
 
-  // Fantasy: overland only, and no engines among the samples.
+  // Fantasy: overland, sea and air, with no engines among the samples.
   await page.goto(`index.html#/c/${cid}/settings`);
   await page.locator("select[name=genre]").selectOption("fantasy");
   await page.getByRole("button", { name: "Save campaign settings" }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
   await page.goto(`index.html#/c/${cid}/travel`);
-  await expect(mode.locator("option")).toHaveCount(1);
+  await expect(mode.locator("option")).toHaveCount(3);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Horseback, at a walk" })).toHaveCount(1);
+  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Car in town" })).toHaveCount(0);
+  await mode.selectOption("air");
+  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Eagle" })).toHaveCount(1);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Airliner" })).toHaveCount(0);
 
-  // Modern: overland and orbital transfers.
+  // Modern: overland, sea, air and orbital transfers.
   await page.goto(`index.html#/c/${cid}/settings`);
   await page.locator("select[name=genre]").selectOption("modern");
   await page.getByRole("button", { name: "Save campaign settings" }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
   await page.goto(`index.html#/c/${cid}/travel`);
-  await expect(mode.locator("option")).toHaveText(["Overland / sea / air (speed × shifts a day)", "Orbital transfer (Hohmann, minimum fuel)"]);
+  await expect(mode.locator("option")).toHaveText(["Overland (on foot, mounted, by road or rail)", "Sea and river (oar, sail, engine)", "Air (balloon, wing, aircraft)", "Orbital transfer (Hohmann, minimum fuel)"]);
   expectNoErrors(errors);
 });

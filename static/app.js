@@ -1014,13 +1014,15 @@
     const out = el('div', { class: 'travel-out' });
     const genre = E.genreOf(settings());
     const modes = [
-      ['ground', 'Overland / sea / air (speed × shifts a day)'],
+      ['overland', 'Overland (on foot, mounted, by road or rail)'],
+      ['sea', 'Sea and river (oar, sail, engine)'],
+      ['air', 'Air (balloon, wing, aircraft)'],
       ['hohmann', 'Orbital transfer (Hohmann, minimum fuel)'],
       ['brachistochrone', 'Constant-thrust burn (flip-and-burn / torch drive)'],
       ['relativistic', 'Interstellar at relativistic speed'],
       ['ftl', 'FTL / jump drive'],
     ].filter(([k]) => E.GENRE_MODES[genre].includes(k));
-    const modeSel = select(modes, 'ground', { class: 'travel-mode' });
+    const modeSel = select(modes, 'overland', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
     const unitSel = () => select([['km', 'km'], ['mi', 'miles'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
     const shiftH = () => (Number(cal().hoursPerDay) || 24) / 4;
@@ -1045,14 +1047,16 @@
     const drawFields = () => {
       const m = modeSel.value;
       const F = [];
-      if (m === 'ground') {
-        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: 60 });
-        const speed = el('input', { name: 'speed', type: 'number', step: 'any', value: campTempUnit() === 'F' ? 3 : 5 });
+      if (E.SPEED_MODES.includes(m)) {
+        const groups = E.speedSamples(m, genre), first = groups[0].items[0];
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: { overland: 60, sea: 300, air: 500 }[m] });
         const unit = select([['km', 'km'], ['mi', 'miles']], campTempUnit() === 'F' ? 'mi' : 'km', { 'aria-label': 'Sample units' });
-        let picked = null;
+        let picked = first;
         const toUnit = kmh => num(unit.value === 'mi' ? kmh / 1.609344 : kmh);
-        const samples = samplePicker(E.groundSpeeds(genre), i => { picked = i; speed.value = toUnit(i.kmh); },
+        const speed = el('input', { name: 'speed', type: 'number', step: 'any', value: toUnit(first.kmh) });
+        const samples = samplePicker(groups, i => { picked = i; speed.value = toUnit(i.kmh); },
           i => `${i.label}: ${i.kmh} km/h · ${num(i.kmh / 1.609344)} mph`);
+        samples.selectedIndex = 1;
         unit.addEventListener('change', () => { if (picked) speed.value = toUnit(picked.kmh); });
         speed.addEventListener('input', () => { picked = null; samples.value = ''; });
         const h = shiftH(), hs = n => `${+(n * h).toFixed(2)} h`;
@@ -1060,12 +1064,13 @@
           field('Distance', dist, 'Any unit, as long as the speed uses the same one'),
           field('Speed per hour (same unit)', speed),
           field('Shifts traveled per day', select([
-            [1, `1 shift (${hs(1)})`], [2, `2 shifts (${hs(2)}), a normal day's travel`],
-            [3, `3 shifts (${hs(3)}), a forced march`], [4, `4 shifts (${hs(4)}), round the clock`]], 2, { name: 'shifts' }),
-            '4 for ships and vehicles that keep going around the clock', `A shift is a quarter of the calendar's ${+(h * 4).toFixed(2)}-hour day. The party rests for the other shifts`),
+            [1, `1 shift (${hs(1)})`], [2, `2 shifts (${hs(2)})${m === 'overland' ? ", a normal day's travel" : ''}`],
+            [3, `3 shifts (${hs(3)})${m === 'overland' ? ', a forced march' : ''}`], [4, `4 shifts (${hs(4)}), round the clock`]], m === 'sea' ? 4 : 2, { name: 'shifts' }),
+            m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock' : '4 for vehicles that keep going around the clock',
+            `A shift is a quarter of the calendar's ${+(h * 4).toFixed(2)}-hour day. The party rests for the other shifts`),
           el('input', { type: 'hidden', name: 'shift_hours', value: h }),
-          field('Terrain multiplier', select([[1, 'Road / open water ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
-            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long'));
+          m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
+            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long') : null);
       } else if (m === 'hohmann') {
         const sys = el('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => el('option', { value: k }, s.label)));
         const r1 = el('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = el('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
@@ -1105,7 +1110,7 @@
           field('FTL speed (LY per day)', el('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
           field('Fixed jump duration (hours)', el('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
       }
-      fieldsWrap.replaceChildren(...F);
+      fieldsWrap.replaceChildren(...F.filter(Boolean));
       out.replaceChildren();
     };
     modeSel.addEventListener('change', drawFields);
@@ -1115,7 +1120,7 @@
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const travelReg = select(regOpts, ''), arriveReg = select(regOpts, '');
     const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
-      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, 'Overland: distance ÷ speed, travelling some of the day\'s four shifts. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
+      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, 'Overland, sea and air: distance ÷ speed, travelling some of the day\'s four shifts. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
@@ -1595,7 +1600,7 @@
         field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' }), null,
           'New days roll their weather here. Same as "Party is here" on the Regions tab'),
         field('Genre', select(Object.entries(E.GENRES), E.genreOf(st), { name: 'genre' }), 'Sets which travel modes and sample speeds the Travel tab offers',
-          'Fantasy: overland, sea and air on foot, horse and sail. Modern: adds engines, aircraft and orbital transfers. Sci-Fi: adds thrust burns, relativistic and FTL travel'),
+          'Fantasy: overland, sea and air by foot, horse, sail and wing. Modern: adds engines, aircraft and orbital transfers. Sci-Fi: adds thrust burns, relativistic and FTL travel'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
         field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
           'Used for anyone who hasn\'t chosen their own units'),

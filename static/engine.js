@@ -741,34 +741,49 @@
   // Genres limit which travel modes and sample figures the Travel tab offers. A campaign with no genre saved
   // (made before genres existed) counts as Sci-Fi, which shows every mode, so nothing disappears on it.
   const GENRES = { fantasy: 'Fantasy', modern: 'Modern', scifi: 'Sci-Fi' };
+  // Overland, sea and air all use the speed × shifts maths ('ground'); the rest are the space modes.
+  const SPEED_MODES = ['overland', 'sea', 'air'];
   const GENRE_MODES = {
-    fantasy: ['ground'],
-    modern: ['ground', 'hohmann'],
-    scifi: ['ground', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
+    fantasy: ['overland', 'sea', 'air'],
+    modern: ['overland', 'sea', 'air', 'hohmann'],
+    scifi: ['overland', 'sea', 'air', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
   };
   const genreOf = settings => (settings && GENRES[settings.genre] ? settings.genre : 'scifi');
-  // Real-world average speeds in km/h, for overland, sea and air travel: [label, km/h, genres].
+  // Real-world average speeds in km/h, by speed mode: [label, km/h, genres].
   const F = ['fantasy', 'modern', 'scifi'], M = ['modern', 'scifi'], SF = ['scifi'];
-  const GROUND_SPEEDS = [
-    { group: 'On foot', items: [
-      ['Walking / marching (average adult)', 5, F], ['Heavily laden or slow group', 3, F], ['Jogging', 9, F]] },
-    { group: 'Animals and carts', items: [
-      ['Ox cart', 3, F], ['Camel caravan', 4, F], ['Horse-drawn wagon', 5, F], ['Horseback, at a walk', 6.5, F],
-      ['Horseback, walk and trot', 10, F], ['Stagecoach (fresh horses at each stage)', 10, F]] },
-    { group: 'Under oar and sail', items: [
-      ['Rowing boat or river barge', 4, F], ['Oared galley, cruising (4 kn)', 7.5, F],
-      ['Medieval sailing ship, cog or carrack (5 kn)', 9, F], ['Viking longship under sail (6 kn)', 11, F]] },
-    { group: 'Engines', items: [
-      ['Bicycle', 16, M], ['Car in town', 30, M], ['Car on country roads', 70, M], ['Car on a motorway / highway', 100, M],
-      ['Intercity train', 130, M], ['High-speed train (TGV, Shinkansen)', 250, M], ['Maglev (Shanghai)', 430, M],
-      ['Cargo or cruise ship (20 kn)', 37, M], ['Helicopter', 250, M], ['Light aircraft (Cessna 172)', 220, M],
-      ['Airliner at cruise', 850, M], ['Concorde (Mach 2)', 2180, M]] },
-    { group: 'Off-world vehicles', items: [
-      ['Apollo Lunar Roving Vehicle', 10, SF], ['Mars rover (Perseverance, top speed)', 0.15, SF]] },
-  ];
-  /** The speed groups a genre may use, without the empty ones. */
-  function groundSpeeds(genre) {
-    return GROUND_SPEEDS.map(g => ({ group: g.group, items: g.items.filter(i => i[2].includes(genre)).map(([label, kmh]) => ({ label, kmh })) }))
+  const SPEEDS = {
+    overland: [
+      { group: 'On foot', items: [
+        ['Walking / marching (average adult)', 5, F], ['Heavily laden or slow group', 3, F], ['Jogging', 9, F]] },
+      { group: 'Animals and carts', items: [
+        ['Ox cart', 3, F], ['Camel caravan', 4, F], ['Horse-drawn wagon', 5, F], ['Horseback, at a walk', 6.5, F],
+        ['Horseback, walk and trot', 10, F], ['Stagecoach (fresh horses at each stage)', 10, F]] },
+      { group: 'Road and rail', items: [
+        ['Bicycle', 16, M], ['Car in town', 30, M], ['Car on country roads', 70, M], ['Car on a motorway / highway', 100, M],
+        ['Intercity train', 130, M], ['High-speed train (TGV, Shinkansen)', 250, M], ['Maglev (Shanghai)', 430, M]] },
+      { group: 'Off-world vehicles', items: [
+        ['Apollo Lunar Roving Vehicle', 10, SF], ['Mars rover (Perseverance, top speed)', 0.15, SF]] },
+    ],
+    sea: [
+      { group: 'Under oar and sail', items: [
+        ['Rowing boat or river barge', 4, F], ['Oared galley, cruising (4 kn)', 7.5, F],
+        ['Medieval sailing ship, cog or carrack (5 kn)', 9, F], ['Viking longship under sail (6 kn)', 11, F],
+        ['Clipper ship (10 kn)', 18.5, M]] },
+      { group: 'Engines', items: [
+        ['Steamship, around 1900 (15 kn)', 28, M], ['Cargo or cruise ship (20 kn)', 37, M],
+        ['Aircraft carrier (30 kn)', 56, M], ['Hydrofoil ferry (40 kn)', 74, M]] },
+    ],
+    air: [
+      { group: 'Wings and balloons', items: [
+        ['Hot-air balloon, drifting with the wind', 15, F], ['Eagle, cruising', 45, F], ['Homing pigeon', 80, F]] },
+      { group: 'Powered flight', items: [
+        ['Airship (Zeppelin)', 110, M], ['Helicopter', 250, M], ['Light aircraft (Cessna 172)', 220, M],
+        ['Airliner at cruise', 850, M], ['Concorde (Mach 2)', 2180, M]] },
+    ],
+  };
+  /** The sample speed groups for a speed mode and genre, without the empty ones. */
+  function speedSamples(mode, genre) {
+    return (SPEEDS[mode] || []).map(g => ({ group: g.group, items: g.items.filter(i => i[2].includes(genre)).map(([label, kmh]) => ({ label, kmh })) }))
       .filter(g => g.items.length);
   }
   // Solar-system distances for thrust burns: [label, distance, unit]. Planet pairs come from the mean orbit radii
@@ -810,9 +825,10 @@
 
   /**
    * Compute a travel duration. Returns {hours, worldHours?, lines[]}.
-   * modes: 'ground' | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
+   * modes: 'ground' (or 'overland' | 'sea' | 'air') | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
    */
   function travel(mode, q) {
+    if (SPEED_MODES.includes(mode)) mode = 'ground';
     const n = k => Number(q[k]);
     const lines = [];
     const fmtH = h => fmtDuration(h);
@@ -1169,7 +1185,7 @@
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
-    travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS, GENRES, GENRE_MODES, genreOf, groundSpeeds, spaceDistances, STARS, starDistance,
+    travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
