@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '2';
+  const APP_VERSION = '3';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -143,6 +143,26 @@
   function visPill(v) {
     return el('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this shift.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
   }
+  /** A drop-down of the baseline shift actions. Picking one hands its name to onPick and
+   * resets, so the activity text stays free-form and several actions can be added. */
+  function actionPicker(onPick) {
+    const groups = Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, label]) => el('optgroup', { label },
+      E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`))));
+    const sel = el('select', { class: 'actpick', 'aria-label': 'Add an action',
+      'data-tip': 'Common things to spend a shift doing, from the Year Zero Engine and Perilous Wilds travel rules. Picking one adds it to the activity; you can still type anything' },
+      el('option', { value: '' }, '+ Add an action…'), groups);
+    sel.addEventListener('change', () => {
+      const a = E.SHIFT_ACTIONS.find(x => x.name === sel.value);
+      sel.value = '';
+      if (a) onPick(a);
+    });
+    return sel;
+  }
+  /** Suggestions for a single-line activity input (the browser shows them as you type). */
+  function actionList(id) {
+    return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
+  }
+
   const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Noon and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
@@ -400,8 +420,8 @@
     const amt = el('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });
     const unit = select([['shift', 'shift(s)'], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit',
       'data-tip': 'A day has four shifts. Months and years follow this campaign\'s calendar' });
-    const act = el('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow',
-      'data-tip': 'Written into every shift that passes, e.g. "Marching to Altdorf". Shifts that already have an activity keep it' });
+    const act = el('input', { placeholder: 'Activity for the passed shifts (optional)', class: 'grow', list: 'pass-actions',
+      'data-tip': 'Written into every shift that passes, e.g. "Marching to Altdorf". Pick a common action from the suggestions or type your own. Shifts that already have an activity keep it' });
     const go = btn('Pass time ▶', null, 'primary', 'Move "now" forward and roll weather for every new day');
     go.addEventListener('click', busy(go, async () => {
       const n = unitShifts(unit.value, Number(amt.value) || 0);
@@ -413,7 +433,7 @@
     }));
     const back = btn('◀ 1 shift', null, 'small', 'Step back one shift. Recorded weather, notes and activities stay');
     back.addEventListener('click', busy(back, async () => { await passShifts(-1); route(); }));
-    return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, go, back);
+    return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, actionList('pass-actions'), go, back);
   }
 
   // ------------------------------------------------------------ calendar tab
@@ -648,6 +668,12 @@
       return card;
     }
     const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift', 'data-tip': 'Players can see this' });
+    const hint = el('small', { class: 'muted' });
+    const pick = actionPicker(a => {
+      act.value = E.addShiftAction(act.value, a.name);
+      hint.textContent = `${a.icon} ${a.name}: ${a.desc}`;
+      act.focus();
+    });
     const gmn = el('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
     const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
     const save = btn('Save', null, 'small primary', 'Save this shift\'s activity, notes and visibility');
@@ -655,7 +681,7 @@
       await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value }, S.camp.id);
       toast(`${names[i]} saved`); route();
     }));
-    card.append(act, gmn, el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
+    card.append(pick, act, hint, gmn, el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
       tip('Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this shift, e.g. a magical darkness or a burning city.')), save,
       !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small', 'Move the campaign clock to this shift') : null));
     return card;
