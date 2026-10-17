@@ -44,9 +44,10 @@
   RedirectMatch 404 (?:^|/)\.git
 </IfModule>
 # The browser-test harness (tests/, including its test-only sign-in), the
-# schema/migrations (db/) and CI config ship in the repo but are not part of the site.
+# schema/migrations (db/), CI config and Claude Code settings (.claude/) ship in
+# the repo but are not part of the site.
 <IfModule mod_alias.c>
-  RedirectMatch 404 (?:^|/)(?:tests|db|docs|\.github)(?:/|$)
+  RedirectMatch 404 (?:^|/)(?:tests|db|docs|\.github|\.claude)(?:/|$)
 </IfModule>
 # Fallback if mod_alias is unavailable (returns 403 instead of 404).
 <IfModule mod_rewrite.c>

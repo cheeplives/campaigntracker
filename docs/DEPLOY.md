@@ -56,9 +56,9 @@ Open `https://www.discreteinfinity.com/chronicle/install.php` and press
 ### Web server
 
 Apache: the bundled `.htaccess` forces HTTPS, sets HSTS/CSP/framing headers and
-blocks the config, `db/`, `docs/`, `tests/`, `.git` and `.md/.sql/.sh` files. It
+blocks the config, `db/`, `docs/`, `tests/`, `.claude/`, `.git` and `.md/.sql/.sh` files. It
 needs `mod_rewrite`, `mod_headers` and `mod_alias`. On nginx, copy the rules from
-Sinless's DEPLOY.md and add `location ~ /(db|tests|docs)/ { return 404; }`.
+Sinless's DEPLOY.md and add `location ~ /(db|tests|docs|\.claude)/ { return 404; }`.
 
 ## Verify
 
