@@ -54,6 +54,12 @@ const DayExport = (() => {
       L.push('');
     }
 
+    if (has(row.locations)) {
+      L.push('## Locations visited');
+      L.push('');
+      L.push(text(row.locations));
+      L.push('');
+    }
     if (has(row.notes)) {
       L.push('## Notes');
       L.push('');

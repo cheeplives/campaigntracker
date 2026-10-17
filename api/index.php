@@ -540,7 +540,7 @@ try {
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv4((int)$c['current_shift']);
-        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes FROM days WHERE campaign_id=? AND abs_day=?');
+        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes, locations FROM days WHERE campaign_id=? AND abs_day=?');
         $st->execute([$cid, $ad]);
         $d = $st->fetch() ?: null;
         $day = null;
@@ -548,7 +548,8 @@ try {
             $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
             $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order), 'notes' => $d['notes']];
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order), 'notes' => $d['notes'],
+                'locations' => $d['locations']];
             if ($isGm) $day['gm_notes'] = $d['gm_notes'];
         }
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
@@ -605,9 +606,12 @@ try {
             $rid = $chk->fetchColumn() ? (int)$rid : null;
         }
         $weather = p('weather') !== null ? json_in(p('weather'), 5000) : null;
-        db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, gm_notes) VALUES (?,?,?,?,?,?)
-            ON DUPLICATE KEY UPDATE region_id=VALUES(region_id), weather_json=COALESCE(VALUES(weather_json), weather_json), notes=VALUES(notes), gm_notes=VALUES(gm_notes)')
-            ->execute([$cid, $ad, $rid, $weather, str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000)]);
+        // locations is only changed when sent, so older callers don't wipe it
+        $hasLoc = array_key_exists('locations', body()) ? 1 : 0;
+        db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, gm_notes, locations) VALUES (?,?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE region_id=VALUES(region_id), weather_json=COALESCE(VALUES(weather_json), weather_json), notes=VALUES(notes), gm_notes=VALUES(gm_notes),
+            locations=IF(?, VALUES(locations), locations)')
+            ->execute([$cid, $ad, $rid, $weather, str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), str_in(p('locations'), 5000), $hasLoc]);
         out(['ok' => true]);
 
     case 'shift_save':

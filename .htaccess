@@ -24,6 +24,16 @@
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
+# --- Make browsers check for a new app after each deploy -------------------
+# The page, scripts and styles keep their names between releases, so without
+# this a browser can keep running last week's app.js (missing new tabs, say)
+# for days. no-cache still lets it reuse its copy when the server says it's unchanged.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
 # --- Don't serve secrets / SQL / docs / tooling / dotfiles -----------------
 <FilesMatch "^config\.php$">
   Require all denied

@@ -37,7 +37,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   view, an event saved the old way still shows, and Go to today opens today.
 - **current-day**: a campaign opens on the Current Day tab and the GM's browser
   saves today's shift weather; players get today's weather only up to the current
-  shift (never the forecast), nothing for later days, and everything once allowed.
+  shift (never the forecast), nothing for later days, and everything once allowed;
+  Previous/Next day and Return to today stay on the tab and keep that rule; the
+  day's Locations visited saves, survives a re-roll and is shown to players.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.

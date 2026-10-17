@@ -20,6 +20,21 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
+  // Locations visited sits under the day's region, saves with the day and survives a weather re-roll.
+  await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
+  await page.getByRole("button", { name: "Save day" }).click();
+  await expect(page.getByText("Day saved")).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
+  await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
+  await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");
+
+  // Next and previous day stay on the tab; Return to today comes back.
+  await page.getByRole("link", { name: "Next day ▶" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/today/3$`));
+  await expect(page.locator(".tabs a.on")).toHaveText("Current Day");
+  await expect(page.getByLabel("Locations visited")).toHaveValue("");
+  await page.getByRole("link", { name: "Return to today" }).click();
+  await expect(page.locator(".dayhero")).toContainText("Now");
   await page.getByRole("button", { name: "Show in calendar" }).click();
   await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
   expectNoErrors(errors);
@@ -56,8 +71,10 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect(await day(2)).toBeNull();
   expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: STORMY }] }, cid)).status).toBe(200);
 
+  expect((await api(page, "day_update", { abs_day: 2, notes: "", locations: "Ubersreik market" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
+  await expect(pp.locator(".kv")).toContainText("Ubersreik market");      // players read the day's locations
   // Days run Dawn first, so at Dawn the player has Dawn's weather and nothing after it.
   await expect(pp.locator(".shiftcard h4").first()).toHaveText(/^Dawn/);
   await expect(pp.locator(".shiftcard").first()).not.toContainText("Weather not known yet");
@@ -73,6 +90,24 @@ test("players see today's weather only up to the current shift", async ({ page, 
   await expect(pp.locator(".shiftcard").filter({ hasText: "Weather not known yet" })).toHaveCount(1);
   await expect(pp.locator(".shiftcard").last()).toContainText("Overnight");
   await expect(pp.locator(".shiftcard").last()).toContainText("Weather not known yet");
+
+  // Stepping through days on the Current Day tab keeps the same rule: nothing for tomorrow, everything for yesterday.
+  await expect(pp.getByRole("link", { name: "Return to today" })).toHaveCount(0);
+  await pp.getByRole("link", { name: "Next day ▶" }).click();
+  await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/today/3$`));
+  await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
+  await expect(pp.locator(".dayhero")).toContainText("Weather not known yet");
+  await expect(pp.locator(".dh-step-icon")).toHaveText(["?", "?", "?", "?"]);
+  await expect(pp.locator(".shiftcard .wx")).toHaveCount(0);
+  await pp.getByRole("link", { name: "◀ Previous day" }).click();
+  await pp.getByRole("link", { name: "◀ Previous day" }).click();
+  await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/today/1$`));
+  await expect(pp.locator(".dayhero")).toContainText("Past day");
+  await expect(pp.locator(".shiftcard").filter({ hasText: "Weather not known yet" })).toHaveCount(0);
+  await expect(pp.locator(".dayhero")).toContainText("Thunderstorm");     // a past day shows its forecast
+  await pp.getByRole("link", { name: "Return to today" }).click();
+  await expect(pp.locator(".dayhero")).toContainText("Now");
+  await expect(pp.locator(".shiftcard").filter({ hasText: "Weather not known yet" })).toHaveCount(1);
 
   // The GM still gets the whole day, and so do players once the GM allows future weather.
   expect((await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.weather).toEqual(STORMY);
