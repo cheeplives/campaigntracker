@@ -149,7 +149,7 @@
     const groups = Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, label]) => el('optgroup', { label },
       E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`))));
     const sel = el('select', { class: 'actpick', 'aria-label': 'Add an action',
-      'data-tip': 'Common things to spend a shift doing, from the Year Zero Engine and Perilous Wilds travel rules. Picking one adds it to the activity; you can still type anything' },
+      'data-tip': 'Common things to spend a shift doing on a journey. Picking one adds it to the activity; you can still type anything' },
       el('option', { value: '' }, '+ Add an action…'), groups);
     sel.addEventListener('change', () => {
       const a = E.SHIFT_ACTIONS.find(x => x.name === sel.value);
@@ -163,13 +163,13 @@
     return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
   }
 
-  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Midday and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
+  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Dawn, Midday, Dusk and Overnight, in that order). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
   const holidayChip = x => el('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
   function moonBadges(d) {
-    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the overnight shift under sun & moons lighting.` },
+    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the dusk and overnight shifts under sun & moons lighting.` },
       el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
@@ -451,7 +451,7 @@
     };
     presetSel.addEventListener('change', () => { preset = presetSel.value; drawMonths(); drawStart(); drawSeasons(); drawClimate(); });
     drawMonths(); drawStart(); drawSeasons(); drawClimate();
-    const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
+    const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 1, { name: 'shift' });
     const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
@@ -989,13 +989,13 @@
   function lightSummary(r) {
     const s = r.settings || {};
     if ((s.lighting || 'natural') !== 'artificial') return null;
-    const lv = s.light_levels || [2, 4, 5, 4];
+    const lv = s.light_levels || [4, 5, 4, 2];
     return 'Artificial light by shift:\n' + shiftNames().map((n, i) => `${n}: ${lv[i]} ${E.VIS_LABELS[lv[i]] || ''}`).join('\n');
   }
   function regionSummary(r) {
     const s = r.settings || {};
     const clim = climateName(s);
-    const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [2, 4, 5, 4]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
+    const light = { natural: 'Sun & moons', artificial: `Artificial lighting (${(s.light_levels || [4, 5, 4, 2]).join('/')})`, none: 'No light' }[s.lighting || 'natural'];
     return [clim, (s.hemisphere || 'north') !== (cal().hemisphere || 'north') ? `${s.hemisphere === 'south' ? 'Southern' : 'Northern'} hemisphere` : null, light, s.terrain_mod ? `Terrain ${s.terrain_mod > 0 ? '+' : ''}${s.terrain_mod}` : null].filter(Boolean).join(' · ');
   }
 
@@ -1093,13 +1093,13 @@
   }
 
   const LIGHT_TIP = 'Only used when the light source is Artificial. Each box is the base visibility of one shift, every day, before weather and terrain:\n'
-    + '0 Pitch black: no light at all\n1 Very dark: emergency strips, a single torch\n2 Dim: night-cycle lighting, a lamplit room\n'
-    + '3 Fair: like dawn or dusk outdoors\n4 Good: normal working lights\n5 Bright: daylight-strength lighting or floodlights\n'
-    + 'The default 2 / 4 / 5 / 4 is a ship or station that dims its lights at night. Weather (such as Emergency lighting) and the terrain modifier still adjust the result, and a GM override on a shift replaces it.';
-  const LIGHT_EXAMPLES = ['no light at all', 'emergency strips, a single torch', 'night-cycle lighting, a lamplit room', 'like dawn or dusk outdoors', 'normal working lights', 'daylight-strength lighting'];
+    + '0 Pitch black: no light at all\n1 Very dark: emergency strips, a single torch, dusk outdoors\n2 Dim: night-cycle lighting, a lamplit room\n'
+    + '3 Fair: like dawn outdoors\n4 Good: normal working lights\n5 Bright: daylight-strength lighting or floodlights\n'
+    + 'The default 4 / 5 / 4 / 2 is a ship or station that dims its lights at night. Weather (such as Emergency lighting) and the terrain modifier still adjust the result, and a GM override on a shift replaces it.';
+  const LIGHT_EXAMPLES = ['no light at all', 'emergency strips, a single torch, dusk outdoors', 'night-cycle lighting, a lamplit room', 'like dawn outdoors', 'normal working lights', 'daylight-strength lighting'];
   /** One 0–5 box per shift for artificial lighting, each with its shift name and a live label. */
   function lightLevels(lv) {
-    const natural = [0, 3, 5, 3];
+    const natural = [3, 5, 1, 0];
     return el('span', { class: 'lightlv' }, shiftNames().map((n, i) => {
       const out = el('small', { class: 'muted' });
       const input = el('input', { type: 'number', min: 0, max: 5, name: `lv${i}`, value: lv[i], class: 'w-num', 'aria-label': `${n} light level`,
@@ -1138,7 +1138,7 @@
       drawBaseline();
     };
     climate.addEventListener('change', syncCustom); syncCustom();
-    const lv = s.light_levels || [2, 4, 5, 4];
+    const lv = s.light_levels || [4, 5, 4, 2];
     const lightSel = select([['natural', 'Sun & moons'], ['artificial', 'Artificial (ship, station, city lights)'], ['none', 'None (caves, deep space)']], s.lighting || 'natural', { name: 'lighting' });
     const lightLv = lightLevels(lv);
     const syncLight = () => lightLv.classList.toggle('off', lightSel.value !== 'artificial');
@@ -1149,7 +1149,7 @@
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
-        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at midday.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
+        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 3 at dawn, 5 at midday, 1 at dusk (plus up to +1 for moonlight), 0 overnight (plus up to +2 for moonlight).\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
         field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
@@ -1410,7 +1410,7 @@
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
         field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), null,
-          'Rename the four shifts, in order: the overnight one, then morning, midday and evening. Their lighting stays tied to that order')),
+          'Rename the four shifts, in order: morning, midday, evening, then the overnight one. Their lighting stays tied to that order')),
       field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
       field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl), or "festival weekday" for named days that keep their weekday (like 2 Yule). Days can be 0 for a leap-only day (like Overlithe: 0, 1, festival)'),
       el('div', { class: 'grid3' },

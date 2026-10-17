@@ -3,23 +3,22 @@
  * Pure functions with no DOM access, so the same file can be tested in Node.
  *
  * Time model: every in-game day has an integer "absolute day" (day 0 = first day of the
- * calendar's epoch year). A day has 4 shifts: 0 Overnight, 1 Dawn, 2 Midday, 3 Dusk.
- * The campaign "now" is stored as an absolute shift = absDay * 4 + shift.
+ * calendar's epoch year). A day has 4 shifts: 0 Dawn, 1 Midday, 2 Dusk, 3 Overnight, so a day
+ * runs from dawn to the night after it. The campaign "now" is stored as an absolute shift = absDay * 4 + shift.
  */
 (function (root) {
   'use strict';
 
-  const SHIFT_KEYS = ['overnight', 'dawn', 'midday', 'dusk'];
-  const DEFAULT_SHIFT_NAMES = ['Overnight', 'Dawn', 'Midday', 'Dusk'];
+  const SHIFT_KEYS = ['dawn', 'midday', 'dusk', 'overnight'];
+  const DEFAULT_SHIFT_NAMES = ['Dawn', 'Midday', 'Dusk', 'Overnight'];
   const VIS_LABELS = ['Pitch black', 'Very dark', 'Dim', 'Fair', 'Good', 'Bright'];
   const MOON_PHASES = [
     ['New', '🌑'], ['Waxing crescent', '🌒'], ['First quarter', '🌓'], ['Waxing gibbous', '🌔'],
     ['Full', '🌕'], ['Waning gibbous', '🌖'], ['Last quarter', '🌗'], ['Waning crescent', '🌘'],
   ];
 
-  // Baseline things a party can spend a shift doing, drawn from the travel rules of the
-  // Year Zero Engine SRD (one task per character per shift) and The Perilous Wilds
-  // (travel roles, camp and provisions). The GM picks them into a shift's activity text,
+  // Baseline things a party can spend a shift doing on a journey (one task per character
+  // per shift: travel roles, camp and provisions). The GM picks them into a shift's activity text,
   // which stays free text, so who does what and anything else can be written alongside.
   const SHIFT_ACTION_GROUPS = { travel: 'On the move', land: 'Living off the land', camp: 'In camp', other: 'Other' };
   const SHIFT_ACTIONS = [
@@ -73,8 +72,8 @@
   function inWeek(m) { return !m.intercalary || !!m.keepWeekday; }
   function shiftNames(cal) {
     let n = cal.shiftNames || [];
-    // campaigns made before the rename saved the old defaults; they get the new ones
-    if (n.join() === 'Overnight,Dawn,Noon,Dusk') n = [];
+    // campaigns made before the rename saved the old defaults (moved to dawn-first order by the server); they get the new ones
+    if (n.join() === 'Dawn,Noon,Dusk,Overnight') n = [];
     return DEFAULT_SHIFT_NAMES.map((d, i) => n[i] || d);
   }
 
@@ -576,6 +575,8 @@
     radiation: ['nominal'], flare: ['nominal'], debris: ['nominal'],
   };
   // Which shift the forecast peaks in: storms, hail, haze and dust build in the afternoon heat; fog is thickest at dawn.
+  // Indexes here run Overnight, Dawn, Midday, Dusk (the order before Dawn became the first shift), so the
+  // same day still rolls the same weather; shiftWeather() hands the result back in Dawn-first order.
   const SHIFT_PEAK = { storm: [2, 3], hail: [2], haze: [2], sandstorm: [2, 3], fog: [1] };
   // Temperature at each shift as a share of the day's high-to-low swing below the high (Midday holds the high).
   const SHIFT_COOL = [0.9, 0.5, 0, 0.35];
@@ -631,7 +632,7 @@
     const hasTemp = typeof w.temp === 'number';
     const range = diurnalRange(clim, sea.type) * (CLOUD_DAMP[w.type] ?? 0.55) * (w.wind >= 2 ? 0.8 : 1);
     const calm = range === 0;
-    return types.map((type, i) => {
+    const out = types.map((type, i) => {
       let temp = null;
       if (hasTemp) temp = Math.min(w.temp, Math.round(w.temp - range * SHIFT_COOL[i] + (calm || i === 2 ? 0 : rng() * 2 - 1)));
       const def = WEATHER[type] || {};
@@ -643,6 +644,7 @@
       if ((WEATHER[type] || {}).wind) wind = Math.max(wind, WEATHER[type].wind);
       return { type, temp, wind: Math.min(wind, Math.max(w.wind || 0, (WEATHER[type] || {}).wind || 0)) };
     });
+    return [out[1], out[2], out[3], out[0]];
   }
 
   // Temperatures are stored in °C; these convert for display and input.
@@ -687,24 +689,25 @@
     if (lighting === 'none') {
       score = 0; parts.push('No natural light (0)');
     } else if (lighting === 'artificial') {
-      const lv = rs.light_levels || cal.lightLevels || [2, 4, 5, 4];
+      const lv = rs.light_levels || cal.lightLevels || [4, 5, 4, 2];
       score = Number(lv[shift] ?? 4);
       parts.push(`${names[shift]} lighting (${score})`);
     } else {
-      score = [0, 3, 5, 3][shift];
+      // Dusk runs from sunset into the evening, so it sits nearer night than dawn
+      score = [3, 5, 1, 0][shift];
       parts.push(`${names[shift]} base (${score})`);
     }
 
     const def = weather ? (WEATHER[weather.type] || {}) : null;
-    if (lighting === 'natural' && shift === 0) {
+    if (lighting === 'natural' && shift >= 2) {
       const ms = moons(cal, d);
       let light = ms.reduce((s, m, i) => s + m.illum * Number((cal.moons[i].brightness ?? 1)), 0);
       if (def) light *= def.moon ?? 1;
-      const bonus = Math.min(2, Math.round(light * 2));
+      const bonus = Math.min(shift === 3 ? 2 : 1, Math.round(light * 2));
       if (bonus) { score += bonus; parts.push(`moonlight +${bonus}`); }
     }
     if (def) {
-      const m = shift === 0 ? def.night : def.day;
+      const m = shift === 3 ? def.night : def.day;
       if (m) { score += m; parts.push(`${def.label.toLowerCase()} ${m > 0 ? '+' : ''}${m}`); }
     }
     const tm = Number(rs.terrain_mod || 0);
@@ -996,15 +999,15 @@
       label: 'Starship clock (Standard Ship Time)',
       calendar: {
         name: 'Standard Ship Time', epochYear: 1, yearSuffix: '', dateFormat: '{W} · {M}, Day {d} · Mission Year {Y}', weekdayOffset: 0, lighting: 'artificial',
-        lightLevels: [2, 4, 5, 4],
+        lightLevels: [4, 5, 4, 2],
         weekdays: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta'],
         months: Array.from({ length: 10 }, (_, i) => ({ name: `Cycle ${i + 1}`, days: 36 })),
         leap: null, seasons: [], moons: [],
-        shiftNames: ['Night Watch', 'Morning Watch', 'Day Watch', 'Evening Watch'],
+        shiftNames: ['Morning Watch', 'Day Watch', 'Evening Watch', 'Night Watch'],
       },
       start: { year: 1, month: 0, day: 1 },
       regions: [
-        { name: 'Ship interior', current: true, settings: { climate: 'ship', lighting: 'artificial', light_levels: [2, 4, 5, 4], terrain_mod: 0 } },
+        { name: 'Ship interior', current: true, settings: { climate: 'ship', lighting: 'artificial', light_levels: [4, 5, 4, 2], terrain_mod: 0 } },
         { name: 'EVA / hull exterior', settings: { climate: 'vacuum', lighting: 'artificial', light_levels: [1, 1, 1, 1], terrain_mod: 0 } }],
       holidays: [
         { name: 'Launch Day', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
