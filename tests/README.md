@@ -43,10 +43,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.
-- **travel**: picking a sample speed fills the planner (in km or miles); an
-  overland trip is planned in shifts a day, each a quarter of the calendar's day;
+- **travel**: overland, sea and air each list only their own sample speeds, and
+  picking one fills the planner (in km or miles); a trip is planned in shifts a day, each a quarter of the calendar's day;
   star pickers fill the light-years between two systems; the campaign's genre
-  (Settings) limits the modes and samples, and a campaign with none keeps them all.
+  (Settings) limits the modes and samples, and a campaign with none keeps them all;
+  a Custom region typed on the day page or in the travel planner joins the campaign's regions.
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
