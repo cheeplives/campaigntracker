@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '6';
+  const APP_VERSION = '7';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1045,7 +1045,7 @@
     const modes = [
       ['overland', 'Overland (on foot, mounted, by road or rail)'],
       ['sea', 'Sea and river (oar, sail, engine)'],
-      ['air', 'Air (balloon, wing, aircraft)'],
+      ['air', 'Air (wing, airship, aircraft)'],
       ['hohmann', 'Orbital transfer (Hohmann, minimum fuel)'],
       ['brachistochrone', 'Constant-thrust burn (flip-and-burn / torch drive)'],
       ['relativistic', 'Interstellar at relativistic speed'],
@@ -1092,15 +1092,15 @@
         samples.selectedIndex = 1;
         speed.addEventListener('input', () => { samples.value = ''; });
         const h = shiftH(), hs = n => `${+(n * h).toFixed(2)} h`;
-        F.push(field('Sample speed', samples, 'Average speeds for the real thing, including rests. Fills in the speed'),
+        F.push(field('Sample speed', samples, 'Real-world figures, each from a source listed on the About page. Fills in the speed'),
           field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
           field(`Speed (${speedUnit})`, speed),
           field('Shifts traveled per day', select([[1, '1 shift'], [2, '2 shifts'], [3, '3 shifts'], [4, '4 shifts']], m === 'sea' ? 4 : 2, { name: 'shifts' }),
             `${hs(1)} each. ${m === 'sea' ? 'Ships with a crew on watch sail all 4' : m === 'overland' ? '2 is a normal day, 3 a forced march' : '4 keeps going around the clock'}`,
             `A shift is a quarter of the calendar's ${+(h * 4).toFixed(2)}-hour day. The party rests for the other shifts`),
           el('input', { type: 'hidden', name: 'shift_hours', value: h }),
-          m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
-            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long') : null);
+          m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [2, 'Woods, hills or ruins ×2'], [3, 'Mountains ×3'], [4, 'Swamp ×4']], 1, { name: 'terrain' }), null,
+            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long. These follow the terrain speeds in the Year Zero Engine reference document (woods at half speed, mountains a third, swamp a quarter)') : null);
       } else if (m === 'hohmann') {
         const sys = el('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => el('option', { value: k }, s.label)));
         const r1 = el('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = el('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
@@ -1724,9 +1724,93 @@
     mount(...campaignHeader('settings'), general, calForm, danger);
   }
 
+  // ------------------------------------------------------------ about: where the built-in figures come from
+  const extLink = (src, text) => el('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer' }, text || src.title);
+  /** "Title — publisher (licence)" for one SOURCES entry. */
+  const cite = key => {
+    const src = E.SOURCES[key];
+    return src ? el('span', {}, extLink(src), el('span', { class: 'muted' }, ` · ${src.by} (${src.licence})`)) : null;
+  };
+  const aboutTable = (head, rows) => el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl about-tbl' },
+    el('tr', {}, head.map(h => el('th', {}, h))), rows.map(r => el('tr', {}, r.map(c => el('td', {}, c))))));
+  function viewAbout() {
+    const MODE = { overland: 'Overland', sea: 'Sea and river', air: 'Air' };
+    const speedRows = Object.entries(E.SPEEDS).flatMap(([m, groups]) => groups.flatMap(g => g.items.map(([label, kmh, , src]) => [MODE[m], label, `${kmh}`, cite(src)])));
+    // planet-to-planet pairs all come from the orbit radii, so they share one line
+    const distRows = E.spaceDistances().flatMap(g => g.items.filter(it => it[3] !== 'jplPlanets').map(([label, , , src]) => [label, cite(src)]));
+    distRows.splice(4, 0, ['Closest and farthest distances between planets (sums and differences of their mean orbit radii)', cite('jplPlanets')]);
+    const starRows = E.STARS.slice(1).map(([name, , , ly, src]) => [name, `${ly.toLocaleString()}`, cite(src)]);
+    const wiki = page => ({ url: `https://en.wikipedia.org/wiki/${page}`, title: page.replace(/_/g, ' ') });
+    const koppenRows = Object.entries(E.KOPPEN).map(([code, k]) => {
+      const [place, page, period, agency, note] = k.station;
+      return [code, k.label, el('span', {}, extLink(wiki(page), place), note ? el('small', { class: 'muted', style: { display: 'block' } }, note) : null), period, agency];
+    });
+    const section = (title, ...kids) => el('section', { class: 'card about' }, el('h2', {}, title), ...kids);
+    const p = (...t) => el('p', {}, ...t);
+    const list = items => el('ul', {}, items.map(i => el('li', {}, ...[i].flat())));
+    mount(
+      el('div', { class: 'card about' },
+        el('h1', {}, 'About Campaign Chronicle'),
+        p('Campaign Chronicle is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
+          'This page lists where every built-in figure comes from: the sample speeds and distances in the travel planner, the climate baselines behind the weather, and the calendar presets.'),
+        p('The sources are open: Wikipedia articles (CC BY-SA 4.0, which in turn cite national weather services, NOAA, NASA and the like), ',
+          'NASA, JPL and other US government pages (public domain), UK government statistics (Open Government Licence) and openly licensed papers. ',
+          'Where a figure has no open source, such as the fictional settings, this page says so under "No open source" at the bottom.'),
+        S.user ? null : el('p', {}, el('a', { href: '#/' }, 'Sign in'))),
+      section('Travel planner: sample speeds',
+        p('Each sample is the figure its source states, converted to km/h where it gives mph or knots. The label says when it is a top, cruising or free-flow speed rather than an average.'),
+        aboutTable(['Mode', 'Sample', 'km/h', 'Source'], speedRows),
+        p('Terrain multipliers follow the off-road speeds in the Year Zero Engine reference document: ', cite('yze'), '.')),
+      section('Travel planner: space',
+        list([
+          ['Constants: the speed of light, the astronomical unit and every GM (gravitational parameter): ', cite('jplConst'), '. Standard gravity: ', cite('g0'), '. Light-year: ', cite('ly'), '.'],
+          ['Planet orbits for the Hohmann transfers and distances: ', cite('jplPlanets'), '; Pluto: ', cite('pluto'), '; Ceres: ', cite('ceres'), '.'],
+          ['Moon orbits (Jupiter, Saturn and Earth systems): ', cite('jplSats'), '. Geostationary orbit: ', cite('geo'), '.'],
+        ]),
+        aboutTable(['Sample distance', 'Source'], distRows),
+        p('Star distances and positions (J2000 right ascension and declination), from which the planner works out the distance between any two:'),
+        aboutTable(['Star', 'Light-years from Sol', 'Source'], starRows)),
+      section('Weather and climate',
+        p('Each Köppen–Geiger class takes its daytime highs and wetness from one representative weather station: its 1991–2020 monthly normals ',
+          '(mean daily maximum, mean daily minimum and precipitation) as published in the station\'s Wikipedia climate table, which reproduces the national weather service named. ',
+          'A season\'s highs run from the lowest to the highest of its three months\' mean daily maxima, widened to at least 4 °C; wetness (0–5) is 1.25 × log₂(1 + P/20), with P the season\'s mean monthly precipitation in mm. ',
+          'The day-to-night temperature swing for each climate group is the stations\' mean daily maximum minus mean daily minimum. ',
+          'The class letters and their rules are those of ', cite('beck'), '.'),
+        aboutTable(['Class', 'Climate', 'Station', 'Normals', 'Weather service'], koppenRows),
+        p('The simple setting climates take their temperatures from one station each: temperate from Warsaw, arctic from Utqiaġvik, desert from Cairo, tropical from Darwin, ',
+          'coastal from ', extLink(wiki('Bergen'), 'Bergen'), ', mountains from ', extLink(wiki('Davos'), 'Davos'), ' and swamp from ', extLink(wiki('Pinsk'), 'Pinsk'), ' in the Pripyat Marshes. ',
+          'Underground air holds near the surface\'s yearly mean: ', cite('cave'), '. The starship is kept at room temperature (20–22 °C): ', cite('room'), '. ',
+          'Open space spans the Moon\'s equatorial range of 95–390 K: ', cite('moonFacts'), '.'),
+        p('Game tuning, not measurements: how often thunderstorms, fog and dust storms turn up (0–3) in each class, the weather mix of the simple climates, ',
+          'how each kind of weather changes visibility, and how the four shifts ease off from the day\'s forecast. These are the app\'s own choices.')),
+      section('Calendars and holidays',
+        list([
+          ['Gregorian calendar months and leap years: ', cite('gregorian'), '. Season start dates (equinoxes and solstices): ', cite('usno'), '.'],
+          ['The Moon\'s mean synodic month (29.530588 days) and reference new moon of 6 January 2000, 18:14 UT: ', cite('phases'), '.'],
+          ['New Year\'s Day, Thanksgiving (fourth Thursday in November) and Christmas Day: ', cite('usHolidays'), '. Christmas Eve: ', cite('xmasEve'), '.'],
+          ['Middle-earth (Shire Reckoning): months, Yule and Lithe days, the Overlithe leap rule and the fixed weekdays from Appendix D of The Lord of the Rings, as summarised by ', cite('shire'), '.'],
+          ['Imperial Calendar (Warhammer Fantasy): months, festival days, weekdays and the two moons: ', cite('imperial'), ' and ', cite('imperialMoons'), '.'],
+          'The Starship clock and the Custom calendar are made up for this app.',
+        ])),
+      section('Game rules',
+        p('The four shifts of a day, the shift tasks under "Add an action" and the terrain multipliers follow ', cite('yze'), '. ',
+          'The visibility score (0–5), its base values per shift and its modifiers are this app\'s own design.')),
+      section('No open source',
+        p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),
+        list([
+          ['Imperial Calendar preset (Warhammer Fantasy, © Games Workshop): the calendar, its holidays and moons follow the official setting via a fan wiki, ',
+            'and the region climates are judgement calls from each region\'s real-world analogue (the Empire as Germany, Bretonnia as France, Kislev as Russia), using the Köppen classes above.'],
+          ['Middle-earth preset (© the Tolkien Estate): the calendar follows the books. Region climates were first taken from ', cite('imaginarymaps'),
+            ' and fit Tolkien\'s own latitude anchors: ', cite('letter294'), '.'],
+          'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
+          'Storm, fog and dust frequencies, the weather mixes of the simple climates, and the visibility rules (see above).',
+        ])));
+  }
+
   // ------------------------------------------------------------ router
   async function route() {
     const parts = (location.hash.replace(/^#\/?/, '') || '').split('/');
+    if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too
     if (!S.user) return; // boot() shows the sign-in or waiting screen
     renderNav();
     try {
@@ -1761,7 +1845,7 @@
       mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Cannot reach the server'), el('p', {}, 'Check that the config is in place and install.php has been run.')));
       return;
     }
-    if (res.status === 401) { S.user = null; S.pending = null; renderNav(); return viewLogin(data.providers || []); }
+    if (res.status === 401) { S.user = null; S.pending = null; renderNav(); return location.hash.startsWith('#/about') ? viewAbout() : viewLogin(data.providers || []); }
     if (!res.ok) { S.user = null; renderNav(); return mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Server error'), el('p', {}, data.message || data.error || `Error ${res.status}`))); }
     S.csrf = data.csrf;
     if (data.status !== 'approved') { S.user = null; S.pending = data; renderNav(); return viewPending(data); }
@@ -1774,7 +1858,9 @@
     route();
   }
 
-  window.addEventListener('hashchange', route);
+  // Signed out, leaving the About page goes back through the gate.
+  window.addEventListener('hashchange', () => (S.user ? route() : boot()));
   $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
+  $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
   boot();
 })();

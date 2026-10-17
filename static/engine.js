@@ -314,63 +314,71 @@
   };
   const WIND = ['Calm', 'Breezy', 'Windy', 'Gale'];
 
-  // Temperatures in °C: [typical low, typical high] for the day's high.
+  // Temperatures in °C: [typical low, typical high] for the day's high. The simple climates take their
+  // temperatures from one station each (1991–2020 normals in tools/climate-normals.json, worked out the same way
+  // as the Köppen baselines below): temperate = Warsaw, arctic = Utqiaġvik, desert = Cairo, tropical = Darwin,
+  // mountains = Davos, coastal = Bergen, swamp = Pinsk in the Pripyat Marshes. Underground follows cave air, which
+  // holds near the surface's yearly mean (a constant 12 °C in Mammoth Cave, per the US National Park Service);
+  // the starship sits at room temperature (20–22 °C); open space spans the Moon's equator, 95–390 K (NASA Moon
+  // Fact Sheet). The weather weights (w) are the app's own game tuning, not measurements.
   const CLIMATES = {
     temperate: { label: 'Temperate', persistence: 0.45, seasons: {
-      spring: { t: [4, 16], w: { clear: 3, partly: 3, overcast: 2, drizzle: 2, rain: 1, storm: 0.5, fog: 1 } },
-      summer: { t: [14, 28], w: { clear: 5, partly: 3, overcast: 1, drizzle: 1, rain: 0.5, storm: 1, fog: 0.3, haze: 0.4 } },
-      autumn: { t: [5, 17], w: { clear: 2, partly: 3, overcast: 3, drizzle: 2, rain: 1.5, storm: 0.3, fog: 2 } },
-      winter: { t: [-6, 5], w: { clear: 2, partly: 2, overcast: 3, drizzle: 1, rain: 1, fog: 1.5, snow: 2, heavysnow: 1, blizzard: 0.3 } },
-      any:    { t: [4, 18], w: { clear: 3, partly: 3, overcast: 2, drizzle: 2, rain: 1, storm: 0.5, fog: 1 } } } },
+      spring: { t: [7, 20], w: { clear: 3, partly: 3, overcast: 2, drizzle: 2, rain: 1, storm: 0.5, fog: 1 } },
+      summer: { t: [22, 26], w: { clear: 5, partly: 3, overcast: 1, drizzle: 1, rain: 0.5, storm: 1, fog: 0.3, haze: 0.4 } },
+      autumn: { t: [7, 19], w: { clear: 2, partly: 3, overcast: 3, drizzle: 2, rain: 1.5, storm: 0.3, fog: 2 } },
+      winter: { t: [0, 4], w: { clear: 2, partly: 2, overcast: 3, drizzle: 1, rain: 1, fog: 1.5, snow: 2, heavysnow: 1, blizzard: 0.3 } },
+      any:    { t: [9, 17], w: { clear: 3, partly: 3, overcast: 2, drizzle: 2, rain: 1, storm: 0.5, fog: 1 } } } },
     arctic: { label: 'Arctic / tundra', persistence: 0.55, seasons: {
-      spring: { t: [-15, -2], w: { clear: 3, partly: 2, overcast: 3, snow: 3, heavysnow: 1, blizzard: 1, fog: 1 } },
-      summer: { t: [0, 12], w: { clear: 3, partly: 3, overcast: 3, drizzle: 2, rain: 1, fog: 2 } },
-      autumn: { t: [-10, 2], w: { clear: 2, partly: 2, overcast: 3, snow: 3, heavysnow: 1.5, blizzard: 0.7, fog: 1 } },
-      winter: { t: [-35, -15], w: { clear: 3, partly: 2, overcast: 2, snow: 2, heavysnow: 1, blizzard: 2 } },
-      any:    { t: [-20, -2], w: { clear: 3, partly: 2, overcast: 3, snow: 3, heavysnow: 1, blizzard: 1 } } } },
+      spring: { t: [-20, -3], w: { clear: 3, partly: 2, overcast: 3, snow: 3, heavysnow: 1, blizzard: 1, fog: 1 } },
+      summer: { t: [5, 9], w: { clear: 3, partly: 3, overcast: 3, drizzle: 2, rain: 1, fog: 2 } },
+      autumn: { t: [-11, 3], w: { clear: 2, partly: 2, overcast: 3, snow: 3, heavysnow: 1.5, blizzard: 0.7, fog: 1 } },
+      winter: { t: [-21, -17], w: { clear: 3, partly: 2, overcast: 2, snow: 2, heavysnow: 1, blizzard: 2 } },
+      any:    { t: [-12, -2], w: { clear: 3, partly: 2, overcast: 3, snow: 3, heavysnow: 1, blizzard: 1 } } } },
     desert: { label: 'Desert', persistence: 0.6, seasons: {
-      spring: { t: [15, 32], w: { clear: 6, partly: 2, haze: 2, sandstorm: 0.8, overcast: 0.3, drizzle: 0.1 } },
-      summer: { t: [25, 45], w: { clear: 7, haze: 3, sandstorm: 1, partly: 1 } },
-      autumn: { t: [15, 33], w: { clear: 6, partly: 2, haze: 1.5, sandstorm: 0.8 } },
-      winter: { t: [5, 22], w: { clear: 6, partly: 2, overcast: 1, drizzle: 0.3, sandstorm: 0.5 } },
-      any:    { t: [15, 35], w: { clear: 6, partly: 2, haze: 2, sandstorm: 0.8 } } } },
+      spring: { t: [24, 32], w: { clear: 6, partly: 2, haze: 2, sandstorm: 0.8, overcast: 0.3, drizzle: 0.1 } },
+      summer: { t: [33, 37], w: { clear: 7, haze: 3, sandstorm: 1, partly: 1 } },
+      autumn: { t: [25, 33], w: { clear: 6, partly: 2, haze: 1.5, sandstorm: 0.8 } },
+      winter: { t: [18, 22], w: { clear: 6, partly: 2, overcast: 1, drizzle: 0.3, sandstorm: 0.5 } },
+      any:    { t: [25, 31], w: { clear: 6, partly: 2, haze: 2, sandstorm: 0.8 } } } },
     tropical: { label: 'Tropical / jungle', persistence: 0.4, seasons: {
-      spring: { t: [24, 32], w: { clear: 3, partly: 3, rain: 2, storm: 1.5, drizzle: 1 } },
-      summer: { t: [25, 33], w: { partly: 2, rain: 3, storm: 3, overcast: 2, clear: 1 } },
-      autumn: { t: [24, 32], w: { partly: 3, rain: 2, storm: 2, clear: 2 } },
-      winter: { t: [22, 30], w: { clear: 4, partly: 3, drizzle: 1, rain: 0.5, fog: 0.5 } },
-      any:    { t: [24, 32], w: { clear: 3, partly: 3, rain: 2, storm: 1.5, drizzle: 1 } } } },
+      spring: { t: [31, 35], w: { clear: 3, partly: 3, rain: 2, storm: 1.5, drizzle: 1 } },
+      summer: { t: [30, 34], w: { partly: 2, rain: 3, storm: 3, overcast: 2, clear: 1 } },
+      autumn: { t: [31, 35], w: { partly: 3, rain: 2, storm: 2, clear: 2 } },
+      winter: { t: [30, 34], w: { clear: 4, partly: 3, drizzle: 1, rain: 0.5, fog: 0.5 } },
+      any:    { t: [31, 35], w: { clear: 3, partly: 3, rain: 2, storm: 1.5, drizzle: 1 } } } },
     mountain: { label: 'Mountains / highlands', persistence: 0.4, seasons: {
-      spring: { t: [-5, 10], w: { clear: 3, partly: 2, overcast: 2, snow: 2, drizzle: 1, fog: 2, storm: 0.5 } },
-      summer: { t: [5, 20], w: { clear: 4, partly: 3, storm: 1.5, rain: 1, fog: 1.5, hail: 0.3 } },
-      autumn: { t: [-5, 10], w: { clear: 3, partly: 2, overcast: 2, fog: 2, snow: 2, drizzle: 1 } },
-      winter: { t: [-25, -5], w: { clear: 2, partly: 2, overcast: 2, snow: 3, heavysnow: 2, blizzard: 1.5, fog: 1 } },
-      any:    { t: [-5, 12], w: { clear: 3, partly: 2, overcast: 2, snow: 1, drizzle: 1, fog: 2 } } } },
+      spring: { t: [5, 13], w: { clear: 3, partly: 2, overcast: 2, snow: 2, drizzle: 1, fog: 2, storm: 0.5 } },
+      summer: { t: [16, 20], w: { clear: 4, partly: 3, storm: 1.5, rain: 1, fog: 1.5, hail: 0.3 } },
+      autumn: { t: [5, 14], w: { clear: 3, partly: 2, overcast: 2, fog: 2, snow: 2, drizzle: 1 } },
+      winter: { t: [-1, 3], w: { clear: 2, partly: 2, overcast: 2, snow: 3, heavysnow: 2, blizzard: 1.5, fog: 1 } },
+      any:    { t: [6, 13], w: { clear: 3, partly: 2, overcast: 2, snow: 1, drizzle: 1, fog: 2 } } } },
     maritime: { label: 'Coastal / maritime', persistence: 0.45, seasons: {
-      spring: { t: [6, 14], w: { partly: 3, overcast: 3, drizzle: 3, rain: 1.5, fog: 2.5, clear: 2, storm: 0.5 } },
-      summer: { t: [12, 22], w: { clear: 3, partly: 3, fog: 2, drizzle: 1, overcast: 2, storm: 0.5 } },
-      autumn: { t: [7, 15], w: { overcast: 3, rain: 2.5, storm: 1.5, drizzle: 2, fog: 2, partly: 2 } },
-      winter: { t: [0, 9], w: { overcast: 3, rain: 3, storm: 2, drizzle: 2, snow: 0.5, fog: 1.5 } },
-      any:    { t: [8, 16], w: { partly: 3, overcast: 3, drizzle: 2, rain: 1.5, fog: 2, clear: 2, storm: 0.7 } } } },
+      spring: { t: [7, 15], w: { partly: 3, overcast: 3, drizzle: 3, rain: 1.5, fog: 2.5, clear: 2, storm: 0.5 } },
+      summer: { t: [17, 21], w: { clear: 3, partly: 3, fog: 2, drizzle: 1, overcast: 2, storm: 0.5 } },
+      autumn: { t: [8, 16], w: { overcast: 3, rain: 2.5, storm: 1.5, drizzle: 2, fog: 2, partly: 2 } },
+      winter: { t: [3, 7], w: { overcast: 3, rain: 3, storm: 2, drizzle: 2, snow: 0.5, fog: 1.5 } },
+      any:    { t: [9, 15], w: { partly: 3, overcast: 3, drizzle: 2, rain: 1.5, fog: 2, clear: 2, storm: 0.7 } } } },
     swamp: { label: 'Swamp / marsh', persistence: 0.5, seasons: {
-      spring: { t: [8, 20], w: { fog: 4, overcast: 3, drizzle: 3, rain: 1, partly: 2, clear: 1 } },
-      summer: { t: [18, 32], w: { fog: 2, haze: 2, partly: 3, storm: 1.5, rain: 1, clear: 2 } },
-      autumn: { t: [8, 20], w: { fog: 5, overcast: 3, drizzle: 3, rain: 1, partly: 1 } },
-      winter: { t: [-2, 8], w: { fog: 4, overcast: 3, drizzle: 2, snow: 1, rain: 1 } },
-      any:    { t: [10, 22], w: { fog: 4, overcast: 3, drizzle: 3, rain: 1, partly: 2 } } } },
+      spring: { t: [6, 20], w: { fog: 4, overcast: 3, drizzle: 3, rain: 1, partly: 2, clear: 1 } },
+      summer: { t: [22, 26], w: { fog: 2, haze: 2, partly: 3, storm: 1.5, rain: 1, clear: 2 } },
+      autumn: { t: [5, 19], w: { fog: 5, overcast: 3, drizzle: 3, rain: 1, partly: 1 } },
+      winter: { t: [-2, 2], w: { fog: 4, overcast: 3, drizzle: 2, snow: 1, rain: 1 } },
+      any:    { t: [8, 17], w: { fog: 4, overcast: 3, drizzle: 3, rain: 1, partly: 2 } } } },
     underground: { label: 'Underground', persistence: 0.7, seasons: {
-      any: { t: [8, 14], w: { still: 6, damp: 3, drafty: 2, dust: 0.4 } } } },
+      any: { t: [10, 14], w: { still: 6, damp: 3, drafty: 2, dust: 0.4 } } } },
     ship: { label: 'Starship interior', persistence: 0.7, seasons: {
-      any: { t: [19, 23], w: { nominal: 20, flicker: 2, nebula: 1, ionstorm: 0.8, redalert: 0.4, radiation: 0.4, blackout: 0.15 } } } },
+      any: { t: [20, 22], w: { nominal: 20, flicker: 2, nebula: 1, ionstorm: 0.8, redalert: 0.4, radiation: 0.4, blackout: 0.15 } } } },
     vacuum: { label: 'Open space / airless body', persistence: 0.6, seasons: {
-      any: { t: [-150, 120], w: { nominal: 12, flare: 1, debris: 1, ionstorm: 0.5, radiation: 0.8 } } } },
+      any: { t: [-178, 117], w: { nominal: 12, flare: 1, debris: 1, ionstorm: 0.5, radiation: 0.8 } } } },
   };
 
   // ---------------------------------------------------------------- Köppen climates
   // Baselines per Köppen–Geiger code, one entry per season (winter, spring, summer, autumn):
   // [low, high] = range of typical daytime highs in °C; wet 0–5 (0 arid … 5 torrential);
   // storm / fog / dust 0–3 (how often thunderstorms or blizzards, fog, and dust storms turn up).
-  // Figures are rounded from representative stations (WorldClim / openclimatemap.org monthly normals).
+  // Highs and wetness come from one representative station per class (`station`: place, Wikipedia article, normals period, weather service, and a note where it only borders the class),
+  // from the 1991–2020 monthly normals in tools/climate-normals.json; `node tools/climate-baselines.js` shows the
+  // rules and checks each station's class. Storm, fog and dust are the app's own game tuning, not measurements.
   // Tropical wet and dry seasons follow the sun: the wet season is "summer", the dry season "winter".
   const KOPPEN_GROUPS = {
     A: 'Tropical', B: 'Arid', C: 'Temperate', D: 'Continental', E: 'Polar',
@@ -385,37 +393,37 @@
   };
   const sb = (lo, hi, wet, storm = 0, fog = 0, dust = 0) => ({ t: [lo, hi], wet, storm, fog, dust });
   const KOPPEN = {
-    Af:  { label: 'Tropical rainforest', where: 'Singapore, Amazon basin, Congo basin', s: [sb(28, 32, 4, 2.5, 1), sb(28, 33, 4, 2.5, 1), sb(28, 32, 4.5, 3, 1), sb(28, 32, 4, 2.5, 1)] },
-    Am:  { label: 'Tropical monsoon', where: 'Miami, Kerala, Myanmar coast', s: [sb(27, 31, 1.5, 0.5), sb(29, 34, 2, 1.5), sb(27, 31, 4.5, 3), sb(28, 32, 3, 2)] },
-    Aw:  { label: 'Tropical savanna (dry winter)', where: 'Darwin, Lagos, Bangkok, Rio de Janeiro', s: [sb(28, 33, 0.5, 0, 0.5, 0.5), sb(31, 36, 1.5, 1.5, 0, 0.5), sb(29, 33, 4, 3), sb(29, 33, 2.5, 2)] },
-    As:  { label: 'Tropical savanna (dry summer)', where: 'Chennai, Mombasa, Hawaii leeward coasts', s: [sb(27, 31, 3.5, 1.5), sb(30, 34, 1.5, 1), sb(30, 35, 0.5, 0.5, 0, 0.5), sb(28, 32, 2.5, 1.5)] },
-    BWh: { label: 'Hot desert', where: 'Cairo, Dubai, Phoenix, the Sahara', s: [sb(18, 25, 0.3, 0, 0.5, 1), sb(26, 35, 0.15, 0.2, 0, 1.5), sb(35, 44, 0.1, 0.3, 0, 2), sb(27, 36, 0.15, 0.2, 0, 1)] },
-    BWk: { label: 'Cold desert', where: 'Gobi, Ladakh, Great Basin, Patagonia', s: [sb(-5, 6, 0.3, 0, 0.5, 0.5), sb(10, 22, 0.4, 0.3, 0, 1.5), sb(24, 34, 0.3, 0.5, 0, 1), sb(8, 20, 0.3, 0.2, 0, 1)] },
-    BSh: { label: 'Hot semi-arid steppe', where: 'Sahel, Alice Springs, Karachi, Monterrey', s: [sb(20, 27, 0.4, 0, 0.3, 1), sb(28, 36, 0.5, 0.5, 0, 1.5), sb(32, 39, 1.3, 1.5, 0, 1), sb(27, 34, 0.7, 0.7, 0, 0.5)] },
-    BSk: { label: 'Cold semi-arid steppe', where: 'Denver, Madrid outskirts, Kazakh steppe, Ulaanbaatar plains', s: [sb(0, 9, 0.7, 0, 0.5, 0.3), sb(12, 22, 1, 1, 0, 0.7), sb(25, 33, 0.8, 1.5, 0, 0.5), sb(12, 22, 0.7, 0.3, 0.3, 0.3)] },
-    Csa: { label: 'Hot-summer Mediterranean', where: 'Athens, Seville, Rome, Los Angeles inland', s: [sb(12, 17, 2.5, 0.5, 1), sb(19, 26, 1.2, 0.5, 0.3), sb(30, 36, 0.15, 0.3), sb(21, 28, 1.5, 0.7, 0.3)] },
-    Csb: { label: 'Warm-summer Mediterranean', where: 'San Francisco, Porto, Cape Town', s: [sb(12, 16, 3, 0.3, 1.5), sb(16, 21, 1.5, 0.2, 1.5), sb(20, 26, 0.3, 0, 2.5), sb(17, 23, 1.5, 0.2, 2)] },
-    Csc: { label: 'Cold-summer Mediterranean', where: 'Highlands of the Cascades and Andes', s: [sb(2, 7, 3, 0.5, 1.5), sb(6, 12, 2, 0.3, 1.5), sb(12, 17, 0.4, 0.2, 1), sb(7, 12, 2, 0.3, 1.5)] },
-    Cwa: { label: 'Monsoon-influenced humid subtropical', where: 'Hong Kong, Delhi, Guangzhou', s: [sb(16, 22, 0.4, 0, 1, 0.3), sb(24, 32, 1.5, 1.5, 0.5), sb(30, 34, 4.5, 3), sb(24, 30, 2, 1.5)] },
-    Cwb: { label: 'Subtropical highland', where: 'Mexico City, Johannesburg, Bogotá-style highlands', s: [sb(18, 22, 0.3, 0, 0.5, 0.3), sb(22, 27, 1.5, 1.5), sb(21, 25, 3.5, 2.5, 0.5), sb(20, 24, 1.5, 1, 0.5)] },
-    Cwc: { label: 'Cold subtropical highland', where: 'High Andean and Himalayan valleys', s: [sb(8, 13, 0.3, 0, 1), sb(12, 17, 1.5, 1), sb(12, 16, 3, 2, 1.5), sb(10, 15, 1.5, 0.5, 1)] },
-    Cfa: { label: 'Humid subtropical', where: 'Atlanta, Shanghai, Buenos Aires, Sydney', s: [sb(7, 14, 2.5, 0.3, 1), sb(17, 25, 2.5, 1.5, 0.5), sb(29, 33, 3, 2.5, 0.3), sb(17, 26, 2.3, 1, 1)] },
-    Cfb: { label: 'Temperate oceanic', where: 'London, Paris, Melbourne, Seattle', s: [sb(5, 10, 3, 0.2, 2), sb(11, 18, 2.5, 0.5, 1), sb(19, 25, 2, 1, 0.5), sb(11, 18, 3, 0.5, 2)] },
-    Cfc: { label: 'Subpolar oceanic', where: 'Faroe Islands, Reykjavík coast, Tierra del Fuego', s: [sb(1, 5, 3.5, 0.8, 1.5), sb(4, 9, 3, 0.3, 1.5), sb(10, 14, 3, 0.2, 2), sb(5, 10, 3.5, 0.8, 1.5)] },
-    Dsa: { label: 'Hot-summer continental (dry summer)', where: 'Hakkari, eastern Anatolia, Utah valleys', s: [sb(-3, 4, 2.5, 0.5, 1), sb(10, 19, 2, 1), sb(27, 34, 0.3, 0.5, 0, 0.5), sb(12, 21, 1, 0.3, 0.5)] },
-    Dsb: { label: 'Warm-summer continental (dry summer)', where: 'Iranian plateau towns, eastern Cascades', s: [sb(-6, 1, 2.5, 0.5, 1), sb(6, 14, 2, 0.7), sb(21, 27, 0.4, 0.5), sb(7, 15, 1.2, 0.3, 0.5)] },
-    Dsc: { label: 'Subarctic (dry summer)', where: 'High Sierra and Anatolian uplands', s: [sb(-15, -5, 2.5, 0.8, 0.5), sb(-2, 8, 2, 0.5), sb(14, 19, 0.5, 0.5), sb(0, 8, 1.5, 0.3, 0.5)] },
-    Dsd: { label: 'Extremely cold subarctic (dry summer)', where: 'Rare: high eastern Siberia', s: [sb(-40, -28, 1, 1, 0.5), sb(-12, 0, 0.8, 0.3), sb(14, 20, 0.5, 0.3), sb(-10, 0, 0.8, 0.5)] },
-    Dwa: { label: 'Monsoon-influenced hot-summer continental', where: 'Beijing, Seoul', s: [sb(-2, 4, 0.3, 0, 0.5, 1), sb(14, 22, 1, 0.5, 0, 1.5), sb(28, 32, 4, 2.5, 0.5), sb(13, 22, 1, 0.3, 1)] },
-    Dwb: { label: 'Monsoon-influenced warm-summer continental', where: 'Vladivostok, northern Korea', s: [sb(-12, -5, 0.3, 0, 0.3), sb(6, 14, 1.2, 0.3, 1.5), sb(20, 25, 3.5, 2, 1.5), sb(6, 14, 1.2, 0.3, 0.5)] },
-    Dwc: { label: 'Monsoon-influenced subarctic', where: 'Mongolia, Chita, Tibetan uplands', s: [sb(-25, -14, 0.2, 0.3, 0.3, 0.3), sb(0, 12, 0.6, 0.3, 0, 1), sb(20, 25, 2.5, 1.5), sb(-2, 10, 0.6, 0.3)] },
-    Dwd: { label: 'Monsoon-influenced extremely cold subarctic', where: 'Oymyakon region', s: [sb(-48, -35, 0.2, 0.3, 1), sb(-15, 0, 0.4, 0.2), sb(16, 22, 2, 1), sb(-14, -2, 0.5, 0.3)] },
-    Dfa: { label: 'Hot-summer humid continental', where: 'Chicago, Kyiv-area plains, Toronto outskirts', s: [sb(-4, 3, 2, 1, 1), sb(10, 19, 2.5, 1.5, 0.5), sb(26, 31, 2.5, 2.5), sb(11, 20, 2, 0.5, 1)] },
-    Dfb: { label: 'Warm-summer humid continental', where: 'Moscow, Toronto, Warsaw, Minneapolis', s: [sb(-9, -1, 2, 1, 1), sb(6, 15, 2, 0.7, 0.5), sb(20, 25, 2.5, 1.5, 0.3), sb(5, 13, 2.2, 0.3, 1.5)] },
-    Dfc: { label: 'Subarctic (boreal taiga)', where: 'Fairbanks, Arkhangelsk, northern Scandinavia', s: [sb(-25, -12, 1.5, 1.2, 0.5), sb(-5, 8, 1.2, 0.5, 0.5), sb(16, 22, 2, 1), sb(-3, 6, 1.8, 0.5, 1)] },
-    Dfd: { label: 'Extremely cold subarctic', where: 'Yakutsk, Verkhoyansk', s: [sb(-45, -32, 0.7, 0.5, 1.5), sb(-15, 2, 0.6, 0.2), sb(18, 25, 1.5, 0.8), sb(-12, 0, 0.8, 0.3, 0.5)] },
-    ET:  { label: 'Tundra', where: 'Alaska North Slope, Norilsk, Svalbard coast', s: [sb(-30, -18, 1, 1.5), sb(-15, -3, 1, 1, 0.5), sb(2, 10, 1.5, 0.3, 2.5), sb(-8, 0, 1.5, 1, 1.5)] },
-    EF:  { label: 'Ice cap', where: 'Antarctica, interior Greenland', s: [sb(-60, -35, 0.4, 2.5), sb(-40, -20, 0.4, 2), sb(-20, -5, 0.5, 1, 0.5), sb(-40, -20, 0.4, 2)] },
+    Af:  { label: 'Tropical rainforest', where: 'Singapore, Amazon basin, Congo basin', station: ['Singapore', 'Climate_of_Singapore', '1991–2020', 'Meteorological Service Singapore (NEA)'], s: [sb(29, 33, 4.5, 2.5, 1), sb(30, 34, 4, 2.5, 1), sb(30, 34, 3.8, 3, 1), sb(30, 34, 4.2, 2.5, 1)] },
+    Am:  { label: 'Tropical monsoon', where: 'Miami, Kerala, Myanmar coast', station: ['Miami International Airport, Florida, US', 'Miami', '1991–2020', 'NOAA'], s: [sb(23, 27, 2.4, 0.5), sb(27, 31, 3.3, 1.5), sb(30, 34, 4.6, 3), sb(27, 32, 4.2, 2)] },
+    Aw:  { label: 'Tropical savanna (dry winter)', where: 'Darwin, Lagos, Bangkok, Rio de Janeiro', station: ['Darwin Airport, Northern Territory, Australia', 'Darwin,_Northern_Territory', '1991–2020', 'Bureau of Meteorology'], s: [sb(30, 34, 0.1, 0, 0.5, 0.5), sb(31, 35, 2.8, 1.5, 0, 0.5), sb(30, 34, 5, 3), sb(31, 35, 3.8, 2)] },
+    As:  { label: 'Tropical savanna (dry summer)', where: 'Chennai, Mombasa, Hawaii leeward coasts', station: ['Chennai (Nungambakkam), India', 'Chennai', '1991–2020', 'India Meteorological Department', 'Wikipedia: As, closely bordering Aw (by the rules here it comes out Aw)'], s: [sb(28, 32, 2.7, 1.5), sb(33, 37, 1.4, 1), sb(34, 38, 3.4, 0.5, 0, 0.5), sb(30, 34, 4.8, 1.5)] },
+    BWh: { label: 'Hot desert', where: 'Cairo, Dubai, Phoenix, the Sahara', station: ['Cairo International Airport, Egypt', 'Cairo', '1991–2020', 'Egyptian Meteorological Authority / NOAA'], s: [sb(18, 22, 0.3, 0, 0.5, 1), sb(24, 32, 0.2, 0.2, 0, 1.5), sb(33, 37, 0, 0.3, 0, 2), sb(25, 33, 0.1, 0.2, 0, 1)] },
+    BWk: { label: 'Cold desert', where: 'Leh (Ladakh), Gobi, Great Basin, Patagonia', station: ['Leh, Ladakh, India', 'Leh', '1951–2020', 'India Meteorological Department'], s: [sb(1, 5, 0.6, 0, 0.5, 0.5), sb(10, 20, 0.7, 0.3, 0, 1.5), sb(24, 29, 0.8, 0.5, 0, 1), sb(11, 23, 0.5, 0.2, 0, 1)] },
+    BSh: { label: 'Hot semi-arid steppe', where: 'Niamey, the Sahel, Monterrey', station: ['Niamey Airport, Niger', 'Niamey', '1991–2020', 'NOAA NCEI / WMO'], s: [sb(32, 36, 0, 0, 0.3, 1), sb(39, 43, 0.8, 0.5, 0, 1.5), sb(33, 38, 3.7, 1.5, 0, 1), sb(34, 38, 1.8, 0.7, 0, 0.5)] },
+    BSk: { label: 'Cold semi-arid steppe', where: 'Denver, Kazakh steppe, Ulaanbaatar plains', station: ['Denver International Airport, Colorado, US', 'Denver', '1991–2020', 'NOAA'], s: [sb(5, 9, 0.7, 0, 0.5, 0.3), sb(13, 22, 2, 1, 0, 0.7), sb(28, 32, 2.2, 1.5, 0, 0.5), sb(12, 26, 1.5, 0.3, 0.3, 0.3)] },
+    Csa: { label: 'Hot-summer Mediterranean', where: 'Rome, Seville, Athens, Los Angeles inland', station: ['Rome Ciampino Airport, Italy', 'Rome', '1991–2020', 'NOAA'], s: [sb(11, 15, 2.8, 0.5, 1), sb(16, 22, 2.5, 0.5, 0.3), sb(28, 32, 1.5, 0.3), sb(17, 27, 3, 0.7, 0.3)] },
+    Csb: { label: 'Warm-summer Mediterranean', where: 'Porto, San Francisco, Cape Town', station: ['Porto Airport, Portugal', 'Porto', '1991–2020', 'IPMA'], s: [sb(13, 17, 3.7, 0.3, 1.5), sb(17, 21, 3.1, 0.2, 1.5), sb(22, 26, 1.5, 0, 2.5), sb(17, 24, 3.6, 0.2, 2)] },
+    Csc: { label: 'Cold-summer Mediterranean', where: 'Akureyri (by the −3 °C rule), highlands of the Cascades and Andes', station: ['Akureyri, Iceland', 'Akureyri', '1991–2020', 'Icelandic Met Office / NOAA', 'Csc when the C/D line is drawn at −3 °C (Dsc at 0 °C); no station with published open normals is Csc at 0 °C'], s: [sb(1, 5, 2.5, 0.5, 1.5), sb(4, 10, 1.7, 0.3, 1.5), sb(12, 16, 1.7, 0.2, 1), sb(4, 12, 2.6, 0.3, 1.5)] },
+    Cwa: { label: 'Monsoon-influenced humid subtropical', where: 'Hong Kong, Delhi, Guangzhou', station: ['Hong Kong Observatory', 'Climate_of_Hong_Kong', '1991–2020', 'Hong Kong Observatory'], s: [sb(18, 22, 1.8, 0, 1, 0.3), sb(22, 29, 4.1, 1.5, 0.5), sb(29, 33, 5, 3), sb(25, 31, 4, 1.5)] },
+    Cwb: { label: 'Subtropical highland', where: 'Mexico City, Johannesburg, Bogotá-style highlands', station: ['Mexico City (Tacubaya), Mexico', 'Mexico_City', '1991–2020', 'Servicio Meteorológico Nacional'], s: [sb(21, 25, 0.6, 0, 0.5, 0.3), sb(25, 29, 1.7, 1.5), sb(23, 27, 4, 2.5, 0.5), sb(21, 25, 2.9, 1, 0.5)] },
+    Cwc: { label: 'Cold subtropical highland', where: 'El Alto, high Andean and Himalayan valleys', station: ['El Alto International Airport, Bolivia', 'El_Alto', 'not stated', 'SENAMHI Bolivia / Deutscher Wetterdienst', 'Wikipedia classes El Alto as Cwc; its warmest month sits just under the 10 °C line, so it borders on ET'], s: [sb(12, 16, 0.7, 0, 1), sb(14, 18, 2, 1), sb(13, 17, 3.4, 2, 1.5), sb(12, 16, 2, 0.5, 1)] },
+    Cfa: { label: 'Humid subtropical', where: 'Atlanta, Shanghai, Buenos Aires, Sydney', station: ['Atlanta (Hartsfield–Jackson Airport), Georgia, US', 'Atlanta', '1991–2020', 'NOAA'], s: [sb(11, 15, 3.5, 0.3, 1), sb(19, 27, 3.3, 1.5, 0.5), sb(29, 33, 3.4, 2.5, 0.3), sb(18, 29, 3.1, 1, 1)] },
+    Cfb: { label: 'Temperate oceanic', where: 'London, Paris, Melbourne, Seattle', station: ['London Heathrow, UK', 'London', '1991–2020', 'Met Office'], s: [sb(7, 11, 2.4, 0.2, 2), sb(12, 18, 2.1, 0.5, 1), sb(21, 25, 2.2, 1, 0.5), sb(12, 20, 2.5, 0.5, 2)] },
+    Cfc: { label: 'Subpolar oceanic', where: 'Tórshavn (Faroe Islands), Reykjavík coast, Tierra del Fuego', station: ['Tórshavn, Faroe Islands', 'Tórshavn', '1991–2020', 'Danish Meteorological Institute'], s: [sb(4, 8, 3.9, 0.8, 1.5), sb(6, 10, 3.2, 0.3, 1.5), sb(10, 14, 2.8, 0.2, 2), sb(8, 12, 3.8, 0.8, 1.5)] },
+    Dsa: { label: 'Hot-summer continental (dry summer)', where: 'Hakkâri, eastern Anatolia, Utah valleys', station: ['Hakkâri, Turkey', 'Hakkâri_(city)', '1991–2020', 'Turkish State Meteorological Service'], s: [sb(-1, 3, 3.2, 0.5, 1), sb(7, 20, 3.3, 1), sb(26, 32, 0.7, 0.5, 0, 0.5), sb(10, 27, 2.2, 0.3, 0.5)] },
+    Dsb: { label: 'Warm-summer continental (dry summer)', where: 'Sivas, central Anatolia, Iranian plateau towns', station: ['Sivas, Turkey', 'Sivas', '1991–2020', 'Turkish State Meteorological Service'], s: [sb(1, 5, 2.1, 0.5, 1), sb(10, 21, 2.4, 0.7), sb(25, 30, 1.1, 0.5), sb(11, 26, 1.8, 0.3, 0.5)] },
+    Dsc: { label: 'Subarctic (dry summer)', where: 'Akureyri, High Sierra and Anatolian uplands', station: ['Akureyri, Iceland', 'Akureyri', '1991–2020', 'Icelandic Met Office / NOAA'], s: [sb(1, 5, 2.5, 0.8, 0.5), sb(4, 10, 1.7, 0.5), sb(12, 16, 1.7, 0.5), sb(4, 12, 2.6, 0.3, 0.5)] },
+    Dsd: { label: 'Extremely cold subarctic (dry summer)', where: 'Rare: Verkhoyansk and high eastern Siberia', station: ['Verkhoyansk, Russia', 'Verkhoyansk', '1991–2020', 'Roshydromet via NOAA', 'Wikipedia: usually called Dfd, but technically qualifies as Dsd'], s: [sb(-42, -37, 0.4, 1, 0.5), sb(-19, 10, 0.6, 0.3), sb(19, 23, 1.7, 0.3), sb(-30, 9, 1, 0.5)] },
+    Dwa: { label: 'Monsoon-influenced hot-summer continental', where: 'Seoul, Beijing', station: ['Seoul, South Korea', 'Seoul', '1991–2020', 'Korea Meteorological Administration'], s: [sb(2, 6, 1.4, 0, 0.5, 1), sb(11, 24, 2.7, 0.5, 0, 1.5), sb(27, 31, 5, 2.5, 0.5), sb(12, 26, 2.9, 0.3, 1)] },
+    Dwb: { label: 'Monsoon-influenced warm-summer continental', where: 'Vladivostok, northern Korea', station: ['Vladivostok, Russia', 'Vladivostok', '1991–2020', 'Roshydromet via NOAA'], s: [sb(-8, -4, 1, 0, 0.3), sb(3, 15, 2.4, 0.3, 1.5), sb(18, 23, 3.8, 2, 1.5), sb(3, 20, 2.7, 0.3, 0.5)] },
+    Dwc: { label: 'Monsoon-influenced subarctic', where: 'Mohe, northern Mongolia, Tibetan uplands', station: ['Mohe, Heilongjiang, China', 'Mohe_City', '1991–2020', 'China Meteorological Administration'], s: [sb(-19, -11, 0.5, 0.3, 0.3, 0.3), sb(-2, 18, 1.4, 0.3, 0, 1), sb(23, 27, 3.1, 1.5), sb(-9, 17, 1.7, 0.3)] },
+    Dwd: { label: 'Monsoon-influenced extremely cold subarctic', where: 'Rare: the Oymyakon region', station: ['Oymyakon, Russia', 'Oymyakon', '1991–2020', 'Roshydromet / WMO via NOAA', 'no station with published open normals is clearly Dwd; Oymyakon borders on it (driest winter month 5 mm against a 4.6 mm cut-off)'], s: [sb(-42, -36, 0.5, 0.3, 1), sb(-20, 10, 0.6, 0.2), sb(19, 23, 2, 1), sb(-30, 9, 1.1, 0.3)] },
+    Dfa: { label: 'Hot-summer humid continental', where: 'Chicago, Kyiv-area plains, Toronto outskirts', station: ['Chicago O\'Hare Airport, Illinois, US', 'Chicago', '1991–2020', 'NOAA'], s: [sb(-1, 3, 2.3, 1, 1), sb(8, 21, 3.1, 1.5, 0.5), sb(26, 30, 3.3, 2.5), sb(9, 24, 2.8, 0.5, 1)] },
+    Dfb: { label: 'Warm-summer humid continental', where: 'Warsaw, Moscow, Toronto, Minneapolis', station: ['Warsaw (Chopin Airport), Poland', 'Warsaw', '1991–2020', 'Institute of Meteorology and Water Management (IMGW)'], s: [sb(0, 4, 1.7, 1, 1), sb(7, 20, 2, 0.7, 0.5), sb(22, 26, 2.7, 1.5, 0.3), sb(7, 19, 2, 0.3, 1.5)] },
+    Dfc: { label: 'Subarctic (boreal taiga)', where: 'Yellowknife, Arkhangelsk, northern Scandinavia', station: ['Yellowknife Airport, Canada', 'Yellowknife', '1991–2020', 'Environment and Climate Change Canada'], s: [sb(-22, -18, 0.9, 1.2, 0.5), sb(-11, 10, 1, 0.5, 0.5), sb(18, 22, 1.9, 1), sb(-9, 11, 1.7, 0.5, 1)] },
+    Dfd: { label: 'Extremely cold subarctic', where: 'Oymyakon, Verkhoyansk', station: ['Oymyakon, Russia', 'Oymyakon', '1991–2020', 'Roshydromet / WMO via NOAA'], s: [sb(-42, -36, 0.5, 0.5, 1.5), sb(-20, 10, 0.6, 0.2), sb(19, 23, 2, 0.8), sb(-30, 9, 1.1, 0.3, 0.5)] },
+    ET:  { label: 'Tundra', where: 'Utqiaġvik (Alaska North Slope), Norilsk, Svalbard coast', station: ['Utqiaġvik (Wiley Post–Will Rogers Airport), Alaska, US', 'Utqiagvik,_Alaska', '1991–2020', 'NOAA'], s: [sb(-21, -17, 0.4, 1.5), sb(-20, -3, 0.4, 1, 0.5), sb(5, 9, 1.3, 0.3, 2.5), sb(-11, 3, 1, 1, 1.5)] },
+    EF:  { label: 'Ice cap', where: 'Antarctica (South Pole), interior Greenland', station: ['Amundsen–Scott South Pole Station, Antarctica', 'Amundsen–Scott_South_Pole_Station', '1991–2020 (temperature), 1957–1988 (precipitation)', 'NOAA / Deutscher Wetterdienst'], s: [sb(-56, -52, 0, 2.5), sb(-54, -35, 0, 2), sb(-37, -26, 0, 1, 0.5), sb(-53, -49, 0, 2)] },
   };
   const KOPPEN_SEASONS = ['winter', 'spring', 'summer', 'autumn'];
   const WET_LABELS = ['Arid', 'Very dry', 'Light', 'Moderate', 'Wet', 'Very wet'];
@@ -583,17 +591,19 @@
 
   /** Typical difference between the daytime high and the overnight low, in °C, before cloud cover. */
   function diurnalRange(clim, sea) {
+    // Mean daily maximum minus mean daily minimum across the stations in tools/climate-normals.json
+    // (`node tools/climate-baselines.js` prints them), rounded to the nearest half degree.
     if (clim === CLIMATES.underground || clim === CLIMATES.ship || clim === CLIMATES.vacuum) return 0;
     const k = clim.koppen || '';
     if (k) {
       const g = k[0];
-      if (g === 'B') return k[1] === 'W' ? 16 : 13;
-      if (g === 'E') return 5;
+      if (g === 'B') return k[1] === 'W' ? 12.5 : 14.5;
+      if (g === 'E') return 6.5;
       if (g === 'A') return 8;
-      if (k[1] === 's' && sea === 'summer') return 13; // dry Mediterranean summers swing hard
-      return g === 'D' ? 11 : 9;
+      if (k[1] === 's' && sea === 'summer') return 11.5; // dry-summer stations swing more in summer
+      return g === 'D' ? 10.5 : 8.5;
     }
-    const R = { temperate: 9, arctic: 6, desert: 16, tropical: 8, mountain: 12, maritime: 6, swamp: 7 };
+    const R = { temperate: 8.5, arctic: 6, desert: 10.5, tropical: 9, mountain: 10, maritime: 6, swamp: 8 };
     for (const key in R) if (clim === CLIMATES[key]) return R[key];
     return 9;
   }
@@ -722,19 +732,78 @@
   }
 
 
+  // ---------------------------------------------------------------- sources
+  // Where the app's reference figures come from, shown on the About page. Data entries below name their source
+  // by key. Wikipedia text is CC BY-SA 4.0; NASA, JPL and US government pages are public domain; GOV.UK
+  // statistics are under the Open Government Licence v3.0.
+  const wp = (page, title) => ({ title: title || page.replace(/_/g, ' ').replace(/ \(.*\)$/, ''), by: 'Wikipedia', licence: 'CC BY-SA 4.0',
+    url: `https://en.wikipedia.org/wiki/${page}` });
+  const nasa = (title, url, by = 'NASA') => ({ title, by, licence: 'Public domain (US government work)', url });
+  const SOURCES = {
+    walk: wp('Preferred_walking_speed'), jog: wp('Jogging'), horse: wp('Horse_gait'), stage: wp('Stagecoach'),
+    camel: wp('Dromedary'), oxen: wp('Oregon_Trail'), bike: wp('Bicycle_performance'),
+    dft: { title: 'Vehicle speed compliance statistics for Great Britain: 2024 (average free-flow speeds)', by: 'Department for Transport',
+      licence: 'Open Government Licence v3.0', url: 'https://www.gov.uk/government/statistics/vehicle-speed-compliance-statistics-for-great-britain-2024/vehicle-speed-compliance-statistics-for-great-britain-2024' },
+    acela: wp('Acela'), shinkansen: wp('Shinkansen'), maglev: wp('Shanghai_maglev_train'), lrv: wp('Lunar_Roving_Vehicle'),
+    percy: nasa('Map a Mars rover driving route (Perseverance top speed)', 'https://www.jpl.nasa.gov/edu/learn/project/map-a-mars-rover-driving-route/', 'NASA JPL'),
+    galley: wp('Galley'), longship: wp('Longship'), clipper: wp('Clipper'), titanic: wp('Titanic'), container: wp('Container_ship'),
+    carrier: wp('Nimitz-class_aircraft_carrier'), hydrofoil: wp('Hydrofoil'),
+    eagle: wp('Golden_eagle'), pigeon: wp('Homing_pigeon'), zeppelin: wp('LZ_129_Hindenburg'), heli: wp('Bell_206'),
+    cessna: wp('Cessna_172'), b787: wp('Boeing_787_Dreamliner'), concorde: wp('Concorde'),
+    jplPlanets: nasa('Approximate positions of the planets (Table 1, semi-major axes)', 'https://ssd.jpl.nasa.gov/planets/approx_pos.html', 'NASA JPL Solar System Dynamics'),
+    jplSats: nasa('Planetary satellite mean elements', 'https://ssd.jpl.nasa.gov/sats/elem/sep.html', 'NASA JPL Solar System Dynamics'),
+    jplConst: nasa('Astrodynamic parameters (GM, au, speed of light)', 'https://ssd.jpl.nasa.gov/astro_par.html', 'NASA JPL Solar System Dynamics'),
+    pluto: nasa('Pluto fact sheet', 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/plutofact.html', 'NASA NSSDCA'),
+    moonFacts: nasa('Moon fact sheet', 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html', 'NASA NSSDCA'),
+    ceres: wp('Ceres_(dwarf_planet)'), geo: wp('Geostationary_orbit'),
+    l2: nasa("Webb's orbit at Sun–Earth Lagrange point 2", 'https://science.nasa.gov/asset/webb/webbs-orbit-at-sun-earth-lagrange-point-2-l2/'),
+    helio: wp('Heliopause_(astronomy)', 'Heliopause'), oort: nasa('Oort Cloud facts', 'https://science.nasa.gov/solar-system/oort-cloud/facts'),
+    nearStars: wp('List_of_nearest_stars'), g0: wp('Standard_gravity'), ly: wp('Light-year'),
+    altair: wp('Altair'), vega: wp('Vega'), pollux: wp('Pollux_(star)'), arcturus: wp('Arcturus'), trappist: wp('TRAPPIST-1'),
+    aldebaran: wp('Aldebaran'), polaris: wp('Polaris'), betelgeuse: wp('Betelgeuse'), sgra: wp('Sagittarius_A*'),
+    // climate
+    beck: { title: 'Present and future Köppen-Geiger climate classification maps at 1-km resolution (Beck et al., Scientific Data 5, 180214, 2018)',
+      by: 'Scientific Data', licence: 'CC BY 4.0', url: 'https://doi.org/10.1038/sdata.2018.214' },
+    cave: nasa('Mammoth Cave weather (cave air a constant 12 °C)', 'https://home.nps.gov/maca/planyourvisit/weather.htm', 'US National Park Service'),
+    room: wp('Room_temperature'),
+    // calendars
+    gregorian: wp('Gregorian_calendar'),
+    usno: nasa('Earth’s seasons and apsides (equinox and solstice dates)', 'https://aa.usno.navy.mil/data/Earth_Seasons', 'US Naval Observatory'),
+    phases: { title: 'Six Millennium Catalog of Phases of the Moon (mean synodic month 29.530588 days; moon phase predictions by Fred Espenak, NASA/GSFC)',
+      by: 'NASA Goddard', licence: 'Free to reproduce with acknowledgment', url: 'https://eclipse.gsfc.nasa.gov/phase/phasecat.html' },
+    usHolidays: nasa('5 U.S.C. § 6103, federal holidays (New Year’s Day, Thanksgiving, Christmas Day)', 'https://www.govinfo.gov/link/uscode/5/6103', 'US Code'),
+    xmasEve: wp('Christmas_Eve'),
+    imperial: { title: 'Imperial Calendar', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'Not openly licensed; setting © Games Workshop',
+      url: 'https://whfb.lexicanum.com/wiki/Imperial_Calendar' },
+    imperialMoons: { title: 'Mannslieb & Morrslieb', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'Not openly licensed; setting © Games Workshop',
+      url: 'https://whfb.lexicanum.com/wiki/Moon' },
+    shire: { title: 'Shire Calendar', by: 'Tolkien Gateway (fan wiki)', licence: 'CC BY-SA 4.0 (wiki text); the setting © the Tolkien Estate',
+      url: 'https://tolkiengateway.net/wiki/Shire_Calendar' },
+    letter294: { title: 'Tolkien, Letters no. 294: Hobbiton at about the latitude of Oxford, Minas Tirith of Florence, Pelargir of ancient Troy (quoted in a Tolkien FAQ)',
+      by: 'Aarhus University (Tolkien FAQ)', licence: 'Quotation; © the Tolkien Estate', url: 'https://cs.au.dk/~clemens/au15572/tolkien/actuallyeurope.html' },
+    imaginarymaps: { title: 'Köppen climate map of Middle-earth (r/imaginarymaps, post c5mzt9)', by: 'Reddit user post', licence: 'Not openly licensed',
+      url: 'https://www.reddit.com/r/imaginarymaps/comments/c5mzt9/' },
+    // rules
+    yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
+      licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
+  };
+
   // ---------------------------------------------------------------- travel planner
+  // Physical constants: c and the au from JPL (jplConst), standard gravity (g0) and the IAU light-year (ly).
   const C = 299792458, G0 = 9.80665, AU = 1.495978707e11, LY = 9.4607304725808e15;
   const DIST_UNITS = { km: 1e3, mi: 1609.344, AU, LY, ls: C, lm: C * 60 };
-  // Central bodies (GM in m³/s²) and bodies orbiting them (orbit radius in AU or km).
+  // Central bodies (GM in m³/s², from jplConst; Jupiter and Saturn are their whole systems) and the bodies orbiting
+  // them (mean orbit radius in AU or km, from jplPlanets, jplSats, pluto and ceres; low orbit adds 400 km to Earth's
+  // 6,371 km mean radius, and geostationary is from geo).
   const SYSTEMS = {
-    sun: { label: 'Sol', gm: 1.32712440018e20, unit: 'AU', bodies: {
+    sun: { label: 'Sol', gm: 1.32712440041e20, unit: 'AU', bodies: {
       Mercury: 0.387, Venus: 0.723, Earth: 1.0, Mars: 1.524, Ceres: 2.77, Jupiter: 5.203,
       Saturn: 9.537, Uranus: 19.19, Neptune: 30.07, Pluto: 39.48 } },
-    jupiter: { label: 'Jupiter system', gm: 1.26686534e17, unit: 'km', bodies: {
-      Io: 421700, Europa: 671034, Ganymede: 1070412, Callisto: 1882709 } },
-    saturn: { label: 'Saturn system', gm: 3.7931187e16, unit: 'km', bodies: {
-      Enceladus: 238020, Tethys: 294619, Dione: 377396, Rhea: 527108, Titan: 1221870, Iapetus: 3560820 } },
-    earth: { label: 'Earth–Moon', gm: 3.986004418e14, unit: 'km', bodies: {
+    jupiter: { label: 'Jupiter system', gm: 1.267127641e17, unit: 'km', bodies: {
+      Io: 421800, Europa: 671100, Ganymede: 1070400, Callisto: 1882700 } },
+    saturn: { label: 'Saturn system', gm: 3.79405848418e16, unit: 'km', bodies: {
+      Enceladus: 238400, Tethys: 295000, Dione: 377700, Rhea: 527200, Titan: 1221900, Iapetus: 3561700 } },
+    earth: { label: 'Earth–Moon', gm: 3.98600435507e14, unit: 'km', bodies: {
       'Low orbit (400 km)': 6771, 'Geostationary': 42164, Moon: 384400 } },
   };
 
@@ -749,36 +818,42 @@
     scifi: ['overland', 'sea', 'air', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
   };
   const genreOf = settings => (settings && GENRES[settings.genre] ? settings.genre : 'scifi');
-  // Real-world average speeds in km/h, by speed mode: [label, km/h, genres].
+  // Real-world speeds in km/h, by speed mode: [label, km/h, genres, source key]. Each figure is the one its source
+  // states (converted from mph or knots where it gives those); the label says when it is a top or cruising speed.
   const F = ['fantasy', 'modern', 'scifi'], M = ['modern', 'scifi'], SF = ['scifi'];
   const SPEEDS = {
     overland: [
       { group: 'On foot', items: [
-        ['Walking / marching (average adult)', 5, F], ['Heavily laden or slow group', 3, F], ['Jogging', 9, F]] },
+        ['Walking (typical adult, 1.4 m/s)', 5, F, 'walk'], ['Slow walker or tired group (1.1 m/s)', 4, F, 'walk'],
+        ['Jogging (6.4–9.7 km/h)', 8, F, 'jog']] },
       { group: 'Animals and carts', items: [
-        ['Ox cart', 3, F], ['Camel caravan', 4, F], ['Horse-drawn wagon', 5, F], ['Horseback, at a walk', 6.5, F],
-        ['Horseback, walk and trot', 10, F], ['Stagecoach (fresh horses at each stage)', 10, F]] },
+        ['Ox-drawn wagon (up to 2 mph)', 3.2, F, 'oxen'], ['Camel caravan, walking', 4, F, 'camel'], ['Horseback, at a walk', 7, F, 'horse'],
+        ['Horseback, at a trot', 13, F, 'horse'], ['Stagecoach, before the late 1700s', 8, F, 'stage'],
+        ['Fast stagecoach of the 1830s (horses changed at each stage)', 16, F, 'stage']] },
       { group: 'Road and rail', items: [
-        ['Bicycle', 16, M], ['Car in town', 30, M], ['Car on country roads', 70, M], ['Car on a motorway / highway', 100, M],
-        ['Intercity train', 130, M], ['High-speed train (TGV, Shinkansen)', 250, M], ['Maglev (Shanghai)', 430, M]] },
+        ['Bicycle (Copenhagen average)', 15.5, M, 'bike'], ['Car on a 30 mph town road, free-flowing', 48, M, 'dft'],
+        ['Car on a rural road, free-flowing', 82, M, 'dft'], ['Car on a motorway / highway, free-flowing', 109, M, 'dft'],
+        ['Intercity train (Acela, average with stops)', 113, M, 'acela'], ['Maglev (Shanghai, average)', 224, M, 'maglev'],
+        ['High-speed train (Shinkansen, Tokyo–Osaka)', 239, M, 'shinkansen']] },
       { group: 'Off-world vehicles', items: [
-        ['Apollo Lunar Roving Vehicle', 10, SF], ['Mars rover (Perseverance, top speed)', 0.15, SF]] },
+        ['Apollo Lunar Roving Vehicle (design top speed)', 10, SF, 'lrv'], ['Mars rover (Perseverance, top speed)', 0.152, SF, 'percy']] },
     ],
     sea: [
       { group: 'Under oar and sail', items: [
-        ['Rowing boat or river barge', 4, F], ['Oared galley, cruising (4 kn)', 7.5, F],
-        ['Medieval sailing ship, cog or carrack (5 kn)', 9, F], ['Viking longship under sail (6 kn)', 11, F],
-        ['Clipper ship (10 kn)', 18.5, M]] },
+        ['Medieval oared galley, cruising', 5, F, 'galley'], ['Viking longship (5–10 kn)', 14, F, 'longship'],
+        ['Ancient trireme, cruising (Olympias trials)', 14, F, 'galley'], ['Medieval galley under sail, fair wind', 15, F, 'galley'],
+        ['Clipper ship, 1866 tea race average (6.6 kn)', 12.2, M, 'clipper']] },
       { group: 'Engines', items: [
-        ['Steamship, around 1900 (15 kn)', 28, M], ['Cargo or cruise ship (20 kn)', 37, M],
-        ['Aircraft carrier (30 kn)', 56, M], ['Hydrofoil ferry (40 kn)', 74, M]] },
+        ['Ocean liner, 1912 (Titanic service speed, 21 kn)', 39, M, 'titanic'], ['Container ship, slow steaming (21 kn)', 39, M, 'container'],
+        ['Aircraft carrier (Nimitz class, 30+ kn)', 56, M, 'carrier'], ['Hydrofoil ferry (Hong Kong–Macau, 45 kn)', 83, M, 'hydrofoil']] },
     ],
     air: [
-      { group: 'Wings and balloons', items: [
-        ['Hot-air balloon, drifting with the wind', 15, F], ['Eagle, cruising', 45, F], ['Homing pigeon', 80, F]] },
+      { group: 'Wings', items: [
+        ['Golden eagle, unhurried soaring', 48, F, 'eagle'], ['Homing pigeon, long-distance average', 97, F, 'pigeon']] },
       { group: 'Powered flight', items: [
-        ['Airship (Zeppelin)', 110, M], ['Helicopter', 250, M], ['Light aircraft (Cessna 172)', 220, M],
-        ['Airliner at cruise', 850, M], ['Concorde (Mach 2)', 2180, M]] },
+        ['Airship (Hindenburg, cruise)', 122, M, 'zeppelin'], ['Helicopter (Bell 206 JetRanger, cruise)', 220, M, 'heli'],
+        ['Light aircraft (Cessna 172, cruise)', 226, M, 'cessna'], ['Airliner at cruise (Boeing 787, Mach 0.85)', 903, M, 'b787'],
+        ['Concorde (Mach 2.02 cruise)', 2154, M, 'concorde']] },
     ],
   };
   /** The sample speed groups for a speed mode and genre, without the empty ones. */
@@ -786,32 +861,33 @@
     return (SPEEDS[mode] || []).map(g => ({ group: g.group, items: g.items.filter(i => i[2].includes(genre)).map(([label, kmh]) => ({ label, kmh })) }))
       .filter(g => g.items.length);
   }
-  // Solar-system distances for thrust burns: [label, distance, unit]. Planet pairs come from the mean orbit radii
-  // below, so a real closest approach can differ a little (Mars ranges 0.37–0.68 AU at opposition).
+  // Solar-system distances for thrust burns: [label, distance, unit, source key]. Planet pairs come from the mean
+  // orbit radii in SYSTEMS, so a real closest approach can differ a little (Mars ranges 0.37–0.68 AU at opposition).
   function spaceDistances() {
-    const b = { Mercury: 0.387, Venus: 0.723, Earth: 1.0, Mars: 1.524, Ceres: 2.77, Jupiter: 5.203, Saturn: 9.537, Uranus: 19.19, Neptune: 30.07, Pluto: 39.48 };
+    const b = SYSTEMS.sun.bodies;
     const r = x => +x.toFixed(2);
-    const pair = (a, z) => [[`${a} to ${z}, closest (${r(Math.abs(b[z] - b[a]))} AU)`, r(Math.abs(b[z] - b[a])), 'AU'],
-      [`${a} to ${z}, farthest (${r(b[z] + b[a])} AU)`, r(b[z] + b[a]), 'AU']];
+    const pair = (a, z) => [[`${a} to ${z}, closest (${r(Math.abs(b[z] - b[a]))} AU)`, r(Math.abs(b[z] - b[a])), 'AU', 'jplPlanets'],
+      [`${a} to ${z}, farthest (${r(b[z] + b[a])} AU)`, r(b[z] + b[a]), 'AU', 'jplPlanets']];
     return [
-      { group: 'Near Earth', items: [['Earth to geostationary orbit (35,786 km)', 35786, 'km'], ['Earth to the Moon (384,400 km)', 384400, 'km'],
-        ['Earth to the Sun–Earth L2 point (1.5 million km)', 1.5e6, 'km'], ['Sun to Earth (1 AU, 8.3 light-minutes)', 1, 'AU']] },
+      { group: 'Near Earth', items: [['Earth to geostationary orbit (35,786 km)', 35786, 'km', 'geo'], ['Earth to the Moon (384,400 km)', 384400, 'km', 'jplSats'],
+        ['Earth to the Sun–Earth L2 point (1.5 million km)', 1.5e6, 'km', 'l2'], ['Sun to Earth (1 AU, 8.3 light-minutes)', 1, 'AU', 'jplConst']] },
       { group: 'From Earth', items: ['Mercury', 'Venus', 'Mars', 'Ceres', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'].flatMap(z => pair('Earth', z)) },
       { group: 'Between other bodies', items: [...pair('Mars', 'Ceres'), ...pair('Mars', 'Jupiter'), ...pair('Jupiter', 'Saturn'), ...pair('Saturn', 'Uranus')] },
-      { group: 'The outer system', items: [['Sun to the heliopause (Voyager 1 crossed it at 121 AU)', 121, 'AU'],
-        ['Sun to the inner Oort cloud (about 2,000 AU)', 2000, 'AU'], ['Sol to Proxima Centauri (4.25 LY)', 4.25, 'LY']] },
+      { group: 'The outer system', items: [['Sun to the heliopause (Voyager 1 crossed it at 121 AU)', 121, 'AU', 'helio'],
+        ['Sun to the inner Oort cloud (about 2,000 AU)', 2000, 'AU', 'oort'], ['Sol to Proxima Centauri (4.25 LY)', 4.25, 'LY', 'nearStars']] },
     ];
   }
   // Star systems near Sol (and a few landmarks), by J2000 right ascension (hours), declination (degrees) and
-  // distance from Sol (light-years), so the distance between any two can be worked out.
+  // distance from Sol (light-years), so the distance between any two can be worked out; the last field is the source.
   const STARS = [
-    ['Sol', 0, 0, 0], ['Proxima Centauri', 14.4952, -62.6795, 4.25], ['Alpha Centauri A/B', 14.6601, -60.8340, 4.37],
-    ["Barnard's Star", 17.9635, 4.6934, 5.96], ['Wolf 359', 10.9415, 7.0147, 7.86], ['Lalande 21185', 11.0556, 35.9700, 8.31],
-    ['Sirius', 6.7525, -16.7161, 8.60], ['Epsilon Eridani', 3.5488, -9.4583, 10.47], ['Procyon', 7.6550, 5.2250, 11.46],
-    ['61 Cygni', 21.1150, 38.7494, 11.40], ['Epsilon Indi', 22.0560, -56.7861, 11.87], ['Tau Ceti', 1.7345, -15.9375, 11.91],
-    ['Altair', 19.8464, 8.8683, 16.73], ['Vega', 18.6156, 38.7836, 25.0], ['Pollux', 7.7554, 28.0262, 33.8],
-    ['Arcturus', 14.2610, 19.1825, 36.7], ['TRAPPIST-1', 23.1081, -5.0414, 40.7], ['Aldebaran', 4.5987, 16.5093, 65.3],
-    ['Polaris', 2.5303, 89.2641, 433], ['Betelgeuse', 5.9195, 7.4071, 548], ['Galactic centre (Sagittarius A*)', 17.7611, -29.0078, 26670],
+    ['Sol', 0, 0, 0], ['Proxima Centauri', 14.4953, -62.6794, 4.25, 'nearStars'], ['Alpha Centauri A/B', 14.6601, -60.8339, 4.34, 'nearStars'],
+    ["Barnard's Star", 17.9635, 4.6933, 5.96, 'nearStars'], ['Wolf 359', 10.9414, 7.0147, 7.86, 'nearStars'], ['Lalande 21185', 11.0556, 35.97, 8.30, 'nearStars'],
+    ['Sirius', 6.7525, -16.7161, 8.71, 'nearStars'], ['Epsilon Eridani', 3.5488, -9.4583, 10.47, 'nearStars'], ['Procyon', 7.655, 5.225, 11.46, 'nearStars'],
+    ['61 Cygni', 21.115, 38.7494, 11.40, 'nearStars'], ['Epsilon Indi', 22.056, -56.7861, 11.87, 'nearStars'], ['Tau Ceti', 1.7345, -15.9375, 11.91, 'nearStars'],
+    ['Altair', 19.8464, 8.8683, 16.73, 'altair'], ['Vega', 18.6157, 38.7837, 25.04, 'vega'], ['Pollux', 7.7553, 28.0262, 33.78, 'pollux'],
+    ['Arcturus', 14.261, 19.1822, 36.7, 'arcturus'], ['TRAPPIST-1', 23.1082, -5.0414, 40.66, 'trappist'], ['Aldebaran', 4.5987, 16.5093, 67, 'aldebaran'],
+    ['Polaris', 2.5303, 89.2641, 446.5, 'polaris'], ['Betelgeuse', 5.9195, 7.4071, 548, 'betelgeuse'],
+    ['Galactic centre (Sagittarius A*)', 17.7611, -29.0078, 26996, 'sgra'],
   ];
   /** Straight-line distance in light-years between two STARS entries (by index), to the nearest 0.01 LY. */
   function starDistance(i, j) {
@@ -932,7 +1008,7 @@
   }
 
   // ---------------------------------------------------------------- presets
-  // Astronomical seasons (equinox/solstice dates). Month indexes are 0-based.
+  // Astronomical seasons: the usual equinox and solstice dates (usno). Month indexes are 0-based.
   const GREGORIAN_SEASONS = {
     north: [
       { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
@@ -991,7 +1067,7 @@
           { name: 'October', days: 31 }, { name: 'November', days: 30 }, { name: 'December', days: 31 }],
         leap: { every: 4, skip: 100, unskip: 400 },
         seasons: GREGORIAN_SEASONS[hemisphere],
-        // reference = a known new moon (6 Jan 2000, 18:14 UTC) expressed as an absolute day
+        // mean synodic month, and reference = a known new moon (6 Jan 2000, 18:14 UTC) as an absolute day (phases)
         moons: [{ name: 'Moon', cycle: 29.530588, ref: 730124.76, brightness: 1, color: '#e8e4d8' }],
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
@@ -1040,7 +1116,8 @@
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 2522, month: 4, day: 1 },
-      // Each region takes the Köppen climate of its real-world analogue: the Empire is Germany shading into
+      // No open data exists for a fictional world. Each region takes the Köppen climate (beck) of its real-world
+      // analogue, a judgement call: the Empire is Germany shading into
       // Poland and Romania eastward, Bretonnia France, Estalia Spain, Tilea Italy, Kislev Russia and Ukraine.
       // Regions marked * are judgement calls where the analogue isn't settled or the region spans a climate border.
       regions: koppenRegions('north', [
@@ -1114,8 +1191,9 @@
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 1418, month: 13, day: 23 }, // Frodo leaves Bag End
-      // Climates follow the Köppen climate map of Middle-earth on r/imaginarymaps (c5mzt9). Umbar and Far Harad
-      // lie south of that map, so theirs are inferred.
+      // No open data exists for a fictional world. Climates were first taken from a fan Köppen map of Middle-earth
+      // (imaginarymaps, not openly licensed) and fit Tolkien's own latitude anchors (letter294): the Shire at
+      // Oxford's latitude (Cfb), Minas Tirith at Florence's. Umbar and Far Harad lie south of that map, so theirs are inferred.
       regions: koppenRegions('north', [
         ['The Shire', 'Cfb', 0], ['Bree-land', 'Cfb', 0], ['Old Forest', 'Cfb', -1], ['Lindon & the Grey Havens', 'Cfb', 0],
         ['Eriador wilds (Lone-lands, Weathertop)', 'Cfb', 0], ['Dunland', 'Cfb', 0],
@@ -1185,7 +1263,7 @@
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
-    travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
+    travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;

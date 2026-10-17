@@ -19,11 +19,11 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   // Each speed mode lists only its own samples, and the first one is filled in.
   const sample = page.getByLabel("Sample", { exact: true });
   await mode.selectOption("air");
-  await expect(page.locator("input[name=speed]")).toHaveValue("15");
+  await expect(page.locator("input[name=speed]")).toHaveValue("48");
   await expect(sample.locator("option", { hasText: "Horseback" })).toHaveCount(0);
-  await sample.selectOption({ label: "Airliner at cruise: 850 km/h" });
+  await sample.selectOption({ label: "Airliner at cruise (Boeing 787, Mach 0.85): 903 km/h" });
   await page.locator("input[name=distance]").fill("1000");
-  await expect(page.locator("input[name=speed]")).toHaveValue("850");
+  await expect(page.locator("input[name=speed]")).toHaveValue("903");
   // One units switch at the top converts every box and relabels the samples.
   const units = { selectOption: v => page.locator(".travel-units").getByLabel(v === "imperial" ? "Imperial" : "Metric").check() };
   await expect(page.locator(".travel-units").getByLabel("Metric")).toBeChecked();
@@ -31,21 +31,21 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   const ub = await page.locator(".travel-units").boundingBox(), cb = await page.locator("form.card").first().boundingBox();
   expect(cb.x + cb.width - (ub.x + ub.width)).toBeLessThan(24);
   await units.selectOption("imperial");
-  await expect(page.locator("input[name=speed]")).toHaveValue("528");
+  await expect(page.locator("input[name=speed]")).toHaveValue("561");
   await expect(page.locator("input[name=distance]")).toHaveValue("621");
-  await expect(sample.locator("option:checked")).toHaveText("Airliner at cruise: 528 mph");
+  await expect(sample.locator("option:checked")).toHaveText("Airliner at cruise (Boeing 787, Mach 0.85): 561 mph");
   await expect(page.getByText("Speed (mph)")).toBeVisible();
   await mode.selectOption("sea");
-  await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(1);
+  await expect(sample.locator("option", { hasText: "Container ship" })).toHaveCount(1);
   await expect(sample.locator("option", { hasText: "Airliner" })).toHaveCount(0);
   await expect(page.locator("select[name=shifts]")).toHaveValue("4");
   await expect(page.locator("select[name=terrain]")).toHaveCount(0);
 
   // Overland: 60 km at 5 km/h is 12 hours, two 6-hour shifts, done in one day.
   await mode.selectOption("overland");
-  await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(0);
+  await expect(sample.locator("option", { hasText: "Container ship" })).toHaveCount(0);
   await units.selectOption("metric");
-  await sample.selectOption({ label: "Walking / marching (average adult): 5 km/h" });
+  await sample.selectOption({ label: "Walking (typical adult, 1.4 m/s): 5 km/h" });
   await page.locator("input[name=distance]").fill("60");
   // The sample box sits level with the distance box beside it (when they share a row).
   const sb = await sample.boundingBox(), db = await page.locator("input[name=distance]").boundingBox();
@@ -78,7 +78,7 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await mode.selectOption("relativistic");
   await page.getByLabel("From star").selectOption({ index: 2 }); // Alpha Centauri A/B
   await page.getByLabel("To star").selectOption({ index: 6 }); // Sirius
-  await expect(page.locator("input[name=distance]")).toHaveValue("9.54");
+  await expect(page.locator("input[name=distance]")).toHaveValue("9.62");
   await mode.selectOption("brachistochrone");
   await page.getByLabel("Sample", { exact: true }).selectOption({ label: "Earth to Mars, closest (0.52 AU)" });
   await expect(page.locator("input[name=distance]")).toHaveValue("0.52");
@@ -98,9 +98,9 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.goto(`index.html#/c/${cid}/travel`);
   await expect(mode.locator("option")).toHaveCount(3);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Horseback, at a walk" })).toHaveCount(1);
-  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Car in town" })).toHaveCount(0);
+  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "motorway" })).toHaveCount(0);
   await mode.selectOption("air");
-  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Eagle" })).toHaveCount(1);
+  await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Golden eagle" })).toHaveCount(1);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Airliner" })).toHaveCount(0);
 
   // Modern: overland, sea, air and orbital transfers.
@@ -109,7 +109,7 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.getByRole("button", { name: "Save campaign settings" }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
   await page.goto(`index.html#/c/${cid}/travel`);
-  await expect(mode.locator("option")).toHaveText(["Overland (on foot, mounted, by road or rail)", "Sea and river (oar, sail, engine)", "Air (balloon, wing, aircraft)", "Orbital transfer (Hohmann, minimum fuel)"]);
+  await expect(mode.locator("option")).toHaveText(["Overland (on foot, mounted, by road or rail)", "Sea and river (oar, sail, engine)", "Air (wing, airship, aircraft)", "Orbital transfer (Hohmann, minimum fuel)"]);
   expectNoErrors(errors);
 });
 
