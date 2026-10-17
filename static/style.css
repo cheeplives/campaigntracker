@@ -80,6 +80,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-dir
 .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 4px 16px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
 .field[hidden] { display: none; }
+.field > .row { margin-top: 0; }   /* a row inside a field lines up with the plain boxes beside it */
 .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--dim); font-weight: 600; }
 .inline { display: inline-flex; gap: 6px; align-items: center; }
 

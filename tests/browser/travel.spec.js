@@ -21,10 +21,16 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await mode.selectOption("air");
   await expect(page.locator("input[name=speed]")).toHaveValue("15");
   await expect(sample.locator("option", { hasText: "Horseback" })).toHaveCount(0);
-  await sample.selectOption({ label: "Airliner at cruise: 850 km/h · 528 mph" });
+  await sample.selectOption({ label: "Airliner at cruise: 850 km/h" });
+  await page.locator("input[name=distance]").fill("1000");
   await expect(page.locator("input[name=speed]")).toHaveValue("850");
-  await page.getByLabel("Sample units").selectOption("mi");
+  // One units switch at the top converts every box and relabels the samples.
+  const units = page.locator("select.travel-units");
+  await units.selectOption("imperial");
   await expect(page.locator("input[name=speed]")).toHaveValue("528");
+  await expect(page.locator("input[name=distance]")).toHaveValue("621");
+  await expect(sample.locator("option:checked")).toHaveText("Airliner at cruise: 528 mph");
+  await expect(page.getByText("Speed (mph)")).toBeVisible();
   await mode.selectOption("sea");
   await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(1);
   await expect(sample.locator("option", { hasText: "Airliner" })).toHaveCount(0);
@@ -34,8 +40,12 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   // Overland: 60 km at 5 km/h is 12 hours, two 6-hour shifts, done in one day.
   await mode.selectOption("overland");
   await expect(sample.locator("option", { hasText: "Cargo or cruise ship" })).toHaveCount(0);
-  await page.getByLabel("Sample units").selectOption("km");
-  await sample.selectOption({ label: "Walking / marching (average adult): 5 km/h · 3.11 mph" });
+  await units.selectOption("metric");
+  await sample.selectOption({ label: "Walking / marching (average adult): 5 km/h" });
+  await page.locator("input[name=distance]").fill("60");
+  // The sample box sits level with the distance box beside it (when they share a row).
+  const sb = await sample.boundingBox(), db = await page.locator("input[name=distance]").boundingBox();
+  if (Math.abs(sb.y - db.y) < sb.height) expect(Math.abs(sb.y - db.y)).toBeLessThan(2);
   await expect(page.locator("select[name=shifts]")).toHaveValue("2");
   await expect(page.locator("input[name=hours_per_day]")).toHaveCount(0);
   await page.getByRole("button", { name: "Calculate" }).click();
@@ -61,6 +71,12 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.getByLabel("Sample", { exact: true }).selectOption({ label: "Earth to Mars, closest (0.52 AU)" });
   await expect(page.locator("input[name=distance]")).toHaveValue("0.52");
   await expect(page.locator("select[name=unit]")).toHaveValue("AU");
+  // Space distances in km switch to miles with the units.
+  await page.getByLabel("Sample", { exact: true }).selectOption({ label: "Earth to the Moon (384,400 km)" });
+  await units.selectOption("imperial");
+  await expect(page.locator("select[name=unit]")).toHaveValue("mi");
+  await expect(page.locator("input[name=distance]")).toHaveValue("239000");
+  await units.selectOption("metric");
 
   // Fantasy: overland, sea and air, with no engines among the samples.
   await page.goto(`index.html#/c/${cid}/settings`);
