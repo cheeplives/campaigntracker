@@ -27,7 +27,7 @@ The full runbook (OAuth apps, config fields, upgrading an older install) is in [
 - **Pass time** (GM, top of every campaign page): move ahead by shifts, days, weeks, months or years. You can also label the passed shifts, e.g. "Coach journey". Weather is generated for each day as time passes, and stays fixed once generated. Each day's weather is its forecast; the four shifts vary within it (cooler overnight, wind easing at night, rain thinning to drizzle, morning fog lifting, afternoon storms), never worse than the forecast except where a colder shift turns rain to snow. Shift weather is worked out from the stored day, so older days get it too.
 - **Current Day** (the tab a campaign opens on): today up close, with the current shift's weather, visibility and activity large, the day's four shifts at a glance, then the full day page below it.
 - **Calendar:** month grid or week view with all four shifts. Click any day to drill down to weather, moons, holidays, per-shift activity, visibility and events.
-- **Day page** (GM): change the day's region, edit or re-roll the weather, and write public notes and GM-only notes. For each shift you can enter activity and private notes, override visibility, or make that shift "now". *Add an action* offers 21 common shift tasks (march, navigate, scout ahead, keep watch, forage, hunt, make camp, stand guard, sleep and so on), adapted from the Year Zero Engine and Perilous Wilds travel rules; each one adds its name to the activity, which stays free text, and shows what it involves. The pass-time activity box suggests the same actions.
+- **Day page** (GM): change the day's region, edit or re-roll the weather, and write public notes and GM-only notes. For each shift you can enter activity and private notes, override visibility, or make that shift "now". *Export* downloads the day as a Markdown file (events, weather, notes and shifts) laid out like Sinless's Scabard export, for pasting into Scabard or another wiki; a player's file holds only what that player can see. *Add an action* offers 21 common shift tasks (march, navigate, scout ahead, keep watch, forage, hunt, make camp, stand guard, sleep and so on), adapted from the Year Zero Engine and Perilous Wilds travel rules; each one adds its name to the activity, which stays free text, and shows what it involves. The pass-time activity box suggests the same actions.
 - **Events:** single-day or multi-day, all day or in one shift. GMs can mark an event **Secret** so players never receive it; this is filtered on the server. Players can add notes to any event they can see.
 - **Travel tab:** calculates travel time, then *Depart* passes that much time. It labels the transit shifts, logs a travel event, and can change the region during travel and on arrival. Modes:
   - Overland / sea / air: speed × hours per day × terrain.
@@ -42,7 +42,7 @@ The full runbook (OAuth apps, config fields, upgrading an older install) is in [
 
 ## How visibility is scored (0 Pitch black … 5 Bright)
 
-The score starts from a base value for the shift: overnight 0, dawn 3, noon 5, dusk 3. Artificially lit regions use their own level for each shift instead. Then:
+The score starts from a base value for the shift: overnight 0, dawn 3, midday 5, dusk 3. Artificially lit regions use their own level for each shift instead. Then:
 
 - **Moonlight:** at night, up to +2 depending on how much of the moons is lit, reduced by cloud cover.
 - **Weather:** that shift's weather, with a modifier such as fog −3, or a blizzard −4 by day.
@@ -55,7 +55,7 @@ Hover over any visibility badge to see this breakdown.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark mode and colour theme before first paint, `fonts/` = self-hosted fonts |
+| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `day-export.js` = a day as Markdown, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark mode and colour theme before first paint, `fonts/` = self-hosted fonts |
 | `api/index.php` | JSON API for campaign data; enforces GM vs player permissions and secret filtering |
 | `api/auth/` | Google/GitHub sign-in (`login`, `callback`, `me`, `logout`), the same flow as Sinless |
 | `api/lib.php` | Shared server library ported from Sinless: config lookup, sessions, CSRF, rate limits, OAuth helpers |

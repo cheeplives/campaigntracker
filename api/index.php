@@ -128,7 +128,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'days', 'day', 'users'];
+$readActions = ['campaigns', 'campaign', 'days', 'day', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -285,12 +285,27 @@ try {
         out(['ok' => true, 'current_shift' => $shift]);
 
     // ===== members =====
+    case 'member_candidates':
+        // Approved accounts not yet in this campaign, for the GM's member picker. GMs only: it lists emails.
+        $cid = cid(); need_gm($cid);
+        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE status='approved' AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?) ORDER BY display_name = '', display_name, email");
+        $st->execute([$cid]);
+        out(['users' => $st->fetchAll()]);
+
     case 'member_add':
         $cid = cid(); need_gm($cid);
-        $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND status='approved'");
-        $st->execute([trim((string)str_in(p('email'), 191, false))]);
-        $uid = $st->fetchColumn();
-        if (!$uid) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
+        if (p('user_id') !== null) {
+            // Picked from the list of registered users.
+            $st = db()->prepare("SELECT id FROM users WHERE id=? AND status='approved'");
+            $st->execute([int_in(p('user_id'), 1)]);
+            $uid = $st->fetchColumn();
+            if (!$uid) fail('That account is not approved (or no longer exists).', 404);
+        } else {
+            $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND status='approved'");
+            $st->execute([trim((string)str_in(p('email'), 191, false))]);
+            $uid = $st->fetchColumn();
+            if (!$uid) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
+        }
         $role = p('role') === 'gm' ? 'gm' : 'player';
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
         out(['ok' => true]);

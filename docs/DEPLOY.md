@@ -72,7 +72,7 @@ curl -sI https://www.discreteinfinity.com/chronicle/api/config.php            # 
 
 Then sign in with your `admin_identities` account, have a second account sign
 in (it should wait for approval), approve it under **Users**, and add it to a
-campaign by email from the **Members** tab.
+campaign by picking it from the list on the **Members** tab.
 
 ## Upgrading an install from before Google/GitHub sign-in
 
