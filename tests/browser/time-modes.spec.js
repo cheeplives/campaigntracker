@@ -86,7 +86,8 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
 
   await page.goto(`index.html#/c/${cid}/travel`);
   await page.locator("select.travel-mode").selectOption("overland");
-  await expect(page.locator("input[name=shifts]")).toHaveValue("8");
+  await expect(page.locator("select[name=shifts]")).toHaveValue("8");
+  await expect(page.locator("select[name=shifts] option").first()).toHaveText("1 hour");
   await page.locator("input[name=distance]").fill("60");
   await page.locator("input[name=speed]").fill("5");
   await page.getByRole("button", { name: "Calculate" }).click();

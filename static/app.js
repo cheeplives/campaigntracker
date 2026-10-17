@@ -1089,7 +1089,10 @@
     ].filter(([k]) => E.GENRE_MODES[genre].includes(k));
     const modeSel = select(modes, 'overland', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
-    const unitSel = () => select([['km', 'km'], ['mi', 'miles'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
+    // One Metric / Imperial choice for every distance and speed box below; the maths itself always runs in km.
+    const units = select([['metric', 'Metric (km, km/h)'], ['imperial', 'Imperial (miles, mph)']], campTempUnit() === 'F' ? 'imperial' : 'metric', { class: 'travel-units' });
+    const KM_MI = 1.609344, imp = () => units.value === 'imperial';
+    const unitSel = () => select([imp() ? ['mi', 'miles'] : ['km', 'km'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
     const shiftH = () => E.slotHours(cal());
     const num = x => +x.toPrecision(3);
     /** A "pick a sample" select over groups of {label, …} items; onPick gets the chosen item. */
@@ -1114,33 +1117,27 @@
       const F = [];
       if (E.SPEED_MODES.includes(m)) {
         const groups = E.speedSamples(m, genre), first = groups[0].items[0];
-        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: { overland: 60, sea: 300, air: 500 }[m] });
-        const unit = select([['km', 'km'], ['mi', 'miles']], campTempUnit() === 'F' ? 'mi' : 'km', { 'aria-label': 'Sample units' });
-        let picked = first;
-        const toUnit = kmh => num(unit.value === 'mi' ? kmh / 1.609344 : kmh);
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: imp() ? { overland: 40, sea: 200, air: 300 }[m] : { overland: 60, sea: 300, air: 500 }[m] });
+        const toUnit = kmh => num(imp() ? kmh / KM_MI : kmh), speedUnit = imp() ? 'mph' : 'km/h';
         const speed = el('input', { name: 'speed', type: 'number', step: 'any', value: toUnit(first.kmh) });
-        const samples = samplePicker(groups, i => { picked = i; speed.value = toUnit(i.kmh); },
-          i => `${i.label}: ${i.kmh} km/h · ${num(i.kmh / 1.609344)} mph`);
+        const samples = samplePicker(groups, i => { speed.value = toUnit(i.kmh); }, i => `${i.label}: ${toUnit(i.kmh)} ${speedUnit}`);
+        samples.name = 'sample';
         samples.selectedIndex = 1;
-        unit.addEventListener('change', () => { if (picked) speed.value = toUnit(picked.kmh); });
-        speed.addEventListener('input', () => { picked = null; samples.value = ''; });
-        const h = shiftH(), hs = n => `${+(n * h).toFixed(2)} h`, n = spd(), dayH = +(h * n).toFixed(2);
-        F.push(field('Sample speed', el('span', { class: 'row' }, samples, unit), 'Average speeds for the real thing, including rests. Fills in the speed'),
-          field('Distance', dist, 'Any unit, as long as the speed uses the same one'),
-          field('Speed per hour (same unit)', speed),
-          // How much of the day the party travels, in this campaign's shifts or hours (Settings → Time tracking).
-          hourMode() ? field('Hours traveled per day', el('input', { name: 'shifts', type: 'number', min: 1, max: n, step: 1, value: m === 'sea' ? n : Math.min(8, n) }),
-            m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock' : `About 8 is a normal day's travel; ${n} keeps going around the clock`,
-            `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`)
-          : n === 2 ? field('Shifts traveled per day', select([
-            [1, `1 shift (${hs(1)}), a normal day's travel`], [2, `2 shifts (${hs(2)}), round the clock`]], m === 'sea' ? 2 : 1, { name: 'shifts' }),
-            m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock' : '2 for vehicles that keep going around the clock',
-            `A shift is half of the calendar's ${dayH}-hour day: Day or Night. The party rests for the other`)
-          : field('Shifts traveled per day', select([
-            [1, `1 shift (${hs(1)})`], [2, `2 shifts (${hs(2)})${m === 'overland' ? ", a normal day's travel" : ''}`],
-            [3, `3 shifts (${hs(3)})${m === 'overland' ? ', a forced march' : ''}`], [4, `4 shifts (${hs(4)}), round the clock`]], m === 'sea' ? 4 : 2, { name: 'shifts' }),
-            m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock' : '4 for vehicles that keep going around the clock',
-            `A shift is a quarter of the calendar's ${dayH}-hour day. The party rests for the other shifts`),
+        speed.addEventListener('input', () => { samples.value = ''; });
+        const h = shiftH(), n = spd(), dayH = +(h * n).toFixed(2), w = word();
+        // How much of the day the party travels, in this campaign's shifts or hours (Settings → Time tracking).
+        // The options are just the counts; what they mean goes in the hint under the box.
+        const perDay = select(Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]),
+          m === 'sea' ? n : hourMode() ? Math.min(8, n) : n === 2 ? 1 : 2, { name: 'shifts' });
+        const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch keep sailing around the clock (${n} hours)` : `About 8 hours is a normal day's travel; ${n} keeps going around the clock`)
+          : n === 2 ? (m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock (2 shifts)' : `1 shift (${+h.toFixed(2)} h) is a normal day's travel; 2 keep going around the clock`)
+          : m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock (4 shifts)' : `2 shifts (${+(2 * h).toFixed(2)} h) is a normal day's travel, 3 a forced march, 4 round the clock`;
+        F.push(field('Sample speed', samples, 'Average speeds for the real thing, including rests. Fills in the speed'),
+          field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
+          field(`Speed (${speedUnit})`, speed),
+          field(`${Word()}s traveled per day`, perDay, perDayHint,
+            hourMode() ? `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`
+              : `A shift is ${n === 2 ? 'half' : 'a quarter'} of the calendar's ${dayH}-hour day. The party rests for the other${n === 2 ? '' : ' shifts'}`),
           el('input', { type: 'hidden', name: 'shift_hours', value: h }),
           el('input', { type: 'hidden', name: 'slots_per_day', value: n }),
           el('input', { type: 'hidden', name: 'slot', value: word() }),
@@ -1149,28 +1146,30 @@
       } else if (m === 'hohmann') {
         const sys = el('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => el('option', { value: k }, s.label)));
         const r1 = el('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = el('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
-        const b1 = el('select', {}), b2 = el('select', {});
+        const b1 = el('select', { name: 'body1', 'aria-label': 'From body' }), b2 = el('select', { name: 'body2', 'aria-label': 'To body' });
         const fill = () => {
           const s = E.SYSTEMS[sys.value];
-          const opts = [['', 'custom…'], ...Object.entries(s.bodies).map(([n, r]) => [r, `${n} (${r.toLocaleString()} ${s.unit})`])];
+          // Moon systems give orbit radii in km; show them in miles for Imperial (converted back on Calculate).
+          const mi = s.unit === 'km' && imp(), u = mi ? 'mi' : s.unit, r0 = r => (mi ? Math.round(r / KM_MI) : r);
+          const opts = [['', 'custom…'], ...Object.entries(s.bodies).map(([n, r]) => [r0(r), `${n} (${r0(r).toLocaleString()} ${u})`])];
           const names = Object.keys(s.bodies);
           const pick = [names.indexOf('Earth') + 1, names.indexOf('Mars') + 1];
           [b1, b2].forEach((b, k) => { b.replaceChildren(...opts.map(([v, l]) => el('option', { value: v }, l))); b.selectedIndex = pick[k] > 0 ? pick[k] : Math.min(opts.length - 1, k + 1); });
           r1.value = b1.value; r2.value = b2.value;
-          lbl1.firstChild.textContent = `From orbit radius (${s.unit})`; lbl2.firstChild.textContent = `To orbit radius (${s.unit})`;
+          lbl1.firstChild.textContent = `From orbit radius (${u})`; lbl2.firstChild.textContent = `To orbit radius (${u})`;
         };
         b1.addEventListener('change', () => { if (b1.value) r1.value = b1.value; });
         b2.addEventListener('change', () => { if (b2.value) r2.value = b2.value; });
         const lbl1 = field('From', el('span', { class: 'row' }, b1, r1)), lbl2 = field('To', el('span', { class: 'row' }, b2, r2));
         sys.addEventListener('change', fill);
         F.push(field('Central body', sys, null, 'The star or planet both orbits go around. Pick a body from the lists or type an orbit radius'), lbl1, lbl2);
-        setTimeout(fill);
+        fill();
       } else if (m === 'brachistochrone' || m === 'relativistic') {
         const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.25 : 1.5 });
         const u = unitSel(); if (m === 'relativistic') u.value = 'LY';
         if (m === 'brachistochrone') {
           F.push(field('Sample distance', samplePicker(E.spaceDistances().map(g => ({ group: g.group, items: g.items.map(([label, d, unit]) => ({ label, d, unit })) })),
-            i => { dist.value = i.d; u.value = i.unit; }), 'Planet distances use average orbits'));
+            i => { const mi = i.unit === 'km' && imp(); dist.value = mi ? num(i.d / KM_MI) : i.d; u.value = mi ? 'mi' : i.unit; }), 'Planet distances use average orbits'));
         } else F.push(...starPickers(dist));
         F.push(field('Distance', el('span', { class: 'row' }, dist, u)),
           field('Acceleration (g)', el('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
@@ -1190,9 +1189,22 @@
     };
     modeSel.addEventListener('change', drawFields);
     drawFields();
+    // Switching units redraws the boxes in the new units and carries the numbers already typed across.
+    units.addEventListener('change', () => {
+      const k = imp() ? 1 / KM_MI : KM_MI, m = modeSel.value;
+      const before = Object.fromEntries([...fieldsWrap.querySelectorAll('[name]')].map(x => [x.name, x.value]));
+      const conv = n => (before[n] === '' ? '' : num(Number(before[n]) * k));
+      drawFields();
+      const set = (n, v) => { const x = fieldsWrap.querySelector(`[name=${n}]`); if (x && v !== undefined) x.value = v; };
+      for (const n of Object.keys(before)) if (n !== 'shift_hours') set(n, before[n]);
+      if (E.SPEED_MODES.includes(m)) { set('distance', conv('distance')); set('speed', conv('speed')); }
+      else if (before.unit === 'km' || before.unit === 'mi') { set('unit', imp() ? 'mi' : 'km'); set('distance', conv('distance')); }
+      else if (m === 'hohmann' && E.SYSTEMS[before.system]?.unit === 'km') fieldsWrap.querySelector('[name=system]').dispatchEvent(new Event('change'));
+    });
 
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
+      field('Units', units, null, 'Metric or Imperial for every distance and speed in the planner'),
       field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive.`),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
@@ -1202,6 +1214,7 @@
       e.preventDefault();
       try {
         const q = formData(f);
+        if (modeSel.value === 'hohmann' && E.SYSTEMS[q.system]?.unit === 'km' && imp()) { q.r1 = Number(q.r1) * KM_MI; q.r2 = Number(q.r2) * KM_MI; }
         result = E.travel(modeSel.value, q);
         out.replaceChildren(el('div', { class: 'result' },
           el('h3', {}, `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
