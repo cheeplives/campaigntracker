@@ -3,8 +3,13 @@
  * Pure functions with no DOM access, so the same file can be tested in Node.
  *
  * Time model: every in-game day has an integer "absolute day" (day 0 = first day of the
- * calendar's epoch year). A day has 4 shifts: 0 Dawn, 1 Midday, 2 Dusk, 3 Overnight, so a day
- * runs from dawn to the night after it. The campaign "now" is stored as an absolute shift = absDay * 4 + shift.
+ * calendar's epoch year). How a day is split depends on the calendar's timeMode:
+ *   shifts4 (the default): 4 shifts, 0 Dawn, 1 Midday, 2 Dusk, 3 Overnight, so a day runs from dawn to the night after it;
+ *   shifts2: 2 shifts, 0 Day (dawn to dusk) and 1 Night (dusk to the next dawn);
+ *   hours: one slot per hour from midnight, like a normal calendar (hoursPerDay of them).
+ * The campaign "now" is stored as an absolute slot = absDay * slotsPerDay(cal) + slot. Weather, light and
+ * visibility are still worked out for the four quarters of the day (Dawn, Midday, Dusk, Overnight), and
+ * every slot takes its quarter's (slotQuarter).
  */
 (function (root) {
   'use strict';
@@ -70,11 +75,46 @@
   }
   /** Festival (intercalary) days sit outside the weekday cycle unless marked keepWeekday (like the Shire's Yule days). */
   function inWeek(m) { return !m.intercalary || !!m.keepWeekday; }
-  function shiftNames(cal) {
-    let n = cal.shiftNames || [];
+  /** The names of the day's four quarters, which weather and light are worked out for: the shift names in four-shift mode. */
+  function quarterNames(cal) {
+    let n = timeMode(cal) === 'shifts4' ? cal.shiftNames || [] : [];
     // campaigns made before the rename saved the old defaults (moved to dawn-first order by the server); they get the new ones
     if (n.join() === 'Dawn,Noon,Dusk,Overnight') n = [];
     return DEFAULT_SHIFT_NAMES.map((d, i) => n[i] || d);
+  }
+  /** The name of every slot of a day: the four shift names, Day and Night, or the hours (00:00, 01:00…). */
+  function shiftNames(cal) {
+    const m = timeMode(cal);
+    if (m === 'shifts2') return ['Day', 'Night'];
+    if (m === 'hours') return Array.from({ length: slotsPerDay(cal) }, (_, h) => `${String(h).padStart(2, '0')}:00`);
+    return quarterNames(cal);
+  }
+
+  // ---------------------------------------------------------------- time modes
+  const TIME_MODES = { shifts4: 'Four shifts (Dawn, Midday, Dusk, Overnight)', shifts2: 'Two shifts (Day and Night)', hours: 'Hours, like a normal calendar' };
+  function timeMode(cal) { return TIME_MODES[cal && cal.timeMode] ? cal.timeMode : 'shifts4'; }
+  /** How many slots (shifts or hours) a day has. Hours mode has one per hour of the calendar's day, up to 240. */
+  function slotsPerDay(cal) {
+    const m = timeMode(cal);
+    if (m === 'shifts2') return 2;
+    if (m === 'hours') return clamp(Math.round(Number(cal.hoursPerDay) || 24), 1, 240);
+    return 4;
+  }
+  /** How many of the calendar's hours one slot lasts. */
+  function slotHours(cal) { return (Number(cal.hoursPerDay) || 24) / slotsPerDay(cal); }
+  /** "shift" or "hour": what a slot is called in this calendar. */
+  function slotWord(cal) { return timeMode(cal) === 'hours' ? 'hour' : 'shift'; }
+  /** The quarter of the day (0 Dawn, 1 Midday, 2 Dusk, 3 Overnight) whose weather and light a slot takes.
+   * Day takes Midday's and Night Overnight's; an hour takes the quarter it falls in, hours before dawn the overnight one. */
+  function slotQuarter(cal, slot) {
+    const m = timeMode(cal);
+    if (m === 'shifts2') return slot ? 3 : 1;
+    if (m === 'hours') return (Math.floor(4 * slot / slotsPerDay(cal)) + 3) % 4;
+    return slot;
+  }
+  /** A day's weather by quarter (from shiftWeather, or the server's partial copy) as weather by slot. */
+  function slotsFromQuarters(cal, quarters) {
+    return Array.from({ length: slotsPerDay(cal) }, (_, i) => (quarters && quarters[slotQuarter(cal, i)]) || null);
   }
 
   function hasLeap(cal) { return !!(cal.leap && cal.leap.every > 0 && cal._extra > 0); }
@@ -160,7 +200,7 @@
     return out.replace(/^[\s,·—-]+/, '').trim();
   }
   function fmtShift(cal, absShift) {
-    const d = Math.floor(absShift / 4), s = mod(absShift, 4);
+    const n = slotsPerDay(cal), d = Math.floor(absShift / n), s = mod(absShift, n);
     return `${shiftNames(cal)[s]} · ${fmtDate(cal, d)}`;
   }
 
@@ -686,13 +726,13 @@
 
   // ---------------------------------------------------------------- visibility
   /**
-   * Visibility 0–5 for one shift. Returns {score, label, parts[]} where parts explain the math.
-   * lighting: 'natural' (sun + moons), 'artificial' (fixed light levels per shift), 'none' (total darkness).
+   * Visibility 0–5 for one slot (shift or hour). Returns {score, label, parts[]} where parts explain the math.
+   * lighting: 'natural' (sun + moons), 'artificial' (fixed light levels per quarter of the day), 'none' (total darkness).
    */
-  function visibility(cal, region, weather, d, shift, override) {
+  function visibility(cal, region, weather, d, slot, override) {
     const rs = (region && region.settings) || {};
     const lighting = rs.lighting || cal.lighting || 'natural';
-    const names = shiftNames(cal);
+    const name = shiftNames(cal)[slot], shift = slotQuarter(cal, slot);
     const parts = [];
     let score;
 
@@ -701,11 +741,11 @@
     } else if (lighting === 'artificial') {
       const lv = rs.light_levels || cal.lightLevels || [4, 5, 4, 2];
       score = Number(lv[shift] ?? 4);
-      parts.push(`${names[shift]} lighting (${score})`);
+      parts.push(`${name} lighting (${score})`);
     } else {
       // Dusk runs from sunset into the evening, so it sits nearer night than dawn
       score = [3, 5, 1, 0][shift];
-      parts.push(`${names[shift]} base (${score})`);
+      parts.push(`${name} base (${score})`);
     }
 
     const def = weather ? (WEATHER[weather.type] || {}) : null;
@@ -909,17 +949,21 @@
     const lines = [];
     const fmtH = h => fmtDuration(h);
     if (mode === 'ground') {
-      // Each shift is a quarter of the calendar's day; the party travels `shifts` of the four and rests the others.
-      const dist = n('distance'), speed = n('speed'), perDay = Math.min(4, Math.max(1, Math.round(n('shifts')) || 2));
-      const shiftH = n('shift_hours') > 0 ? n('shift_hours') : 6;
+      // A day has slots_per_day slots (4 shifts by default, 2, or its hours) of shift_hours each; the party
+      // travels `shifts` of them and rests the others.
+      const spd = n('slots_per_day') > 0 ? Math.round(n('slots_per_day')) : 4, word = q.slot === 'hour' ? 'hour' : 'shift';
+      const dist = n('distance'), speed = n('speed'), perDay = Math.min(spd, Math.max(1, Math.round(n('shifts')) || Math.min(2, spd)));
+      const shiftH = n('shift_hours') > 0 ? n('shift_hours') : 24 / spd;
       if (!(dist > 0 && speed > 0)) throw new Error('Enter a distance and a speed');
       const moving = dist / speed * (n('terrain') || 1);
       const travelShifts = moving / shiftH;
-      // Whole days of travel, then the last day's remaining shifts: arrival comes at the end of the last moving shift.
+      // Whole days of travel, then the last day's remaining slots: arrival comes at the end of the last moving slot.
       const fullDays = Math.max(0, Math.ceil(travelShifts / perDay) - 1);
-      const elapsed = fullDays * 4 + (travelShifts - fullDays * perDay);
-      lines.push(`${moving.toFixed(1)} hours moving at ${speed}/h${n('terrain') && n('terrain') !== 1 ? ` (terrain ×${n('terrain')})` : ''} = ${travelShifts.toFixed(1)} shifts of ${+shiftH.toFixed(2)} h`);
-      lines.push(`${perDay} shift${perDay === 1 ? '' : 's'} on the move a day → ${(elapsed / 4).toFixed(1)} days`);
+      const elapsed = fullDays * spd + (travelShifts - fullDays * perDay);
+      const terr = n('terrain') && n('terrain') !== 1 ? ` (terrain ×${n('terrain')})` : '';
+      lines.push(word === 'hour' && shiftH === 1 ? `${moving.toFixed(1)} hours moving at ${speed}/h${terr}`
+        : `${moving.toFixed(1)} hours moving at ${speed}/h${terr} = ${travelShifts.toFixed(1)} ${word}s of ${+shiftH.toFixed(2)} h`);
+      lines.push(`${perDay} ${word}${perDay === 1 ? '' : 's'} on the move a day → ${(elapsed / spd).toFixed(1)} days`);
       return { hours: elapsed * shiftH, lines };
     }
     if (mode === 'hohmann') {
@@ -1001,10 +1045,9 @@
     if (d < 365 * 2) return `${d.toFixed(1)} days`;
     return `${(d / 365.25).toFixed(2)} years (${Math.round(d).toLocaleString()} days)`;
   }
-  /** hours -> number of shifts, using the calendar's day length (default 24 h) */
+  /** hours -> number of slots (shifts or hours), using the calendar's day length (default 24 h) */
   function hoursToShifts(cal, h) {
-    const perShift = (Number(cal.hoursPerDay) || 24) / 4;
-    return Math.max(0, Math.round(h / perShift));
+    return Math.max(0, Math.round(h / slotHours(cal)));
   }
 
   // ---------------------------------------------------------------- presets
@@ -1259,7 +1302,7 @@
 
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
-    prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
+    prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,

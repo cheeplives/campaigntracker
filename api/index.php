@@ -169,9 +169,106 @@ function campaign_row(int $cid): array {
  * Needs the users row joined as u and their campaign_members row LEFT JOINed as m. */
 const AUTHOR_SQL = "COALESCE(NULLIF(m.character_name, ''), u.display_name)";
 function campaign_settings(int $cid): array { return dec(campaign_row($cid)['settings_json']) ?: []; }
-function floordiv4(int $n): int { return (int)floor($n / 4); }
+function floordiv(int $n, int $d): int { return (int)floor($n / $d); }
 /** The calendar's shift order: 'dawn' once a day runs Dawn first, 'overnight' for the original order. */
 function shift_order(array $campaign): string { return (string)((dec($campaign['calendar_json']) ?: [])['shiftOrder'] ?? 'overnight'); }
+
+// ---------- time modes (mirrors timeMode() and friends in static/engine.js) ----------
+/** How a calendar splits its days: 'shifts4' (Dawn, Midday, Dusk, Overnight), 'shifts2' (Day, Night) or 'hours'. */
+function time_mode(?array $cal): string {
+    $m = $cal['timeMode'] ?? 'shifts4';
+    return in_array($m, ['shifts4', 'shifts2', 'hours'], true) ? $m : 'shifts4';
+}
+function slots_per_day(?array $cal): int {
+    switch (time_mode($cal)) {
+        case 'shifts2': return 2;
+        case 'hours': return max(1, min(240, (int)round((float)($cal['hoursPerDay'] ?? 24) ?: 24)));
+        default: return 4;
+    }
+}
+/** Slots per day of a campaign row. */
+function camp_spd(array $campaign): int { return slots_per_day(dec($campaign['calendar_json'])); }
+/** The quarter of the day (0 Dawn, 1 Midday, 2 Dusk, 3 Overnight) whose weather a slot takes. */
+function slot_quarter(?array $cal, int $slot): int {
+    switch (time_mode($cal)) {
+        case 'shifts2': return $slot ? 3 : 1;
+        case 'hours': return (intdiv(4 * $slot, slots_per_day($cal)) + 3) % 4;
+        default: return $slot;
+    }
+}
+/**
+ * Absolute slot $a of calendar $from as an absolute slot of calendar $to, by the time of day it covers.
+ * Times are in days from the epoch's first midnight: four shifts start at dawn (a quarter of the way
+ * through the day), Day at dawn and Night at dusk, and hours on the hour. A start slot becomes the slot
+ * its start falls in; an end slot ($end) becomes the slot its last moment falls in.
+ */
+function convert_slot(int $a, ?array $from, ?array $to, bool $end = false): int {
+    $n = slots_per_day($from);
+    $t = $a + ($end ? 1 : 0);
+    switch (time_mode($from)) {
+        case 'shifts4': $t = ($t + 1) / 4; break;
+        case 'shifts2': $t = ($t + 0.5) / 2; break;
+        default: $t = $t / $n;
+    }
+    $m = slots_per_day($to);
+    switch (time_mode($to)) {
+        case 'shifts4': $x = 4 * $t - 1; break;
+        case 'shifts2': $x = 2 * $t - 0.5; break;
+        default: $x = $m * $t;
+    }
+    return $end ? (int)ceil($x - 1e-9) - 1 : (int)floor($x + 1e-9);
+}
+/**
+ * Move a campaign's clock, shift activities, shift notes and timed events from calendar $old's slots to
+ * $new's, after its time mode (or its hours per day, in hours mode) changes. Activities that end up in
+ * the same slot are joined. All-day events and the days themselves don't move.
+ */
+function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
+    $n0 = slots_per_day($old); $n1 = slots_per_day($new);
+    $split = fn(int $a) => [floordiv($a, $n1), $a - $n1 * floordiv($a, $n1)];
+    $pdo->prepare('UPDATE campaigns SET current_shift=? WHERE id=?')
+        ->execute([convert_slot((int)campaign_row($cid)['current_shift'], $old, $new), $cid]);
+
+    $st = $pdo->prepare('SELECT abs_day, shift, activity, gm_notes, visibility_override FROM shifts WHERE campaign_id=? ORDER BY abs_day, shift');
+    $st->execute([$cid]);
+    $merged = [];
+    foreach ($st->fetchAll() as $r) {
+        [$d, $s] = $split(convert_slot((int)$r['abs_day'] * $n0 + (int)$r['shift'], $old, $new));
+        $k = "$d|$s";
+        if (!isset($merged[$k])) { $merged[$k] = [$d, $s, null, null, null]; }
+        foreach ([2 => 'activity', 3 => 'gm_notes'] as $i => $f) {
+            $v = trim((string)$r[$f]);
+            if ($v === '') continue;
+            $cur = (string)$merged[$k][$i];
+            if ($cur === '') $merged[$k][$i] = $v;
+            elseif (!in_array($v, explode("\n", $cur), true)) $merged[$k][$i] = "$cur\n$v";
+        }
+        if ($merged[$k][4] === null && $r['visibility_override'] !== null) $merged[$k][4] = (int)$r['visibility_override'];
+    }
+    $pdo->prepare('DELETE FROM shifts WHERE campaign_id=?')->execute([$cid]);
+    $ins = $pdo->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, activity, gm_notes, visibility_override) VALUES (?,?,?,?,?,?)');
+    foreach ($merged as [$d, $s, $act, $gmn, $vo]) $ins->execute([$cid, $d, $s, $act, $gmn, $vo]);
+
+    $st = $pdo->prepare('SELECT id, abs_day, shift FROM shift_notes WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE shift_notes SET abs_day=?, shift=? WHERE id=?');
+    foreach ($st->fetchAll() as $r) {
+        [$d, $s] = $split(convert_slot((int)$r['abs_day'] * $n0 + (int)$r['shift'], $old, $new));
+        $up->execute([$d, $s, $r['id']]);
+    }
+
+    $st = $pdo->prepare('SELECT id, abs_day, end_day, shift, shift_end FROM events WHERE campaign_id=? AND shift IS NOT NULL');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE events SET abs_day=?, end_day=?, shift=?, shift_end=? WHERE id=?');
+    foreach ($st->fetchAll() as $e) {
+        $endDay = $e['end_day'] !== null ? (int)$e['end_day'] : (int)$e['abs_day'];
+        $endShift = $e['shift_end'] !== null ? (int)$e['shift_end'] : (int)$e['shift'];
+        $a = convert_slot((int)$e['abs_day'] * $n0 + (int)$e['shift'], $old, $new);
+        $b = max($a, convert_slot($endDay * $n0 + $endShift, $old, $new, true));
+        [$d0, $s0] = $split($a); [$d1, $s1] = $split($b);
+        $up->execute([$d0, $d1 > $d0 ? $d1 : null, $s0, $s1, $e['id']]);
+    }
+}
 
 /**
  * A day's weather as this user may see it. Players without future weather get nothing for days after
@@ -180,14 +277,22 @@ function shift_order(array $campaign): string { return (string)((dec($campaign['
  * away). The shifts come from the copy the GM's browser saves with the forecast, and only count if it
  * was saved in the calendar's current shift order ($shiftOrder); otherwise players get nothing.
  */
-function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFuture, string $shiftOrder) {
+function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFuture, string $shiftOrder, ?array $cal = null) {
     $w = dec($json);
-    $today = floordiv4($currentShift);
+    $spd = slots_per_day($cal);
+    $today = floordiv($currentShift, $spd);
     if (!$hideFuture || $w === null || $ad < $today) return $w;
     if ($ad > $today) return null;
     $shifts = is_array($w['shifts'] ?? null) ? array_values($w['shifts']) : [];
-    $seen = array_slice($shifts, 0, $currentShift - 4 * $today + 1);
-    $now = end($seen);
+    // The weather is kept by quarter of the day (Dawn, Midday, Dusk, Overnight); the current slot falls in quarter $q.
+    // Quarters up to it have come round, and in hours mode so has the overnight one, which covers the hours before dawn.
+    $slot = $currentShift - $spd * $today;
+    $q = slot_quarter($cal, $slot);
+    $preDawn = time_mode($cal) === 'hours' && $q === 3 && 4 * $slot < $spd;
+    $seen = [];
+    foreach ($shifts as $i => $x) $seen[] = ($preDawn ? $i === 3 : ($i <= $q || time_mode($cal) === 'hours' && $i === 3)) ? $x : null;
+    while ($seen && end($seen) === null) array_pop($seen);
+    $now = $shifts[$q] ?? null;
     if (count($shifts) !== 4 || !is_array($now) || ($w['shift_order'] ?? null) !== $shiftOrder) return null;
     return ['type' => $now['type'] ?? null, 'temp' => $now['temp'] ?? null, 'wind' => $now['wind'] ?? 0,
         'season' => $w['season'] ?? null, 'shifts' => $seen, 'partial' => true];
@@ -250,13 +355,63 @@ function save_event_tags(int $cid, int $eid, $list): void {
     foreach (array_keys($ids) as $id) $link->execute([$eid, $id]);
 }
 
+// ---------- downtime (the Downtime tab) ----------
+const DOWNTIME_KINDS = ['long_rest' => 'Long Rest', 'short_rest' => 'Short Rest', 'downtime' => 'Downtime'];
+/** Shifts in a day of campaign row $c: four, or what its time tracking mode gives once campaigns have one. */
+function downtime_spd(array $c): int { return function_exists('camp_spd') ? camp_spd($c) : 4; }
+/** The fewest shifts a long rest uses up: half the day's shifts (2 of 4, 1 of 2), or 8 when time is kept in hours. */
+function long_rest_min(array $c): int {
+    $hours = function_exists('time_mode') && time_mode(dec($c['calendar_json'])) === 'hours';
+    return $hours ? min(8, downtime_spd($c)) : max(1, intdiv(downtime_spd($c), 2));
+}
+/** A downtime's activities, checked: [{name, members: [user ids in the campaign]}], each name once. */
+function downtime_activities($list, int $cid): string {
+    if (!is_array($list)) fail('Expected a list of activities');
+    if (count($list) > 40) fail('Too many activities (max 40)');
+    $st = db()->prepare('SELECT user_id FROM campaign_members WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $out = []; $seen = [];
+    foreach ($list as $a) {
+        $name = trim((string)str_in(is_array($a) ? ($a['name'] ?? '') : '', 100, false));
+        $k = mb_strtolower($name);
+        if ($name === '' || isset($seen[$k])) continue;
+        $seen[$k] = true;
+        $m = array_map('intval', is_array($a['members'] ?? null) ? $a['members'] : []);
+        $out[] = ['name' => $name, 'members' => array_values(array_unique(array_filter($m, fn($i) => in_array($i, $ids, true))))];
+    }
+    return json_encode($out, JSON_UNESCAPED_UNICODE);
+}
+/**
+ * Add $label to the activity of absolute shifts $from..$to (a day has $spd of them), after what is
+ * there already ("Make camp; Long Rest"), or take it back out ($add false). A shift that already
+ * lists it is left alone.
+ */
+function label_shifts(int $cid, int $spd, int $from, int $to, string $label, bool $add): void {
+    $st = db()->prepare('SELECT abs_day, shift, activity FROM shifts WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
+    $st->execute([$cid, (int)floor($from / $spd), (int)floor($to / $spd)]);
+    $have = [];
+    foreach ($st->fetchAll() as $r) $have[(int)$r['abs_day'] * $spd + (int)$r['shift']] = (string)$r['activity'];
+    $up = db()->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, activity) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE activity=VALUES(activity)');
+    for ($s = $from; $s <= $to; $s++) {
+        $cur = trim($have[$s] ?? '');
+        $parts = array_values(array_filter(array_map('trim', preg_split('/[;\n]/', $cur)), 'strlen'));
+        $has = in_array($label, $parts, true);
+        if ($add === $has) continue;
+        $new = $add ? ($cur === '' ? $label : rtrim($cur, " \t\n;,") . "; $label")
+            : implode('; ', array_filter($parts, fn($x) => $x !== $label));
+        $d = (int)floor($s / $spd);
+        $up->execute([$cid, $d, $s - $spd * $d, $new === '' ? null : $new]);
+    }
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'days', 'day', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'days', 'day', 'downtimes', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -396,8 +551,19 @@ try {
         $desc = p('description', $c['description']);
         $cal = p('calendar') !== null ? stamp_cal(json_in(p('calendar'))) : $c['calendar_json'];
         $settings = p('settings') !== null ? json_in(p('settings')) : $c['settings_json'];
-        db()->prepare('UPDATE campaigns SET name=?, description=?, calendar_json=?, settings_json=? WHERE id=?')
-            ->execute([$name, str_in($desc, 5000), $cal, $settings, $cid]);
+        $oldCal = dec($c['calendar_json']); $newCal = dec($cal);
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            // A new time mode (or a new number of hours in hours mode) moves the clock and everything kept by shift.
+            if (time_mode($oldCal) !== time_mode($newCal) || slots_per_day($oldCal) !== slots_per_day($newCal)) convert_time_mode($pdo, $cid, $oldCal, $newCal);
+            $pdo->prepare('UPDATE campaigns SET name=?, description=?, calendar_json=?, settings_json=? WHERE id=?')
+                ->execute([$name, str_in($desc, 5000), $cal, $settings, $cid]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
         out(['ok' => true]);
 
     case 'campaign_delete':
@@ -507,7 +673,7 @@ try {
         if ($to < $from || $to - $from > 1500) fail('Range must be 0–1500 days');
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
-        $today = floordiv4((int)$c['current_shift']);
+        $today = floordiv((int)$c['current_shift'], camp_spd($c));
         $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
         $order = shift_order($c);
 
@@ -519,7 +685,7 @@ try {
             $days[] = [
                 'abs_day' => $ad,
                 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order),
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])),
                 'has_notes' => ($d['notes'] ?? '') !== '' || ($isGm && ($d['gm_notes'] ?? '') !== ''),
             ];
         }
@@ -539,7 +705,7 @@ try {
         $ad = int_in($_GET['d'] ?? 0);
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
-        $today = floordiv4((int)$c['current_shift']);
+        $today = floordiv((int)$c['current_shift'], camp_spd($c));
         $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes, locations FROM days WHERE campaign_id=? AND abs_day=?');
         $st->execute([$cid, $ad]);
         $d = $st->fetch() ?: null;
@@ -548,7 +714,7 @@ try {
             $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
             $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order), 'notes' => $d['notes'],
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])), 'notes' => $d['notes'],
                 'locations' => $d['locations']];
             if ($isGm) $day['gm_notes'] = $d['gm_notes'];
         }
@@ -616,11 +782,12 @@ try {
 
     case 'shift_save':
         $cid = cid(); need_gm($cid);
+        $maxSlot = camp_spd(campaign_row($cid)) - 1;
         $vo = p('visibility_override');
         $vo = ($vo === null || $vo === '') ? null : int_in($vo, 0, 5);
         db()->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, activity, gm_notes, visibility_override) VALUES (?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE activity=VALUES(activity), gm_notes=VALUES(gm_notes), visibility_override=VALUES(visibility_override)')
-            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, 3), str_in(p('activity'), 5000), str_in(p('gm_notes'), 5000), $vo]);
+            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, $maxSlot), str_in(p('activity'), 5000), str_in(p('gm_notes'), 5000), $vo]);
         out(['ok' => true]);
 
     case 'shifts_fill': // GM: label a span of shifts (e.g. "Travelling to Altdorf") without overwriting existing activity
@@ -632,7 +799,8 @@ try {
         $st = db()->prepare("INSERT INTO shifts (campaign_id, abs_day, shift, activity) VALUES (?,?,?,?)
             ON DUPLICATE KEY UPDATE activity=IF(activity IS NULL OR activity='', VALUES(activity), activity)");
         db()->beginTransaction();
-        for ($s = $from; $s <= $to; $s++) $st->execute([$cid, floordiv4($s), $s - 4 * floordiv4($s), $act]);
+        $spd = camp_spd(campaign_row($cid));
+        for ($s = $from; $s <= $to; $s++) $st->execute([$cid, floordiv($s, $spd), $s - $spd * floordiv($s, $spd), $act]);
         db()->commit();
         out(['ok' => true]);
 
@@ -642,7 +810,7 @@ try {
         $text = trim((string)str_in(p('body'), 5000, false));
         if ($text === '') fail('Note is empty');
         db()->prepare('INSERT INTO shift_notes (campaign_id, abs_day, shift, user_id, body) VALUES (?,?,?,?,?)')
-            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, 3), me()['id'], $text]);
+            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, camp_spd(campaign_row($cid)) - 1), me()['id'], $text]);
         out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
 
     case 'shift_note_delete':
@@ -680,10 +848,11 @@ try {
         if ($end === $ad) $end = null;
         // shift empty = all day. Otherwise the event runs from shift (on abs_day)
         // to shift_end (on end_day, or the same day); shift_end defaults to shift.
+        $maxSlot = camp_spd(campaign_row($cid)) - 1;
         $shift = p('shift');
-        $shift = ($shift === null || $shift === '') ? null : int_in($shift, 0, 3);
+        $shift = ($shift === null || $shift === '') ? null : int_in($shift, 0, $maxSlot);
         $shiftEnd = p('shift_end');
-        $shiftEnd = ($shift === null) ? null : (($shiftEnd === null || $shiftEnd === '') ? $shift : int_in($shiftEnd, 0, 3));
+        $shiftEnd = ($shift === null) ? null : (($shiftEnd === null || $shiftEnd === '') ? $shift : int_in($shiftEnd, 0, $maxSlot));
         if ($shift !== null && $end === null && $shiftEnd < $shift) fail('Shift End is before Shift Start');
         $secret = ($role === 'gm' && p('is_secret')) ? 1 : 0;
         $title = trim((string)str_in(p('title'), 200, false));
@@ -735,6 +904,81 @@ try {
         if ($owner === false) fail('Note not found', 404);
         if ($role !== 'gm' && (int)$owner !== me()['id']) fail('You can only delete your own notes', 403);
         db()->prepare('DELETE FROM event_notes WHERE id=?')->execute([$nid]);
+        out(['ok' => true]);
+
+    // ===== downtime: rests and downtime, one card each =====
+    case 'downtimes':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $st = db()->prepare('SELECT id, kind, title, start_shift, end_shift, slots, activities_json, notes' . ($isGm ? ', gm_notes' : '')
+            . ' FROM downtimes WHERE campaign_id=? ORDER BY start_shift DESC, id DESC');
+        $st->execute([$cid]);
+        $rows = array_map(function ($r) {
+            foreach (['id', 'start_shift', 'end_shift', 'slots'] as $k) $r[$k] = (int)$r[$k];
+            $r['activities'] = dec($r['activities_json']) ?: [];
+            unset($r['activities_json']);
+            return $r;
+        }, $st->fetchAll());
+        out(['downtimes' => $rows]);
+
+    case 'downtime_save':
+        // The GM makes a card and can change anything on it but its timing. Players can only write its public notes.
+        $cid = cid();
+        $role = role($cid);
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        if ($id) {
+            $st = db()->prepare('SELECT id FROM downtimes WHERE id=? AND campaign_id=?');
+            $st->execute([$id, $cid]);
+            if (!$st->fetchColumn()) fail('Downtime not found', 404);
+            if ($role !== 'gm') {
+                db()->prepare('UPDATE downtimes SET notes=? WHERE id=?')->execute([str_in(p('notes'), 20000), $id]);
+                out(['ok' => true, 'id' => $id]);
+            }
+            db()->prepare('UPDATE downtimes SET title=?, activities_json=?, notes=?, gm_notes=? WHERE id=?')
+                ->execute([trim((string)str_in(p('title'), 200, false)), downtime_activities(p('activities', []), $cid), str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), $id]);
+            out(['ok' => true, 'id' => $id]);
+        }
+        need_gm($cid);
+        $kind = (string)p('kind');
+        if (!isset(DOWNTIME_KINDS[$kind])) fail('Pick a long rest, a short rest or downtime');
+        $c = campaign_row($cid);
+        $spd = downtime_spd($c);
+        if ($kind === 'downtime') {
+            // whole days, from the first shift of the start date to the last of the end date
+            $d0 = int_in(p('start_day')); $d1 = int_in(p('end_day'));
+            if ($d1 < $d0) fail('The end date is before the start date');
+            if (($d1 - $d0 + 1) * $spd > 6000) fail('Downtime can last at most ' . intdiv(6000, $spd) . ' days');
+            $from = $d0 * $spd; $to = $d1 * $spd + $spd - 1; $slots = $to - $from + 1;
+        } else {
+            // a rest starts now and uses up the shifts after the current one; a short rest of 0 just marks the current shift
+            $min = $kind === 'long_rest' ? long_rest_min($c) : 0;
+            $slots = p('slots');
+            if (!is_numeric($slots) || (int)$slots < $min || (int)$slots > 10 * $spd) fail("A " . strtolower(DOWNTIME_KINDS[$kind]) . " takes $min to " . 10 * $spd . ' shifts');
+            $slots = (int)$slots;
+            $now = (int)$c['current_shift'];
+            [$from, $to] = $slots ? [$now + 1, $now + $slots] : [$now, $now];
+        }
+        $pdo = db();
+        $pdo->beginTransaction();
+        $pdo->prepare('INSERT INTO downtimes (campaign_id, kind, title, start_shift, end_shift, slots, activities_json, notes, gm_notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$cid, $kind, trim((string)str_in(p('title'), 200, false)), $from, $to, $slots, downtime_activities(p('activities', []), $cid),
+                str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), me()['id']]);
+        $id = (int)$pdo->lastInsertId();
+        label_shifts($cid, $spd, $from, $to, DOWNTIME_KINDS[$kind], true);
+        $pdo->commit();
+        out(['ok' => true, 'id' => $id, 'start_shift' => $from, 'end_shift' => $to]);
+
+    case 'downtime_delete':
+        // Takes its label back off the shifts it covered; the clock stays where it is.
+        $cid = cid(); need_gm($cid);
+        $st = db()->prepare('SELECT kind, start_shift, end_shift FROM downtimes WHERE id=? AND campaign_id=?');
+        $st->execute([int_in(p('id'), 1), $cid]);
+        $d = $st->fetch();
+        if (!$d) fail('Downtime not found', 404);
+        db()->beginTransaction();
+        if (isset(DOWNTIME_KINDS[$d['kind']])) label_shifts($cid, downtime_spd(campaign_row($cid)), (int)$d['start_shift'], (int)$d['end_shift'], DOWNTIME_KINDS[$d['kind']], false);
+        db()->prepare('DELETE FROM downtimes WHERE id=? AND campaign_id=?')->execute([(int)p('id'), $cid]);
+        db()->commit();
         out(['ok' => true]);
 
     default:

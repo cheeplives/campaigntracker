@@ -174,3 +174,26 @@ CREATE TABLE IF NOT EXISTS event_notes (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Rests and downtime (the Downtime tab), one card each. Times are absolute shifts
+-- (abs_day * shifts per day + shift), first and last inclusive; a short rest that
+-- costs no shift has start_shift = end_shift = the shift it was taken in and slots = 0.
+-- activities_json: [{"name": "Tend to Wounds", "members": [user ids]}]. gm_notes never reach players.
+CREATE TABLE IF NOT EXISTS downtimes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(16) NOT NULL,                        -- short_rest | long_rest | downtime
+  title VARCHAR(200) NOT NULL DEFAULT '',
+  start_shift BIGINT NOT NULL,
+  end_shift BIGINT NOT NULL,
+  slots INT NOT NULL DEFAULT 0,                     -- shifts the rest uses up; 0 for a short rest that costs none
+  activities_json TEXT,
+  notes TEXT,
+  gm_notes TEXT,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_downtimes_campaign (campaign_id, start_shift),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

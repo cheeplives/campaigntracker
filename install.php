@@ -54,6 +54,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/004_day_locations.sql');
             $msg .= ' Days now have a Locations visited box.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'downtimes'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/005_downtime.sql');
+            $msg .= ' Added the Downtime tab.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
