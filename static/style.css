@@ -329,3 +329,7 @@ details.shiftcard[open] > * + * { margin-top: 6px; }
 /* About page: source tables wrap long titles instead of widening the page. */
 .about p { max-width: 75ch; } .about ul { padding-left: 1.2em; } .about li { margin: 4px 0; }
 .about-tbl td { vertical-align: top; overflow-wrap: anywhere; }
+
+/* "The GM updated the calendar" notice: a full-width row of the sticky top bar (showChangeBanner in app.js) */
+#change-banner { flex: 0 0 calc(100% + 32px); margin: 0 -16px -10px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 16px; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border-top: 1px solid var(--accent); }
