@@ -345,7 +345,7 @@
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM adds them to a campaign by email from its Members tab. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM picks them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -686,7 +686,9 @@
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
-      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'));
+      btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small', 'Return to the calendar, showing this day'),
+      btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
+        'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here'));
 
     // --- overview card
     const overview = el('div', { class: 'card' },
@@ -1247,13 +1249,38 @@
           try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Take them out of this campaign. Their account stays')) : null)));
     if (isGM()) {
-      const f = el('form', { class: 'row' }, el('input', { name: 'email', type: 'email', placeholder: 'Their sign-in email', required: true, class: 'grow' }),
-        select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'data-tip': 'A co-GM has the same powers as you, including secrets' }), el('button', { class: 'primary small' }, 'Add member'));
+      // Pick from the site's approved accounts, or type a full email for someone not in the list.
+      let candidates = [];
+      const q = el('input', { name: 'q', type: 'search', placeholder: 'Search people, or type their sign-in email', autocomplete: 'off', 'aria-label': 'Find a person to add', class: 'grow' });
+      const role = select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'aria-label': 'Role', 'data-tip': 'A co-GM has the same powers as you, including secrets' });
+      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'Registered people' });
+      const add = async body => {
+        try { await post('member_add', { ...body, role: role.value }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+      };
+      const matches = () => {
+        const t = q.value.trim().toLowerCase();
+        return t ? candidates.filter(u => (u.display_name || '').toLowerCase().includes(t) || (u.email || '').toLowerCase().includes(t)) : candidates;
+      };
+      const renderList = () => {
+        const m = matches();
+        list.replaceChildren(...(m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
+          el('div', {}, el('strong', {}, u.display_name || u.email), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
+          el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email} to this campaign`))))
+          : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Everyone registered is already in this campaign. Add someone new by their sign-in email.')]),
+          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null);
+      };
+      q.addEventListener('input', renderList);
+      const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
-        try { await post('member_add', formData(f), S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+        const v = q.value.trim();
+        const m = matches();
+        if (v.includes('@')) return add({ email: v });
+        if (v && m.length === 1) return add({ user_id: m[0].id });
+        toast('Pick someone from the list, or type their full sign-in email.', true);
       });
-      card.append(el('h3', {}, 'Add a member'), f, el('small', { class: 'muted' }, 'Use the email they sign in with. They need to have signed in once and been approved by the site admin.'));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, 'Everyone who has signed in and been approved by the site admin is listed. Someone new needs to sign in once and be approved first.'));
+      api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
     }
     mount(...campaignHeader('members'), card);
   }
