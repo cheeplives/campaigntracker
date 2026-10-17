@@ -3,9 +3,19 @@
  * --dim --accent --on-accent --ok --bad --disp --body --mono), so shared
  * components read the same in both apps; each app keeps its own palette.
  *
- * Mode: data-theme = light | dark on <html>, set before first paint by
- * static/theme-init.js (stored choice, else the OS setting) and toggled by the
- * 🌙/☀ button in the top bar. Same mechanism and control as Sinless. */
+ * Two independent axes on <html>, the same as Sinless:
+ *   data-theme  = light | dark                  -> MODE (the 🌙/☀ toggle)
+ *   data-scheme = parchment | nightsky | …      -> THEME (the top-bar picker)
+ * Both are set before first paint by static/theme-init.js and remembered in
+ * localStorage; the theme is also saved to the signed-in account (prefs.scheme)
+ * so it follows them to other devices.
+ *
+ * To ADD A THEME: add a dark and a light block below (split with
+ * :not([data-theme="light"]) / [data-theme="light"]), then register it in
+ * SCHEMES in app.js and api/index.php. Override only the surface and identity
+ * tokens (--bg --panel --panel-2 --line --text --dim --accent --on-accent, and
+ * --disp if the theme wants its own heading face). Never --ok/--bad/--secret:
+ * those keep their meaning in every theme. Parchment is the base :root palette. */
 :root {
   color-scheme: dark;
   --bg: #16140f; --panel: #211e17; --panel-2: #2a261d; --line: #3d372a;
@@ -17,6 +27,35 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --bg: #f4eee1; --panel: #fffaf0; --panel-2: #f1e8d6; --line: #dccfb4; --text: #2b2417; --dim: #7a6e57; --accent: #a8741a; --on-accent: #fff;
+}
+/* ---------- Night Sky: deep indigo and moonlight silver, for stargazers and night watches */
+:root[data-scheme="nightsky"]:not([data-theme="light"]) {
+  --bg: #0c1020; --panel: #131a2e; --panel-2: #1a2340; --line: #2a3556; --text: #e2e6f5; --dim: #8e98b8; --accent: #b9c6f2; --on-accent: #10162b;
+}
+:root[data-scheme="nightsky"][data-theme="light"] {
+  --bg: #eef0f8; --panel: #ffffff; --panel-2: #e5e8f4; --line: #cfd5ea; --text: #1a2038; --dim: #5a6384; --accent: #3d4fa8; --on-accent: #fff;
+}
+/* ---------- Ship's Console: phosphor green on a dark bridge display, monospace headings */
+:root[data-scheme="console"] { --disp: var(--mono); }
+:root[data-scheme="console"]:not([data-theme="light"]) {
+  --bg: #0a1210; --panel: #0f1a17; --panel-2: #14231f; --line: #1f3a32; --text: #cfeee2; --dim: #6f9a8b; --accent: #3ee0a0; --on-accent: #032018;
+}
+:root[data-scheme="console"][data-theme="light"] {
+  --bg: #eef4f1; --panel: #ffffff; --panel-2: #e3eee9; --line: #c8dcd3; --text: #10241d; --dim: #4f6c62; --accent: #0b7a55; --on-accent: #fff;
+}
+/* ---------- Arctic: glacier blue and snow, for cold-weather campaigns */
+:root[data-scheme="arctic"]:not([data-theme="light"]) {
+  --bg: #0e161c; --panel: #15212a; --panel-2: #1c2b36; --line: #2a3d4b; --text: #e4f0f6; --dim: #8aa3b2; --accent: #7cc8f0; --on-accent: #06222f;
+}
+:root[data-scheme="arctic"][data-theme="light"] {
+  --bg: #f2f7fa; --panel: #ffffff; --panel-2: #e6f0f5; --line: #cfe0ea; --text: #12232d; --dim: #587080; --accent: #1f74a8; --on-accent: #fff;
+}
+/* ---------- Wildwood: moss and bark, for overland travel and hexcrawls */
+:root[data-scheme="wildwood"]:not([data-theme="light"]) {
+  --bg: #11160f; --panel: #182016; --panel-2: #1f291c; --line: #314029; --text: #e3ead8; --dim: #96a385; --accent: #9cc45a; --on-accent: #142008;
+}
+:root[data-scheme="wildwood"][data-theme="light"] {
+  --bg: #f1f4ea; --panel: #fcfdf8; --panel-2: #e7ecdc; --line: #d2dcc0; --text: #1e2615; --dim: #63704f; --accent: #4f7a1f; --on-accent: #fff;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--body); }
@@ -198,6 +237,15 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .status.approved { color: var(--ok); border-color: var(--ok); }
 .status.revoked { color: var(--bad); border-color: var(--bad); }
 .theme-toggle { padding: 3px 8px; line-height: 1.2; }
+.scheme-pick { position: relative; }
+.scheme-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; line-height: 1.2; }
+.scheme-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
+.scheme-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; list-style: none; margin: 0; padding: 4px; min-width: 210px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+.scheme-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 1px solid transparent; }
+.scheme-opt[aria-checked="true"] { border-color: var(--accent); }
+.scheme-opt small { display: block; color: var(--dim); }
+@media (max-width: 480px) { .scheme-name { display: none; } }
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: right; }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }

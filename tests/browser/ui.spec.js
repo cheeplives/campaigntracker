@@ -1,5 +1,5 @@
 // The shared UI kit: in-page dialogs instead of confirm()/prompt(), and the
-// light/dark toggle, which is remembered like Sinless's.
+// light/dark toggle and colour themes, which are remembered like Sinless's.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign } = require("./helpers");
 
@@ -34,6 +34,32 @@ test("the theme toggle switches light/dark and is remembered", async ({ page }) 
   await expect(html).toHaveAttribute("data-theme", after);
   await page.reload();
   await expect(html).toHaveAttribute("data-theme", after);
+});
+
+test("a colour theme is picked from the top bar, remembered, and follows the account", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const who = person("Theo");
+  await signIn(page, who);
+  await approve(browser, who.email);
+  await page.goto("index.html");
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-scheme", "parchment");
+  await page.getByRole("button", { name: /^Theme:/ }).click();
+  await page.getByRole("menuitemradio", { name: /Ship's Console/ }).click();
+  await expect(html).toHaveAttribute("data-scheme", "console");
+  await expect(page.getByRole("button", { name: "Theme: Ship's Console" })).toBeVisible();
+  await page.reload();
+  await expect(html).toHaveAttribute("data-scheme", "console");
+
+  // A fresh device (no local storage) picks it up from the account once signed in.
+  await expect.poll(async () => (await (await page.request.get("api/auth/me.php")).json()).prefs.scheme).toBe("console");
+  const ctx = await browser.newContext();
+  const other = await ctx.newPage();
+  await signIn(other, who);
+  await other.goto("index.html");
+  await expect(other.locator("html")).toHaveAttribute("data-scheme", "console");
+  await ctx.close();
+  expectNoErrors(errors);
 });
 
 test("fonts are served from this site, not a third party", async ({ page }) => {

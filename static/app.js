@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '3';
+  const APP_VERSION = '4';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -203,6 +203,7 @@
       S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
       S.user?.is_admin ? el('a', { href: '#/admin', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
       S.user ? el('a', { href: '#/account', 'data-tip': `Signed in as ${S.user.email}. Your display preferences` }, S.user.name || S.user.email) : null,
+      schemePicker(),
       themeToggle(),
       S.user || S.pending ? btn('Sign out', signOut, 'link') : null,
     ]));
@@ -220,6 +221,49 @@
     }, 'theme-toggle', 'Toggle light / dark mode');
     b.setAttribute('aria-label', 'Toggle light / dark mode');
     return b;
+  }
+
+  // Colour themes, independent of light/dark (each has both). id must match a
+  // data-scheme block in style.css and SCHEMES in api/index.php; dot is the swatch.
+  const SCHEME_KEY = 'chronicle:scheme';
+  const SCHEMES = [
+    { id: 'parchment', name: 'Parchment & Brass', dot: '#d9a441', blurb: 'The classic: aged paper and lamplight' },
+    { id: 'nightsky', name: 'Night Sky', dot: '#b9c6f2', blurb: 'Indigo and moonlight, for night watches' },
+    { id: 'console', name: 'Ship\'s Console', dot: '#3ee0a0', blurb: 'Phosphor green on a bridge display' },
+    { id: 'arctic', name: 'Arctic', dot: '#7cc8f0', blurb: 'Glacier blue and snow' },
+    { id: 'wildwood', name: 'Wildwood', dot: '#9cc45a', blurb: 'Moss and bark, for the overland road' },
+  ];
+  const schemeOf = id => SCHEMES.find(s => s.id === id) || SCHEMES[0];
+  const currentScheme = () => schemeOf(document.documentElement.dataset.scheme).id;
+  /** Apply a theme on this device. save = also store it on the signed-in account. */
+  function applyScheme(id, save) {
+    id = schemeOf(id).id;
+    document.documentElement.dataset.scheme = id;
+    try { localStorage.setItem(SCHEME_KEY, id); } catch { /* private mode: just this page */ }
+    if (save && S.user && S.user.prefs?.scheme !== id) {
+      post('prefs_save', { scheme: id }).then(r => { S.user.prefs = r.prefs; }).catch(err => toast(err.message, true));
+    }
+  }
+  /** Top-bar theme picker: a pill showing the current theme, opening a menu of all of them (like Sinless's). */
+  function schemePicker() {
+    const cur = schemeOf(currentScheme());
+    const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
+    const button = el('button', { type: 'button', class: 'scheme-btn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
+      el('span', { class: 'scheme-dot', style: { background: cur.dot } }), el('span', { class: 'scheme-name' }, cur.name));
+    const close = () => { list.hidden = true; button.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', close); };
+    list.append(...SCHEMES.map(s => el('li', { role: 'none' },
+      el('button', { type: 'button', role: 'menuitemradio', class: 'scheme-opt', 'aria-checked': String(s.id === cur.id),
+        onclick: () => { close(); applyScheme(s.id, true); renderNav(); } },
+        el('span', { class: 'scheme-dot', style: { background: s.dot } }),
+        el('span', {}, s.name, el('small', {}, s.blurb))))));
+    button.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!list.hidden) return close();
+      list.hidden = false; button.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', close);
+    });
+    list.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); button.focus(); } });
+    return el('span', { class: 'scheme-pick' }, button, list);
   }
 
   // ------------------------------------------------------------ sign-in gate / account / admin
@@ -1374,6 +1418,8 @@
     S.pending = null;
     const first = !S.user;
     S.user = { ...data, id: Number(data.id) };
+    // A theme saved on the account wins over this device's, so it follows them between devices.
+    if (S.user.prefs?.scheme && S.user.prefs.scheme !== currentScheme()) applyScheme(S.user.prefs.scheme);
     if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);
     route();
   }

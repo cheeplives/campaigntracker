@@ -33,7 +33,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),
-  and Cancel keeps the item; the light/dark toggle is remembered; fonts load
+  and Cancel keeps the item; the light/dark toggle is remembered; a colour theme picked
+  from the top bar is remembered and follows the account to a new device; fonts load
   from this site only.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility and travel results in the browser as under Node.
