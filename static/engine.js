@@ -29,12 +29,14 @@
     cal.weekdayOffset = Number(cal.weekdayOffset || 0);
     cal._base = months.reduce((s, m) => s + Number(m.days || 0), 0);
     cal._extra = months.reduce((s, m) => s + Number(m.leapDays || 0), 0);
-    cal._baseW = months.reduce((s, m) => s + (m.intercalary ? 0 : Number(m.days || 0)), 0);
-    cal._extraW = months.reduce((s, m) => s + (m.intercalary ? 0 : Number(m.leapDays || 0)), 0);
+    cal._baseW = months.reduce((s, m) => s + (inWeek(m) ? Number(m.days || 0) : 0), 0);
+    cal._extraW = months.reduce((s, m) => s + (inWeek(m) ? Number(m.leapDays || 0) : 0), 0);
     if (cal._base <= 0) throw new Error('Calendar needs at least one month with days');
     Object.defineProperty(cal, '_prepped', { value: true, enumerable: false });
     return cal;
   }
+  /** Festival (intercalary) days sit outside the weekday cycle unless marked keepWeekday (like the Shire's Yule days). */
+  function inWeek(m) { return !m.intercalary || !!m.keepWeekday; }
   function shiftNames(cal) {
     const n = cal.shiftNames || [];
     return DEFAULT_SHIFT_NAMES.map((d, i) => n[i] || d);
@@ -101,9 +103,9 @@
     prep(cal);
     if (!cal.weekdays.length) return null;
     const p = fromAbs(cal, d);
-    if (p.intercalary) return null;
+    if (!inWeek(cal.months[p.month])) return null;
     let count = (p.year - cal.epochYear) * cal._baseW + leapsBefore(cal, p.year) * cal._extraW;
-    for (let m = 0; m < p.month; m++) if (!cal.months[m].intercalary) count += monthLength(cal, p.year, m);
+    for (let m = 0; m < p.month; m++) if (inWeek(cal.months[m])) count += monthLength(cal, p.year, m);
     count += p.day - 1;
     return mod(cal.weekdayOffset + count, cal.weekdays.length);
   }
@@ -115,9 +117,9 @@
   function fmtDate(cal, d, opts = {}) {
     const p = fromAbs(cal, d);
     const mo = cal.months[p.month];
-    if (p.intercalary && monthLength(cal, p.year, p.month) === 1) return `${mo.name}, ${yearLabel(cal, p.year)}`;
     const wd = weekday(cal, d);
     const W = (wd !== null && !opts.noWeekday) ? cal.weekdays[wd] : '';
+    if (p.intercalary && monthLength(cal, p.year, p.month) === 1) return `${W ? `${W}, ` : ''}${mo.name}, ${yearLabel(cal, p.year)}`;
     const fmt = cal.dateFormat || '{W}, {d} {M} {Y}';
     let out = fmt.replace('{d}', p.day).replace('{M}', mo.name).replace('{Y}', yearLabel(cal, p.year)).replace('{W}', W);
     return out.replace(/^[\s,·—-]+/, '').trim();
@@ -893,6 +895,63 @@
         { name: 'Mondstille (Winter Solstice)', color: '#2e8b57', rule: { type: 'fixed', month: 16, day: 1, span: 1 }, description: 'Ulric, Taal, Rhya.' },
         { name: 'Keg End', color: '#8b5a2b', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'Dwarf Gods.' },
         { name: 'Hexensnacht (Witching Night)', color: '#7b4fa0', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'The night before Hexenstag; both moons are said to be full.' },
+      ],
+      settings: { time_unit: 'day', temp_unit: 'C' },
+    },
+
+    middleearth: {
+      label: 'Middle-earth (Shire Reckoning, Third Age)',
+      calendar: {
+        // Shire Reckoning (LotR Appendix D). S.R. year + 1600 = Third Age year (1418 S.R. = T.A. 3018).
+        // 2 Yule is always Sterday: Mid-year's Day and Overlithe sit outside the week, so every date keeps its weekday.
+        name: 'Shire Reckoning', epochYear: 1, yearSuffix: 'S.R.', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Sterday', 'Sunday', 'Monday', 'Trewsday', 'Hevensday', 'Mersday', 'Highday'],
+        months: [
+          { name: '2 Yule', days: 1, intercalary: true, keepWeekday: true },
+          { name: 'Afteryule', days: 30 }, { name: 'Solmath', days: 30 }, { name: 'Rethe', days: 30 },
+          { name: 'Astron', days: 30 }, { name: 'Thrimidge', days: 30 }, { name: 'Forelithe', days: 30 },
+          { name: '1 Lithe', days: 1, intercalary: true, keepWeekday: true },
+          { name: "Mid-year's Day", days: 1, intercalary: true },
+          { name: 'Overlithe', days: 0, leapDays: 1, intercalary: true },
+          { name: '2 Lithe', days: 1, intercalary: true, keepWeekday: true },
+          { name: 'Afterlithe', days: 30 }, { name: 'Wedmath', days: 30 }, { name: 'Halimath', days: 30 },
+          { name: 'Winterfilth', days: 30 }, { name: 'Blotmath', days: 30 }, { name: 'Foreyule', days: 30 },
+          { name: '1 Yule', days: 1, intercalary: true, keepWeekday: true }],
+        // Overlithe every fourth year, except the last year of a century
+        leap: { every: 4, skip: 100, unskip: 0 },
+        // Shire dates run about ten days ahead of ours: Rethe 29 ≈ 20 March, Mid-year's Day ≈ 21 June, Winterfilth 2 ≈ 22 September, 1 Yule ≈ 20 December
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 3, day: 29 }, { name: 'Summer', type: 'summer', month: 8, day: 1 },
+          { name: 'Autumn', type: 'autumn', month: 14, day: 2 }, { name: 'Winter', type: 'winter', month: 17, day: 1 }],
+        // a real-world synodic month; the phases are not matched to the dates in the books
+        moons: [{ name: 'Moon', cycle: 29.530588, ref: 0, brightness: 1, color: '#e8e4d8' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1418, month: 13, day: 23 }, // Frodo leaves Bag End
+      // Climates follow the Köppen climate map of Middle-earth on r/imaginarymaps (c5mzt9). Umbar and Far Harad
+      // lie south of that map, so theirs are inferred.
+      regions: [
+        ['The Shire', 'Cfb', 0], ['Bree-land', 'Cfb', 0], ['Old Forest', 'Cfb', -1], ['Lindon & the Grey Havens', 'Cfb', 0],
+        ['Eriador wilds (Lone-lands, Weathertop)', 'Cfb', 0], ['Dunland', 'Cfb', 0],
+        ['Rhudaur & the Trollshaws', 'Dfb', 0], ['Rivendell', 'Dfb', -1],
+        ['Misty Mountains (high passes)', 'ET', 0], ['Angmar & the Ettenmoors', 'Dfc', 0], ['Forodwaith', 'ET', 1],
+        ['Lothlórien', 'Dfb', -1], ['Fangorn Forest', 'Dfb', -1], ['Rohan', 'Dfb', 0], ['Mirkwood', 'Dfb', -2],
+        ['Dale & Erebor', 'Dfc', 0], ['Iron Hills', 'Dfc', 0], ['Rhûn', 'BSk', 0],
+        ['Anórien', 'Dfa', 0], ['Minas Tirith & Lossarnach', 'Csa', 0], ['Ithilien', 'Csa', -1],
+        ['Lebennin & Belfalas (Dol Amroth)', 'Csa', 0], ['South Gondor (Harondor)', 'BSh', 0],
+        ['Mordor: Gorgoroth', 'BWk', 0], ['Mordor: Nurn', 'BWk', 0], ['Umbar', 'BWh', 0],
+        ['Near Harad', 'BWh', 1], ['Far Harad', 'Aw', 0],
+      ].map(([name, code, terrain], i) => ({
+        name, ...(i ? {} : { current: true }),
+        settings: { climate: `koppen:${code}`, hemisphere: 'north', lighting: 'natural', terrain_mod: terrain },
+      })),
+      holidays: [
+        { name: 'Yule', color: '#2e8b57', rule: { type: 'fixed', month: 17, day: 1, span: 2 }, description: 'The two Yuledays: the old year ends on 1 Yule and the new one begins on 2 Yule.' },
+        // Lithe is two entries so 2 Lithe is covered whether or not an Overlithe falls before it
+        { name: 'Lithe', color: '#d9a441', rule: { type: 'fixed', month: 7, day: 1, span: 2 }, description: 'Midsummer holiday: 1 Lithe, Mid-year\'s Day, Overlithe in leap years, and 2 Lithe. The Free Fair is held on the White Downs.' },
+        { name: 'Lithe', color: '#d9a441', rule: { type: 'fixed', month: 10, day: 1, span: 1 }, description: 'Midsummer holiday: 1 Lithe, Mid-year\'s Day, Overlithe in leap years, and 2 Lithe. The Free Fair is held on the White Downs.' },
+        { name: 'Overlithe', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'The leap day, a special holiday added after Mid-year\'s Day.' },
+        { name: 'Birthday of Bilbo and Frodo', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 22, span: 1 } },
       ],
       settings: { time_unit: 'day', temp_unit: 'C' },
     },

@@ -171,7 +171,7 @@
     wrap.getAbs = () => {
       const yy = Number(y.value), mm = Number(m.value);
       const len = E.monthLength(c, yy, mm);
-      return E.toAbs(c, yy, mm, Math.min(Math.max(1, Number(d.value) || 1), len));
+      return E.toAbs(c, yy, mm, Math.max(1, Math.min(Number(d.value) || 1, len)));
     };
     return wrap;
   }
@@ -447,7 +447,11 @@
       if (st.mode === 'month') {
         const p = E.fromAbs(c, anchor);
         let y = p.year, m = p.month + dir;
-        if (m < 0) { m = c.months.length - 1; y--; } else if (m >= c.months.length) { m = 0; y++; }
+        for (let guard = 0; guard < c.months.length; guard++) { // skip leap-only months in common years (like Overlithe)
+          if (m < 0) { m = c.months.length - 1; y--; } else if (m >= c.months.length) { m = 0; y++; }
+          if (E.monthLength(c, y, m) > 0) break;
+          m += dir;
+        }
         st.anchor = E.toAbs(c, y, m, 1);
       } else st.anchor = anchor + dir * E.weekLength(c);
       route();
@@ -1187,7 +1191,7 @@
   function calToText(c) {
     return {
       weekdays: (c.weekdays || []).join(', '),
-      months: c.months.map(m => [m.name, m.days, m.leapDays || 0, m.intercalary ? 'festival' : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
+      months: c.months.map(m => [m.name, m.days, m.leapDays || 0, m.intercalary ? (m.keepWeekday ? 'festival weekday' : 'festival') : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
       moons: (c.moons || []).map(m => [m.name, m.cycle, m.ref || 0, m.brightness ?? 1, m.color || '#e8e4d8', m.erratic ? 'erratic' : ''].filter((x, i) => i < 5 || x).join(', ')).join('\n'),
       shiftNames: E.shiftNames(c).join(', '),
     };
@@ -1200,9 +1204,11 @@
     c.hoursPerDay = Number(v.hoursPerDay) || 24; c.lighting = v.cal_lighting;
     c.weekdays = v.weekdays.split(',').map(x => x.trim()).filter(Boolean);
     c.months = lines(v.months).map(([name, days, leap, fest]) => {
-      const m = { name, days: Math.max(1, Number(days) || 1) };
+      // a month may have no days outside leap years (like Overlithe)
+      const m = { name, days: Math.max(Number(leap) > 0 ? 0 : 1, Number(days) || 0) };
       if (Number(leap)) m.leapDays = Number(leap);
       if (fest && /fest|inter/i.test(fest)) m.intercalary = true;
+      if (m.intercalary && /week/i.test(fest)) m.keepWeekday = true;
       return m;
     });
     if (!c.months.length) throw new Error('Add at least one month');
@@ -1257,7 +1263,7 @@
         field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), null,
           'Rename the four shifts, in order: the overnight one, then morning, midday and evening. Their lighting stays tied to that order')),
       field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
-      field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl)'),
+      field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl), or "festival weekday" for named days that keep their weekday (like 2 Yule). Days can be 0 for a leap-only day (like Overlithe: 0, 1, festival)'),
       el('div', { class: 'grid3' },
         field('Leap year every N years (0 = none)', el('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
         field('…except every N years', el('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
