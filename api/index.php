@@ -250,13 +250,63 @@ function save_event_tags(int $cid, int $eid, $list): void {
     foreach (array_keys($ids) as $id) $link->execute([$eid, $id]);
 }
 
+// ---------- downtime (the Downtime tab) ----------
+const DOWNTIME_KINDS = ['long_rest' => 'Long Rest', 'short_rest' => 'Short Rest', 'downtime' => 'Downtime'];
+/** Shifts in a day of campaign row $c: four, or what its time tracking mode gives once campaigns have one. */
+function downtime_spd(array $c): int { return function_exists('camp_spd') ? camp_spd($c) : 4; }
+/** The fewest shifts a long rest uses up: half the day's shifts (2 of 4, 1 of 2), or 8 when time is kept in hours. */
+function long_rest_min(array $c): int {
+    $hours = function_exists('time_mode') && time_mode(dec($c['calendar_json'])) === 'hours';
+    return $hours ? min(8, downtime_spd($c)) : max(1, intdiv(downtime_spd($c), 2));
+}
+/** A downtime's activities, checked: [{name, members: [user ids in the campaign]}], each name once. */
+function downtime_activities($list, int $cid): string {
+    if (!is_array($list)) fail('Expected a list of activities');
+    if (count($list) > 40) fail('Too many activities (max 40)');
+    $st = db()->prepare('SELECT user_id FROM campaign_members WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $out = []; $seen = [];
+    foreach ($list as $a) {
+        $name = trim((string)str_in(is_array($a) ? ($a['name'] ?? '') : '', 100, false));
+        $k = mb_strtolower($name);
+        if ($name === '' || isset($seen[$k])) continue;
+        $seen[$k] = true;
+        $m = array_map('intval', is_array($a['members'] ?? null) ? $a['members'] : []);
+        $out[] = ['name' => $name, 'members' => array_values(array_unique(array_filter($m, fn($i) => in_array($i, $ids, true))))];
+    }
+    return json_encode($out, JSON_UNESCAPED_UNICODE);
+}
+/**
+ * Add $label to the activity of absolute shifts $from..$to (a day has $spd of them), after what is
+ * there already ("Make camp; Long Rest"), or take it back out ($add false). A shift that already
+ * lists it is left alone.
+ */
+function label_shifts(int $cid, int $spd, int $from, int $to, string $label, bool $add): void {
+    $st = db()->prepare('SELECT abs_day, shift, activity FROM shifts WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
+    $st->execute([$cid, (int)floor($from / $spd), (int)floor($to / $spd)]);
+    $have = [];
+    foreach ($st->fetchAll() as $r) $have[(int)$r['abs_day'] * $spd + (int)$r['shift']] = (string)$r['activity'];
+    $up = db()->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, activity) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE activity=VALUES(activity)');
+    for ($s = $from; $s <= $to; $s++) {
+        $cur = trim($have[$s] ?? '');
+        $parts = array_values(array_filter(array_map('trim', preg_split('/[;\n]/', $cur)), 'strlen'));
+        $has = in_array($label, $parts, true);
+        if ($add === $has) continue;
+        $new = $add ? ($cur === '' ? $label : rtrim($cur, " \t\n;,") . "; $label")
+            : implode('; ', array_filter($parts, fn($x) => $x !== $label));
+        $d = (int)floor($s / $spd);
+        $up->execute([$cid, $d, $s - $spd * $d, $new === '' ? null : $new]);
+    }
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'days', 'day', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'days', 'day', 'downtimes', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -735,6 +785,81 @@ try {
         if ($owner === false) fail('Note not found', 404);
         if ($role !== 'gm' && (int)$owner !== me()['id']) fail('You can only delete your own notes', 403);
         db()->prepare('DELETE FROM event_notes WHERE id=?')->execute([$nid]);
+        out(['ok' => true]);
+
+    // ===== downtime: rests and downtime, one card each =====
+    case 'downtimes':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $st = db()->prepare('SELECT id, kind, title, start_shift, end_shift, slots, activities_json, notes' . ($isGm ? ', gm_notes' : '')
+            . ' FROM downtimes WHERE campaign_id=? ORDER BY start_shift DESC, id DESC');
+        $st->execute([$cid]);
+        $rows = array_map(function ($r) {
+            foreach (['id', 'start_shift', 'end_shift', 'slots'] as $k) $r[$k] = (int)$r[$k];
+            $r['activities'] = dec($r['activities_json']) ?: [];
+            unset($r['activities_json']);
+            return $r;
+        }, $st->fetchAll());
+        out(['downtimes' => $rows]);
+
+    case 'downtime_save':
+        // The GM makes a card and can change anything on it but its timing. Players can only write its public notes.
+        $cid = cid();
+        $role = role($cid);
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        if ($id) {
+            $st = db()->prepare('SELECT id FROM downtimes WHERE id=? AND campaign_id=?');
+            $st->execute([$id, $cid]);
+            if (!$st->fetchColumn()) fail('Downtime not found', 404);
+            if ($role !== 'gm') {
+                db()->prepare('UPDATE downtimes SET notes=? WHERE id=?')->execute([str_in(p('notes'), 20000), $id]);
+                out(['ok' => true, 'id' => $id]);
+            }
+            db()->prepare('UPDATE downtimes SET title=?, activities_json=?, notes=?, gm_notes=? WHERE id=?')
+                ->execute([trim((string)str_in(p('title'), 200, false)), downtime_activities(p('activities', []), $cid), str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), $id]);
+            out(['ok' => true, 'id' => $id]);
+        }
+        need_gm($cid);
+        $kind = (string)p('kind');
+        if (!isset(DOWNTIME_KINDS[$kind])) fail('Pick a long rest, a short rest or downtime');
+        $c = campaign_row($cid);
+        $spd = downtime_spd($c);
+        if ($kind === 'downtime') {
+            // whole days, from the first shift of the start date to the last of the end date
+            $d0 = int_in(p('start_day')); $d1 = int_in(p('end_day'));
+            if ($d1 < $d0) fail('The end date is before the start date');
+            if (($d1 - $d0 + 1) * $spd > 6000) fail('Downtime can last at most ' . intdiv(6000, $spd) . ' days');
+            $from = $d0 * $spd; $to = $d1 * $spd + $spd - 1; $slots = $to - $from + 1;
+        } else {
+            // a rest starts now and uses up the shifts after the current one; a short rest of 0 just marks the current shift
+            $min = $kind === 'long_rest' ? long_rest_min($c) : 0;
+            $slots = p('slots');
+            if (!is_numeric($slots) || (int)$slots < $min || (int)$slots > 10 * $spd) fail("A " . strtolower(DOWNTIME_KINDS[$kind]) . " takes $min to " . 10 * $spd . ' shifts');
+            $slots = (int)$slots;
+            $now = (int)$c['current_shift'];
+            [$from, $to] = $slots ? [$now + 1, $now + $slots] : [$now, $now];
+        }
+        $pdo = db();
+        $pdo->beginTransaction();
+        $pdo->prepare('INSERT INTO downtimes (campaign_id, kind, title, start_shift, end_shift, slots, activities_json, notes, gm_notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$cid, $kind, trim((string)str_in(p('title'), 200, false)), $from, $to, $slots, downtime_activities(p('activities', []), $cid),
+                str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), me()['id']]);
+        $id = (int)$pdo->lastInsertId();
+        label_shifts($cid, $spd, $from, $to, DOWNTIME_KINDS[$kind], true);
+        $pdo->commit();
+        out(['ok' => true, 'id' => $id, 'start_shift' => $from, 'end_shift' => $to]);
+
+    case 'downtime_delete':
+        // Takes its label back off the shifts it covered; the clock stays where it is.
+        $cid = cid(); need_gm($cid);
+        $st = db()->prepare('SELECT kind, start_shift, end_shift FROM downtimes WHERE id=? AND campaign_id=?');
+        $st->execute([int_in(p('id'), 1), $cid]);
+        $d = $st->fetch();
+        if (!$d) fail('Downtime not found', 404);
+        db()->beginTransaction();
+        if (isset(DOWNTIME_KINDS[$d['kind']])) label_shifts($cid, downtime_spd(campaign_row($cid)), (int)$d['start_shift'], (int)$d['end_shift'], DOWNTIME_KINDS[$d['kind']], false);
+        db()->prepare('DELETE FROM downtimes WHERE id=? AND campaign_id=?')->execute([(int)p('id'), $cid]);
+        db()->commit();
         out(['ok' => true]);
 
     default:
