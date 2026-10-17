@@ -23,7 +23,11 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await form.getByRole("combobox", { name: /^Shift Start/ }).selectOption({ label: "Dawn" });
   await expect(form.getByRole("combobox", { name: /^Shift End/ })).toHaveValue("0");   // follows Shift Start
   await form.getByRole("combobox", { name: /^Shift End/ }).selectOption({ label: "Midday" });
-  await form.getByRole("button", { name: "Battle", exact: true }).click();
+  const battle = form.getByRole("button", { name: "Battle", exact: true });
+  await expect(battle).toHaveCSS("border-color", "rgb(185, 28, 28)");      // each tag shows its colour
+  await expect(battle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await battle.click();
+  await expect(battle).toHaveCSS("background-color", "rgb(185, 28, 28)");  // and fills in when picked
   await form.getByLabel("New tag name").fill("Siege");
   await form.getByRole("button", { name: "+ Add tag" }).click();
   await expect(form.getByRole("button", { name: "Siege", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -54,5 +58,33 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await page.goto(`index.html#/c/${cid}/day/7`);
   await page.getByRole("link", { name: "Go to today" }).click();
   await expect(page).toHaveURL(/#\/c\/\d+\/day\/2$/);
+  expectNoErrors(errors);
+});
+
+test("a player who may add events can tag them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Mara"), player = person("Nils");
+  const gctx = await browser.newContext();
+  const gp = await gctx.newPage();
+  await signIn(gp, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(gp, `Player tags ${gm.id}`);
+  expect((await api(gp, "campaign_update", { settings: { players_can_add_events: true } }, cid)).status).toBe(200);
+  await signIn(page, player);
+  await approve(browser, player.email);
+  expect((await api(gp, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  await gctx.close();
+
+  await page.goto(`index.html#/c/${cid}/day/3`);
+  await page.getByRole("button", { name: "+ Add event" }).click();
+  const form = page.locator("form.event");
+  await form.getByLabel("Title", { exact: true }).fill("Harvest dance");
+  const party = form.getByRole("button", { name: "Party", exact: true });
+  await party.click();
+  await expect(party).toHaveAttribute("aria-pressed", "true");
+  await expect(party).toHaveCSS("background-color", "rgb(219, 39, 119)");
+  await form.getByRole("button", { name: "Add event" }).click();
+  await expect(page.getByText("Event saved")).toBeVisible();
+  await expect(page.locator(".event", { hasText: "Harvest dance" }).locator(".chip.tag")).toHaveText(["Party"]);
   expectNoErrors(errors);
 });

@@ -943,8 +943,11 @@
     const list = el('div', { class: 'tagpick' });
     const draw = () => list.replaceChildren(...[...known.values()].sort((a, b) => a.name.localeCompare(b.name)).map(t => {
       const k = key(t), sel = on.has(k);
-      return el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), style: { '--tag': t.color }, 'aria-pressed': String(sel),
-        onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, t.name);
+      const b = el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
+        'data-tip': sel ? `Tagged ${t.name}. Click to take it off` : `Click to tag this event ${t.name}`,
+        onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, sel ? '✓ ' : ''), t.name);
+      b.style.setProperty('--tag', t.color); // el()'s style object can't set custom properties
+      return b;
     }));
     const PALETTE = ['#2563eb', '#0891b2', '#16a34a', '#9333ea', '#e11d48', '#ea580c', '#4d7c0f', '#0f766e'];
     const name = el('input', { maxlength: 40, placeholder: 'New tag', 'aria-label': 'New tag name' });
