@@ -35,7 +35,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '5';
+  const APP_VERSION = '6';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -701,7 +701,7 @@
   }
 
   // ------------------------------------------------------------ day drill-down
-  /** current: the Current Day tab, which shows today with the current shift up front. */
+  /** current: the Current Day tab, which opens on today with the current shift up front and can step to other days. */
   async function viewDay(d, current = false) {
     const c = cal(), names = shiftNames();
     const r = await api('day', { query: { cid: S.camp.id, d } });
@@ -717,7 +717,13 @@
       current ? 'Open the calendar on this day' : 'Return to the calendar, showing this day');
     const exportBtn = btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
       'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here');
-    const nav = current ? el('div', { class: 'calbar' }, el('h2', {}, E.fmtDate(c, d)), toCalendar, exportBtn) : el('div', { class: 'calbar' },
+    const tabDay = n => `#/c/${S.camp.id}/${current ? `today/${n}` : `day/${n}`}`;
+    const nav = current ? el('div', { class: 'calbar' },
+      el('a', { class: 'button small', href: tabDay(d - 1) }, '◀ Previous day'),
+      el('h2', {}, E.fmtDate(c, d)),
+      el('a', { class: 'button small', href: tabDay(d + 1) }, 'Next day ▶'),
+      d !== today() ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/today`, 'data-tip': 'Back to the campaign\'s current day' }, 'Return to today') : null,
+      toCalendar, exportBtn) : el('div', { class: 'calbar' },
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
@@ -729,7 +735,9 @@
     const overview = el('div', { class: 'card' },
       el('div', { class: 'kv' },
         el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
-        el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
+        el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—',
+          !isGM() && row.locations ? el('span', { class: 'lbl', style: { marginTop: '8px' } }, 'Locations visited') : null,
+          !isGM() && row.locations ? el('span', { class: 'pre' }, row.locations) : null),
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
@@ -748,23 +756,36 @@
       (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
       r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
-    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? nowHero(d, region, sws, shifts) : null, overview,
+    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts) : null, overview,
       el('h3', { class: 'pad' }, 'Shifts', tip(SHIFT_TIP)), shiftCards, evCard);
   }
 
-  /** The Current Day tab's banner: the shift the campaign clock is on, large, and the day's four shifts at a glance. */
-  function nowHero(d, region, sws, shifts) {
-    const c = cal(), names = shiftNames(), sh = E.mod(nowShift(), 4);
-    const sw = sws[sh] || null, def = sw ? E.WEATHER[sw.type] || {} : null;
-    const v = E.visibility(c, region, sw, d, sh, shifts[sh]?.visibility_override);
-    return el('section', { class: 'card dayhero' },
-      el('div', { class: 'dh-now' },
+  /** The Current Day tab's banner and the day's four shifts at a glance. On today it shows the shift the campaign
+   * clock is on, large; on any other day, the day's forecast (what the player may see of it). */
+  function dayHero(d, region, w, sws, shifts) {
+    const c = cal(), names = shiftNames(), isToday = d === today();
+    const sh = isToday ? E.mod(nowShift(), 4) : d < today() ? 4 : -1; // which shifts have passed
+    let main;
+    if (isToday) {
+      const sw = sws[sh] || null, def = sw ? E.WEATHER[sw.type] || {} : null;
+      const v = E.visibility(c, region, sw, d, sh, shifts[sh]?.visibility_override);
+      main = el('div', { class: 'dh-now' },
         el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
         el('div', {},
           el('div', { class: 'lbl' }, 'Now'),
           el('div', { class: 'dh-shift' }, names[sh]),
           el('div', {}, weatherText(sw, `Weather this ${names[sh]}`), ' ', visPill(v)),
-          shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, shifts[sh].activity) : null)),
+          shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, shifts[sh].activity) : null));
+    } else {
+      const def = w ? E.WEATHER[w.type] || {} : null;
+      main = el('div', { class: 'dh-now' },
+        el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
+        el('div', {},
+          el('div', { class: 'lbl' }, d < today() ? 'Past day' : 'Coming day'),
+          el('div', { class: 'dh-shift' }, w ? def.label || w.type : isGM() ? 'No weather recorded' : 'Weather not known yet'),
+          w ? el('div', {}, weatherText(w)) : null));
+    }
+    return el('section', { class: 'card dayhero' }, main,
       el('div', { class: 'dh-strip' }, [0, 1, 2, 3].map(i => {
         const x = sws[i] || null, cls = ['dh-step'];
         if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
@@ -782,9 +803,12 @@
     const wind = select(E.WIND.map((n, i) => [i, n]), w?.wind || 0, { name: 'wind' });
     const notes = el('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
     const gmn = el('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
+    const locs = el('textarea', { name: 'locations', rows: 2, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
-        field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+        el('div', { class: 'stack' },
+          field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+          field('Locations visited', locs, null, 'The towns, sites and buildings the party went to this day. Players can see this')),
         field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           'Set the day\'s weather by hand. Rain, fog, snow and the like lower visibility; see the shift cards below for the exact effect.'),
         field('Day notes (players can see)', notes),
@@ -794,7 +818,7 @@
           const reg = regionById(regSel.value) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
-          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
           route();
         }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
         d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small',
@@ -808,7 +832,7 @@
         weather = withShiftWx(d, regionById(regSel.value) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
       try {
-        await post('day_update', { abs_day: d, region_id: regSel.value || null, weather, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+        await post('day_update', { abs_day: d, region_id: regSel.value || null, weather, notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
         toast('Day saved'); route();
       } catch (err) { toast(err.message, true); }
     });
@@ -1615,6 +1639,7 @@
         await loadCampaign(cid);
         const tab = parts[2] || 'today';
         if (tab === 'day') return await viewDay(Number(parts[3]));
+        if (tab === 'today' && parts[3]) return await viewDay(Number(parts[3]), true);
         const viewToday = () => viewDay(today(), true);
         return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
       }

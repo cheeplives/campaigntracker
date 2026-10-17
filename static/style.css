@@ -76,6 +76,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-dir
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .row.spread { justify-content: space-between; margin-top: 0; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 16px; }
+.stack { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 4px 16px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
 .field[hidden] { display: none; }

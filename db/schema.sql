@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS days (
   weather_json TEXT,
   notes TEXT,
   gm_notes TEXT,
+  locations TEXT,
   PRIMARY KEY (campaign_id, abs_day),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL
