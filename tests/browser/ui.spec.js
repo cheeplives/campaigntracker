@@ -43,3 +43,14 @@ test("fonts are served from this site, not a third party", async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
   expect(outside).toEqual([]);
 });
+
+test("the favicon and touch icon are linked and served as images", async ({ page, request }) => {
+  await page.goto("index.html");
+  const hrefs = await page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll(ls => ls.map(l => l.href));
+  expect(hrefs.length).toBe(3);
+  for (const href of [...hrefs, new URL("favicon.ico", page.url()).href]) {
+    const res = await request.get(href);
+    expect(res.ok(), href).toBe(true);
+    expect(res.headers()["content-type"], href).toMatch(/^image\//);
+  }
+});

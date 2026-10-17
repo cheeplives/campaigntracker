@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Campaign Chronicle: a brass crescent moon and star on the dark parchment
+       panel, in the app's palette (--panel #211e17, --accent #d9a441, --text #ece4d2). -->
+  <defs>
+    <mask id="crescent">
+      <rect width="64" height="64" fill="#fff"/>
+      <circle cx="39" cy="27" r="15" fill="#000"/>
+    </mask>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#211e17" stroke="#d9a441" stroke-width="3"/>
+  <circle cx="29" cy="34" r="19" fill="#d9a441" mask="url(#crescent)"/>
+  <path d="M46 12l2.4 6.6L55 21l-6.6 2.4L46 30l-2.4-6.6L37 21l6.6-2.4z" fill="#ece4d2"/>
+</svg>
