@@ -35,6 +35,9 @@ test("switching time mode moves the clock, activities and events to the same tim
   await api(page, "event_save", { abs_day: 2, shift: 2, shift_end: 3, title: "Feast" }, cid);
   await api(page, "event_save", { abs_day: 2, title: "Fair" }, cid);
   const calendar = async () => (await api(page, "campaign", undefined, cid)).json.campaign;
+  // A rest from Midday of day 2 to Dawn of day 3, and a short rest that cost no shift at Dawn of day 2.
+  sql(`INSERT INTO downtimes (campaign_id, kind, start_shift, end_shift, slots) VALUES (${cid}, 'long_rest', 9, 12, 4), (${cid}, 'short_rest', 8, 8, 0)`);
+  const rests = () => sql(`SELECT start_shift, end_shift, slots FROM downtimes WHERE campaign_id = ${cid} ORDER BY id`).trim().split("\n");
 
   // Four shifts to hours: Dawn is 06:00, Midday 12:00, and the overnight shift runs to 05:00 the next day.
   let c = await calendar();
@@ -45,6 +48,7 @@ test("switching time mode moves the clock, activities and events to the same tim
   const events = () => sql(`SELECT title, abs_day, IFNULL(end_day, '-'), IFNULL(shift, '-'), IFNULL(shift_end, '-') FROM events WHERE campaign_id = ${cid} ORDER BY id`).trim().split("\n");
   expect(events()).toEqual(["Feast\t2\t3\t18\t5", "Fair\t2\t-\t-\t-"]);
   expect(sql(`SELECT abs_day, shift FROM shift_notes WHERE campaign_id = ${cid}`).trim()).toBe("2\t18");
+  expect(rests()).toEqual(["60\t83\t24", "54\t54\t0"]);
 
   // Hours to two shifts: the morning's activities join in Day, the evening is Night.
   c = await calendar();

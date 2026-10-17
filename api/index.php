@@ -219,7 +219,7 @@ function convert_slot(int $a, ?array $from, ?array $to, bool $end = false): int 
     return $end ? (int)ceil($x - 1e-9) - 1 : (int)floor($x + 1e-9);
 }
 /**
- * Move a campaign's clock, shift activities, shift notes and timed events from calendar $old's slots to
+ * Move a campaign's clock, shift activities, shift notes, timed events and rests from calendar $old's slots to
  * $new's, after its time mode (or its hours per day, in hours mode) changes. Activities that end up in
  * the same slot are joined. All-day events and the days themselves don't move.
  */
@@ -267,6 +267,17 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
         $b = max($a, convert_slot($endDay * $n0 + $endShift, $old, $new, true));
         [$d0, $s0] = $split($a); [$d1, $s1] = $split($b);
         $up->execute([$d0, $d1 > $d0 ? $d1 : null, $s0, $s1, $e['id']]);
+    }
+
+    // Rests and downtime keep absolute slots; a short rest that cost no shift (slots 0) stays a single moment.
+    $st = $pdo->prepare('SELECT id, start_shift, end_shift, slots FROM downtimes WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE downtimes SET start_shift=?, end_shift=?, slots=? WHERE id=?');
+    foreach ($st->fetchAll() as $r) {
+        $a = convert_slot((int)$r['start_shift'], $old, $new);
+        if ((int)$r['slots'] === 0) { $up->execute([$a, $a, 0, $r['id']]); continue; }
+        $b = max($a, convert_slot((int)$r['end_shift'], $old, $new, true));
+        $up->execute([$a, $b, $b - $a + 1, $r['id']]);
     }
 }
 
