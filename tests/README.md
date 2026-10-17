@@ -39,7 +39,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   saves today's shift weather; players get today's weather only up to the current
   shift (never the forecast), nothing for later days, and everything once allowed.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
-  their own text, and it saves.
+  their own text, and it saves; a player names their character on the Members tab, and
+  their shift notes and events are signed with it; the GM adds shift notes too.
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.

@@ -740,7 +740,8 @@
 
     // --- shifts
     const sws = shiftWx(d, region, w);
-    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i => shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i])));
+    const shiftCards = el('div', { class: 'shifts' }, [0, 1, 2, 3].map(i =>
+      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i))));
 
     // --- events
     const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
@@ -815,7 +816,7 @@
   }
 
   /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
-  function shiftCard(d, i, s, region, sw, hiddenWx) {
+  function shiftCard(d, i, s, region, sw, hiddenWx, notes) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * 4 + i === nowShift();
@@ -825,7 +826,7 @@
         : hiddenWx ? el('div', { class: 'small muted', 'data-tip': 'Players see each shift\'s weather once the campaign clock reaches it' }, 'Weather not known yet') : null,
       el('small', { class: 'muted', 'data-tip': 'How the visibility score was worked out: base light for the shift, then moonlight, weather and terrain' }, v.parts.join(' · ')));
     if (!isGM()) {
-      card.append(el('p', { class: 'pre' }, s.activity || el('span', { class: 'muted' }, 'No activity recorded.')));
+      card.append(el('p', { class: 'pre' }, s.activity || el('span', { class: 'muted' }, 'No activity recorded.')), shiftNotes(d, i, notes));
       return card;
     }
     const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: 'What the party does this shift', 'data-tip': 'Players can see this' });
@@ -844,8 +845,33 @@
     }));
     card.append(pick, act, hint, gmn, el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
       tip('Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this shift, e.g. a magical darkness or a burning city.')), save,
-      !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small', 'Move the campaign clock to this shift') : null));
+      !isNow ? btn('Set as now', async () => { await passShifts(d * 4 + i - nowShift()); route(); }, 'small', 'Move the campaign clock to this shift') : null),
+      shiftNotes(d, i, notes));
     return card;
+  }
+
+  /** Who wrote something: their character name, with the player's own name on hover when it differs. */
+  function byline(x) {
+    const who = x.author || 'unknown';
+    return x.player && x.player !== who ? el('span', { 'data-tip': `Played by ${x.player}` }, who) : who;
+  }
+
+  /** Free notes at the foot of a shift card, separate from events. Anyone in the campaign can add one. */
+  function shiftNotes(d, i, notes) {
+    const list = notes.map(n => el('div', { class: 'enote' },
+      el('div', { class: 'pre' }, n.body),
+      el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
+          if (!await confirmDialog('Delete this note?')) return;
+          try { await post('shift_note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+        }, 'link small'), 'Delete this note') : null)));
+    const input = el('textarea', { rows: 4, placeholder: 'Notes', 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
+    const add = btn('Add note', null, 'small', 'Add your note to this shift, signed with your character name');
+    add.addEventListener('click', busy(add, async () => {
+      if (!input.value.trim()) return;
+      await post('shift_note_add', { abs_day: d, shift: i, body: input.value }, S.camp.id); route();
+    }));
+    return el('div', { class: 'shiftnotes' }, el('span', { class: 'lbl' }, 'Notes'), el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
 
   function eventView(e, d) {
@@ -855,7 +881,7 @@
     const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
     const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote' },
       el('div', { class: 'pre' }, n.body),
-      el('small', { class: 'muted' }, `— ${n.author || 'unknown'}, ${n.created_at}`,
+      el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
         (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
           if (!await confirmDialog('Delete this note?')) return;
           try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
@@ -872,7 +898,7 @@
         el('small', { class: 'muted' }, shiftRange(e), span)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.body ? el('p', { class: 'pre' }, e.body) : null,
-      el('small', { class: 'muted' }, `Added by ${e.author || 'unknown'}`),
+      el('small', { class: 'muted' }, 'Added by ', byline(e)),
       (isGM() || mine) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
         btn('Delete', async () => {
@@ -1349,13 +1375,25 @@
   // ------------------------------------------------------------ members tab
   function viewMembers() {
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
-      S.members.map(m => el('div', { class: 'listrow' },
-        el('div', {}, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
-          el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
-        isGM() ? el('div', { class: 'actions' }, btn('Remove', async () => {
-          if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
-          try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Take them out of this campaign. Their account stays')) : null)));
+      S.members.map(m => {
+        const self = Number(m.id) === S.user.id;
+        return el('div', { class: 'listrow' },
+          el('div', {}, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player'),
+            el('div', { class: 'small' }, el('span', { class: 'lbl' }, 'Character '),
+              m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet'))),
+          el('div', { class: 'actions' },
+            (self || isGM()) ? btn(m.character_name ? 'Rename character' : 'Set character', async () => {
+              const name = await promptDialog(self ? 'Your character\'s name in this campaign:' : `${m.display_name}'s character name:`,
+                { value: m.character_name || '', placeholder: 'Leave empty to use their own name', ok: 'Save' });
+              if (name === null) return;
+              try { await post('member_character', { user_id: m.id, character_name: name }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+            }, 'small', 'Events and notes they add are signed with this name instead of their own') : null,
+            isGM() ? btn('Remove', async () => {
+              if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
+              try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+            }, 'small danger', 'Take them out of this campaign. Their account stays') : null));
+      }));
     if (isGM()) {
       // Pick from the site's approved accounts, or type a full email for someone not in the list.
       let candidates = [];

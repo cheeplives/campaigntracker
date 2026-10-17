@@ -45,6 +45,11 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/002_event_shifts_tags.sql');
             $msg .= ' Events now have Shift Start/End and tags; existing events are unchanged.';
         }
+        // schema.sql only creates missing tables, so columns added later come from their migration.
+        if (!$pdo->query("SHOW COLUMNS FROM campaign_members LIKE 'character_name'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/003_shift_notes_characters.sql');
+            $msg .= ' Added character names and shift notes.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();

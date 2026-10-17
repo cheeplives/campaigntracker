@@ -185,6 +185,10 @@ button.tagopt.on { background: var(--tag); color: #fff; text-shadow: 0 1px 1px r
 .shiftcard.now { border: 2px solid var(--accent); }
 .shiftcard .actpick { align-self: flex-start; max-width: 100%; }
 .shiftcard .actpick + textarea + small:empty { display: none; }
+.shiftnotes { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
+.shiftnotes .enotes { margin-top: 0; }
+.shiftnotes .enotes:empty { display: none; }
+.charname { font-style: italic; }
 .event { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; background: var(--panel-2); }
 .event.secret { border-left: 4px solid var(--secret); }
 .event.editing { border-color: var(--accent); }

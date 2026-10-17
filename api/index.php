@@ -165,6 +165,9 @@ function campaign_row(int $cid): array {
     if (!$c) fail('Campaign not found', 404);
     return $c;
 }
+/** SQL for how a writer is labelled in campaign $cid: their character name, else their account name.
+ * Needs the users row joined as u and their campaign_members row LEFT JOINed as m. */
+const AUTHOR_SQL = "COALESCE(NULLIF(m.character_name, ''), u.display_name)";
 function campaign_settings(int $cid): array { return dec(campaign_row($cid)['settings_json']) ?: []; }
 function floordiv4(int $n): int { return (int)floor($n / 4); }
 /** The calendar's shift order: 'dawn' once a day runs Dawn first, 'overnight' for the original order. */
@@ -350,10 +353,10 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
-        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role']], $members);
+        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid)]);
 
     case 'campaign_create':
@@ -444,6 +447,17 @@ try {
         $isGmTarget->execute([$cid, $uid]);
         if ($isGmTarget->fetchColumn() === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
+        out(['ok' => true]);
+
+    case 'member_character': // a player names their own character; a GM can name anyone's
+        $cid = cid();
+        $uid = int_in(p('user_id', me()['id']), 1);
+        if ($uid !== me()['id']) need_gm($cid); else role($cid);
+        $name = trim((string)str_in(p('character_name'), 150, false));
+        $chk = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
+        $chk->execute([$cid, $uid]);
+        if (!$chk->fetchColumn()) fail('Only campaign members can have a character name', 404);
+        db()->prepare('UPDATE campaign_members SET character_name=? WHERE campaign_id=? AND user_id=?')->execute([$name, $cid, $uid]);
         out(['ok' => true]);
 
     // ===== regions =====
@@ -540,21 +554,30 @@ try {
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
         $st->execute([$cid, $ad]);
         $shifts = $st->fetchAll();
-        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, e.created_by, u.display_name AS author FROM events e LEFT JOIN users u ON u.id=e.created_by WHERE e.campaign_id=? AND e.abs_day <= ? AND COALESCE(e.end_day, e.abs_day) >= ?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.shift IS NULL DESC, e.shift, e.id');
+        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, e.created_by, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+            FROM events e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
+            WHERE e.campaign_id=? AND e.abs_day <= ? AND COALESCE(e.end_day, e.abs_day) >= ?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.shift IS NULL DESC, e.shift, e.id');
         $st->execute([$cid, $ad, $ad]);
         $events = $st->fetchAll();
         if ($events) {
             $ids = array_column($events, 'id');
             $in = implode(',', array_fill(0, count($ids), '?'));
-            $st = db()->prepare("SELECT n.id, n.event_id, n.user_id, n.body, n.created_at, u.display_name AS author FROM event_notes n LEFT JOIN users u ON u.id=n.user_id WHERE n.event_id IN ($in) ORDER BY n.created_at");
-            $st->execute($ids);
+            $st = db()->prepare('SELECT n.id, n.event_id, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . " AS author, u.display_name AS player
+                FROM event_notes n LEFT JOIN users u ON u.id=n.user_id LEFT JOIN campaign_members m ON m.campaign_id=? AND m.user_id=n.user_id
+                WHERE n.event_id IN ($in) ORDER BY n.created_at");
+            $st->execute([$cid, ...$ids]);
             $notes = [];
             foreach ($st->fetchAll() as $n) $notes[$n['event_id']][] = $n;
             foreach ($events as &$e) $e['notes'] = $notes[$e['id']] ?? [];
             unset($e);
             attach_tags($events);
         }
-        out(['day' => $day, 'shifts' => $shifts, 'events' => $events, 'today' => $today]);
+        $st = db()->prepare('SELECT n.id, n.shift, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+            FROM shift_notes n LEFT JOIN users u ON u.id=n.user_id LEFT JOIN campaign_members m ON m.campaign_id=n.campaign_id AND m.user_id=n.user_id
+            WHERE n.campaign_id=? AND n.abs_day=? ORDER BY n.created_at, n.id');
+        $st->execute([$cid, $ad]);
+        $shiftNotes = $st->fetchAll();
+        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'events' => $events, 'today' => $today]);
 
     case 'days_save': // GM: batch upsert generated weather (+ region) — never touches notes
         $cid = cid(); need_gm($cid);
@@ -607,6 +630,27 @@ try {
         db()->beginTransaction();
         for ($s = $from; $s <= $to; $s++) $st->execute([$cid, floordiv4($s), $s - 4 * floordiv4($s), $act]);
         db()->commit();
+        out(['ok' => true]);
+
+    case 'shift_note_add': // anyone in the campaign, GM or player
+        $cid = cid();
+        role($cid);
+        $text = trim((string)str_in(p('body'), 5000, false));
+        if ($text === '') fail('Note is empty');
+        db()->prepare('INSERT INTO shift_notes (campaign_id, abs_day, shift, user_id, body) VALUES (?,?,?,?,?)')
+            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, 3), me()['id'], $text]);
+        out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
+
+    case 'shift_note_delete':
+        $cid = cid();
+        $role = role($cid);
+        $nid = int_in(p('id'), 1);
+        $st = db()->prepare('SELECT user_id FROM shift_notes WHERE id=? AND campaign_id=?');
+        $st->execute([$nid, $cid]);
+        $owner = $st->fetchColumn();
+        if ($owner === false) fail('Note not found', 404);
+        if ($role !== 'gm' && (int)$owner !== me()['id']) fail('You can only delete your own notes', 403);
+        db()->prepare('DELETE FROM shift_notes WHERE id=?')->execute([$nid]);
         out(['ok' => true]);
 
     // ===== events & notes =====
