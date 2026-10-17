@@ -30,6 +30,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **campaign**: a GM creates a campaign and every tab renders with no script
   errors; members are added by sign-in email, only once approved; players never
   receive secret events.
+- **events**: an event runs from a Shift Start to a Shift End (Shift End follows
+  Shift Start) or all day, takes starter and new tags whose colours show in week
+  view, an event saved the old way still shows, and Go to today opens today.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),

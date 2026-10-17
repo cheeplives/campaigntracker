@@ -115,7 +115,8 @@ CREATE TABLE IF NOT EXISTS events (
   campaign_id INT UNSIGNED NOT NULL,
   abs_day BIGINT NOT NULL,
   end_day BIGINT NULL,
-  shift TINYINT UNSIGNED NULL,
+  shift TINYINT UNSIGNED NULL,                      -- first shift; NULL = all day
+  shift_end TINYINT UNSIGNED NULL,                  -- last shift (on end_day if set); NULL = same as shift
   title VARCHAR(200) NOT NULL,
   body TEXT,
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
@@ -125,6 +126,26 @@ CREATE TABLE IF NOT EXISTS events (
   INDEX idx_events_day (campaign_id, abs_day),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Event tags ("Battle", "Festival"...), per campaign, each with a colour.
+-- The starter tags in api/index.php are offered to every campaign and get a row
+-- here the first time an event uses them.
+CREATE TABLE IF NOT EXISTS tags (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  name VARCHAR(40) NOT NULL,
+  color VARCHAR(16) NOT NULL DEFAULT '#6b7280',
+  UNIQUE KEY uq_tag_name (campaign_id, name),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS event_tags (
+  event_id INT UNSIGNED NOT NULL,
+  tag_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (event_id, tag_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS event_notes (

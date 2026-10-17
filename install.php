@@ -1,7 +1,7 @@
 <?php
 /**
- * Installer: creates the tables on a fresh database, or upgrades an install made
- * before Google/GitHub sign-in by running db/migrations/001_oauth_signin.sql.
+ * Installer: creates the tables on a fresh database, or upgrades an older install
+ * by running the files in db/migrations/ it still needs.
  * There is no admin to create here: list your email in admin_identities in the
  * config and your first sign-in is approved as admin.
  * After it succeeds, set 'allow_install' => false in the config (or delete this file).
@@ -38,6 +38,12 @@ if (!cfg('allow_install')) {
         } else {
             run_sql_file($pdo, __DIR__ . '/db/schema.sql');
             $msg = 'Tables are ready.';
+        }
+        // Event shift ranges and tags. schema.sql already made the new tables,
+        // so on an older install this only adds the events.shift_end column.
+        if (!$pdo->query("SHOW COLUMNS FROM events LIKE 'shift_end'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/002_event_shifts_tags.sql');
+            $msg .= ' Events now have Shift Start/End and tags; existing events are unchanged.';
         }
         $ok = true;
     } catch (Throwable $e) {
