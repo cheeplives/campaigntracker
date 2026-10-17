@@ -794,8 +794,33 @@
       })));
   }
 
+  /** A region select with a "Custom…" choice that shows a name box. resolve() returns the picked region id ('' for the
+   * lead option); a custom name is first saved as a new region, starting from the party's current region's conditions. */
+  function regionPicker(lead, value, attrs) {
+    const sel = select([...lead, ...S.regions.map(r => [r.id, r.name]), ['custom', 'Custom…']], value, attrs);
+    const name = el('input', { maxlength: 150, placeholder: 'New region name', 'aria-label': 'Custom region name', style: { display: 'none' } });
+    sel.addEventListener('change', () => { name.style.display = sel.value === 'custom' ? '' : 'none'; if (sel.value === 'custom') name.focus(); });
+    const node = el('span', { class: 'row' }, sel, name);
+    const resolve = async () => {
+      if (sel.value !== 'custom') return sel.value;
+      const n = name.value.trim();
+      if (!n) throw new Error('Name the custom region');
+      const same = S.regions.find(r => r.name.toLowerCase() === n.toLowerCase());
+      if (same) return String(same.id);
+      const base = currentRegion();
+      const { id } = await post('region_save', { name: n, description: '', settings: { ...(base?.settings || { climate: 'temperate' }) } }, S.camp.id);
+      S.regions.push({ id, name: n, description: '', settings: { ...(base?.settings || { climate: 'temperate' }) } });
+      S.regions.sort((a, b) => a.name.localeCompare(b.name));
+      sel.insertBefore(el('option', { value: id }, n), sel.lastChild);
+      sel.value = String(id); name.style.display = 'none';
+      toast(`Added region "${n}". Set its climate on the Regions tab`);
+      return String(id);
+    };
+    return { node, sel, resolve };
+  }
+
   function dayEditor(d, row, region, w) {
-    const regSel = select([['', '— (current region)'], ...S.regions.map(r => [r.id, r.name])], row.region_id ?? '', { name: 'region_id' });
+    const regPick = regionPicker([['', '— (current region)']], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
     const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
@@ -807,7 +832,7 @@
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
         el('div', { class: 'stack' },
-          field('Region for this day', regSel, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+          field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
           field('Locations visited', locs, null, 'The towns, sites and buildings the party went to this day. Players can see this')),
         field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           'Set the day\'s weather by hand. Rain, fog, snow and the like lower visibility; see the shift cards below for the exact effect.'),
@@ -815,24 +840,28 @@
         field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save day'),
         tipped(btn('🎲 Re-roll weather', async () => {
-          const reg = regionById(regSel.value) || region;
+          let rid;
+          try { rid = await regPick.resolve(); } catch (err) { return toast(err.message, true); }
+          const reg = regionById(rid) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
-          await post('day_update', { abs_day: d, region_id: regSel.value || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
+          await post('day_update', { abs_day: d, region_id: rid || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
           route();
         }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
         d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * 4 + E.mod(nowShift(), 4) - nowShift()); route(); }, 'small',
           'Move the campaign clock to this day, keeping the same shift') : null));
     f.addEventListener('submit', async e => {
       e.preventDefault();
+      let rid;
+      try { rid = await regPick.resolve(); } catch (err) { return toast(err.message, true); }
       let weather = null;
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
         if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
-        weather = withShiftWx(d, regionById(regSel.value) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
+        weather = withShiftWx(d, regionById(rid) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
       try {
-        await post('day_update', { abs_day: d, region_id: regSel.value || null, weather, notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
+        await post('day_update', { abs_day: d, region_id: rid || null, weather, notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
         toast('Day saved'); route();
       } catch (err) { toast(err.message, true); }
     });
@@ -1116,9 +1145,7 @@
     modeSel.addEventListener('change', drawFields);
     drawFields();
 
-    const regOpts = [['', '— no change —'], ...S.regions.map(r => [r.id, r.name])];
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
-    const travelReg = select(regOpts, ''), arriveReg = select(regOpts, '');
     const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
       field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, 'Overland, sea and air: distance ÷ speed, travelling some of the day\'s four shifts. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
       fieldsWrap,
@@ -1139,6 +1166,7 @@
     });
 
     const departForm = () => {
+      const travelReg = regionPicker([['', '— no change —']], ''), arriveReg = regionPicker([['', '— no change —']], '');
       const useWorld = el('input', { type: 'checkbox' });
       const shiftsFor = () => E.hoursToShifts(cal(), useWorld.checked && result.worldHours ? result.worldHours : result.hours);
       const info = el('small', { class: 'muted' });
@@ -1153,7 +1181,8 @@
         if (n <= 0) throw new Error('Trip is shorter than one shift');
         const label = `In transit${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
         const startDay = today();
-        await passShifts(n, label, travelReg.value || null, arriveReg.value || null);
+        const travelId = await travelReg.resolve(), arriveId = await arriveReg.resolve();
+        await passShifts(n, label, travelId || null, arriveId || null);
         vs().anchor = today();
         await post('event_save', { abs_day: startDay, end_day: today() > startDay ? today() : null, shift: null,
           title: `${label}`, body: result.lines.join('\n'), is_secret: false }, S.camp.id);
@@ -1162,8 +1191,8 @@
       }));
       return el('div', { class: 'depart' }, el('h3', {}, 'Make the trip'),
         el('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
-          field('Region while travelling', travelReg, 'e.g. "Ship interior" so transit days get shipboard conditions'),
-          field('Region on arrival', arriveReg, null, 'The party is moved here when the trip ends'),
+          field('Region while travelling', travelReg.node, 'e.g. "Ship interior" so transit days get shipboard conditions'),
+          field('Region on arrival', arriveReg.node, null, 'The party is moved here when the trip ends'),
           result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
         info, el('div', { class: 'row' }, go),
         el('small', { class: 'muted' }, 'Labels every passed shift with the trip (without overwriting existing activity) and logs a multi-day travel event.'));
