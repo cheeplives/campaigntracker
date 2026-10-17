@@ -43,6 +43,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.
+- **downtime**: a long rest takes at least half the day, labels the shifts after
+  now next to their activity and moves the clock; a short rest of 0 shifts marks the
+  current one; downtime covers whole days and its label comes off when deleted; the GM
+  picks activities, custom ones and players; players see them and edit only the public
+  notes, never the GM notes.
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;

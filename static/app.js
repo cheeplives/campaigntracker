@@ -533,11 +533,12 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     travel: 'Work out how long a journey takes, then pass that much time',
+    downtime: 'Rests and downtime: what the party does, and who does it',
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
@@ -1539,6 +1540,207 @@
     return f;
   }
 
+  // ------------------------------------------------------------ downtime tab
+  /** Shifts in a day: four, or whatever the campaign's time tracking gives where campaigns have a mode. */
+  const dtSpd = () => (E.slotsPerDay ? E.slotsPerDay(cal()) : 4);
+  const dtHours = () => !!E.timeMode && E.timeMode(cal()) === 'hours';
+  const dtWord = n => `${dtHours() ? 'hour' : 'shift'}${n === 1 ? '' : 's'}`;
+  /** The fewest shifts a long rest uses up: half the day (2 of 4 shifts, 1 of 2), or 8 hours. Matches long_rest_min() in api/index.php. */
+  const longRestMin = () => (dtHours() ? Math.min(8, dtSpd()) : Math.max(1, Math.floor(dtSpd() / 2)));
+  const DOWNTIME_KINDS = {
+    long_rest: { label: 'Long Rest', icon: '🛏' },
+    short_rest: { label: 'Short Rest', icon: '☕' },
+    downtime: { label: 'Downtime', icon: '🏠' },
+  };
+  const REST_ACTIVITIES = [
+    ['Tend to Wounds', 'Bind injuries, change dressings and get some health back'],
+    ['Manage Stress', 'Talk it out, pray, meditate or otherwise shake off stress and fear'],
+    ['Repair Gear', 'Mend armour, sharpen blades, patch clothes and fix equipment'],
+    ['Prepare', 'Plan the next move, ready spells, sort supplies or study the map'],
+    ['Relax', 'Eat, drink and take it easy'],
+  ];
+  const DOWNTIME_ACTIVITIES = [
+    ['Work on Project', 'Make progress on a long-term project: a building, a book, a scheme'],
+    ['Crafting', 'Make or improve items, potions or gear'],
+    ['Career Pursuits', 'Work a trade or a job for pay, standing or contacts'],
+    ['Research', 'Dig through libraries, archives and rumours for answers'],
+    ['Recuperate', 'Rest up to recover from lasting injuries, illness or trauma'],
+    ['Train', 'Learn a skill, a language, a tool or a technique'],
+    ['Networking', 'Make contacts, call in favours and hear the news'],
+    ['Acquire an Asset', 'Find and get hold of a mount, property, vehicle, hireling or rare item'],
+    ['Indulge or Carouse', 'Party, gamble and indulge vices to blow off steam, for better or worse'],
+  ];
+  /** The activities offered for a kind of downtime: a long rest has the rest ones plus Work on Project. */
+  const dtOffered = kind => kind === 'downtime' ? DOWNTIME_ACTIVITIES
+    : kind === 'long_rest' ? [...REST_ACTIVITIES, ['Work on Project', 'Put a few hours into a long-term project']] : REST_ACTIVITIES;
+  const dtPlayers = () => S.members.filter(m => m.role === 'player');
+  const memberName = m => m.character_name || m.display_name || m.email;
+
+  async function viewDowntime() {
+    const { downtimes } = await api('downtimes', { query: { cid: S.camp.id } });
+    const head = el('div', { class: 'card' }, el('div', { class: 'row spread' },
+      el('h2', {}, 'Downtime', tip('Rests and stretches of downtime, one card each. Making one writes Long Rest, Short Rest or Downtime into the activity of the shifts it covers, and can move the clock to its end. Pick what the party does on each card and who does it.')),
+      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary', 'Start a long rest, a short rest or some days of downtime') : null),
+      downtimes.length ? null : el('p', { class: 'muted' }, isGM() ? 'No rests or downtime yet. Press New downtime to add one.' : 'No rests or downtime yet.'));
+    mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(downtimeCard)));
+  }
+
+  /** The dialog a new downtime card starts from: what kind, how long, and whether to move the clock. */
+  function downtimeDialog() {
+    hideTip();
+    const spd = dtSpd(), min = longRestMin();
+    const kinds = Object.entries(DOWNTIME_KINDS).map(([k, x]) => el('label', { class: 'inline dt-kind' },
+      el('input', { type: 'radio', name: 'kind', value: k, checked: k === 'long_rest' }), `${x.icon} ${x.label}`));
+    const slots = el('input', { type: 'number', name: 'slots', class: 'w-num', step: 1 });
+    const slotsLbl = el('span', { class: 'lbl' });
+    const slotsHint = el('small', { class: 'muted' });
+    const restField = el('label', { class: 'field' }, slotsLbl, slots, slotsHint);
+    const startDay = datePicker(today()), endDay = datePicker(today() + 6);
+    const dayFields = el('div', {}, field('Start date', startDay), field('End date', endDay, 'Every shift from the start of the first day to the end of the last'));
+    const title = el('input', { name: 'title', maxlength: 200, placeholder: 'e.g. Back at the Grey Lady inn' });
+    const moveClock = el('input', { type: 'checkbox', name: 'move', checked: true });
+    const moveLbl = el('span');
+    const err = el('p', { class: 'bad small', hidden: true });
+    const kind = () => kinds.map(k => k.querySelector('input')).find(i => i.checked).value;
+    const sync = () => {
+      const k = kind(), rest = k !== 'downtime';
+      restField.hidden = !rest; dayFields.hidden = rest;
+      if (rest) {
+        const lo = k === 'long_rest' ? min : 0;
+        slots.min = lo; slots.max = 10 * spd;
+        slots.value = k === 'long_rest' ? min : dtHours() ? 1 : 0;
+        slotsLbl.textContent = `${dtHours() ? 'Hours' : 'Shifts'} used up`;
+        slotsHint.textContent = k === 'long_rest'
+          ? (dtHours() ? `At least ${min} hours.` : `At least ${min} of the day's ${spd} shifts.`)
+          : (dtHours() ? 'About an hour.' : 'About an hour, so it usually costs no shift. 0 marks the current shift only.');
+      }
+      moveLbl.textContent = rest ? ' Move the clock to the end of the rest' : ' Move the clock to the end of the downtime';
+    };
+    kinds.forEach(k => k.addEventListener('change', sync));
+    const create = el('button', { class: 'primary', type: 'submit' }, 'Create');
+    const d = el('dialog', { class: 'kit-dialog dt-dialog', 'aria-label': 'New downtime' },
+      el('form', { novalidate: true },
+        el('h3', {}, 'New downtime'),
+        el('div', { class: 'field', role: 'radiogroup', 'aria-label': 'Kind' }, el('span', { class: 'lbl' }, 'Kind'), el('div', { class: 'row' }, kinds)),
+        restField, dayFields,
+        field('Title (optional)', title),
+        el('label', { class: 'inline' }, moveClock, moveLbl),
+        err,
+        el('div', { class: 'kit-dialog-actions' }, create, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel'))));
+    sync();
+    d.addEventListener('close', () => d.remove());
+    d.querySelector('form').addEventListener('submit', busy(create, async e => {
+      e.preventDefault();
+      err.hidden = true;
+      const k = kind(), body = { kind: k, title: title.value };
+      if (k === 'downtime') {
+        body.start_day = startDay.getAbs(); body.end_day = endDay.getAbs();
+        if (body.end_day < body.start_day) { err.textContent = 'The end date is before the start date.'; err.hidden = false; return; }
+      } else {
+        body.slots = Math.round(Number(slots.value));
+        if (!(body.slots >= Number(slots.min) && body.slots <= Number(slots.max))) {
+          err.textContent = `Enter ${slots.min} to ${slots.max} ${dtWord(2)}.`; err.hidden = false; return;
+        }
+      }
+      try {
+        const r = await post('downtime_save', body, S.camp.id);
+        if (moveClock.checked && r.end_shift > nowShift()) await passShifts(r.end_shift - nowShift());
+      } catch (x) { err.textContent = x.message; err.hidden = false; return; }
+      d.close();
+      toast(`${DOWNTIME_KINDS[k].label} added`);
+      route();
+    }));
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /** When a downtime runs: its dates, or its shifts for a rest. */
+  function downtimeWhen(x) {
+    const c = cal(), n = dtSpd();
+    if (x.kind === 'downtime') {
+      const a = Math.floor(x.start_shift / n), b = Math.floor(x.end_shift / n), days = b - a + 1;
+      return `${E.fmtDate(c, a)}${b > a ? ` → ${E.fmtDate(c, b)}` : ''} · ${days} day${days === 1 ? '' : 's'}`;
+    }
+    if (!x.slots) return `During ${E.fmtShift(c, x.start_shift)} · no ${dtWord(1)} lost`;
+    return `${E.fmtShift(c, x.start_shift)}${x.slots > 1 ? ` → ${E.fmtShift(c, x.end_shift)}` : ''} · ${x.slots} ${dtWord(x.slots)}`;
+  }
+
+  /** One downtime card. The GM picks its activities and who takes part; the public notes are open to everyone. */
+  function downtimeCard(x) {
+    const k = DOWNTIME_KINDS[x.kind] || { label: x.kind, icon: '' };
+    const going = nowShift() >= x.start_shift && nowShift() <= x.end_shift;
+    const players = dtPlayers();
+    const byId = new Map(S.members.map(m => [Number(m.id), m]));
+    const card = el('section', { class: 'card downtime', 'data-kind': x.kind },
+      el('div', { class: 'row spread' },
+        el('h3', {}, `${k.icon} ${k.label}`, x.title ? el('span', { class: 'dt-title' }, ` · ${x.title}`) : null,
+          going ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is inside this one' }, 'NOW') : null),
+        el('small', { class: 'muted' }, downtimeWhen(x))));
+    const notes = el('textarea', { rows: 3, value: x.notes || '', 'aria-label': 'Notes', placeholder: 'Notes for everyone',
+      'data-tip': 'Everyone in the campaign can read and change these' });
+
+    if (!isGM()) {
+      card.append(el('span', { class: 'lbl' }, 'Activities'),
+        x.activities.length ? el('ul', { class: 'dt-acts' }, x.activities.map(a => {
+          const who = a.members.map(id => byId.get(Number(id))).filter(Boolean).map(memberName);
+          return el('li', {}, el('strong', {}, a.name), who.length ? el('span', { class: 'muted' }, ` · ${who.join(', ')}`) : null);
+        })) : el('p', { class: 'muted' }, 'No activities picked yet.'));
+      const save = btn('Save notes', null, 'small primary', 'Save the notes on this card');
+      save.addEventListener('click', busy(save, async () => { await post('downtime_save', { id: x.id, notes: notes.value }, S.camp.id); toast('Notes saved'); }));
+      card.append(field('Notes', notes), el('div', { class: 'row' }, save));
+      return card;
+    }
+
+    // picked: name -> Set of member ids; the offered activities first, then custom ones in the order they were added
+    const picked = new Map(x.activities.map(a => [a.name, new Set(a.members.map(Number))]));
+    const offered = dtOffered(x.kind);
+    const custom = x.activities.map(a => a.name).filter(nm => !offered.some(([o]) => o === nm));
+    const list = el('div', { class: 'dt-acts' });
+    const row = (name, desc) => {
+      const on = picked.has(name);
+      const box = el('input', { type: 'checkbox', checked: on, 'aria-label': name, onchange: () => { box.checked ? picked.set(name, new Set()) : picked.delete(name); draw(); } });
+      const who = on && players.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, players.map(m => {
+        const id = Number(m.id), sel = picked.get(name).has(id);
+        return el('button', { type: 'button', class: 'dt-member' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
+          'data-tip': sel ? `${memberName(m)} is doing this. Click to take them off` : `Click to put ${memberName(m)} on this`,
+          onclick: () => { const s = picked.get(name); s.has(id) ? s.delete(id) : s.add(id); draw(); } }, memberName(m));
+      })) : null;
+      return el('div', { class: 'dt-act' + (on ? ' on' : '') }, el('label', { class: 'inline', 'data-tip': desc || 'A custom activity' }, box, name), who);
+    };
+    const draw = () => list.replaceChildren(...offered.map(([n, desc]) => row(n, desc)), ...custom.map(n => row(n, null)));
+    draw();
+    const customIn = el('input', { maxlength: 100, placeholder: 'Custom activity', 'aria-label': 'Custom activity', class: 'grow' });
+    const addCustom = () => {
+      const n = customIn.value.trim();
+      if (!n) return;
+      const same = [...offered.map(([o]) => o), ...custom].find(o => o.toLowerCase() === n.toLowerCase());
+      if (!same) custom.push(n);
+      if (!picked.has(same || n)) picked.set(same || n, new Set());
+      customIn.value = ''; draw();
+    };
+    customIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); addCustom(); } });
+    const title = el('input', { maxlength: 200, value: x.title || '', 'aria-label': 'Title', placeholder: 'Title (optional)' });
+    const gmn = el('textarea', { rows: 3, value: x.gm_notes || '', 'aria-label': 'GM notes', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
+    const save = btn('Save', null, 'small primary', 'Save this card\'s title, activities and notes');
+    save.addEventListener('click', busy(save, async () => {
+      const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => ({ name: n, members: [...picked.get(n)] }));
+      await post('downtime_save', { id: x.id, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+      toast(`${k.label} saved`); route();
+    }));
+    const del = btn('Delete', async () => {
+      if (!await confirmDialog(`Delete this ${k.label.toLowerCase()}? Its label comes off the shifts it covered; the clock stays where it is.`, { ok: 'Delete', danger: true })) return;
+      try { await post('downtime_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+    }, 'small danger', 'Delete this card');
+    card.append(
+      field('Title', title),
+      el('span', { class: 'lbl' }, 'Activities', tip(players.length ? 'Tick what the party does, then pick which players do each one' : 'Tick what the party does. Add players on the Members tab to put them on activities')),
+      list,
+      el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small', 'Add your own activity to this card')),
+      el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
+      el('div', { class: 'row' }, save, del));
+    return card;
+  }
+
   // ------------------------------------------------------------ members tab
   function viewMembers() {
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
@@ -1793,7 +1995,7 @@
         if (tab === 'day') return await viewDay(Number(parts[3]));
         if (tab === 'today' && parts[3]) return await viewDay(Number(parts[3]), true);
         const viewToday = () => viewDay(today(), true);
-        return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
       }
       await viewCampaigns();
     } catch (err) {

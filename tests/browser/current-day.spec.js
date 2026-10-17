@@ -100,6 +100,8 @@ test("players see today's weather only up to the current shift", async ({ page, 
   await expect(pp.locator(".dh-step-icon")).toHaveText(["?", "?", "?", "?"]);
   await expect(pp.locator(".shiftcard .wx")).toHaveCount(0);
   await pp.getByRole("link", { name: "◀ Previous day" }).click();
+  // wait for day 2 to draw, or the second click lands on day 3's link again
+  await expect(pp.getByRole("link", { name: "◀ Previous day" })).toHaveAttribute("href", new RegExp(`/today/1$`));
   await pp.getByRole("link", { name: "◀ Previous day" }).click();
   await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/today/1$`));
   await expect(pp.locator(".dayhero")).toContainText("Past day");
