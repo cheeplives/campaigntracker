@@ -124,6 +124,8 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .shifts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
 .shiftcard { display: flex; flex-direction: column; gap: 6px; }
 .shiftcard.now { border: 2px solid var(--accent); }
+.shiftcard .actpick { align-self: flex-start; max-width: 100%; }
+.shiftcard .actpick + textarea + small:empty { display: none; }
 .event { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; background: var(--panel-2); }
 .event.secret { border-left: 4px solid var(--secret); }
 .event.editing { border-color: var(--accent); }

@@ -17,6 +17,40 @@
     ['Full', '🌕'], ['Waning gibbous', '🌖'], ['Last quarter', '🌗'], ['Waning crescent', '🌘'],
   ];
 
+  // Baseline things a party can spend a shift doing, drawn from the travel rules of the
+  // Year Zero Engine SRD (one task per character per shift) and The Perilous Wilds
+  // (travel roles, camp and provisions). The GM picks them into a shift's activity text,
+  // which stays free text, so who does what and anything else can be written alongside.
+  const SHIFT_ACTION_GROUPS = { travel: 'On the move', land: 'Living off the land', camp: 'In camp', other: 'Other' };
+  const SHIFT_ACTIONS = [
+    { name: 'March', group: 'travel', icon: '🥾', desc: 'Travel on foot towards the destination. Two shifts of marching a day is comfortable; a third or fourth is a forced march.' },
+    { name: 'Forced march', group: 'travel', icon: '😓', desc: 'Keep moving past the usual two shifts a day. Everyone tests their stamina, and anyone who fails has to stop and rest.' },
+    { name: 'Ride / drive', group: 'travel', icon: '🐎', desc: 'Travel on a mount or in a vehicle. Passengers can keep watch, rest or sleep, but the rider or driver can do nothing else.' },
+    { name: 'Sail / row', group: 'travel', icon: '⛵', desc: 'Travel by boat along a river, across a lake or at sea. Passengers can rest or sleep if they take no other task.' },
+    { name: 'Navigate', group: 'travel', icon: '🧭', desc: 'Pick the route through unfamiliar or dangerous country. Done well, the party makes good time; done badly, it is slowed, strays off course or walks into trouble.' },
+    { name: 'Scout ahead', group: 'travel', icon: '🔭', desc: 'Range ahead of the group to spot shortcuts, shelter, sites worth finding and signs of danger before the rest arrive.' },
+    { name: 'Keep watch', group: 'travel', icon: '👁', desc: 'One lookout watches for threats, and can do so while marching. Without one, the party gets no warning of what is coming.' },
+    { name: 'Forage', group: 'land', icon: '🌿', desc: 'Search the area for edible plants or drinkable water. Searching the same place again yields less each time.' },
+    { name: 'Hunt / trap', group: 'land', icon: '🏹', desc: 'Track game and bring it down, or set snares. The meat still has to be cooked before it is safe to eat.' },
+    { name: 'Fish', group: 'land', icon: '🎣', desc: 'Needs a river, lake or coast and some fishing gear. It can be done from a moving boat.' },
+    { name: 'Gather', group: 'land', icon: '🪵', desc: 'Collect firewood, fuel or other raw materials from the surroundings.' },
+    { name: 'Explore', group: 'land', icon: '🗺', desc: 'Stop the journey to search a site, ruin or landmark. It can take one shift or many, and it leaves no time for rest.' },
+    { name: 'Make camp', group: 'camp', icon: '⛺', desc: 'Find a sheltered spot, light a fire and settle in, usually in the evening. A poor site invites a mishap during the night.' },
+    { name: 'Cook', group: 'camp', icon: '🍲', desc: 'Turn caught or foraged food into safe meals over a fire or in a kitchen. Can happen in the same shift as making camp.' },
+    { name: 'Manage provisions', group: 'camp', icon: '🎒', desc: 'Share out food and water and keep track of what is left. Careful handling stretches the supplies.' },
+    { name: 'Stand guard', group: 'camp', icon: '🛡', desc: 'Stay awake to watch over the camp. The guard needs to sleep in some other shift.' },
+    { name: 'Rest', group: 'camp', icon: '🔥', desc: 'Take it easy and recover from injury and strain. Being interrupted by a fight or similar drama spoils it.' },
+    { name: 'Sleep', group: 'camp', icon: '💤', desc: 'Everyone needs at least one shift of sleep a day, usually overnight. Interrupted sleep does not count.' },
+    { name: 'Repair', group: 'other', icon: '🔧', desc: 'Fix broken gear, a damaged vehicle or a wrecked camp. Serious damage takes a full shift of work.' },
+    { name: 'Tend wounds', group: 'other', icon: '🩹', desc: 'Treat the injured, stop bleeding and nurse the sick.' },
+    { name: 'Socialise / trade', group: 'other', icon: '🗣', desc: 'Spend time with locals or fellow travellers: bargain, buy supplies, gather rumours or carouse.' },
+  ];
+  /** Add an action's name to a shift's activity text, after anything already written there. */
+  function addShiftAction(text, name) {
+    const t = String(text || '').replace(/[\s;,]+$/, '');
+    return t ? `${t}; ${name}` : name;
+  }
+
   const mod = (a, n) => ((a % n) + n) % n;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -997,7 +1031,7 @@
   };
 
   const Engine = {
-    SHIFT_KEYS, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
+    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
