@@ -4,7 +4,7 @@ const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
 
 const shift = (type, temp) => ({ type, temp, wind: 1 });
-const STORMY = { type: "storm", temp: 20, wind: 2, shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
+const STORMY = { type: "storm", temp: 20, wind: 2, shift_order: "overnight", shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
 
 test("a campaign opens on the Current Day tab, and the GM's browser saves today's shift weather", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -19,6 +19,7 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   await expect(page.locator(".shiftcard.now")).toHaveCount(1);
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
+  expect((await today()).shift_order).toBe("overnight");
   await page.getByRole("button", { name: "Show in calendar" }).click();
   await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
   expectNoErrors(errors);
@@ -46,6 +47,14 @@ test("players see today's weather only up to the current shift", async ({ page, 
   const range = (await (await pp.request.get(`api/index.php?a=days&cid=${cid}&from=1&to=3`)).json()).days;
   expect(range.find(x => x.abs_day === 2).weather.shifts).toHaveLength(1);
   expect(JSON.stringify(range.filter(x => x.abs_day >= 2))).not.toContain("storm");
+
+  // A copy saved in a different shift order than the calendar's is never handed out.
+  expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: { ...STORMY, shift_order: "dawn" } }] }, cid)).status).toBe(200);
+  expect(await day(2)).toBeNull();
+  const { shift_order, ...unmarked } = STORMY;
+  expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: unmarked }] }, cid)).status).toBe(200);
+  expect(await day(2)).toBeNull();
+  expect((await api(page, "days_save", { days: [{ abs_day: 2, weather: STORMY }] }, cid)).status).toBe(200);
 
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");

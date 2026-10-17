@@ -99,14 +99,17 @@ function campaign_row(int $cid): array {
 }
 function campaign_settings(int $cid): array { return dec(campaign_row($cid)['settings_json']) ?: []; }
 function floordiv4(int $n): int { return (int)floor($n / 4); }
+/** The calendar's shift order: 'dawn' once a day runs Dawn first, 'overnight' for the original order. */
+function shift_order(array $campaign): string { return (string)((dec($campaign['calendar_json']) ?: [])['shiftOrder'] ?? 'overnight'); }
 
 /**
  * A day's weather as this user may see it. Players without future weather get nothing for days after
  * today, and for today only the shifts up to the current one: the weather fields are the current
  * shift's, never the day's forecast (which is the worst the day brings, so it would give later shifts
- * away). The shifts come from the copy the GM's browser saves with the forecast; without it, nothing.
+ * away). The shifts come from the copy the GM's browser saves with the forecast, and only count if it
+ * was saved in the calendar's current shift order ($shiftOrder); otherwise players get nothing.
  */
-function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFuture) {
+function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFuture, string $shiftOrder) {
     $w = dec($json);
     $today = floordiv4($currentShift);
     if (!$hideFuture || $w === null || $ad < $today) return $w;
@@ -114,7 +117,7 @@ function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFu
     $shifts = is_array($w['shifts'] ?? null) ? array_values($w['shifts']) : [];
     $seen = array_slice($shifts, 0, $currentShift - 4 * $today + 1);
     $now = end($seen);
-    if (count($shifts) !== 4 || !is_array($now)) return null;
+    if (count($shifts) !== 4 || !is_array($now) || ($w['shift_order'] ?? null) !== $shiftOrder) return null;
     return ['type' => $now['type'] ?? null, 'temp' => $now['temp'] ?? null, 'wind' => $now['wind'] ?? 0,
         'season' => $w['season'] ?? null, 'shifts' => $seen, 'partial' => true];
 }
@@ -352,6 +355,7 @@ try {
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv4((int)$c['current_shift']);
         $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
+        $order = shift_order($c);
 
         $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes FROM days WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
         $st->execute([$cid, $from, $to]);
@@ -361,7 +365,7 @@ try {
             $days[] = [
                 'abs_day' => $ad,
                 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture),
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order),
                 'has_notes' => ($d['notes'] ?? '') !== '' || ($isGm && ($d['gm_notes'] ?? '') !== ''),
             ];
         }
@@ -387,8 +391,9 @@ try {
         $day = null;
         if ($d) {
             $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
+            $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture), 'notes' => $d['notes']];
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order), 'notes' => $d['notes']];
             if ($isGm) $day['gm_notes'] = $d['gm_notes'];
         }
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');

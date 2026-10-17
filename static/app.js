@@ -99,7 +99,7 @@
       if (row && row.weather) {
         // stored before shift weather was saved, or the engine has changed it since: refresh the copy players get
         const fresh = withShiftWx(d, regionById(row.region_id) || currentRegion(), row.weather);
-        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts)) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
+        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts) || fresh.shift_order !== row.weather.shift_order) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
         prev = row.weather; continue;
       }
       const reg = (row && regionById(row.region_id)) || region;
@@ -190,10 +190,11 @@
    * without future weather gets only the shifts so far from the server (w.partial), never the forecast. */
   const shiftWx = (d, region, w) => w?.partial ? w.shifts : E.shiftWeather(cal(), S.camp.seed, region, d, w);
   /** Day weather as the GM saves it: the forecast plus its four shifts, so the server can hand players
-   * today's shifts one at a time without sending the forecast. */
+   * today's shifts one at a time without sending the forecast. shift_order records the calendar's shift
+   * order they were saved in; the server ignores a copy saved in another order. */
   function withShiftWx(d, region, w) {
-    const { shifts, ...forecast } = w;
-    return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast) };
+    const { shifts, shift_order, ...forecast } = w;
+    return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast), shift_order: cal().shiftOrder || 'overnight' };
   }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
