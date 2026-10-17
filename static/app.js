@@ -1095,10 +1095,8 @@
         F.push(field('Sample speed', samples, 'Average speeds for the real thing, including rests. Fills in the speed'),
           field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
           field(`Speed (${speedUnit})`, speed),
-          field('Shifts traveled per day', select([
-            [1, `1 shift (${hs(1)})`], [2, `2 shifts (${hs(2)})${m === 'overland' ? ", a normal day's travel" : ''}`],
-            [3, `3 shifts (${hs(3)})${m === 'overland' ? ', a forced march' : ''}`], [4, `4 shifts (${hs(4)}), round the clock`]], m === 'sea' ? 4 : 2, { name: 'shifts' }),
-            m === 'sea' ? 'Ships with a crew on watch keep sailing around the clock' : '4 for vehicles that keep going around the clock',
+          field('Shifts traveled per day', select([[1, '1 shift'], [2, '2 shifts'], [3, '3 shifts'], [4, '4 shifts']], m === 'sea' ? 4 : 2, { name: 'shifts' }),
+            `${hs(1)} each. ${m === 'sea' ? 'Ships with a crew on watch sail all 4' : m === 'overland' ? '2 is a normal day, 3 a forced march' : '4 keeps going around the clock'}`,
             `A shift is a quarter of the calendar's ${+(h * 4).toFixed(2)}-hour day. The party rests for the other shifts`),
           el('input', { type: 'hidden', name: 'shift_hours', value: h }),
           m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
@@ -1144,6 +1142,7 @@
           field('FTL speed (LY per day)', el('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
           field('Fixed jump duration (hours)', el('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
       }
+      fieldsWrap.classList.toggle('travel-speed', E.SPEED_MODES.includes(m));
       fieldsWrap.replaceChildren(...F.filter(Boolean));
       out.replaceChildren();
     };
