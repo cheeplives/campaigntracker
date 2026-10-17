@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS campaign_members (
   campaign_id INT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
   role ENUM('gm','player') NOT NULL DEFAULT 'player',
+  character_name VARCHAR(150) NOT NULL DEFAULT '',   -- shown instead of the player's name on their events and notes
   PRIMARY KEY (campaign_id, user_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -109,6 +110,20 @@ CREATE TABLE IF NOT EXISTS shifts (
   visibility_override TINYINT NULL,
   PRIMARY KEY (campaign_id, abs_day, shift),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Free notes on a shift, separate from its events. Any member can add them.
+CREATE TABLE IF NOT EXISTS shift_notes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  abs_day BIGINT NOT NULL,
+  shift TINYINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  body TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_shift_notes_day (campaign_id, abs_day),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS events (

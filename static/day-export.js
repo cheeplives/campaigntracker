@@ -17,7 +17,7 @@ const DayExport = (() => {
   const who = x => x.character_name || x.author || 'unknown';
 
   /** ctx: { camp, role, regions, holidays, tempUnit, d, data }, where data is the
-   * 'day' API response ({ day, shifts, events }) and camp has calendar,
+   * 'day' API response ({ day, shifts, shift_notes, events }) and camp has calendar,
    * settings, seed and current_shift. Returns the Markdown text. */
   function build(ctx) {
     const { camp, d, data } = ctx;
@@ -81,8 +81,10 @@ const DayExport = (() => {
       ].filter(Boolean).join(' · '));
       L.push('');
       if (has(sh.activity)) { L.push(`**Activity:** ${text(sh.activity)}`); L.push(''); }
-      // Shift notes from players and GM, once the API sends them.
-      if (has(sh.notes)) { L.push(text(sh.notes)); L.push(''); }
+      // Shift notes from players and GM, each signed like event notes.
+      const sn = (data.shift_notes || []).filter(n => Number(n.shift) === i);
+      for (const n of sn) L.push(`- ${text(n.body).replace(/\n/g, '\n  ')} — *${who(n)}, ${n.created_at}*`);
+      if (sn.length) L.push('');
       if (gm && has(sh.gm_notes)) { L.push(`> 🔒 ${text(sh.gm_notes).replace(/\n/g, '\n> ')}`); L.push(''); }
     }
 
