@@ -41,7 +41,7 @@ The full runbook (OAuth apps, config fields, upgrading an older install) is in [
 
 ## How visibility is scored (0 Pitch black … 5 Bright)
 
-The score starts from a base value for the shift: overnight 0, dawn 3, noon 5, dusk 3. Artificially lit regions use their own level for each shift instead. Then:
+The score starts from a base value for the shift: overnight 0, dawn 3, midday 5, dusk 3. Artificially lit regions use their own level for each shift instead. Then:
 
 - **Moonlight:** at night, up to +2 depending on how much of the moons is lit, reduced by cloud cover.
 - **Weather:** that shift's weather, with a modifier such as fog −3, or a blizzard −4 by day.
