@@ -30,7 +30,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **campaign**: a GM creates a campaign and every tab renders with no script
   errors; a custom calendar is created with its own number of months, each
   with its own length; members are added by sign-in email, only once approved; players never
-  receive secret events.
+  receive secret events; a GM picks people from the approved accounts not yet in
+  the campaign, which only GMs can list.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves.
 - **ui**: deleting asks in the in-page dialog (never a browser `confirm()`),

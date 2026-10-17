@@ -108,6 +108,7 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .role.gm { color: var(--accent); border-color: var(--accent); }
 .listrow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .listrow:last-child { border-bottom: 0; }
+.picker { margin-top: 8px; }
 
 /* now bar */
 .nowbar { background: linear-gradient(135deg, var(--panel), var(--panel-2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
