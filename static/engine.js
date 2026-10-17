@@ -850,6 +850,42 @@
       { name: 'Autumn', type: 'autumn', month: 2, day: 20 }, { name: 'Winter', type: 'winter', month: 5, day: 21 },
       { name: 'Spring', type: 'spring', month: 8, day: 22 }, { name: 'Summer', type: 'summer', month: 11, day: 21 }],
   };
+  /** Preset regions from [name, Köppen code, terrain visibility modifier] rows; the first is where the party starts. */
+  const koppenRegions = (hemisphere, rows) => rows.map(([name, code, terrain = 0], i) => ({
+    name, ...(i ? {} : { current: true }),
+    settings: { climate: `koppen:${code}`, hemisphere, lighting: 'natural', terrain_mod: terrain },
+  }));
+  // Real-world regions for the Gregorian presets, each listed under the hemisphere it lies in. Regions that
+  // straddle the equator (the Amazon and Congo basins, the East African highlands) sit with the south, where most of them lie.
+  const EARTH_REGIONS = {
+    north: [
+      ['Central Europe (Germany, the Low Countries)', 'Cfb'], ['British Isles & northern France', 'Cfb'],
+      ['Mediterranean Europe (Spain, Italy, Greece)', 'Csa'], ['Eastern Europe (Poland, Ukraine, western Russia)', 'Dfb'],
+      ['Southern Scandinavia (Oslo, Stockholm)', 'Dfb'], ['Northern Scandinavia & the Siberian taiga', 'Dfc'],
+      ['Eastern Siberia (Yakutsk)', 'Dfd'], ['Arctic tundra (Svalbard, northern Canada, Alaska North Slope)', 'ET', 1],
+      ['Eastern US: Northeast & Midwest (Boston, Chicago)', 'Dfa'], ['Eastern US: Mid-Atlantic & Southeast (Washington, Atlanta)', 'Cfa'],
+      ['Southern Florida', 'Am'], ['Great Plains & Rocky Mountain foothills (Denver)', 'BSk'],
+      ['US Southwest deserts (Phoenix, Mojave)', 'BWh', 1], ['US West Coast (coastal California, Pacific Northwest)', 'Csb'],
+      ['Southern Canada (Toronto, Montreal, the Prairies)', 'Dfb'], ['Canadian boreal forest & interior Alaska', 'Dfc'],
+      ['Mexican highlands (Mexico City)', 'Cwb'], ['Caribbean & Central America', 'Aw'],
+      ['Sahara', 'BWh', 1], ['Sahel (Mali, Niger, Chad)', 'BSh'], ['West Africa (Lagos, Accra)', 'Aw'],
+      ['Ethiopian Highlands', 'Cwb'], ['Arabian Peninsula', 'BWh', 1], ['Iranian plateau & Anatolian interior', 'BSk'],
+      ['Central Asian steppe (Kazakhstan)', 'BSk'], ['Northern India (Delhi, the Ganges plain)', 'Cwa'],
+      ['Southern India', 'Aw'], ['Tibetan Plateau', 'Dwc'], ['Mongolia', 'Dwc'],
+      ['Northern China & Korea (Beijing, Seoul)', 'Dwa'], ['Eastern China (Shanghai, the Yangtze valley)', 'Cfa'],
+      ['Southern China (Guangzhou, Hong Kong)', 'Cwa'], ['Japan (Honshu, Kyushu)', 'Cfa'],
+      ['Mainland Southeast Asia (Thailand, Vietnam, Myanmar)', 'Aw'], ['Malay Peninsula & Singapore', 'Af', -2]],
+    south: [
+      ['Southeast Australia (Melbourne, Tasmania)', 'Cfb'], ['Eastern Australia (Sydney, Brisbane)', 'Cfa'],
+      ['Southwest Australia (Perth)', 'Csa'], ['Northern Australia (Darwin, the Top End)', 'Aw'],
+      ['Australian Outback', 'BWh', 1], ['New Zealand', 'Cfb'], ['Java & Bali', 'Am'], ['New Guinea', 'Af', -2],
+      ['Amazon Basin', 'Af', -2], ['Brazilian Cerrado & Rio de Janeiro', 'Aw'],
+      ['Southern Brazil, Uruguay & the Pampas (Buenos Aires)', 'Cfa'], ['Andean Altiplano (La Paz, Lake Titicaca)', 'Cwc'],
+      ['Central Chile (Santiago)', 'Csb'], ['Patagonia', 'BWk'], ['Tierra del Fuego', 'Cfc'],
+      ['Congo Basin', 'Af', -2], ['East African Highlands (Nairobi, Lake Victoria)', 'Cwb'],
+      ['Southern African savanna (Zambia, Zimbabwe, Mozambique)', 'Aw'], ['Highveld (Johannesburg)', 'Cwb'],
+      ['Kalahari', 'BSh', 1], ['Western Cape (Cape Town)', 'Csb'], ['Antarctica', 'EF', 1]],
+  };
   function gregorianPreset(hemisphere) {
     const north = hemisphere === 'north';
     return {
@@ -869,7 +905,7 @@
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 2026, month: 9, day: 16 },
-      regions: [{ name: 'Temperate lowlands', current: true, settings: { climate: 'temperate', hemisphere, lighting: 'natural', terrain_mod: 0 } }],
+      regions: koppenRegions(hemisphere, EARTH_REGIONS[hemisphere]),
       holidays: [
         { name: "New Year's Day", color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
         { name: 'Thanksgiving (US)', color: '#c0632b', rule: { type: 'nth_weekday', month: 10, weekday: 4, n: 4, span: 1 } },
@@ -913,10 +949,30 @@
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 2522, month: 4, day: 1 },
-      regions: [
-        { name: 'Reikland', current: true, settings: { climate: 'temperate', hemisphere: 'north', lighting: 'natural', terrain_mod: 0 } },
-        { name: 'Drakwald Forest', settings: { climate: 'temperate', hemisphere: 'north', lighting: 'natural', terrain_mod: -1 } },
-        { name: 'Middle Mountains', settings: { climate: 'mountain', hemisphere: 'north', lighting: 'natural', terrain_mod: 0 } }],
+      // Each region takes the Köppen climate of its real-world analogue: the Empire is Germany shading into
+      // Poland and Romania eastward, Bretonnia France, Estalia Spain, Tilea Italy, Kislev Russia and Ukraine.
+      // Regions marked * are judgement calls where the analogue isn't settled or the region spans a climate border.
+      regions: koppenRegions('north', [
+        ['Reikland', 'Cfb'], ['Middenland', 'Cfb'], ['Drakwald Forest', 'Cfb', -1], ['Nordland', 'Cfb'],
+        ['Wasteland & Marienburg', 'Cfb'], ['Wissenland', 'Cfb'],
+        ['Hochland', 'Dfb'], // *
+        ['Talabecland', 'Dfb'], // *
+        ['Great Forest', 'Dfb', -1], // *
+        ['Middle Mountains', 'Dfc'], // * uplands colder than the lowlands around them
+        ['Ostland', 'Dfb'],
+        ['Averland', 'Dfb'], // * Bavaria and Austria sit on the Cfb/Dfb line
+        ['Stirland', 'Dfb'], ['The Moot', 'Dfb'], ['Sylvania', 'Dfb'], ['Ostermark', 'Dfb'],
+        ['Kislev', 'Dfb'], ['Troll Country', 'Dfc'], ['Northern Wastes', 'ET', 1],
+        ["Bretonnia: Couronne & the north (L'Anguille, Lyonesse, Artois)", 'Cfb'],
+        ['Bretonnia: Bordeleaux & Aquitaine', 'Cfb'],
+        ['Bretonnia: Brionne, Quenelles & Carcassonne', 'Csa'], // * Provence and Languedoc
+        ['Grey Mountains', 'Dfc'], // * the Alps below the snowline
+        ['Black Mountains', 'Dfc'], // *
+        ["World's Edge Mountains (high passes)", 'ET'], // *
+        ['Estalia', 'Csa'], ['Tilea', 'Csa'],
+        ['Border Princes', 'Cfa'], // * the Balkans
+        ['Badlands', 'BSk'], // *
+      ]),
       // the Important Dates list on the Imperial Calendar sheet; month indexes count the intercalary days
       holidays: [
         { name: 'Hexenstag (Witching Day)', color: '#7b4fa0', rule: { type: 'fixed', month: 0, day: 1, span: 1 }, description: 'Morr. Start of the New Year.' },
@@ -969,7 +1025,7 @@
       start: { year: 1418, month: 13, day: 23 }, // Frodo leaves Bag End
       // Climates follow the Köppen climate map of Middle-earth on r/imaginarymaps (c5mzt9). Umbar and Far Harad
       // lie south of that map, so theirs are inferred.
-      regions: [
+      regions: koppenRegions('north', [
         ['The Shire', 'Cfb', 0], ['Bree-land', 'Cfb', 0], ['Old Forest', 'Cfb', -1], ['Lindon & the Grey Havens', 'Cfb', 0],
         ['Eriador wilds (Lone-lands, Weathertop)', 'Cfb', 0], ['Dunland', 'Cfb', 0],
         ['Rhudaur & the Trollshaws', 'Dfb', 0], ['Rivendell', 'Dfb', -1],
@@ -980,10 +1036,7 @@
         ['Lebennin & Belfalas (Dol Amroth)', 'Csa', 0], ['South Gondor (Harondor)', 'BSh', 0],
         ['Mordor: Gorgoroth', 'BWk', 0], ['Mordor: Nurn', 'BWk', 0], ['Umbar', 'BWh', 0],
         ['Near Harad', 'BWh', 1], ['Far Harad', 'Aw', 0],
-      ].map(([name, code, terrain], i) => ({
-        name, ...(i ? {} : { current: true }),
-        settings: { climate: `koppen:${code}`, hemisphere: 'north', lighting: 'natural', terrain_mod: terrain },
-      })),
+      ]),
       holidays: [
         { name: 'Yule', color: '#2e8b57', rule: { type: 'fixed', month: 17, day: 1, span: 2 }, description: 'The two Yuledays: the old year ends on 1 Yule and the new one begins on 2 Yule.' },
         // Lithe is two entries so 2 Lithe is covered whether or not an Overlithe falls before it
