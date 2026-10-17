@@ -43,6 +43,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.
+- **travel**: picking a sample speed fills the planner (in km or miles); an
+  overland trip is planned in shifts a day, each a quarter of the calendar's day;
+  star pickers fill the light-years between two systems; the campaign's genre
+  (Settings) limits the modes and samples, and a campaign with none keeps them all.
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
@@ -51,7 +55,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   from the top bar is remembered and follows the account to a new device; fonts load
   from this site only.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
-  season, weather, visibility and travel results in the browser as under Node.
+  season, weather, visibility, travel and star-distance results in the browser as under Node.
 
 Tests sign in through `tests/support/login.php`, which runs the same
 `sign_in_identity()` as the real OAuth callback with a made-up identity. It

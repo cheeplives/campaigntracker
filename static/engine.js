@@ -738,6 +738,76 @@
       'Low orbit (400 km)': 6771, 'Geostationary': 42164, Moon: 384400 } },
   };
 
+  // Genres limit which travel modes and sample figures the Travel tab offers. A campaign with no genre saved
+  // (made before genres existed) counts as Sci-Fi, which shows every mode, so nothing disappears on it.
+  const GENRES = { fantasy: 'Fantasy', modern: 'Modern', scifi: 'Sci-Fi' };
+  const GENRE_MODES = {
+    fantasy: ['ground'],
+    modern: ['ground', 'hohmann'],
+    scifi: ['ground', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
+  };
+  const genreOf = settings => (settings && GENRES[settings.genre] ? settings.genre : 'scifi');
+  // Real-world average speeds in km/h, for overland, sea and air travel: [label, km/h, genres].
+  const F = ['fantasy', 'modern', 'scifi'], M = ['modern', 'scifi'], SF = ['scifi'];
+  const GROUND_SPEEDS = [
+    { group: 'On foot', items: [
+      ['Walking / marching (average adult)', 5, F], ['Heavily laden or slow group', 3, F], ['Jogging', 9, F]] },
+    { group: 'Animals and carts', items: [
+      ['Ox cart', 3, F], ['Camel caravan', 4, F], ['Horse-drawn wagon', 5, F], ['Horseback, at a walk', 6.5, F],
+      ['Horseback, walk and trot', 10, F], ['Stagecoach (fresh horses at each stage)', 10, F]] },
+    { group: 'Under oar and sail', items: [
+      ['Rowing boat or river barge', 4, F], ['Oared galley, cruising (4 kn)', 7.5, F],
+      ['Medieval sailing ship, cog or carrack (5 kn)', 9, F], ['Viking longship under sail (6 kn)', 11, F]] },
+    { group: 'Engines', items: [
+      ['Bicycle', 16, M], ['Car in town', 30, M], ['Car on country roads', 70, M], ['Car on a motorway / highway', 100, M],
+      ['Intercity train', 130, M], ['High-speed train (TGV, Shinkansen)', 250, M], ['Maglev (Shanghai)', 430, M],
+      ['Cargo or cruise ship (20 kn)', 37, M], ['Helicopter', 250, M], ['Light aircraft (Cessna 172)', 220, M],
+      ['Airliner at cruise', 850, M], ['Concorde (Mach 2)', 2180, M]] },
+    { group: 'Off-world vehicles', items: [
+      ['Apollo Lunar Roving Vehicle', 10, SF], ['Mars rover (Perseverance, top speed)', 0.15, SF]] },
+  ];
+  /** The speed groups a genre may use, without the empty ones. */
+  function groundSpeeds(genre) {
+    return GROUND_SPEEDS.map(g => ({ group: g.group, items: g.items.filter(i => i[2].includes(genre)).map(([label, kmh]) => ({ label, kmh })) }))
+      .filter(g => g.items.length);
+  }
+  // Solar-system distances for thrust burns: [label, distance, unit]. Planet pairs come from the mean orbit radii
+  // below, so a real closest approach can differ a little (Mars ranges 0.37–0.68 AU at opposition).
+  function spaceDistances() {
+    const b = { Mercury: 0.387, Venus: 0.723, Earth: 1.0, Mars: 1.524, Ceres: 2.77, Jupiter: 5.203, Saturn: 9.537, Uranus: 19.19, Neptune: 30.07, Pluto: 39.48 };
+    const r = x => +x.toFixed(2);
+    const pair = (a, z) => [[`${a} to ${z}, closest (${r(Math.abs(b[z] - b[a]))} AU)`, r(Math.abs(b[z] - b[a])), 'AU'],
+      [`${a} to ${z}, farthest (${r(b[z] + b[a])} AU)`, r(b[z] + b[a]), 'AU']];
+    return [
+      { group: 'Near Earth', items: [['Earth to geostationary orbit (35,786 km)', 35786, 'km'], ['Earth to the Moon (384,400 km)', 384400, 'km'],
+        ['Earth to the Sun–Earth L2 point (1.5 million km)', 1.5e6, 'km'], ['Sun to Earth (1 AU, 8.3 light-minutes)', 1, 'AU']] },
+      { group: 'From Earth', items: ['Mercury', 'Venus', 'Mars', 'Ceres', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'].flatMap(z => pair('Earth', z)) },
+      { group: 'Between other bodies', items: [...pair('Mars', 'Ceres'), ...pair('Mars', 'Jupiter'), ...pair('Jupiter', 'Saturn'), ...pair('Saturn', 'Uranus')] },
+      { group: 'The outer system', items: [['Sun to the heliopause (Voyager 1 crossed it at 121 AU)', 121, 'AU'],
+        ['Sun to the inner Oort cloud (about 2,000 AU)', 2000, 'AU'], ['Sol to Proxima Centauri (4.25 LY)', 4.25, 'LY']] },
+    ];
+  }
+  // Star systems near Sol (and a few landmarks), by J2000 right ascension (hours), declination (degrees) and
+  // distance from Sol (light-years), so the distance between any two can be worked out.
+  const STARS = [
+    ['Sol', 0, 0, 0], ['Proxima Centauri', 14.4952, -62.6795, 4.25], ['Alpha Centauri A/B', 14.6601, -60.8340, 4.37],
+    ["Barnard's Star", 17.9635, 4.6934, 5.96], ['Wolf 359', 10.9415, 7.0147, 7.86], ['Lalande 21185', 11.0556, 35.9700, 8.31],
+    ['Sirius', 6.7525, -16.7161, 8.60], ['Epsilon Eridani', 3.5488, -9.4583, 10.47], ['Procyon', 7.6550, 5.2250, 11.46],
+    ['61 Cygni', 21.1150, 38.7494, 11.40], ['Epsilon Indi', 22.0560, -56.7861, 11.87], ['Tau Ceti', 1.7345, -15.9375, 11.91],
+    ['Altair', 19.8464, 8.8683, 16.73], ['Vega', 18.6156, 38.7836, 25.0], ['Pollux', 7.7554, 28.0262, 33.8],
+    ['Arcturus', 14.2610, 19.1825, 36.7], ['TRAPPIST-1', 23.1081, -5.0414, 40.7], ['Aldebaran', 4.5987, 16.5093, 65.3],
+    ['Polaris', 2.5303, 89.2641, 433], ['Betelgeuse', 5.9195, 7.4071, 548], ['Galactic centre (Sagittarius A*)', 17.7611, -29.0078, 26670],
+  ];
+  /** Straight-line distance in light-years between two STARS entries (by index), to the nearest 0.01 LY. */
+  function starDistance(i, j) {
+    const xyz = ([, ra, dec, d]) => {
+      const a = ra * Math.PI / 12, b = dec * Math.PI / 180;
+      return [d * Math.cos(b) * Math.cos(a), d * Math.cos(b) * Math.sin(a), d * Math.sin(b)];
+    };
+    const p = xyz(STARS[i]), q = xyz(STARS[j]);
+    return Math.round(Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * 100) / 100;
+  }
+
   /**
    * Compute a travel duration. Returns {hours, worldHours?, lines[]}.
    * modes: 'ground' | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
@@ -747,13 +817,18 @@
     const lines = [];
     const fmtH = h => fmtDuration(h);
     if (mode === 'ground') {
-      const dist = n('distance'), speed = n('speed'), perDay = n('hours_per_day') || 8;
+      // Each shift is a quarter of the calendar's day; the party travels `shifts` of the four and rests the others.
+      const dist = n('distance'), speed = n('speed'), perDay = Math.min(4, Math.max(1, Math.round(n('shifts')) || 2));
+      const shiftH = n('shift_hours') > 0 ? n('shift_hours') : 6;
       if (!(dist > 0 && speed > 0)) throw new Error('Enter a distance and a speed');
       const moving = dist / speed * (n('terrain') || 1);
-      const days = moving / perDay;
-      lines.push(`${moving.toFixed(1)} hours moving at ${speed}/h${n('terrain') && n('terrain') !== 1 ? ` (terrain ×${n('terrain')})` : ''}`);
-      lines.push(`${perDay} travel hours a day → ${days.toFixed(1)} days`);
-      return { hours: days * 24, lines };
+      const travelShifts = moving / shiftH;
+      // Whole days of travel, then the last day's remaining shifts: arrival comes at the end of the last moving shift.
+      const fullDays = Math.max(0, Math.ceil(travelShifts / perDay) - 1);
+      const elapsed = fullDays * 4 + (travelShifts - fullDays * perDay);
+      lines.push(`${moving.toFixed(1)} hours moving at ${speed}/h${n('terrain') && n('terrain') !== 1 ? ` (terrain ×${n('terrain')})` : ''} = ${travelShifts.toFixed(1)} shifts of ${+shiftH.toFixed(2)} h`);
+      lines.push(`${perDay} shift${perDay === 1 ? '' : 's'} on the move a day → ${(elapsed / 4).toFixed(1)} days`);
+      return { hours: elapsed * shiftH, lines };
     }
     if (mode === 'hohmann') {
       const sys = SYSTEMS[q.system] || SYSTEMS.sun;
@@ -911,7 +986,7 @@
         { name: 'Thanksgiving (US)', color: '#c0632b', rule: { type: 'nth_weekday', month: 10, weekday: 4, n: 4, span: 1 } },
         { name: 'Christmas Eve & Day', color: '#2e8b57', rule: { type: 'fixed', month: 11, day: 24, span: 2 } },
       ],
-      settings: { time_unit: 'day', temp_unit: north ? 'F' : 'C' },
+      settings: { genre: 'modern', time_unit: 'day', temp_unit: north ? 'F' : 'C' },
     };
   }
 
@@ -991,7 +1066,7 @@
         { name: 'Keg End', color: '#8b5a2b', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'Dwarf Gods.' },
         { name: 'Hexensnacht (Witching Night)', color: '#7b4fa0', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'The night before Hexenstag; both moons are said to be full.' },
       ],
-      settings: { time_unit: 'day', temp_unit: 'C' },
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
     },
 
     middleearth: {
@@ -1045,7 +1120,7 @@
         { name: 'Overlithe', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'The leap day, a special holiday added after Mid-year\'s Day.' },
         { name: 'Birthday of Bilbo and Frodo', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 22, span: 1 } },
       ],
-      settings: { time_unit: 'day', temp_unit: 'C' },
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
     },
 
     shipclock: {
@@ -1065,7 +1140,7 @@
       holidays: [
         { name: 'Launch Day', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
         { name: 'Shore leave rotation', color: '#2e8b57', rule: { type: 'every_n', start: 30, interval: 60, span: 3 } }],
-      settings: { time_unit: 'week', temp_unit: 'C' },
+      settings: { genre: 'scifi', time_unit: 'week', temp_unit: 'C' },
     },
 
     custom: {
@@ -1094,7 +1169,7 @@
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
-    travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS,
+    travel, fmtDuration, hoursToShifts, SYSTEMS, DIST_UNITS, GENRES, GENRE_MODES, genreOf, groundSpeeds, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;

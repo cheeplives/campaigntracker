@@ -1012,22 +1012,58 @@
   // ------------------------------------------------------------ travel tab
   function viewTravel() {
     const out = el('div', { class: 'travel-out' });
-    const modeSel = select([
-      ['ground', 'Overland / sea / air (speed × hours per day)'],
+    const genre = E.genreOf(settings());
+    const modes = [
+      ['ground', 'Overland / sea / air (speed × shifts a day)'],
       ['hohmann', 'Orbital transfer (Hohmann, minimum fuel)'],
       ['brachistochrone', 'Constant-thrust burn (flip-and-burn / torch drive)'],
       ['relativistic', 'Interstellar at relativistic speed'],
       ['ftl', 'FTL / jump drive'],
-    ], 'ground', { class: 'travel-mode' });
+    ].filter(([k]) => E.GENRE_MODES[genre].includes(k));
+    const modeSel = select(modes, 'ground', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
     const unitSel = () => select([['km', 'km'], ['mi', 'miles'], ['AU', 'AU'], ['LY', 'light-years'], ['ls', 'light-seconds'], ['lm', 'light-minutes']], 'AU', { name: 'unit' });
+    const shiftH = () => (Number(cal().hoursPerDay) || 24) / 4;
+    const num = x => +x.toPrecision(3);
+    /** A "pick a sample" select over groups of {label, …} items; onPick gets the chosen item. */
+    const samplePicker = (groups, onPick, labelOf = i => i.label) => {
+      const items = [];
+      const s = el('select', { 'aria-label': 'Sample' }, el('option', { value: '' }, 'Pick a sample…'),
+        groups.map(g => el('optgroup', { label: g.group }, g.items.map(i => el('option', { value: items.push(i) - 1 }, labelOf(i))))));
+      s.addEventListener('change', () => { if (s.value !== '') onPick(items[s.value]); });
+      return s;
+    };
+    /** From / To star pickers that fill a light-year distance input. */
+    const starPickers = dist => {
+      const opts = E.STARS.map(([name, , , ly], i) => [i, i ? `${name} (${ly.toLocaleString()} LY from Sol)` : name]);
+      const from = select(opts, 0, { 'aria-label': 'From star' }), to = select(opts, 1, { 'aria-label': 'To star' });
+      const fill = () => { if (from.value !== to.value) dist.value = num(E.starDistance(Number(from.value), Number(to.value))); };
+      from.addEventListener('change', fill); to.addEventListener('change', fill);
+      return [field('From star system', from, null, 'Pick two star systems to fill in the distance between them, or type your own distance'),
+        field('To star system', to)];
+    };
     const drawFields = () => {
       const m = modeSel.value;
       const F = [];
       if (m === 'ground') {
-        F.push(field('Distance', el('input', { name: 'distance', type: 'number', step: 'any', value: 60 }), 'Any unit — miles, km, leagues…'),
-          field('Speed per hour (same unit)', el('input', { name: 'speed', type: 'number', step: 'any', value: 3 }), 'Walking ≈ 3 mph / 5 km/h; horse ≈ 5–6 mph; sailing ship ≈ 4–8 knots'),
-          field('Travel hours per day', el('input', { name: 'hours_per_day', type: 'number', step: 'any', value: 8 }), '24 for ships that sail around the clock'),
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: 60 });
+        const speed = el('input', { name: 'speed', type: 'number', step: 'any', value: campTempUnit() === 'F' ? 3 : 5 });
+        const unit = select([['km', 'km'], ['mi', 'miles']], campTempUnit() === 'F' ? 'mi' : 'km', { 'aria-label': 'Sample units' });
+        let picked = null;
+        const toUnit = kmh => num(unit.value === 'mi' ? kmh / 1.609344 : kmh);
+        const samples = samplePicker(E.groundSpeeds(genre), i => { picked = i; speed.value = toUnit(i.kmh); },
+          i => `${i.label}: ${i.kmh} km/h · ${num(i.kmh / 1.609344)} mph`);
+        unit.addEventListener('change', () => { if (picked) speed.value = toUnit(picked.kmh); });
+        speed.addEventListener('input', () => { picked = null; samples.value = ''; });
+        const h = shiftH(), hs = n => `${+(n * h).toFixed(2)} h`;
+        F.push(field('Sample speed', el('span', { class: 'row' }, samples, unit), 'Average speeds for the real thing, including rests. Fills in the speed'),
+          field('Distance', dist, 'Any unit, as long as the speed uses the same one'),
+          field('Speed per hour (same unit)', speed),
+          field('Shifts traveled per day', select([
+            [1, `1 shift (${hs(1)})`], [2, `2 shifts (${hs(2)}), a normal day's travel`],
+            [3, `3 shifts (${hs(3)}), a forced march`], [4, `4 shifts (${hs(4)}), round the clock`]], 2, { name: 'shifts' }),
+            '4 for ships and vehicles that keep going around the clock', `A shift is a quarter of the calendar's ${+(h * 4).toFixed(2)}-hour day. The party rests for the other shifts`),
+          el('input', { type: 'hidden', name: 'shift_hours', value: h }),
           field('Terrain multiplier', select([[1, 'Road / open water ×1'], [1.5, 'Rough ×1.5'], [2, 'Forest / hills ×2'], [3, 'Mountains / swamp ×3']], 1, { name: 'terrain' }), null,
             'Multiplies the travel time for slow going. ×2 means the trip takes twice as long'));
       } else if (m === 'hohmann') {
@@ -1036,9 +1072,9 @@
         const b1 = el('select', {}), b2 = el('select', {});
         const fill = () => {
           const s = E.SYSTEMS[sys.value];
-          const opts = [['', 'custom…'], ...Object.entries(s.bodies).map(([n, r]) => [r, n])];
-          const names = opts.map(o => o[1]);
-          const pick = [names.indexOf('Earth'), names.indexOf('Mars')];
+          const opts = [['', 'custom…'], ...Object.entries(s.bodies).map(([n, r]) => [r, `${n} (${r.toLocaleString()} ${s.unit})`])];
+          const names = Object.keys(s.bodies);
+          const pick = [names.indexOf('Earth') + 1, names.indexOf('Mars') + 1];
           [b1, b2].forEach((b, k) => { b.replaceChildren(...opts.map(([v, l]) => el('option', { value: v }, l))); b.selectedIndex = pick[k] > 0 ? pick[k] : Math.min(opts.length - 1, k + 1); });
           r1.value = b1.value; r2.value = b2.value;
           lbl1.firstChild.textContent = `From orbit radius (${s.unit})`; lbl2.firstChild.textContent = `To orbit radius (${s.unit})`;
@@ -1050,15 +1086,22 @@
         F.push(field('Central body', sys, null, 'The star or planet both orbits go around. Pick a body from the lists or type an orbit radius'), lbl1, lbl2);
         setTimeout(fill);
       } else if (m === 'brachistochrone' || m === 'relativistic') {
-        F.push(field('Distance', el('span', { class: 'row' }, el('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.24 : 1.5 }), (() => { const u = unitSel(); if (m === 'relativistic') u.value = 'LY'; return u; })()),
-          'Earth–Mars ranges 0.5–2.5 AU; Alpha Centauri is 4.24 LY'),
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: m === 'relativistic' ? 4.25 : 1.5 });
+        const u = unitSel(); if (m === 'relativistic') u.value = 'LY';
+        if (m === 'brachistochrone') {
+          F.push(field('Sample distance', samplePicker(E.spaceDistances().map(g => ({ group: g.group, items: g.items.map(([label, d, unit]) => ({ label, d, unit })) })),
+            i => { dist.value = i.d; u.value = i.unit; }), 'Planet distances use average orbits'));
+        } else F.push(...starPickers(dist));
+        F.push(field('Distance', el('span', { class: 'row' }, dist, u)),
           field('Acceleration (g)', el('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
           field('Speed cap (fraction of light, optional)', el('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates',
             '0.1 means a tenth of the speed of light. Leave empty to burn all the way to the midpoint'));
       } else {
         const kind = select([['rate', 'Speed in light-years per day'], ['fixed', 'Fixed duration per jump']], 'rate', { name: 'ftl_kind' });
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: 4.25 });
         F.push(field('FTL type', kind, null, 'Speed: the trip scales with distance. Fixed: every jump takes the same time, however far'),
-          field('Distance (LY)', el('input', { name: 'distance', type: 'number', step: 'any', value: 10 })),
+          ...starPickers(dist),
+          field('Distance (LY)', dist),
           field('FTL speed (LY per day)', el('input', { name: 'rate', type: 'number', step: 'any', value: 1 })),
           field('Fixed jump duration (hours)', el('input', { name: 'fixed_hours', type: 'number', step: 'any', value: 168 }), 'e.g. 168 h = one week in jump space'));
       }
@@ -1072,7 +1115,7 @@
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const travelReg = select(regOpts, ''), arriveReg = select(regOpts, '');
     const f = el('form', { class: 'card' }, el('h2', {}, 'Travel planner'),
-      field('Mode', modeSel, null, 'Overland: distance ÷ speed, in travel hours per day. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
+      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, 'Overland: distance ÷ speed, travelling some of the day\'s four shifts. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting\'s jump drive.'),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
@@ -1551,6 +1594,8 @@
         field('Name', el('input', { name: 'name', value: S.camp.name, required: true })),
         field('Party\'s current region', select([['', '—'], ...S.regions.map(r => [r.id, r.name])], st.current_region ?? '', { name: 'current_region' }), null,
           'New days roll their weather here. Same as "Party is here" on the Regions tab'),
+        field('Genre', select(Object.entries(E.GENRES), E.genreOf(st), { name: 'genre' }), 'Sets which travel modes and sample speeds the Travel tab offers',
+          'Fantasy: overland, sea and air on foot, horse and sail. Modern: adds engines, aircraft and orbital transfers. Sci-Fi: adds thrust burns, relativistic and FTL travel'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
         field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
           'Used for anyone who hasn\'t chosen their own units'),
@@ -1562,7 +1607,7 @@
     general.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(general);
-      const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, time_unit: v.time_unit, temp_unit: v.temp_unit,
+      const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, genre: v.genre, time_unit: v.time_unit, temp_unit: v.temp_unit,
         players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events };
       try { await post('campaign_update', { name: v.name, description: v.description, settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
       catch (err) { toast(err.message, true); }
@@ -1579,7 +1624,7 @@
         field('Weekday of epoch day 1 (0 = first weekday)', el('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
           'Shifts the whole weekday cycle. Change it to line up a known date with the right weekday'),
         field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year'),
-        field('Hours per day', el('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), 'Used to turn travel hours into shifts'),
+        field('Hours per day', el('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), 'Each of the day\'s four shifts is a quarter of this, for travel too'),
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
         field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), null,

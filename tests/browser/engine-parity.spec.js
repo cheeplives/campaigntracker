@@ -26,12 +26,14 @@ function workload(E) {
   }
   const trip = (mode, q) => { try { return E.travel(mode, q); } catch (e) { return String(e.message); } };
   out.travel = [
-    trip("ground", { distance: 120, speed: 3, hours_per_day: 8, terrain: 1.5 }),
+    trip("ground", { distance: 120, speed: 3, shifts: 2, shift_hours: 6, terrain: 1.5 }),
+    trip("ground", { distance: 50, speed: 5, shifts: 3, shift_hours: 7.5 }),
     trip("hohmann", { system: "sun", r1: 1, r2: 1.524 }),
     trip("brachistochrone", { distance: 1.5, g: 1 }),
     trip("relativistic", { distance: 4.2, g: 1 }),
     trip("ftl", { fixed_hours: 168 }),
   ];
+  out.stars = [E.starDistance(0, 6), E.starDistance(1, 2), E.starDistance(2, 6)];
   return JSON.parse(JSON.stringify(out));
 }
 
