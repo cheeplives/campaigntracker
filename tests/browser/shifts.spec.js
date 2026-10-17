@@ -81,7 +81,7 @@ test("players and GMs add shift notes, signed with their character name", async 
   await row.getByRole("button", { name: "Set character" }).click();
   await pp.locator(".kit-dialog-input").fill("Sir Maximus");
   await pp.getByRole("button", { name: "Save" }).click();
-  await expect(row).toContainText("Sir Maximus");
+  await expect(row.locator(".member-char .charname")).toHaveText("Sir Maximus");
   // Players can't rename someone else's character.
   const lou = (await api(page, "campaign", undefined, cid)).json.members.find(m => m.display_name === "Lou");
   expect((await api(pp, "member_character", { user_id: lou.id, character_name: "Nope" }, cid)).status).toBe(403);

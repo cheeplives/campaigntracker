@@ -197,6 +197,16 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 .shiftnotes .enotes { margin-top: 0; }
 .shiftnotes .enotes:empty { display: none; }
 .charname { font-style: italic; }
+.listrow.member { align-items: center; }
+.listrow.member > .who, .listrow.member > .actions { flex: 1 1 0; min-width: 0; }
+.member-char { flex: 1 1 0; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.member-char .charname { font-family: var(--disp); font-size: 1.35rem; line-height: 1.2; }
+.member-char .muted { font-style: italic; }
+@media (max-width: 720px) {
+  .listrow.member > .who, .listrow.member > .member-char, .listrow.member > .actions { flex: 1 1 100%; }
+  .member-char { align-items: flex-start; text-align: left; }
+  .listrow.member > .actions { justify-content: flex-start; }
+}
 .event { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; background: var(--panel-2); }
 .event.secret { border-left: 4px solid var(--secret); }
 .event.editing { border-color: var(--accent); }

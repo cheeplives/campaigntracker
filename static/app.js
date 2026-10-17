@@ -1746,11 +1746,12 @@
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
-        return el('div', { class: 'listrow' },
-          el('div', {}, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
-            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player'),
-            el('div', { class: 'small' }, el('span', { class: 'lbl' }, 'Character '),
-              m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet'))),
+        return el('div', { class: 'listrow member' },
+          el('div', { class: 'who' }, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
+          // The character sits centred between the player and the buttons, larger than the rest of the row.
+          el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
+            m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet')),
           el('div', { class: 'actions' },
             (self || isGM()) ? btn(m.character_name ? 'Rename character' : 'Set character', async () => {
               const name = await promptDialog(self ? 'Your character\'s name in this campaign:' : `${m.display_name}'s character name:`,
