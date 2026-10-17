@@ -289,3 +289,15 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
   .tbl.users td.act { grid-column: 1 / -1; }
   .tbl.users td.act .actions { justify-content: flex-start; }
 }
+/* Hours mode: many slots a day, so the strip wraps and empty hour cards fold to their heading. */
+.dh-strip.hours { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); max-width: none; flex-basis: 100%; }
+.dh-strip.hours .dh-step { padding: 4px 2px; }
+.dh-strip.hours .dh-step-icon { font-size: 1.1rem; }
+.wr-shifts:empty::before { content: '—'; color: var(--dim); }
+.shifts.hours { align-items: start; }
+details.shiftcard { display: block; }
+details.shiftcard > summary { cursor: pointer; list-style: none; }
+details.shiftcard > summary::-webkit-details-marker { display: none; }
+details.shiftcard > summary h4::before { content: '▸ '; color: var(--dim); }
+details.shiftcard[open] > summary h4::before { content: '▾ '; }
+details.shiftcard[open] > * + * { margin-top: 6px; }

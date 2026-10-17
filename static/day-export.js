@@ -27,14 +27,15 @@ const DayExport = (() => {
     const region = ctx.regions.find(r => r.id === Number(row.region_id))
       || ctx.regions.find(r => r.id === Number(s.current_region)) || ctx.regions[0] || null;
     const w = row.weather || null;
-    const now = Number(camp.current_shift), today = Math.floor(now / 4);
+    const spd = E.slotsPerDay(c), hours = E.timeMode(c) === 'hours';
+    const now = Number(camp.current_shift), today = Math.floor(now / spd);
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, ctx.holidays, d);
     // a player's today comes as the shifts so far (w.partial), without the forecast
-    const sws = w?.partial ? w.shifts : E.shiftWeather(c, camp.seed, region, d, w);
+    const sws = E.slotsFromQuarters(c, w?.partial ? w.shifts : E.shiftWeather(c, camp.seed, region, d, w));
     const shifts = {}; (data.shifts || []).forEach(x => (shifts[x.shift] = x));
     // Players don't learn the weather of a shift that hasn't happened yet.
-    const hideWx = i => !gm && !s.players_see_future_weather && d * 4 + i > now;
+    const hideWx = i => !gm && !s.players_see_future_weather && d * spd + i > now;
     const L = [];
 
     L.push(`# ${E.fmtDate(c, d)}`);
@@ -45,7 +46,7 @@ const DayExport = (() => {
     L.push([
       `**${w?.partial ? 'Weather now' : 'Forecast'}** ${w ? `${wxDef.icon || ''} ${E.weatherLabel(w, unit)}`.trim() : 'not known'}`,
       ...E.moons(c, d).map(m => `**${m.name}** ${m.icon} ${m.label} (${Math.round(m.illum * 100)}%)`),
-      d === today ? `**Now** ${names[E.mod(now, 4)]}` : null,
+      d === today ? `**Now** ${names[E.mod(now, spd)]}` : null,
     ].filter(Boolean).join(' · '));
     L.push('');
     if (hol.length) {
@@ -73,13 +74,15 @@ const DayExport = (() => {
       L.push('');
     }
 
-    L.push('## Shifts');
+    L.push(hours ? '## Hours' : '## Shifts');
     L.push('');
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < spd; i++) {
       const sh = shifts[i] || {};
+      // In hours mode only the hours with something recorded, and the current one, get a section.
+      if (hours && d * spd + i !== now && !has(sh.activity) && !(gm && has(sh.gm_notes)) && !(data.shift_notes || []).some(n => Number(n.shift) === i)) continue;
       const hidden = hideWx(i), sw = hidden ? null : sws[i] || null;
       const v = E.visibility(c, region, sw, d, i, sh.visibility_override);
-      L.push(`### ${names[i]}${d * 4 + i === now ? ' (now)' : ''}`);
+      L.push(`### ${names[i]}${d * spd + i === now ? ' (now)' : ''}`);
       L.push('');
       L.push([
         `**Weather** ${sw ? `${E.WEATHER[sw.type]?.icon || ''} ${E.weatherLabel(sw, unit)}`.trim() : hidden ? 'not known yet' : 'not recorded'}`,
