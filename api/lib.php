@@ -35,18 +35,57 @@ $__home = getenv('HOME') ?: ($_SERVER['HOME'] ?? '');
 if ($__home !== '') $__candidates[] = rtrim($__home, '/') . '/chronicle-config.php';
 $__candidates[] = __DIR__ . '/config.php';
 
-$__CONFIG_PATH = '';
-foreach ($__candidates as $__c) {
-  if ($__c !== '' && is_file($__c)) { $__CONFIG_PATH = $__c; break; }
-}
-if ($__CONFIG_PATH === '') {
+/** Stop on a setup problem. JSON for the app; for install.php (which defines
+ * CHRONICLE_INSTALLER) a readable page that says what is wrong and how to fix
+ * it, instead of a bare 500. */
+function setup_error(string $code, string $message, array $details = []): void {
   http_response_code(500);
+  if (defined('CHRONICLE_INSTALLER')) {
+    header('Content-Type: text/html; charset=utf-8');
+    $e = fn($t) => htmlspecialchars((string) $t, ENT_QUOTES, 'UTF-8');
+    echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+       . '<title>Setup problem — Campaign Chronicle</title><link rel="stylesheet" href="static/fonts.css"><link rel="stylesheet" href="static/style.css">'
+       . '<main><div class="card narrow"><h1>Setup problem</h1><p>' . $e($message) . '</p>';
+    if ($details) echo '<ul>' . implode('', array_map(fn($d) => '<li>' . $e($d) . '</li>', $details)) . '</ul>';
+    echo '<p class="muted small">Error code: ' . $e($code) . '. See docs/DEPLOY.md.</p></div></main>';
+    exit;
+  }
   header('Content-Type: application/json');
-  echo json_encode(['error' => 'server_not_configured',
-                    'message' => 'Copy api/config.example.php to api/config.php (or ~/chronicle-config.php) and fill it in.']);
+  echo json_encode(['error' => $code, 'message' => $message]);
   exit;
 }
-$GLOBALS['__CFG'] = require $__CONFIG_PATH;
+
+$__CONFIG_PATH = '';
+foreach ($__candidates as $__c) {
+  if ($__c !== '' && @is_file($__c)) { $__CONFIG_PATH = $__c; break; }
+}
+if ($__CONFIG_PATH === '') {
+  $__old = dirname(__DIR__) . '/lib/config.php';
+  setup_error('server_not_configured',
+    is_file($__old)
+      ? 'Found the old lib/config.php, but this version reads its config from chronicle-config.php. Copy api/config.example.php to ~/chronicle-config.php (or api/config.php), copy your database details across, add the Google/GitHub sign-in settings, then delete lib/config.php.'
+      : 'No config file found. Copy api/config.example.php to ~/chronicle-config.php (or api/config.php) and fill it in.',
+    array_map(fn($c) => 'Looked for: ' . $c, array_values(array_filter($__candidates))));
+}
+try {
+  $GLOBALS['__CFG'] = (function ($path) { return require $path; })($__CONFIG_PATH);
+} catch (Throwable $e) {
+  setup_error('bad_config', 'The config file has a PHP error, often a missing comma or quote.',
+    ['Config file: ' . $__CONFIG_PATH, 'PHP said: ' . $e->getMessage() . (stripos($e->getMessage(), 'line') === false ? ' on line ' . $e->getLine() : '')]);
+}
+if (!is_array($GLOBALS['__CFG'])) {
+  setup_error('bad_config', "The config file doesn't return a settings array. It should start with <?php and then return [ ... ]; like api/config.example.php.", ['Config file: ' . $__CONFIG_PATH]);
+}
+// A config in the old format (db_host, db_name, db_user, db_pass at the top
+// level) still reaches the database, so install.php can upgrade it.
+if (!isset($GLOBALS['__CFG']['db']) && isset($GLOBALS['__CFG']['db_host'])) {
+  $__o = $GLOBALS['__CFG'];
+  $GLOBALS['__CFG']['db'] = ['host' => $__o['db_host'], 'port' => (int) ($__o['db_port'] ?? 3306),
+    'name' => $__o['db_name'] ?? '', 'user' => $__o['db_user'] ?? '', 'password' => $__o['db_pass'] ?? ''];
+}
+if (!is_array($GLOBALS['__CFG']['db'] ?? null)) {
+  setup_error('bad_config', "The config file has no 'db' settings. Fill in the 'db' block from api/config.example.php.", ['Config file: ' . $__CONFIG_PATH]);
+}
 
 function cfg(?string $key = null, $default = null) {
   $c = $GLOBALS['__CFG'];
@@ -87,6 +126,12 @@ function db(): PDO {
     ]);
   } catch (Throwable $e) {
     error_log('DB connect failed: ' . $e->getMessage());
+    // The installer shows the driver's reason (wrong password, unknown host…),
+    // but only while allow_install is on; the app never does.
+    if (defined('CHRONICLE_INSTALLER') && cfg('allow_install')) {
+      setup_error('db_unavailable', "Couldn't connect to the database with the 'db' settings in the config.",
+        ['Host: ' . $d['host'] . ', database: ' . $d['name'] . ', user: ' . $d['user'], 'MySQL said: ' . $e->getMessage()]);
+    }
     json_error(500, 'db_unavailable', 'The database is unavailable.');
   }
   return $pdo;

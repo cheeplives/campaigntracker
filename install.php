@@ -7,6 +7,7 @@
  * After it succeeds, set 'allow_install' => false in the config (or delete this file).
  */
 declare(strict_types=1);
+const CHRONICLE_INSTALLER = true;   // lib.php shows setup problems as a readable page
 require __DIR__ . '/api/lib.php';
 header('Content-Type: text/html; charset=utf-8');
 
