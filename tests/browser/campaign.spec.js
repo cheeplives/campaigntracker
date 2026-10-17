@@ -22,6 +22,35 @@ test("a GM creates a campaign and every tab renders", async ({ page, browser }) 
   expectNoErrors(errors);
 });
 
+test("a custom calendar gets its own number of months, each with its own length", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Kit");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  await page.goto("index.html");
+  await page.getByRole("button", { name: "+ New campaign" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Odd Months");
+  await page.getByLabel("Calendar preset").selectOption("custom");
+  const count = page.getByRole("spinbutton", { name: /Number of months/ });
+  await count.fill("3");
+  await count.press("Tab");
+  await page.getByLabel("Month 1 days").fill("10");
+  await page.getByLabel("Month 2 name").fill("Longmonth");
+  await page.getByLabel("Month 2 days").fill("40");
+  await page.getByLabel("Month 3 days").fill("5");
+  await page.getByLabel("Month 3 days").press("Tab");
+  await expect(page.getByText("3 months, 55 days a year.")).toBeVisible();
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("heading", { name: "Odd Months" })).toBeVisible();
+  const cid = page.url().match(/#\/c\/(\d+)/)[1];
+  const { json } = await api(page, "campaign", undefined, cid);
+  expect(json.campaign.calendar.months.map(m => [m.name, m.days])).toEqual([["Month 1", 10], ["Longmonth", 40], ["Month 3", 5]]);
+  for (const s of json.campaign.calendar.seasons) expect(s.day).toBeLessThanOrEqual([10, 40, 5][s.month]);
+  await page.getByRole("navigation").getByRole("link", { name: "Calendar", exact: true }).click();
+  await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
+  expectNoErrors(errors);
+});
+
 test("a GM adds a player by email; the player sees the campaign but not its secrets", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Hal"), player = person("Ivy");

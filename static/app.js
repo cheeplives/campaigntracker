@@ -163,7 +163,7 @@
     return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
   }
 
-  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Noon and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
+  const SHIFT_TIP = 'Every day is split into four shifts of about six hours (by default Overnight, Dawn, Midday and Dusk). Time passes, activities are logged and visibility is worked out shift by shift.';
   const CLIMATE_TIP = 'Decides the odds of each kind of weather and the usual temperatures in every season. Köppen classes match real-world climates; the setting climates cover ship interiors, open space, caves and the like.';
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
@@ -361,11 +361,29 @@
     mount(list);
   }
 
+  /** Seasons moved from one month list to another, each starting at the same share of the year. */
+  function spreadSeasons(seasons, from, to) {
+    const len = ms => ms.reduce((t, m) => t + Number(m.days), 0);
+    return seasons.map(s => {
+      let d = from.slice(0, s.month).reduce((t, m) => t + Number(m.days), 0) + s.day - 1, month = 0;
+      d = Math.floor(d * len(to) / len(from));
+      while (d >= to[month].days) d -= to[month++].days;
+      return { ...s, month, day: d + 1 };
+    });
+  }
+
   function viewCreate() {
     let preset = 'gregorian';
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
     const startWrap = el('div');
-    const tmpCal = () => { const c = JSON.parse(JSON.stringify(E.PRESETS[preset].calendar)); E.prep(c); return c; };
+    // the Custom preset's months, set on this form: how many there are and each one's length
+    let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
+    /** The preset's calendar, with the custom months (and seasons spread over them) when Custom is picked. */
+    const presetCal = () => {
+      const c = E.PRESETS[preset].calendar;
+      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
+    };
+    const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
       const p = E.PRESETS[preset], c = tmpCal();
@@ -397,22 +415,56 @@
       climateSel.querySelector('option[value=koppen_custom]').remove(); climateSel.querySelector('option[value=custom]').remove(); // built later, per region
       climateWrap.replaceChildren(el('label', { class: 'field' }, el('span', { class: 'lbl' }, 'Home region climate', tip(CLIMATE_TIP)), climateSel, hint));
     };
-    presetSel.addEventListener('change', () => { preset = presetSel.value; drawStart(); drawSeasons(); drawClimate(); });
-    drawStart(); drawSeasons(); drawClimate();
+    const monthsWrap = el('div');
+    const drawMonths = () => {
+      if (preset !== 'custom') return monthsWrap.replaceChildren();
+      const rows = el('div', { class: 'monthrows' });
+      const count = el('input', { type: 'number', min: 1, max: 100, value: customMonths.length, class: 'w-day', name: 'month_count' });
+      const addRow = (m, i) => rows.append(el('div', { class: 'row monthrow' },
+        el('input', { value: m.name, 'data-k': 'name', 'aria-label': `Month ${i + 1} name`, class: 'grow', placeholder: `Month ${i + 1}` }),
+        el('input', { type: 'number', min: 1, max: 1000, value: m.days, class: 'w-day', 'data-k': 'days', 'aria-label': `Month ${i + 1} days` }),
+        el('small', { class: 'muted' }, 'days')));
+      const read = () => [...rows.children].map((r, i) => ({
+        name: r.querySelector('[data-k=name]').value.trim() || `Month ${i + 1}`,
+        days: Math.max(1, Math.min(1000, Math.round(Number(r.querySelector('[data-k=days]').value) || 1))),
+      }));
+      const total = el('small', { class: 'muted' });
+      const sync = () => {
+        customMonths = read();
+        total.textContent = `${customMonths.length} month${customMonths.length === 1 ? '' : 's'}, ${customMonths.reduce((t, m) => t + m.days, 0)} days a year.`;
+        drawStart(); drawSeasons();
+      };
+      customMonths.forEach(addRow);
+      count.addEventListener('change', () => {
+        const n = Math.max(1, Math.min(100, Math.round(Number(count.value) || 1)));
+        count.value = n;
+        const len = rows.lastChild ? rows.lastChild.querySelector('[data-k=days]').value : 30;
+        while (rows.children.length > n) rows.lastChild.remove();
+        while (rows.children.length < n) addRow({ name: `Month ${rows.children.length + 1}`, days: len }, rows.children.length);
+        sync();
+      });
+      rows.addEventListener('change', sync);
+      sync();
+      monthsWrap.replaceChildren(el('h3', {}, 'Months'),
+        field('Number of months', count, null, 'How many months make up a year. Each one can have its own number of days below.'),
+        el('small', { class: 'muted' }, 'Name · days in the month'), rows, total);
+    };
+    presetSel.addEventListener('change', () => { preset = presetSel.value; drawMonths(); drawStart(); drawSeasons(); drawClimate(); });
+    drawMonths(); drawStart(); drawSeasons(); drawClimate();
     const shiftSel = select(E.shiftNames(E.PRESETS[preset].calendar).map((n, i) => [i, n]), 2, { name: 'shift' });
     const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
         'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
-      startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
+      monthsWrap, startWrap, field('Starting shift', shiftSel, null, SHIFT_TIP), climateWrap, seasonWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
       const p = E.PRESETS[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
-          name: v.name, description: v.description, calendar: { ...p.calendar, seasons: seasons.getSeasons() }, settings: { ...p.settings },
+          name: v.name, description: v.description, calendar: { ...presetCal(), seasons: seasons.getSeasons() }, settings: { ...p.settings },
           current_shift: picker.getAbs() * 4 + Number(v.shift),
           regions: p.regions.map(r => r === homeRegion() ? { ...r, settings: { ...r.settings, climate: v.climate } } : r), holidays: p.holidays,
         });
@@ -1095,7 +1147,7 @@
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
-        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at noon.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
+        field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 0 overnight (plus up to +2 for moonlight), 3 at dawn and dusk, 5 at midday.\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
         field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
