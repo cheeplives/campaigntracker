@@ -48,6 +48,7 @@ $admins = (array)cfg('admin_identities', []);
 ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install — Campaign Chronicle</title>
+<link rel="icon" href="static/icons/favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="stylesheet" href="static/fonts.css"><link rel="stylesheet" href="static/style.css"></head>
 <body><main><div class="card narrow">
 <h1>Campaign Chronicle setup</h1>
