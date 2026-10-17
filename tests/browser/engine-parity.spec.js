@@ -59,3 +59,20 @@ test("Middle-earth: Shire Reckoning dates and weekdays", () => {
   expect(Engine.climateFor(rohan).koppen).toBe("Dfb");
   for (const r of p.regions) expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
 });
+
+test("Gregorian and Imperial presets: regions carry Köppen climates in the right hemisphere", () => {
+  const P = Engine.PRESETS;
+  for (const key of ["gregorian", "gregorian_south", "imperial"]) {
+    const regions = P[key].regions;
+    expect(regions.filter(r => r.current)).toHaveLength(1);
+    for (const r of regions) {
+      expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
+      expect(r.settings.hemisphere).toBe(P[key].calendar.hemisphere);
+    }
+  }
+  const named = (key, name) => Engine.climateFor(P[key].regions.find(r => r.name === name)).koppen;
+  expect(named("gregorian", "Sahara")).toBe("BWh");
+  expect(named("gregorian_south", "Western Cape (Cape Town)")).toBe("Csb");
+  expect(named("imperial", "Reikland")).toBe("Cfb");
+  expect(named("imperial", "Tilea")).toBe("Csa");
+});
