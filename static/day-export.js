@@ -94,7 +94,10 @@ const DayExport = (() => {
         const span = has(e.end_day) ? `${E.fmtDate(c, Number(e.abs_day), { noWeekday: true })} → ${E.fmtDate(c, Number(e.end_day), { noWeekday: true })}` : null;
         L.push(`### ${e.title}${Number(e.is_secret) ? ' 🔒' : ''}`);
         L.push('');
-        L.push(`*${[has(e.shift) ? names[e.shift] : 'All day', span, Number(e.is_secret) ? 'Secret (GM only)' : null, `added by ${who(e)}`].filter(Boolean).join(' · ')}*`);
+        const shifts = !has(e.shift) ? 'All day'
+          : has(e.end_day) || (has(e.shift_end) && Number(e.shift_end) !== Number(e.shift)) ? `${names[e.shift]} → ${names[has(e.shift_end) ? e.shift_end : e.shift]}` : names[e.shift];
+        const tags = (e.tags || []).length ? `Tags: ${e.tags.map(t => t.name).join(', ')}` : null;
+        L.push(`*${[shifts, span, tags, Number(e.is_secret) ? 'Secret (GM only)' : null, `added by ${who(e)}`].filter(Boolean).join(' · ')}*`);
         L.push('');
         if (has(e.body)) { L.push(text(e.body)); L.push(''); }
         for (const n of e.notes || []) L.push(`- ${text(n.body).replace(/\n/g, '\n  ')} — *${who(n)}, ${n.created_at}*`);

@@ -190,6 +190,63 @@ function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFu
         'season' => $w['season'] ?? null, 'shifts' => $seen, 'partial' => true];
 }
 
+/** Tags every campaign is offered before anyone creates their own: name => colour. */
+const STARTER_TAGS = [
+    'Holiday' => '#b8860b', 'Battle' => '#b91c1c', 'Party' => '#db2777', 'Banquet' => '#c2410c',
+    'Service' => '#4b5563', 'Ritual' => '#7c3aed', 'Festival' => '#d97706', 'Fair' => '#65a30d',
+    'Coronation' => '#a16207', 'Wedding' => '#be185d', 'Birth' => '#0d9488', 'Catastrophe' => '#7f1d1d',
+];
+const TAG_COLOR = '/^#[0-9a-fA-F]{6}$/';
+/** The campaign's tags plus any starter tag it hasn't used yet (id null), by name. */
+function campaign_tags(int $cid): array {
+    $st = db()->prepare('SELECT id, name, color FROM tags WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $tags = [];
+    foreach ($st->fetchAll() as $t) $tags[mb_strtolower($t['name'])] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
+    foreach (STARTER_TAGS as $name => $color) $tags[mb_strtolower($name)] ??= ['id' => null, 'name' => $name, 'color' => $color];
+    $tags = array_values($tags);
+    usort($tags, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+    return $tags;
+}
+/** Add each event's tags ([{id, name, color}]) as $e['tags']. */
+function attach_tags(array &$events): void {
+    if (!$events) return;
+    $ids = array_column($events, 'id');
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    $st = db()->prepare("SELECT et.event_id, t.id, t.name, t.color FROM event_tags et JOIN tags t ON t.id=et.tag_id WHERE et.event_id IN ($in) ORDER BY t.name");
+    $st->execute($ids);
+    $by = [];
+    foreach ($st->fetchAll() as $t) $by[$t['event_id']][] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
+    foreach ($events as &$e) $e['tags'] = $by[$e['id']] ?? [];
+    unset($e);
+}
+/** Replace an event's tags with $list ([{name, color?}]); a name the campaign
+ * hasn't used yet becomes a new tag, coloured as sent (or its starter colour). */
+function save_event_tags(int $cid, int $eid, $list): void {
+    if (!is_array($list) || count($list) > 20) fail('Send up to 20 tags');
+    $find = db()->prepare('SELECT id FROM tags WHERE campaign_id=? AND name=?');
+    $add = db()->prepare('INSERT INTO tags (campaign_id, name, color) VALUES (?,?,?)');
+    $ids = [];
+    foreach ($list as $t) {
+        $name = trim((string)str_in(is_array($t) ? ($t['name'] ?? '') : $t, 40, false));
+        if ($name === '') continue;
+        $find->execute([$cid, $name]);
+        $id = $find->fetchColumn();
+        if ($id === false) {
+            $starter = null;
+            foreach (STARTER_TAGS as $n => $c) if (strcasecmp($n, $name) === 0) { $starter = $c; $name = $n; }
+            $color = is_array($t) ? (string)($t['color'] ?? '') : '';
+            if (!preg_match(TAG_COLOR, $color)) $color = $starter ?? '#6b7280';
+            $add->execute([$cid, $name, $color]);
+            $id = db()->lastInsertId();
+        }
+        $ids[(int)$id] = true;
+    }
+    db()->prepare('DELETE FROM event_tags WHERE event_id=?')->execute([$eid]);
+    $link = db()->prepare('INSERT INTO event_tags (event_id, tag_id) VALUES (?,?)');
+    foreach (array_keys($ids) as $id) $link->execute([$eid, $id]);
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -297,7 +354,7 @@ try {
         $st->execute([$cid]);
         $members = $st->fetchAll();
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role']], $members);
-        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members]);
+        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid)]);
 
     case 'campaign_create':
         $u = me();
@@ -455,9 +512,10 @@ try {
         $st = db()->prepare('SELECT abs_day, shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
         $st->execute([$cid, $from, $to]);
         $shifts = $st->fetchAll();
-        $st = db()->prepare('SELECT id, abs_day, end_day, shift, title, is_secret FROM events WHERE campaign_id=? AND abs_day <= ? AND COALESCE(end_day, abs_day) >= ?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY abs_day, shift');
+        $st = db()->prepare('SELECT id, abs_day, end_day, shift, shift_end, title, is_secret FROM events WHERE campaign_id=? AND abs_day <= ? AND COALESCE(end_day, abs_day) >= ?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY abs_day, shift');
         $st->execute([$cid, $to, $from]);
         $events = $st->fetchAll();
+        attach_tags($events);
         out(['days' => $days, 'shifts' => $shifts, 'events' => $events, 'today' => $today]);
 
     // ===== single day drill-down =====
@@ -482,7 +540,7 @@ try {
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
         $st->execute([$cid, $ad]);
         $shifts = $st->fetchAll();
-        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.title, e.body, e.is_secret, e.created_by, u.display_name AS author FROM events e LEFT JOIN users u ON u.id=e.created_by WHERE e.campaign_id=? AND e.abs_day <= ? AND COALESCE(e.end_day, e.abs_day) >= ?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.shift IS NULL DESC, e.shift, e.id');
+        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, e.created_by, u.display_name AS author FROM events e LEFT JOIN users u ON u.id=e.created_by WHERE e.campaign_id=? AND e.abs_day <= ? AND COALESCE(e.end_day, e.abs_day) >= ?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.shift IS NULL DESC, e.shift, e.id');
         $st->execute([$cid, $ad, $ad]);
         $events = $st->fetchAll();
         if ($events) {
@@ -494,6 +552,7 @@ try {
             foreach ($st->fetchAll() as $n) $notes[$n['event_id']][] = $n;
             foreach ($events as &$e) $e['notes'] = $notes[$e['id']] ?? [];
             unset($e);
+            attach_tags($events);
         }
         out(['day' => $day, 'shifts' => $shifts, 'events' => $events, 'today' => $today]);
 
@@ -571,18 +630,26 @@ try {
         $end = ($end === null || $end === '') ? null : int_in($end);
         if ($end !== null && $end < $ad) fail('End day is before start day');
         if ($end === $ad) $end = null;
+        // shift empty = all day. Otherwise the event runs from shift (on abs_day)
+        // to shift_end (on end_day, or the same day); shift_end defaults to shift.
         $shift = p('shift');
         $shift = ($shift === null || $shift === '') ? null : int_in($shift, 0, 3);
+        $shiftEnd = p('shift_end');
+        $shiftEnd = ($shift === null) ? null : (($shiftEnd === null || $shiftEnd === '') ? $shift : int_in($shiftEnd, 0, 3));
+        if ($shift !== null && $end === null && $shiftEnd < $shift) fail('Shift End is before Shift Start');
         $secret = ($role === 'gm' && p('is_secret')) ? 1 : 0;
         $title = trim((string)str_in(p('title'), 200, false));
         if ($title === '') fail('Title required');
-        $args = [$ad, $end, $shift, $title, str_in(p('body'), 20000), $secret];
+        $args = [$ad, $end, $shift, $shiftEnd, $title, str_in(p('body'), 20000), $secret];
+        db()->beginTransaction();
         if ($id) {
-            db()->prepare('UPDATE events SET abs_day=?, end_day=?, shift=?, title=?, body=?, is_secret=? WHERE id=? AND campaign_id=?')->execute([...$args, $id, $cid]);
+            db()->prepare('UPDATE events SET abs_day=?, end_day=?, shift=?, shift_end=?, title=?, body=?, is_secret=? WHERE id=? AND campaign_id=?')->execute([...$args, $id, $cid]);
         } else {
-            db()->prepare('INSERT INTO events (abs_day, end_day, shift, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?)')->execute([...$args, $cid, $u['id']]);
+            db()->prepare('INSERT INTO events (abs_day, end_day, shift, shift_end, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?)')->execute([...$args, $cid, $u['id']]);
             $id = (int)db()->lastInsertId();
         }
+        if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'));
+        db()->commit();
         out(['ok' => true, 'id' => $id]);
 
     case 'event_delete':

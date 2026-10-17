@@ -32,6 +32,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   with its own length; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **events**: an event runs from a Shift Start to a Shift End (Shift End follows
+  Shift Start) or all day, takes starter and new tags whose colours show in week
+  view, an event saved the old way still shows, and Go to today opens today.
 - **current-day**: a campaign opens on the Current Day tab and the GM's browser
   saves today's shift weather; players get today's weather only up to the current
   shift (never the forecast), nothing for later days, and everything once allowed.

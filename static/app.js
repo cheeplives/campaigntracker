@@ -33,7 +33,7 @@
   }
 
   // ------------------------------------------------------------ API
-  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [] };
+  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '5';
   async function api(action, { query = {}, body = null } = {}) {
@@ -68,7 +68,7 @@
   async function loadCampaign(cid, force) {
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
-    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members;
+    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || [];
     E.prep(S.camp.calendar);
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
   }
@@ -173,6 +173,20 @@
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
   const holidayChip = x => el('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
+  const tagChip = t => el('span', { class: 'chip tag', style: { background: t.color }, 'data-tip': `Tag: ${t.name}` }, t.name);
+  /** The different tags on a list of events, in order of first appearance. */
+  function tagsOf(evs) {
+    const seen = new Map();
+    for (const e of evs) for (const t of e.tags || []) if (!seen.has(t.name.toLowerCase())) seen.set(t.name.toLowerCase(), t);
+    return [...seen.values()];
+  }
+  /** "All day", "Dawn", or "Dawn → Dusk" for an event's shifts. */
+  function shiftRange(e) {
+    const names = shiftNames();
+    if (e.shift === null || e.shift === undefined) return 'All day';
+    const a = Number(e.shift), b = e.shift_end === null || e.shift_end === undefined ? a : Number(e.shift_end);
+    return a === b && (e.end_day === null || e.end_day === undefined) ? names[a] : `${names[a]} → ${names[b]}`;
+  }
   function moonBadges(d) {
     return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the dusk and overnight shifts under sun & moons lighting.` },
       el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
@@ -628,7 +642,7 @@
   }
 
   const evLine = e => el('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
-    Number(e.is_secret) ? '🔒 ' : '• ', e.title);
+    Number(e.is_secret) ? '🔒 ' : el('span', { class: 'evdot', style: e.tags?.length ? { color: e.tags[0].color } : null }, '● '), e.title);
   function dayCell(d, data, compact) {
     const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
     const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
@@ -673,7 +687,7 @@
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
       rows.push(el('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
         el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
-          hol.map(holidayChip), evs.map(evLine)),
+          hol.map(holidayChip), tagsOf(evs).map(tagChip), evs.map(evLine)),
         el('div', { class: 'wr-shifts' }, [0, 1, 2, 3].map(i => {
           const s = sh[i] || {};
           const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
@@ -707,7 +721,9 @@
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
-      toCalendar, exportBtn);
+      toCalendar,
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'),
+      exportBtn);
 
     // --- overview card
     const overview = el('div', { class: 'card' },
@@ -833,7 +849,7 @@
   }
 
   function eventView(e, d) {
-    const names = shiftNames(), c = cal();
+    const c = cal();
     const mine = Number(e.created_by) === S.user.id;
     const span = e.end_day !== null && e.end_day !== undefined ? ` (${E.fmtDate(c, Number(e.abs_day), { noWeekday: true })} → ${E.fmtDate(c, Number(e.end_day), { noWeekday: true })})` : '';
     const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
@@ -853,7 +869,8 @@
     box.append(...[
       el('div', { class: 'row spread' },
         el('h4', {}, Number(e.is_secret) ? secretTag() : null, e.title),
-        el('small', { class: 'muted' }, e.shift !== null && e.shift !== undefined ? names[e.shift] : 'All day', span)),
+        el('small', { class: 'muted' }, shiftRange(e), span)),
+      e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.body ? el('p', { class: 'pre' }, e.body) : null,
       el('small', { class: 'muted' }, `Added by ${e.author || 'unknown'}`),
       (isGM() || mine) ? el('div', { class: 'row' },
@@ -866,25 +883,73 @@
     return box;
   }
 
+  /** Toggle tags on and off, or make a new one with its own colour.
+   * get() returns the picked tags as [{ name, color }]. */
+  function tagPicker(picked) {
+    const key = t => t.name.toLowerCase();
+    const known = new Map(S.tags.map(t => [key(t), t]));
+    for (const t of picked) if (!known.has(key(t))) known.set(key(t), t);
+    const on = new Set(picked.map(key));
+    const list = el('div', { class: 'tagpick' });
+    const draw = () => list.replaceChildren(...[...known.values()].sort((a, b) => a.name.localeCompare(b.name)).map(t => {
+      const k = key(t), sel = on.has(k);
+      return el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), style: { '--tag': t.color }, 'aria-pressed': String(sel),
+        onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, t.name);
+    }));
+    const PALETTE = ['#2563eb', '#0891b2', '#16a34a', '#9333ea', '#e11d48', '#ea580c', '#4d7c0f', '#0f766e'];
+    const name = el('input', { maxlength: 40, placeholder: 'New tag', 'aria-label': 'New tag name' });
+    const color = el('input', { type: 'color', value: PALETTE[known.size % PALETTE.length], 'aria-label': 'New tag colour', 'data-tip': 'Colour for the new tag' });
+    const add = () => {
+      const n = name.value.trim();
+      if (!n) return;
+      const k = n.toLowerCase();
+      if (!known.has(k)) known.set(k, { name: n, color: color.value });
+      on.add(k); name.value = ''; color.value = PALETTE[known.size % PALETTE.length]; draw();
+    };
+    name.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
+    draw();
+    const node = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Make your own with New tag')),
+      list, el('div', { class: 'row' }, name, color, btn('+ Add tag', add, 'small', 'Create this tag and put it on the event')));
+    return { node, get: () => [...on].map(k => ({ name: known.get(k).name, color: known.get(k).color })) };
+  }
+
   function eventForm(d, e = {}) {
     const names = shiftNames();
-    const start = Number(e.abs_day ?? d);
+    const start = Number(e.abs_day ?? d); // a new event starts on the day it is added from
     const lasts = e.end_day !== null && e.end_day !== undefined ? Number(e.end_day) - start + 1 : 1;
-    const startPick = datePicker(start);
+    const shiftOpts = names.map((n, i) => [i, n]);
+    const allDay = el('input', { type: 'checkbox', name: 'all_day', checked: e.shift === null || e.shift === undefined });
+    const shiftStart = select(shiftOpts, e.shift ?? 0, { name: 'shift' });
+    const shiftEnd = select(shiftOpts, e.shift_end ?? e.shift ?? 0, { name: 'shift_end', required: true });
+    // Shift End follows Shift Start until it is set apart, so one pick means one shift.
+    let lastStart = shiftStart.value;
+    shiftStart.addEventListener('change', () => { if (shiftEnd.value === lastStart) shiftEnd.value = shiftStart.value; lastStart = shiftStart.value; });
+    const startField = field('Shift Start', shiftStart, null, 'The shift the event begins in');
+    const endField = field('Shift End', shiftEnd, null, 'The shift it ends in, on its last day. The same as Shift Start for a one-shift event');
+    const syncAllDay = () => { startField.hidden = endField.hidden = allDay.checked; };
+    allDay.addEventListener('change', syncAllDay); syncAllDay();
+    const tags = tagPicker(e.tags || []);
     const f = el('form', { class: 'event editing' },
       el('div', { class: 'grid2' },
         field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
-        field('Shift', select([['', 'All day'], ...names.map((n, i) => [i, n])], e.shift ?? '', { name: 'shift' }), null, 'When in the day it happens. "All day" for things that span the whole day'),
-        field('Starts', startPick),
+        field('All day', allDay, null, 'For things that fill the whole day. Untick to pick the shifts it starts and ends in'),
+        startField, endField,
         field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
         isGM() ? field('Secret (GM only)', el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), null, 'Players won\'t see this event or its notes') : null),
+      tags.node,
       field('Details', el('textarea', { name: 'body', rows: 4, value: e.body || '' })),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
-      const v = formData(f), a = startPick.getAbs(), n = Math.max(1, Number(v.lasts) || 1);
+      const v = formData(f), n = Math.max(1, Number(v.lasts) || 1);
+      const timed = !allDay.checked;
+      if (timed && n === 1 && Number(shiftEnd.value) < Number(shiftStart.value)) { toast('Shift End is before Shift Start', true); return; }
+      const picked = tags.get();
       try {
-        await post('event_save', { id: e.id, abs_day: a, end_day: n > 1 ? a + n - 1 : null, shift: v.shift, title: v.title, body: v.body, is_secret: v.is_secret }, S.camp.id);
+        await post('event_save', { id: e.id, abs_day: start, end_day: n > 1 ? start + n - 1 : null,
+          shift: timed ? shiftStart.value : null, shift_end: timed ? shiftEnd.value : null,
+          title: v.title, body: v.body, is_secret: v.is_secret, tags: picked }, S.camp.id);
+        for (const t of picked) if (!S.tags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.tags.push(t);
         toast('Event saved'); route();
       } catch (err) { toast(err.message, true); }
     });
