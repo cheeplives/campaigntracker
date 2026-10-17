@@ -44,7 +44,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.
 - **travel**: overland, sea and air each list only their own sample speeds, and
-  picking one fills the planner (in km or miles); a trip is planned in shifts a day, each a quarter of the calendar's day;
+  picking one fills the planner; one Metric/Imperial switch converts every
+  distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;
   star pickers fill the light-years between two systems; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions.
