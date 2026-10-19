@@ -33,9 +33,9 @@
   }
 
   // ------------------------------------------------------------ API
-  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], reminders: [] };
+  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '9';
+  const APP_VERSION = '10';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -626,12 +626,13 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
+    holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
@@ -1150,17 +1151,17 @@
   }
 
   /** Toggle tags on and off, or make a new one with its own colour.
-   * get() returns the picked tags as [{ name, color }]. */
-  function tagPicker(picked) {
+   * get() returns the picked tags as [{ name, color }]. Holdings pass their own list (tags), apart from the events'. */
+  function tagPicker(picked, noun = 'event', tags = S.tags) {
     const key = t => t.name.toLowerCase();
-    const known = new Map(S.tags.map(t => [key(t), t]));
+    const known = new Map(tags.map(t => [key(t), t]));
     for (const t of picked) if (!known.has(key(t))) known.set(key(t), t);
     const on = new Set(picked.map(key));
     const list = el('div', { class: 'tagpick' });
     const draw = () => list.replaceChildren(...[...known.values()].sort((a, b) => a.name.localeCompare(b.name)).map(t => {
       const k = key(t), sel = on.has(k);
       const b = el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
-        'data-tip': sel ? `Tagged ${t.name}. Click to take it off` : `Click to tag this event ${t.name}`,
+        'data-tip': sel ? `Tagged ${t.name}. Click to take it off` : `Click to tag this ${noun} ${t.name}`,
         onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, sel ? '✓ ' : ''), t.name);
       b.style.setProperty('--tag', t.color); // el()'s style object can't set custom properties
       return b;
@@ -1177,8 +1178,9 @@
     };
     name.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
     draw();
-    const node = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Make your own with New tag')),
-      list, el('div', { class: 'row' }, name, color, btn('+ Add tag', add, 'small', 'Create this tag and put it on the event')));
+    const node = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip(noun === 'event' ? 'Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Make your own with New tag'
+      : `Group ${noun}s by kind. These tags are the ${noun}s' own, apart from the events' tags. Make your own with New tag`)),
+      list, el('div', { class: 'row' }, name, color, btn('+ Add tag', add, 'small', `Create this tag and put it on the ${noun}`)));
     return { node, get: () => [...on].map(k => ({ name: known.get(k).name, color: known.get(k).color })) };
   }
 
@@ -1891,6 +1893,272 @@
     return card;
   }
 
+  // ------------------------------------------------------------ party holdings tab
+  // Gear and Loot on the left, one card per holding on the right. GM and players alike add, change and remove both.
+  /** Holding types and their own fields, beyond name, location, description, amount and tags. Matches HOLDING_KINDS in api/index.php. */
+  const HOLDING_KINDS = {
+    vehicle: { label: 'Vehicle', icon: '🚙', fields: ['top_speed', 'fuel_cap', 'fuel_type', 'fuel_consume', 'reliability', 'armor', 'crew', 'cargo', 'value'] },
+    animal: { label: 'Animal', icon: '🐎', fields: ['top_speed', 'training', 'armor', 'crew', 'cargo', 'value'] },
+    building: { label: 'Building', icon: '🏰', fields: ['construction', 'armor', 'size', 'class', 'status', 'upkeep', 'value'] },
+    asset: { label: 'Asset', icon: '💎', fields: ['category', 'value'] },
+    custom: { label: 'Custom', icon: '📦', fields: ['value'] },
+  };
+  const HOLDING_FIELDS = {
+    top_speed: 'Top Speed', fuel_cap: 'Fuel Capacity', fuel_type: 'Fuel Type', fuel_consume: 'Fuel Consumption', reliability: 'Reliability',
+    armor: 'Armor', crew: 'Crew', cargo: 'Cargo', value: 'Value', training: 'Training', construction: 'Construction Type', size: 'Size', class: 'Class', status: 'Status', upkeep: 'Upkeep', category: 'Category',
+  };
+  /** Fields picked from a list, or typed in with Custom. */
+  const HOLDING_CHOICES = {
+    construction: ['Wood', 'Stone', 'Concrete', 'Metal', 'Mixed'],
+    category: ['Item', 'Connection', 'Contact', 'Favor'],
+  };
+  const HOLDING_MAX = 1e9;
+  const holdingType = h => (h.kind === 'custom' ? h.type_name : HOLDING_KINDS[h.kind]?.label) || h.kind;
+
+  /** A − amount + ticker. onTick(delta) and onSet(n) save it; if one throws, the box goes back to what it was. */
+  function amountTicker(value, { label = 'Amount', onTick, onSet } = {}) {
+    let n = Number(value) || 0;
+    const box = el('input', { type: 'number', min: 0, max: HOLDING_MAX, step: 1, value: n, class: 'tick-n', 'aria-label': label });
+    const show = () => { box.value = n; minus.disabled = n <= 0; };
+    const tick = async delta => {
+      const was = n;
+      n = Math.max(0, Math.min(HOLDING_MAX, n + delta));
+      if (n === was) return;
+      show();
+      try { if (onTick) await onTick(n - was); } catch (err) { n = was; show(); toast(err.message, true); }
+    };
+    const minus = el('button', { type: 'button', class: 'small', 'aria-label': `${label}: one fewer`, 'data-tip': 'One fewer', onclick: () => tick(-1) }, '−');
+    const plus = el('button', { type: 'button', class: 'small', 'aria-label': `${label}: one more`, 'data-tip': 'One more', onclick: () => tick(1) }, '+');
+    box.addEventListener('change', async () => {
+      const was = n, v = Math.round(Number(box.value));
+      if (!Number.isFinite(v) || v < 0 || v > HOLDING_MAX) { show(); return; }
+      n = v; show();
+      try { if (onSet) await onSet(n); } catch (err) { n = was; show(); toast(err.message, true); }
+    });
+    show();
+    return { node: el('div', { class: 'ticker' }, minus, box, plus), get: () => n };
+  }
+
+  async function viewHoldings() {
+    const { gear, holdings, tags } = await api('holdings', { query: { cid: S.camp.id } });
+    S.holdingTags = tags || [];
+    const right = el('div', { class: 'holdings-col' },
+      el('div', { class: 'card' }, el('div', { class: 'row spread' },
+        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
+        btn('+ Add holding', () => holdingDialog(), 'primary', 'Add a vehicle, animal, building, asset or a type of your own')),
+        holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press Add holding to add one.')),
+      holdings.map(holdingCard));
+    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, gearCard(gear), right));
+  }
+
+  /** The Gear and Loot list: item, who claimed it and where it is, all free text, and how many. Each box saves when you leave it. */
+  function gearCard(gear) {
+    const rows = el('div', { class: 'gear-rows' });
+    const gearRow = g => {
+      const text = (name, label, ph) => el('input', { name, value: g[name] || '', maxlength: 200, 'aria-label': label, placeholder: ph });
+      const item = text('item', 'Item', 'Item'), claimed = text('claimed_by', 'Claimed by', 'Claimed by'), loc = text('location', 'Location', 'Location');
+      const save = async () => {
+        try { await post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value }, S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
+      };
+      [item, claimed, loc].forEach(i => i.addEventListener('change', save));
+      const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
+        onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
+        onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
+      const row = el('div', { class: 'gear-row' }, item, claimed, loc, amount.node,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: async () => {
+          if (!await confirmDialog(`Remove "${item.value || 'this item'}" from Gear and Loot?`, { ok: 'Remove', danger: true })) return;
+          try { await post('gear_delete', { id: g.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
+        } }, '✕'));
+      return row;
+    };
+    rows.append(...gear.map(gearRow));
+    // The last row adds an item; Enter in any of its boxes adds it too.
+    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': 'New item' });
+    const nClaimed = el('input', { maxlength: 200, placeholder: 'Claimed by', 'aria-label': 'New item claimed by' });
+    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'New item location' });
+    const nAmount = amountTicker(1, { label: 'How many of the new item' });
+    const add = btn('+ Add', null, 'small primary', 'Add this item to the list');
+    add.addEventListener('click', busy(null, async () => {
+      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
+      // As in Storage: clear the boxes first, and put them back if the save fails.
+      const typed = [nItem.value, nClaimed.value, nLoc.value];
+      const g = { item: typed[0].trim(), claimed_by: typed[1].trim(), location: typed[2].trim(), amount: nAmount.get() };
+      nItem.value = nClaimed.value = nLoc.value = '';
+      nItem.focus();
+      try { g.id = (await post('gear_save', g, S.camp.id)).id; }
+      catch (err) { if (!nItem.value && !nClaimed.value && !nLoc.value) [nItem.value, nClaimed.value, nLoc.value] = typed; throw err; }
+      rows.append(gearRow(g));
+    }));
+    for (const i of [nItem, nClaimed, nLoc]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    return el('section', { class: 'card gear' },
+      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. The GM and every player can edit the list.')),
+      el('div', { class: 'gear-row gear-head', 'aria-hidden': 'true' }, ['Item', 'Claimed by', 'Location', 'Amount', ''].map(h => el('span', { class: 'lbl' }, h))),
+      rows,
+      gear.length ? null : el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.'),
+      el('div', { class: 'gear-row gear-new' }, nItem, nClaimed, nLoc, nAmount.node, add));
+  }
+
+  /** One holding's card: its type, amount, location, description, fields and tags, with Edit and Delete. */
+  function holdingCard(h) {
+    const k = HOLDING_KINDS[h.kind] || HOLDING_KINDS.custom;
+    const amount = amountTicker(h.amount, { label: `How many ${h.name}`, onTick: delta => post('holding_tick', { id: h.id, delta }, S.camp.id) });
+    const stats = k.fields.filter(f => h.stats?.[f]).map(f => el('div', {}, el('span', { class: 'lbl' }, HOLDING_FIELDS[f]), el('span', {}, h.stats[f])));
+    return el('section', { class: 'card holding', 'data-kind': h.kind },
+      el('div', { class: 'row spread' },
+        el('h3', {}, `${k.icon} ${h.name}`),
+        el('div', { class: 'inline' }, el('span', { class: 'lbl' }, 'Amount'), amount.node)),
+      el('small', { class: 'muted' }, holdingType(h), h.location ? ` · 📍 ${h.location}` : ''),
+      h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
+      h.description ? el('p', { class: 'pre' }, h.description) : null,
+      stats.length ? el('div', { class: 'hold-stats' }, stats) : null,
+      storageBox(h),
+      el('div', { class: 'row' },
+        btn('Edit', () => holdingDialog(h), 'small', 'Change this holding'),
+        btn('Delete', async () => {
+          if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
+          try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+        }, 'small danger', 'Delete this holding')));
+  }
+
+  /** The first number in a text such as "1,200 lb" or "2.5 tons", or null. */
+  const leadNumber = s => { const m = String(s ?? '').replace(/,/g, '').match(/\d+(\.\d+)?|\.\d+/); return m ? Number(m[0]) : null; };
+  const fmtWeight = n => (Math.round(n * 100) / 100).toLocaleString();
+  /** A holding's Storage box: a ledger of what is kept in it and how much each weighs, with the total,
+   * flagged when it is more than the holding's Cargo. Boxes save when you leave them. */
+  function storageBox(h) {
+    const cap = leadNumber(h.stats?.cargo);
+    const lines = el('div', { class: 'ledger-rows' });
+    const total = el('div', { class: 'ledger-total' });
+    const weights = () => [...lines.querySelectorAll('input.ledger-w')].map(i => Number(i.value) || 0);
+    const sum = () => {
+      const t = weights().reduce((a, b) => a + b, 0), over = cap !== null && t > cap;
+      total.classList.toggle('over', over);
+      total.replaceChildren(el('span', {}, 'Total weight'), el('strong', {}, fmtWeight(t), cap !== null ? ` / ${h.stats.cargo}` : ''),
+        ...(over ? [el('span', { class: 'bad', role: 'alert' }, `⚠ Over cargo by ${fmtWeight(t - cap)}`)] : []));
+    };
+    const wInput = v => el('input', { type: 'number', min: 0, step: 'any', class: 'ledger-w', value: v ?? '', placeholder: 'Weight' });
+    const line = s => {
+      const item = el('input', { maxlength: 200, value: s.item, 'aria-label': 'Stored item' });
+      const weight = wInput(s.weight);
+      weight.setAttribute('aria-label', `Weight of ${s.item}`);
+      const save = async () => {
+        if (!item.value.trim()) { item.value = s.item; return; }
+        try { await post('storage_save', { id: s.id, item: item.value, weight: weight.value }, S.camp.id); s.item = item.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+      };
+      item.addEventListener('change', save);
+      weight.addEventListener('change', save);
+      weight.addEventListener('input', sum);
+      const row = el('div', { class: 'ledger-row' }, item, weight,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: async () => {
+          if (!await confirmDialog(`Remove "${item.value}" from ${h.name}'s storage?`, { ok: 'Remove', danger: true })) return;
+          try { await post('storage_delete', { id: s.id }, S.camp.id); row.remove(); sum(); } catch (err) { toast(err.message, true); }
+        } }, '✕'));
+      return row;
+    };
+    lines.append(...(h.storage || []).map(line));
+    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': `New item in ${h.name}'s storage` });
+    const nWeight = wInput('');
+    nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
+    const add = btn('+ Add', null, 'small', 'Put this item in storage');
+    // Not disabled while saving, so a quick second item (Enter, Enter) is added too.
+    add.addEventListener('click', busy(null, async () => {
+      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
+      // Clear the boxes before saving, so anything typed while it saves isn't wiped; put it back if the save fails.
+      const typed = [nItem.value, nWeight.value];
+      const s = { item: typed[0].trim(), weight: typed[1] === '' ? null : Number(typed[1]) };
+      nItem.value = nWeight.value = '';
+      nItem.focus();
+      try { s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: typed[1] }, S.camp.id)).id; }
+      catch (err) { if (!nItem.value && !nWeight.value) [nItem.value, nWeight.value] = typed; throw err; }
+      lines.append(line(s));
+      sum();
+    }));
+    for (const i of [nItem, nWeight]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    sum();
+    return el('div', { class: 'storage' },
+      el('span', { class: 'lbl' }, 'Storage', tip(cap !== null
+        ? `What is kept in ${h.name}, and what each item weighs. The total is checked against its Cargo (${h.stats.cargo}), so give weights in the same unit`
+        : `What is kept in ${h.name}, and what each item weighs. Give the holding a Cargo value to be warned when it is overloaded`)),
+      el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Item'), el('span', { class: 'lbl' }, 'Weight'), el('span')),
+      lines,
+      el('div', { class: 'ledger-row ledger-new' }, nItem, nWeight, add),
+      total);
+  }
+
+  /** Add a holding, or edit one (h): the common fields, then the fields of the type picked. */
+  function holdingDialog(h = {}) {
+    hideTip();
+    const CUSTOM = '__custom';
+    const kindSel = select([...Object.entries(HOLDING_KINDS).map(([v, x]) => [v, v === 'custom' ? 'Custom…' : x.label])], h.kind || 'vehicle', { name: 'kind', 'aria-label': 'Type' });
+    const typeName = el('input', { maxlength: 60, value: h.type_name || '', placeholder: 'e.g. Ship, Company, Spell', 'aria-label': 'Custom type' });
+    const typeField = field('Custom type', typeName, 'What kind of holding this is');
+    const name = el('input', { maxlength: 200, value: h.name || '', required: true });
+    const loc = el('input', { maxlength: 200, value: h.location || '' });
+    const desc = el('textarea', { rows: 5, value: h.description || '' });
+    const amount = amountTicker(h.amount ?? 1);
+    const tags = tagPicker(h.tags || [], 'holding', S.holdingTags || []);
+    // One box per field across every type, so switching type and back keeps what was typed.
+    const boxes = {};
+    for (const f of Object.keys(HOLDING_FIELDS)) {
+      const v = h.stats?.[f] || '';
+      const input = el('input', { maxlength: 200, value: v });
+      const choices = HOLDING_CHOICES[f];
+      if (!choices) { boxes[f] = { node: field(HOLDING_FIELDS[f], input), get: () => input.value }; continue; }
+      const custom = !!v && !choices.includes(v);
+      const sel = select([['', '—'], ...choices.map(c => [c, c]), [CUSTOM, 'Custom…']], custom ? CUSTOM : v, { 'aria-label': HOLDING_FIELDS[f] });
+      input.value = custom ? v : '';
+      input.placeholder = `Your own ${HOLDING_FIELDS[f].toLowerCase()}`;
+      input.setAttribute('aria-label', `Custom ${HOLDING_FIELDS[f].toLowerCase()}`);
+      const sync = () => { input.hidden = sel.value !== CUSTOM; };
+      sel.addEventListener('change', () => { sync(); if (!input.hidden) input.focus(); });
+      sync();
+      boxes[f] = { node: field(HOLDING_FIELDS[f], el('div', { class: 'stack' }, sel, input)), get: () => (sel.value === CUSTOM ? input.value : sel.value) };
+    }
+    const statsBox = el('div', { class: 'grid3 hold-fields' });
+    const syncKind = () => {
+      typeField.hidden = kindSel.value !== 'custom';
+      statsBox.replaceChildren(...HOLDING_KINDS[kindSel.value].fields.map(f => boxes[f].node));
+    };
+    kindSel.addEventListener('change', syncKind);
+    syncKind();
+    const err = el('p', { class: 'bad small', hidden: true });
+    const save = el('button', { class: 'primary', type: 'submit' }, h.id ? 'Save' : 'Add holding');
+    const title = h.id ? `Edit ${h.name}` : 'Add holding';
+    const d = el('dialog', { class: 'kit-dialog hold-dialog', 'aria-label': title },
+      el('form', { novalidate: true },
+        el('h3', {}, title),
+        el('div', { class: 'grid2' }, field('Holding Name', name), field('Type', kindSel)),
+        typeField,
+        field('Location', loc),
+        field('Description', desc),
+        el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Amount'), amount.node),
+        statsBox,
+        tags.node,
+        err,
+        el('div', { class: 'kit-dialog-actions' }, save, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel'))));
+    d.addEventListener('close', () => d.remove());
+    d.querySelector('form').addEventListener('submit', busy(save, async e => {
+      e.preventDefault();
+      err.hidden = true;
+      const kind = kindSel.value;
+      const fail = (msg, box) => { err.textContent = msg; err.hidden = false; box?.focus(); };
+      if (!name.value.trim()) return fail('Give the holding a name.', name);
+      if (kind === 'custom' && !typeName.value.trim()) return fail('Name the custom type.', typeName);
+      const stats = Object.fromEntries(HOLDING_KINDS[kind].fields.map(f => [f, boxes[f].get().trim()]).filter(([, v]) => v));
+      const picked = tags.get();
+      try {
+        await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
+          location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked }, S.camp.id);
+      } catch (x) { return fail(x.message); }
+      d.close();
+      toast(h.id ? 'Holding saved' : 'Holding added');
+      route();
+    }));
+    document.body.append(d);
+    d.showModal();
+    name.focus();
+  }
+
   // ------------------------------------------------------------ members tab
   function viewMembers() {
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
@@ -2231,7 +2499,7 @@
         const viewToday = () => viewDay(today(), true);
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }
