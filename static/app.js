@@ -1868,13 +1868,16 @@
     const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'New item location' });
     const nAmount = amountTicker(1, { label: 'How many of the new item' });
     const add = btn('+ Add', null, 'small primary', 'Add this item to the list');
-    add.addEventListener('click', busy(add, async () => {
+    add.addEventListener('click', busy(null, async () => {
       if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      const g = { item: nItem.value.trim(), claimed_by: nClaimed.value.trim(), location: nLoc.value.trim(), amount: nAmount.get() };
-      g.id = (await post('gear_save', g, S.camp.id)).id;
-      rows.append(gearRow(g));
+      // As in Storage: clear the boxes first, and put them back if the save fails.
+      const typed = [nItem.value, nClaimed.value, nLoc.value];
+      const g = { item: typed[0].trim(), claimed_by: typed[1].trim(), location: typed[2].trim(), amount: nAmount.get() };
       nItem.value = nClaimed.value = nLoc.value = '';
       nItem.focus();
+      try { g.id = (await post('gear_save', g, S.camp.id)).id; }
+      catch (err) { if (!nItem.value && !nClaimed.value && !nLoc.value) [nItem.value, nClaimed.value, nLoc.value] = typed; throw err; }
+      rows.append(gearRow(g));
     }));
     for (const i of [nItem, nClaimed, nLoc]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
     return el('section', { class: 'card gear' },
@@ -1947,14 +1950,18 @@
     const nWeight = wInput('');
     nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
     const add = btn('+ Add', null, 'small', 'Put this item in storage');
-    add.addEventListener('click', busy(add, async () => {
+    // Not disabled while saving, so a quick second item (Enter, Enter) is added too.
+    add.addEventListener('click', busy(null, async () => {
       if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      const s = { item: nItem.value.trim(), weight: nWeight.value === '' ? null : Number(nWeight.value) };
-      s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: nWeight.value }, S.camp.id)).id;
-      lines.append(line(s));
+      // Clear the boxes before saving, so anything typed while it saves isn't wiped; put it back if the save fails.
+      const typed = [nItem.value, nWeight.value];
+      const s = { item: typed[0].trim(), weight: typed[1] === '' ? null : Number(typed[1]) };
       nItem.value = nWeight.value = '';
-      sum();
       nItem.focus();
+      try { s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: typed[1] }, S.camp.id)).id; }
+      catch (err) { if (!nItem.value && !nWeight.value) [nItem.value, nWeight.value] = typed; throw err; }
+      lines.append(line(s));
+      sum();
     }));
     for (const i of [nItem, nWeight]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
     sum();
