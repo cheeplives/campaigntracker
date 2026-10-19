@@ -1,7 +1,7 @@
--- 006_reminders.sql — calendar reminders that pop up when the campaign clock reaches them.
+-- 007_reminders.sql — calendar reminders that pop up when the campaign clock reaches them.
 --
 -- Run ONCE on an install created before this change:
---   mysql -u <user> -p <database> < db/migrations/006_reminders.sql
+--   mysql -u <user> -p <database> < db/migrations/007_reminders.sql
 -- (install.php runs it for you when there is no reminders table.)
 -- Fresh installs already get it from db/schema.sql.
 
