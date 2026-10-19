@@ -86,7 +86,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
 
   // A building with a construction type of its own.
   await dlg.getByLabel("Type", { exact: true }).selectOption("building");
-  expect(await fieldsOf()).toEqual(["Construction Type", "Armor", "Size", "Value"]);
+  expect(await fieldsOf()).toEqual(["Construction Type", "Armor", "Size", "Class", "Status", "Upkeep", "Value"]);
   await expect(dlg.getByLabel("Custom type", { exact: true })).toBeHidden();
   await dlg.getByRole("button", { name: "Add holding" }).click();
   await expect(dlg).toContainText("Give the holding a name");
@@ -96,6 +96,8 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await dlg.getByLabel("Construction Type", { exact: true }).selectOption("__custom");
   await dlg.getByLabel("Custom construction type").fill("Bone and wattle");
   await dlg.getByLabel("Size", { exact: true }).fill("Small");
+  await dlg.getByLabel("Status", { exact: true }).fill("Needs repairs");
+  await dlg.getByLabel("Upkeep", { exact: true }).fill("5 gp a month");
   await dlg.getByLabel("Value", { exact: true }).fill("400 gp");
   await dlg.getByRole("button", { name: "Amount: one more" }).click();
   // Holdings have their own tags: none of the events' starter tags are offered.
@@ -116,7 +118,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await card.getByRole("button", { name: /one fewer/ }).click();
   await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.holdings[0].amount).toBe(1);
   const saved = (await api(pp, "holdings", undefined, cid)).json.holdings[0];
-  expect(saved.stats).toEqual({ construction: "Bone and wattle", size: "Small", value: "400 gp" });
+  expect(saved.stats).toEqual({ construction: "Bone and wattle", size: "Small", status: "Needs repairs", upkeep: "5 gp a month", value: "400 gp" });
   expect(saved.tags.map(t => t.name)).toEqual(["Base"]);
   // ...and they stay out of the events' list, which keeps its own.
   const campaignTags = (await api(pp, "campaign", undefined, cid)).json.tags.map(t => t.name);

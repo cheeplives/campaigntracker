@@ -428,7 +428,7 @@ function label_shifts(int $cid, int $spd, int $from, int $to, string $label, boo
 const HOLDING_KINDS = [
     'vehicle' => ['top_speed', 'fuel_cap', 'fuel_type', 'fuel_consume', 'reliability', 'armor', 'crew', 'cargo', 'value'],
     'animal' => ['top_speed', 'training', 'armor', 'crew', 'cargo', 'value'],
-    'building' => ['construction', 'armor', 'size', 'value'],
+    'building' => ['construction', 'armor', 'size', 'class', 'status', 'upkeep', 'value'],
     'asset' => ['category', 'value'],
     'custom' => ['value'],
 ];
