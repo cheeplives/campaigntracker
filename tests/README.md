@@ -67,6 +67,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
+- **reminders**: a GM's reminder, added from today's page on the next shift, pops up for
+  the GM when time passes to it and on a player's open page at its next check; Dismiss stops
+  it for that person only, Remind me later until the clock moves or the page reloads; moving
+  it re-arms it; players keep only their own reminders and never see the GMs' or another
+  player's; a time the clock has passed is refused; switching to hours moves reminders with the clock.
 - **changes**: a player's open page offers a Refresh banner after the GM saves a
   change, and Refresh loads it on the same tab; a player's own note and the GM's
   own saves don't announce themselves.

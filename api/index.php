@@ -269,6 +269,11 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
         $up->execute([$d0, $d1 > $d0 ? $d1 : null, $s0, $s1, $e['id']]);
     }
 
+    $st = $pdo->prepare('SELECT id, due_shift FROM reminders WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE reminders SET due_shift=? WHERE id=?');
+    foreach ($st->fetchAll() as $r) $up->execute([convert_slot((int)$r['due_shift'], $old, $new), $r['id']]);
+
     // Rests and downtime keep absolute slots; a short rest that cost no shift (slots 0) stays a single moment.
     $st = $pdo->prepare('SELECT id, start_shift, end_shift, slots FROM downtimes WHERE campaign_id=?');
     $st->execute([$cid]);
@@ -460,13 +465,33 @@ function holding_tick(string $table, int $cid): int {
     return (int)holding_row($table, $id, $cid)['amount'];
 }
 
+// ---------- reminders ----------
+const REMINDER_AUDIENCES = ['me', 'gm', 'all'];
+/** SQL condition for the reminders user $uid may see (alias r): their own, the GMs' if they are a GM, and everyone's. */
+function reminder_visible_sql(bool $isGm): string {
+    return "(r.audience='all' OR r.created_by=?" . ($isGm ? " OR r.audience='gm'" : '') . ')';
+}
+/** A reminder this user may change: one they made, or as a GM one shared with the GMs or everyone. Fails otherwise. */
+function editable_reminder(int $cid, int $id, string $role): array {
+    $st = db()->prepare('SELECT id, due_shift, audience, created_by FROM reminders WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    $r = $st->fetch();
+    $mine = $r && (int)$r['created_by'] === me()['id'];
+    if (!$r || (!$mine && !($role === 'gm' && $r['audience'] !== 'me'))) fail('Reminder not found', 404);
+    return $r;
+}
+/** Tell open pages about a GM's change to a reminder others can see (a private one stays quiet). */
+function touch_campaign(int $cid): void {
+    db()->prepare('UPDATE campaigns SET updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$cid]);
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'holdings', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -1182,6 +1207,78 @@ try {
         $cid = cid();
         role($cid);
         db()->prepare('DELETE FROM holdings WHERE id=? AND campaign_id=?')->execute([int_in(p('id'), 1), $cid]);
+        out(['ok' => true]);
+
+    // ===== reminders: pop up when the campaign clock reaches them =====
+    case 'reminders':
+        // Everything this user may see, with whether it is due (the clock has reached it) and whether they dismissed it.
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $uid = me()['id'];
+        $now = (int)campaign_row($cid)['current_shift'];
+        $st = db()->prepare('SELECT r.id, r.due_shift, r.title, r.body, r.audience, r.created_by, ' . AUTHOR_SQL . ' AS author, u.display_name AS player,
+                (dm.user_id IS NOT NULL) AS dismissed
+            FROM reminders r LEFT JOIN users u ON u.id=r.created_by LEFT JOIN campaign_members m ON m.campaign_id=r.campaign_id AND m.user_id=r.created_by
+            LEFT JOIN reminder_dismissals dm ON dm.reminder_id=r.id AND dm.user_id=?
+            WHERE r.campaign_id=? AND ' . reminder_visible_sql($isGm) . ' ORDER BY r.due_shift, r.id');
+        $st->execute([$uid, $cid, $uid]);
+        $rows = array_map(function ($r) use ($now) {
+            foreach (['id', 'due_shift'] as $k) $r[$k] = (int)$r[$k];
+            $r['created_by'] = $r['created_by'] !== null ? (int)$r['created_by'] : null;
+            $r['dismissed'] = (bool)$r['dismissed'];
+            $r['due'] = $r['due_shift'] <= $now;
+            return $r;
+        }, $st->fetchAll());
+        out(['reminders' => $rows, 'current_shift' => $now]);
+
+    case 'reminder_save':
+        // Anyone can keep reminders for themselves; a GM can also share one with the GMs or with everyone.
+        $cid = cid();
+        $role = role($cid);
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        $old = $id ? editable_reminder($cid, $id, $role) : null;
+        $title = trim((string)str_in(p('title'), 200, false));
+        if ($title === '') fail('Give the reminder a title');
+        $audience = (string)p('audience', 'me');
+        if (!in_array($audience, REMINDER_AUDIENCES, true)) fail('Pick who the reminder is for');
+        if ($role !== 'gm' && $audience !== 'me') fail('Only a GM can share a reminder', 403);
+        $due = int_in(p('due_shift'));
+        $moved = !$old || (int)$old['due_shift'] !== $due;
+        if ($moved && $due <= (int)campaign_row($cid)['current_shift']) fail('Pick a time after now: the clock has already passed that one');
+        db()->beginTransaction();
+        if ($old) {
+            db()->prepare('UPDATE reminders SET due_shift=?, title=?, body=?, audience=? WHERE id=?')->execute([$due, $title, str_in(p('body'), 5000), $audience, $id]);
+            // moved to a new time: it pops up again for everyone, even those who dismissed it
+            if ($moved) db()->prepare('DELETE FROM reminder_dismissals WHERE reminder_id=?')->execute([$id]);
+        } else {
+            db()->prepare('INSERT INTO reminders (campaign_id, due_shift, title, body, audience, created_by) VALUES (?,?,?,?,?,?)')
+                ->execute([$cid, $due, $title, str_in(p('body'), 5000), $audience, me()['id']]);
+            $id = (int)db()->lastInsertId();
+        }
+        if ($role === 'gm' && ($audience !== 'me' || ($old && $old['audience'] !== 'me'))) touch_campaign($cid);
+        db()->commit();
+        out(['ok' => true, 'id' => $id]);
+
+    case 'reminder_delete':
+        $cid = cid();
+        $role = role($cid);
+        $r = editable_reminder($cid, int_in(p('id'), 1), $role);
+        db()->prepare('DELETE FROM reminders WHERE id=?')->execute([$r['id']]);
+        if ($role === 'gm' && $r['audience'] !== 'me') touch_campaign($cid);
+        out(['ok' => true]);
+
+    case 'reminder_dismiss':
+        // This user has read these reminders: they stop popping up for them (and only them).
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $uid = me()['id'];
+        $ids = array_slice(array_map('intval', (array)p('ids', [])), 0, 200);
+        $seen = db()->prepare('SELECT r.id FROM reminders r WHERE r.id=? AND r.campaign_id=? AND ' . reminder_visible_sql($isGm));
+        $ins = db()->prepare('INSERT IGNORE INTO reminder_dismissals (reminder_id, user_id) VALUES (?,?)');
+        foreach ($ids as $rid) {
+            $seen->execute([$rid, $cid, $uid]);
+            if ($seen->fetchColumn()) $ins->execute([$rid, $uid]);
+        }
         out(['ok' => true]);
 
     default:
