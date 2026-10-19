@@ -48,6 +48,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   current one; downtime covers whole days and its label comes off when deleted; the GM
   picks activities, custom ones and players; players see them and edit only the public
   notes, never the GM notes.
+- **holdings**: a player adds Gear and Loot from the last row, ticks its count (never
+  below 0) and edits its boxes, and the GM sees and removes it; the Add holding dialog
+  shows each type's own fields, takes a custom construction type, a custom holding
+  type and tags, and its card ticks, edits and deletes for GM and players alike.
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;

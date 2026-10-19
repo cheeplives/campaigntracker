@@ -197,3 +197,50 @@ CREATE TABLE IF NOT EXISTS downtimes (
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Party Holdings tab. party_gear is the Gear and Loot list: one row per item, all free text
+-- but the count. holdings are the cards beside it: vehicles, animals, buildings, assets or a
+-- type the party names (kind 'custom', named by type_name). stats_json holds the fields of
+-- its kind, e.g. {"top_speed": "60 mph", "fuel_type": "Diesel"}; see HOLDING_KINDS in api/index.php.
+-- Every member of the campaign, GM or player, can add, change and remove both.
+CREATE TABLE IF NOT EXISTS party_gear (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  item VARCHAR(200) NOT NULL DEFAULT '',
+  claimed_by VARCHAR(200) NOT NULL DEFAULT '',
+  location VARCHAR(200) NOT NULL DEFAULT '',
+  amount INT NOT NULL DEFAULT 1,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_gear_campaign (campaign_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS holdings (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  kind VARCHAR(16) NOT NULL,                        -- vehicle | animal | building | asset | custom
+  type_name VARCHAR(60) NOT NULL DEFAULT '',        -- the type a custom holding is, e.g. "Ship"
+  location VARCHAR(200) NOT NULL DEFAULT '',
+  description TEXT,
+  amount INT NOT NULL DEFAULT 1,
+  stats_json TEXT,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_holdings_campaign (campaign_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- A holding's tags, from the same per-campaign list events use.
+CREATE TABLE IF NOT EXISTS holding_tags (
+  holding_id INT UNSIGNED NOT NULL,
+  tag_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (holding_id, tag_id),
+  FOREIGN KEY (holding_id) REFERENCES holdings(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

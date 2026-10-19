@@ -327,21 +327,25 @@ function campaign_tags(int $cid): array {
     usort($tags, fn($a, $b) => strcasecmp($a['name'], $b['name']));
     return $tags;
 }
-/** Add each event's tags ([{id, name, color}]) as $e['tags']. */
-function attach_tags(array &$events): void {
+/** What carries tags: its link table and that table's id column. */
+const TAG_LINKS = ['event' => ['event_tags', 'event_id'], 'holding' => ['holding_tags', 'holding_id']];
+/** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
+function attach_tags(array &$events, string $of = 'event'): void {
     if (!$events) return;
+    [$table, $col] = TAG_LINKS[$of];
     $ids = array_column($events, 'id');
     $in = implode(',', array_fill(0, count($ids), '?'));
-    $st = db()->prepare("SELECT et.event_id, t.id, t.name, t.color FROM event_tags et JOIN tags t ON t.id=et.tag_id WHERE et.event_id IN ($in) ORDER BY t.name");
+    $st = db()->prepare("SELECT et.$col AS owner, t.id, t.name, t.color FROM $table et JOIN tags t ON t.id=et.tag_id WHERE et.$col IN ($in) ORDER BY t.name");
     $st->execute($ids);
     $by = [];
-    foreach ($st->fetchAll() as $t) $by[$t['event_id']][] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
+    foreach ($st->fetchAll() as $t) $by[$t['owner']][] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
     foreach ($events as &$e) $e['tags'] = $by[$e['id']] ?? [];
     unset($e);
 }
-/** Replace an event's tags with $list ([{name, color?}]); a name the campaign
- * hasn't used yet becomes a new tag, coloured as sent (or its starter colour). */
-function save_event_tags(int $cid, int $eid, $list): void {
+/** Replace an event's (or holding's, $of 'holding') tags with $list ([{name, color?}]); a name the
+ * campaign hasn't used yet becomes a new tag, coloured as sent (or its starter colour). */
+function save_event_tags(int $cid, int $eid, $list, string $of = 'event'): void {
+    [$table, $col] = TAG_LINKS[$of];
     if (!is_array($list) || count($list) > 20) fail('Send up to 20 tags');
     $find = db()->prepare('SELECT id FROM tags WHERE campaign_id=? AND name=?');
     $add = db()->prepare('INSERT INTO tags (campaign_id, name, color) VALUES (?,?,?)');
@@ -361,8 +365,8 @@ function save_event_tags(int $cid, int $eid, $list): void {
         }
         $ids[(int)$id] = true;
     }
-    db()->prepare('DELETE FROM event_tags WHERE event_id=?')->execute([$eid]);
-    $link = db()->prepare('INSERT INTO event_tags (event_id, tag_id) VALUES (?,?)');
+    db()->prepare("DELETE FROM $table WHERE $col=?")->execute([$eid]);
+    $link = db()->prepare("INSERT INTO $table ($col, tag_id) VALUES (?,?)");
     foreach (array_keys($ids) as $id) $link->execute([$eid, $id]);
 }
 
@@ -416,13 +420,52 @@ function label_shifts(int $cid, int $spd, int $from, int $to, string $label, boo
     }
 }
 
+// ---------- party holdings (the Party Holdings tab) ----------
+/** Holding types and the fields each one has beyond the common ones (name, location, description, amount, tags).
+ * 'custom' is a type the party names itself. All fields are free text; Construction Type and Category
+ * offer a list in the browser but take anything. Matches HOLDING_KINDS in static/app.js. */
+const HOLDING_KINDS = [
+    'vehicle' => ['top_speed', 'fuel_cap', 'fuel_type', 'fuel_consume', 'reliability', 'armor', 'crew', 'cargo', 'value'],
+    'animal' => ['top_speed', 'training', 'armor', 'crew', 'cargo', 'value'],
+    'building' => ['construction', 'armor', 'size', 'value'],
+    'asset' => ['category', 'value'],
+    'custom' => ['value'],
+];
+const HOLDING_MAX = 1_000_000_000;
+/** A holding's fields for its kind, as stored: only that kind's keys, blank ones left out. */
+function holding_stats($v, string $kind): string {
+    if ($v !== null && !is_array($v)) fail('Expected an object of fields');
+    $out = [];
+    foreach (HOLDING_KINDS[$kind] as $k) {
+        $x = trim((string)str_in(is_array($v) ? ($v[$k] ?? null) : null, 200, false));
+        if ($x !== '') $out[$k] = $x;
+    }
+    return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : '{}';
+}
+/** Fetch a gear row or holding of campaign $cid by id, or fail. */
+function holding_row(string $table, int $id, int $cid): array {
+    $st = db()->prepare("SELECT * FROM $table WHERE id=? AND campaign_id=?");
+    $st->execute([$id, $cid]);
+    $r = $st->fetch();
+    if (!$r) fail($table === 'holdings' ? 'Holding not found' : 'Item not found', 404);
+    return $r;
+}
+/** Tick a gear row's or holding's amount up or down by $delta, never below 0. Returns the new amount. */
+function holding_tick(string $table, int $cid): int {
+    $id = int_in(p('id'), 1);
+    $delta = int_in(p('delta'), -HOLDING_MAX, HOLDING_MAX);
+    holding_row($table, $id, $cid);
+    db()->prepare("UPDATE $table SET amount=LEAST(?, GREATEST(0, amount + ?)) WHERE id=?")->execute([HOLDING_MAX, $delta, $id]);
+    return (int)holding_row($table, $id, $cid)['amount'];
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'holdings', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -431,7 +474,8 @@ if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET f
 // weather on its own, which players' pages already work out the same way.
 $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
-    'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete'];
+    'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
+    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1013,6 +1057,90 @@ try {
         if (isset(DOWNTIME_KINDS[$d['kind']])) label_shifts($cid, downtime_spd(campaign_row($cid)), (int)$d['start_shift'], (int)$d['end_shift'], DOWNTIME_KINDS[$d['kind']], false);
         db()->prepare('DELETE FROM downtimes WHERE id=? AND campaign_id=?')->execute([(int)p('id'), $cid]);
         db()->commit();
+        out(['ok' => true]);
+
+    // ===== party holdings: the Gear and Loot list and the holding cards, open to GM and players alike =====
+    case 'holdings':
+        $cid = cid();
+        role($cid);
+        $st = db()->prepare('SELECT id, item, claimed_by, location, amount FROM party_gear WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        $gear = array_map(function ($r) { $r['id'] = (int)$r['id']; $r['amount'] = (int)$r['amount']; return $r; }, $st->fetchAll());
+        $st = db()->prepare('SELECT id, name, kind, type_name, location, description, amount, stats_json FROM holdings WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        $holdings = array_map(function ($r) {
+            $r['id'] = (int)$r['id']; $r['amount'] = (int)$r['amount'];
+            $r['stats'] = (object)(dec($r['stats_json']) ?: []);
+            unset($r['stats_json']);
+            return $r;
+        }, $st->fetchAll());
+        attach_tags($holdings, 'holding');
+        out(['gear' => $gear, 'holdings' => $holdings]);
+
+    case 'gear_save':
+        $cid = cid();
+        role($cid);
+        $row = [trim((string)str_in(p('item'), 200, false)), trim((string)str_in(p('claimed_by'), 200, false)),
+            trim((string)str_in(p('location'), 200, false))];
+        if (p('id')) {
+            // amount is only changed when sent, so editing a box doesn't undo someone else's tick
+            $id = int_in(p('id'), 1);
+            $old = holding_row('party_gear', $id, $cid);
+            $amount = array_key_exists('amount', body()) ? int_in(p('amount'), 0, HOLDING_MAX) : (int)$old['amount'];
+            db()->prepare('UPDATE party_gear SET item=?, claimed_by=?, location=?, amount=? WHERE id=?')->execute([...$row, $amount, $id]);
+            out(['ok' => true, 'id' => $id]);
+        }
+        if ($row[0] === '') fail('Name the item');
+        db()->prepare('INSERT INTO party_gear (campaign_id, item, claimed_by, location, amount, created_by) VALUES (?,?,?,?,?,?)')
+            ->execute([$cid, ...$row, int_in(p('amount', 1), 0, HOLDING_MAX), me()['id']]);
+        out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
+
+    case 'gear_tick':
+        $cid = cid();
+        role($cid);
+        out(['ok' => true, 'amount' => holding_tick('party_gear', $cid)]);
+
+    case 'gear_delete':
+        $cid = cid();
+        role($cid);
+        db()->prepare('DELETE FROM party_gear WHERE id=? AND campaign_id=?')->execute([int_in(p('id'), 1), $cid]);
+        out(['ok' => true]);
+
+    case 'holding_save':
+        $cid = cid();
+        role($cid);
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        if ($id) holding_row('holdings', $id, $cid);
+        $kind = (string)p('kind');
+        if (!isset(HOLDING_KINDS[$kind])) fail('Pick a type: Vehicle, Animal, Building, Asset or Custom');
+        $name = trim((string)str_in(p('name'), 200, false));
+        if ($name === '') fail('Give the holding a name');
+        $typeName = $kind === 'custom' ? trim((string)str_in(p('type_name'), 60, false)) : '';
+        if ($kind === 'custom' && $typeName === '') fail('Name the custom type');
+        $row = [$name, $kind, $typeName, trim((string)str_in(p('location'), 200, false)), str_in(p('description'), 20000),
+            int_in(p('amount', 1), 0, HOLDING_MAX), holding_stats(p('stats'), $kind)];
+        $pdo = db();
+        $pdo->beginTransaction();
+        if ($id) {
+            $pdo->prepare('UPDATE holdings SET name=?, kind=?, type_name=?, location=?, description=?, amount=?, stats_json=? WHERE id=?')->execute([...$row, $id]);
+        } else {
+            $pdo->prepare('INSERT INTO holdings (name, kind, type_name, location, description, amount, stats_json, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?)')
+                ->execute([...$row, $cid, me()['id']]);
+            $id = (int)$pdo->lastInsertId();
+        }
+        if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'holding');
+        $pdo->commit();
+        out(['ok' => true, 'id' => $id]);
+
+    case 'holding_tick':
+        $cid = cid();
+        role($cid);
+        out(['ok' => true, 'amount' => holding_tick('holdings', $cid)]);
+
+    case 'holding_delete':
+        $cid = cid();
+        role($cid);
+        db()->prepare('DELETE FROM holdings WHERE id=? AND campaign_id=?')->execute([int_in(p('id'), 1), $cid]);
         out(['ok' => true]);
 
     default:
