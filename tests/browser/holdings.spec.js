@@ -98,6 +98,8 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await dlg.getByLabel("Size", { exact: true }).fill("Small");
   await dlg.getByLabel("Value", { exact: true }).fill("400 gp");
   await dlg.getByRole("button", { name: "Amount: one more" }).click();
+  // Holdings have their own tags: none of the events' starter tags are offered.
+  await expect(dlg.locator(".tagopt")).toHaveCount(0);
   await dlg.getByLabel("New tag name").fill("Base");
   await dlg.getByRole("button", { name: "+ Add tag" }).click();
   await dlg.getByRole("button", { name: "Add holding" }).click();
@@ -116,6 +118,11 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   const saved = (await api(pp, "holdings", undefined, cid)).json.holdings[0];
   expect(saved.stats).toEqual({ construction: "Bone and wattle", size: "Small", value: "400 gp" });
   expect(saved.tags.map(t => t.name)).toEqual(["Base"]);
+  // ...and they stay out of the events' list, which keeps its own.
+  const campaignTags = (await api(pp, "campaign", undefined, cid)).json.tags.map(t => t.name);
+  expect(campaignTags).not.toContain("Base");
+  expect(campaignTags).toContain("Battle");
+  expect((await api(pp, "holdings", undefined, cid)).json.tags.map(t => t.name)).toEqual(["Base"]);
 
   // The GM edits it into a custom type: only Value stays among its fields.
   await page.goto(`index.html#/c/${cid}/holdings`);

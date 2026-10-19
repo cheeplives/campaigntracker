@@ -33,7 +33,7 @@
   }
 
   // ------------------------------------------------------------ API
-  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
+  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '9';
   async function api(action, { query = {}, body = null } = {}) {
@@ -1041,10 +1041,10 @@
   }
 
   /** Toggle tags on and off, or make a new one with its own colour.
-   * get() returns the picked tags as [{ name, color }]. */
-  function tagPicker(picked, noun = 'event') {
+   * get() returns the picked tags as [{ name, color }]. Holdings pass their own list (tags), apart from the events'. */
+  function tagPicker(picked, noun = 'event', tags = S.tags) {
     const key = t => t.name.toLowerCase();
-    const known = new Map(S.tags.map(t => [key(t), t]));
+    const known = new Map(tags.map(t => [key(t), t]));
     for (const t of picked) if (!known.has(key(t))) known.set(key(t), t);
     const on = new Set(picked.map(key));
     const list = el('div', { class: 'tagpick' });
@@ -1069,7 +1069,7 @@
     name.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
     draw();
     const node = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip(noun === 'event' ? 'Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Make your own with New tag'
-      : `Group ${noun}s by kind. Tags are shared with events, and each has a colour. Make your own with New tag`)),
+      : `Group ${noun}s by kind. These tags are the ${noun}s' own, apart from the events' tags. Make your own with New tag`)),
       list, el('div', { class: 'row' }, name, color, btn('+ Add tag', add, 'small', `Create this tag and put it on the ${noun}`)));
     return { node, get: () => [...on].map(k => ({ name: known.get(k).name, color: known.get(k).color })) };
   }
@@ -1830,10 +1830,11 @@
   }
 
   async function viewHoldings() {
-    const { gear, holdings } = await api('holdings', { query: { cid: S.camp.id } });
+    const { gear, holdings, tags } = await api('holdings', { query: { cid: S.camp.id } });
+    S.holdingTags = tags || [];
     const right = el('div', { class: 'holdings-col' },
       el('div', { class: 'card' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each. The GM and every player can add and change them.')),
+        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
         btn('+ Add holding', () => holdingDialog(), 'primary', 'Add a vehicle, animal, building, asset or a type of your own')),
         holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press Add holding to add one.')),
       holdings.map(holdingCard));
@@ -1916,7 +1917,7 @@
     const loc = el('input', { maxlength: 200, value: h.location || '' });
     const desc = el('textarea', { rows: 5, value: h.description || '' });
     const amount = amountTicker(h.amount ?? 1);
-    const tags = tagPicker(h.tags || [], 'holding');
+    const tags = tagPicker(h.tags || [], 'holding', S.holdingTags || []);
     // One box per field across every type, so switching type and back keeps what was typed.
     const boxes = {};
     for (const f of Object.keys(HOLDING_FIELDS)) {
@@ -1970,7 +1971,6 @@
         await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
           location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked }, S.camp.id);
       } catch (x) { return fail(x.message); }
-      for (const t of picked) if (!S.tags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.tags.push(t);
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
       route();

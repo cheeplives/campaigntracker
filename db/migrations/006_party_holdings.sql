@@ -43,11 +43,21 @@ CREATE TABLE IF NOT EXISTS holdings (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- A holding's tags, from the same per-campaign list events use.
+-- Holdings have their own tags, kept apart from the events' list in tags.
+CREATE TABLE IF NOT EXISTS holding_tag_names (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  name VARCHAR(40) NOT NULL,
+  color VARCHAR(16) NOT NULL DEFAULT '#6b7280',
+  UNIQUE KEY uq_holding_tag_name (campaign_id, name),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Which tags each holding carries.
 CREATE TABLE IF NOT EXISTS holding_tags (
   holding_id INT UNSIGNED NOT NULL,
   tag_id INT UNSIGNED NOT NULL,
   PRIMARY KEY (holding_id, tag_id),
   FOREIGN KEY (holding_id) REFERENCES holdings(id) ON DELETE CASCADE,
-  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+  FOREIGN KEY (tag_id) REFERENCES holding_tag_names(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

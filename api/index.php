@@ -327,15 +327,16 @@ function campaign_tags(int $cid): array {
     usort($tags, fn($a, $b) => strcasecmp($a['name'], $b['name']));
     return $tags;
 }
-/** What carries tags: its link table and that table's id column. */
-const TAG_LINKS = ['event' => ['event_tags', 'event_id'], 'holding' => ['holding_tags', 'holding_id']];
+/** What carries tags: its link table, that table's id column, and the table of tag names.
+ * Events and holdings each keep their own list of tags. */
+const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => ['holding_tags', 'holding_id', 'holding_tag_names']];
 /** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
 function attach_tags(array &$events, string $of = 'event'): void {
     if (!$events) return;
-    [$table, $col] = TAG_LINKS[$of];
+    [$table, $col, $names] = TAG_LINKS[$of];
     $ids = array_column($events, 'id');
     $in = implode(',', array_fill(0, count($ids), '?'));
-    $st = db()->prepare("SELECT et.$col AS owner, t.id, t.name, t.color FROM $table et JOIN tags t ON t.id=et.tag_id WHERE et.$col IN ($in) ORDER BY t.name");
+    $st = db()->prepare("SELECT et.$col AS owner, t.id, t.name, t.color FROM $table et JOIN $names t ON t.id=et.tag_id WHERE et.$col IN ($in) ORDER BY t.name");
     $st->execute($ids);
     $by = [];
     foreach ($st->fetchAll() as $t) $by[$t['owner']][] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
@@ -345,10 +346,10 @@ function attach_tags(array &$events, string $of = 'event'): void {
 /** Replace an event's (or holding's, $of 'holding') tags with $list ([{name, color?}]); a name the
  * campaign hasn't used yet becomes a new tag, coloured as sent (or its starter colour). */
 function save_event_tags(int $cid, int $eid, $list, string $of = 'event'): void {
-    [$table, $col] = TAG_LINKS[$of];
+    [$table, $col, $names] = TAG_LINKS[$of];
     if (!is_array($list) || count($list) > 20) fail('Send up to 20 tags');
-    $find = db()->prepare('SELECT id FROM tags WHERE campaign_id=? AND name=?');
-    $add = db()->prepare('INSERT INTO tags (campaign_id, name, color) VALUES (?,?,?)');
+    $find = db()->prepare("SELECT id FROM $names WHERE campaign_id=? AND name=?");
+    $add = db()->prepare("INSERT INTO $names (campaign_id, name, color) VALUES (?,?,?)");
     $ids = [];
     foreach ($list as $t) {
         $name = trim((string)str_in(is_array($t) ? ($t['name'] ?? '') : $t, 40, false));
@@ -357,7 +358,7 @@ function save_event_tags(int $cid, int $eid, $list, string $of = 'event'): void 
         $id = $find->fetchColumn();
         if ($id === false) {
             $starter = null;
-            foreach (STARTER_TAGS as $n => $c) if (strcasecmp($n, $name) === 0) { $starter = $c; $name = $n; }
+            if ($of === 'event') foreach (STARTER_TAGS as $n => $c) if (strcasecmp($n, $name) === 0) { $starter = $c; $name = $n; }
             $color = is_array($t) ? (string)($t['color'] ?? '') : '';
             if (!preg_match(TAG_COLOR, $color)) $color = $starter ?? '#6b7280';
             $add->execute([$cid, $name, $color]);
@@ -1075,7 +1076,10 @@ try {
             return $r;
         }, $st->fetchAll());
         attach_tags($holdings, 'holding');
-        out(['gear' => $gear, 'holdings' => $holdings]);
+        $st = db()->prepare('SELECT id, name, color FROM holding_tag_names WHERE campaign_id=? ORDER BY name');
+        $st->execute([$cid]);
+        $tags = array_map(fn($t) => ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']], $st->fetchAll());
+        out(['gear' => $gear, 'holdings' => $holdings, 'tags' => $tags]);
 
     case 'gear_save':
         $cid = cid();

@@ -51,7 +51,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **holdings**: a player adds Gear and Loot from the last row, ticks its count (never
   below 0) and edits its boxes, and the GM sees and removes it; the Add holding dialog
   shows each type's own fields, takes a custom construction type, a custom holding
-  type and tags, and its card ticks, edits and deletes for GM and players alike.
+  type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;
