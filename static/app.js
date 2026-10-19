@@ -33,9 +33,9 @@
   }
 
   // ------------------------------------------------------------ API
-  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [] };
+  const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], reminders: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '8';
+  const APP_VERSION = '9';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -71,7 +71,7 @@
     try {
       const r = await api('changed', { query: { cid } });
       // a save from this page since the check started: its own stamp, not someone else's change
-      if (seq === writeSeq && S.camp?.id === cid && r.changed !== S.camp.changed) showChangeBanner(r.changed);
+      if (seq === writeSeq && S.camp?.id === cid && r.changed !== S.camp.changed) { showChangeBanner(r.changed); checkReminders(); }
     } catch { /* offline for a moment: try again next time */ } finally { checking = false; }
   }
   function showChangeBanner(stamp) {
@@ -88,6 +88,59 @@
   function hideChangeBanner() { $('#change-banner')?.remove(); }
   setInterval(checkForChanges, CHANGE_POLL_MS);
   document.addEventListener('visibilitychange', checkForChanges);
+
+  // ------------------------------------------------------------ reminders
+  // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
+  // for everyone it is meant for, until each of them dismisses it. Every page load in a campaign checks, and so
+  // does the change poll, so a player sees it when the GM passes time without having to refresh.
+  const REMINDER_AUDIENCES = [['me', 'Just me'], ['gm', 'The GMs'], ['all', 'Everyone']];
+  const AUDIENCE_TEXT = { me: 'Only you', gm: 'GMs only', all: 'Everyone' };
+  const snoozed = new Set(); // "id@clock": Remind me later was pressed; it pops up again once the clock moves
+  let reminderOpen = false;
+  async function loadReminders() {
+    const cid = S.camp.id;
+    const r = await api('reminders', { query: { cid } });
+    if (S.camp?.id === cid) S.reminders = r.reminders;
+    return r;
+  }
+  async function checkReminders() {
+    if (!S.camp?.id) return;
+    try { popDueReminders(await loadReminders()); } catch { /* offline for a moment: try again next time */ }
+  }
+  /** Show the reminders the clock has reached that this person hasn't dismissed (or put off at this time). */
+  function popDueReminders({ reminders, current_shift: clock }) {
+    if (reminderOpen) return;
+    const due = reminders.filter(x => x.due && !x.dismissed && !snoozed.has(`${x.id}@${clock}`));
+    if (due.length) reminderDialog(due, clock);
+  }
+  function reminderDialog(list, clock) {
+    hideTip();
+    reminderOpen = true;
+    const cid = S.camp.id;
+    const d = el('dialog', { class: 'kit-dialog reminder-dialog', 'aria-label': 'Reminders' },
+      el('form', { method: 'dialog' },
+        el('h3', {}, list.length === 1 ? '🔔 Reminder' : `🔔 ${list.length} reminders`),
+        el('div', { class: 'reminder-list' }, list.map(x => el('div', { class: 'reminder' },
+          el('strong', {}, x.title),
+          el('div', { class: 'small muted' }, E.fmtShift(cal(), x.due_shift)),
+          x.body ? el('p', { class: 'pre' }, x.body) : null,
+          el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · from `, byline(x))))),
+        el('div', { class: 'kit-dialog-actions' },
+          el('button', { value: 'dismiss', class: 'primary', type: 'submit', autofocus: true }, 'Dismiss'),
+          el('button', { value: 'later', type: 'submit' }, 'Remind me later'))));
+    d.addEventListener('cancel', () => { d.returnValue = 'later'; });
+    d.addEventListener('close', async () => {
+      d.remove();
+      reminderOpen = false;
+      if (d.returnValue !== 'dismiss') { list.forEach(x => snoozed.add(`${x.id}@${clock}`)); return; }
+      try {
+        await post('reminder_dismiss', { ids: list.map(x => x.id) }, cid);
+        list.forEach(x => (x.dismissed = true));
+      } catch (e) { toast(e.message, true); }
+    });
+    document.body.append(d);
+    d.showModal();
+  }
 
   // ------------------------------------------------------------ campaign helpers
   const isGM = () => S.role === 'gm';
@@ -113,7 +166,7 @@
   async function loadCampaign(cid, force) {
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
-    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || [];
+    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     E.prep(S.camp.calendar);
     hideChangeBanner();
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
@@ -711,11 +764,13 @@
     return out;
   }
 
+  const dayReminders = d => S.reminders.filter(x => Math.floor(x.due_shift / spd()) === d);
+  const reminderTip = rs => rs.map(x => `🔔 ${shiftNames()[E.mod(x.due_shift, spd())]}: ${x.title}`).join('\n');
   const evLine = e => el('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
     Number(e.is_secret) ? '🔒 ' : el('span', { class: 'evdot', style: e.tags?.length ? { color: e.tags[0].color } : null }, '● '), e.title);
   function dayCell(d, data, compact) {
     const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
-    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
+    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d), rems = dayReminders(d);
     const w = row?.weather, def = w ? E.WEATHER[w.type] : null;
     const cls = ['daycell'];
     if (d === today()) cls.push('today');
@@ -725,7 +780,8 @@
     return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
       el('div', { class: 'dc-top' }, el('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
         el('span', { class: 'dc-icons' }, def ? el('span', { 'data-tip': E.weatherLabel(w, tempUnit()) }, def.icon) : null,
-          compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)))),
+          compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)),
+          rems.length ? el('span', { class: 'dc-bell', 'data-tip': reminderTip(rems) }, '🔔') : null)),
       hol.map(x => el('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
       evs.slice(0, 3).map(evLine),
       evs.length > 3 ? el('div', { class: 'muted small', 'data-tip': evs.slice(3).map(e => e.title).join('\n') }, `+${evs.length - 3} more`) : null,
@@ -757,7 +813,8 @@
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
       rows.push(el('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
         el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
-          hol.map(holidayChip), tagsOf(evs).map(tagChip), evs.map(evLine)),
+          hol.map(holidayChip), tagsOf(evs).map(tagChip), evs.map(evLine),
+          dayReminders(d).map(x => el('div', { class: 'evline reminder', 'data-tip': reminderTip([x]) }, '🔔 ', x.title))),
         el('div', { class: 'wr-shifts', style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : {} }, slots.filter(i => !hourMode() || sh[i]?.activity || d * spd() + i === nowShift()).map(i => {
           const s = sh[i] || {};
           const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
@@ -826,8 +883,15 @@
       (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
       r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
+    // --- reminders
+    const rems = dayReminders(d);
+    const remCard = el('div', { class: 'card' }, el('div', { class: 'row spread' },
+      el('h3', {}, 'Reminders', tip(`A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`)),
+      btn('+ Add reminder', () => remCard.append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`)),
+      rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
+
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts) : null, overview,
-      el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard);
+      el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard, remCard);
   }
 
   /** The Current Day tab's banner and the day's shifts (or hours) at a glance. On today it shows the shift the campaign
@@ -1037,6 +1101,52 @@
         }, 'small danger', 'Delete this event and its notes')) : null,
       notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
+  }
+
+  const canEditReminder = x => x.created_by === S.user.id || (isGM() && x.audience !== 'me');
+  function reminderView(x, d) {
+    const state = !x.due ? ['Waiting', `Pops up when the clock reaches ${E.fmtShift(cal(), x.due_shift)}`]
+      : x.dismissed ? ['Dismissed', 'You have read this one'] : ['Due', 'The clock has reached it and you haven\'t dismissed it yet'];
+    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : '') },
+      el('div', { class: 'row spread' },
+        el('h4', {}, '🔔 ', x.title),
+        el('small', { class: 'muted' }, shiftNames()[E.mod(x.due_shift, spd())], ' · ', el('span', { 'data-tip': state[1] }, state[0]))),
+      x.body ? el('p', { class: 'pre' }, x.body) : null,
+      el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
+      canEditReminder(x) ? el('div', { class: 'row' },
+        btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
+        btn('Delete', async () => {
+          if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
+          try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+        }, 'small danger', 'Delete this reminder')) : null);
+    return box;
+  }
+
+  function reminderForm(d, x = {}) {
+    const n = spd(), names = shiftNames();
+    // a new reminder on today starts at the next shift, since the clock has already reached this one
+    const at = x.id ? x.due_shift : d === today() ? Math.min(nowShift() + 1, d * n + n - 1) : d * n;
+    const day = datePicker(Math.floor(at / n));
+    const slot = select(names.map((nm, i) => [i, nm]), E.mod(at, n), { name: 'slot', 'aria-label': Word() });
+    const audience = isGM() ? select(REMINDER_AUDIENCES, x.audience || 'me', { name: 'audience' }) : null;
+    const f = el('form', { class: 'event editing reminder' },
+      el('div', { class: 'grid2' },
+        field('Title', el('input', { name: 'title', value: x.title || '', required: true, maxlength: 200, placeholder: 'e.g. The ransom is due' })),
+        field('When', el('span', { class: 'row' }, day, slot), null, `It pops up once the campaign clock reaches this ${word()}`),
+        isGM() ? field('Who sees it', audience, null, 'Just me: only you. The GMs: every GM of this campaign. Everyone: the players too')
+          : el('p', { class: 'muted small' }, 'Only you see your reminders.')),
+      field('Details', el('textarea', { name: 'body', rows: 3, value: x.body || '' })),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, x.id ? 'Save reminder' : 'Add reminder'), btn('Cancel', () => route(), 'small')));
+    f.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const v = formData(f), due = day.getAbs() * n + Number(slot.value);
+      if (due <= nowShift() && due !== x.due_shift) { toast(`Pick a ${word()} after now: the clock has already passed that one`, true); return; }
+      try {
+        await post('reminder_save', { id: x.id, title: v.title, body: v.body, due_shift: due, audience: audience ? audience.value : 'me' }, S.camp.id);
+        toast('Reminder saved'); route();
+      } catch (err) { toast(err.message, true); }
+    });
+    return f;
   }
 
   /** Toggle tags on and off, or make a new one with its own colour.
@@ -2116,11 +2226,14 @@
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
         await loadCampaign(cid);
+        const rem = await loadReminders().catch(() => null); // fresh on every page, so a pass of time pops what it reached
         const tab = parts[2] || 'today';
-        if (tab === 'day') return await viewDay(Number(parts[3]));
-        if (tab === 'today' && parts[3]) return await viewDay(Number(parts[3]), true);
         const viewToday = () => viewDay(today(), true);
-        return await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        if (tab === 'day') await viewDay(Number(parts[3]));
+        else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
+        else await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        if (rem) popDueReminders(rem);
+        return;
       }
       await viewCampaigns();
     } catch (err) {

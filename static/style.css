@@ -249,6 +249,11 @@ button.dt-member { padding: 2px 10px; font-size: .8rem; border-radius: 99px; bor
 button.dt-member.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 .dt-dialog .dt-kind { margin-right: 6px; }
 .dt-dialog [hidden] { display: none; }
+.event.reminder { border-left: 4px solid var(--accent); }
+.event.reminder.due { background: var(--panel); }
+.reminder-dialog .reminder-list { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; margin-bottom: 14px; }
+.reminder-dialog .reminder { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+.reminder-dialog .reminder p { margin: 4px 0; }
 
 /* seasons */
 .season { display: inline-block; font-size: .78rem; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); white-space: nowrap; }

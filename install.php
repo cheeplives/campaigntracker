@@ -58,6 +58,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/005_downtime.sql');
             $msg .= ' Added the Downtime tab.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'reminder_dismissals'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/006_reminders.sql');
+            $msg .= ' Added calendar reminders.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
