@@ -254,3 +254,17 @@ CREATE TABLE IF NOT EXISTS holding_tags (
   FOREIGN KEY (holding_id) REFERENCES holdings(id) ON DELETE CASCADE,
   FOREIGN KEY (tag_id) REFERENCES holding_tag_names(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- What is kept in each holding (the Storage box on its card): one line per item and its weight.
+-- Weights are plain numbers, added up and compared with the number in the holding's Cargo field.
+CREATE TABLE IF NOT EXISTS holding_storage (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  holding_id INT UNSIGNED NOT NULL,
+  item VARCHAR(200) NOT NULL,
+  weight DECIMAL(14,2) NULL,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_storage_holding (holding_id, id),
+  FOREIGN KEY (holding_id) REFERENCES holdings(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

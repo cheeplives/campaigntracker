@@ -357,6 +357,13 @@ button.link.danger { color: var(--bad); font-size: 1rem; }
 .holding h3 { margin: 0; }
 .hold-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px 14px; margin: 4px 0; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; }
 .hold-stats > div { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.storage { margin: 4px 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.ledger-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 32px; gap: 6px; align-items: center; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.ledger-row input { width: 100%; min-width: 0; }
+.ledger-head { border-bottom: 0; padding-bottom: 0; }
+.ledger-new { border-bottom: 0; grid-template-columns: minmax(0, 1fr) 110px auto; margin-top: 4px; }
+.ledger-total { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: flex-end; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+.ledger-total.over strong { color: var(--bad); }
 dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
 .hold-dialog [hidden] { display: none; }
 .hold-fields { margin: 4px 0; padding-top: 6px; border-top: 1px dashed var(--line); }

@@ -476,7 +476,7 @@ if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET f
 $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
-    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete'];
+    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1076,6 +1076,15 @@ try {
             return $r;
         }, $st->fetchAll());
         attach_tags($holdings, 'holding');
+        if ($holdings) {
+            $ids = array_column($holdings, 'id');
+            $st = db()->prepare('SELECT id, holding_id, item, weight FROM holding_storage WHERE holding_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY id');
+            $st->execute($ids);
+            $by = [];
+            foreach ($st->fetchAll() as $r) $by[$r['holding_id']][] = ['id' => (int)$r['id'], 'item' => $r['item'], 'weight' => $r['weight'] === null ? null : (float)$r['weight']];
+            foreach ($holdings as &$h) $h['storage'] = $by[$h['id']] ?? [];
+            unset($h);
+        }
         $st = db()->prepare('SELECT id, name, color FROM holding_tag_names WHERE campaign_id=? ORDER BY name');
         $st->execute([$cid]);
         $tags = array_map(fn($t) => ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']], $st->fetchAll());
@@ -1140,6 +1149,34 @@ try {
         $cid = cid();
         role($cid);
         out(['ok' => true, 'amount' => holding_tick('holdings', $cid)]);
+
+    case 'storage_save': // a line in a holding's Storage box: new (holding_id) or changed (id)
+        $cid = cid();
+        role($cid);
+        $item = trim((string)str_in(p('item'), 200, false));
+        if ($item === '') fail('Name the item');
+        $w = p('weight');
+        if ($w === '' || $w === null) $w = null;
+        elseif (!is_numeric($w) || (float)$w < 0 || (float)$w > 1e12) fail('Weight must be a number, 0 or more');
+        else $w = round((float)$w, 2);
+        if (p('id')) {
+            $id = int_in(p('id'), 1);
+            $st = db()->prepare('SELECT s.id FROM holding_storage s JOIN holdings h ON h.id=s.holding_id WHERE s.id=? AND h.campaign_id=?');
+            $st->execute([$id, $cid]);
+            if (!$st->fetchColumn()) fail('Item not found', 404);
+            db()->prepare('UPDATE holding_storage SET item=?, weight=? WHERE id=?')->execute([$item, $w, $id]);
+            out(['ok' => true, 'id' => $id]);
+        }
+        $hid = int_in(p('holding_id'), 1);
+        holding_row('holdings', $hid, $cid);
+        db()->prepare('INSERT INTO holding_storage (holding_id, item, weight, created_by) VALUES (?,?,?,?)')->execute([$hid, $item, $w, me()['id']]);
+        out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
+
+    case 'storage_delete':
+        $cid = cid();
+        role($cid);
+        db()->prepare('DELETE s FROM holding_storage s JOIN holdings h ON h.id=s.holding_id WHERE s.id=? AND h.campaign_id=?')->execute([int_in(p('id'), 1), $cid]);
+        out(['ok' => true]);
 
     case 'holding_delete':
         $cid = cid();

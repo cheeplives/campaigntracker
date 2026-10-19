@@ -156,3 +156,51 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   expectNoErrors(perrors);
   await pctx.close();
 });
+
+test("each holding has a Storage ledger whose total weight is checked against its Cargo", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp, pctx } = await campaignWithPlayer(page, browser, "Storage");
+  const perrors = watchErrors(pp);
+  expect((await api(page, "holding_save", { name: "Mule cart", kind: "vehicle", stats: { cargo: "100 lb" } }, cid)).status).toBe(200);
+  const { id: shed } = (await api(page, "holding_save", { name: "Shed", kind: "building" }, cid)).json;
+
+  // A player loads the cart past its cargo.
+  await pp.goto(`index.html#/c/${cid}/holdings`);
+  const cart = pp.locator(".holding", { hasText: "Mule cart" });
+  const store = cart.locator(".storage");
+  await expect(store.locator(".ledger-total")).toContainText("0 / 100 lb");
+  await store.getByLabel("New item in Mule cart's storage", { exact: true }).fill("Grain sacks");
+  await store.getByLabel("Weight of the new item in Mule cart's storage").fill("60");
+  await store.getByRole("button", { name: "+ Add" }).click();
+  await store.getByLabel("New item in Mule cart's storage", { exact: true }).fill("Anvil");
+  await store.getByLabel("Weight of the new item in Mule cart's storage").fill("50");
+  await store.getByLabel("Weight of the new item in Mule cart's storage").press("Enter");
+  await expect(store.locator(".ledger-rows .ledger-row")).toHaveCount(2);
+  await expect(store.locator(".ledger-total")).toContainText("110 / 100 lb");
+  await expect(store.locator(".ledger-total")).toContainText("Over cargo by 10");
+
+  // Lightening a load clears the warning as you type, and saves when you leave the box.
+  await store.getByLabel("Weight of Anvil", { exact: true }).fill("40");
+  await expect(store.locator(".ledger-total")).not.toContainText("Over cargo");
+  await store.getByLabel("Weight of Anvil", { exact: true }).press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.holdings.find(h => h.name === "Mule cart").storage.map(s => [s.item, s.weight]))
+    .toEqual([["Grain sacks", 60], ["Anvil", 40]]);
+
+  // The GM sees it, and removes a line. A holding with no Cargo just totals its weights.
+  await page.goto(`index.html#/c/${cid}/holdings`);
+  const gstore = page.locator(".holding", { hasText: "Mule cart" }).locator(".storage");
+  await expect(gstore.locator(".ledger-total")).toContainText("100 / 100 lb");
+  await gstore.getByRole("button", { name: "Remove Grain sacks from storage" }).click();
+  await page.locator(".kit-dialog").getByRole("button", { name: "Remove" }).click();
+  await expect(gstore.locator(".ledger-total")).toContainText("40 / 100 lb");
+  expect((await api(page, "storage_save", { holding_id: shed, item: "Tools", weight: 12.5 }, cid)).status).toBe(200);
+  await page.reload();
+  const shedTotal = page.locator(".holding", { hasText: "Shed" }).locator(".ledger-total");
+  await expect(shedTotal).toContainText("12.5");
+  await expect(shedTotal).toHaveText("Total weight12.5");
+  expect((await api(page, "storage_save", { holding_id: shed, item: "Bad", weight: "heavy" }, cid)).status).toBe(400);
+
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+  await pctx.close();
+});

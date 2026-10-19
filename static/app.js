@@ -1898,12 +1898,74 @@
       h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
       h.description ? el('p', { class: 'pre' }, h.description) : null,
       stats.length ? el('div', { class: 'hold-stats' }, stats) : null,
+      storageBox(h),
       el('div', { class: 'row' },
         btn('Edit', () => holdingDialog(h), 'small', 'Change this holding'),
         btn('Delete', async () => {
           if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
           try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Delete this holding')));
+  }
+
+  /** The first number in a text such as "1,200 lb" or "2.5 tons", or null. */
+  const leadNumber = s => { const m = String(s ?? '').replace(/,/g, '').match(/\d+(\.\d+)?|\.\d+/); return m ? Number(m[0]) : null; };
+  const fmtWeight = n => (Math.round(n * 100) / 100).toLocaleString();
+  /** A holding's Storage box: a ledger of what is kept in it and how much each weighs, with the total,
+   * flagged when it is more than the holding's Cargo. Boxes save when you leave them. */
+  function storageBox(h) {
+    const cap = leadNumber(h.stats?.cargo);
+    const lines = el('div', { class: 'ledger-rows' });
+    const total = el('div', { class: 'ledger-total' });
+    const weights = () => [...lines.querySelectorAll('input.ledger-w')].map(i => Number(i.value) || 0);
+    const sum = () => {
+      const t = weights().reduce((a, b) => a + b, 0), over = cap !== null && t > cap;
+      total.classList.toggle('over', over);
+      total.replaceChildren(el('span', {}, 'Total weight'), el('strong', {}, fmtWeight(t), cap !== null ? ` / ${h.stats.cargo}` : ''),
+        ...(over ? [el('span', { class: 'bad', role: 'alert' }, `⚠ Over cargo by ${fmtWeight(t - cap)}`)] : []));
+    };
+    const wInput = v => el('input', { type: 'number', min: 0, step: 'any', class: 'ledger-w', value: v ?? '', placeholder: 'Weight' });
+    const line = s => {
+      const item = el('input', { maxlength: 200, value: s.item, 'aria-label': 'Stored item' });
+      const weight = wInput(s.weight);
+      weight.setAttribute('aria-label', `Weight of ${s.item}`);
+      const save = async () => {
+        if (!item.value.trim()) { item.value = s.item; return; }
+        try { await post('storage_save', { id: s.id, item: item.value, weight: weight.value }, S.camp.id); s.item = item.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+      };
+      item.addEventListener('change', save);
+      weight.addEventListener('change', save);
+      weight.addEventListener('input', sum);
+      const row = el('div', { class: 'ledger-row' }, item, weight,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: async () => {
+          if (!await confirmDialog(`Remove "${item.value}" from ${h.name}'s storage?`, { ok: 'Remove', danger: true })) return;
+          try { await post('storage_delete', { id: s.id }, S.camp.id); row.remove(); sum(); } catch (err) { toast(err.message, true); }
+        } }, '✕'));
+      return row;
+    };
+    lines.append(...(h.storage || []).map(line));
+    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': `New item in ${h.name}'s storage` });
+    const nWeight = wInput('');
+    nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
+    const add = btn('+ Add', null, 'small', 'Put this item in storage');
+    add.addEventListener('click', busy(add, async () => {
+      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
+      const s = { item: nItem.value.trim(), weight: nWeight.value === '' ? null : Number(nWeight.value) };
+      s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: nWeight.value }, S.camp.id)).id;
+      lines.append(line(s));
+      nItem.value = nWeight.value = '';
+      sum();
+      nItem.focus();
+    }));
+    for (const i of [nItem, nWeight]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    sum();
+    return el('div', { class: 'storage' },
+      el('span', { class: 'lbl' }, 'Storage', tip(cap !== null
+        ? `What is kept in ${h.name}, and what each item weighs. The total is checked against its Cargo (${h.stats.cargo}), so give weights in the same unit`
+        : `What is kept in ${h.name}, and what each item weighs. Give the holding a Cargo value to be warned when it is overloaded`)),
+      el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Item'), el('span', { class: 'lbl' }, 'Weight'), el('span')),
+      lines,
+      el('div', { class: 'ledger-row ledger-new' }, nItem, nWeight, add),
+      total);
   }
 
   /** Add a holding, or edit one (h): the common fields, then the fields of the type picked. */
