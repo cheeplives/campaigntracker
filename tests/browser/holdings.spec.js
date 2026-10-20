@@ -204,3 +204,41 @@ test("each holding has a Storage ledger whose total weight is checked against it
   expectNoErrors(perrors);
   await pctx.close();
 });
+
+test("Party Funds tracks the party's money, one line per currency, for players and the GM", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp, pctx } = await campaignWithPlayer(page, browser, "Funds");
+  const perrors = watchErrors(pp);
+
+  await pp.goto(`index.html#/c/${cid}/holdings`);
+  const funds = pp.locator(".funds");
+  await expect(funds).toContainText("Party Funds");
+  await funds.getByLabel("New currency", { exact: true }).fill("Gold pieces");
+  await funds.getByLabel("Amount of the new currency").fill("120");
+  await funds.getByRole("button", { name: "+ Add" }).click();
+  await funds.getByLabel("New currency", { exact: true }).fill("Silver");
+  await funds.getByLabel("Amount of the new currency").fill("35.5");
+  await funds.getByLabel("Amount of the new currency").press("Enter");
+  await expect(funds.locator(".ledger-rows .ledger-row")).toHaveCount(2);
+
+  // Spending saves when you leave the box.
+  await funds.getByLabel("Amount of Gold pieces", { exact: true }).fill("95");
+  await funds.getByLabel("Amount of Gold pieces", { exact: true }).press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds.map(f => [f.currency, f.amount]))
+    .toEqual([["Gold pieces", 95], ["Silver", 35.5]]);
+  expect((await api(pp, "funds_save", { currency: "", amount: 1 }, cid)).status).toBe(400);
+  expect((await api(pp, "funds_save", { currency: "Gems", amount: "lots" }, cid)).status).toBe(400);
+
+  // The GM sees it and removes a line.
+  await page.goto(`index.html#/c/${cid}/holdings`);
+  const gfunds = page.locator(".funds");
+  await expect(gfunds.getByLabel("Amount of Silver", { exact: true })).toHaveValue("35.5");
+  await gfunds.getByRole("button", { name: "Remove Silver" }).click();
+  await page.locator(".kit-dialog").getByRole("button", { name: "Remove" }).click();
+  await expect(gfunds.locator(".ledger-rows .ledger-row")).toHaveCount(1);
+  expect((await api(page, "holdings", undefined, cid)).json.funds.map(f => f.currency)).toEqual(["Gold pieces"]);
+
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+  await pctx.close();
+});

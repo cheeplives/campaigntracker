@@ -501,7 +501,7 @@ if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET f
 $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
-    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete'];
+    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1113,7 +1113,10 @@ try {
         $st = db()->prepare('SELECT id, name, color FROM holding_tag_names WHERE campaign_id=? ORDER BY name');
         $st->execute([$cid]);
         $tags = array_map(fn($t) => ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']], $st->fetchAll());
-        out(['gear' => $gear, 'holdings' => $holdings, 'tags' => $tags]);
+        $st = db()->prepare('SELECT id, currency, amount FROM party_funds WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        $funds = array_map(fn($r) => ['id' => (int)$r['id'], 'currency' => $r['currency'], 'amount' => (float)$r['amount']], $st->fetchAll());
+        out(['funds' => $funds, 'gear' => $gear, 'holdings' => $holdings, 'tags' => $tags]);
 
     case 'gear_save':
         $cid = cid();
@@ -1174,6 +1177,30 @@ try {
         $cid = cid();
         role($cid);
         out(['ok' => true, 'amount' => holding_tick('holdings', $cid)]);
+
+    case 'funds_save': // a line of Party Funds: a kind of money and how much; new, or changed (id)
+        $cid = cid();
+        role($cid);
+        $currency = trim((string)str_in(p('currency'), 60, false));
+        if ($currency === '') fail('Name the currency');
+        $a = p('amount', 0);
+        if ($a === '' || $a === null) $a = 0;
+        if (!is_numeric($a) || abs((float)$a) > 1e13) fail('The amount must be a number');
+        $a = round((float)$a, 2);
+        if (p('id')) {
+            $id = int_in(p('id'), 1);
+            holding_row('party_funds', $id, $cid);
+            db()->prepare('UPDATE party_funds SET currency=?, amount=? WHERE id=?')->execute([$currency, $a, $id]);
+            out(['ok' => true, 'id' => $id]);
+        }
+        db()->prepare('INSERT INTO party_funds (campaign_id, currency, amount, created_by) VALUES (?,?,?,?)')->execute([$cid, $currency, $a, me()['id']]);
+        out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
+
+    case 'funds_delete':
+        $cid = cid();
+        role($cid);
+        db()->prepare('DELETE FROM party_funds WHERE id=? AND campaign_id=?')->execute([int_in(p('id'), 1), $cid]);
+        out(['ok' => true]);
 
     case 'storage_save': // a line in a holding's Storage box: new (holding_id) or changed (id)
         $cid = cid();
