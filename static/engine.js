@@ -196,8 +196,10 @@
     const W = (wd !== null && !opts.noWeekday) ? cal.weekdays[wd] : '';
     if (p.intercalary && monthLength(cal, p.year, p.month) === 1) return `${W ? `${W}, ` : ''}${mo.name}, ${yearLabel(cal, p.year)}`;
     const fmt = cal.dateFormat || '{W}, {d} {M} {Y}';
-    let out = fmt.replace('{d}', p.day).replace('{M}', mo.name).replace('{Y}', yearLabel(cal, p.year)).replace('{W}', W);
-    return out.replace(/^[\s,·—-]+/, '').trim();
+    // {w} is the name of the week within the month, for months that name theirs (Glorantha's Disorder Week, Harmony Week…)
+    const wk = (mo.weeks || [])[Math.floor((p.day - 1) / weekLength(cal))] || '';
+    let out = fmt.replace('{d}', p.day).replace('{M}', mo.name).replace('{Y}', yearLabel(cal, p.year)).replace('{W}', W).replace('{w}', wk);
+    return out.replace(/(,\s*)+,/g, ',').replace(/^[\s,·—-]+/, '').trim();
   }
   function fmtShift(cal, absShift) {
     const n = slotsPerDay(cal), d = Math.floor(absShift / n), s = mod(absShift, n);
@@ -823,6 +825,16 @@
       by: 'Aarhus University (Tolkien FAQ)', licence: 'Quotation; © the Tolkien Estate', url: 'https://cs.au.dk/~clemens/au15572/tolkien/actuallyeurope.html' },
     imaginarymaps: { title: 'Köppen climate map of Middle-earth (r/imaginarymaps, post c5mzt9)', by: 'Reddit user post', licence: 'Not openly licensed',
       url: 'https://www.reddit.com/r/imaginarymaps/comments/c5mzt9/' },
+    orlanthi: { title: 'Orlanthi Calendar', by: 'Glorantha Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Moon Design Publications / Chaosium',
+      url: 'https://glorantha.fandom.com/wiki/Orlanthi_Calendar' },
+    balazar: { title: 'Gloranthan Calendar spreadsheet (seasons, weeks and weekdays)', by: 'Back to Balazar', licence: 'Not openly licensed',
+      url: 'http://www.backtobalazar.com' },
+    runequestCults: { title: 'Gods of Glorantha: each cult’s holy days and high holy day (from RuneQuest: Roleplaying in Glorantha)', by: 'Journey of the Heroes (fan wiki)',
+      licence: 'Not openly licensed; setting © Chaosium', url: 'https://journeyoftheheroes.wikidot.com/gods' },
+    gloranthaWeather: { title: 'Weather in Glorantha', by: 'Well of Daliath (Chaosium)', licence: 'Not openly licensed; © Chaosium',
+      url: 'https://wellofdaliath.chaosium.com/weather-in-glorantha/' },
+    gloranthaGeo: { title: 'Geography of Glorantha', by: 'Glorantha Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Moon Design Publications / Chaosium',
+      url: 'https://glorantha.fandom.com/wiki/Geography' },
     // rules
     yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
       licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
@@ -1125,6 +1137,21 @@
     };
   }
 
+  // Glorantha: the eight weeks of each season, the seasons in calendar order, and the cults' holy days.
+  const GLORANTHA_WEEKS = ['Disorder', 'Harmony', 'Death', 'Fertility', 'Stasis', 'Movement', 'Illusion', 'Truth'];
+  const GLORANTHA_SEASONS = ['Sea', 'Fire', 'Earth', 'Dark', 'Storm'];
+  const GLORANTHA_DAYS = ['Freezeday', 'Waterday', 'Clayday', 'Windsday', 'Fireday', 'Wildday', 'Godsday'];
+  /** One holy day of a god: a weekday of a named week in one season, or that god's high holy day. */
+  function gloranthaDay(god, color, season, week, weekday, high = false) {
+    const day = GLORANTHA_WEEKS.indexOf(week) * 7 + GLORANTHA_DAYS.indexOf(weekday) + 1;
+    return { name: `${god} ${high ? 'High Holy Day' : 'holy day'}`, color, rule: { type: 'fixed', month: GLORANTHA_SEASONS.indexOf(season), day, span: 1 },
+      description: `${weekday} of ${week} Week, ${season} Season${high ? ': the high holy day' : ''}.` };
+  }
+  /** A god's holy day in every season (weekday may differ by season), the one in the high holy season named as such. */
+  function gloranthaHolyDays(god, color, weekday, week, highSeason) {
+    return GLORANTHA_SEASONS.map(s => gloranthaDay(god, color, s, week, typeof weekday === 'string' ? weekday : weekday[s], s === highSeason));
+  }
+
   const PRESETS = {
     gregorian: gregorianPreset('north'),
     gregorian_south: gregorianPreset('south'),
@@ -1256,6 +1283,70 @@
         { name: 'Lithe', color: '#d9a441', rule: { type: 'fixed', month: 10, day: 1, span: 1 }, description: 'Midsummer holiday: 1 Lithe, Mid-year\'s Day, Overlithe in leap years, and 2 Lithe. The Free Fair is held on the White Downs.' },
         { name: 'Overlithe', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'The leap day, a special holiday added after Mid-year\'s Day.' },
         { name: 'Birthday of Bilbo and Frodo', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 22, span: 1 } },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+    },
+
+    glorantha: {
+      label: 'Glorantha (Orlanthi calendar, Solar Time)',
+      calendar: {
+        // 5 seasons of 8 named weeks, then the 2 weeks of Sacred Time: 294 days, which is exactly 42 weeks,
+        // so every season and every year starts on Freezeday. Weekday and week names follow the calendar sheet.
+        name: 'Gloranthan', epochYear: 1, yearSuffix: 'ST', dateFormat: '{W}, {w}, {M}, {Y}', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Freezeday', 'Waterday', 'Clayday', 'Windsday', 'Fireday', 'Wildday', 'Godsday'],
+        months: [
+          ...['Sea', 'Fire', 'Earth', 'Dark', 'Storm'].map(s => ({ name: `${s} Season`, days: 56, weeks: GLORANTHA_WEEKS.map(w => `${w} Week`) })),
+          { name: 'Sacred Time', days: 14, weeks: ['First Week', 'Second Week'] }],
+        leap: null,
+        // the year opens in spring with Sea Season; Storm Season and Sacred Time close it in late winter
+        seasons: [
+          { name: 'Sea Season', type: 'spring', month: 0, day: 1 }, { name: 'Fire Season', type: 'summer', month: 1, day: 1 },
+          { name: 'Earth Season', type: 'autumn', month: 2, day: 1 }, { name: 'Dark Season', type: 'winter', month: 3, day: 1 },
+          { name: 'Storm Season', type: 'winter', month: 4, day: 1 }, { name: 'Sacred Time', type: 'winter', month: 5, day: 1 }],
+        // the Red Moon turns through its phases once a week, Black on Waterday and Full on Wildday
+        moons: [{ name: 'Red Moon', cycle: 7, ref: 1.75, brightness: 0.5, color: '#c8513a' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1625, month: 0, day: 1 },
+      // No open data exists for a fictional world. Glorantha is flat and its seasons are the same everywhere, so
+      // every region sits in the north; it runs cold toward Valind's Glacier and hot toward Pamaltela (gloranthaGeo).
+      // Each region takes the Köppen climate of what it reads like, a judgement call: Sartar and Dragon Pass as
+      // snowy uplands, Prax and Pent as cold steppe, Peloria warmed by the Glowline, Kralorela as China, Teshnos as India.
+      regions: koppenRegions('north', [
+        ['Sartar (Jonstown, Boldhome, the Colymar lands)', 'Dfb'], ['Old Woods & the Stinking Forest', 'Dfb', -1],
+        ['Grazelands & Beast Valley', 'BSk'], ['Tarsh & Dragon Pass lowlands', 'Dfb'],
+        ['Storm Mountains & Kero Fin', 'ET'], ['Dagori Inkarth & the Shadows Dance', 'Dfc'],
+        ['Esrolia (Nochet)', 'Cfa'], ['Heortland', 'Cfb'], ['Caladraland', 'Cfa'],
+        ['Prax & the River of Cradles (Pavis)', 'BSk'], ['The Wastelands', 'BWk', 1],
+        ['Peloria: the Lunar heartland & Glamour', 'Cfa'], ['Pent', 'BSk'],
+        ['Fronela', 'Dfb'], ['Rockwood Mountains', 'Dfc'], ["Valind's Glacier", 'EF', 1],
+        ['Ralios', 'Cfb'], ['Seshnela', 'Cfb'], ['Maniria', 'Cfa', -1],
+        ['Kralorela', 'Cwa'], ['Teshnos', 'Am'], ['East Isles', 'Af'],
+        ['Fonrit', 'Aw'], ['Errinoru Jungle & the Maslo Coast', 'Af', -2], ['Pamaltelan plains (Agimori)', 'BSh'],
+      ]),
+      // the cults' holy days (runequestCults): a weekday of a named week in every season, and a high holy day once a year
+      holidays: [
+        { name: 'Sacred Time', color: '#7b4fa0', rule: { type: 'fixed', month: 5, day: 1, span: 14 }, description: 'The two weeks between the years, when the gods are near and the coming year\'s fortunes are set in the great rites.' },
+        ...gloranthaHolyDays('Orlanth', '#4a90d9', 'Windsday', 'Movement', 'Storm'),
+        { name: 'Orlanth (Sacred Time)', color: '#4a90d9', rule: { type: 'fixed', month: 5, day: 4, span: 1 }, description: 'The Windsdays of Sacred Time are holy to Orlanth.' },
+        { name: 'Orlanth (Sacred Time)', color: '#4a90d9', rule: { type: 'fixed', month: 5, day: 11, span: 1 }, description: 'The Windsdays of Sacred Time are holy to Orlanth.' },
+        ...gloranthaHolyDays('Ernalda', '#2e8b57', 'Clayday', 'Fertility', 'Earth'),
+        gloranthaDay('Ernalda', '#2e8b57', 'Sea', 'Harmony', 'Waterday'), gloranthaDay('Ernalda', '#2e8b57', 'Dark', 'Illusion', 'Freezeday'),
+        ...gloranthaHolyDays('Humakt', '#6b6b6b', { Sea: 'Waterday', Fire: 'Fireday', Earth: 'Clayday', Dark: 'Freezeday', Storm: 'Windsday' }, 'Death', 'Storm'),
+        ...gloranthaHolyDays('Storm Bull', '#8b3a3a', { Sea: 'Freezeday', Fire: 'Waterday', Earth: 'Clayday', Dark: 'Windsday', Storm: 'Fireday' }, 'Stasis'),
+        gloranthaDay('Storm Bull', '#8b3a3a', 'Storm', 'Stasis', 'Wildday', true),
+        ...gloranthaHolyDays('Yelmalio', '#d9a441', 'Fireday', 'Truth', 'Fire'),
+        ...gloranthaHolyDays('Eiritha', '#8b5a2b', 'Clayday', 'Fertility', 'Earth'),
+        ...gloranthaHolyDays('Chalana Arroy', '#9aa7b4', 'Wildday', 'Fertility'),
+        { name: 'Chalana Arroy High Holy Day', color: '#9aa7b4', rule: { type: 'fixed', month: 5, day: 8, span: 7 }, description: 'High holy day: a festival through the second week of Sacred Time.' },
+        ...gloranthaHolyDays('Issaries', '#c0632b', 'Wildday', 'Movement'),
+        { name: 'Issaries High Holy Day', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 6, span: 1 }, description: 'High holy day: each Wildday of Sacred Time.' },
+        { name: 'Issaries High Holy Day', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 13, span: 1 }, description: 'High holy day: each Wildday of Sacred Time.' },
+        ...gloranthaHolyDays('Lhankor Mhy', '#4b6b8b', 'Godsday', 'Truth'),
+        { name: 'Lhankor Mhy High Holy Day', color: '#4b6b8b', rule: { type: 'fixed', month: 5, day: 7, span: 1 }, description: 'High holy day: each Godsday of Sacred Time.' },
+        { name: 'Lhankor Mhy High Holy Day', color: '#4b6b8b', rule: { type: 'fixed', month: 5, day: 14, span: 1 }, description: 'High holy day: each Godsday of Sacred Time.' },
+        gloranthaDay('Babeester Gor', '#a0522d', 'Dark', 'Disorder', 'Wildday'), gloranthaDay('Babeester Gor', '#a0522d', 'Earth', 'Death', 'Freezeday', true),
+        { ...gloranthaDay('Argan Argar', '#3b3b5c', 'Dark', 'Harmony', 'Waterday', true), rule: { type: 'fixed', month: 3, day: 9, span: 2 }, description: 'High holy days: Waterday and Clayday of Harmony Week in Dark Season.' },
       ],
       settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
     },

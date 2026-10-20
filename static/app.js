@@ -2337,6 +2337,9 @@
       if (Number(leap)) m.leapDays = Number(leap);
       if (fest && /fest|inter/i.test(fest)) m.intercalary = true;
       if (m.intercalary && /week/i.test(fest)) m.keepWeekday = true;
+      // week names have no field of their own here, so a month keeps the ones it had under the same name
+      const was = (base.months || []).find(o => o.name === name);
+      if (was && was.weeks) m.weeks = was.weeks;
       return m;
     });
     if (!c.months.length) throw new Error('Add at least one month');
@@ -2393,7 +2396,7 @@
         field('First year (epoch)', el('input', { type: 'number', name: 'epochYear', value: c.epochYear }), null, 'The year number of the calendar\'s very first day'),
         field('Weekday of epoch day 1 (0 = first weekday)', el('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
           'Shifts the whole weekday cycle. Change it to line up a known date with the right weekday'),
-        field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year'),
+        field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year, {w} week name (Glorantha)'),
         field('Hours per day', el('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), { shifts4: 'Each of the day\'s four shifts is a quarter of this, for travel too', shifts2: 'Day and Night are half of this each, for travel too', hours: 'The hours in a day, each one its own step on the clock and in the travel planner' }[E.timeMode(c)]),
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
@@ -2509,6 +2512,7 @@
           ['New Year\'s Day, Thanksgiving (fourth Thursday in November) and Christmas Day: ', cite('usHolidays'), '. Christmas Eve: ', cite('xmasEve'), '.'],
           ['Middle-earth (Shire Reckoning): months, Yule and Lithe days, the Overlithe leap rule and the fixed weekdays from Appendix D of The Lord of the Rings, as summarised by ', cite('shire'), '.'],
           ['Imperial Calendar (Warhammer Fantasy): months, festival days, weekdays and the two moons: ', cite('imperial'), ' and ', cite('imperialMoons'), '.'],
+          ['Glorantha (Orlanthi calendar): seasons, weeks and weekdays from ', cite('balazar'), ' and ', cite('orlanthi'), '; the cults\' holy days from ', cite('runequestCults'), '.'],
           'The Starship clock and the Custom calendar are made up for this app.',
         ])),
       section('Game rules',
@@ -2521,6 +2525,8 @@
             'and the region climates are judgement calls from each region\'s real-world analogue (the Empire as Germany, Bretonnia as France, Kislev as Russia), using the Köppen classes above.'],
           ['Middle-earth preset (© the Tolkien Estate): the calendar follows the books. Region climates were first taken from ', cite('imaginarymaps'),
             ' and fit Tolkien\'s own latitude anchors: ', cite('letter294'), '.'],
+          ['Glorantha preset (© Chaosium): the calendar and holy days follow the official setting via fan sources. Glorantha is flat and its seasons are the same everywhere; region climates are judgement calls from ', cite('gloranthaGeo'),
+            ' (cold toward the Glacier in the north, hot toward Pamaltela in the south) and ', cite('gloranthaWeather'), ', using the Köppen classes above. The Red Moon\'s weekly phases, Full on Wildday, are a reading of the setting.'],
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
           'Storm, fog and dust frequencies, the weather mixes of the simple climates, and the visibility rules (see above).',
         ])));
