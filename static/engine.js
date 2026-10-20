@@ -362,6 +362,21 @@
     { kmh: [39, 61], mph: [25, 38], beaufort: '6–7' },
     { kmh: [62, null], mph: [39, null], beaufort: '8+' },
   ];
+  // How hard each precipitating weather falls, by the usual meteorological intensity bands (snow as depth of fresh snow).
+  const PRECIP_RATES = {
+    drizzle:   { metric: 'under 2.5 mm an hour', imperial: 'under 0.1 in an hour' },
+    rain:      { metric: '4–15 mm an hour', imperial: '0.15–0.6 in an hour' },
+    storm:     { metric: '10–50 mm an hour in bursts', imperial: '0.4–2 in an hour in bursts' },
+    snow:      { metric: 'under 1 cm of snow an hour', imperial: 'under 0.4 in of snow an hour' },
+    heavysnow: { metric: '2.5–5 cm of snow an hour', imperial: '1–2 in of snow an hour' },
+    blizzard:  { metric: '2.5+ cm of snow an hour, blowing and drifting', imperial: '1+ in of snow an hour, blowing and drifting' },
+    hail:      { metric: 'hailstones 0.5–2.5 cm across', imperial: 'hailstones ¼–1 in across' },
+  };
+  /** Weather type -> how much falls, e.g. '4–15 mm an hour', or '' for dry weather. Imperial temperature units (°F, °R) get inches. */
+  function precipRate(type, unit) {
+    const p = PRECIP_RATES[type];
+    return p ? (unit === 'F' || unit === 'R' ? p.imperial : p.metric) : '';
+  }
   /** Wind level -> its speed range, e.g. '39–61 km/h'. Imperial temperature units (°F, °R) get mph. */
   function windSpeed(level, unit) {
     const ws = WIND_SPEEDS[level];
@@ -1409,7 +1424,7 @@
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
-    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };

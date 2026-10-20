@@ -298,17 +298,20 @@
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
   const SO_FAR_TIP = 'The weather this shift. The rest of today\'s weather shows up as each shift comes round.';
-  /** Tooltip line giving the wind's actual speed, e.g. 'Windy: 25–38 mph (Beaufort 6–7)'. Empty when calm. */
-  function windTip(w) {
-    if (!w?.wind) return '';
-    return `\n${E.WIND[w.wind]}: ${E.windSpeed(w.wind, tempUnit())} (Beaufort ${E.WIND_SPEEDS[w.wind].beaufort})`;
+  /** Tooltip lines giving how much falls and the wind's actual speed, e.g. 'Heavy rain: 4–15 mm an hour' and
+   * 'Windy: 25–38 mph (Beaufort 6–7)'. Empty for dry, calm weather. */
+  function wxTip(w) {
+    if (!w) return '';
+    const rate = E.precipRate(w.type, tempUnit());
+    return (rate ? `\n${E.WEATHER[w.type].label}: ${rate}` : '')
+      + (w.wind ? `\n${E.WIND[w.wind]}: ${E.windSpeed(w.wind, tempUnit())} (Beaufort ${E.WIND_SPEEDS[w.wind].beaufort})` : '');
   }
   function weatherText(w, what = FORECAST_TIP) {
     if (!w) return el('span', { class: 'muted' }, 'No weather recorded');
     if (w.partial && what === FORECAST_TIP) what = SO_FAR_TIP;
     const def = E.WEATHER[w.type] || {};
     const mods = [def.day ? `daytime visibility ${def.day > 0 ? '+' : ''}${def.day}` : null, def.night ? `overnight ${def.night > 0 ? '+' : ''}${def.night}` : null].filter(Boolean);
-    return el('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}${windTip(w)}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
+    return el('span', { class: 'wx', 'data-tip': `${what}\n${def.label}${mods.length ? `: ${mods.join(', ')}` : ': no effect on visibility'}${wxTip(w)}` }, `${def.icon || ''} ${E.weatherLabel(w, tempUnit())}`);
   }
   /** The weather in each of day d's shifts (or hours), worked out from the day's forecast w for its four quarters. On today, a player
    * without future weather gets only the shifts so far from the server (w.partial), never the forecast. */
@@ -785,7 +788,7 @@
     if (evs.length || hol.length) cls.push('has-ev');
     return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
       el('div', { class: 'dc-top' }, el('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
-        el('span', { class: 'dc-icons' }, def ? el('span', { 'data-tip': E.weatherLabel(w, tempUnit()) + windTip(w) }, def.icon) : null,
+        el('span', { class: 'dc-icons' }, def ? el('span', { 'data-tip': E.weatherLabel(w, tempUnit()) + wxTip(w) }, def.icon) : null,
           compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)),
           rems.length ? el('span', { class: 'dc-bell', 'data-tip': reminderTip(rems) }, '🔔') : null)),
       hol.map(x => el('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
@@ -826,7 +829,7 @@
           const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
           const isNow = d * spd() + i === nowShift();
           return el('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? `This is the current ${word()}` : null },
-            el('div', { class: 'sb-head' }, el('span', {}, names[i], sw ? el('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) + windTip(sw) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
+            el('div', { class: 'sb-head' }, el('span', {}, names[i], sw ? el('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) + wxTip(sw) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
             el('div', { class: 'sb-act' }, s.activity || el('span', { class: 'muted' }, '—')));
         }))));
     }
@@ -929,7 +932,7 @@
       el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
         const x = sws[i] || null, cls = ['dh-step'];
         if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
-        return el('div', { class: cls.join(' '), 'data-tip': x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${windTip(x)}` : `${names[i]}: weather not known yet` },
+        return el('div', { class: cls.join(' '), 'data-tip': x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${wxTip(x)}` : `${names[i]}: weather not known yet` },
           el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i]));
       })));
   }
