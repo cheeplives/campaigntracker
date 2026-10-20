@@ -66,6 +66,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/007_reminders.sql');
             $msg .= ' Added calendar reminders.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'party_funds'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/008_party_funds.sql');
+            $msg .= ' Added Party Funds.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
