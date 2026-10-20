@@ -48,7 +48,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   current one; downtime covers whole days and its label comes off when deleted; the GM
   picks activities, custom ones and players; players see them and edit only the public
   notes, never the GM notes.
-- **holdings**: Party Funds keeps one line per currency, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the last row, ticks its count (never
+- **holdings**: Party Funds keeps one line per currency with where it is kept, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the last row, ticks its count (never
   below 0) and edits its boxes, and the GM sees and removes it; the Add holding dialog
   shows each type's own fields, takes a custom construction type, a custom holding
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
