@@ -94,6 +94,35 @@ test("Glorantha: seasons of named weeks, Sacred Time, the Red Moon and holy days
   expect(Engine.fmtDate(plain, 0)).toBe("Firstday, Month 1, 1");
 });
 
+test("weeks of any length: weekdays, Nth weekday holidays and week names", () => {
+  // a 5-day week over 30-day months: each weekday falls 6 times a month
+  const five = { months: [{ name: "Ember", days: 30 }, { name: "Frost", days: 30 }], weekdays: ["One", "Two", "Three", "Four", "Five"], epochYear: 1 };
+  Engine.prep(five);
+  expect(Engine.weekLength(five)).toBe(5);
+  expect(Engine.maxWeekdaysInMonth(five)).toBe(6);
+  expect([0, 4, 5, 30, 31].map(d => Engine.weekday(five, d))).toEqual([0, 4, 0, 0, 1]);
+  const sixth = { name: "Sixth Three", rule: { type: "nth_weekday", month: 1, weekday: 2, n: 6, span: 1 } };
+  const hit = Engine.toAbs(five, 1, 1, 28);
+  expect(Engine.weekday(five, hit)).toBe(2);
+  expect(Engine.holidaysOn(five, [sixth], hit).map(h => h.name)).toEqual(["Sixth Three"]);
+  expect(Engine.holidaysOn(five, [{ ...sixth, rule: { ...sixth.rule, n: -1 } }], hit)).toHaveLength(1);
+  // the Imperial Calendar's 8-day week and Standard Ship Time's 6-day one
+  const imperial = JSON.parse(JSON.stringify(Engine.PRESETS.imperial.calendar));
+  Engine.prep(imperial);
+  expect(Engine.weekLength(imperial)).toBe(8);
+  expect(new Set(Array.from({ length: 40 }, (_, d) => Engine.weekday(imperial, d)).filter(w => w !== null)).size).toBe(8);
+  const ship = JSON.parse(JSON.stringify(Engine.PRESETS.shipclock.calendar));
+  Engine.prep(ship);
+  expect(Engine.weekLength(ship)).toBe(6);
+  // named weeks follow the week's length, so a 10-day week names days 11 to 20 the second week
+  const decade = { months: [{ name: "Germinal", days: 30, weeks: ["First Decade", "Second Decade", "Third Decade"] }],
+    weekdays: ["Primidi", "Duodi", "Tridi", "Quartidi", "Quintidi", "Sextidi", "Septidi", "Octidi", "Nonidi", "Décadi"], epochYear: 1, dateFormat: "{W}, {w}, {d} {M}" };
+  Engine.prep(decade);
+  expect(Engine.fmtDate(decade, 10)).toBe("Primidi, Second Decade, 11 Germinal");
+  expect(Engine.fmtDate(decade, 29)).toBe("Décadi, Third Decade, 30 Germinal");
+  expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(Engine.ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);
+});
+
 test("Gregorian and Imperial presets: regions carry Köppen climates in the right hemisphere", () => {
   const P = Engine.PRESETS;
   for (const key of ["gregorian", "gregorian_south", "imperial"]) {

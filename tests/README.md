@@ -29,7 +29,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   sign-in starts are rate-limited per IP.
 - **campaign**: a GM creates a campaign and every tab renders with no script
   errors; a custom calendar is created with its own number of months, each
-  with its own length; members are added by sign-in email, only once approved; players never
+  with its own length, and a week of its own length and day names; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows

@@ -41,12 +41,21 @@ test("a custom calendar gets its own number of months, each with its own length"
   await page.getByLabel("Month 3 days").fill("5");
   await page.getByLabel("Month 3 days").press("Tab");
   await expect(page.getByText("3 months, 55 days a year.")).toBeVisible();
+  // and its own week: 5 days, one renamed
+  const week = page.getByRole("spinbutton", { name: /Days in a week/ });
+  await expect(week).toHaveValue("7");
+  await week.fill("5");
+  await week.press("Tab");
+  await expect(page.getByLabel(/^Weekday \d+ name$/)).toHaveCount(5);
+  await page.getByLabel("Weekday 5 name").fill("Restday");
+  await page.getByLabel("Weekday 5 name").press("Tab");
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("heading", { name: "Odd Months" })).toBeVisible();
   const cid = page.url().match(/#\/c\/(\d+)/)[1];
   const { json } = await api(page, "campaign", undefined, cid);
   expect(json.campaign.calendar.months.map(m => [m.name, m.days])).toEqual([["Month 1", 10], ["Longmonth", 40], ["Month 3", 5]]);
   for (const s of json.campaign.calendar.seasons) expect(s.day).toBeLessThanOrEqual([10, 40, 5][s.month]);
+  expect(json.campaign.calendar.weekdays).toEqual(["Firstday", "Seconday", "Thirdday", "Fourthday", "Restday"]);
   await page.getByRole("navigation").getByRole("link", { name: "Calendar", exact: true }).click();
   await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
   expectNoErrors(errors);
