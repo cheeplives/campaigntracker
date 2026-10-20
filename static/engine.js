@@ -355,6 +355,35 @@
     debris:    { label: 'Debris field', icon: '☄️', day: -1, night: -1, moon: 0.6 },
   };
   const WIND = ['Calm', 'Breezy', 'Windy', 'Gale'];
+  // Sustained wind speed for each WIND level in km/h [from, to] (Beaufort scale), so the GM needn't look it up. Gale has no top.
+  const WIND_SPEEDS = [
+    { kmh: [0, 19], mph: [0, 12], beaufort: '0–3' },
+    { kmh: [20, 38], mph: [13, 24], beaufort: '4–5' },
+    { kmh: [39, 61], mph: [25, 38], beaufort: '6–7' },
+    { kmh: [62, null], mph: [39, null], beaufort: '8+' },
+  ];
+  // How hard each precipitating weather falls, by the usual meteorological intensity bands (snow as depth of fresh snow).
+  const PRECIP_RATES = {
+    drizzle:   { metric: 'under 2.5 mm an hour', imperial: 'under 0.1 in an hour' },
+    rain:      { metric: '4–15 mm an hour', imperial: '0.15–0.6 in an hour' },
+    storm:     { metric: '10–50 mm an hour in bursts', imperial: '0.4–2 in an hour in bursts' },
+    snow:      { metric: 'under 1 cm of snow an hour', imperial: 'under 0.4 in of snow an hour' },
+    heavysnow: { metric: '2.5–5 cm of snow an hour', imperial: '1–2 in of snow an hour' },
+    blizzard:  { metric: '2.5+ cm of snow an hour, blowing and drifting', imperial: '1+ in of snow an hour, blowing and drifting' },
+    hail:      { metric: 'hailstones 0.5–2.5 cm across', imperial: 'hailstones ¼–1 in across' },
+  };
+  /** Weather type -> how much falls, e.g. '4–15 mm an hour', or '' for dry weather. Imperial temperature units (°F, °R) get inches. */
+  function precipRate(type, unit) {
+    const p = PRECIP_RATES[type];
+    return p ? (unit === 'F' || unit === 'R' ? p.imperial : p.metric) : '';
+  }
+  /** Wind level -> its speed range, e.g. '39–61 km/h'. Imperial temperature units (°F, °R) get mph. */
+  function windSpeed(level, unit) {
+    const ws = WIND_SPEEDS[level];
+    if (!ws) return '';
+    const mph = unit === 'F' || unit === 'R', [a, b] = mph ? ws.mph : ws.kmh, sym = mph ? 'mph' : 'km/h';
+    return b == null ? `${a}+ ${sym}` : a === 0 ? `under ${b + 1} ${sym}` : `${a}–${b} ${sym}`;
+  }
 
   // Temperatures in °C: [typical low, typical high] for the day's high. The simple climates take their
   // temperatures from one station each (1991–2020 normals in tools/climate-normals.json, worked out the same way
@@ -1395,7 +1424,7 @@
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
-    genWeather, shiftWeather, weatherLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
