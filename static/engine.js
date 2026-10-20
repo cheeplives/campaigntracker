@@ -728,6 +728,99 @@
     return [out[1], out[2], out[3], out[0]];
   }
 
+  // ---------------------------------------------------------------- ground conditions
+  // Snow cover and how wet the ground is, worked out by walking the weather of the days before, quarter by quarter.
+  // Nothing is stored: stored days give their weather, and days with none are rolled from the region's climate the
+  // same way passing time would roll them. The figures are the app's own game tuning, not measurements.
+  const GROUND_DAYS = 60; // how far back the walk starts
+  const SNOWFALL = { snow: 0.6, heavysnow: 2.5, blizzard: 4 }; // cm of fresh snow a quarter
+  // Totals over a whole quarter, far below PRECIP_RATES' hourly rates: it seldom falls the whole six hours, and these
+  // keep each Köppen class's monthly totals near its station's.
+  const RAINFALL = { drizzle: 1, rain: 5, storm: 8, hail: 2, damp: 0.3 }; // mm of water a quarter
+  const SUNSHINE = { clear: 1.5, haze: 1.6, partly: 1.2, overcast: 0.6, fog: 0.3, sandstorm: 1.3, hail: 0.3 };
+  const QUARTER_SUN = [0.6, 1, 0.8, 0.3]; // Dawn, Midday, Dusk, Overnight: how much each dries the ground
+  const FIELD_CAPACITY = 30, DRYING = 0.035;
+  // Wetness (mm of water held in the topsoil, 0–60) -> label and the going, worst first.
+  const GROUND_WET = [
+    [48, 'Waterlogged', 'Standing water and deep mud: wheeled travel off the roads is close to impossible and low ground floods.'],
+    [35, 'Muddy', 'Slow going: carts and wagons bog down, and travel off the roads is slow and tiring.'],
+    [25, 'Soft', 'Heavy going for wagons and horses; boots sink in and leave clear tracks.'],
+    [15, 'Damp', 'Good going; tracks show clearly.'],
+    [5, 'Firm', 'Good going.'],
+    [-1, 'Dry', 'Good going; tracks are hard to follow.'],
+  ];
+  const GROUND_SNOW = [
+    [60, 'Very deep snow', 'Barely passable without snowshoes or skis; wagons need runners.'],
+    [30, 'Deep snow', 'Very slow going on foot; wagons need runners.'],
+    [10, 'Snow cover', 'Slow going on foot without snowshoes or skis.'],
+    [2, 'Thin snow cover', 'Slightly slower going; tracks show clearly.'],
+    [0.5, 'Dusting of snow', 'Tracks show clearly.'],
+  ];
+  const noGround = clim => clim === CLIMATES.underground || clim === CLIMATES.ship || clim === CLIMATES.vacuum;
+
+  /**
+   * The ground at the end of each quarter (Dawn, Midday, Dusk, Overnight) of absolute day d in region.
+   * history: Map(abs day -> that day's weather in this region, as stored or as the server hands it a player). A day
+   * missing from the map is rolled from the climate; a null entry is a day nobody may know, which the walk passes over.
+   * A partial day (w.partial) counts only the quarters it has. Returns [] where weather has no ground (caves, ships,
+   * space), else 4 entries, null for quarters not known: { snow (cm), wet (mm), frozen, melting, temp, lastSnow
+   * (abs day of the last snowfall or null), wetDays (days of the last 7 with rain or melt) }.
+   */
+  function groundConditions(cal, seed, region, d, history, opts) {
+    const clim = climateFor(region);
+    if (noGround(clim)) return [];
+    const days = (opts && opts.days) || GROUND_DAYS;
+    let snow = 0, wet = 20, soil = null, lastSnow = null, prev = null;
+    const wetLog = [];
+    let out = [];
+    for (let day = d - days; day <= d; day++) {
+      let w = history && history.has(day) ? history.get(day) : undefined, quarters;
+      if (w === undefined) w = genWeather(cal, seed, region, day, prev, 0);
+      if (!w) quarters = [null, null, null, null];
+      else if (w.partial) quarters = [0, 1, 2, 3].map(i => (w.shifts && w.shifts[i]) || null);
+      else quarters = shiftWeather(cal, seed, region, day, w);
+      prev = w && !w.partial ? w : null;
+      let wetToday = false;
+      out = quarters.map((q, i) => {
+        if (!q) return null;
+        const t = typeof q.temp === 'number' ? q.temp : typeof w.temp === 'number' ? w.temp : 10;
+        soil = soil === null ? t : soil * 0.8 + t * 0.2; // the ground follows the air slowly
+        const frozen = soil < 0;
+        const fresh = SNOWFALL[q.type] || 0, rain = RAINFALL[q.type] || 0;
+        if (fresh) { snow += fresh; lastSnow = day; }
+        const sun = SUNSHINE[q.type] ?? (rain || fresh ? 0.2 : 0.8);
+        let melt = 0;
+        if (snow > 0 && t > 0) melt = Math.min(snow, t * 0.35 + rain * 0.15 + (i === 1 ? 0.2 * sun : 0));
+        snow -= melt;
+        if (snow < 0.05) snow = 0;
+        const water = rain + melt * 2; // settled snow holds about 2 mm of water per cm
+        if (water >= 1) wetToday = true;
+        // water above what the soil holds drains away; below it, sun, warmth and wind dry it, slower as it dries out
+        const covered = snow > 1;
+        const drain = frozen ? 0 : Math.max(0, wet - FIELD_CAPACITY) * 0.06;
+        const dry = frozen || covered ? 0 : Math.max(0, t) * DRYING * sun * QUARTER_SUN[i] * (1 + 0.2 * (q.wind || 0)) * Math.min(1, wet / FIELD_CAPACITY);
+        wet = Math.min(60, Math.max(0, wet + water - drain - dry));
+        return { snow: Math.round(snow * 10) / 10, wet: Math.round(wet * 10) / 10, frozen, melting: melt > 0.3, temp: t, lastSnow };
+      });
+      wetLog.push(wetToday);
+    }
+    const wetDays = wetLog.slice(-7).filter(Boolean).length;
+    return out.map(g => g && { ...g, wetDays });
+  }
+
+  /** {icon, label, going}: the ground in a word or two, with snow depth in cm, or inches for a Fahrenheit or Rankine unit. */
+  function groundLabel(g, unit) {
+    if (!g) return null;
+    if (g.snow >= 0.5) {
+      const [, label, going] = GROUND_SNOW.find(([min]) => g.snow >= min);
+      const depth = unit === 'F' || unit === 'R' ? `${Math.max(1, Math.round(g.snow / 2.54))} in` : `${Math.max(1, Math.round(g.snow))} cm`;
+      return { icon: '⛄', label: `${label}, ${depth}${g.melting ? ', melting' : ''}`, going: g.melting ? `${going} Slush and meltwater make it slippery.` : going };
+    }
+    const [, wl, wgo] = GROUND_WET.find(([min]) => g.wet >= min);
+    if (g.frozen) return { icon: '🧊', label: g.wet >= 25 ? 'Frozen, icy ruts' : 'Frozen hard', going: g.wet >= 25 ? 'Hard going over frozen ruts and ice; slippery. It turns to mud when it thaws.' : 'Hard, fast going.' };
+    return { icon: '🥾', label: wl, going: wgo };
+  }
+
   // Temperatures are stored in °C; these convert for display and input.
   const TEMP_UNITS = {
     C: { label: 'Celsius', sym: '°C', from: c => c, to: v => v },
@@ -1424,7 +1517,7 @@
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
-    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };

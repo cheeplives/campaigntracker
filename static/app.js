@@ -323,6 +323,31 @@
     const { shifts, shift_order, ...forecast } = w;
     return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast), shift_order: cal().shiftOrder || 'overnight' };
   }
+  /** The ground in each shift (or hour) of day d in region, worked out from the weather of the days before; w is day d's
+   * weather as this page has it. [] where nothing can be known: caves and ships, or a day a player may not see yet. */
+  async function groundFor(d, region, w) {
+    const hide = !isGM() && !settings().players_see_future_weather;
+    if (hide && d > today()) return [];
+    const { days } = await fetchRange(d - E.GROUND_DAYS, d - 1);
+    const history = new Map();
+    // stored days count only where the party was in this region; the rest are rolled from its climate
+    for (const [ad, row] of days) if (row.weather && (regionById(row.region_id) || currentRegion())?.id === region?.id) history.set(ad, row.weather);
+    history.set(d, w || null);
+    const quarters = E.groundConditions(cal(), S.camp.seed, region, d, history);
+    return quarters.length ? E.slotsFromQuarters(cal(), quarters) : [];
+  }
+  /** The ground underfoot in a word or two, with what it means for travel and how it got that way in its tooltip. */
+  function groundText(g, d) {
+    const l = E.groundLabel(g, tempUnit());
+    if (!l) return null;
+    const ago = n => n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`;
+    const lines = [`Ground underfoot: ${l.label}. ${l.going}`,
+      g.lastSnow !== null ? `Last snowfall: ${ago(d - g.lastSnow)}.` : null,
+      `Rain or snowmelt on ${g.wetDays} of the last 7 days.`,
+      g.frozen ? 'The ground is frozen.' : null,
+      `Worked out from the last ${E.GROUND_DAYS} days of weather here: rain and snow, how warm it was, sun and wind. Days with no weather recorded are rolled from the region's climate. A rough guide, not a rule.`];
+    return el('span', { class: 'ground', 'data-tip': lines.filter(Boolean).join('\n') }, `${l.icon} ${l.label}`);
+  }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
@@ -845,6 +870,9 @@
     const region = regionById(row.region_id) || currentRegion();
     const w = row.weather || null;
     const shifts = {}; r.shifts.forEach(s => (shifts[s.shift] = s));
+    let grounds = [];
+    try { grounds = await groundFor(d, region, w); } catch { /* the day still shows without it */ }
+    const groundNow = d === today() ? grounds[E.mod(nowShift(), spd())] : grounds.filter(Boolean).pop();
     const p = E.fromAbs(c, d);
     const sea = E.season(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
@@ -875,6 +903,8 @@
           !isGM() && row.locations ? el('span', { class: 'lbl', style: { marginTop: '8px' } }, 'Locations visited') : null,
           !isGM() && row.locations ? el('span', { class: 'pre' }, row.locations) : null),
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
+        groundNow ? el('div', {}, el('span', { class: 'lbl' }, d === today() ? 'Ground now' : 'Ground at day\'s end',
+          tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null),
@@ -885,7 +915,7 @@
     // --- shifts
     const sws = shiftWx(d, region, w);
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
-      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i))));
+      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null)));
 
     // --- events
     const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
@@ -899,13 +929,13 @@
       btn('+ Add reminder', () => remCard.append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`)),
       rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
-    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts) : null, overview,
+    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview,
       el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard, remCard);
   }
 
   /** The Current Day tab's banner and the day's shifts (or hours) at a glance. On today it shows the shift the campaign
    * clock is on, large; on any other day, the day's forecast (what the player may see of it). */
-  function dayHero(d, region, w, sws, shifts) {
+  function dayHero(d, region, w, sws, shifts, ground) {
     const c = cal(), names = shiftNames(), isToday = d === today();
     const sh = isToday ? E.mod(nowShift(), spd()) : d < today() ? spd() : -1; // which shifts have passed
     let main;
@@ -918,6 +948,7 @@
           el('div', { class: 'lbl' }, 'Now'),
           el('div', { class: 'dh-shift' }, names[sh]),
           el('div', {}, weatherText(sw, `Weather this ${names[sh]}`), ' ', visPill(v)),
+          ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
           shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, shifts[sh].activity) : null));
     } else {
       const def = w ? E.WEATHER[w.type] || {} : null;
@@ -926,7 +957,8 @@
         el('div', {},
           el('div', { class: 'lbl' }, d < today() ? 'Past day' : 'Coming day'),
           el('div', { class: 'dh-shift' }, w ? def.label || w.type : isGM() ? 'No weather recorded' : 'Weather not known yet'),
-          w ? el('div', {}, weatherText(w)) : null));
+          w ? el('div', {}, weatherText(w)) : null,
+          ground ? el('div', { class: 'small' }, groundText(ground, d)) : null));
     }
     return el('section', { class: 'card dayhero' }, main,
       el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
@@ -1012,7 +1044,7 @@
   }
 
   /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
-  function shiftCard(d, i, s, region, sw, hiddenWx, notes) {
+  function shiftCard(d, i, s, region, sw, hiddenWx, notes, ground) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * spd() + i === nowShift();
@@ -1020,6 +1052,7 @@
       el('div', { class: 'row spread' }, el('h4', {}, names[i], isNow ? el('span', { class: 'nowtag', 'data-tip': `The campaign clock is on this ${word()}` }, 'NOW') : null), visPill(v)),
       sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
         : hiddenWx ? el('div', { class: 'small muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet') : null,
+      ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
       el('small', { class: 'muted', 'data-tip': `How the visibility score was worked out: base light for the ${word()}, then moonlight, weather and terrain` }, v.parts.join(' · ')));
     // In hours mode a day has many cards, so an hour with nothing recorded starts folded to its heading.
     const fold = c => {

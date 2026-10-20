@@ -21,6 +21,7 @@ function workload(E) {
         date: E.fmtDate(cal, d), weekday: E.weekday(cal, d), season: E.season(cal, d, region.settings?.hemisphere),
         moons: E.moons(cal, d), weather: w, shifts: sw,
         vis: [0, 1, 2, 3].map(s => E.visibility(cal, region, (sw && sw[s]) || w, d, s, null)),
+        ground: E.groundConditions(cal, 12345, region, d, new Map(), { days: 20 }).map(g => E.groundLabel(g, "C")),
       };
     });
   }
