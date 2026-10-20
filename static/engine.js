@@ -184,7 +184,19 @@
     count += p.day - 1;
     return mod(cal.weekdayOffset + count, cal.weekdays.length);
   }
+  /** Days in the calendar's week: one per weekday name, any number of them. A calendar without weekdays counts 7 for "a week". */
   function weekLength(cal) { return cal.weekdays && cal.weekdays.length ? cal.weekdays.length : 7; }
+  /** The most times one weekday can fall in a month (5 for Gregorian, 4 for the Imperial 8-day week, 10 for a 3-day week of 30-day months). */
+  function maxWeekdaysInMonth(cal) {
+    if (!cal.weekdays || !cal.weekdays.length) return 0;
+    const W = cal.weekdays.length;
+    return (cal.months || []).filter(inWeek).reduce((n, m) => Math.max(n, Math.ceil((Number(m.days || 0) + Number(m.leapDays || 0)) / W)), 0);
+  }
+  /** 1 → '1st', 2 → '2nd', 11 → '11th', 22 → '22nd' */
+  function ordinal(n) {
+    const t = n % 100;
+    return n + (t >= 11 && t <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
+  }
 
   function yearLabel(cal, y) {
     return cal.yearSuffix ? `${y} ${cal.yearSuffix}` : String(y);
@@ -1265,7 +1277,7 @@
   const GLORANTHA_DAYS = ['Freezeday', 'Waterday', 'Clayday', 'Windsday', 'Fireday', 'Wildday', 'Godsday'];
   /** One holy day of a god: a weekday of a named week in one season, or that god's high holy day. */
   function gloranthaDay(god, color, season, week, weekday, high = false) {
-    const day = GLORANTHA_WEEKS.indexOf(week) * 7 + GLORANTHA_DAYS.indexOf(weekday) + 1;
+    const day = GLORANTHA_WEEKS.indexOf(week) * GLORANTHA_DAYS.length + GLORANTHA_DAYS.indexOf(weekday) + 1;
     return { name: `${god} ${high ? 'High Holy Day' : 'holy day'}`, color, rule: { type: 'fixed', month: GLORANTHA_SEASONS.indexOf(season), day, span: 1 },
       description: `${weekday} of ${week} Week, ${season} Season${high ? ': the high holy day' : ''}.` };
   }
@@ -1515,7 +1527,7 @@
 
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
-    prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength,
+    prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
     yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,

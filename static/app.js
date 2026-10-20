@@ -545,10 +545,12 @@
     const startWrap = el('div');
     // the Custom preset's months, set on this form: how many there are and each one's length
     let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
-    /** The preset's calendar, with the custom months (and seasons spread over them) when Custom is picked. */
+    // and its week: how many days, and each one's name
+    let customWeekdays = [...E.PRESETS.custom.calendar.weekdays];
+    /** The preset's calendar, with the custom months, week (and seasons spread over the months) when Custom is picked. */
     const presetCal = () => {
       const c = E.PRESETS[preset].calendar;
-      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
+      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
     };
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
@@ -614,7 +616,27 @@
       sync();
       monthsWrap.replaceChildren(el('h3', {}, 'Months'),
         field('Number of months', count, null, 'How many months make up a year. Each one can have its own number of days below.'),
-        el('small', { class: 'muted' }, 'Name · days in the month'), rows, total);
+        el('small', { class: 'muted' }, 'Name · days in the month'), rows, total, drawWeek());
+    };
+    /** The Custom preset's week: any number of days, each with its own name, or none for a calendar without weeks. */
+    const drawWeek = () => {
+      const wrap = el('div'), rows = el('div', { class: 'weekrows grid3' });
+      const count = el('input', { type: 'number', min: 0, max: 100, value: customWeekdays.length, class: 'w-day', name: 'week_length' });
+      const addRow = (name, i) => rows.append(el('input', { value: name, 'data-k': 'weekday', 'aria-label': `Weekday ${i + 1} name`, placeholder: `Day ${i + 1}` }));
+      const sync = () => { customWeekdays = [...rows.children].map((r, i) => r.value.trim() || `Day ${i + 1}`); drawStart(); };
+      customWeekdays.forEach(addRow);
+      count.addEventListener('change', () => {
+        const n = Math.max(0, Math.min(100, Math.round(Number(count.value) || 0)));
+        count.value = n;
+        while (rows.children.length > n) rows.lastChild.remove();
+        while (rows.children.length < n) addRow(`Day ${rows.children.length + 1}`, rows.children.length);
+        sync();
+      });
+      rows.addEventListener('change', sync);
+      wrap.append(el('h3', {}, 'Week'),
+        field('Days in a week', count, '0 for a calendar without weeks.', 'How many days make up a week, each with its own name below. The month grid has one column per day of the week, and "Nth weekday" holidays count in it.'),
+        rows);
+      return wrap;
     };
     presetSel.addEventListener('change', () => { preset = presetSel.value; drawMonths(); drawStart(); drawSeasons(); drawClimate(); });
     drawMonths(); drawStart(); drawSeasons(); drawClimate();
@@ -1674,7 +1696,7 @@
     const span = Number(r.span) > 1 ? ` for ${r.span} days` : '';
     const mname = c.months[r.month]?.name || '?';
     if (r.type === 'fixed') return `Every year: ${r.day} ${mname}${span}`;
-    if (r.type === 'nth_weekday') return `Every year: ${Number(r.n) < 0 ? 'last' : ['', '1st', '2nd', '3rd', '4th', '5th'][r.n]} ${c.weekdays[r.weekday] || '?'} of ${mname}${span}`;
+    if (r.type === 'nth_weekday') return `Every year: ${Number(r.n) < 0 ? 'last' : E.ordinal(Number(r.n))} ${c.weekdays[r.weekday] || '?'} of ${mname}${span}`;
     if (r.type === 'once') return `Once: ${E.fmtDate(c, Number(r.abs_day))}${span}`;
     if (r.type === 'every_n') return `Every ${r.interval} days from ${E.fmtDate(c, Number(r.start), { noWeekday: true })}${span}`;
     return '?';
@@ -1692,15 +1714,19 @@
   }
   function holidayForm(x = { rule: { type: 'fixed', month: 0, day: 1, span: 1 }, color: '#b8860b' }) {
     const c = cal(), r = x.rule || {};
-    const type = select([['fixed', 'Same date every year'], ['nth_weekday', 'Nth weekday of a month'], ['once', 'One time only'], ['every_n', 'Every N days']], r.type, { name: 'type' });
+    // Nth weekday needs weeks; offered on a calendar without any only to keep a rule it already has
+    const hasWeeks = c.weekdays.length > 0 || r.type === 'nth_weekday';
+    const type = select([['fixed', 'Same date every year'], ...(hasWeeks ? [['nth_weekday', 'Nth weekday of a month']] : []), ['once', 'One time only'], ['every_n', 'Every N days']], r.type, { name: 'type' });
     const monthSel = select(c.months.map((m, i) => [i, m.name]), r.month ?? 0, { name: 'month' });
     const dayIn = el('input', { type: 'number', min: 1, name: 'day', value: r.day || 1 });
     const wdSel = select(c.weekdays.map((w, i) => [i, w]), r.weekday ?? 0, { name: 'weekday' });
-    const nSel = select([[1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [5, '5th'], [-1, 'Last']], r.n ?? 1, { name: 'n' });
+    // as many as a weekday can fall in the longest month: 5 for a 7-day week, 4 for an 8-day one, more for short weeks
+    const maxN = Math.max(1, E.maxWeekdaysInMonth(c), Number(r.n) || 0);
+    const nSel = select([...Array.from({ length: maxN }, (_, i) => [i + 1, E.ordinal(i + 1)]), [-1, 'Last']], r.n ?? 1, { name: 'n' });
     const oncePick = datePicker(r.abs_day ?? today()), startPick = datePicker(r.start ?? today());
     const interval = el('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
     const parts = {
-      month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel), n: field('Which one', nSel),
+      month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel, `${E.weekLength(c)} days a week`), n: field('Which one', nSel),
       once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval, null, 'Counted in days, ignoring months and years. Good for market days or a comet'),
     };
     const show = { fixed: ['month', 'day'], nth_weekday: ['n', 'weekday', 'month'], once: ['once'], every_n: ['start', 'interval'] };
@@ -2443,7 +2469,9 @@
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
         field('Shift names (4, comma-separated)', el('input', { name: 'shiftNames', value: t.shiftNames }), E.timeMode(c) === 'shifts4' ? null : 'Used when Time tracking is four shifts',
           'Rename the four shifts, in order: morning, midday, evening, then the overnight one. Their lighting stays tied to that order')),
-      field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2)),
+      field('Weekdays (comma-separated; leave empty for no weeks)', ta('weekdays', t.weekdays, 2),
+        c.weekdays.length ? `${c.weekdays.length} days a week. The week is as long as this list.` : 'No weeks.',
+        'One name per day of the week, in order. A week can have any number of days: 8 in the Imperial Calendar, 6 in Standard Ship Time, 10 for a decade'),
       field('Months — one per line: Name, days, leap days[, festival]', ta('months', t.months, 8), 'Add "festival" for intercalary days that sit outside the weekday cycle (like Mitterfruhl), or "festival weekday" for named days that keep their weekday (like 2 Yule). Days can be 0 for a leap-only day (like Overlithe: 0, 1, festival)'),
       el('div', { class: 'grid3' },
         field('Leap year every N years (0 = none)', el('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
