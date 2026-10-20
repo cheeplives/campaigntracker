@@ -1966,13 +1966,13 @@
   const HOLDING_KINDS = {
     vehicle: { label: 'Vehicle', icon: '🚙', fields: ['top_speed', 'fuel_cap', 'fuel_type', 'fuel_consume', 'reliability', 'armor', 'crew', 'cargo', 'value'] },
     animal: { label: 'Animal', icon: '🐎', fields: ['top_speed', 'training', 'armor', 'crew', 'cargo', 'value'] },
-    building: { label: 'Building', icon: '🏰', fields: ['construction', 'armor', 'size', 'class', 'status', 'upkeep', 'value'] },
+    building: { label: 'Building', icon: '🏰', fields: ['construction', 'armor', 'size', 'class', 'status', 'upkeep', 'access', 'seclusion', 'environment', 'value'] },
     asset: { label: 'Asset', icon: '💎', fields: ['category', 'value'] },
     custom: { label: 'Custom', icon: '📦', fields: ['value'] },
   };
   const HOLDING_FIELDS = {
     top_speed: 'Top Speed', fuel_cap: 'Fuel Capacity', fuel_type: 'Fuel Type', fuel_consume: 'Fuel Consumption', reliability: 'Reliability',
-    armor: 'Armor', crew: 'Crew', cargo: 'Cargo', value: 'Value', training: 'Training', construction: 'Construction Type', size: 'Size', class: 'Class', status: 'Status', upkeep: 'Upkeep', category: 'Category',
+    armor: 'Armor', crew: 'Crew', cargo: 'Cargo', value: 'Value', training: 'Training', construction: 'Construction Type', size: 'Size', class: 'Class', status: 'Status', upkeep: 'Upkeep', access: 'Access', seclusion: 'Seclusion', environment: 'Environment', category: 'Category',
   };
   /** Fields picked from a list, or typed in with Custom. */
   const HOLDING_CHOICES = {
