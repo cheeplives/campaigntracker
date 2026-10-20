@@ -1951,20 +1951,21 @@
     mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear)), right));
   }
 
-  /** Party Funds: a ledger of the party's money, one line per currency ("Gold pieces" 120). Boxes save when you leave them. */
+  /** Party Funds: a ledger of the party's money, one line per currency, where it is kept and how much
+   * ("Gold pieces", "Bank of Altdorf", 120). Boxes save when you leave them. */
   function fundsCard(funds) {
     const rows = el('div', { class: 'ledger-rows' });
     const amountBox = (v, label) => el('input', { type: 'number', step: 'any', value: v ?? '', placeholder: 'Amount', 'aria-label': label });
     const line = f => {
       const cur = el('input', { maxlength: 60, value: f.currency, 'aria-label': 'Currency' });
+      const loc = el('input', { maxlength: 200, value: f.location || '', placeholder: 'Location', 'aria-label': `Where the ${f.currency} is kept` });
       const amt = amountBox(f.amount, `Amount of ${f.currency}`);
       const save = async () => {
         if (!cur.value.trim()) { cur.value = f.currency; return; }
-        try { await post('funds_save', { id: f.id, currency: cur.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
-      cur.addEventListener('change', save);
-      amt.addEventListener('change', save);
-      const row = el('div', { class: 'ledger-row' }, cur, amt,
+      for (const i of [cur, loc, amt]) i.addEventListener('change', save);
+      const row = el('div', { class: 'ledger-row' }, cur, loc, amt,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: async () => {
           if (!await confirmDialog(`Remove "${cur.value}" from Party Funds?`, { ok: 'Remove', danger: true })) return;
           try { await post('funds_delete', { id: f.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
@@ -1973,25 +1974,26 @@
     };
     rows.append(...funds.map(line));
     const nCur = el('input', { maxlength: 60, placeholder: 'Currency, e.g. Gold pieces', 'aria-label': 'New currency' });
+    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'Where the new currency is kept' });
     const nAmt = amountBox('', 'Amount of the new currency');
     const add = btn('+ Add', null, 'small primary', 'Add this to Party Funds');
     // As in Storage: clear the boxes before saving so nothing typed meanwhile is lost, and put them back if it fails.
     add.addEventListener('click', busy(null, async () => {
       if (!nCur.value.trim()) { nCur.focus(); toast('Name the currency first', true); return; }
-      const typed = [nCur.value, nAmt.value];
-      const f = { currency: typed[0].trim(), amount: typed[1] === '' ? 0 : Number(typed[1]) };
-      nCur.value = nAmt.value = '';
+      const typed = [nCur.value, nLoc.value, nAmt.value];
+      const f = { currency: typed[0].trim(), location: typed[1].trim(), amount: typed[2] === '' ? 0 : Number(typed[2]) };
+      nCur.value = nLoc.value = nAmt.value = '';
       nCur.focus();
-      try { f.id = (await post('funds_save', { currency: f.currency, amount: typed[1] }, S.camp.id)).id; }
-      catch (err) { if (!nCur.value && !nAmt.value) [nCur.value, nAmt.value] = typed; throw err; }
+      try { f.id = (await post('funds_save', { currency: f.currency, location: f.location, amount: typed[2] }, S.camp.id)).id; }
+      catch (err) { if (!nCur.value && !nLoc.value && !nAmt.value) [nCur.value, nLoc.value, nAmt.value] = typed; throw err; }
       rows.append(line(f));
     }));
-    for (const i of [nCur, nAmt]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    for (const i of [nCur, nLoc, nAmt]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
     return el('section', { class: 'card funds' },
-      el('h2', {}, 'Party Funds', tip('The party\'s money, one line per currency: gold, credits, favours owed in coin. Type in a box and it saves when you leave it. The GM and every player can edit it.')),
-      el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
+      el('h2', {}, 'Party Funds', tip('The party\'s money, one line per currency, with where it is kept: gold in a strongbox, credits in a bank. Type in a box and it saves when you leave it. The GM and every player can edit it.')),
+      el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Location'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
       rows,
-      el('div', { class: 'ledger-row ledger-new' }, nCur, nAmt, add));
+      el('div', { class: 'ledger-row ledger-new' }, nCur, nLoc, nAmt, add));
   }
 
   /** The Gear and Loot list: item, who claimed it and where it is, all free text, and how many. Each box saves when you leave it. */

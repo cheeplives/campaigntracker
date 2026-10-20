@@ -1113,9 +1113,9 @@ try {
         $st = db()->prepare('SELECT id, name, color FROM holding_tag_names WHERE campaign_id=? ORDER BY name');
         $st->execute([$cid]);
         $tags = array_map(fn($t) => ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']], $st->fetchAll());
-        $st = db()->prepare('SELECT id, currency, amount FROM party_funds WHERE campaign_id=? ORDER BY id');
+        $st = db()->prepare('SELECT id, currency, location, amount FROM party_funds WHERE campaign_id=? ORDER BY id');
         $st->execute([$cid]);
-        $funds = array_map(fn($r) => ['id' => (int)$r['id'], 'currency' => $r['currency'], 'amount' => (float)$r['amount']], $st->fetchAll());
+        $funds = array_map(fn($r) => ['id' => (int)$r['id'], 'currency' => $r['currency'], 'location' => $r['location'], 'amount' => (float)$r['amount']], $st->fetchAll());
         out(['funds' => $funds, 'gear' => $gear, 'holdings' => $holdings, 'tags' => $tags]);
 
     case 'gear_save':
@@ -1178,11 +1178,12 @@ try {
         role($cid);
         out(['ok' => true, 'amount' => holding_tick('holdings', $cid)]);
 
-    case 'funds_save': // a line of Party Funds: a kind of money and how much; new, or changed (id)
+    case 'funds_save': // a line of Party Funds: a kind of money, where it is kept and how much; new, or changed (id)
         $cid = cid();
         role($cid);
         $currency = trim((string)str_in(p('currency'), 60, false));
         if ($currency === '') fail('Name the currency');
+        $location = trim((string)str_in(p('location'), 200, false));
         $a = p('amount', 0);
         if ($a === '' || $a === null) $a = 0;
         if (!is_numeric($a) || abs((float)$a) > 1e13) fail('The amount must be a number');
@@ -1190,10 +1191,10 @@ try {
         if (p('id')) {
             $id = int_in(p('id'), 1);
             holding_row('party_funds', $id, $cid);
-            db()->prepare('UPDATE party_funds SET currency=?, amount=? WHERE id=?')->execute([$currency, $a, $id]);
+            db()->prepare('UPDATE party_funds SET currency=?, location=?, amount=? WHERE id=?')->execute([$currency, $location, $a, $id]);
             out(['ok' => true, 'id' => $id]);
         }
-        db()->prepare('INSERT INTO party_funds (campaign_id, currency, amount, created_by) VALUES (?,?,?,?)')->execute([$cid, $currency, $a, me()['id']]);
+        db()->prepare('INSERT INTO party_funds (campaign_id, currency, location, amount, created_by) VALUES (?,?,?,?,?)')->execute([$cid, $currency, $location, $a, me()['id']]);
         out(['ok' => true, 'id' => (int)db()->lastInsertId()]);
 
     case 'funds_delete':

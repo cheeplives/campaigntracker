@@ -297,11 +297,12 @@ CREATE TABLE IF NOT EXISTS reminder_dismissals (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Party Funds (top of the Party Holdings tab's left column): one line per kind of money the
--- party holds, e.g. "Gold pieces" 120. Open to GM and players alike.
+-- party holds and where it is kept, e.g. "Gold pieces" in "Bank of Altdorf", 120. Open to GM and players alike.
 CREATE TABLE IF NOT EXISTS party_funds (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   currency VARCHAR(60) NOT NULL,
+  location VARCHAR(200) NOT NULL DEFAULT '',
   amount DECIMAL(16,2) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

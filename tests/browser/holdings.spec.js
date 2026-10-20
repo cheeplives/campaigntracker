@@ -214,6 +214,7 @@ test("Party Funds tracks the party's money, one line per currency, for players a
   const funds = pp.locator(".funds");
   await expect(funds).toContainText("Party Funds");
   await funds.getByLabel("New currency", { exact: true }).fill("Gold pieces");
+  await funds.getByLabel("Where the new currency is kept").fill("Strongbox in the wagon");
   await funds.getByLabel("Amount of the new currency").fill("120");
   await funds.getByRole("button", { name: "+ Add" }).click();
   await funds.getByLabel("New currency", { exact: true }).fill("Silver");
@@ -226,6 +227,11 @@ test("Party Funds tracks the party's money, one line per currency, for players a
   await funds.getByLabel("Amount of Gold pieces", { exact: true }).press("Tab");
   await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds.map(f => [f.currency, f.amount]))
     .toEqual([["Gold pieces", 95], ["Silver", 35.5]]);
+  // Where it is kept saves the same way.
+  await funds.getByLabel("Where the Silver is kept").fill("Pip's purse");
+  await funds.getByLabel("Where the Silver is kept").press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds.map(f => f.location))
+    .toEqual(["Strongbox in the wagon", "Pip's purse"]);
   expect((await api(pp, "funds_save", { currency: "", amount: 1 }, cid)).status).toBe(400);
   expect((await api(pp, "funds_save", { currency: "Gems", amount: "lots" }, cid)).status).toBe(400);
 

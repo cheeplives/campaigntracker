@@ -70,6 +70,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/008_party_funds.sql');
             $msg .= ' Added Party Funds.';
         }
+        if (!$pdo->query("SHOW COLUMNS FROM party_funds LIKE 'location'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/009_party_funds_location.sql');
+            $msg .= ' Party Funds now have a Location.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
