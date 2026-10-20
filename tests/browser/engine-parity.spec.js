@@ -63,6 +63,36 @@ test("Middle-earth: Shire Reckoning dates and weekdays", () => {
   for (const r of p.regions) expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
 });
 
+test("Glorantha: seasons of named weeks, Sacred Time, the Red Moon and holy days", () => {
+  const p = Engine.PRESETS.glorantha;
+  const cal = JSON.parse(JSON.stringify(p.calendar));
+  Engine.prep(cal);
+  // 294 days is exactly 42 weeks, so every year starts on Freezeday of Disorder Week in Sea Season
+  for (const y of [1, 1625, 1626]) {
+    expect(Engine.yearLength(cal, y)).toBe(294);
+    expect(Engine.fmtDate(cal, Engine.yearStart(cal, y))).toBe(`Freezeday, Disorder Week, Sea Season, ${y} ST`);
+  }
+  const storm = Engine.toAbs(cal, 1625, 4, 5 * 7 + 4); // Windsday of Movement Week, Storm Season
+  expect(Engine.fmtDate(cal, storm)).toBe("Windsday, Movement Week, Storm Season, 1625 ST");
+  expect(Engine.holidaysOn(cal, p.holidays, storm).map(h => h.name)).toContain("Orlanth High Holy Day");
+  expect(Engine.season(cal, storm).name).toBe("Storm Season");
+  const last = Engine.toAbs(cal, 1625, 5, 14);
+  expect(Engine.fmtDate(cal, last)).toBe("Godsday, Second Week, Sacred Time, 1625 ST");
+  expect(Engine.holidaysOn(cal, p.holidays, last).map(h => h.name)).toEqual(expect.arrayContaining(["Sacred Time", "Lhankor Mhy High Holy Day"]));
+  // the Red Moon is Black on Waterday and Full on Wildday, every week
+  for (let d = 0; d < 14; d++) {
+    const wd = cal.weekdays[Engine.weekday(cal, d)], label = Engine.moons(cal, d)[0].label;
+    if (wd === "Waterday") expect(label).toBe("New");
+    if (wd === "Wildday") expect(label).toBe("Full");
+  }
+  expect(p.regions.filter(r => r.current)).toHaveLength(1);
+  for (const r of p.regions) expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
+  // a calendar without week names leaves {w} out cleanly
+  const plain = { ...JSON.parse(JSON.stringify(Engine.PRESETS.custom.calendar)), dateFormat: "{W}, {w}, {M}, {Y}" };
+  Engine.prep(plain);
+  expect(Engine.fmtDate(plain, 0)).toBe("Firstday, Month 1, 1");
+});
+
 test("Gregorian and Imperial presets: regions carry Köppen climates in the right hemisphere", () => {
   const P = Engine.PRESETS;
   for (const key of ["gregorian", "gregorian_south", "imperial"]) {
