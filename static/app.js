@@ -540,6 +540,18 @@
     });
   }
 
+  /** "leap years: 2028, 2032, 2036, 2040…, but not 2100": the next few leap years from a year on, for checking a leap rule at a glance. */
+  function leapSummary(c, from) {
+    const t = E.prep(JSON.parse(JSON.stringify(c)));
+    const out = [];
+    for (let y = from; out.length < 4 && y < from + 100000; y++) if (E.isLeap(t, y)) out.push(y);
+    if (!out.length) return 'no leap years';
+    // the next year the "except" rule takes away (like 2100), which the first few rarely show
+    const L = t.leap, skipped = L.skip ? Math.ceil((from + 1) / L.skip) * L.skip : 0;
+    const next = skipped && !E.isLeap(t, skipped) && E.mod(skipped, L.every) === 0 ? `, but not ${skipped}` : '';
+    return `leap years: ${out.join(', ')}…${next}`;
+  }
+
   function viewCreate() {
     let preset = 'gregorian';
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
@@ -548,10 +560,12 @@
     let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
     // and its week: how many days, and each one's name
     let customWeekdays = [...E.PRESETS.custom.calendar.weekdays];
-    /** The preset's calendar, with the custom months, week (and seasons spread over the months) when Custom is picked. */
+    // and its leap rule: every N years, except every N, unless every N (null for no leap years)
+    let customLeap = null;
+    /** The preset's calendar, with the custom months, week, leap rule (and seasons spread over the months) when Custom is picked. */
     const presetCal = () => {
       const c = E.PRESETS[preset].calendar;
-      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
+      return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], leap: customLeap && { ...customLeap }, seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
     };
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
@@ -568,7 +582,7 @@
       seasons = seasonEditor(tmpCal());
       const hemi = E.PRESETS[preset].calendar.hemisphere;
       seasonWrap.replaceChildren(el('h3', {}, 'Seasons'),
-        hemi ? el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`) : null, seasons);
+        ...(hemi ? [el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`)] : []), seasons);
     };
     const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
     const climateWrap = el('div');
@@ -591,17 +605,34 @@
       const rows = el('div', { class: 'monthrows' });
       const count = el('input', { type: 'number', min: 1, max: 100, value: customMonths.length, class: 'w-day', name: 'month_count' });
       const addRow = (m, i) => rows.append(el('div', { class: 'row monthrow' },
-        el('input', { value: m.name, 'data-k': 'name', 'aria-label': `Month ${i + 1} name`, class: 'grow', placeholder: `Month ${i + 1}` }),
+        el('input', { value: m.name, 'data-k': 'name', 'aria-label': `Month ${i + 1} name`, class: 'grow', style: { flexBasis: '110px', minWidth: 0 }, placeholder: `Month ${i + 1}` }),
         el('input', { type: 'number', min: 1, max: 1000, value: m.days, class: 'w-day', 'data-k': 'days', 'aria-label': `Month ${i + 1} days` }),
-        el('small', { class: 'muted' }, 'days')));
-      const read = () => [...rows.children].map((r, i) => ({
-        name: r.querySelector('[data-k=name]').value.trim() || `Month ${i + 1}`,
-        days: Math.max(1, Math.min(1000, Math.round(Number(r.querySelector('[data-k=days]').value) || 1))),
-      }));
+        el('small', { class: 'muted' }, '+'),
+        el('input', { type: 'number', min: 0, max: 1000, value: m.leapDays || 0, class: 'w-day', 'data-k': 'leap', 'aria-label': `Month ${i + 1} leap days`, 'data-tip': 'Extra days this month gets in a leap year, added at its end (like 29 February)' }),
+        el('small', { class: 'muted' }, 'leap')));
+      const num = (r, k, lo) => Math.max(lo, Math.min(1000, Math.round(Number(r.querySelector(`[data-k=${k}]`).value) || lo)));
+      const read = () => [...rows.children].map((r, i) => {
+        const m = { name: r.querySelector('[data-k=name]').value.trim() || `Month ${i + 1}`, days: num(r, 'days', 1) };
+        if (num(r, 'leap', 0)) m.leapDays = num(r, 'leap', 0);
+        return m;
+      });
+      const leapIn = (name, value, label) => el('input', { type: 'number', min: 0, max: 10000, value, class: 'w-day', name, 'aria-label': label });
+      const every = leapIn('leap_every', customLeap ? customLeap.every : 0, 'Leap year every N years'), skip = leapIn('leap_skip', customLeap ? customLeap.skip : 0, 'Except every N years'), unskip = leapIn('leap_unskip', customLeap ? customLeap.unskip : 0, 'Unless every N years');
+      const small = t => el('small', { class: 'muted' }, t);
+      // three boxes in one sentence, so a div rather than field()'s label, which would only name the first
+      const leapRule = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Leap years', tip('A leap year adds each month\'s leap days. Years divisible by the "except" number are not leap years after all, unless they are also divisible by the "unless" number. Leave those two at 0 for a plain every-N-years rule')),
+        el('div', { class: 'row' }, small('every'), every, small('years, except every'), skip, small('unless every'), unskip),
+        small('0 for no leap years. Gregorian: every 4, except every 100, unless every 400'));
       const total = el('small', { class: 'muted' });
       const sync = () => {
         customMonths = read();
-        total.textContent = `${customMonths.length} month${customMonths.length === 1 ? '' : 's'}, ${customMonths.reduce((t, m) => t + m.days, 0)} days a year.`;
+        const n = v => Math.max(0, Math.round(Number(v.value) || 0));
+        customLeap = n(every) > 0 ? { every: n(every), skip: n(skip), unskip: n(unskip) } : null;
+        const base = customMonths.reduce((t, m) => t + m.days, 0), extra = customMonths.reduce((t, m) => t + (m.leapDays || 0), 0);
+        total.textContent = `${customMonths.length} month${customMonths.length === 1 ? '' : 's'}, ${base} days a year`
+          + (customLeap && extra ? `, ${base + extra} in a leap year (${leapSummary({ months: customMonths, leap: customLeap, epochYear: 1 }, 1)}).` : '.')
+          + (extra && !customLeap ? ' Set how often leap years come below for the leap days to count.' : '')
+          + (customLeap && !extra ? ' Give a month some leap days for leap years to add any.' : '');
         drawStart(); drawSeasons();
       };
       customMonths.forEach(addRow);
@@ -614,10 +645,11 @@
         sync();
       });
       rows.addEventListener('change', sync);
+      leapRule.addEventListener('change', sync);
       sync();
       monthsWrap.replaceChildren(el('h3', {}, 'Months'),
         field('Number of months', count, null, 'How many months make up a year. Each one can have its own number of days below.'),
-        el('small', { class: 'muted' }, 'Name · days in the month'), rows, total, drawWeek());
+        el('small', { class: 'muted' }, 'Name · days in the month + extra days in a leap year'), rows, leapRule, total, drawWeek());
     };
     /** The Custom preset's week: any number of days, each with its own name, or none for a calendar without weeks. */
     const drawWeek = () => {
@@ -2472,6 +2504,22 @@
 
     const L = c.leap || {};
     const seasons = seasonEditor(c);
+    // what the leap fields add up to, from this year on, so the rule can be checked before saving
+    const leapNote = el('small', { class: 'muted leap-note' });
+    const drawLeap = () => {
+      const v = formData(calForm);
+      const months = v.months.split('\n').map(l => l.split(',').map(x => x.trim())).filter(([name]) => name)
+        .map(([name, days, leap]) => ({ name, days: Math.max(0, Number(days) || 0), leapDays: Math.max(0, Number(leap) || 0) }));
+      const every = Math.max(0, Number(v.leap_every) || 0);
+      const base = months.reduce((t, m) => t + m.days, 0), extra = months.reduce((t, m) => t + m.leapDays, 0);
+      const inLeap = months.filter(m => m.leapDays).map(m => `${m.name} +${m.leapDays}`).join(', ');
+      if (base <= 0) return (leapNote.textContent = '');
+      if (!every && !extra) return (leapNote.textContent = 'No leap years. To add one, give a month leap days in the list above (like "February, 28, 1") and set how often leap years come.');
+      if (!every) return (leapNote.textContent = `Months have leap days (${inLeap}), but no leap years are set, so they never happen.`);
+      if (!extra) return (leapNote.textContent = 'Leap years are set, but no month has leap days, so they add nothing. Add a third number to a month line, like "February, 28, 1".');
+      const rule = { every, skip: Math.max(0, Number(v.leap_skip) || 0), unskip: Math.max(0, Number(v.leap_unskip) || 0) };
+      leapNote.textContent = `A leap year has ${base + extra} days instead of ${base} (${inLeap}). From this year, ${leapSummary({ months, leap: rule, epochYear: c.epochYear }, E.fromAbs(c, today()).year)}`;
+    };
     const calForm = el('form', { class: 'card' }, el('h2', {}, 'Calendar'),
       el('p', { class: 'muted' }, 'Changing the calendar re-labels every stored day: records stay attached to the same absolute day number, not to a month name.'),
       el('div', { class: 'grid2' },
@@ -2494,6 +2542,7 @@
         field('Leap year every N years (0 = none)', el('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
         field('…except every N years', el('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
         field('…unless every N years', el('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }), null, 'Years divisible by this are leap years again. Gregorian: 400')),
+      leapNote,
       el('h3', {}, 'Seasons'),
       field('Season dates are for the', select([['north', 'Northern hemisphere'], ['south', 'Southern hemisphere']], c.hemisphere || 'north', { name: 'cal_hemisphere' }),
         'Regions in the other hemisphere get the opposite season'),
@@ -2504,6 +2553,8 @@
         el('small', { class: 'muted' }, 'If you edit this box, it is saved instead of the fields above.')),
       el('button', { class: 'primary' }, 'Save calendar'));
     const rawInitial = calForm.elements.raw.value;
+    calForm.addEventListener('input', e => { if (/^(months|leap_)/.test(e.target.name || '')) drawLeap(); });
+    drawLeap();
     calForm.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(calForm);
