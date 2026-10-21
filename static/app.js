@@ -791,6 +791,11 @@
       const segs = (c.seasons || []).length ? E.monthSeasons(c, p.year)[p.month].seasons : [];
       if (segs.length) seasonLine = el('div', { class: 'seasonline' }, segs.map((x, i) =>
         el('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
+    } else if (st.mode === 'year') {
+      const y = E.fromAbs(c, anchor).year;
+      from = E.toAbs(c, y, 0, 1);
+      to = from + E.yearLength(c, y) - 1;
+      title = E.yearLabel(c, y);
     } else {
       // walk back to the first weekday, then forward through a full week (festival days have no weekday)
       const wl = E.weekLength(c);
@@ -811,7 +816,8 @@
           m += dir;
         }
         st.anchor = E.toAbs(c, y, m, 1);
-      } else st.anchor = anchor + dir * E.weekLength(c);
+      } else if (st.mode === 'year') st.anchor = E.toAbs(c, E.fromAbs(c, anchor).year + dir, 0, 1);
+      else st.anchor = anchor + dir * E.weekLength(c);
       route();
     };
     const jump = datePicker(anchor);
@@ -820,16 +826,17 @@
       btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
       el('span', { class: 'seg' },
         btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
-        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', hourMode() ? 'One row per day showing the hours with an activity, their visibility and activity' : 'One row per day showing every shift, its visibility and activity')),
+        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', hourMode() ? 'One row per day showing the hours with an activity, their visibility and activity' : 'One row per day showing every shift, its visibility and activity'),
+        btn('Year', () => { st.mode = 'year'; route(); }, st.mode === 'year' ? 'small on' : 'small', 'Every month of the year on one page. Click a month\'s name to open it, or a day to open the day')),
       el('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
 
     mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
     body.append(el('p', { class: 'muted' }, 'Loading…'));
     const data = await fetchRange(from, to);
     const missing = []; for (let d = from; d <= to; d++) if (!data.days.get(d)?.weather) missing.push(d);
-    const content = st.mode === 'month' ? monthGrid(from, to, data) : weekList(from, to, data);
+    const content = st.mode === 'month' ? monthGrid(from, to, data) : st.mode === 'year' ? yearGrid(from, data) : weekList(from, to, data);
     body.replaceChildren(content);
-    if (isGM() && missing.length) {
+    if (isGM() && missing.length && st.mode !== 'year') { // a whole year is too much to forecast with one click
       const g = btn(`Generate weather for ${missing.length} day(s) here`, null, 'small', 'Roll weather now for the days shown that have none yet, using each day\'s region');
       g.addEventListener('click', busy(g, async () => { await ensureWeather(from, to); route(); }));
       body.append(el('div', { class: 'row' }, g, el('small', { class: 'muted' }, 'Days are generated automatically as time passes; this forecasts ahead. Players only see future weather if you allow it in Settings.')));
@@ -901,6 +908,47 @@
     return el('div', {},
       el('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => el('div', { 'data-tip': n }, n.slice(0, 3)))),
       el('div', { class: 'grid', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, cells));
+  }
+
+  /** A small day for the year view: its number, marked when something is on, with the details in its tooltip. */
+  function yearCell(d, data) {
+    const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
+    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d), rems = dayReminders(d), np = data.notes.get(d);
+    const w = row?.weather;
+    const cls = ['ycell'];
+    if (d === today()) cls.push('today');
+    if (d < today()) cls.push('past');
+    if (p.intercalary) cls.push('festival');
+    if (evs.length || hol.length) cls.push('has-ev');
+    const tipLines = [E.fmtDate(c, d), w ? E.weatherLabel(w, tempUnit()) : null, ...keyMoonPhases(d).map(m => `${m.icon} ${m.name}: ${m.label} moon`),
+      ...hol.map(x => `Holiday: ${x.name}`), ...evs.map(e => `${Number(e.is_secret) ? '🔒' : '●'} ${e.title}`),
+      ...rems.map(x => `🔔 ${x.title}`), np ? `📝 ${np.count} note${np.count > 1 ? 's' : ''}` : null].filter(Boolean);
+    return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': tipLines.join('\n'),
+      style: hol.length ? { boxShadow: `inset 0 -3px 0 ${hol[0].color}` } : null },
+      p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? '★' : p.day);
+  }
+
+  /** Every month of the year starting on day `from`, each as a small grid. A month's name opens it in the month view. */
+  function yearGrid(from, data) {
+    const c = cal(), wl = E.weekLength(c), st = vs(), y = E.fromAbs(c, from).year;
+    const months = [];
+    c.months.forEach((mo, m) => {
+      const len = E.monthLength(c, y, m);
+      if (len <= 0) return; // leap-only months in common years
+      const start = E.toAbs(c, y, m, 1);
+      const cells = [];
+      const weeks = !mo.intercalary && c.weekdays.length;
+      if (weeks) for (let i = 0, lead = E.weekday(c, start) || 0; i < lead; i++) cells.push(el('span', { class: 'ycell empty' }));
+      for (let d = start; d < start + len; d++) cells.push(yearCell(d, data));
+      const cols = weeks ? wl : Math.min(wl, len);
+      const open = el('button', { type: 'button', class: 'ym-name', 'data-tip': `Open ${mo.name} in the month view`,
+        onclick: () => { st.mode = 'month'; st.anchor = start; route(); } }, len === 1 && mo.intercalary ? `★ ${mo.name}` : mo.name);
+      months.push(el('div', { class: 'ymonth' + (mo.intercalary ? ' festival' : '') + (today() >= start && today() < start + len ? ' current' : '') },
+        open,
+        weeks ? el('div', { class: 'ygrid ygrid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => el('span', { 'data-tip': n }, n.slice(0, 2)))) : null,
+        el('div', { class: 'ygrid', style: { gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` } }, cells)));
+    });
+    return el('div', { class: 'yeargrid' }, months);
   }
 
   function weekList(from, to, data) {

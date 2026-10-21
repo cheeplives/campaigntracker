@@ -38,6 +38,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   moon-phase holidays and limited runs (between two years, or N times) fall on
   the right days; a GM builds them in the holiday form, which shows only the
   fields each rule needs, and the calendar shows them.
+- **year-view**: the year view shows every month with today ringed, marks days
+  with events and lists them in the tooltip, steps a year at a time, opens a
+  month from its name and a day from its number, and never gives a player a
+  secret event.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
