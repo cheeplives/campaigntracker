@@ -272,17 +272,20 @@ const Nouns = (() => {
     return [...found.values()].sort((a, b) => b.count - a.count || a.term.localeCompare(b.term));
   }
 
-  /** Entries whose name or alias shares a whole word with term, or contains it (or is contained in it): the ones it may
-   * be another name for. entries: [{ id, name, aliases }]. Most alike first. */
+  /** Entries whose name or alias contains term (or is contained in it), or starts or ends with the same word: the ones it
+   * may be another name for ("Hoffmann" and "Gunther Hoffmann", "Gunther the innkeeper" and "Gunther Hoffmann").
+   * entries: [{ id, name, aliases }]. Most alike first. */
   function related(term, entries) {
-    const k = keyOf(term), words = new Set((k.match(WORD) || []).filter(w => !STOP.has(w) && !JOIN.has(w) && !COMMON.has(w) && w.length > 2));
+    const k = keyOf(term), kw = (k.match(WORD) || []);
+    const ends = w => w.length > 2 && !STOP.has(w) && !JOIN.has(w) && !COMMON.has(w);
+    const edges = new Set([kw[0], kw[kw.length - 1]].filter(w => w && ends(w)));
     const score = e => {
       let best = 0;
       for (const n of [e.name, ...(e.aliases || [])]) {
         const nk = keyOf(n), nw = (nk.match(WORD) || []);
         if (nk === k) return 0;
         if (nk.includes(k) || k.includes(nk)) best = Math.max(best, 3);
-        else if (nw.some(w => words.has(w))) best = Math.max(best, 2);
+        else if ([nw[0], nw[nw.length - 1]].some(w => edges.has(w))) best = Math.max(best, 2);
       }
       return best;
     };
