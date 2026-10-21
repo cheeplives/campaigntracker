@@ -59,10 +59,11 @@
 <IfModule mod_alias.c>
   RedirectMatch 404 (?:^|/)(?:tests|tools|db|docs|\.github|\.claude)(?:/|$)
 </IfModule>
-# Fallback if mod_alias is unavailable (returns 403 instead of 404).
+# Fallback if mod_alias is unavailable: the same folders, plus .git, by mod_rewrite.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule (?:^|/)\.git - [F,L]
+  RewriteRule (?:^|/)\.git - [R=404,L]
+  RewriteRule (?:^|/)(?:tests|tools|db|docs|\.github|\.claude)(?:/|$) - [R=404,L]
 </IfModule>
 
 Options -Indexes

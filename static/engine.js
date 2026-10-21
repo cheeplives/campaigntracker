@@ -833,9 +833,16 @@
   /**
    * Weather for each of the 4 shifts of absolute day d, worked out from that day's weather w.
    * Deterministic for the same day and forecast, so nothing extra is stored. Returns [] when w is empty.
+   * Without a seed (a player who may not see future weather isn't sent it) it is the copy of the shifts the
+   * GM's browser saved with w, when that was saved in the calendar's current shift order; failing that, a split
+   * of the same forecast rolled without the seed, which only spreads out a day the player can already see.
    */
   function shiftWeather(cal, seed, region, d, w) {
     if (!w || !w.type) return [];
+    if (seed === undefined || seed === null) {
+      if (Array.isArray(w.shifts) && w.shifts.length === 4 && w.shift_order === (cal.shiftOrder || 'overnight')) return w.shifts.slice();
+      seed = 'unseeded';
+    }
     const clim = climateFor(region);
     const sea = season(cal, d, region && region.settings && region.settings.hemisphere);
     const rng = rngFor(`${seed}|shifts|${d}|${w.type}|${w.temp}|${w.wind}`);
@@ -924,7 +931,8 @@
     let out = [];
     for (let day = d - days; day <= d; day++) {
       let w = history && history.has(day) ? history.get(day) : undefined, quarters;
-      if (w === undefined) w = genWeather(cal, seed, region, day, prev, 0);
+      // a day with nothing stored is rolled from the seed; without one it is a day nobody knows
+      if (w === undefined) w = seed === undefined || seed === null ? null : genWeather(cal, seed, region, day, prev, 0);
       if (!w) quarters = [null, null, null, null];
       else if (w.partial) quarters = [0, 1, 2, 3].map(i => (w.shifts && w.shifts[i]) || null);
       else quarters = shiftWeather(cal, seed, region, day, w);

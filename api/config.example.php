@@ -121,7 +121,8 @@ return [
   // false in production (errors go to the PHP error log instead).
   'debug' => false,
 
-  // Lets install.php create tables and run migrations. Set false (or delete
-  // install.php) once the install or upgrade is done.
-  'allow_install' => true,
+  // Lets install.php create tables and run migrations. Turn it on for an
+  // install or upgrade, then set it back to false. Once a site admin has signed
+  // in, install.php also needs you signed in as a site admin.
+  'allow_install' => false,
 ];
