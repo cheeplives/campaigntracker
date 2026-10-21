@@ -13,6 +13,8 @@ const DayExport = (() => {
   const E = window.Engine;
   const has = v => v !== null && v !== undefined && String(v).trim() !== '';
   const text = v => String(v ?? '').replace(/\r\n?/g, '\n').trim();
+  /** A day note: rich text (the Public and Secret notes' editor) becomes Markdown. */
+  const note = (v, format) => format === 'html' ? RichText.toMarkdown(v) : text(v);
   /** Who wrote something: the character's name when the API sends one, else the player's. */
   const who = x => x.character_name || x.author || 'unknown';
 
@@ -64,15 +66,15 @@ const DayExport = (() => {
       L.push('');
     }
     if (has(row.notes)) {
-      L.push('## Notes');
+      L.push('## Public notes');
       L.push('');
-      L.push(text(row.notes));
+      L.push(note(row.notes, row.notes_format));
       L.push('');
     }
     if (gm && has(row.gm_notes)) {
-      L.push('## GM notes 🔒');
+      L.push('## Secret notes 🔒');
       L.push('');
-      L.push(text(row.gm_notes));
+      L.push(note(row.gm_notes, row.gm_notes_format));
       L.push('');
     }
 

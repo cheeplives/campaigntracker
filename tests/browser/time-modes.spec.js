@@ -81,7 +81,7 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   await expect(page.locator(".now-date")).toContainText("06:00");
 
   await page.goto(`index.html#/c/${cid}/today`);
-  await expect(page.locator("h3.pad", { hasText: /^Hours/ })).toBeVisible();
+  await expect(page.locator("[data-box=shifts] .daybox-toggle")).toHaveText("Hours");
   await expect(page.locator(".shiftcard")).toHaveCount(24);
   await expect(page.locator(".shiftcard.now h4")).toContainText("06:00");
   await expect(page.getByLabel("Unit").locator("option").first()).toHaveText("hour(s)");

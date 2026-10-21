@@ -20,10 +20,14 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
-  // Locations visited sits under the day's region, saves with the day and survives a weather re-roll.
+  // The boxes come in order: Weather, Notes, Shifts, Events, Reminders.
+  await expect(page.locator(".daybox")).toHaveCount(5);
+  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "notes", "shifts", "events", "reminders"]);
+  await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
+  // Locations visited sits in the Notes box, saves with the notes and survives a weather re-roll.
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
-  await page.getByRole("button", { name: "Save day" }).click();
-  await expect(page.getByText("Day saved")).toBeVisible();
+  await page.getByRole("button", { name: "Save notes" }).click();
+  await expect(page.getByText("Notes saved")).toBeVisible();
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
   await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
   await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");
@@ -74,7 +78,8 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect((await api(page, "day_update", { abs_day: 2, notes: "", locations: "Ubersreik market" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
-  await expect(pp.locator(".kv")).toContainText("Ubersreik market");      // players read the day's locations
+  await expect(pp.locator("[data-box=notes]")).toContainText("Ubersreik market");      // players read the day's locations
+  await expect(pp.locator("[data-box=weather]")).not.toContainText("Ubersreik market"); // no longer in the weather box
   // Days run Dawn first, so at Dawn the player has Dawn's weather and nothing after it.
   await expect(pp.locator(".shiftcard h4").first()).toHaveText(/^Dawn/);
   await expect(pp.locator(".shiftcard").first()).not.toContainText("Weather not known yet");

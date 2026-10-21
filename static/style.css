@@ -210,6 +210,74 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 .dh-step-icon { font-size: 1.6rem; line-height: 1.2; }
 .dh-step .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .dayedit { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+/* The day page's boxes (Weather, Notes, Shifts or Hours, Events, Reminders), each folding to its heading */
+.daybox { display: flex; flex-direction: column; gap: 12px; }
+.daybox.folded { gap: 0; }
+.daybox-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.daybox-head h3 { margin: 0; display: flex; align-items: center; gap: 4px; }
+button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; color: inherit; font: inherit; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; }
+.daybox-caret::before { content: '▾'; display: inline-block; width: 1em; color: var(--accent); transition: transform .15s; }
+.daybox.folded .daybox-caret::before { transform: rotate(-90deg); }
+.daybox-body[hidden] { display: none; }
+.daybox-body > .event:first-child, .daybox-body > form:first-child { margin-top: 0; }
+.dayconditions .dayedit:first-child { margin-top: 0; }
+.dayhero + .dayconditions { padding-top: 14px; border-top: 1px dashed var(--line); }
+.notes-locs { display: flex; flex-direction: column; gap: 2px; }
+.notes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.notepanel { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.notepanel h4 { margin: 0; }
+.notepanel.secret h4 { color: var(--secret); }
+/* Rich text, as it reads (.richtext) and as it is written (.rt-editor, Quill's snow theme recoloured) */
+.richtext, .rt-editor .ql-editor { line-height: 1.5; overflow-wrap: anywhere; }
+.richtext > :first-child { margin-top: 0; } .richtext > :last-child { margin-bottom: 0; }
+.richtext p { margin: 0 0 .6em; }
+.richtext h1, .richtext h2, .richtext h3, .rt-editor .ql-editor h1, .rt-editor .ql-editor h2, .rt-editor .ql-editor h3 { margin: .8em 0 .3em; }
+.richtext h1, .rt-editor .ql-snow .ql-editor h1 { font-size: 1.45rem; }
+.richtext h2, .rt-editor .ql-snow .ql-editor h2 { font-size: 1.25rem; }
+.richtext h3, .rt-editor .ql-snow .ql-editor h3 { font-size: 1.1rem; }
+.richtext ul, .richtext ol { margin: 0 0 .6em; padding-left: 1.5em; }
+.richtext blockquote, .rt-editor .ql-snow .ql-editor blockquote { margin: .4em 0; padding-left: 12px; border-left: 3px solid var(--accent); color: var(--dim); }
+.richtext table { border-collapse: collapse; margin: .4em 0 .8em; display: block; overflow-x: auto; max-width: 100%; }
+.richtext td, .richtext th, .rt-editor .ql-editor td { border: 1px solid var(--line); padding: 4px 8px; vertical-align: top; }
+.richtext tr:first-child td { background: var(--panel-2); font-weight: 600; }
+.richtext code, .rt-editor .ql-snow .ql-editor code { font: .9em var(--mono); background: var(--panel-2); padding: 1px 4px; border-radius: 4px; }
+.richtext pre { font: .9em var(--mono); background: var(--panel-2); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; }
+.richtext a, .rt-editor .ql-snow .ql-editor a { color: var(--accent); text-decoration: underline; }
+.rt-editor { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); position: relative; }
+.rt-editor.loading .rt-toolbar { visibility: hidden; }
+.rt-editor .rt-toolbar { border-bottom: 1px solid var(--line); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-family: var(--body); }
+.rt-editor .rt-quillbar.ql-toolbar.ql-snow { display: contents; }
+.rt-editor .ql-toolbar.ql-snow .ql-formats, .rt-editor .rt-extra { margin: 0; display: inline-flex; align-items: center; gap: 2px; }
+.rt-editor .rt-toolbar button { float: none; width: 32px; height: 30px; padding: 4px 6px; border: 0; border-radius: 6px; background: none; color: var(--text); }
+.rt-editor .rt-toolbar button.rt-undo, .rt-editor .rt-toolbar button.rt-redo { font-size: 1.15rem; line-height: 1; }
+.rt-editor .rt-toolbar button:hover, .rt-editor .ql-snow.ql-toolbar button.ql-active { background: var(--panel); color: var(--accent); }
+.rt-editor .ql-snow .ql-stroke, .rt-editor .ql-snow .ql-stroke-miter { stroke: var(--text); }
+.rt-editor .ql-snow .ql-fill, .rt-editor .ql-snow .ql-stroke.ql-fill { fill: var(--text); }
+.rt-editor .ql-snow.ql-toolbar button:hover .ql-stroke, .rt-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.rt-editor .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke, .rt-editor .ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke { stroke: var(--accent); }
+.rt-editor .ql-snow.ql-toolbar button:hover .ql-fill, .rt-editor .ql-snow.ql-toolbar button.ql-active .ql-fill { fill: var(--accent); }
+.rt-editor .ql-snow .ql-picker { color: var(--text); float: none; height: 30px; font-size: .85rem; }
+.rt-editor .ql-snow .ql-picker-label { display: flex; align-items: center; border-radius: 6px; }
+.rt-editor .ql-snow .ql-picker.ql-header { width: 112px; }
+.rt-editor .ql-snow .ql-picker-options { background: var(--panel); color: var(--text); border-color: var(--line) !important; border-radius: 6px; z-index: 5 !important; }
+.rt-editor .ql-snow.ql-toolbar .ql-picker-item:hover, .rt-editor .ql-snow.ql-toolbar .ql-picker-item.ql-selected,
+.rt-editor .ql-snow.ql-toolbar .ql-picker-label:hover, .rt-editor .ql-snow.ql-toolbar .ql-picker-label.ql-active { color: var(--accent); }
+.rt-editor select.rt-table { width: 96px; padding: 3px 6px; margin-right: 6px; font-size: .85rem; height: 30px; }
+.rt-editor .ql-container.ql-snow { border: 0; font: inherit; font-size: 15px; height: auto; }
+.rt-editor .ql-editor { min-height: 140px; max-height: 60vh; padding: 10px 12px; color: var(--text); }
+.rt-editor .ql-editor.ql-blank::before { color: var(--dim); font-style: italic; left: 12px; right: 12px; }
+.rt-editor .ql-editor p, .rt-editor .ql-editor ol, .rt-editor .ql-editor li { margin-bottom: .3em; }
+.rt-editor .ql-snow .ql-tooltip { background: var(--panel); color: var(--text); border-color: var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.25); border-radius: 8px; z-index: 6; white-space: normal; max-width: calc(100% - 8px); }
+.rt-editor .ql-snow .ql-tooltip::before { content: 'Link:'; }
+.rt-editor .ql-snow .ql-tooltip[data-mode=link]::before { content: 'Link to:'; }
+.rt-editor .ql-snow .ql-tooltip input[type=text] { background: var(--panel-2); color: var(--text); border-color: var(--line); width: 200px; max-width: 100%; height: 32px; font-size: 16px; }
+.rt-editor .ql-snow .ql-tooltip a.ql-action, .rt-editor .ql-snow .ql-tooltip a.ql-remove { color: var(--accent); }
+.rt-editor .ql-snow .ql-tooltip a.ql-action::after { border-color: var(--line); }
+@media (pointer: coarse) {
+  .rt-editor .rt-toolbar button { width: 40px; height: 38px; }
+  .rt-editor .ql-snow .ql-picker, .rt-editor select.rt-table { height: 38px; }
+  .rt-editor .ql-container.ql-snow { font-size: 16px; }   /* 16px stops iOS zooming into the editor */
+}
 .shifts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
 .shiftcard { display: flex; flex-direction: column; gap: 6px; }
 .shiftcard.now { border: 2px solid var(--accent); }

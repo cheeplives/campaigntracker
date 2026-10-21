@@ -25,7 +25,7 @@ test("a day exports to Markdown, and players get only what they can see", async 
   await page.goto(`index.html#/c/${cid}/day/2`);
   const md = await exportDay(page);
   expect(md).toMatch(/^# /);
-  for (const s of ["## Notes", "The party reached town", "## GM notes 🔒", "Bandits are watching", "## Shifts", "### Dawn (now)",
+  for (const s of ["## Public notes", "The party reached town", "## Secret notes 🔒", "Bandits are watching", "## Shifts", "### Dawn (now)",
     "**Activity:** Haggle", "Prices are rigged", "## Events", "### Market day", "Stalls along the river", "### Hidden ambush 🔒", "GM view"])
     expect(md).toContain(s);
   expect(md).toMatch(/\*\*Forecast\*\* \S/);
@@ -43,7 +43,7 @@ test("a day exports to Markdown, and players get only what they can see", async 
   await pp.goto(`index.html#/c/${cid}/day/2`);
   const pmd = await exportDay(pp);
   for (const s of ["The party reached town", "### Market day", "**Activity:** Haggle", "- Bought rope — *Kestrel, ", "player view"]) expect(pmd).toContain(s);
-  for (const s of ["Hidden ambush", "Bandits are watching", "Prices are rigged", "GM notes"]) expect(pmd).not.toContain(s);
+  for (const s of ["Hidden ambush", "Bandits are watching", "Prices are rigged", "Secret notes"]) expect(pmd).not.toContain(s);
   // Dawn is now; the later shifts' weather stays unknown to players.
   const later = pmd.split("### Midday")[1];
   expect(pmd.split("### Midday")[0]).not.toContain("**Weather** not known yet");
