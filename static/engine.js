@@ -355,14 +355,28 @@
   function moons(cal, d) { return (cal.moons || []).map(m => moonPhase(m, d)); }
 
   // ---------------------------------------------------------------- holidays
+  /** n counts from the start (1 = first); a negative n counts from the end (-1 = last, -2 = second to last). */
   function nthWeekdayStart(cal, y, m, wd, n) {
     const len = monthLength(cal, y, m), hits = [];
     for (let day = 1; day <= len; day++) {
       const a = toAbs(cal, y, m, day);
       if (weekday(cal, a) === Number(wd)) hits.push(a);
     }
-    if (!hits.length) return null;
-    return Number(n) < 0 ? hits[hits.length - 1] : (hits[Number(n) - 1] ?? null);
+    n = Number(n);
+    return (n < 0 ? hits[hits.length + n] : hits[n - 1]) ?? null;
+  }
+  /** Circular distance from a moon's noon phase on day d to a target phase (0..1). */
+  function phaseGap(moon, d, target) {
+    const g = mod(moonPhase(moon, d).phase - target, 1);
+    return Math.min(g, 1 - g);
+  }
+  /**
+   * Whether day d is the day a moon reaches a phase (0 new … 4 full … 7 waning crescent): the day whose
+   * noon phase is nearest the exact phase, once per cycle. An erratic moon can't wobble a near miss into a hit.
+   */
+  function moonPhaseDay(moon, d, phase) {
+    const target = mod(Number(phase) || 0, 8) / 8, g = phaseGap(moon, d, target);
+    return g <= Math.max(1 / 16, 0.5 / (Number(moon.cycle) || 28)) && g <= phaseGap(moon, d - 1, target) && g < phaseGap(moon, d + 1, target);
   }
   function holidayStartsForYear(cal, rule, y) {
     const m = Number(rule.month);
@@ -375,16 +389,48 @@
     if (rule.type === 'nth_weekday') return nthWeekdayStart(cal, y, m, rule.weekday, rule.n);
     return null;
   }
+  const optYear = v => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Math.trunc(Number(v)));
+  /**
+   * Year limits shared by the repeating rules: from_year / until_year (inclusive), every_years (yearly rules only,
+   * counted from from_year, or the epoch year) and times (how many occurrences, from the first). index is the
+   * occurrence's number for times; yearly rules work it out from y.
+   */
+  function holidayYearOk(cal, r, y, index) {
+    const from = optYear(r.from_year), until = optYear(r.until_year);
+    if (from !== null && y < from) return false;
+    if (until !== null && y > until) return false;
+    if (index === undefined) {
+      const every = Math.max(1, Math.trunc(Number(r.every_years)) || 1), base = from ?? Number(cal.epochYear || 0);
+      if (mod(y - base, every)) return false;
+      index = Math.floor((y - base) / every);
+    }
+    const times = optYear(r.times);
+    return !(times !== null && times > 0 && index >= times);
+  }
   function holidayActive(cal, h, d) {
     const r = h.rule || {};
     const span = Math.max(1, Number(r.span) || 1);
     if (r.type === 'once') { const s = Number(r.abs_day); return d >= s && d < s + span; }
     if (r.type === 'every_n') {
       const s = Number(r.start), iv = Math.max(1, Number(r.interval) || 1);
-      return d >= s && mod(d - s, iv) < span;
+      if (!(d >= s && mod(d - s, iv) < span)) return false;
+      const k = Math.floor((d - s) / iv);
+      return holidayYearOk(cal, r, fromAbs(cal, s + k * iv).year, k);
+    }
+    if (r.type === 'moon_phase') {
+      const moon = (cal.moons || [])[Number(r.moon) || 0], m = optYear(r.month);
+      if (!moon) return false;
+      for (let k = 0; k < span; k++) {
+        const s = d - k;
+        if (!moonPhaseDay(moon, s, r.phase)) continue;
+        const p = fromAbs(cal, s);
+        if ((m === null || m < 0 || p.month === m) && holidayYearOk(cal, r, p.year, 0)) return true;
+      }
+      return false;
     }
     const y = fromAbs(cal, d).year;
     for (const yy of [y, y - 1]) {
+      if (!holidayYearOk(cal, r, yy)) continue;
       const s = holidayStartsForYear(cal, r, yy);
       if (s !== null && d >= s && d < s + span) return true;
     }
@@ -1597,7 +1643,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, holidaysOn, holidayActive,
+    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,

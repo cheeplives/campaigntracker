@@ -491,7 +491,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -816,6 +816,28 @@ try {
             if (trim($n['body']) !== '') $addNote((int)$n['abs_day'], ['kind' => 'shift', 'shift' => (int)$n['shift'], 'author' => $n['author'], 'text' => $n['body']]);
         }
         out(['days' => $days, 'shifts' => $shifts, 'events' => $events, 'notes' => array_values($notes), 'today' => $today]);
+
+    // ===== every event, for the Events tab's list and search =====
+    case 'events':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, ' . AUTHOR_SQL . ' AS author
+            FROM events e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
+            WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.abs_day, e.shift IS NOT NULL, e.shift, e.id');
+        $st->execute([$cid]);
+        $events = $st->fetchAll();
+        if ($events) {
+            // note bodies come along so the search finds an event by what was said about it
+            $st = db()->prepare('SELECT n.event_id, n.body FROM event_notes n JOIN events e ON e.id=n.event_id
+                WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY n.created_at, n.id');
+            $st->execute([$cid]);
+            $notes = [];
+            foreach ($st->fetchAll() as $n) $notes[$n['event_id']][] = $n['body'];
+            foreach ($events as &$e) $e['notes'] = $notes[$e['id']] ?? [];
+            unset($e);
+            attach_tags($events);
+        }
+        out(['events' => $events]);
 
     // ===== single day drill-down =====
     case 'day':
