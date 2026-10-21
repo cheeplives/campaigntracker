@@ -352,12 +352,16 @@
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
-    const y = el('input', { type: 'number', value: p.year, class: 'w-year', 'aria-label': 'Year' });
+    // with eras the year is typed as its number in an era (27 RA), and the era is picked next to it
+    const eras = (c.eras || []).filter(e => e.name || e.abbr), at = E.eraOf(c, p.year);
+    const y = el('input', { type: 'number', value: eras.length ? at.year : p.year, class: 'w-year', 'aria-label': 'Year' });
+    const era = eras.length ? select([...eras.map(e => [c.eras.indexOf(e), e.abbr || e.name]), ['', 'Calendar year']], at.era ? at.era.index : '',
+      { 'aria-label': 'Era', 'data-tip': 'The era the year is counted in. Calendar year: the plain year number, ignoring eras' }) : null;
     const m = select(c.months.map((mo, i) => [i, mo.name]), p.month, { 'aria-label': 'Month' });
     const d = el('input', { type: 'number', min: 1, value: p.day, class: 'w-day', 'aria-label': 'Day' });
-    const wrap = el('span', { class: 'datepick' }, d, m, y);
+    const wrap = el('span', { class: 'datepick' }, ...clean([d, m, y, era]));
     wrap.getAbs = () => {
-      const yy = Number(y.value), mm = Number(m.value);
+      const yy = era && era.value !== '' ? E.eraYear(c.eras[Number(era.value)], Number(y.value)) : Number(y.value), mm = Number(m.value);
       const len = E.monthLength(c, yy, mm);
       return E.toAbs(c, yy, mm, Math.max(1, Math.min(Number(d.value) || 1, len)));
     };
@@ -750,12 +754,14 @@
     const c = cal(), st = vs();
     const body = el('div', { class: 'card' });
     const anchor = st.anchor;
-    let from, to, title, seasonLine = null;
+    let from, to, title, titleTip, seasonLine = null;
     if (st.mode === 'month') {
       const p = E.fromAbs(c, anchor);
       from = E.toAbs(c, p.year, p.month, 1);
       to = from + E.monthLength(c, p.year, p.month) - 1;
       title = `${c.months[p.month].name} ${E.yearLabel(c, p.year)}`;
+      const era = E.eraOf(c, p.year).era;
+      if (era) titleTip = `${era.name}: year ${E.eraOf(c, p.year).year} of the era, calendar year ${p.year}`;
       const segs = (c.seasons || []).length ? E.monthSeasons(c, p.year)[p.month].seasons : [];
       if (segs.length) seasonLine = el('div', { class: 'seasonline' }, segs.map((x, i) =>
         el('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
@@ -784,7 +790,7 @@
     };
     const jump = datePicker(anchor);
     const toolbar = el('div', { class: 'calbar' },
-      btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), el('h2', {}, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
+      btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), el('h2', { 'data-tip': titleTip }, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
       btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
       el('span', { class: 'seg' },
         btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
@@ -2406,6 +2412,7 @@
       months: c.months.map(m => [m.name, m.days, m.leapDays || 0, m.intercalary ? (m.keepWeekday ? 'festival weekday' : 'festival') : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
       moons: (c.moons || []).map(m => [m.name, m.cycle, m.ref || 0, m.brightness ?? 1, m.color || '#e8e4d8', m.erratic ? 'erratic' : ''].filter((x, i) => i < 5 || x).join(', ')).join('\n'),
       shiftNames: E.quarterNames({ ...c, timeMode: 'shifts4' }).join(', '),
+      eras: (c.eras || []).map(e => [e.name, e.abbr || '', e.start || 0, e.restart ? 'restart' : e.before ? 'before' : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
     };
   }
   function textToCal(v, base, seasons) {
@@ -2432,6 +2439,15 @@
     c.hemisphere = v.cal_hemisphere; c.seasons = seasons;
     c.moons = lines(v.moons).map(([name, cycle, ref, bright, color, erratic]) => ({ name, cycle: Number(cycle) || 28, ref: Number(ref) || 0, brightness: bright === undefined ? 1 : Number(bright), color: color || '#e8e4d8', erratic: /err/i.test(erratic || '') }));
     c.shiftNames = v.shiftNames.split(',').map(x => x.trim()).slice(0, 4);
+    c.eras = lines(v.eras).map(([name, abbr, start, kind]) => {
+      if (!Number.isFinite(Number(start)) || start === undefined || start === '') throw new Error(`Era "${name}" needs a first year`);
+      const e = { name, abbr: abbr || '', start: Number(start) };
+      if (/restart/i.test(kind || '')) e.restart = true;
+      if (/before/i.test(kind || '')) e.before = true;
+      return e;
+    });
+    if (c.eras.filter(e => e.before).length > 1) throw new Error('Only one era can count the years before');
+    if (!c.eras.length) delete c.eras;
     return c;
   }
 
@@ -2476,11 +2492,11 @@
       el('p', { class: 'muted' }, 'Changing the calendar re-labels every stored day: records stay attached to the same absolute day number, not to a month name.'),
       el('div', { class: 'grid2' },
         field('Calendar name', el('input', { name: 'cal_name', value: c.name || '' })),
-        field('Year label suffix', el('input', { name: 'yearSuffix', value: c.yearSuffix || '' }), 'e.g. IC, AD, MY'),
+        field('Year label suffix', el('input', { name: 'yearSuffix', value: c.yearSuffix || '' }), (c.eras || []).length ? 'e.g. IC, AD, MY. Only for years no era covers' : 'e.g. IC, AD, MY'),
         field('First year (epoch)', el('input', { type: 'number', name: 'epochYear', value: c.epochYear }), null, 'The year number of the calendar\'s very first day'),
         field('Weekday of epoch day 1 (0 = first weekday)', el('input', { type: 'number', name: 'weekdayOffset', value: c.weekdayOffset || 0 }), null,
           'Shifts the whole weekday cycle. Change it to line up a known date with the right weekday'),
-        field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year, {w} week name (Glorantha)'),
+        field('Date format', el('input', { name: 'dateFormat', value: c.dateFormat || '{W}, {d} {M} {Y}' }), '{W} weekday, {d} day, {M} month, {Y} year, {E} era name, {w} week name (Glorantha)'),
         field('Hours per day', el('input', { type: 'number', name: 'hoursPerDay', value: c.hoursPerDay || 24 }), { shifts4: 'Each of the day\'s four shifts is a quarter of this, for travel too', shifts2: 'Day and Night are half of this each, for travel too', hours: 'The hours in a day, each one its own step on the clock and in the travel planner' }[E.timeMode(c)]),
         field('Default light source', select([['natural', 'Sun & moons'], ['artificial', 'Artificial'], ['none', 'None']], c.lighting || 'natural', { name: 'cal_lighting' }), 'Regions can override',
           'Used for any region that doesn\'t set its own. See the Light source help on a region'),
@@ -2494,6 +2510,9 @@
         field('Leap year every N years (0 = none)', el('input', { type: 'number', name: 'leap_every', value: L.every || 0 }), null, 'Leap years add each month\'s leap days. Gregorian: 4'),
         field('…except every N years', el('input', { type: 'number', name: 'leap_skip', value: L.skip || 0 }), null, 'Years divisible by this are not leap years after all. Gregorian: 100'),
         field('…unless every N years', el('input', { type: 'number', name: 'leap_unskip', value: L.unskip || 0 }), null, 'Years divisible by this are leap years again. Gregorian: 400')),
+      field('Eras — one per line: Name, abbreviation, first year[, restart | before]', ta('eras', t.eras, 3),
+        'e.g. Dale Reckoning, DR, 1. Add "restart" to count the era\'s years from 1, or "before" for the years before it, counted back (1 BCE)',
+        'An era runs from its first year until the next one starts, and its abbreviation replaces the year suffix (1492 DR). Only one era can be "before". Leave the box empty for no eras.\nYears are typed and stored as calendar years; eras only change how they are labelled. Date pickers take the year in an era, with the era picked next to it. Use {E} in the date format to show the era\'s full name'),
       el('h3', {}, 'Seasons'),
       field('Season dates are for the', select([['north', 'Northern hemisphere'], ['south', 'Southern hemisphere']], c.hemisphere || 'north', { name: 'cal_hemisphere' }),
         'Regions in the other hemisphere get the opposite season'),

@@ -198,8 +198,36 @@
     return n + (t >= 11 && t <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
   }
 
+  // ---------------------------------------------------------------- eras
+  /**
+   * Eras name stretches of years: { name, abbr, start, restart, before }. An era runs from its first year (start)
+   * until the next era starts. A restart era counts its own years from 1; otherwise it keeps the calendar's year
+   * number. One era may be marked before: it covers the years before its start, counted back from 1 (like BC).
+   */
+  function eraList(cal) {
+    return (cal.eras || []).map((e, i) => ({ ...e, start: Number(e.start) || 0, index: i })).filter(e => e.name || e.abbr);
+  }
+  /** The era year y falls in and its number there: { era, year }. era is null when no era covers y. */
+  function eraOf(cal, y) {
+    const list = eraList(cal);
+    let cur = null;
+    for (const e of list.filter(e => !e.before).sort((a, b) => a.start - b.start)) if (y >= e.start) cur = e;
+    if (cur) return { era: cur, year: cur.restart ? y - cur.start + 1 : y };
+    const pre = list.find(e => e.before);
+    if (pre && y < pre.start) return { era: pre, year: pre.start - y };
+    return { era: null, year: y };
+  }
+  /** The calendar year of year n of era e (the inverse of eraOf). */
+  function eraYear(e, n) {
+    if (!e) return n;
+    const start = Number(e.start) || 0;
+    return e.before ? start - n : e.restart ? start + n - 1 : n;
+  }
+  /** "1492 DR": the year's number in its era with the era's abbreviation, or the calendar's year suffix where no era covers it. */
   function yearLabel(cal, y) {
-    return cal.yearSuffix ? `${y} ${cal.yearSuffix}` : String(y);
+    const { era, year } = eraOf(cal, y);
+    const suffix = era ? era.abbr : cal.yearSuffix;
+    return suffix ? `${year} ${suffix}` : String(year);
   }
   function fmtDate(cal, d, opts = {}) {
     const p = fromAbs(cal, d);
@@ -210,7 +238,8 @@
     const fmt = cal.dateFormat || '{W}, {d} {M} {Y}';
     // {w} is the name of the week within the month, for months that name theirs (Glorantha's Disorder Week, Harmony Week…)
     const wk = (mo.weeks || [])[Math.floor((p.day - 1) / weekLength(cal))] || '';
-    let out = fmt.replace('{d}', p.day).replace('{M}', mo.name).replace('{Y}', yearLabel(cal, p.year)).replace('{W}', W).replace('{w}', wk);
+    let out = fmt.replace('{d}', p.day).replace('{M}', mo.name).replace('{Y}', yearLabel(cal, p.year)).replace('{W}', W).replace('{w}', wk)
+      .replace('{E}', (eraOf(cal, p.year).era || {}).name || '');
     return out.replace(/(,\s*)+,/g, ',').replace(/^[\s,·—-]+/, '').trim();
   }
   function fmtShift(cal, absShift) {
@@ -1255,6 +1284,8 @@
           { name: 'July', days: 31 }, { name: 'August', days: 31 }, { name: 'September', days: 30 },
           { name: 'October', days: 31 }, { name: 'November', days: 30 }, { name: 'December', days: 31 }],
         leap: { every: 4, skip: 100, unskip: 400 },
+        // no year 0: the year before 1 is 1 BCE
+        eras: [{ name: 'Common Era', abbr: '', start: 1 }, { name: 'Before the Common Era', abbr: 'BCE', start: 1, before: true }],
         seasons: GREGORIAN_SEASONS[hemisphere],
         // mean synodic month, and reference = a known new moon (6 Jan 2000, 18:14 UTC) as an absolute day (phases)
         moons: [{ name: 'Moon', cycle: 29.530588, ref: 730124.76, brightness: 1, color: '#e8e4d8' }],
@@ -1528,7 +1559,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
+    eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
