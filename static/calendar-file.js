@@ -46,7 +46,8 @@ const CalendarFile = (() => {
     document.body.append(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    // iPad Safari reads the file only once its "Download?" prompt is answered, so keep it for a minute, not a second
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
   }
 
   /** { calendar, holidays, today } from a file's text. Throws an Error that says what is wrong. */

@@ -1,6 +1,7 @@
 // Cross-browser test run for Campaign Chronicle. See tests/README.md.
 //
-// Same five engines/form factors as Sinless's suite. The app needs PHP and
+// Same five engines/form factors as Sinless's suite, plus an iPad (Safari's
+// engine, touch, no hover) because the app is meant to work fully on one. The app needs PHP and
 // MySQL, so the config starts `php -S` on the repo root with
 // CHRONICLE_CONFIG pointing at support/config.test.php, and support/reset-db.js
 // rebuilds the test database before each run.
@@ -30,6 +31,7 @@ module.exports = defineConfig({
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+    { name: "ipad", use: { ...devices["iPad (gen 7)"] } },
   ],
   webServer: {
     command: `php -S 127.0.0.1:${PORT} -t ..`,

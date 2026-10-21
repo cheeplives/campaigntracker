@@ -1,5 +1,5 @@
 # Cross-browser tests: the same Playwright suite (tests/) in Chromium, Firefox
-# and WebKit (Safari's engine), desktop and phone. Same matrix as Sinless's
+# and WebKit (Safari's engine), desktop, phone and iPad. Same matrix as Sinless's
 # workflow, plus PHP and MySQL because this app has a server. See tests/README.md.
 name: Browser tests
 
@@ -29,6 +29,7 @@ jobs:
           - { project: webkit,        browser: webkit }
           - { project: mobile-safari, browser: webkit }
           - { project: mobile-chrome, browser: chromium }
+          - { project: ipad,          browser: webkit }
     services:
       mysql:
         image: mysql:8.0
