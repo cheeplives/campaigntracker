@@ -99,7 +99,7 @@ button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 4
 button.small, .button.small { padding: 4px 9px; font-size: .85rem; }
 button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; }
 button.on { background: var(--accent); color: var(--on-accent); }
-.w-num { width: 74px; } .w-year { width: 88px; } .w-day { width: 64px; } .grow { flex: 1 1 200px; }
+.w-num { width: 74px; } .w-year { width: 88px; } .w-day { width: 64px; } .w-clock { width: 64px; } .grow { flex: 1 1 200px; }
 .datepick { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 
 .tbl { width: 100%; border-collapse: collapse; } .tbl td, .tbl th { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); }
@@ -397,3 +397,5 @@ dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
   .gear-new > :last-child { grid-column: 1 / -1; }
   .gear-head { display: none; }
 }
+
+.sunpair { display: inline-flex; align-items: center; gap: 4px; }

@@ -30,6 +30,7 @@ const DayExport = (() => {
     const spd = E.slotsPerDay(c), hours = E.timeMode(c) === 'hours';
     const now = Number(camp.current_shift), today = Math.floor(now / spd);
     const sea = E.season(c, d, region?.settings?.hemisphere);
+    const sun = E.sunTimes(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, ctx.holidays, d);
     // a player's today comes as the shifts so far (w.partial), without the forecast
     const sws = E.slotsFromQuarters(c, w?.partial ? w.shifts : E.shiftWeather(c, camp.seed, region, d, w));
@@ -45,6 +46,7 @@ const DayExport = (() => {
     const wxDef = w ? E.WEATHER[w.type] || {} : null;
     L.push([
       `**${w?.partial ? 'Weather now' : 'Forecast'}** ${w ? `${wxDef.icon || ''} ${E.weatherLabel(w, unit)}`.trim() : 'not known'}`,
+      sun ? `**Sun** rises ${E.fmtClock(sun.sunrise)}, sets ${E.fmtClock(sun.sunset)}` : null,
       ...E.moons(c, d).map(m => `**${m.name}** ${m.icon} ${m.label} (${Math.round(m.illum * 100)}%)`),
       d === today ? `**Now** ${names[E.mod(now, spd)]}` : null,
     ].filter(Boolean).join(' · '));

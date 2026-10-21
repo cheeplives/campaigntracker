@@ -282,6 +282,65 @@
     });
   }
 
+  // ---------------------------------------------------------------- sunrise and sunset
+  /** A clock time ("06:30", "6.5" or 6.5) as hours from midnight, or null when blank or unreadable. */
+  function parseClock(v) {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    const s = String(v).trim(), m = s.match(/^(\d{1,3})(?::(\d{1,2}))?$/);
+    if (m) return Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0);
+    const n = Number(s);
+    return s && Number.isFinite(n) ? n : null;
+  }
+  /** Hours from midnight as "HH:MM" (an hour is 60 minutes whatever the length of the day). */
+  function fmtClock(h) {
+    const mins = Math.round(h * 60);
+    return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mod(mins, 60)).padStart(2, '0')}`;
+  }
+  /**
+   * Sunrise and sunset on absolute day d: { sunrise, sunset, daylight } in hours from midnight, or null when no season
+   * gives times. Each season may set the times on its start day; days in between blend from one to the next, wrapping
+   * into the next year. A region in the other hemisphere takes the times from half a year away.
+   */
+  function sunTimes(cal, d, hemisphere) {
+    if (!(cal.seasons || []).some(s => parseClock(s.sunrise) !== null && parseClock(s.sunset) !== null)) return null;
+    const H = Number(cal.hoursPerDay) || 24;
+    let p = fromAbs(cal, d);
+    if (hemisphere && hemisphere !== (cal.hemisphere || 'north')) p = fromAbs(cal, d + Math.floor(yearLength(cal, p.year) / 2));
+    const len = yearLength(cal, p.year);
+    const pts = seasonStarts(cal, p.year).map(x => ({ doy: x.doy, r: parseClock(x.s.sunrise), s: parseClock(x.s.sunset) }))
+      .filter(x => x.r !== null && x.s !== null);
+    let a = pts[pts.length - 1], b = pts[0];
+    for (const x of pts) if (x.doy <= p.doy) a = x;
+    b = pts[(pts.indexOf(a) + 1) % pts.length];
+    const from = a.doy <= p.doy ? a.doy : a.doy - len, to = b.doy > p.doy ? b.doy : b.doy + len;
+    const f = to > from ? (p.doy - from) / (to - from) : 0;
+    const sunrise = clamp(a.r + (b.r - a.r) * f, 0, H), sunset = clamp(a.s + (b.s - a.s) * f, 0, H);
+    return { sunrise, sunset, daylight: Math.max(0, sunset - sunrise) };
+  }
+  /** Natural light 0–5 at hour t of a day with these sun times: daylight 5, the hour after sunrise and before sunset 4,
+   * the hour of twilight either side 2, night 0. */
+  function sunLight(cal, sun, t) {
+    const tw = (Number(cal.hoursPerDay) || 24) / 24;
+    if (sun.sunset <= sun.sunrise) return 0;
+    if (t >= sun.sunrise + tw && t <= sun.sunset - tw) return 5;
+    if (t >= sun.sunrise && t <= sun.sunset) return 4;
+    if (t >= sun.sunrise - tw && t <= sun.sunset + tw) return 2;
+    return 0;
+  }
+  /** How much lighter (or darker) a quarter of the day is with these sun times than with sunrise and sunset at a quarter
+   * and three quarters of the day, the even split the quarters' base scores assume. The quarter runs on the clock as
+   * hours mode places it: Dawn from a quarter of the day, Overnight from midnight. */
+  function sunShift(cal, sun, quarter) {
+    const H = Number(cal.hoursPerDay) || 24, even = { sunrise: H / 4, sunset: 3 * H / 4 }, start = mod(quarter + 1, 4) * H / 4, n = 12;
+    let diff = 0;
+    for (let i = 0; i < n; i++) {
+      const t = start + (i + 0.5) * H / 4 / n;
+      diff += sunLight(cal, sun, t) - sunLight(cal, even, t);
+    }
+    return Math.round(diff / n);
+  }
+
   // ---------------------------------------------------------------- moons
   function moonPhase(moon, d) {
     const cycle = Number(moon.cycle) || 28;
@@ -870,7 +929,9 @@
     const lighting = rs.lighting || cal.lighting || 'natural';
     const name = shiftNames(cal)[slot], shift = slotQuarter(cal, slot);
     const parts = [];
-    let score;
+    // sunrise and sunset, when the seasons give them, light natural shifts; moonlight helps from dusk, most overnight
+    const sun = lighting === 'natural' ? sunTimes(cal, d, rs.hemisphere) : null;
+    let score, night = shift === 3, moonCap = shift === 3 ? 2 : shift === 2 ? 1 : 0;
 
     if (lighting === 'none') {
       score = 0; parts.push('No natural light (0)');
@@ -878,22 +939,29 @@
       const lv = rs.light_levels || cal.lightLevels || [4, 5, 4, 2];
       score = Number(lv[shift] ?? 4);
       parts.push(`${name} lighting (${score})`);
+    } else if (sun && timeMode(cal) === 'hours') {
+      // an hour takes the light of the sun at its middle
+      score = sunLight(cal, sun, (slot + 0.5) * slotHours(cal));
+      parts.push(`${name} ${{ 0: 'night', 2: 'twilight', 4: 'low sun', 5: 'daylight' }[score]} (${score})`);
+      night = score === 0; moonCap = { 0: 2, 2: 1 }[score] || 0;
     } else {
       // Dusk runs from sunset into the evening, so it sits nearer night than dawn
       score = [3, 5, 1, 0][shift];
       parts.push(`${name} base (${score})`);
+      const ds = sun ? sunShift(cal, sun, shift) : 0;
+      if (ds) { score += ds; parts.push(`sun ${fmtClock(sun.sunrise)}–${fmtClock(sun.sunset)} ${ds > 0 ? '+' : ''}${ds}`); }
     }
 
     const def = weather ? (WEATHER[weather.type] || {}) : null;
-    if (lighting === 'natural' && shift >= 2) {
+    if (lighting === 'natural' && moonCap) {
       const ms = moons(cal, d);
       let light = ms.reduce((s, m, i) => s + m.illum * Number((cal.moons[i].brightness ?? 1)), 0);
       if (def) light *= def.moon ?? 1;
-      const bonus = Math.min(shift === 3 ? 2 : 1, Math.round(light * 2));
+      const bonus = Math.min(moonCap, Math.round(light * 2));
       if (bonus) { score += bonus; parts.push(`moonlight +${bonus}`); }
     }
     if (def) {
-      const m = shift === 3 ? def.night : def.day;
+      const m = night ? def.night : def.day;
       if (m) { score += m; parts.push(`${def.label.toLowerCase()} ${m > 0 ? '+' : ''}${m}`); }
     }
     const tm = Number(rs.terrain_mod || 0);
@@ -1197,14 +1265,15 @@
   }
 
   // ---------------------------------------------------------------- presets
-  // Astronomical seasons: the usual equinox and solstice dates (usno). Month indexes are 0-based.
+  // Astronomical seasons: the usual equinox and solstice dates (usno). Month indexes are 0-based. Sunrise and sunset
+  // are local solar time (no daylight saving) on those dates at about 45° latitude, the middle of the preset's regions.
   const GREGORIAN_SEASONS = {
     north: [
-      { name: 'Spring', type: 'spring', month: 2, day: 20 }, { name: 'Summer', type: 'summer', month: 5, day: 21 },
-      { name: 'Autumn', type: 'autumn', month: 8, day: 22 }, { name: 'Winter', type: 'winter', month: 11, day: 21 }],
+      { name: 'Spring', type: 'spring', month: 2, day: 20, sunrise: '06:00', sunset: '18:10' }, { name: 'Summer', type: 'summer', month: 5, day: 21, sunrise: '04:25', sunset: '19:35' },
+      { name: 'Autumn', type: 'autumn', month: 8, day: 22, sunrise: '05:50', sunset: '18:00' }, { name: 'Winter', type: 'winter', month: 11, day: 21, sunrise: '07:40', sunset: '16:20' }],
     south: [
-      { name: 'Autumn', type: 'autumn', month: 2, day: 20 }, { name: 'Winter', type: 'winter', month: 5, day: 21 },
-      { name: 'Spring', type: 'spring', month: 8, day: 22 }, { name: 'Summer', type: 'summer', month: 11, day: 21 }],
+      { name: 'Autumn', type: 'autumn', month: 2, day: 20, sunrise: '06:00', sunset: '18:10' }, { name: 'Winter', type: 'winter', month: 5, day: 21, sunrise: '07:40', sunset: '16:20' },
+      { name: 'Spring', type: 'spring', month: 8, day: 22, sunrise: '05:50', sunset: '18:00' }, { name: 'Summer', type: 'summer', month: 11, day: 21, sunrise: '04:25', sunset: '19:35' }],
   };
   /** Preset regions from [name, Köppen code, terrain visibility modifier] rows; the first is where the party starts. */
   const koppenRegions = (hemisphere, rows) => rows.map(([name, code, terrain = 0], i) => ({
@@ -1528,7 +1597,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
+    yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
