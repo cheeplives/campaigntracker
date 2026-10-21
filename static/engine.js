@@ -27,17 +27,14 @@
   // which stays free text, so who does what and anything else can be written alongside.
   const SHIFT_ACTION_GROUPS = { travel: 'On the move', land: 'Living off the land', camp: 'In camp', other: 'Other' };
   const SHIFT_ACTIONS = [
-    { name: 'March', group: 'travel', icon: '🥾', desc: 'Travel on foot towards the destination. Two shifts of marching a day is comfortable; a third or fourth is a forced march.' },
-    { name: 'Forced march', group: 'travel', icon: '😓', desc: 'Keep moving past the usual two shifts a day. Everyone tests their stamina, and anyone who fails has to stop and rest.' },
-    { name: 'Ride / drive', group: 'travel', icon: '🐎', desc: 'Travel on a mount or in a vehicle. Passengers can keep watch, rest or sleep, but the rider or driver can do nothing else.' },
-    { name: 'Sail / row', group: 'travel', icon: '⛵', desc: 'Travel by boat along a river, across a lake or at sea. Passengers can rest or sleep if they take no other task.' },
+    { name: 'Travel', group: 'travel', icon: '🥾', desc: 'Move towards the destination on foot, mounted, in a vehicle or by boat. Two shifts a day is comfortable; pushing on for a third or fourth is a forced march, and everyone tests their stamina. A rider, driver or rower can do nothing else, but passengers can keep watch, rest or sleep.' },
     { name: 'Navigate', group: 'travel', icon: '🧭', desc: 'Pick the route through unfamiliar or dangerous country. Done well, the party makes good time; done badly, it is slowed, strays off course or walks into trouble.' },
     { name: 'Scout ahead', group: 'travel', icon: '🔭', desc: 'Range ahead of the group to spot shortcuts, shelter, sites worth finding and signs of danger before the rest arrive.' },
-    { name: 'Keep watch', group: 'travel', icon: '👁', desc: 'One lookout watches for threats, and can do so while marching. Without one, the party gets no warning of what is coming.' },
+    { name: 'Keep watch', group: 'travel', icon: '👁', desc: 'One lookout watches for threats, and can do so while travelling. Without one, the party gets no warning of what is coming.' },
     { name: 'Forage', group: 'land', icon: '🌿', desc: 'Search the area for edible plants or drinkable water. Searching the same place again yields less each time.' },
     { name: 'Hunt / trap', group: 'land', icon: '🏹', desc: 'Track game and bring it down, or set snares. The meat still has to be cooked before it is safe to eat.' },
     { name: 'Fish', group: 'land', icon: '🎣', desc: 'Needs a river, lake or coast and some fishing gear. It can be done from a moving boat.' },
-    { name: 'Gather', group: 'land', icon: '🪵', desc: 'Collect firewood, fuel or other raw materials from the surroundings.' },
+    { name: 'Scrounge', group: 'land', icon: '🪵', desc: 'Search the surroundings for firewood, fuel or other raw materials.' },
     { name: 'Explore', group: 'land', icon: '🗺', desc: 'Stop the journey to search a site, ruin or landmark. It can take one shift or many, and it leaves no time for rest.' },
     { name: 'Make camp', group: 'camp', icon: '⛺', desc: 'Find a sheltered spot, light a fire and settle in, usually in the evening. A poor site invites a mishap during the night.' },
     { name: 'Cook', group: 'camp', icon: '🍲', desc: 'Turn caught or foraged food into safe meals over a fire or in a kitchen. Can happen in the same shift as making camp.' },
