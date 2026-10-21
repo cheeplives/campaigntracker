@@ -1,7 +1,7 @@
 // The Current Day tab opens first, and players only get today's weather up to
 // the current shift: the server holds back later shifts and the day's forecast.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign , notNow } = require("./helpers");
 
 const shift = (type, temp) => ({ type, temp, wind: 1 });
 const STORMY = { type: "storm", temp: 20, wind: 2, shift_order: "dawn", shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
@@ -28,6 +28,7 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
   await page.getByRole("button", { name: "Save notes" }).click();
   await expect(page.getByText("Notes saved")).toBeVisible();
+  await notNow(page); // the detector offers Altdorf and the Grey Lady inn for the Encyclopedia
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
   await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
   await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");

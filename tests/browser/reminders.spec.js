@@ -1,7 +1,7 @@
 // Calendar reminders: set on a day and shift from the day page, they pop up once the campaign
 // clock reaches them, for whoever they are meant for, until each person dismisses them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign , notNow } = require("./helpers");
 
 test("a GM's reminder pops up for the GM and an open player page when time passes to it", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -27,6 +27,7 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   await form.getByLabel("Who sees it").selectOption("all");
   await form.getByRole("button", { name: "Add reminder" }).click();
   await expect(page.getByText("Reminder saved")).toBeVisible();
+  await notNow(page); // the detector offers the Black Hand for the Encyclopedia
   const card = page.locator(".event.reminder");
   await expect(card).toContainText("The ransom is due");
   await expect(card).toContainText("Midday · Waiting");

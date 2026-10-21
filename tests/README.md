@@ -59,6 +59,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Previous/Next day and Return to today stay on the tab and keep that rule; the
   day's Locations visited saves, survives a re-roll and is shown to players.
 - **day-notes**: the GM writes bold text and a table in the Public notes and a Secret note, and they save as cleaned HTML and reopen in the editor; players read the formatted Public notes, never the Secret ones, the month grid previews them as plain text and the export turns them into Markdown; scripts, images, styles, attributes and javascript: links are stripped on the server, and HTML put straight into the database is still rebuilt from the allow-list in the browser; a plain note from before shows as typed; every day box folds and stays folded per account in that browser, and adding an event unfolds Events.
+- **encyclopedia**: the Proper Noun Detector finds capitalized, bold/italic and quoted names and a day's
+  Locations visited, leaving out common and calendar words; saving notes offers them to Add (with a tag, and GM only
+  when found only in GM-only text), Ignore or Skip; entries are linked where players read the names, a link opens the
+  entry, Blank Entries lists the new ones, players write Public notes but never get GM notes, secret entries or the
+  GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own.
 - **eras**: era abbreviations label their years, a restart era counts from 1 and
   a "before" era counts back (the Gregorian preset has no year 0); a GM types eras
   in Settings, the month title uses them and the date picker takes a year in an

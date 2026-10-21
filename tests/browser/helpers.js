@@ -73,4 +73,12 @@ async function makeCampaign(page, name = "Test campaign") {
   return r.json.id;
 }
 
-module.exports = { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+/** Close the Proper Noun Detector's dialog, which a save that names something new opens, without adding anything. */
+async function notNow(page) {
+  const d = page.locator("dialog.noun-dialog");
+  await expect(d).toBeVisible();
+  await d.getByRole("button", { name: "Not now" }).click();
+  await expect(d).toHaveCount(0);
+}
+
+module.exports = { notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

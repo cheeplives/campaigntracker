@@ -506,3 +506,47 @@ dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
 }
 
 .sunpair { display: inline-flex; align-items: center; gap: 4px; }
+
+/* encyclopedia tab: the entries down the left (Blank Entries first), the one picked on the right */
+a.enc-link { color: inherit; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a.enc-link:hover { color: var(--accent); }
+a.enc-link.secret { text-decoration-color: var(--secret); }
+.enc-mentions { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.enc-page { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.enc-index { display: flex; flex-direction: column; gap: 8px; }
+.enc-index input[type=search] { width: 100%; }
+.enc-lists h3 { font-size: .95rem; margin: 10px 0 4px; }
+.enc-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; padding: 7px 8px; border-radius: 6px; color: var(--text); border-left: 3px solid transparent; }
+.enc-item:hover { background: var(--panel-2); }
+.enc-item.on { background: var(--panel-2); border-left-color: var(--accent); font-weight: 600; }
+.enc-item .etags { display: inline-flex; flex-wrap: wrap; }
+.enc-blank { background: var(--panel-2); border-radius: 8px; padding: 2px 6px 6px; }
+.enc-blank h3 { color: var(--accent); }
+.enc-blank .enc-item:hover, .enc-blank .enc-item.on { background: var(--panel); }
+.enc-detail { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.enc-detail h2 { margin: 0; overflow-wrap: anywhere; }
+.enc-form { display: flex; flex-direction: column; gap: 10px; }
+.enc-where { margin: 0; padding-left: 18px; }
+.enc-ignored summary { cursor: pointer; color: var(--dim); }
+.enc-ignored-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.enc-ignored-word { background: var(--panel-2); border-radius: 99px; padding: 1px 4px 1px 10px; font-size: .85rem; }
+@media (max-width: 900px) {
+  .enc-page { grid-template-columns: 1fr; }
+  .enc-page.has-sel .enc-detail { order: -1; } /* the entry picked comes first, the list after it */
+}
+
+/* the Proper Noun Detector's dialog: one row per name found, Add / Ignore / Skip */
+dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
+.noun-list { display: flex; flex-direction: column; max-height: 58vh; overflow-y: auto; margin: 8px 0 14px; border-top: 1px solid var(--line); }
+.noun-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.noun-row.off .noun-what { opacity: .55; }
+.noun-what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.noun-what input:not([type=checkbox]) { min-width: 0; flex: 1 1 160px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex: none; }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 5px 9px; font-size: .85rem; color: var(--dim); }
+.seg label + label span { border-left: 1px solid var(--line); }
+.seg input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 560px) { .noun-row { flex-direction: column; gap: 6px; } }

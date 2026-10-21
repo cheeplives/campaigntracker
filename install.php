@@ -92,6 +92,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/010_day_notes_rich_text.sql');
             $msg .= ' Day notes can now be formatted (Public and Secret notes).';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'encyclopedia_ignored'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/011_encyclopedia.sql');
+            $msg .= ' Added the Encyclopedia tab and the Proper Noun Detector.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
