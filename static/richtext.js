@@ -210,7 +210,14 @@ const RichText = (() => {
       // Quill writes spaces as &nbsp;, which would stop lines wrapping.
       return { text: empty ? '' : quill.getSemanticHTML().replace(/&nbsp;/g, ' '), format: 'html' };
     }
-    return { node, value, ready: () => !!quill };
+    /** Add a paragraph of plain text at the end (what was written about something elsewhere, quoted into an entry). */
+    function insertText(t) {
+      if (!quill) { text = (format === 'html' ? `${text || ''}<p>${t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</p>` : `${text ? `${text}\n` : ''}${t}`); return; }
+      const end = quill.getLength() - 1;
+      quill.insertText(end, (quill.getText().trim() ? '\n' : '') + t, 'user');
+      quill.setSelection(quill.getLength() - 1, 0, 'silent');
+    }
+    return { node, value, insertText, ready: () => !!quill };
   }
 
   return { render, view, toMarkdown, editor, load, safeHref };

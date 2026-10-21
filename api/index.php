@@ -340,7 +340,14 @@ function campaign_tags(int $cid): array {
 }
 /** What carries tags: its link table, that table's id column, and the table of tag names.
  * Events and holdings each keep their own list of tags. */
-const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => ['holding_tags', 'holding_id', 'holding_tag_names']];
+const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => ['holding_tags', 'holding_id', 'holding_tag_names'],
+    'entry' => ['encyclopedia_tags', 'entry_id', 'encyclopedia_tag_names']];
+/** Tags every campaign's Encyclopedia is offered before anyone makes their own: name => colour. */
+const ENTRY_STARTER_TAGS = [
+    'Location' => '#16a34a', 'Item' => '#d97706', 'Person' => '#2563eb', 'Group' => '#9333ea', 'Event' => '#e11d48', 'Religion' => '#0891b2',
+];
+/** Starter tags of what carries tags, by $of: the events' and the Encyclopedia's (holdings have none). */
+function starter_tags(string $of): array { return ['event' => STARTER_TAGS, 'entry' => ENTRY_STARTER_TAGS][$of] ?? []; }
 /** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
 function attach_tags(array &$events, string $of = 'event'): void {
     if (!$events) return;
@@ -369,7 +376,7 @@ function save_event_tags(int $cid, int $eid, $list, string $of = 'event'): void 
         $id = $find->fetchColumn();
         if ($id === false) {
             $starter = null;
-            if ($of === 'event') foreach (STARTER_TAGS as $n => $c) if (strcasecmp($n, $name) === 0) { $starter = $c; $name = $n; }
+            foreach (starter_tags($of) as $n => $c) if (strcasecmp($n, $name) === 0) { $starter = $c; $name = $n; }
             $color = is_array($t) ? (string)($t['color'] ?? '') : '';
             if (!preg_match(TAG_COLOR, $color)) $color = $starter ?? '#6b7280';
             $add->execute([$cid, $name, $color]);
@@ -491,13 +498,114 @@ function touch_campaign(int $cid): void {
     db()->prepare('UPDATE campaigns SET updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$cid]);
 }
 
+// ---------- the Encyclopedia ----------
+// Entries are the people, places, items and the like that turn up in play. Every member reads the entries that
+// aren't secret and can add them and write their Public notes; GM notes, secret entries and deleting other people's
+// entries are for GMs. The Proper Noun Detector (static/encyclopedia.js) runs in the browser and offers new names
+// after each save; the words someone turns down are kept per campaign, one list for the GMs and one for the players.
+
+/** Whether migration 011 has been run, so the rest of the app still works on an install that hasn't. */
+function has_encyclopedia(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'encyclopedia_ignored'")->fetchColumn();
+}
+function need_encyclopedia(): void {
+    if (!has_encyclopedia()) fail('The Encyclopedia needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+}
+/** The Encyclopedia's tags plus any starter tag the campaign hasn't used yet (id null), by name. */
+function entry_tags(int $cid): array {
+    if (!has_encyclopedia()) return [];
+    $st = db()->prepare('SELECT id, name, color FROM encyclopedia_tag_names WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $tags = [];
+    foreach ($st->fetchAll() as $t) $tags[mb_strtolower($t['name'])] = ['id' => (int)$t['id'], 'name' => $t['name'], 'color' => $t['color']];
+    foreach (ENTRY_STARTER_TAGS as $name => $color) $tags[mb_strtolower($name)] ??= ['id' => null, 'name' => $name, 'color' => $color];
+    $tags = array_values($tags);
+    usort($tags, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+    return $tags;
+}
+/** Every entry this member may see, short: what the browser needs to link names and to know which are new. */
+function entry_index(int $cid, bool $isGm): array {
+    if (!has_encyclopedia()) return [];
+    $st = db()->prepare("SELECT id, name, aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
+        FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
+    $st->execute([$cid]);
+    return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
+        'blank' => (bool)$e['blank'], 'preview' => entry_preview($e['notes'])], $st->fetchAll());
+}
+/** An entry row's aliases as a list. */
+function entry_aliases(array $e): array {
+    $a = dec($e['aliases_json'] ?? null);
+    return is_array($a) ? array_values(array_filter($a, 'is_string')) : [];
+}
+/** The first line or so of an entry's Public notes, for the tooltip on its links. */
+function entry_preview(?string $html): string {
+    $t = preg_replace('/\s+/u', ' ', rich_html_plain((string)$html));
+    return mb_strlen($t) > 140 ? rtrim(mb_substr($t, 0, 139)) . '…' : $t;
+}
+/** Aliases as sent ([names]) checked and stored as JSON, or null for none. $ownName and $ownId are left out of the clash check. */
+function aliases_in($list, int $cid, string $ownName, ?int $ownId): ?string {
+    if ($list === null) return null;
+    if (!is_array($list) || count($list) > 30) fail('Send up to 30 other names');
+    $out = []; $seen = [mb_strtolower($ownName) => true];
+    foreach ($list as $a) {
+        $n = entry_name($a);
+        $k = mb_strtolower($n);
+        if (isset($seen[$k])) continue;
+        $seen[$k] = true;
+        $same = entry_named($cid, $n);
+        if ($same && (int)$same['id'] !== $ownId) fail("\"$n\" is already a name of \"{$same['name']}\"", 409);
+        $out[] = $n;
+    }
+    return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
+}
+/** Which list of turned-down words this member uses: the GMs' or the players'. */
+function ignore_scope(string $role): string { return $role === 'gm' ? 'gm' : 'player'; }
+function ignored_terms(int $cid, string $role): array {
+    if (!has_encyclopedia()) return [];
+    $st = db()->prepare('SELECT term FROM encyclopedia_ignored WHERE campaign_id=? AND scope=? ORDER BY term');
+    $st->execute([$cid, ignore_scope($role)]);
+    return $st->fetchAll(PDO::FETCH_COLUMN);
+}
+/** An entry's name or a word to ignore, as sent: trimmed, spaces run together, 1–150 characters. */
+function entry_name($v): string {
+    $n = trim(preg_replace('/\s+/u', ' ', (string)str_in($v, 400, false)) ?? '');
+    if ($n === '') fail('Give the entry a name');
+    if (mb_strlen($n) > 150) fail('Names are 150 characters at most');
+    return $n;
+}
+/** An entry of campaign $cid this member may see, or fail. */
+function entry_row(int $cid, int $id, string $role): array {
+    $st = db()->prepare('SELECT * FROM encyclopedia_entries WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    $e = $st->fetch();
+    if (!$e || ($role !== 'gm' && (int)$e['is_secret'])) fail('Entry not found', 404);
+    return $e;
+}
+/** The entry of campaign $cid named $name (any case), secret or not, or null. */
+function entry_by_name(int $cid, string $name): ?array {
+    $st = db()->prepare('SELECT id, name, is_secret FROM encyclopedia_entries WHERE campaign_id=? AND name=?');
+    $st->execute([$cid, $name]);
+    return $st->fetch() ?: null;
+}
+/** The entry of campaign $cid that $name is the name or an alias of (any case), secret or not, or null. */
+function entry_named(int $cid, string $name): ?array {
+    if ($e = entry_by_name($cid, $name)) return $e;
+    $st = db()->prepare("SELECT id, name, is_secret, aliases_json FROM encyclopedia_entries WHERE campaign_id=? AND aliases_json IS NOT NULL");
+    $st->execute([$cid]);
+    $k = mb_strtolower($name);
+    foreach ($st->fetchAll() as $e) foreach (entry_aliases($e) as $a) if (mb_strtolower($a) === $k) return $e;
+    return null;
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
-$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates'];
+$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+    'encyclopedia', 'encyclopedia_sources'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -507,7 +615,8 @@ if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET f
 $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
-    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete'];
+    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
+    'entry_save', 'entries_add', 'entry_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -618,7 +727,9 @@ try {
         $st->execute([$cid]);
         $members = $st->fetchAll();
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
-        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid)]);
+        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
+            'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
+            'encyclopedia_tags' => entry_tags($cid)]);
 
     case 'changed': // polled by open pages: a new value means a GM changed something since
         $cid = cid();
@@ -1371,6 +1482,181 @@ try {
             $seen->execute([$rid, $cid, $uid]);
             if ($seen->fetchColumn()) $ins->execute([$rid, $uid]);
         }
+        out(['ok' => true]);
+
+    // ===== the Encyclopedia =====
+    case 'encyclopedia':
+        $cid = cid();
+        $role = role($cid);
+        $isGm = $role === 'gm';
+        need_encyclopedia();
+        $st = db()->prepare('SELECT e.id, e.name, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+            FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
+            WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
+        $st->execute([$cid]);
+        $entries = array_map(function ($e) {
+            $e['id'] = (int)$e['id'];
+            $e['aliases'] = entry_aliases($e);
+            unset($e['aliases_json']);
+            $e['is_secret'] = (bool)$e['is_secret'];
+            $e['created_by'] = $e['created_by'] !== null ? (int)$e['created_by'] : null;
+            return $e;
+        }, $st->fetchAll());
+        attach_tags($entries, 'entry');
+        out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role)]);
+
+    case 'encyclopedia_sources':
+        // Everything written in the campaign that this member may read, for the detector's full scan and for an
+        // entry's "Mentioned in" list. secret: only GMs can read it, so names found only there start as GM only.
+        $cid = cid();
+        $role = role($cid);
+        $isGm = $role === 'gm';
+        $out = [];
+        $add = function (array $src, $text, bool $secret = false, string $format = 'plain') use (&$out) {
+            if (trim((string)$text) === '') return;
+            $out[] = $src + ['text' => (string)$text, 'format' => $format, 'secret' => $secret];
+        };
+        $st = db()->prepare("SELECT abs_day, notes, notes_format, gm_notes, gm_notes_format, locations FROM days WHERE campaign_id=?
+            AND (COALESCE(notes, '') <> '' OR COALESCE(gm_notes, '') <> '' OR COALESCE(locations, '') <> '') ORDER BY abs_day");
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $d) {
+            $ad = (int)$d['abs_day'];
+            $add(['kind' => 'locations', 'abs_day' => $ad], $d['locations']);
+            $add(['kind' => 'day_notes', 'abs_day' => $ad], $d['notes'], false, $d['notes_format']);
+            if ($isGm) $add(['kind' => 'day_gm_notes', 'abs_day' => $ad], $d['gm_notes'], true, $d['gm_notes_format']);
+        }
+        $st = db()->prepare('SELECT abs_day, shift, activity' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? ORDER BY abs_day, shift');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $s) {
+            $src = ['abs_day' => (int)$s['abs_day'], 'shift' => (int)$s['shift']];
+            $add(['kind' => 'activity'] + $src, $s['activity']);
+            if ($isGm) $add(['kind' => 'shift_gm_notes'] + $src, $s['gm_notes'], true);
+        }
+        $st = db()->prepare('SELECT abs_day, shift, body FROM shift_notes WHERE campaign_id=? ORDER BY abs_day, shift, id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $n) $add(['kind' => 'shift_note', 'abs_day' => (int)$n['abs_day'], 'shift' => (int)$n['shift']], $n['body']);
+        $st = db()->prepare('SELECT id, abs_day, title, body, is_secret FROM events WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY abs_day, id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $e) {
+            $src = ['kind' => 'event', 'id' => (int)$e['id'], 'abs_day' => (int)$e['abs_day'], 'title' => $e['title']];
+            $add($src, trim($e['title'] . "\n" . $e['body']), (bool)$e['is_secret']);
+        }
+        $st = db()->prepare('SELECT e.id, e.abs_day, e.title, e.is_secret, n.body FROM event_notes n JOIN events e ON e.id=n.event_id
+            WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.abs_day, n.id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $n) $add(['kind' => 'event_note', 'id' => (int)$n['id'], 'abs_day' => (int)$n['abs_day'], 'title' => $n['title']], $n['body'], (bool)$n['is_secret']);
+        $uid = me()['id'];
+        $spdC = camp_spd(campaign_row($cid));
+        $st = db()->prepare('SELECT r.id, r.due_shift, r.title, r.body, r.audience FROM reminders r WHERE r.campaign_id=? AND ' . reminder_visible_sql($isGm) . ' ORDER BY r.due_shift, r.id');
+        $st->execute([$cid, $uid]);
+        foreach ($st->fetchAll() as $r) {
+            $add(['kind' => 'reminder', 'id' => (int)$r['id'], 'abs_day' => floordiv((int)$r['due_shift'], $spdC), 'title' => $r['title']],
+                trim($r['title'] . "\n" . $r['body']), $isGm && $r['audience'] !== 'all');
+        }
+        if (has_encyclopedia()) {
+            $st = db()->prepare('SELECT id, name, notes, is_secret' . ($isGm ? ', gm_notes' : '') . ' FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $e) {
+                $src = ['kind' => 'entry', 'id' => (int)$e['id'], 'title' => $e['name']];
+                $add($src, $e['notes'], (bool)$e['is_secret'], 'html');
+                if ($isGm) $add(['kind' => 'entry_gm_notes'] + $src, $e['gm_notes'], true, 'html');
+            }
+        }
+        out(['sources' => $out]);
+
+    case 'entry_save':
+        // A new entry, or a change to one. Players change the name, tags and Public notes of entries that aren't
+        // secret; GM notes and whether an entry is secret are only for GMs, and are kept as they were otherwise.
+        $cid = cid();
+        $role = role($cid);
+        $isGm = $role === 'gm';
+        need_encyclopedia();
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        $old = $id ? entry_row($cid, $id, $role) : null;
+        $name = entry_name(p('name'));
+        $same = entry_named($cid, $name);
+        if ($same && (int)$same['id'] !== $id) fail($isGm || !(int)$same['is_secret'] ? "\"$name\" is already a name of \"{$same['name']}\"" : 'Pick another name', 409);
+        $aliases = array_key_exists('aliases', body()) ? aliases_in(p('aliases'), $cid, $name, $id) : ($old['aliases_json'] ?? null);
+        $rich = fn(string $k) => array_key_exists($k, body()) ? (rich_html_clean((string)str_in(p($k), 200000)) ?: null) : ($old[$k] ?? null);
+        $notes = $rich('notes');
+        $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
+        $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
+        db()->beginTransaction();
+        if ($old) {
+            db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=? WHERE id=?')->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
+        } else {
+            db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, aliases_json, notes, gm_notes, is_secret, created_by) VALUES (?,?,?,?,?,?,?)')
+                ->execute([$cid, $name, $aliases, $notes, $gmNotes, $secret, me()['id']]);
+            $id = (int)db()->lastInsertId();
+        }
+        if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
+        db()->commit();
+        out(['ok' => true, 'id' => $id]);
+
+    case 'entries_add':
+        // The detector's approved names: [{name, is_secret, tags: [{name, color?}]}], or {name, alias_of: entry id} to add
+        // the name to an entry that exists as another name for it. A name that is already a name of an entry is left as
+        // it is. A player who sends the name of a secret entry is told nothing; the word joins the players' turned-down
+        // list so they aren't asked about it again.
+        $cid = cid();
+        $role = role($cid);
+        $isGm = $role === 'gm';
+        need_encyclopedia();
+        $list = p('entries', []);
+        if (!is_array($list) || count($list) > 500) fail('Send up to 500 entries at a time');
+        $added = []; $aliased = [];
+        $ins = db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, is_secret, created_by) VALUES (?,?,?,?)');
+        $upd = db()->prepare('UPDATE encyclopedia_entries SET aliases_json=? WHERE id=?');
+        $ign = db()->prepare('INSERT IGNORE INTO encyclopedia_ignored (campaign_id, scope, term) VALUES (?,?,?)');
+        db()->beginTransaction();
+        foreach ($list as $x) {
+            if (!is_array($x)) fail('Expected a list of entries');
+            $name = entry_name($x['name'] ?? '');
+            $same = entry_named($cid, $name);
+            if ($same) {
+                if (!$isGm && (int)$same['is_secret']) $ign->execute([$cid, 'player', $name]);
+                continue;
+            }
+            if (!empty($x['alias_of'])) {
+                $of = entry_row($cid, int_in($x['alias_of'], 1), $role);
+                $list = entry_aliases($of);
+                $list[] = $name;
+                $upd->execute([aliases_in($list, $cid, $of['name'], (int)$of['id']), $of['id']]);
+                $aliased[] = ['id' => (int)$of['id'], 'name' => $of['name'], 'alias' => $name];
+                continue;
+            }
+            $ins->execute([$cid, $name, $isGm && !empty($x['is_secret']) ? 1 : 0, me()['id']]);
+            $id = (int)db()->lastInsertId();
+            if (isset($x['tags'])) save_event_tags($cid, $id, $x['tags'], 'entry');
+            $added[] = ['id' => $id, 'name' => $name];
+        }
+        db()->commit();
+        out(['ok' => true, 'added' => $added, 'aliased' => $aliased]);
+
+    case 'entry_delete':
+        $cid = cid();
+        $role = role($cid);
+        need_encyclopedia();
+        $e = entry_row($cid, int_in(p('id'), 1), $role);
+        if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
+        db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);
+        out(['ok' => true]);
+
+    case 'terms_ignore': // the detector stops offering these words to this member's side (the GMs, or the players)
+        $cid = cid();
+        $role = role($cid);
+        need_encyclopedia();
+        $terms = p('terms', []);
+        if (!is_array($terms) || count($terms) > 500) fail('Send up to 500 words at a time');
+        $ins = db()->prepare('INSERT IGNORE INTO encyclopedia_ignored (campaign_id, scope, term) VALUES (?,?,?)');
+        foreach ($terms as $t) $ins->execute([$cid, ignore_scope($role), entry_name($t)]);
+        out(['ok' => true]);
+
+    case 'term_restore': // offer a turned-down word again
+        $cid = cid();
+        $role = role($cid);
+        need_encyclopedia();
+        db()->prepare('DELETE FROM encyclopedia_ignored WHERE campaign_id=? AND scope=? AND term=?')->execute([$cid, ignore_scope($role), entry_name(p('term'))]);
         out(['ok' => true]);
 
     default:
