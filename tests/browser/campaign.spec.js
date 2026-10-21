@@ -61,6 +61,51 @@ test("a custom calendar gets its own number of months, each with its own length"
   expectNoErrors(errors);
 });
 
+test("a custom calendar gets leap days in the month and on the rule it is given", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Lea");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  await page.goto("index.html");
+  await page.getByRole("button", { name: "+ New campaign" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Leaping");
+  await page.getByLabel("Calendar preset").selectOption("custom");
+  const count = page.getByRole("spinbutton", { name: /Number of months/ });
+  await count.fill("3");
+  await count.press("Tab");
+  await page.getByLabel("Month 2 leap days").fill("2");
+  await page.getByLabel("Month 2 leap days").press("Tab");
+  await expect(page.getByText("Set how often leap years come below")).toBeVisible();
+  await page.getByLabel("Leap year every N years").fill("5");
+  await page.getByLabel("Except every N years").fill("50");
+  await page.getByLabel("Except every N years").press("Tab");
+  await expect(page.getByText("3 months, 90 days a year, 92 in a leap year (leap years: 5, 10, 15, 20…, but not 50).")).toBeVisible();
+  // a 4-day week, so the weekday has to count the leap days to come out right
+  const week = page.getByRole("spinbutton", { name: /Days in a week/ });
+  await week.fill("4");
+  await week.press("Tab");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("heading", { name: "Leaping" })).toBeVisible();
+  const cid = page.url().match(/#\/c\/(\d+)/)[1];
+  const { json } = await api(page, "campaign", undefined, cid);
+  const cal = json.campaign.calendar;
+  expect(cal.months.map(m => [m.days, m.leapDays || 0])).toEqual([[30, 0], [30, 2], [30, 0]]);
+  expect(cal.leap).toEqual({ every: 5, skip: 50, unskip: 0 });
+  const E = await page.evaluate(c => {
+    const E = window.Engine; E.prep(c);
+    return { y5: E.yearLength(c, 5), y4: E.yearLength(c, 4), y50: E.yearLength(c, 50), feb: E.monthLength(c, 5, 1),
+      wd: E.weekday(c, E.toAbs(c, 6, 0, 1)) };
+  }, cal);
+  expect(E).toEqual({ y5: 92, y4: 90, y50: 90, feb: 32, wd: (5 * 90 + 2) % 4 });
+
+  // Settings shows what the rule does, as it is typed
+  await page.goto(`index.html#/c/${cid}/settings`);
+  await expect(page.locator(".leap-note")).toContainText("A leap year has 92 days instead of 90 (Month 2 +2)");
+  await page.locator("[name=leap_every]").fill("0");
+  await expect(page.locator(".leap-note")).toContainText("no leap years are set");
+  expectNoErrors(errors);
+});
+
 test("a GM adds a player by email; the player sees the campaign but not its secrets", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Hal"), player = person("Ivy");
