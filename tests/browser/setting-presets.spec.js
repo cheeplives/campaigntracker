@@ -87,10 +87,14 @@ test("a GM starts a Forgotten Realms campaign, and About & sources cites the fou
   await expect(page.getByText("Shieldmeet").first()).toBeVisible();
   await page.getByRole("navigation").getByRole("link", { name: "Regions", exact: true }).click();
   await expect(page.getByText("Waterdeep").first()).toBeVisible();
-  await page.goto(page.url().replace(/#.*/, "") + "#/about");
-  const calendars = page.locator("section", { has: page.getByRole("heading", { name: "Calendars and holidays" }) });
+  // a fresh tab, so a campaign view still loading can't draw over the About page
+  const about = await page.context().newPage();
+  const aboutErrors = watchErrors(about);
+  await about.goto("index.html#/about");
+  const calendars = about.locator("section", { has: about.getByRole("heading", { name: "Calendars and holidays" }) });
   for (const link of [/Calendar of Harptos/, /Galifar Calendar/, /Calendar of Exandria/, /Absalom Reckoning/]) {
     await expect(calendars.getByRole("link", { name: link })).toHaveAttribute("target", "_blank");
   }
   expectNoErrors(errors);
+  expectNoErrors(aboutErrors);
 });

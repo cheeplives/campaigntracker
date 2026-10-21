@@ -99,7 +99,7 @@ button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 4
 button.small, .button.small { padding: 4px 9px; font-size: .85rem; }
 button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; }
 button.on { background: var(--accent); color: var(--on-accent); }
-.w-num { width: 74px; } .w-year { width: 88px; } .w-day { width: 64px; } .grow { flex: 1 1 200px; }
+.w-num { width: 74px; } .w-year { width: 88px; } .w-day { width: 64px; } .w-clock { width: 64px; } .grow { flex: 1 1 200px; }
 .datepick { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 
 .tbl { width: 100%; border-collapse: collapse; } .tbl td, .tbl th { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); }
@@ -232,6 +232,25 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 .enotes { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .enote { background: var(--panel); border-radius: 6px; padding: 6px 10px; border-left: 3px solid var(--line); }
 .event .row textarea { flex: 1 1 240px; width: auto; }
+
+/* events tab */
+.evfilters { margin: 8px 0 12px; }
+.evfilters input[type=search] { flex: 1 1 260px; width: auto; min-width: 0; }
+.evfilters select { flex: 0 1 auto; width: auto; }
+.evrow { justify-content: flex-start; flex-wrap: nowrap; }
+.evrow .evwhen { flex: 0 0 190px; }
+.evrow .evbody { flex: 1 1 auto; min-width: 0; }
+.evrow h4 { margin: 0 0 2px; }
+.evrow h4 a { color: inherit; }
+.evrow p { margin: 2px 0 4px; overflow-wrap: anywhere; }
+.evrow.past { opacity: .75; }
+.evrow.secret { border-left: 4px solid var(--secret); padding-left: 8px; }
+.evnow { color: var(--accent); font-weight: 600; }
+.evrow mark { background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 0 1px; }
+@media (max-width: 560px) {
+  .evrow { flex-wrap: wrap; gap: 2px; }
+  .evrow .evwhen { flex: 1 1 100%; }
+}
 
 /* travel */
 .result { background: var(--panel-2); border-radius: 8px; padding: 12px; margin-top: 12px; border-left: 4px solid var(--accent); }
@@ -414,3 +433,5 @@ dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
   .gear-new > :last-child { grid-column: 1 / -1; }
   .gear-head { display: none; }
 }
+
+.sunpair { display: inline-flex; align-items: center; gap: 4px; }

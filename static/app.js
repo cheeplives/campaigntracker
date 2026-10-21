@@ -554,7 +554,25 @@
 
   function viewCreate() {
     let preset = 'gregorian';
+    // the built-in presets, plus 'file' once a calendar is imported from a file
+    const presets = { ...E.PRESETS };
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
+    const importBtn = btn('Import calendar from file…', async () => {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const base = E.PRESETS.custom;
+        const hemisphere = r.calendar.hemisphere === 'south' ? 'south' : 'north';
+        presets.file = { label: `From file: ${r.calendar.name || 'calendar'}`, calendar: r.calendar, holidays: r.holidays, settings: base.settings,
+          regions: base.regions.map(x => ({ ...x, settings: { ...x.settings, hemisphere } })),
+          start: r.today || { year: Number(r.calendar.epochYear) || 0, month: 0, day: 1 } };
+        presetSel.querySelector('option[value=file]')?.remove();
+        presetSel.append(el('option', { value: 'file' }, presets.file.label));
+        presetSel.value = 'file';
+        presetSel.dispatchEvent(new Event('change'));
+        toast(`Imported ${r.calendar.name || 'the calendar'}${r.holidays.length ? ` and ${r.holidays.length} holiday${r.holidays.length === 1 ? '' : 's'}` : ''}`);
+      } catch (err) { toast(err.message, true); }
+    }, 'small', 'Start from a calendar exported from another campaign (Settings → Tools → Export calendar), with its holidays and the date it had reached');
     const startWrap = el('div');
     // the Custom preset's months, set on this form: how many there are and each one's length
     let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
@@ -564,13 +582,13 @@
     let customLeap = null;
     /** The preset's calendar, with the custom months, week, leap rule (and seasons spread over the months) when Custom is picked. */
     const presetCal = () => {
-      const c = E.PRESETS[preset].calendar;
+      const c = presets[preset].calendar;
       return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], leap: customLeap && { ...customLeap }, seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
     };
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
-      const p = E.PRESETS[preset], c = tmpCal();
+      const p = presets[preset], c = tmpCal();
       const saved = S.camp; S.camp = { calendar: c, current_shift: 0 }; // datePicker reads cal()
       picker = datePicker(E.toAbs(c, p.start.year, p.start.month, p.start.day));
       S.camp = saved;
@@ -580,11 +598,11 @@
     let seasons;
     const drawSeasons = () => {
       seasons = seasonEditor(tmpCal());
-      const hemi = E.PRESETS[preset].calendar.hemisphere;
+      const hemi = presets[preset].calendar.hemisphere;
       seasonWrap.replaceChildren(el('h3', {}, 'Seasons'),
         ...(hemi ? [el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`)] : []), seasons);
     };
-    const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
+    const homeRegion = () => presets[preset].regions.find(r => r.current) || presets[preset].regions[0];
     const climateWrap = el('div');
     let climateSel;
     const drawClimate = () => {
@@ -678,7 +696,7 @@
     const shiftSel = select([], 0, { name: 'shift' });
     const startShift = field('Starting shift', shiftSel, null, shiftTip({}));
     const drawShifts = () => {
-      const c = { ...E.PRESETS[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
+      const c = { ...presets[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
       const pick = { shifts4: 1, shifts2: 0, hours: Math.min(names.length - 1, Math.round(names.length / 3)) }[modeSel.value];
       shiftSel.replaceChildren(...names.map((n, i) => el('option', { value: i }, n)));
       shiftSel.value = String(pick);
@@ -692,7 +710,8 @@
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
-        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
+        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later, or import a calendar exported from another campaign.'),
+      el('div', { class: 'row' }, importBtn),
       monthsWrap, startWrap,
       field('Time tracking', modeSel, 'You can change this later on the Settings tab.',
         'How each day is split. Four shifts: Dawn, Midday, Dusk and Overnight, about six hours each. Two shifts: Day and Night. Hours: every hour of the day from midnight, like a normal calendar. Weather, light and visibility follow the time of day in every mode, and the travel planner counts in the same steps.'),
@@ -700,7 +719,7 @@
       el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
-      const p = E.PRESETS[preset], v = formData(f);
+      const p = presets[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
           name: v.name, description: v.description, calendar: { ...presetCal(), seasons: seasons.getSeasons(), timeMode: v.time_mode }, settings: { ...p.settings },
@@ -714,10 +733,11 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
+    events: 'Every event in one list: search it and filter it by tag',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -994,6 +1014,7 @@
     const groundNow = d === today() ? grounds[E.mod(nowShift(), spd())] : grounds.filter(Boolean).pop();
     const p = E.fromAbs(c, d);
     const sea = E.season(c, d, region?.settings?.hemisphere);
+    const sun = E.sunTimes(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
 
     const toCalendar = btn(current ? 'Show in calendar' : 'Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
@@ -1024,6 +1045,8 @@
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         groundNow ? el('div', {}, el('span', { class: 'lbl' }, d === today() ? 'Ground now' : 'Ground at day\'s end',
           tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
+        sun ? el('div', { class: 'sun' }, el('span', { class: 'lbl' }, 'Sun', tip('Sunrise and sunset, blended between the times set on the seasons in Settings, and taken from half a year away for regions in the other hemisphere. Natural light at dawn and dusk follows them')),
+          `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null),
@@ -1051,6 +1074,9 @@
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview,
       el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard, remCard);
   }
+
+  /** Hours of daylight as "11h 40m". */
+  const fmtDaylight = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`; };
 
   /** The Current Day tab's banner and the day's shifts (or hours) at a glance. On today it shows the shift the campaign
    * clock is on, large; on any other day, the day's forecast (what the player may see of it). */
@@ -1385,6 +1411,77 @@
       } catch (err) { toast(err.message, true); }
     });
     return f;
+  }
+
+  // ------------------------------------------------------------ events tab
+  /** Every event the member can see in one list, newest or oldest first, narrowed by a search and by tags. */
+  async function viewEvents() {
+    const { events } = await api('events', { query: { cid: S.camp.id } });
+    const st = vs().events || (vs().events = { q: '', tags: new Set(), when: 'all', order: 'asc' });
+    const c = cal(), d0 = today();
+    const end = e => Number(e.end_day ?? e.abs_day);
+    // what the search looks through: title, details, notes, tags and who added it
+    const hay = new Map(events.map(e => [e, [e.title, e.body, ...(e.notes || []), ...(e.tags || []).map(t => t.name), e.author].filter(Boolean).join('\n').toLowerCase()]));
+    const used = tagsOf(events).sort((a, b) => a.name.localeCompare(b.name));
+    for (const k of [...st.tags]) if (!used.some(t => t.name.toLowerCase() === k)) st.tags.delete(k);
+
+    const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles, details, notes and tags', 'aria-label': 'Search events' });
+    const when = select([['all', 'All events'], ['upcoming', 'Today and later'], ['past', 'Before today']], st.when, { 'aria-label': 'When',
+      'data-tip': 'Every event, only those still to come (or running today), or only those already over' });
+    const order = select([['asc', 'Oldest first'], ['desc', 'Newest first']], st.order, { 'aria-label': 'Order' });
+    const tagRow = el('div', { class: 'tagpick' });
+    const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
+    const list = el('div', { class: 'evlist' });
+
+    /** text with each search word wrapped in <mark>, still built from text nodes */
+    const marked = (text, words) => {
+      if (!words.length) return text;
+      const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+      return text.split(re).map((part, i) => (i % 2 ? el('mark', {}, part) : part));
+    };
+    const clip = t => (t.length > 220 ? `${t.slice(0, 219).trimEnd()}…` : t);
+    const row = (e, words) => {
+      const a = Number(e.abs_day), b = end(e);
+      const date = E.fmtDate(c, a, { noWeekday: true }) + (b !== a ? ` → ${E.fmtDate(c, b, { noWeekday: true })}` : '');
+      const state = b < d0 ? 'past' : a > d0 ? 'future' : 'now';
+      const notes = (e.notes || []).length;
+      return el('div', { class: `listrow evrow ${state}` + (Number(e.is_secret) ? ' secret' : '') },
+        el('div', { class: 'evwhen' },
+          el('a', { href: `#/c/${S.camp.id}/day/${a}`, 'data-tip': 'Open this day' }, date),
+          el('div', { class: 'small muted' }, shiftRange(e), state === 'now' ? el('span', { class: 'evnow' }, ' · Today') : null)),
+        el('div', { class: 'evbody' },
+          el('h4', {}, Number(e.is_secret) ? secretTag() : null, el('a', { href: `#/c/${S.camp.id}/day/${a}` }, marked(e.title, words))),
+          e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
+          e.body ? el('p', { class: 'small pre' }, marked(clip(e.body), words)) : null,
+          el('small', { class: 'muted' }, 'Added by ', byline(e), notes ? ` · ${notes} note${notes === 1 ? '' : 's'}` : '')));
+    };
+    const draw = () => {
+      const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = events.filter(e => (st.when === 'all' || (st.when === 'upcoming' ? end(e) >= d0 : end(e) < d0))
+        && (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase())))
+        && words.every(w => hay.get(e).includes(w)));
+      if (st.order === 'desc') shown = shown.slice().reverse();
+      count.textContent = shown.length === events.length ? `${events.length} event${events.length === 1 ? '' : 's'}` : `${shown.length} of ${events.length} events`;
+      list.replaceChildren(...(shown.length ? shown.map(e => row(e, words))
+        : [el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.')]));
+      tagRow.replaceChildren(...used.map(t => {
+        const k = t.name.toLowerCase(), on = st.tags.has(k);
+        const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+          'data-tip': on ? `Showing ${t.name} events. Click to stop filtering by it` : `Show only events tagged ${t.name}`,
+          onclick: () => { on ? st.tags.delete(k) : st.tags.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
+        b.style.setProperty('--tag', t.color);
+        return b;
+      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'link small', 'Show events with any tag, or none')] : []));
+    };
+    search.addEventListener('input', () => { st.q = search.value; draw(); });
+    when.addEventListener('change', () => { st.when = when.value; draw(); });
+    order.addEventListener('change', () => { st.order = order.value; draw(); });
+    draw();
+    mount(...campaignHeader('events'), el('div', { class: 'card' },
+      el('h2', {}, 'Events'),
+      el('div', { class: 'row evfilters' }, search, when, order),
+      used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
+      count, list));
   }
 
   // ------------------------------------------------------------ travel tab
@@ -1788,14 +1885,29 @@
   }
 
   // ------------------------------------------------------------ holidays tab
+  /** "Last", "2nd to last"… for a negative n, "1st", "2nd"… otherwise. */
+  const nthLabel = n => (n === -1 ? 'last' : n < -1 ? `${E.ordinal(-n)} to last` : E.ordinal(n));
+  const hasYear = v => v !== undefined && v !== null && v !== '';
   function describeRule(r) {
     const c = cal(); r = r || {};
     const span = Number(r.span) > 1 ? ` for ${r.span} days` : '';
     const mname = c.months[r.month]?.name || '?';
-    if (r.type === 'fixed') return `Every year: ${r.day} ${mname}${span}`;
-    if (r.type === 'nth_weekday') return `Every year: ${Number(r.n) < 0 ? 'last' : E.ordinal(Number(r.n))} ${c.weekdays[r.weekday] || '?'} of ${mname}${span}`;
+    const every = Math.max(1, Number(r.every_years) || 1);
+    const often = every > 1 ? `Every ${every} years` : 'Every year';
+    // limits: "5 times from 1420", "from 1420 to 1430", "until 1430"
+    const from = hasYear(r.from_year) ? E.yearLabel(c, Number(r.from_year)) : '', until = hasYear(r.until_year) ? E.yearLabel(c, Number(r.until_year)) : '';
+    const limit = [Number(r.times) > 0 ? `${r.times} time${Number(r.times) === 1 ? '' : 's'}` : '',
+      from && until ? `from ${from} to ${until}` : from ? `from ${from}` : until ? `until ${until}` : ''].filter(Boolean).join(' ');
+    const tail = `${span}${limit ? `, ${limit}` : ''}`;
+    if (r.type === 'fixed') return `${often}: ${r.day} ${mname}${tail}`;
+    if (r.type === 'nth_weekday') return `${often}: ${nthLabel(Number(r.n))} ${c.weekdays[r.weekday] || '?'} of ${mname}${tail}`;
     if (r.type === 'once') return `Once: ${E.fmtDate(c, Number(r.abs_day))}${span}`;
-    if (r.type === 'every_n') return `Every ${r.interval} days from ${E.fmtDate(c, Number(r.start), { noWeekday: true })}${span}`;
+    if (r.type === 'every_n') return `Every ${r.interval} days from ${E.fmtDate(c, Number(r.start), { noWeekday: true })}${tail}`;
+    if (r.type === 'moon_phase') {
+      const moon = (c.moons || [])[Number(r.moon) || 0]?.name || '?', ph = (E.MOON_PHASES[Number(r.phase)] || ['?'])[0];
+      const inMonth = hasYear(r.month) && Number(r.month) >= 0 ? ` in ${mname}` : '';
+      return `Every ${ph.toLowerCase()} ${ph === 'New' || ph === 'Full' ? 'moon' : ''} of ${moon}${inMonth}${tail}`.replace(/\s+/g, ' ');
+    }
     return '?';
   }
   function viewHolidays() {
@@ -1811,28 +1923,58 @@
   }
   function holidayForm(x = { rule: { type: 'fixed', month: 0, day: 1, span: 1 }, color: '#b8860b' }) {
     const c = cal(), r = x.rule || {};
+    const fromAbsYear = () => E.fromAbs(c, today()).year;
     // Nth weekday needs weeks; offered on a calendar without any only to keep a rule it already has
     const hasWeeks = c.weekdays.length > 0 || r.type === 'nth_weekday';
-    const type = select([['fixed', 'Same date every year'], ...(hasWeeks ? [['nth_weekday', 'Nth weekday of a month']] : []), ['once', 'One time only'], ['every_n', 'Every N days']], r.type, { name: 'type' });
+    // likewise moon phases need a moon
+    const hasMoons = (c.moons || []).length > 0 || r.type === 'moon_phase';
+    const type = select([['fixed', 'Same date every year'], ...(hasWeeks ? [['nth_weekday', 'Nth weekday of a month']] : []), ['once', 'One time only'], ['every_n', 'Every N days'],
+      ...(hasMoons ? [['moon_phase', 'Moon phase']] : [])], r.type, { name: 'type' });
     const monthSel = select(c.months.map((m, i) => [i, m.name]), r.month ?? 0, { name: 'month' });
+    const moonSel = select((c.moons || []).map((m, i) => [i, m.name]), r.moon ?? 0, { name: 'moon' });
+    const phaseSel = select(E.MOON_PHASES.map(([label, icon], i) => [i, `${icon} ${label}`]), r.phase ?? 4, { name: 'phase' });
+    const moonMonthSel = select([[-1, 'Any month'], ...c.months.map((m, i) => [i, m.name])], r.type === 'moon_phase' && hasYear(r.month) ? r.month : -1, { name: 'moon_month' });
     const dayIn = el('input', { type: 'number', min: 1, name: 'day', value: r.day || 1 });
     const wdSel = select(c.weekdays.map((w, i) => [i, w]), r.weekday ?? 0, { name: 'weekday' });
     // as many as a weekday can fall in the longest month: 5 for a 7-day week, 4 for an 8-day one, more for short weeks
     const maxN = Math.max(1, E.maxWeekdaysInMonth(c), Number(r.n) || 0);
-    const nSel = select([...Array.from({ length: maxN }, (_, i) => [i + 1, E.ordinal(i + 1)]), [-1, 'Last']], r.n ?? 1, { name: 'n' });
+    const nSel = select([...Array.from({ length: maxN }, (_, i) => [i + 1, E.ordinal(i + 1)]), ...Array.from({ length: maxN - 1 }, (_, i) => [-1 - i, nthLabel(-1 - i)[0].toUpperCase() + nthLabel(-1 - i).slice(1)])], r.n ?? 1, { name: 'n' });
+    const everyIn = el('input', { type: 'number', min: 1, name: 'every_years', value: r.every_years || 1 });
+    const limitSel = select([['', 'Forever'], ['years', 'Between two years'], ['times', 'A set number of times']],
+      Number(r.times) > 0 ? 'times' : hasYear(r.from_year) || hasYear(r.until_year) ? 'years' : '', { name: 'limit' });
+    const fromIn = el('input', { type: 'number', name: 'from_year', value: r.from_year ?? '', placeholder: String(fromAbsYear()) });
+    const untilIn = el('input', { type: 'number', name: 'until_year', value: r.until_year ?? '' });
+    const timesIn = el('input', { type: 'number', min: 1, name: 'times', value: r.times || 3 });
     const oncePick = datePicker(r.abs_day ?? today()), startPick = datePicker(r.start ?? today());
     const interval = el('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
     const parts = {
       month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel, `${E.weekLength(c)} days a week`), n: field('Which one', nSel),
       once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval, null, 'Counted in days, ignoring months and years. Good for market days or a comet'),
+      moon: field('Moon', moonSel), phase: field('Phase', phaseSel, null, 'Falls on the one day each cycle when the moon is nearest this phase'), moon_month: field('Only in', moonMonthSel, null, 'Every time the phase comes round, or only when it falls in one month'),
+      every_years: field('Every (years)', everyIn, null, '1 for every year, 4 for every fourth year (counted from the first year, or the calendar\'s first year if that is blank)'),
+      limit: field('Runs', limitSel, null, 'Forever, only between two years, or a set number of times from the first year'),
+      from_year: field('First year', fromIn), until_year: field('Last year', untilIn), times: field('Times', timesIn),
     };
-    const show = { fixed: ['month', 'day'], nth_weekday: ['n', 'weekday', 'month'], once: ['once'], every_n: ['start', 'interval'] };
-    const sync = () => Object.entries(parts).forEach(([k, part]) => (part.style.display = show[type.value].includes(k) ? '' : 'none'));
-    type.addEventListener('change', sync);
+    const show = { fixed: ['month', 'day', 'every_years', 'limit'], nth_weekday: ['n', 'weekday', 'month', 'every_years', 'limit'], once: ['once'], every_n: ['start', 'interval', 'limit'], moon_phase: ['moon', 'phase', 'moon_month', 'limit'] };
+    // moon phases can't count times, and every N days counts from its first occurrence, not a year
+    const limits = { moon_phase: ['', 'years'] };
+    const sync = () => {
+      const t = type.value, on = [...show[t]];
+      [...limitSel.options].forEach(o => (o.hidden = !!limits[t] && !limits[t].includes(o.value)));
+      if (limitSel.selectedOptions[0]?.hidden) limitSel.value = '';
+      if (on.includes('limit')) {
+        if (limitSel.value === 'years') on.push('from_year', 'until_year');
+        if (limitSel.value === 'times') on.push('times', ...(t === 'every_n' ? [] : ['from_year']));
+        if (on.includes('every_years') && Number(everyIn.value) > 1 && !on.includes('from_year')) on.push('from_year');
+      }
+      Object.entries(parts).forEach(([k, part]) => (part.style.display = on.includes(k) ? '' : 'none'));
+    };
+    [type, limitSel].forEach(x => x.addEventListener('change', sync));
+    everyIn.addEventListener('input', sync);
     const f = el('form', { class: 'card' }, el('h3', {}, x.id ? `Edit ${x.name}` : 'New holiday'),
       el('div', { class: 'grid2' },
         field('Name', el('input', { name: 'name', value: x.name || '', required: true })),
-        field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date'),
+        field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date. Moon phase: e.g. every full moon'),
         ...Object.values(parts),
         field('Lasts (days)', el('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
         field('Color', el('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
@@ -1848,6 +1990,20 @@
       if (v.type === 'nth_weekday') Object.assign(rule, { month: Number(v.month), weekday: Number(v.weekday), n: Number(v.n) });
       if (v.type === 'once') rule.abs_day = oncePick.getAbs();
       if (v.type === 'every_n') Object.assign(rule, { start: startPick.getAbs(), interval: Math.max(1, Number(v.interval) || 1) });
+      if (v.type === 'moon_phase') Object.assign(rule, { moon: Number(v.moon), phase: Number(v.phase), ...(Number(v.moon_month) >= 0 ? { month: Number(v.moon_month) } : {}) });
+      if (v.type === 'fixed' || v.type === 'nth_weekday') {
+        const every = Math.max(1, Math.trunc(Number(v.every_years)) || 1);
+        if (every > 1) rule.every_years = every;
+      }
+      if (v.type !== 'once') {
+        const yr = s => (s === '' || !Number.isFinite(Number(s)) ? null : Math.trunc(Number(s)));
+        const from = yr(v.from_year), until = yr(v.until_year);
+        if (v.limit === 'years') Object.assign(rule, from !== null ? { from_year: from } : {}, until !== null ? { until_year: until } : {});
+        if (v.limit === 'times') Object.assign(rule, { times: Math.max(1, Math.trunc(Number(v.times)) || 1) }, v.type !== 'every_n' ? { from_year: from ?? fromAbsYear() } : {});
+        // every N years counts from the first year
+        if (rule.every_years && rule.from_year === undefined && from !== null) rule.from_year = from;
+        if (v.limit === 'years' && from !== null && until !== null && until < from) return toast('The last year is before the first year', true);
+      }
       try {
         await post('holiday_save', { id: x.id, name: v.name, rule, color: v.color, is_secret: v.is_secret, description: v.description }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
@@ -2429,9 +2585,12 @@
   }
 
   // ------------------------------------------------------------ season editor
+  /** A season's sunrise and sunset boxes as saved: both trimmed, or neither when both are blank. */
+  const sunPair = (r, t) => (r.trim() || t.trim() ? { sunrise: r.trim(), sunset: t.trim() } : {});
   const SEASON_LABELS = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', none: 'None (no climate change)' };
   const seasonChip = s => el('span', { class: `season s-${s.type || 'none'}` }, s.name || '—');
-  /** Editable list of seasons (name, climate type, start month & day) with a live month-by-month preview. */
+  /** Editable list of seasons (name, climate type, start month & day, and sunrise and sunset on that day) with a live
+   * month-by-month preview. */
   function seasonEditor(c) {
     const rows = el('div', { class: 'seasonrows' });
     const preview = el('div', { class: 'seasonmap' });
@@ -2441,32 +2600,39 @@
       type: r.querySelector('[data-k=type]').value,
       month: Number(r.querySelector('[data-k=month]').value),
       day: Math.max(1, Number(r.querySelector('[data-k=day]').value) || 1),
+      ...sunPair(r.querySelector('[data-k=sunrise]').value, r.querySelector('[data-k=sunset]').value),
     }));
     const redraw = () => {
       const test = { ...c, seasons: read().filter(s => s.name) };
       let map;
       try { E.prep(test); map = E.monthSeasons(test); } catch { return; }
+      const sunOn = month => { const t = E.sunTimes(test, E.toAbs(test, test.epochYear, month, 1)); return t && `☀ ${E.fmtClock(t.sunrise)}–${E.fmtClock(t.sunset)}`; };
       preview.replaceChildren(el('table', { class: 'tbl' }, el('tbody', {}, map.map(({ month, seasons }) =>
         el('tr', {}, el('td', {}, c.months[month].name), el('td', {}, test.seasons.length
           ? seasons.map(x => el('span', { class: 'seasonseg' }, seasonChip(x), seasons.length > 1 ? ` ${x.from}–${x.to}` : ''))
-          : el('span', { class: 'muted' }, 'No seasons')))))));
+          : el('span', { class: 'muted' }, 'No seasons')),
+          el('td', { class: 'muted small', 'data-tip': `Sunrise and sunset on day 1 of ${c.months[month].name}` }, sunOn(month) || ''))))));
     };
     const addRow = (s = { name: '', type: 'none', month: 0, day: 1 }) => {
       const month = select(monthOpts, s.month, { 'data-k': 'month', 'aria-label': 'Start month' });
       const day = el('input', { type: 'number', min: 1, value: s.day || 1, class: 'w-day', 'data-k': 'day', 'aria-label': 'Start day' });
       const syncMax = () => { const mo = c.months[month.value]; day.max = Number(mo.days) + Number(mo.leapDays || 0); };
       month.addEventListener('change', syncMax); syncMax();
+      const clock = (k, label, tipText) => el('input', { value: s[k] || '', placeholder: k === 'sunrise' ? '06:00' : '18:00', class: 'w-clock', inputmode: 'numeric',
+        'data-k': k, 'aria-label': label, 'data-tip': tipText });
       const row = el('div', { class: 'row seasonrow' },
         el('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
         select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate', 'data-tip': 'Which season\'s weather odds regions use while this season lasts' }),
         month, day,
+        el('span', { class: 'sunpair' }, '☀', clock('sunrise', 'Sunrise', 'Sunrise on this season\'s first day, like 06:30. Leave both blank to skip'), '–',
+          clock('sunset', 'Sunset', 'Sunset on this season\'s first day, like 18:15. Days in between blend towards the next season\'s times')),
         btn('✕', () => { row.remove(); redraw(); }, 'small link', 'Remove this season'));
       rows.append(row);
     };
     (c.seasons || []).forEach(s => addRow(s));
-    const wrap = el('div', { class: 'seasoned' }, el('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
+    const wrap = el('div', { class: 'seasoned' }, el('small', { class: 'muted' }, 'Name · climate · first month and day · sunrise–sunset that day'), rows,
       el('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small', 'Add another season, such as a monsoon or a festival winter'),
-        el('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
+        el('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use. Sunrise and sunset are optional: set them and every day shows its times, blended from one season to the next, and natural light at dawn and dusk follows them.')),
       el('details', { open: true }, el('summary', {}, 'Seasons by month'), preview));
     wrap.addEventListener('input', redraw);
     wrap.addEventListener('change', redraw);
@@ -2474,6 +2640,13 @@
     wrap.getSeasons = () => {
       const list = read();
       if (list.some(s => !s.name)) throw new Error('Every season needs a name');
+      const H = Number(c.hoursPerDay) || 24;
+      for (const s of list) {
+        if (s.sunrise === undefined) continue;
+        const r = E.parseClock(s.sunrise), t = E.parseClock(s.sunset);
+        if (r === null || t === null) throw new Error(`${s.name}: give both sunrise and sunset as times like 06:30, or leave both blank`);
+        if (r > t || t > H) throw new Error(`${s.name}: sunrise has to come before sunset, within a ${H}-hour day`);
+      }
       return list;
     };
     return wrap;
@@ -2617,12 +2790,32 @@
     });
 
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
+    async function importCalendar() {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const name = r.calendar.name || 'the calendar';
+        if (!await confirmDialog(`Replace this campaign's calendar with ${name} from the file? Stored days keep their absolute day numbers.`)) return;
+        // holidays the campaign doesn't have yet, by name
+        const have = new Set(S.holidays.map(h => h.name.toLowerCase()));
+        const fresh = r.holidays.filter(h => !have.has(h.name.toLowerCase()));
+        const addHolidays = fresh.length && await confirmDialog(`Also add the file's ${fresh.length} holiday${fresh.length === 1 ? '' : 's'} this campaign doesn't have (${fresh.map(h => h.name).join(', ')})?`);
+        await post('campaign_update', { calendar: { ...r.calendar, timeMode: E.timeMode(c) } }, S.camp.id);
+        if (addHolidays) for (const h of fresh) await post('holiday_save', h, S.camp.id);
+        await loadCampaign(S.camp.id, true); toast(`Imported ${name}${addHolidays ? ` and ${fresh.length} holiday${fresh.length === 1 ? '' : 's'}` : ''}`); route();
+      } catch (err) { toast(err.message, true); }
+    }
     const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
       el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
         if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
         await post('campaign_update', { calendar: { ...E.PRESETS[presetSel.value].calendar, timeMode: E.timeMode(c) } }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
       }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
+      el('div', { class: 'row' },
+        btn('⬇ Export calendar', () => CalendarFile.download(S.camp, S.holidays), 'small',
+          'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
+        btn('Import calendar…', importCalendar, 'small',
+          'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
       el('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
         if (typed !== 'DELETE') return;
@@ -2743,7 +2936,7 @@
         const viewToday = () => viewDay(today(), true);
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }
