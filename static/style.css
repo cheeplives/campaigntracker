@@ -128,7 +128,10 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .nowtag { font: 600 .65rem var(--body); letter-spacing: .1em; background: var(--accent); color: var(--on-accent); padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
 .secret-tag { font: 600 .68rem var(--body); color: #fff; background: var(--secret); padding: 2px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
 
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+/* Tabs wrap onto a second row rather than hiding Members and Settings off the right edge (iPad portrait, narrow windows).
+ * Phones keep one row that scrolls sideways, which takes less of a small screen. */
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--line); }
+@media (max-width: 560px) { .tabs { flex-wrap: nowrap; overflow-x: auto; } }
 .tabs a { padding: 8px 14px; color: var(--dim); border-bottom: 2px solid transparent; white-space: nowrap; }
 .tabs a.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 

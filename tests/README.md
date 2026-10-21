@@ -2,7 +2,7 @@
 
 Automated checks that Campaign Chronicle behaves the same in **Chromium**
 (Chrome, Edge), **Firefox** and **WebKit** (Safari, and every browser on
-iPhone/iPad), on desktop and phone-sized screens. Set up the same way as
+iPhone/iPad), on desktop, phone and iPad-sized screens. Set up the same way as
 Sinless's suite, with PHP and MySQL added because this app has a server.
 
 They run on GitHub Actions on every push and pull request
@@ -15,6 +15,7 @@ They run on GitHub Actions on every push and pull request
 | `webkit` | WebKit | desktop Safari |
 | `mobile-safari` | WebKit | iPhone 13 (touch, 390px) |
 | `mobile-chrome` | Chromium | Pixel 7 (touch, 412px) |
+| `ipad` | WebKit | iPad, 7th generation (touch, no hover, 810px portrait) |
 
 A failed job uploads a `report-<project>` artifact with the HTML report,
 screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
@@ -106,6 +107,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   and Cancel keeps the item; the light/dark toggle is remembered; a colour theme picked
   from the top bar is remembered and follows the account to a new device; fonts load
   from this site only.
+- **touch**: on a touch screen a tooltip opens on tap and closes on a second
+  tap or a tap elsewhere, while a tap inside a link still follows it; the theme
+  menu closes on a tap or click outside it; every campaign tab is on screen at
+  tablet and desktop widths.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility, travel and star-distance results in the browser as under Node.
 

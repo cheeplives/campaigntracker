@@ -44,8 +44,10 @@ const KIT = (() => {
 
   // ------------------------------------------------------------ tooltips
   // Any element with data-tip shows a tooltip on hover (and on keyboard focus).
-  // The "?" icons from tip() also open on tap, so touch screens can read them,
-  // which a native title attribute never does. One floating box, kept inside the viewport.
+  // Touch screens can't hover, so there a tap opens it instead (a second tap
+  // closes it), except on links and controls, where a tap does what it always
+  // did. The "?" icons from tip() open on tap everywhere. A native title
+  // attribute never shows on touch. One floating box, kept inside the viewport.
   /** A small "?" icon that explains the thing next to it. */
   function tip(text) {
     return el('span', { class: 'tip', tabindex: 0, role: 'button', 'aria-label': text, 'data-tip': text,
@@ -68,14 +70,23 @@ const KIT = (() => {
   function hideTip() { tipEl = null; if (tipBox) tipBox.className = ''; }
   const tipTarget = e => (e.target instanceof Element ? e.target.closest('[data-tip]') : null);
   const canHover = matchMedia('(hover: hover)');
+  const INTERACTIVE = 'a[href], button, input, select, textarea, label, summary, [role=button]';
   document.addEventListener('mouseover', e => {
-    if (!canHover.matches) return; // touch: only the "?" icons open, on tap
+    if (!canHover.matches) return; // touch: tapped open instead, below (pointerup)
     const t = tipTarget(e);
     if (t) { if (t !== tipEl) showTip(t); } else if (tipEl) hideTip();
   });
   document.addEventListener('focusin', e => { const t = tipTarget(e); if (t && t.matches(':focus-visible')) showTip(t); });
   document.addEventListener('focusout', hideTip);
   document.addEventListener('click', e => { if (!tipTarget(e)) hideTip(); });
+  // Touch and pen work from pointer events rather than click: iPad Safari sends no click for a tap
+  // on plain text or background, and a touch-screen laptop reports it can hover even when tapped.
+  document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && !tipTarget(e)) hideTip(); });
+  document.addEventListener('pointerup', e => {
+    if (e.pointerType === 'mouse') return;
+    const t = tipTarget(e);
+    if (t && !t.closest(INTERACTIVE)) { if (t === tipEl) hideTip(); else showTip(t); } else if (t) hideTip();
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
   window.addEventListener('scroll', hideTip, true);
 

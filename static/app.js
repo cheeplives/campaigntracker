@@ -422,7 +422,10 @@
     const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
     const button = el('button', { type: 'button', class: 'scheme-btn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
       el('span', { class: 'scheme-dot', style: { background: cur.dot } }), el('span', { class: 'scheme-name' }, cur.name));
-    const close = () => { list.hidden = true; button.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', close); };
+    let wrap = null;
+    // pointerdown, not click: iPad Safari sends no click for a tap on plain page background
+    const outside = e => { if (!wrap.contains(e.target)) close(); };
+    const close = () => { list.hidden = true; button.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', outside); };
     list.append(...SCHEMES.map(s => el('li', { role: 'none' },
       el('button', { type: 'button', role: 'menuitemradio', class: 'scheme-opt', 'aria-checked': String(s.id === cur.id),
         onclick: () => { close(); applyScheme(s.id, true); renderNav(); } },
@@ -432,10 +435,10 @@
       e.stopPropagation();
       if (!list.hidden) return close();
       list.hidden = false; button.setAttribute('aria-expanded', 'true');
-      document.addEventListener('click', close);
+      document.addEventListener('pointerdown', outside);
     });
     list.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); button.focus(); } });
-    return el('span', { class: 'scheme-pick' }, button, list);
+    return (wrap = el('span', { class: 'scheme-pick' }, button, list));
   }
 
   // ------------------------------------------------------------ sign-in gate / account / admin
