@@ -66,7 +66,13 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   text), Alias, Ignore or Skip (remembered until the page reloads); entries are linked where players read the names
   (aliases too, with the entry's first line on hover), a link opens the entry, Blank Entries lists the new ones, an
   entry quotes where it was found with Add to notes, players write Public notes but never get GM notes, secret entries
-  or the GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own.
+  or the GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own;
+  the Link dialog connects one entry to many with one kind of connection, each page reads it from its own end ("Has
+  resident" / "Resident of"), the same fact made from either end or with the labels typed the other way round is one
+  row, a symmetric kind is kept once, unticking removes, and deleting an entry takes its connections; players never get
+  a GM-only connection, one touching a secret entry, or a label used only by those, can't set GM only and remove only
+  their own; the notes suggest connections (a "Residents:" line suggests the label), and the list searches, filters by
+  connection chips and "Show in list"; renaming a kind changes every page.
 - **eras**: era abbreviations label their years, a restart era counts from 1 and
   a "before" era counts back (the Gregorian preset has no year 0); a GM types eras
   in Settings, the month title uses them and the date picker takes a year in an
