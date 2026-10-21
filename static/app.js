@@ -1740,14 +1740,29 @@
   }
 
   // ------------------------------------------------------------ holidays tab
+  /** "Last", "2nd to last"… for a negative n, "1st", "2nd"… otherwise. */
+  const nthLabel = n => (n === -1 ? 'last' : n < -1 ? `${E.ordinal(-n)} to last` : E.ordinal(n));
+  const hasYear = v => v !== undefined && v !== null && v !== '';
   function describeRule(r) {
     const c = cal(); r = r || {};
     const span = Number(r.span) > 1 ? ` for ${r.span} days` : '';
     const mname = c.months[r.month]?.name || '?';
-    if (r.type === 'fixed') return `Every year: ${r.day} ${mname}${span}`;
-    if (r.type === 'nth_weekday') return `Every year: ${Number(r.n) < 0 ? 'last' : E.ordinal(Number(r.n))} ${c.weekdays[r.weekday] || '?'} of ${mname}${span}`;
+    const every = Math.max(1, Number(r.every_years) || 1);
+    const often = every > 1 ? `Every ${every} years` : 'Every year';
+    // limits: "5 times from 1420", "from 1420 to 1430", "until 1430"
+    const from = hasYear(r.from_year) ? E.yearLabel(c, Number(r.from_year)) : '', until = hasYear(r.until_year) ? E.yearLabel(c, Number(r.until_year)) : '';
+    const limit = [Number(r.times) > 0 ? `${r.times} time${Number(r.times) === 1 ? '' : 's'}` : '',
+      from && until ? `from ${from} to ${until}` : from ? `from ${from}` : until ? `until ${until}` : ''].filter(Boolean).join(' ');
+    const tail = `${span}${limit ? `, ${limit}` : ''}`;
+    if (r.type === 'fixed') return `${often}: ${r.day} ${mname}${tail}`;
+    if (r.type === 'nth_weekday') return `${often}: ${nthLabel(Number(r.n))} ${c.weekdays[r.weekday] || '?'} of ${mname}${tail}`;
     if (r.type === 'once') return `Once: ${E.fmtDate(c, Number(r.abs_day))}${span}`;
-    if (r.type === 'every_n') return `Every ${r.interval} days from ${E.fmtDate(c, Number(r.start), { noWeekday: true })}${span}`;
+    if (r.type === 'every_n') return `Every ${r.interval} days from ${E.fmtDate(c, Number(r.start), { noWeekday: true })}${tail}`;
+    if (r.type === 'moon_phase') {
+      const moon = (c.moons || [])[Number(r.moon) || 0]?.name || '?', ph = (E.MOON_PHASES[Number(r.phase)] || ['?'])[0];
+      const inMonth = hasYear(r.month) && Number(r.month) >= 0 ? ` in ${mname}` : '';
+      return `Every ${ph.toLowerCase()} ${ph === 'New' || ph === 'Full' ? 'moon' : ''} of ${moon}${inMonth}${tail}`.replace(/\s+/g, ' ');
+    }
     return '?';
   }
   function viewHolidays() {
@@ -1763,28 +1778,58 @@
   }
   function holidayForm(x = { rule: { type: 'fixed', month: 0, day: 1, span: 1 }, color: '#b8860b' }) {
     const c = cal(), r = x.rule || {};
+    const fromAbsYear = () => E.fromAbs(c, today()).year;
     // Nth weekday needs weeks; offered on a calendar without any only to keep a rule it already has
     const hasWeeks = c.weekdays.length > 0 || r.type === 'nth_weekday';
-    const type = select([['fixed', 'Same date every year'], ...(hasWeeks ? [['nth_weekday', 'Nth weekday of a month']] : []), ['once', 'One time only'], ['every_n', 'Every N days']], r.type, { name: 'type' });
+    // likewise moon phases need a moon
+    const hasMoons = (c.moons || []).length > 0 || r.type === 'moon_phase';
+    const type = select([['fixed', 'Same date every year'], ...(hasWeeks ? [['nth_weekday', 'Nth weekday of a month']] : []), ['once', 'One time only'], ['every_n', 'Every N days'],
+      ...(hasMoons ? [['moon_phase', 'Moon phase']] : [])], r.type, { name: 'type' });
     const monthSel = select(c.months.map((m, i) => [i, m.name]), r.month ?? 0, { name: 'month' });
+    const moonSel = select((c.moons || []).map((m, i) => [i, m.name]), r.moon ?? 0, { name: 'moon' });
+    const phaseSel = select(E.MOON_PHASES.map(([label, icon], i) => [i, `${icon} ${label}`]), r.phase ?? 4, { name: 'phase' });
+    const moonMonthSel = select([[-1, 'Any month'], ...c.months.map((m, i) => [i, m.name])], r.type === 'moon_phase' && hasYear(r.month) ? r.month : -1, { name: 'moon_month' });
     const dayIn = el('input', { type: 'number', min: 1, name: 'day', value: r.day || 1 });
     const wdSel = select(c.weekdays.map((w, i) => [i, w]), r.weekday ?? 0, { name: 'weekday' });
     // as many as a weekday can fall in the longest month: 5 for a 7-day week, 4 for an 8-day one, more for short weeks
     const maxN = Math.max(1, E.maxWeekdaysInMonth(c), Number(r.n) || 0);
-    const nSel = select([...Array.from({ length: maxN }, (_, i) => [i + 1, E.ordinal(i + 1)]), [-1, 'Last']], r.n ?? 1, { name: 'n' });
+    const nSel = select([...Array.from({ length: maxN }, (_, i) => [i + 1, E.ordinal(i + 1)]), ...Array.from({ length: maxN - 1 }, (_, i) => [-1 - i, nthLabel(-1 - i)[0].toUpperCase() + nthLabel(-1 - i).slice(1)])], r.n ?? 1, { name: 'n' });
+    const everyIn = el('input', { type: 'number', min: 1, name: 'every_years', value: r.every_years || 1 });
+    const limitSel = select([['', 'Forever'], ['years', 'Between two years'], ['times', 'A set number of times']],
+      Number(r.times) > 0 ? 'times' : hasYear(r.from_year) || hasYear(r.until_year) ? 'years' : '', { name: 'limit' });
+    const fromIn = el('input', { type: 'number', name: 'from_year', value: r.from_year ?? '', placeholder: String(fromAbsYear()) });
+    const untilIn = el('input', { type: 'number', name: 'until_year', value: r.until_year ?? '' });
+    const timesIn = el('input', { type: 'number', min: 1, name: 'times', value: r.times || 3 });
     const oncePick = datePicker(r.abs_day ?? today()), startPick = datePicker(r.start ?? today());
     const interval = el('input', { type: 'number', min: 1, name: 'interval', value: r.interval || 30 });
     const parts = {
       month: field('Month', monthSel), day: field('Day', dayIn), weekday: field('Weekday', wdSel, `${E.weekLength(c)} days a week`), n: field('Which one', nSel),
       once: field('Date', oncePick), start: field('First occurrence', startPick), interval: field('Repeat every (days)', interval, null, 'Counted in days, ignoring months and years. Good for market days or a comet'),
+      moon: field('Moon', moonSel), phase: field('Phase', phaseSel, null, 'Falls on the one day each cycle when the moon is nearest this phase'), moon_month: field('Only in', moonMonthSel, null, 'Every time the phase comes round, or only when it falls in one month'),
+      every_years: field('Every (years)', everyIn, null, '1 for every year, 4 for every fourth year (counted from the first year, or the calendar\'s first year if that is blank)'),
+      limit: field('Runs', limitSel, null, 'Forever, only between two years, or a set number of times from the first year'),
+      from_year: field('First year', fromIn), until_year: field('Last year', untilIn), times: field('Times', timesIn),
     };
-    const show = { fixed: ['month', 'day'], nth_weekday: ['n', 'weekday', 'month'], once: ['once'], every_n: ['start', 'interval'] };
-    const sync = () => Object.entries(parts).forEach(([k, part]) => (part.style.display = show[type.value].includes(k) ? '' : 'none'));
-    type.addEventListener('change', sync);
+    const show = { fixed: ['month', 'day', 'every_years', 'limit'], nth_weekday: ['n', 'weekday', 'month', 'every_years', 'limit'], once: ['once'], every_n: ['start', 'interval', 'limit'], moon_phase: ['moon', 'phase', 'moon_month', 'limit'] };
+    // moon phases can't count times, and every N days counts from its first occurrence, not a year
+    const limits = { moon_phase: ['', 'years'] };
+    const sync = () => {
+      const t = type.value, on = [...show[t]];
+      [...limitSel.options].forEach(o => (o.hidden = !!limits[t] && !limits[t].includes(o.value)));
+      if (limitSel.selectedOptions[0]?.hidden) limitSel.value = '';
+      if (on.includes('limit')) {
+        if (limitSel.value === 'years') on.push('from_year', 'until_year');
+        if (limitSel.value === 'times') on.push('times', ...(t === 'every_n' ? [] : ['from_year']));
+        if (on.includes('every_years') && Number(everyIn.value) > 1 && !on.includes('from_year')) on.push('from_year');
+      }
+      Object.entries(parts).forEach(([k, part]) => (part.style.display = on.includes(k) ? '' : 'none'));
+    };
+    [type, limitSel].forEach(x => x.addEventListener('change', sync));
+    everyIn.addEventListener('input', sync);
     const f = el('form', { class: 'card' }, el('h3', {}, x.id ? `Edit ${x.name}` : 'New holiday'),
       el('div', { class: 'grid2' },
         field('Name', el('input', { name: 'name', value: x.name || '', required: true })),
-        field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date'),
+        field('Repeats', type, null, 'Same date: e.g. 1 January every year. Nth weekday: e.g. the last Thursday of November. One time only: a single date. Every N days: a fixed cycle from a first date. Moon phase: e.g. every full moon'),
         ...Object.values(parts),
         field('Lasts (days)', el('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
         field('Color', el('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
@@ -1800,6 +1845,20 @@
       if (v.type === 'nth_weekday') Object.assign(rule, { month: Number(v.month), weekday: Number(v.weekday), n: Number(v.n) });
       if (v.type === 'once') rule.abs_day = oncePick.getAbs();
       if (v.type === 'every_n') Object.assign(rule, { start: startPick.getAbs(), interval: Math.max(1, Number(v.interval) || 1) });
+      if (v.type === 'moon_phase') Object.assign(rule, { moon: Number(v.moon), phase: Number(v.phase), ...(Number(v.moon_month) >= 0 ? { month: Number(v.moon_month) } : {}) });
+      if (v.type === 'fixed' || v.type === 'nth_weekday') {
+        const every = Math.max(1, Math.trunc(Number(v.every_years)) || 1);
+        if (every > 1) rule.every_years = every;
+      }
+      if (v.type !== 'once') {
+        const yr = s => (s === '' || !Number.isFinite(Number(s)) ? null : Math.trunc(Number(s)));
+        const from = yr(v.from_year), until = yr(v.until_year);
+        if (v.limit === 'years') Object.assign(rule, from !== null ? { from_year: from } : {}, until !== null ? { until_year: until } : {});
+        if (v.limit === 'times') Object.assign(rule, { times: Math.max(1, Math.trunc(Number(v.times)) || 1) }, v.type !== 'every_n' ? { from_year: from ?? fromAbsYear() } : {});
+        // every N years counts from the first year
+        if (rule.every_years && rule.from_year === undefined && from !== null) rule.from_year = from;
+        if (v.limit === 'years' && from !== null && until !== null && until < from) return toast('The last year is before the first year', true);
+      }
       try {
         await post('holiday_save', { id: x.id, name: v.name, rule, color: v.color, is_secret: v.is_secret, description: v.description }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();

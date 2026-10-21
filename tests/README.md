@@ -34,6 +34,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **holidays**: the last and Nth-from-last weekday of a month, every Nth year,
+  moon-phase holidays and limited runs (between two years, or N times) fall on
+  the right days; a GM builds them in the holiday form, which shows only the
+  fields each rule needs, and the calendar shows them.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
