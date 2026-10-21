@@ -348,7 +348,8 @@
     let ph = t / cycle;
     if (moon.erratic) ph += 0.18 * Math.sin(d / 7.3) + 0.11 * Math.sin(d / 3.1 + 1.7);
     ph = mod(ph, 1);
-    const illum = (1 - Math.cos(2 * Math.PI * ph)) / 2;
+    // rounded, since Math.cos may differ in the last bit between engines (Firefox and V8 do on Eberron's moons)
+    const illum = Math.round((1 - Math.cos(2 * Math.PI * ph)) / 2 * 1e9) / 1e9;
     const idx = mod(Math.round(ph * 8), 8);
     return { name: moon.name, phase: ph, illum, label: MOON_PHASES[idx][0], icon: MOON_PHASES[idx][1], color: moon.color };
   }
@@ -1083,6 +1084,24 @@
       url: 'https://wellofdaliath.chaosium.com/weather-in-glorantha/' },
     gloranthaGeo: { title: 'Geography of Glorantha', by: 'Glorantha Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Moon Design Publications / Chaosium',
       url: 'https://glorantha.fandom.com/wiki/Geography' },
+    harptos: { title: 'Calendar of Harptos (months, festivals, Shieldmeet, tendays)', by: 'Forgotten Realms Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Wizards of the Coast',
+      url: 'https://forgottenrealms.fandom.com/wiki/Calendar' },
+    selune: { title: 'Selûne (moon): full every 30 days 10½ hours, full at midnight on Hammer 1, 1372 DR', by: 'Forgotten Realms Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Wizards of the Coast',
+      url: 'https://forgottenrealms.fandom.com/wiki/Sel%C3%BBne_(moon)' },
+    galifar: { title: 'Galifar Calendar month pages (months, weekdays and each month’s holidays; e.g. Sypheros)', by: 'Eberron Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Wizards of the Coast',
+      url: 'https://eberron.fandom.com/wiki/Sypheros' },
+    galifarHolidays: { title: 'The Calendar of Khorvaire (holidays of the Sovereign Host, the Silver Flame and the Five Nations)', by: 'LegendKeeper (fan world)', licence: 'Not openly licensed; setting © Wizards of the Coast',
+      url: 'https://www.legendkeeper.com/p/cmo8thuxo0zxs0jk97fcrg8zk/juswys5i' },
+    exandria: { title: 'Calendar of Exandria (months, weekdays, seasons and holidays)', by: 'Critical Role Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Critical Role',
+      url: 'https://criticalrole.fandom.com/wiki/Calendar_of_Exandria' },
+    catha: { title: 'Catha (30 to 40 days to wax and wane)', by: 'Critical Role Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Critical Role',
+      url: 'https://criticalrole.fandom.com/wiki/Catha' },
+    ruidus: { title: 'Ruidus (always full when up, flares at random, a near six-month cycle)', by: 'Critical Role Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Critical Role',
+      url: 'https://criticalrole.fandom.com/wiki/Ruidus' },
+    absalom: { title: 'Absalom Reckoning (months, weekdays, Leap Day every four years)', by: 'PathfinderWiki', licence: 'CC BY-SA 3.0 (wiki text); the setting © Paizo',
+      url: 'https://pathfinderwiki.com/wiki/Absalom_Reckoning' },
+    golarionHolidays: { title: 'Holidays and festivals', by: 'PathfinderWiki', licence: 'CC BY-SA 3.0 (wiki text); the setting © Paizo',
+      url: 'https://pathfinderwiki.com/wiki/Holidays_and_festivals' },
     // rules
     yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
       licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
@@ -1598,6 +1617,229 @@
         { ...gloranthaDay('Argan Argar', '#3b3b5c', 'Dark', 'Harmony', 'Waterday', true), rule: { type: 'fixed', month: 3, day: 9, span: 2 }, description: 'High holy days: Waterday and Clayday of Harmony Week in Dark Season.' },
       ],
       settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+    },
+
+    harptos: {
+      label: 'Forgotten Realms (Calendar of Harptos, Dale Reckoning)',
+      calendar: {
+        // 12 months of three tendays each, with five festival days between months that sit outside the tendays,
+        // and Shieldmeet after Midsummer every fourth year: 365 days, 366 in a Shieldmeet year (harptos).
+        // The days of a tenday have no names, so they are counted (the fourth day of the first tenday of Flamerule).
+        name: 'Calendar of Harptos', epochYear: 1, yearSuffix: 'DR', dateFormat: '{d} {M}, {Y}', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['First day', 'Second day', 'Third day', 'Fourth day', 'Fifth day', 'Sixth day', 'Seventh day', 'Eighth day', 'Ninth day', 'Tenth day'],
+        months: [
+          { name: 'Hammer', days: 30 }, { name: 'Midwinter', days: 1, intercalary: true },
+          { name: 'Alturiak', days: 30 }, { name: 'Ches', days: 30 }, { name: 'Tarsakh', days: 30 },
+          { name: 'Greengrass', days: 1, intercalary: true },
+          { name: 'Mirtul', days: 30 }, { name: 'Kythorn', days: 30 }, { name: 'Flamerule', days: 30 },
+          { name: 'Midsummer', days: 1, intercalary: true }, { name: 'Shieldmeet', days: 0, leapDays: 1, intercalary: true },
+          { name: 'Eleasis', days: 30 }, { name: 'Eleint', days: 30 },
+          { name: 'Highharvestide', days: 1, intercalary: true },
+          { name: 'Marpenoth', days: 30 }, { name: 'Uktar', days: 30 },
+          { name: 'Feast of the Moon', days: 1, intercalary: true },
+          { name: 'Nightal', days: 30 }].map(m => m.intercalary ? m : { ...m, weeks: ['First Tenday', 'Second Tenday', 'Third Tenday'] }),
+        leap: { every: 4, skip: 0, unskip: 0 },
+        // the equinoxes and solstices: Ches 19, Kythorn 20, Eleint 21 and Nightal 20
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 3, day: 19 }, { name: 'Summer', type: 'summer', month: 7, day: 20 },
+          { name: 'Autumn', type: 'autumn', month: 12, day: 21 }, { name: 'Winter', type: 'winter', month: 17, day: 20 }],
+        // Selûne is full every 30 days 10½ hours, 48 times in four years, and was full at midnight on Hammer 1, 1372 DR
+        // (selune): ref is that day (absolute day 500757) less half a cycle
+        moons: [{ name: 'Selûne', cycle: 30.4375, ref: 500741.78125, brightness: 1, color: '#e8e4d8' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1492, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: the Sword Coast as Atlantic Europe, Amn and Tethyr as Spain, Calimshan as North Africa,
+      // the North and the Dalelands as Scandinavia and Poland, Thay and Mulhorand as Anatolia and Egypt.
+      regions: koppenRegions('north', [
+        ['Waterdeep', 'Cfb'], ['Neverwinter & the Sword Coast North', 'Cfb'], ['Neverwinter Wood', 'Cfb', -1],
+        ["Baldur's Gate & the Western Heartlands", 'Cfa'], ['The High Forest', 'Cfb', -1], ['Silver Marches (Silverymoon)', 'Dfb'],
+        ['Icewind Dale', 'ET', 1], ['Spine of the World', 'ET'], ['The Moonshae Isles', 'Cfb'],
+        ['Cormyr (Suzail)', 'Cfb'], ['The Dalelands', 'Dfb'], ['Moonsea (Phlan, Zhentil Keep)', 'Dfb'], ['Sembia', 'Cfa'],
+        ['Anauroch', 'BWk', 1], ['Damara & Vaasa', 'Dfc'], ['Rashemen', 'Dfb'], ['Impiltur', 'Dfb'],
+        ['Aglarond', 'Cfa'], ['Thay', 'BSk'], ['Mulhorand', 'BWh', 1],
+        ['Amn (Athkatla)', 'Csa'], ['Tethyr', 'Csa'], ['Calimshan', 'BSh'], ['Lake of Steam', 'Cfa'],
+        ['The Shaar', 'BSh'], ['Halruaa', 'Cfa'], ['Luiren', 'Am'], ['Chult', 'Af', -2],
+      ]),
+      // the festival days between the months, and Shieldmeet (harptos)
+      holidays: [
+        { name: 'Midwinter', color: '#4a90d9', rule: { type: 'fixed', month: 1, day: 1, span: 1 }, description: 'Deadwinter Day: the festival between Hammer and Alturiak.' },
+        { name: 'Greengrass', color: '#2e8b57', rule: { type: 'fixed', month: 5, day: 1, span: 1 }, description: 'The spring festival between Tarsakh and Mirtul.' },
+        { name: 'Midsummer', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'The summer festival between Flamerule and Eleasis.' },
+        { name: 'Shieldmeet', color: '#b8860b', rule: { type: 'fixed', month: 10, day: 1, span: 1 }, description: 'The day after Midsummer, once every four years: a day of open council and the renewing of pacts.' },
+        { name: 'Highharvestide', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 1, span: 1 }, description: 'The harvest festival between Eleint and Marpenoth.' },
+        { name: 'Feast of the Moon', color: '#7b4fa0', rule: { type: 'fixed', month: 16, day: 1, span: 1 }, description: 'The festival between Uktar and Nightal, when the dead are remembered.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    eberron: {
+      label: 'Eberron (Galifar Calendar, Year of the Kingdom)',
+      calendar: {
+        // 12 months of four weeks: 336 days, exactly 48 weeks, so every month starts on Sul (galifar). No leap years.
+        name: 'Galifar Calendar', epochYear: 1, yearSuffix: 'YK', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Sul', 'Mol', 'Zol', 'Wir', 'Zor', 'Far', 'Sar'],
+        months: ['Zarantyr', 'Olarune', 'Therendor', 'Eyre', 'Dravago', 'Nymm', 'Lharvion', 'Barrakas', 'Rhaan', 'Sypheros', 'Aryth', 'Vult']
+          .map(name => ({ name, days: 28 })),
+        leap: null,
+        // Zarantyr is mid-winter and Vult early winter, so each season opens on the first of its first month
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 2, day: 1 }, { name: 'Summer', type: 'summer', month: 5, day: 1 },
+          { name: 'Autumn', type: 'autumn', month: 8, day: 1 }, { name: 'Winter', type: 'winter', month: 11, day: 1 }],
+        // the twelve moons, each named for the month it is closest in; the setting gives no cycles, so they are
+        // the app's own: Zarantyr, the nearest, every 28 days, and each farther moon a week slower
+        moons: [
+          ['Zarantyr', '#f2f2f2'], ['Olarune', '#f0a95c'], ['Therendor', '#c9c9c9'], ['Eyre', '#d9d9d9'], ['Dravago', '#c8a2c8'], ['Nymm', '#f5d76e'],
+          ['Lharvion', '#f4f1e0'], ['Barrakas', '#bfc7d1'], ['Rhaan', '#a9c4e8'], ['Sypheros', '#7a7a7a'], ['Aryth', '#e0857a'], ['Vult', '#a8a8a8'],
+        ].map(([name, color], i) => ({ name, cycle: 28 + 7 * i, ref: 0, brightness: i ? 0.5 : 1, color })),
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 998, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: the Five Nations as temperate Europe with Karrnath colder, Q'barra and Xen'drik as jungle,
+      // Talenta as steppe, the Demon Wastes as cold desert. The Mournland's weather is magical; it is given Cyre's old climate.
+      regions: koppenRegions('north', [
+        ['Breland (Sharn, Wroat)', 'Cfb'], ['Aundair (Fairhaven)', 'Cfb'], ['Thrane (Flamekeep)', 'Cfb'], ['Karrnath (Korth)', 'Dfb'],
+        ['The Mournland', 'Cfb', 1], ['Zilargo', 'Cfa'], ['Darguun', 'Cfa'], ['Droaam', 'Csb'], ['The Shadow Marches', 'Cfa', -1],
+        ['The Eldeen Reaches', 'Cfb', -1], ['The Talenta Plains', 'BSk'], ['Valenar', 'BSh'], ['The Mror Holds', 'Dfc'],
+        ['Lhazaar Principalities', 'Cfb'], ["Q'barra", 'Af', -2], ['The Demon Wastes', 'BWk', 1], ['The Frostfell', 'EF', 1],
+        ["Xen'drik", 'Af', -2], ['Aerenal', 'Am', -1], ['Sarlona (Riedra)', 'Dwa'], ['Argonnessen', 'Aw'],
+      ]),
+      // the Sovereign Host's and the Silver Flame's high holy days, and the Five Nations' secular days (galifarHolidays)
+      holidays: [
+        { name: 'Crystalfall', color: '#9aa7b4', rule: { type: 'fixed', month: 1, day: 9, span: 1 }, description: 'Sharn remembers the ice that brought down the Glass Tower.' },
+        { name: 'Bright Souls\' Day', color: '#d9a441', rule: { type: 'fixed', month: 1, day: 18, span: 1 }, description: 'Silver Flame: honours the faithful who gave their lives.' },
+        { name: 'The Day of Mourning', color: '#6b6b6b', rule: { type: 'fixed', month: 1, day: 20, span: 1 }, description: 'The day Cyre became the Mournland, in 994 YK.' },
+        { name: 'Sun\'s Blessing', color: '#d9a441', rule: { type: 'fixed', month: 2, day: 15, span: 1 }, description: 'Sovereign Host: Dol Arrah. A day of peace.' },
+        { name: 'Aureon\'s Crown', color: '#4b6b8b', rule: { type: 'fixed', month: 4, day: 26, span: 1 }, description: 'Sovereign Host: Aureon. Lectures and graduations.' },
+        { name: 'Brightblade', color: '#8b3a3a', rule: { type: 'fixed', month: 5, day: 12, span: 1 }, description: 'Sovereign Host: Dol Dorn. Contests of arms.' },
+        { name: 'First Dawn', color: '#d9a441', rule: { type: 'fixed', month: 5, day: 21, span: 1 }, description: 'Silver Flame (Thrane): the founding of the theocracy.' },
+        { name: 'Silvertide', color: '#d9a441', rule: { type: 'fixed', month: 6, day: 14, span: 1 }, description: 'Silver Flame: its holiest day, the binding of the Lords of Dust.' },
+        { name: 'The Hunt', color: '#2e8b57', rule: { type: 'fixed', month: 7, day: 4, span: 1 }, description: 'Sovereign Host: Balinor.' },
+        { name: 'Boldrei\'s Feast', color: '#c0632b', rule: { type: 'fixed', month: 8, day: 9, span: 1 }, description: 'Sovereign Host: Boldrei. A feast of community.' },
+        { name: 'The Ascension', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'Silver Flame: Tira Miron\'s sacrifice.' },
+        { name: 'Wildnight', color: '#7b4fa0', rule: { type: 'fixed', month: 9, day: 18, span: 2 }, description: 'The Fury\'s nights, when tempers run hot.' },
+        { name: 'Thronehold', color: '#4a90d9', rule: { type: 'fixed', month: 10, day: 11, span: 1 }, description: 'The Treaty of Thronehold that ended the Last War, 996 YK.' },
+        { name: 'Long Shadows', color: '#3b3b5c', rule: { type: 'fixed', month: 11, day: 26, span: 3 }, description: 'The Shadow\'s nights at the year\'s end.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    exandria: {
+      label: 'Exandria (Critical Role, Post-Divergence)',
+      calendar: {
+        // 11 months of 27 to 32 days, 328 days with no leap years, and a seven-day week (exandria).
+        name: 'Exandrian calendar', epochYear: 0, yearSuffix: 'P.D.', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Miresen', 'Grissen', 'Whelsen', 'Conthsen', 'Folsen', 'Yulisen', "Da'leysen"],
+        months: [
+          { name: 'Horisal', days: 29 }, { name: 'Misuthar', days: 30 }, { name: 'Dualahei', days: 30 }, { name: 'Thunsheer', days: 31 },
+          { name: 'Unndilar', days: 28 }, { name: 'Brussendar', days: 31 }, { name: 'Sydenstar', days: 32 }, { name: 'Fessuran', days: 29 },
+          { name: "Quen'pillar", days: 27 }, { name: 'Cuersaar', days: 29 }, { name: 'Duscar', days: 32 }],
+        leap: null,
+        // the Northern Hemisphere's seasons: Dualahei 13, Unndilar 26, Fessuran 3 and Duscar 2
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 2, day: 13 }, { name: 'Summer', type: 'summer', month: 4, day: 26 },
+          { name: 'Autumn', type: 'autumn', month: 7, day: 3 }, { name: 'Winter', type: 'winter', month: 10, day: 2 }],
+        // Catha waxes and wanes over 30 to 40 days (catha); Ruidus shows full whenever it is up, flares at random and
+        // circles in about six months (ruidus). The exact cycles are the app's choice.
+        moons: [
+          { name: 'Catha', cycle: 33, ref: 0, brightness: 1, color: '#e8e4d8' },
+          { name: 'Ruidus', cycle: 164, ref: 0, brightness: 0.3, color: '#a33a2a', erratic: true }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 835, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: Tal'Dorei and the Dwendalian Empire as temperate Europe, the Menagerie Coast as the
+      // Mediterranean, Eiselcross as the polar north, Marquet as North Africa and Arabia.
+      regions: koppenRegions('north', [
+        ['Emon & the Kingsbrook', 'Cfb'], ['Westruun & the Dividing Plains', 'Dfa'], ['Whitestone', 'Dfb'], ['Stilben', 'Cfa'],
+        ['Kymal', 'BSk'], ['The Cliffkeep Mountains', 'Dfc'], ['The Alabaster Sierras', 'ET'], ['Rifenmist Peninsula', 'Cfb'],
+        ['Ashkeeper Peaks', 'BSk'], ['The Verdant Expanse', 'Cfa', -2], ['Rexxentrum', 'Dfb'], ['Zadash & the Marrow Valley', 'Cfb'],
+        ['Trostenwald', 'Cfb'], ['The Greying Wildlands', 'Dfc'], ['Nicodranas & the Menagerie Coast', 'Csa'], ['Port Damali', 'Csa'],
+        ['Xhorhas (Rosohna)', 'Dfb'], ['The Barbed Fields', 'BSk'], ['Eiselcross', 'ET', 1], ['Issylra (Vasselheim)', 'Dfb'],
+        ['Marquet (Ank\'Harel)', 'BWh', 1], ['The Hellcatch Valley', 'BWh', 1], ['The Lucidian Coast', 'Af', -2],
+      ]),
+      // the holy days of the Prime Deities and the common holidays (exandria)
+      holidays: [
+        { name: 'New Dawn', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 }, description: 'Avandra, the Changebringer. The first day of the new year.' },
+        { name: 'Hillsgold', color: '#b8860b', rule: { type: 'fixed', month: 0, day: 27, span: 1 } },
+        { name: 'Day of Challenging', color: '#8b3a3a', rule: { type: 'fixed', month: 1, day: 7, span: 1 }, description: 'Kord, the Stormlord.' },
+        { name: 'Renewal Festival', color: '#2e8b57', rule: { type: 'fixed', month: 2, day: 13, span: 1 }, description: 'The first day of spring.' },
+        { name: 'Wild\'s Grandeur', color: '#2e8b57', rule: { type: 'fixed', month: 2, day: 20, span: 1 }, description: 'Melora, the Wildmother.' },
+        { name: 'Harvest\'s Rise', color: '#c0632b', rule: { type: 'fixed', month: 3, day: 11, span: 1 } },
+        { name: 'Merryfrond\'s Day', color: '#2e8b57', rule: { type: 'fixed', month: 3, day: 31, span: 1 } },
+        { name: 'Deep Solace', color: '#8b5a2b', rule: { type: 'fixed', month: 4, day: 18, span: 1 }, description: 'Moradin, the All-Hammer.' },
+        { name: 'Artisan\'s Faire', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 15, span: 1 } },
+        { name: 'Elvendawn (Midsummer)', color: '#9fd27a', rule: { type: 'fixed', month: 5, day: 20, span: 1 }, description: 'Corellon, the Arch Heart.' },
+        { name: 'Morn of Largesse', color: '#b8860b', rule: { type: 'fixed', month: 6, day: 14, span: 1 } },
+        { name: 'Highsummer', color: '#d9a441', rule: { type: 'fixed', month: 6, day: 15, span: 1 }, description: 'Pelor, the Dawnfather.' },
+        { name: 'Harvest\'s Close', color: '#c0632b', rule: { type: 'fixed', month: 7, day: 3, span: 1 } },
+        { name: 'Hazel Festival', color: '#8b5a2b', rule: { type: 'fixed', month: 8, day: 10, span: 1 } },
+        { name: 'Civilization\'s Dawn', color: '#4b6b8b', rule: { type: 'fixed', month: 8, day: 22, span: 1 }, description: 'Erathis, the Lawbearer.' },
+        { name: 'Night of Ascension', color: '#3b3b5c', rule: { type: 'fixed', month: 9, day: 13, span: 1 }, description: 'The Raven Queen.' },
+        { name: 'Zan\'s Cup', color: '#c0632b', rule: { type: 'fixed', month: 9, day: 21, span: 1 } },
+        { name: 'Barren Eve', color: '#6b6b6b', rule: { type: 'fixed', month: 10, day: 2, span: 1 } },
+        { name: 'Bahamut\'s day of remembrance', color: '#9aa7b4', rule: { type: 'fixed', month: 10, day: 5, span: 1 }, description: 'Bahamut, the Platinum Dragon.' },
+        { name: 'Day of Heart and Hearth', color: '#c0632b', rule: { type: 'fixed', month: 10, day: 16, span: 1 } },
+        { name: 'Winter\'s Crest', color: '#4a90d9', rule: { type: 'fixed', month: 10, day: 20, span: 1 } },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    golarion: {
+      label: 'Golarion (Pathfinder, Absalom Reckoning)',
+      calendar: {
+        // Gregorian-length months and Leap Day at the end of Calistril every fourth year, with no century rule
+        // (4724 AR was a leap year; absalom). Weekdays line up with the real year 2700 years earlier, so
+        // 1 Abadius 4725 AR is a Wealday as 1 January 2025 was a Wednesday.
+        name: 'Absalom Reckoning', epochYear: 1, yearSuffix: 'AR', weekdayOffset: 5, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Moonday', 'Toilday', 'Wealday', 'Oathday', 'Fireday', 'Starday', 'Sunday'],
+        months: [
+          { name: 'Abadius', days: 31 }, { name: 'Calistril', days: 28, leapDays: 1 }, { name: 'Pharast', days: 31 },
+          { name: 'Gozran', days: 30 }, { name: 'Desnus', days: 31 }, { name: 'Sarenith', days: 30 },
+          { name: 'Erastus', days: 31 }, { name: 'Arodus', days: 31 }, { name: 'Rova', days: 30 },
+          { name: 'Lamashan', days: 31 }, { name: 'Neth', days: 30 }, { name: 'Kuthona', days: 31 }],
+        leap: { every: 4, skip: 0, unskip: 0 },
+        // the Inner Sea's seasons are Earth's: equinoxes and solstices in Pharast, Sarenith, Rova and Kuthona, on the usual days
+        seasons: GREGORIAN_SEASONS.north,
+        // Somal, given Earth's moon's mean synodic month; the starting phase is the app's choice
+        moons: [{ name: 'Somal', cycle: 29.530588, ref: 0, brightness: 1, color: '#e8e4d8' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 4725, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: the Inner Sea as the Mediterranean, Varisia and Ustalav as northern Europe, Osirion and
+      // Qadira as Egypt and Arabia, the Mwangi Expanse as the Congo. Irrisen's winter is magical, so it is given tundra.
+      regions: koppenRegions('north', [
+        ['Absalom & the Isle of Kortos', 'Csa'], ['Andoran', 'Cfa'], ['Cheliax (Westcrown, Egorian)', 'Csa'], ['Taldor (Oppara)', 'Csa'],
+        ['Varisia: Magnimar & the Lost Coast', 'Csb'], ['Varisia: Korvosa & the Cinderlands', 'Cfb'], ['Isger & Druma', 'Cfb'], ['Galt', 'Cfb'],
+        ['Nirmathas & the Fangwood', 'Dfb', -1], ['Molthune', 'Dfb'], ['Lastwall & the Gravelands', 'Dfb'], ['Ustalav', 'Dfb'],
+        ['Brevoy & the River Kingdoms', 'Dfb'], ['Numeria', 'BSk'], ['Mendev', 'Dfc'], ['Sarkoris Scar', 'Dfc'],
+        ['Irrisen', 'ET', 1], ['Realm of the Mammoth Lords', 'ET'], ['Lands of the Linnorm Kings', 'Dfc'], ['Crown of the World', 'EF', 1],
+        ['Nidal', 'Dfb'], ['Belkzen (Hold of Belkzen)', 'BSk'], ['Qadira', 'BWh', 1], ['Osirion (Sothis)', 'BWh', 1],
+        ['Thuvia & Rahadoum', 'BWh', 1], ['Katapesh', 'BSh'], ['Nex', 'BSh'], ['Geb', 'BWk'],
+        ['The Mwangi Expanse', 'Af', -2], ['Vidrian & the Shackles', 'Am'], ['Minkai (Tian Xia)', 'Cfa'],
+      ]),
+      // the best known of the Inner Sea's holidays (golarionHolidays); the equinox and solstice ones take the seasons' days
+      holidays: [
+        { name: 'Foundation Day', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 }, description: 'Absalom and Milani: Aroden founds the city. The first day of the year.' },
+        { name: 'Day of Bones', color: '#6b6b6b', rule: { type: 'fixed', month: 2, day: 5, span: 1 }, description: 'Pharasma: the recently dead are paraded, then buried free.' },
+        { name: 'Old-Mage Day', color: '#4b6b8b', rule: { type: 'fixed', month: 4, day: 13, span: 1 }, description: 'Nantambu: Old-Mage Jatembe, father of Garundi magic.' },
+        { name: 'Breaching Festival', color: '#7b4fa0', rule: { type: 'nth_weekday', month: 4, weekday: 6, n: -1, span: 1 }, description: 'Korvosa, the last Sunday of Desnus: contestants try to break the Acadamae\'s wards.' },
+        { name: 'Burning Blades', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 10, span: 1 }, description: 'Sarenrae: dances with flaming blades.' },
+        { name: 'Sunwrought Festival', color: '#d9a441', rule: { type: 'fixed', month: 5, day: 21, span: 1 }, description: 'Sarenrae and Brigh, at the summer solstice: Sarenrae\'s defeat of Rovagug, with kites and fireworks.' },
+        { name: 'Crusader Memorial Day', color: '#8b3a3a', rule: { type: 'fixed', month: 7, day: 6, span: 1 }, description: 'Mendev: the crusades against the Worldwound.' },
+        { name: 'Armasse', color: '#b8860b', rule: { type: 'fixed', month: 7, day: 16, span: 1 }, description: 'Aroden, Iomedae and Milani: commoners train to fight.' },
+        { name: 'Swallowtail Festival', color: '#9fd27a', rule: { type: 'fixed', month: 8, day: 22, span: 1 }, description: 'Desna, at the autumn equinox: stories, feasting and butterflies released.' },
+        { name: 'Ascendance Day', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 6, span: 1 }, description: 'Iomedae\'s ascension through the Test of the Starstone.' },
+        { name: 'Kraken Carnival', color: '#4a90d9', rule: { type: 'fixed', month: 9, day: 15, span: 1 }, description: 'Absalom: kite battles.' },
+        { name: 'Seven Veils', color: '#c8a2c8', rule: { type: 'fixed', month: 10, day: 7, span: 1 }, description: 'Sivanah: masquerades celebrating unity among ancestries.' },
+        { name: 'Abjurant Day', color: '#4b6b8b', rule: { type: 'fixed', month: 10, day: 8, span: 1 }, description: 'Nethys: defences strengthened and magic taught to children.' },
+        { name: 'Crystalhue', color: '#c8a2c8', rule: { type: 'fixed', month: 11, day: 21, span: 1 }, description: 'Shelyn, at the winter solstice: art and courtship.' },
+        { name: 'Night of the Pale', color: '#3b3b5c', rule: { type: 'fixed', month: 11, day: 31, span: 1 }, description: 'The year\'s last night, when the ghosts of the year\'s dead pass by.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
     },
 
     shipclock: {

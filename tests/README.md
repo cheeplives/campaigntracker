@@ -34,6 +34,13 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,
+  festival days outside them, Shieldmeet every fourth year and Selûne's known
+  full moons; Eberron's months all start on Sul, with its twelve moons and
+  holidays; Exandria's 328-day year, seasons and holy days; Golarion's Leap
+  Day, real-world-aligned weekdays and the last-Sunday Breaching Festival;
+  every setting region has a Köppen climate; a GM starts a Forgotten Realms
+  campaign with its holidays and regions, and About & sources cites all four.
 - **holidays**: the last and Nth-from-last weekday of a month, every Nth year,
   moon-phase holidays and limited runs (between two years, or N times) fall on
   the right days; a GM builds them in the holiday form, which shows only the
