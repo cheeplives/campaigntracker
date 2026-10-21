@@ -174,15 +174,16 @@
 
   /** Fetch stored day rows in [from, to] (chunked). Returns Map(abs_day -> row) plus shifts & events. */
   async function fetchRange(from, to) {
-    const days = new Map(), shifts = [], events = [];
+    const days = new Map(), shifts = [], events = [], notes = new Map();
     for (let a = from; a <= to; a += 1500) {
       const b = Math.min(to, a + 1499);
       const r = await api('days', { query: { cid: S.camp.id, from: a, to: b } });
       r.days.forEach(d => days.set(d.abs_day, d));
       shifts.push(...r.shifts);
+      (r.notes || []).forEach(n => notes.set(n.abs_day, n));
       for (const e of r.events) if (!events.some(x => x.id === e.id)) events.push(e);
     }
-    return { days, shifts, events };
+    return { days, shifts, events, notes };
   }
 
   /** GM only: generate and store weather for days in [from, to] that don't have any yet. */
@@ -820,13 +821,22 @@
     return out;
   }
 
+  /** Note previews for the calendar views: day notes, GM notes (GMs only) and shift notes, as the server allowed them. */
+  const noteWho = n => n.kind === 'gm' ? 'GM notes 🔒' : n.kind === 'day' ? 'Day notes' : `${shiftNames()[n.shift] ?? 'Shift'}${n.author ? ` · ${n.author}` : ''}`;
+  function notesTip(np) {
+    const more = np.count - np.items.length;
+    return np.items.map(n => `${noteWho(n)}: ${n.text}`).join('\n\n') + (more > 0 ? `\n\n+${more} more. Open the day to read them` : '');
+  }
+  const notePreview = (n, cls = 'dc-note') => el('div', { class: cls + (n.kind === 'gm' ? ' secret' : '') },
+    el('span', { class: 'np-icon' }, n.kind === 'gm' ? '🔒 ' : '📝 '), el('span', { class: 'np-text' }, n.text));
+
   const dayReminders = d => S.reminders.filter(x => Math.floor(x.due_shift / spd()) === d);
   const reminderTip = rs => rs.map(x => `🔔 ${shiftNames()[E.mod(x.due_shift, spd())]}: ${x.title}`).join('\n');
   const evLine = e => el('div', { class: 'evline' + (Number(e.is_secret) ? ' secret' : ''), 'data-tip': Number(e.is_secret) ? 'Secret event: only GMs can see it' : null },
     Number(e.is_secret) ? '🔒 ' : el('span', { class: 'evdot', style: e.tags?.length ? { color: e.tags[0].color } : null }, '● '), e.title);
   function dayCell(d, data, compact) {
     const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
-    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d), rems = dayReminders(d);
+    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d), rems = dayReminders(d), np = data.notes.get(d);
     const w = row?.weather, def = w ? E.WEATHER[w.type] : null;
     const cls = ['daycell'];
     if (d === today()) cls.push('today');
@@ -841,7 +851,8 @@
       hol.map(x => el('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
       evs.slice(0, 3).map(evLine),
       evs.length > 3 ? el('div', { class: 'muted small', 'data-tip': evs.slice(3).map(e => e.title).join('\n') }, `+${evs.length - 3} more`) : null,
-      row?.has_notes ? el('div', { class: 'muted small', 'data-tip': 'This day has notes. Open it to read them' }, '📝') : null);
+      np ? el('div', { class: 'dc-notes', 'data-tip': notesTip(np) }, notePreview(np.items[0]),
+        np.count > 1 ? el('div', { class: 'muted small dc-notes-more' }, `+${np.count - 1} more note${np.count > 2 ? 's' : ''}`) : null) : null);
   }
 
   function monthGrid(from, to, data) {
@@ -867,17 +878,23 @@
       const row = data.days.get(d), w = row?.weather, sh = dayShifts(data, d);
       const reg = regionById(row?.region_id) || currentRegion(), sws = shiftWx(d, reg, w);
       const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d);
+      const np = data.notes.get(d), dayNotes = np?.items.filter(n => n.kind !== 'shift') || [];
+      const shiftNotesOf = i => np?.items.filter(n => n.kind === 'shift' && n.shift === i) || [];
+      const hidden = np ? np.count - np.items.length : 0;
       rows.push(el('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
         el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
           hol.map(holidayChip), tagsOf(evs).map(tagChip), evs.map(evLine),
-          dayReminders(d).map(x => el('div', { class: 'evline reminder', 'data-tip': reminderTip([x]) }, '🔔 ', x.title))),
-        el('div', { class: 'wr-shifts', style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : {} }, slots.filter(i => !hourMode() || sh[i]?.activity || d * spd() + i === nowShift()).map(i => {
+          dayReminders(d).map(x => el('div', { class: 'evline reminder', 'data-tip': reminderTip([x]) }, '🔔 ', x.title)),
+          dayNotes.map(n => el('div', { 'data-tip': `${noteWho(n)}: ${n.text}` }, notePreview(n, 'wr-note'))),
+          hidden > 0 ? el('div', { class: 'muted small', 'data-tip': 'Open the day to read them' }, `+${hidden} more note${hidden > 1 ? 's' : ''}`) : null),
+        el('div', { class: 'wr-shifts', style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : {} }, slots.filter(i => !hourMode() || sh[i]?.activity || shiftNotesOf(i).length || d * spd() + i === nowShift()).map(i => {
           const s = sh[i] || {};
           const sw = sws[i] || null, v = E.visibility(c, reg, sw, d, i, s.visibility_override);
           const isNow = d * spd() + i === nowShift();
           return el('div', { class: 'shiftbox' + (isNow ? ' now' : ''), 'data-tip': isNow ? `This is the current ${word()}` : null },
             el('div', { class: 'sb-head' }, el('span', {}, names[i], sw ? el('span', { class: 'sb-wx', 'data-tip': E.weatherLabel(sw, tempUnit()) + wxTip(sw) }, ` ${E.WEATHER[sw.type]?.icon || ''}`) : null), visPill(v)),
-            el('div', { class: 'sb-act' }, s.activity || el('span', { class: 'muted' }, '—')));
+            el('div', { class: 'sb-act' }, s.activity || el('span', { class: 'muted' }, '—')),
+            shiftNotesOf(i).map(n => el('div', { 'data-tip': `${noteWho(n)}: ${n.text}` }, notePreview(n, 'wr-note'))));
         }))));
     }
     return el('div', { class: 'weeklist' }, rows);
