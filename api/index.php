@@ -158,6 +158,11 @@ function dawn_first(int $cid): void {
     }
 }
 
+/** A holiday's colour as sent, or the default gold when it isn't a #hex colour. */
+function holiday_color($v): string {
+    return is_string($v) && preg_match('/^#[0-9a-fA-F]{3,8}$/', $v) ? $v : '#b8860b';
+}
+
 function campaign_row(int $cid): array {
     $st = db()->prepare('SELECT * FROM campaigns WHERE id=?');
     $st->execute([$cid]);
@@ -596,8 +601,11 @@ try {
         $camp = [
             'id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'],
             'calendar' => dec($c['calendar_json']), 'settings' => (object)(dec($c['settings_json']) ?: []),
-            'current_shift' => (int)$c['current_shift'], 'seed' => (int)$c['seed'], 'changed' => (string)$c['updated_at'],
+            'current_shift' => (int)$c['current_shift'], 'changed' => (string)$c['updated_at'],
         ];
+        // The weather engine rolls every future day from the seed, so a player who may not see future weather
+        // doesn't get it: their page uses the shifts the GM's browser saves with each day's weather instead.
+        if ($isGm || !empty((dec($c['settings_json']) ?: [])['players_see_future_weather'])) $camp['seed'] = (int)$c['seed'];
         $st = db()->prepare('SELECT id, name, settings_json, description FROM regions WHERE campaign_id=? ORDER BY name');
         $st->execute([$cid]);
         $regions = array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'settings' => (object)(dec($r['settings_json']) ?: []), 'description' => $r['description']], $st->fetchAll());
@@ -642,7 +650,7 @@ try {
         }
         foreach ((array)p('holidays', []) as $h) {
             $pdo->prepare('INSERT INTO holidays (campaign_id, name, rule_json, description, color, is_secret) VALUES (?,?,?,?,?,?)')
-                ->execute([$cid, str_in($h['name'] ?? 'Holiday', 150, false), json_in($h['rule'] ?? []), str_in($h['description'] ?? null, 5000), str_in($h['color'] ?? '#b8860b', 16, false), !empty($h['is_secret']) ? 1 : 0]);
+                ->execute([$cid, str_in($h['name'] ?? 'Holiday', 150, false), json_in($h['rule'] ?? []), str_in($h['description'] ?? null, 5000), holiday_color($h['color'] ?? null), !empty($h['is_secret']) ? 1 : 0]);
         }
         $pdo->commit();
         out(['ok' => true, 'id' => $cid]);
@@ -686,9 +694,14 @@ try {
     case 'member_candidates':
         // Approved accounts not yet in this campaign, for the GM's member picker. GMs only: it lists emails.
         $cid = cid(); need_gm($cid);
+        // Only a site admin sees their emails: any approved user can start a campaign and be its GM, so the
+        // rest get names, and add someone without a name by typing their sign-in email.
         $st = db()->prepare("SELECT id, email, display_name FROM users WHERE status='approved' AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?) ORDER BY display_name = '', display_name, email");
         $st->execute([$cid]);
-        out(['users' => $st->fetchAll()]);
+        $users = $st->fetchAll();
+        if (!me()['is_admin']) $users = array_values(array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']],
+            array_filter($users, fn($x) => trim((string)$x['display_name']) !== '')));
+        out(['users' => $users]);
 
     case 'member_add':
         $cid = cid(); need_gm($cid);
@@ -752,9 +765,7 @@ try {
     case 'holiday_save':
         $cid = cid(); need_gm($cid);
         $id = p('id') ? int_in(p('id'), 1) : null;
-        $color = (string)str_in(p('color', '#b8860b'), 16, false);
-        if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $color)) $color = '#b8860b';
-        $args = [str_in(p('name'), 150, false), json_in(p('rule', [])), str_in(p('description'), 5000), $color, p('is_secret') ? 1 : 0];
+        $args = [str_in(p('name'), 150, false), json_in(p('rule', [])), str_in(p('description'), 5000), holiday_color(p('color')), p('is_secret') ? 1 : 0];
         if ($id) {
             db()->prepare('UPDATE holidays SET name=?, rule_json=?, description=?, color=?, is_secret=? WHERE id=? AND campaign_id=?')->execute([...$args, $id, $cid]);
         } else {
@@ -973,14 +984,15 @@ try {
         $u = me();
         $settings = campaign_settings($cid);
         $id = p('id') ? int_in(p('id'), 1) : null;
-        if ($role !== 'gm') {
-            if (empty($settings['players_can_add_events'])) fail('Only the GM can add events in this campaign', 403);
-            if ($id) {
-                $st = db()->prepare('SELECT created_by, is_secret FROM events WHERE id=? AND campaign_id=?');
-                $st->execute([$id, $cid]);
-                $e = $st->fetch();
-                if (!$e || (int)$e['created_by'] !== $u['id']) fail('You can only edit events you created', 403);
-            }
+        if ($role !== 'gm' && empty($settings['players_can_add_events'])) fail('Only the GM can add events in this campaign', 403);
+        $old = null;
+        if ($id) {
+            // the event must be this campaign's, or its tags (saved below by event id) would be another campaign's
+            $st = db()->prepare('SELECT created_by, is_secret FROM events WHERE id=? AND campaign_id=?');
+            $st->execute([$id, $cid]);
+            $old = $st->fetch();
+            if (!$old) fail('Event not found', 404);
+            if ($role !== 'gm' && (int)$old['created_by'] !== $u['id']) fail('You can only edit events you created', 403);
         }
         $ad = int_in(p('abs_day'));
         $end = p('end_day');
@@ -995,7 +1007,8 @@ try {
         $shiftEnd = p('shift_end');
         $shiftEnd = ($shift === null) ? null : (($shiftEnd === null || $shiftEnd === '') ? $shift : int_in($shiftEnd, 0, $maxSlot));
         if ($shift !== null && $end === null && $shiftEnd < $shift) fail('Shift End is before Shift Start');
-        $secret = ($role === 'gm' && p('is_secret')) ? 1 : 0;
+        // a player's edit keeps whatever the GM set; only a GM makes an event secret or not
+        $secret = $role === 'gm' ? (p('is_secret') ? 1 : 0) : ($old ? (int)$old['is_secret'] : 0);
         $title = trim((string)str_in(p('title'), 200, false));
         if ($title === '') fail('Title required');
         $args = [$ad, $end, $shift, $shiftEnd, $title, str_in(p('body'), 20000), $secret];

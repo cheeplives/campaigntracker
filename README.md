@@ -16,7 +16,7 @@ The full runbook (OAuth apps, config fields, upgrading an older install) is in [
 2. **Deploy with git:** `git clone https://github.com/cheeplives/campaigntracker.git chronicle` inside your web root. Updates are `./deploy.sh` (pull + PHP syntax check).
 3. **Configure:** copy `api/config.example.php` to `~/chronicle-config.php` (above the web root; `api/config.php` also works) and fill in the database, `base_url`, the Google/GitHub client ids and secrets, and your email under `admin_identities`.
 4. **Add the callback** `<base_url>/api/auth/callback.php` to your Google OAuth client (as a second redirect URI next to Sinless's) and register a GitHub OAuth app for it.
-5. **Install:** open `<base_url>/install.php` and press *Install or upgrade*, then set `'allow_install' => false`.
+5. **Install:** set `'allow_install' => true`, open `<base_url>/install.php` and press *Install or upgrade*, then set it back to `false`. Later upgrades need you signed in as a site admin.
 6. **Sign in** with the email in `admin_identities`. You're approved as admin straight away; everyone else appears under *Users* to approve.
 
 ## Using it

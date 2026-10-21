@@ -327,8 +327,11 @@ function safe_return_path(?string $p): string {
   $home = (string) (parse_url((string) cfg('base_url', ''), PHP_URL_PATH) ?: '') . '/';
   if (!is_string($p) || $p === '') return $home;
   // Only allow a site-relative path; reject anything scheme/host-like.
+  // Browsers drop tabs and newlines from a URL, so "/<tab>/evil.com" would become "//evil.com": refuse every
+  // control character, then anything that isn't under the app's own path.
+  if (preg_match('/[\x00-\x1F\x7F\\\\]/', $p)) return $home;
   if ($p[0] !== '/' || (isset($p[1]) && $p[1] === '/')) return $home;
-  if (strpos($p, "\\") !== false || strpos($p, "\n") !== false || strpos($p, "\r") !== false) return $home;
+  if (strncmp($p, $home, strlen($home)) !== 0) return $home;
   return $p;
 }
 
@@ -502,7 +505,8 @@ function post_signup_webhook(string $text): void {
   try {
     http_request('POST', $url, [
       'headers'     => ['Content-Type: application/json'],
-      'post_fields' => json_encode(['content' => $text, 'text' => $text]),
+      // allowed_mentions: a new user's name could be "@everyone"; Discord pings nobody from this message
+      'post_fields' => json_encode(['content' => $text, 'text' => $text, 'allowed_mentions' => ['parse' => []]]),
       'connect_timeout' => 2,
       'timeout'         => 3,
     ]);

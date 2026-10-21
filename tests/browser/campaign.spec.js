@@ -1,7 +1,7 @@
 // Every campaign screen renders for a GM with no script errors, members are
 // picked from the registered accounts or added by sign-in email, and players never receive secret events.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign } = require("./helpers");
 
 test("a GM creates a campaign and every tab renders", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -138,6 +138,8 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
 test("a GM picks a registered player from the list; only approved non-members are offered, and only to GMs", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Kit"), player = person("Lark"), waiting = person("Moss");
+  // the picker shows a GM names only (just a site admin sees emails), so give each a name no other test uses
+  for (const p of [gm, player, waiting]) p.name = `${p.name} ${p.id}`;
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Picker ${gm.id}`);
@@ -149,21 +151,30 @@ test("a GM picks a registered player from the list; only approved non-members ar
   const wctx = await browser.newContext();
   await signIn(await wctx.newPage(), waiting);
 
-  const emails = (await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.email);
-  expect(emails).toContain(player.email);
-  expect(emails).not.toContain(waiting.email);   // not approved
-  expect(emails).not.toContain(gm.email);        // already in the campaign
+  const offered = (await api(page, "member_candidates", undefined, cid)).json.users;
+  const names = offered.map(u => u.display_name);
+  expect(names).toContain(player.name);
+  expect(names).not.toContain(waiting.name);     // not approved
+  expect(names).not.toContain(gm.name);          // already in the campaign
+  // a GM who isn't a site admin gets no one's email
+  expect(offered.filter(u => "email" in u)).toEqual([]);
+  // the site admin does
+  const actx = await browser.newContext();
+  const ap = await actx.newPage();
+  await signIn(ap, ADMIN);
+  expect((await api(ap, "member_candidates", undefined, cid)).json.users.map(u => u.email)).toContain(player.email);
+  await actx.close();
 
   await page.goto(`index.html#/c/${cid}/members`);
   await page.getByPlaceholder("Search people, or type their sign-in email").fill(player.id);
-  const row = page.getByRole("listitem").filter({ hasText: player.email });
+  const row = page.getByRole("listitem").filter({ hasText: player.name });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText(`(${player.email})`)).toBeVisible();
 
   // Players can't list everyone's accounts.
   expect((await api(pp, "member_candidates", undefined, cid)).status).toBe(403);
-  expect((await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.email)).not.toContain(player.email);
+  expect((await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.display_name)).not.toContain(player.name);
   await pctx.close();
   await wctx.close();
   expectNoErrors(errors);

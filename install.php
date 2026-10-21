@@ -22,9 +22,23 @@ function run_sql_file(PDO $pdo, string $file): void {
     }
 }
 
-$msg = ''; $ok = false;
+/** Once someone has signed in as a site admin, only a signed-in site admin may run the installer, so leaving
+ * allow_install on doesn't let a stranger start an upgrade. Before that (a fresh database, or one from before
+ * Google/GitHub sign-in, where nobody can sign in yet) it stays open, as allow_install is all there is. */
+function installer_locked(): bool {
+    $pdo = db();
+    if (!$pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn()) return false;
+    if (!$pdo->query("SHOW COLUMNS FROM users LIKE 'provider'")->fetchColumn()) return false;
+    if (!$pdo->query("SELECT 1 FROM users WHERE is_admin=1 AND status='approved' AND provider<>'legacy' LIMIT 1")->fetchColumn()) return false;
+    $u = current_user();
+    return !$u || !(int)$u['is_admin'] || $u['status'] !== 'approved';
+}
+
+$msg = ''; $ok = false; $locked = false;
 if (!cfg('allow_install')) {
     $msg = "The installer is turned off. Set 'allow_install' => true in the config to run it again.";
+} elseif ($locked = installer_locked()) {
+    $msg = 'Sign in to Campaign Chronicle as a site admin, then open this page again.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if (!hash_equals(csrf_token(), (string)($_POST['csrf'] ?? ''))) throw new RuntimeException('Security token mismatch. Reload the page.');
@@ -90,7 +104,7 @@ $admins = (array)cfg('admin_identities', []);
 <?php if ($msg): ?><p class="result"><?= h($msg) ?></p><?php endif; ?>
 <?php if ($ok): ?>
   <p><strong>Next:</strong> set <code>'allow_install' => false</code> in the config, then <a href="./">open Campaign Chronicle</a> and sign in.</p>
-<?php elseif (cfg('allow_install')): ?>
+<?php elseif (cfg('allow_install') && !$locked): ?>
 <form method="post">
   <p>This creates the database tables, or upgrades an older install that used usernames and passwords. Back up the database before upgrading.</p>
   <?php if (!$admins): ?><p class="bad">No admin_identities are set in the config, so nobody will be able to approve accounts. Add your email there first.</p><?php endif; ?>

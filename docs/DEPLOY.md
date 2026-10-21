@@ -49,9 +49,12 @@ The callback is `https://www.discreteinfinity.com/chronicle/api/auth/callback.ph
 
 ### Create the tables
 
-Open `https://www.discreteinfinity.com/chronicle/install.php` and press
+Set `'allow_install' => true` in the config (it ships off), open
+`https://www.discreteinfinity.com/chronicle/install.php` and press
 *Install or upgrade* (or run `mysql -u USER -p DB < db/schema.sql`). Then set
-`'allow_install' => false` in the config.
+`'allow_install' => false` again. Once a site admin has signed in, install.php
+also asks you to be signed in as a site admin, so for a later upgrade sign in to
+the app first.
 
 ### Web server
 

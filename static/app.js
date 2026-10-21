@@ -2575,8 +2575,8 @@
       const renderList = () => {
         const m = matches();
         list.replaceChildren(...(m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
-          el('div', {}, el('strong', {}, u.display_name || u.email), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
-          el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email} to this campaign`))))
+          el('div', {}, el('strong', {}, u.display_name || u.email || 'Unnamed account'), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
+          el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email || 'them'} to this campaign`))))
           : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Everyone registered is already in this campaign. Add someone new by their sign-in email.')]),
           m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null);
       };
@@ -2590,7 +2590,8 @@
         if (v && m.length === 1) return add({ user_id: m[0].id });
         toast('Pick someone from the list, or type their full sign-in email.', true);
       });
-      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, 'Everyone who has signed in and been approved by the site admin is listed. Someone new needs to sign in once and be approved first.'));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Everyone who has signed in and been approved by the site admin is listed. Someone new needs to sign in once and be approved first.'
+        : 'Everyone approved by the site admin is listed by name. To add someone who isn\'t listed, type their full sign-in email. Someone new needs to sign in once and be approved first.'));
       api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
     }
     mount(...campaignHeader('members'), card);
