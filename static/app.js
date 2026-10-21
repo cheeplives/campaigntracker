@@ -37,7 +37,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '12';
+  const APP_VERSION = '13';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1741,24 +1741,38 @@
     const r = await api('encyclopedia', { query: { cid: S.camp.id } });
     const entries = r.entries;
     S.encTags = r.tags || []; S.encIgnored = r.ignored || [];
+    const rel = { ready: !!r.relations_ready, list: r.relations || [], types: r.relation_types || [], entries };
+    const conns = connIndex(rel);
     S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }));
     const st = vs().enc || (vs().enc = { q: '', tags: new Set() });
+    st.rels ||= new Set();
+    if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
     const current = sel === 'new' ? { tags: [] } : entries.find(e => e.id === Number(sel)) || null;
     const href = id => `#/c/${S.camp.id}/encyclopedia${id ? `/${id}` : ''}`;
 
     // --- the list
-    const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : ''].join('\n').toLowerCase()]));
+    const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
+      ...conns.get(e.id).flatMap(c => [c.label, c.other.name])].join('\n').toLowerCase()]));
+    // The connection labels in use, as seen from either end, for the chips: "has resident" and "resident of".
+    const relUsed = new Map();
+    for (const list of conns.values()) for (const c of list) relUsed.set(c.label.toLowerCase(), { name: c.label, color: c.type.color });
+    for (const k of [...st.rels]) if (!relUsed.has(k)) st.rels.delete(k);
+    const relRow = el('div', { class: 'tagpick enc-relpick' });
+    const nearRow = el('div', { class: 'row small' });
     const used = tagsOf(entries).sort((a, b) => a.name.localeCompare(b.name));
     for (const k of [...st.tags]) if (!used.some(t => t.name.toLowerCase() === k)) st.tags.delete(k);
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
     const tagRow = el('div', { class: 'tagpick' });
     const lists = el('div', { class: 'enc-lists' });
+    const ctx = { rel, conns, entries, st, draw: null };
     const item = e => el('a', { class: 'enc-item' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
       el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name, e.aliases?.length ? el('small', { class: 'muted' }, ` · ${e.aliases.join(', ')}`) : null),
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
     const draw = () => {
       const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
-      const shown = entries.filter(e => (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase()))) && words.every(w => hay.get(e).includes(w)));
+      const shown = entries.filter(e => (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase()))) && words.every(w => hay.get(e).includes(w))
+        && (!st.rels.size || conns.get(e.id).some(c => st.rels.has(c.label.toLowerCase())))
+        && (!st.near || e.id === st.near || conns.get(e.id).some(c => c.other.id === st.near)));
       const blank = shown.filter(entryBlank);
       lists.replaceChildren(...clean([
         blank.length ? el('section', { class: 'enc-blank' }, el('h3', {}, `Blank Entries (${blank.length})`,
@@ -1774,7 +1788,20 @@
         b.style.setProperty('--tag', t.color);
         return b;
       }));
+      relRow.replaceChildren(...(relUsed.size ? [el('span', { class: 'small muted' }, 'Connections:')] : []), ...[...relUsed].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([k, t]) => {
+        const on = st.rels.has(k);
+        const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+          'data-tip': on ? `Showing entries that are ${t.name} something. Click to stop filtering by it` : `Show only entries with a "${t.name}" connection`,
+          onclick: () => { on ? st.rels.delete(k) : st.rels.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
+        b.style.setProperty('--tag', t.color);
+        return b;
+      }));
+      const near = st.near && entries.find(e => e.id === st.near);
+      nearRow.hidden = !near;
+      nearRow.replaceChildren(...(near ? [el('span', { class: 'muted' }, 'Connected to'), el('strong', {}, near.name),
+        btn('× Clear', () => { st.near = null; draw(); }, 'link small', 'Show every entry again')] : []));
     };
+    ctx.draw = draw;
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     draw();
     const scanBtn = btn('🔍 Scan campaign', null, 'small', 'Run the Proper Noun Detector over every note, event, reminder and Locations visited list in the campaign, and offer the names that are missing');
@@ -1790,18 +1817,18 @@
     const left = el('section', { class: 'card enc-index' },
       el('div', { class: 'row spread' }, el('h2', {}, 'Encyclopedia', tip('The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only')),
         el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn)),
-      search, used.length ? tagRow : null, lists, ignored);
+      search, used.length ? tagRow : null, relRow, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
 
     // --- the entry picked
     const right = el('section', { class: 'card enc-detail' });
     if (!current) right.append(el('p', { class: 'muted' }, entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.'),
       el('p', { class: 'small muted' }, 'When you save a note, an event, a reminder or a day\'s Locations visited, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".'));
     else if (!current.id || entryBlank(current)) right.append(entryForm(current));
-    else right.append(...entryView(current));
+    else right.append(...entryView(current, ctx));
     mount(...campaignHeader('encyclopedia'), el('div', { class: 'enc-page' + (current ? ' has-sel' : '') }, left, right));
   }
 
-  function entryView(e) {
+  function entryView(e, ctx) {
     const canDelete = isGM() || e.created_by === S.user.id;
     const box = el('div', { class: 'enc-mentioned' }, el('h4', {}, 'Mentioned in'), el('p', { class: 'muted small' }, 'Looking…'));
     api('encyclopedia_sources', { query: { cid: S.camp.id } }).then(({ sources }) => {
@@ -1834,8 +1861,209 @@
         (e.notes || '').trim() ? note(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
         (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
+      connectionsCard(e, ctx),
       e.author ? el('small', { class: 'muted' }, 'Added by ', byline(e)) : null,
       box]);
+  }
+
+  // Connections between entries: London "Has resident" Gunther, Gunther "Resident of" London. Each relationship type
+  // has a label for each end (one, for a type that reads the same both ways); the server never sends players a
+  // connection that is GM only or touches a GM-only entry.
+  /** Type t as seen from one end: side 'from' reads its label, 'to' its inverse. */
+  const relLabel = (t, side) => t.symmetric || side === 'from' ? t.label : t.inverse_label;
+  /** Each entry's connections, by id: [{ r, type, side, label, other }], other being the entry at the far end. */
+  function connIndex(rel) {
+    const types = new Map(rel.types.filter(t => t.id).map(t => [t.id, t]));
+    const byId = new Map(rel.entries.map(e => [e.id, e]));
+    const out = new Map(rel.entries.map(e => [e.id, []]));
+    for (const r of rel.list) {
+      const type = types.get(r.type_id), a = byId.get(r.from_id), b = byId.get(r.to_id);
+      if (!type || !a || !b) continue;
+      out.get(a.id).push({ r, type, side: 'from', label: relLabel(type, 'from'), other: b });
+      out.get(b.id).push({ r, type, side: type.symmetric ? 'from' : 'to', label: relLabel(type, 'to'), other: a });
+    }
+    for (const list of out.values()) list.sort((x, y) => x.label.localeCompare(y.label) || x.other.name.localeCompare(y.other.name));
+    return out;
+  }
+  /** Every way a connection can be read from the entry it is made on: both ends of each type, once for a symmetric one. */
+  function relChoices(types) {
+    return types.flatMap(t => t.symmetric ? [{ t, side: 'from' }] : [{ t, side: 'from' }, { t, side: 'to' }])
+      .map(c => ({ ...c, key: `${c.t.id ?? `${c.t.label}|${c.t.inverse_label}`}:${c.side}`, label: relLabel(c.t, c.side), far: relLabel(c.t, c.side === 'from' ? 'to' : 'from') }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }
+  /** Whether this member may remove or change connection r: whoever made it, and GMs. */
+  const relMine = r => isGM() || r.created_by === S.user.id;
+
+  /** The Connections card on entry e's page, grouped by label as seen from e, with the suggestions from the notes. */
+  function connectionsCard(e, ctx) {
+    const { rel, conns, entries, st } = ctx;
+    if (!rel.ready) return null;
+    const list = conns.get(e.id) || [];
+    const groups = new Map();
+    for (const c of list) {
+      const k = `${c.type.id}:${c.side}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(c);
+    }
+    const choiceKey = c => `${c.type.id}:${c.side}`;
+    const rows = [...groups.values()].map(g => {
+      const label = el('span', { class: 'chip enc-rel', 'data-tip': g[0].type.symmetric ? `${g[0].label}: reads the same from both ends`
+        : `${g[0].label}. From the other end it reads "${relLabel(g[0].type, g[0].side === 'from' ? 'to' : 'from')}"` }, g[0].label);
+      label.style.background = g[0].type.color;
+      return el('div', { class: 'enc-conn-row' }, label,
+        el('span', { class: 'enc-conn-names' }, g.map(c => {
+          const secret = c.r.is_secret || c.other.is_secret || e.is_secret;
+          return el('span', { class: 'enc-conn' + (secret ? ' secret' : ''), 'data-id': c.other.id },
+            secret ? el('span', { 'data-tip': 'GM only: players never see this connection' }, '🔒 ') : null,
+            el('a', { class: 'enc-link' + (c.other.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${c.other.id}`,
+              'data-tip': `${c.other.name}${c.other.is_secret ? ' (GM only)' : ''}: open it in the Encyclopedia` }, c.other.name),
+            c.r.note ? el('small', { class: 'muted' }, ` (${c.r.note})`) : null,
+            relMine(c.r) ? btn('×', async () => {
+              if (!await confirmDialog(`Remove "${c.label} ${c.other.name}" from ${e.name}? It goes from both pages.`, { ok: 'Remove', danger: true })) return;
+              try { await post('relation_delete', { id: c.r.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+            }, 'link small enc-conn-x', `Remove this connection from both pages`) : null);
+        })),
+        btn('✎', () => connectDialog(e, rel, { choice: choiceKey(g[0]) }), 'link small', `Add or remove ${g[0].label} connections`));
+    });
+    // Suggestions: entries named in these notes, or whose notes name this one, not yet connected to it.
+    const linked = new Set(list.map(c => c.other.id));
+    const ideas = Nouns.suggestions(e, entries, { gm: isGM() }).filter(x => !linked.has(x.other.id));
+    const suggest = ideas.length ? el('details', { class: 'enc-suggest' },
+      el('summary', { class: 'small' }, `Suggested connections (${ideas.length})`),
+      el('p', { class: 'small muted' }, 'Entries named in these notes, or whose notes name this one. A line like "Residents: Gunther, Ilse" suggests the name too. Connect makes it a connection on both pages.'),
+      el('ul', { class: 'enc-suggest-list' }, ideas.slice(0, 50).map(x => {
+        const mine = x.writer.id === e.id;
+        return el('li', { 'data-id': x.other.id },
+          x.secret && isGM() ? el('span', { 'data-tip': 'Found in GM notes or touches a GM-only entry, so it would be GM only' }, '🔒 ') : null,
+          el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.other.id}` }, x.other.name),
+          el('small', { class: 'muted' }, x.label ? ` · "${x.label}" in ${mine ? 'these notes' : `${x.other.name}'s notes`}` : mine ? ' · named in these notes' : ` · ${x.other.name}'s notes name ${e.name}`),
+          ' ', btn('Connect…', () => connectDialog(mine ? e : x.other, rel, { label: x.label, tick: [mine ? x.other.id : e.id], secret: x.secret }), 'small',
+            x.label ? `Connect them as "${x.label}"` : 'Pick how they are connected'));
+      }))) : null;
+    return el('section', { class: 'enc-conns' },
+      el('div', { class: 'row spread' }, el('h4', {}, 'Connections', tip(`How ${e.name} is connected to other entries. Each connection shows on both pages, read from each end ("Has resident" here, "Resident of" there)`)),
+        el('div', { class: 'row' },
+          list.length ? btn('Show in list', () => { st.near = e.id; ctx.draw(); }, 'small', `List ${e.name} and the entries connected to it`) : null,
+          btn('🔗 Link', () => connectDialog(e, rel), 'small primary', `Connect ${e.name} to one or more entries`))),
+      rows.length ? el('div', { class: 'enc-conn-list' }, rows) : el('p', { class: 'muted small' }, 'No connections yet.'),
+      suggest);
+  }
+
+  /** Josh's Link dialog: connect entry e to the entries ticked, with one relationship. preset: { choice } (a relChoices
+   * key), { label } (a label to pick, or to start a new relationship with), tick (entry ids to tick), secret. */
+  function connectDialog(e, rel, preset = {}) {
+    hideTip();
+    const cid = S.camp.id;
+    const choices = relChoices(rel.types);
+    const lower = s => String(s || '').toLowerCase();
+    const start = preset.choice ? choices.find(c => c.key === preset.choice)
+      : preset.label ? choices.find(c => lower(c.label) === lower(preset.label)) : choices.find(c => c.label === 'Related to') || choices[0];
+    const pick = select([...choices.map(c => [c.key, c.t.symmetric ? `${c.label} (both ways)` : `${c.label} ↔ ${c.far}`]), ['new', '+ New connection…']],
+      start ? start.key : 'new', { 'aria-label': `How ${e.name} is connected`, class: 'grow' });
+    const mineIn = el('input', { maxlength: 40, value: !start && preset.label ? preset.label : '', placeholder: 'e.g. Has resident', 'aria-label': `New connection, as ${e.name} reads it` });
+    const theirsIn = el('input', { maxlength: 40, placeholder: 'e.g. Resident of. Leave empty if it reads the same both ways', 'aria-label': 'New connection, as the other entries read it' });
+    const fresh = el('div', { class: 'grid2 conn-new' }, field(`From ${e.name}'s side`, mineIn), field('From theirs', theirsIn, null, 'What the entries you tick show on their pages. Leave it empty if it reads the same both ways, like "Ally of"'));
+    const choice = () => choices.find(c => c.key === pick.value) || null;
+    const conns = connIndex(rel).get(e.id) || [];
+    const linkedFor = c => new Set(c && c.t.id ? conns.filter(x => x.type.id === c.t.id && x.side === c.side).map(x => x.other.id) : []);
+    let was = linkedFor(choice());
+    const others = rel.entries.filter(x => x.id !== e.id).sort((a, b) => a.name.localeCompare(b.name));
+    const search = el('input', { type: 'search', placeholder: 'Search entries', 'aria-label': 'Search entries to connect', class: 'grow' });
+    const usedTags = tagsOf(others).sort((a, b) => a.name.localeCompare(b.name));
+    const tagSel = select([['', 'All tags'], ...usedTags.map(t => [t.name.toLowerCase(), t.name])], '', { 'aria-label': 'Show entries with this tag' });
+    const rows = others.map(x => {
+      const box = el('input', { type: 'checkbox', checked: was.has(x.id) || (preset.tick || []).includes(x.id), 'aria-label': x.name });
+      const already = el('small', { class: 'muted' });
+      const row = el('label', { class: 'conn-row', 'data-id': x.id }, box,
+        el('span', { class: 'grow' }, x.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, x.name),
+        x.tags?.length ? el('span', { class: 'etags' }, x.tags.map(tagChip)) : null, already);
+      return { x, box, row, already, hay: [...Nouns.namesOf(x), ...(x.tags || []).map(t => t.name)].join('\n').toLowerCase() };
+    });
+    const count = el('p', { class: 'small muted conn-count' });
+    const note = el('input', { maxlength: 200, placeholder: 'e.g. since the flood', 'aria-label': 'Note on the new connections' });
+    const secret = isGM() ? el('input', { type: 'checkbox', checked: !!preset.secret || !!e.is_secret, disabled: !!e.is_secret }) : null;
+    const sync = () => {
+      const c = choice();
+      fresh.hidden = !!c;
+      const far = c ? c.far : (theirsIn.value.trim() || mineIn.value.trim() || '…');
+      const n = rows.filter(r => r.box.checked).length;
+      for (const r of rows) r.already.textContent = was.has(r.x.id) ? (r.box.checked ? 'connected ✓' : 'will be removed') : '';
+      const gone = rows.filter(r => !r.box.checked && was.has(r.x.id)).length;
+      count.textContent = `${n} picked${gone ? `, ${gone} to remove` : ''}. Each will show "${far} ${e.name}" on its page.`;
+      const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+      for (const r of rows) r.row.hidden = !(words.every(w => r.hay.includes(w)) && (!tagSel.value || (r.x.tags || []).some(t => t.name.toLowerCase() === tagSel.value)));
+    };
+    pick.addEventListener('change', () => { was = linkedFor(choice()); for (const r of rows) r.box.checked = was.has(r.x.id); sync(); });
+    for (const el_ of [search, mineIn, theirsIn]) el_.addEventListener('input', sync);
+    tagSel.addEventListener('change', sync);
+    for (const r of rows) r.box.addEventListener('change', sync);
+    const form = el('form', {},
+      el('h3', {}, `🔗 Connect ${e.name} to…`),
+      el('div', { class: 'row' }, el('strong', {}, e.name), pick, el('span', { class: 'muted' }, 'the entries ticked')),
+      fresh,
+      el('div', { class: 'row' }, search, usedTags.length ? tagSel : null),
+      el('div', { class: 'conn-list' }, others.length ? rows.map(r => r.row) : el('p', { class: 'muted small' }, 'There are no other entries yet.')),
+      count,
+      field('Note (optional)', note, null, 'A few words shown beside each new connection, on both pages'),
+      secret ? el('label', { class: 'inline small', 'data-tip': e.is_secret ? `${e.name} is GM only, so its connections are too` : 'Only GMs will see these connections. Connections to a GM-only entry always are' }, secret, ' 🔒 GM only') : null,
+      el('div', { class: 'kit-dialog-actions' },
+        el('button', { class: 'primary', type: 'submit' }, 'Save connections'),
+        el('button', { type: 'button', value: 'cancel', onclick: () => d.close() }, 'Cancel')));
+    const d = el('dialog', { class: 'kit-dialog conn-dialog', 'aria-label': `Connect ${e.name}` }, form);
+    form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const c = choice();
+      if (!c && !mineIn.value.trim()) { toast('Name the new connection', true); mineIn.focus(); return; }
+      const add = rows.filter(r => r.box.checked && !was.has(r.x.id)).map(r => r.x.id);
+      const remove = rows.filter(r => !r.box.checked && was.has(r.x.id)).map(r => r.x.id);
+      if (!add.length && !remove.length) { d.close(); return; }
+      const type = c ? (c.t.id ? { id: c.t.id } : { label: c.t.label, inverse_label: c.t.inverse_label, symmetric: c.t.symmetric })
+        : { label: mineIn.value.trim(), inverse_label: theirsIn.value.trim() };
+      const body = { entry_id: e.id, type, side: c ? c.side : 'from', add, remove, note: note.value.trim() };
+      if (secret) body.is_secret = secret.checked;
+      try {
+        await post('relations_save', body, cid);
+        d.close();
+        toast([add.length ? `${add.length} connected` : '', remove.length ? `${remove.length} removed` : ''].filter(Boolean).join(' · '));
+        if (S.camp?.id === cid) route();
+      } catch (err) { toast(err.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    sync();
+    d.showModal();
+    (start ? search : mineIn).focus();
+  }
+
+  /** GMs: the campaign's kinds of connection, to rename, recolour, merge or delete. */
+  function relationKinds(rel) {
+    const stored = rel.types.filter(t => t.id);
+    if (!stored.length) return null;
+    const used = new Map();
+    for (const r of rel.list) used.set(r.type_id, (used.get(r.type_id) || 0) + 1);
+    return el('details', { class: 'enc-kinds' },
+      el('summary', { class: 'small' }, `Kinds of connection (${stored.length})`),
+      el('p', { class: 'small muted' }, 'Rename a kind of connection here and every page using it changes. Merge moves its connections into another kind.'),
+      stored.map(t => {
+        const label = el('input', { value: t.label, maxlength: 40, 'aria-label': 'Label from the first end' });
+        const inverse = el('input', { value: t.inverse_label, maxlength: 40, placeholder: 'Same both ways', 'aria-label': 'Label from the other end' });
+        const color = el('input', { type: 'color', value: t.color, 'aria-label': 'Colour' });
+        const into = select([['', 'Merge into…'], ...stored.filter(x => x.id !== t.id).map(x => [x.id, x.symmetric ? x.label : `${x.label} ↔ ${x.inverse_label}`])], '', { 'aria-label': `Merge ${t.label} into another kind` });
+        const save = async body => { try { await post('relation_type_save', { id: t.id, ...body }, S.camp.id); route(); } catch (err) { toast(err.message, true); } };
+        into.addEventListener('change', async () => {
+          if (!into.value) return;
+          if (await confirmDialog(`Move every "${t.label}" connection into "${into.selectedOptions[0].textContent}"?`, { ok: 'Merge' })) save({ merge_into: Number(into.value) });
+          else into.value = '';
+        });
+        return el('div', { class: 'enc-kind row', 'data-id': t.id, 'data-label': t.label }, color, label, el('span', { class: 'muted' }, '↔'), inverse,
+          el('small', { class: 'muted' }, `${used.get(t.id) || 0} used`),
+          btn('Save', () => save({ label: label.value, inverse_label: inverse.value, symmetric: !inverse.value.trim(), color: color.value }), 'small'),
+          into,
+          btn('Delete', async () => {
+            if (!await confirmDialog(`Delete "${t.label}" and its ${used.get(t.id) || 0} connection(s)?`, { ok: 'Delete', danger: true })) return;
+            try { await post('relation_type_delete', { id: t.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+          }, 'small danger'));
+      }));
   }
 
   /** The sentences across the campaign that name entry e, each with a button that puts it into the notes, so an entry the

@@ -213,3 +213,145 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   await expect(page.locator(".event a.enc-link")).toHaveText(["Captain Rolf", "Marienburg", "Rolf"]);
   expectNoErrors(errors);
 });
+
+// Connections: London "Has resident" Gunther shows on Gunther's page as "Resident of" London. One fact is one row,
+// whichever page it was made on, and players never get a GM-only connection or one that touches a GM-only entry.
+async function entry(page, cid, body) {
+  const r = await api(page, "entry_save", body, cid);
+  expect(r.status).toBe(200);
+  return r.json.id;
+}
+const connRow = (page, label) => page.locator(".enc-conn-row").filter({ has: page.locator(".chip.enc-rel", { hasText: new RegExp(`^${label}$`) }) });
+
+test("the Link dialog connects one entry to many, and each page reads the connection from its own end", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Connections");
+  const london = await entry(page, cid, { name: "London", notes: "<p>A big city.</p>", tags: [{ name: "Location" }] });
+  const gunther = await entry(page, cid, { name: "Gunther Hoffmann", notes: "<p>Innkeeper.</p>", tags: [{ name: "Person" }] });
+  const ilse = await entry(page, cid, { name: "Mother Ilse", notes: "<p>Priestess.</p>", tags: [{ name: "Person" }] });
+  const rolf = await entry(page, cid, { name: "Rolf the Spy", notes: "<p>Secret.</p>", is_secret: true });
+  await entry(page, cid, { name: "The Grey Lady inn", notes: "<p>An inn.</p>", tags: [{ name: "Location" }] });
+
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${london}`);
+  await expect(page.locator(".enc-conns")).toContainText("No connections yet.");
+  await page.getByRole("button", { name: "🔗 Link" }).click();
+  const dlg = page.locator("dialog.conn-dialog");
+  await expect(dlg).toBeVisible();
+  await dlg.getByLabel("How London is connected").selectOption({ label: "Has resident ↔ Resident of" });
+  await dlg.getByLabel("Show entries with this tag").selectOption({ label: "Person" });
+  await expect(dlg.locator(".conn-row", { hasText: "The Grey Lady inn" })).toBeHidden();
+  await dlg.getByRole("checkbox", { name: "Gunther Hoffmann" }).check();
+  await dlg.getByRole("checkbox", { name: "Mother Ilse" }).check();
+  await expect(dlg.locator(".conn-count")).toContainText('2 picked. Each will show "Resident of London" on its page.');
+  await dlg.getByRole("button", { name: "Save connections" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect(connRow(page, "Has resident")).toContainText("Gunther Hoffmann");
+  await expect(connRow(page, "Has resident")).toContainText("Mother Ilse");
+
+  // Gunther's page reads it the other way, and making it from his end finds the same connection.
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${gunther}`);
+  await expect(connRow(page, "Resident of")).toContainText("London");
+  await page.getByRole("button", { name: "🔗 Link" }).click();
+  await dlg.getByLabel("How Gunther Hoffmann is connected").selectOption({ label: "Resident of ↔ Has resident" });
+  await expect(dlg.locator(".conn-row", { hasText: "London" })).toContainText("connected ✓");
+  await dlg.getByRole("button", { name: "Cancel" }).click();
+
+  // A new relationship typed one way round that an existing one has the other way joins it.
+  let r = await api(page, "relations_save", { entry_id: ilse, type: { label: "Resident of", inverse_label: "Has resident" }, side: "from", add: [london] }, cid);
+  expect(r.status).toBe(200);
+  expect(r.json.relations).toHaveLength(2);
+  // A symmetric relationship is kept once from either end.
+  expect((await api(page, "relations_save", { entry_id: gunther, type: { label: "Ally of", inverse_label: "" }, add: [ilse] }, cid)).status).toBe(200);
+  r = await api(page, "relations_save", { entry_id: ilse, type: { label: "Ally of", symmetric: true }, add: [gunther] }, cid);
+  expect(r.json.relations).toHaveLength(3);
+
+  // GM only: a ticked connection, one to a secret entry, and a label used only by those never reach players.
+  expect((await api(page, "relations_save", { entry_id: london, type: { label: "Secretly funds", inverse_label: "Funded by" }, add: [ilse], is_secret: true }, cid)).status).toBe(200);
+  r = await api(page, "relations_save", { entry_id: london, type: { label: "Has resident", inverse_label: "Resident of" }, add: [rolf] }, cid);
+  expect(r.json.relations.find(x => x.to_id === rolf).is_secret).toBe(true);
+  const seen = (await api(pp, "encyclopedia", undefined, cid)).json;
+  expect(seen.relations).toHaveLength(3);
+  expect(seen.relations.some(x => x.to_id === rolf || x.from_id === rolf)).toBe(false);
+  expect(seen.relation_types.map(t => t.label)).not.toContain("Secretly funds");
+  expect((await api(pp, "relations_save", { entry_id: london, type: { label: "Has resident", inverse_label: "Resident of" }, add: [rolf] }, cid)).status).toBe(404);
+  // Players can connect what they see, and only remove what they made.
+  const gmRow = seen.relations.find(x => x.to_id === gunther && x.from_id === london);
+  expect((await api(pp, "relation_delete", { id: gmRow.id }, cid)).status).toBe(403);
+  r = await api(pp, "relations_save", { entry_id: gunther, type: { label: "Related to", symmetric: true }, add: [london], is_secret: true }, cid);
+  expect(r.status).toBe(200);
+  const mine = r.json.relations.find(x => x.type_id === r.json.type_id);
+  expect(mine.is_secret).toBe(false); // players can't make GM-only connections
+  expect((await api(pp, "relation_delete", { id: mine.id }, cid)).status).toBe(200);
+
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${london}`);
+  await expect(connRow(pp, "Has resident")).toContainText("Gunther Hoffmann");
+  await expect(pp.locator(".enc-conns")).not.toContainText("Rolf");
+  await expect(pp.locator(".enc-conns")).not.toContainText("Secretly funds");
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${london}`);
+  await expect(connRow(page, "Has resident")).toContainText("Rolf the Spy");
+  await expect(connRow(page, "Has resident").locator(".enc-conn.secret")).toContainText("Rolf the Spy");
+
+  // Unticking removes, and deleting an entry takes its connections with it.
+  await connRow(page, "Has resident").getByRole("button", { name: "✎" }).click();
+  await dlg.getByRole("checkbox", { name: "Mother Ilse" }).uncheck();
+  await expect(dlg.locator(".conn-row", { hasText: "Mother Ilse" })).toContainText("will be removed");
+  await dlg.getByRole("button", { name: "Save connections" }).click();
+  await expect(connRow(page, "Has resident")).not.toContainText("Mother Ilse");
+  expect((await api(page, "entry_delete", { id: rolf }, cid)).status).toBe(200);
+  r = (await api(page, "encyclopedia", undefined, cid)).json;
+  expect(r.relations.some(x => x.to_id === rolf)).toBe(false);
+  expectNoErrors(errors);
+});
+
+test("the notes suggest connections, and the list searches and filters by them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Suggest");
+  const hans = await entry(page, cid, { name: "Hans", notes: "<p>A baker.</p>" });
+  await entry(page, cid, { name: "Greta", notes: "<p>Hans's sister. She was born in Altdorf.</p>" });
+  const altdorf = await entry(page, cid, { name: "Altdorf", notes: "<p>The capital.</p><p>Residents: Hans, Greta</p>" });
+  await entry(page, cid, { name: "Nuln", notes: "<p>Far away.</p>" });
+
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${hans}`);
+  const ideas = page.locator(".enc-suggest");
+  await expect(ideas.locator("summary")).toHaveText(/Suggested connections \(2\)/);
+  await ideas.locator("summary").click();
+  await expect(ideas.locator("li[data-id]").first()).toContainText('"Residents" in Altdorf\'s notes');
+  await ideas.locator(`li[data-id="${altdorf}"]`).getByRole("button", { name: "Connect…" }).click();
+  const dlg = page.locator("dialog.conn-dialog");
+  await expect(dlg.getByLabel("How Altdorf is connected")).toHaveValue("new");
+  await expect(dlg.getByLabel("New connection, as Altdorf reads it")).toHaveValue("Residents");
+  await expect(dlg.getByRole("checkbox", { name: "Hans" })).toBeChecked();
+  await dlg.getByRole("checkbox", { name: "Greta" }).check();
+  await dlg.getByRole("button", { name: "Save connections" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect(connRow(page, "Residents")).toContainText("Altdorf");
+  await expect(page.locator(".enc-suggest summary")).toHaveText(/Suggested connections \(1\)/); // Greta's notes name Hans
+
+  // Search finds connections from either end; the chips and "Show in list" filter by them.
+  const list = page.locator(".enc-lists section:last-child .enc-item");
+  await page.getByLabel("Search the Encyclopedia").fill("residents");
+  await expect(list).toHaveCount(3);
+  await page.getByLabel("Search the Encyclopedia").fill("");
+  await expect(list).toHaveCount(4);
+  await page.locator(".enc-relpick button.tagopt", { hasText: "Residents" }).click();
+  await expect(list).toHaveCount(3);
+  await page.locator(".enc-relpick button.tagopt", { hasText: "Residents" }).click();
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf}`);
+  await page.getByRole("button", { name: "Show in list" }).click();
+  await expect(page.locator(".enc-index")).toContainText("Connected to");
+  await expect(list).toHaveCount(3);
+  await expect(list.filter({ hasText: "Nuln" })).toHaveCount(0);
+  await page.getByRole("button", { name: "× Clear" }).click();
+  await expect(list).toHaveCount(4);
+
+  // GMs rename a kind of connection once and every page follows.
+  await page.locator(".enc-kinds summary").click();
+  const kind = page.locator(`.enc-kind[data-label="Residents"]`);
+  await kind.getByLabel("Label from the first end").fill("Has resident");
+  await kind.getByLabel("Label from the other end").fill("Resident of");
+  await kind.getByRole("button", { name: "Save" }).click();
+  await expect(connRow(page, "Has resident")).toContainText("Hans");
+  const r = (await api(page, "encyclopedia", undefined, cid)).json;
+  expect(r.relations).toHaveLength(2);
+  expectNoErrors(errors);
+});

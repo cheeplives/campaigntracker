@@ -358,10 +358,48 @@ const Nouns = (() => {
     return { text, tree, mentions };
   }
 
+  /** Connections the notes suggest for entry e, given every entry the member can see ([{ id, name, aliases, notes,
+   * gm_notes?, is_secret }]): each other entry e's notes name, and each one whose notes name e. A line of the form
+   * "Residents: Gunther Hoffmann, Mother Ilse", where every name on it is an entry, also suggests the label. Returns
+   * [{ other, label, writer, secret }]: writer is the entry whose notes it came from (e or other), secret is true when
+   * it came from GM notes or touches a GM-only entry. gm: read the GM notes too. */
+  function suggestions(e, entries, { gm = false } = {}) {
+    const byKey = new Map();
+    for (const x of entries) for (const n of namesOf(x)) byKey.set(keyOf(n), x);
+    const found = new Map();
+    const note = (other, label, writer, secret) => {
+      const was = found.get(other.id);
+      if (was && (was.label || !label)) return;
+      found.set(other.id, { other, label, writer, secret: secret || !!other.is_secret || !!e.is_secret });
+    };
+    /** The names on each "Label: name, name" line of t whose names are all entries: [{ label, entries }]. */
+    const lines = t => String(t).split('\n').flatMap(line => {
+      const m = /^\s*([^:\n]{1,40}):\s*(.+)$/.exec(line);
+      if (!m || byKey.has(keyOf(m[1]))) return [];
+      const parts = m[2].split(/\s*(?:[,;&]|\band\b)\s*/).map(tidy).filter(Boolean);
+      const hit = parts.map(x => byKey.get(keyOf(x)));
+      return parts.length && hit.every(Boolean) ? [{ label: tidy(m[1]), entries: hit }] : [];
+    });
+    const texts = x => [[x.notes, false], gm ? [x.gm_notes, true] : null].filter(t => t && String(t[0] || '').trim())
+      .map(([t, secret]) => [plain(t, 'html'), secret]);
+    const others = entries.filter(x => x.id !== e.id);
+    const mine = linker(others, () => null);
+    for (const [t, secret] of texts(e)) {
+      for (const l of lines(t)) for (const o of l.entries) if (o.id !== e.id) note(o, l.label, e, secret);
+      for (const o of mine.mentions(t)) note(o, null, e, secret);
+    }
+    const me = linker([e], () => null);
+    for (const o of others) for (const [t, secret] of texts(o)) {
+      for (const l of lines(t)) if (l.entries.includes(e)) note(o, l.label, o, secret);
+      if (me.mentions(t).length) note(o, null, o, secret);
+    }
+    return [...found.values()].sort((a, b) => !a.label - !b.label || a.other.name.localeCompare(b.other.name));
+  }
+
   /** Plain text of a stored note, for searching: rich text loses its markup. */
   const plain = (text, format) => (format === 'html' ? fromHtml(text).text : String(text || ''));
   /** Every name an entry goes by. */
   const namesOf = e => [e.name, ...(e.aliases || [])].filter(Boolean);
 
-  return { find, related, excerpts, linker, plain, keyOf, namesOf, guessTag };
+  return { find, related, excerpts, linker, plain, keyOf, namesOf, guessTag, suggestions };
 })();
