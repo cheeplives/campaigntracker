@@ -72,19 +72,21 @@ const KIT = (() => {
   const canHover = matchMedia('(hover: hover)');
   const INTERACTIVE = 'a[href], button, input, select, textarea, label, summary, [role=button]';
   document.addEventListener('mouseover', e => {
-    if (!canHover.matches) return; // touch: tapped open instead, below
+    if (!canHover.matches) return; // touch: tapped open instead, below (pointerup)
     const t = tipTarget(e);
     if (t) { if (t !== tipEl) showTip(t); } else if (tipEl) hideTip();
   });
   document.addEventListener('focusin', e => { const t = tipTarget(e); if (t && t.matches(':focus-visible')) showTip(t); });
   document.addEventListener('focusout', hideTip);
-  document.addEventListener('click', e => {
-    const t = tipTarget(e);
-    if (t && !canHover.matches && !t.closest(INTERACTIVE)) return t === tipEl ? hideTip() : showTip(t);
-    if (!t || !canHover.matches) hideTip();
-  });
-  // iPad Safari sends no click for a tap on plain page background, so a touch anywhere else closes the tooltip
+  document.addEventListener('click', e => { if (!tipTarget(e)) hideTip(); });
+  // Touch and pen work from pointer events rather than click: iPad Safari sends no click for a tap
+  // on plain text or background, and a touch-screen laptop reports it can hover even when tapped.
   document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && !tipTarget(e)) hideTip(); });
+  document.addEventListener('pointerup', e => {
+    if (e.pointerType === 'mouse') return;
+    const t = tipTarget(e);
+    if (t && !t.closest(INTERACTIVE)) { if (t === tipEl) hideTip(); else showTip(t); } else if (t) hideTip();
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
   window.addEventListener('scroll', hideTip, true);
 

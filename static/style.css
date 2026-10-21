@@ -319,8 +319,6 @@ button.dt-member.on { background: var(--accent); border-color: var(--accent); co
   background: var(--text); color: var(--bg); font: 400 .82rem/1.4 var(--body); white-space: pre-line; box-shadow: 0 4px 14px rgb(0 0 0 / .35);
   opacity: 0; visibility: hidden; transition: opacity .12s; }
 #tipbox.show { opacity: 1; visibility: visible; }
-/* touch screens open tooltips on tap; a pointer cursor is also what makes iPad Safari send the tap as a click */
-@media (hover: none) { [data-tip] { cursor: pointer; } }
 .lightlv { display: flex; gap: 8px; flex-wrap: wrap; }
 .lightlv > span { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .lightlv.off { opacity: .5; }
