@@ -72,8 +72,10 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   await expect(pdlg).toContainText("The ransom is due");
   await pdlg.getByRole("button", { name: "Dismiss" }).click();
   await expect(pp.locator(".event.reminder")).toContainText("Midday · Due"); // until the page redraws
+  // Dismiss saves in the background, so wait for the server to have it.
+  await expect.poll(async () => (await api(pp, "reminders", undefined, cid)).json.reminders.map(x => [x.title, x.due, x.dismissed]))
+    .toEqual([["The ransom is due", true, true]]);
   const mine = (await api(pp, "reminders", undefined, cid)).json.reminders;
-  expect(mine.map(x => [x.title, x.due, x.dismissed])).toEqual([["The ransom is due", true, true]]);
   // The player can't change the GM's reminder.
   await expect(pp.locator(".event.reminder").getByRole("button", { name: "Edit" })).toHaveCount(0);
   expect((await api(pp, "reminder_delete", { id: mine[0].id }, cid)).status).toBe(404);
