@@ -34,6 +34,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **year-view**: the year view shows every month with today ringed, marks days
+  with events and lists them in the tooltip, steps a year at a time, opens a
+  month from its name and a day from its number, and never gives a player a
+  secret event.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
