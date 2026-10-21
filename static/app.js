@@ -714,10 +714,11 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
+    events: 'Every event in one list: search it and filter it by tag',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -1337,6 +1338,77 @@
       } catch (err) { toast(err.message, true); }
     });
     return f;
+  }
+
+  // ------------------------------------------------------------ events tab
+  /** Every event the member can see in one list, newest or oldest first, narrowed by a search and by tags. */
+  async function viewEvents() {
+    const { events } = await api('events', { query: { cid: S.camp.id } });
+    const st = vs().events || (vs().events = { q: '', tags: new Set(), when: 'all', order: 'asc' });
+    const c = cal(), d0 = today();
+    const end = e => Number(e.end_day ?? e.abs_day);
+    // what the search looks through: title, details, notes, tags and who added it
+    const hay = new Map(events.map(e => [e, [e.title, e.body, ...(e.notes || []), ...(e.tags || []).map(t => t.name), e.author].filter(Boolean).join('\n').toLowerCase()]));
+    const used = tagsOf(events).sort((a, b) => a.name.localeCompare(b.name));
+    for (const k of [...st.tags]) if (!used.some(t => t.name.toLowerCase() === k)) st.tags.delete(k);
+
+    const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles, details, notes and tags', 'aria-label': 'Search events' });
+    const when = select([['all', 'All events'], ['upcoming', 'Today and later'], ['past', 'Before today']], st.when, { 'aria-label': 'When',
+      'data-tip': 'Every event, only those still to come (or running today), or only those already over' });
+    const order = select([['asc', 'Oldest first'], ['desc', 'Newest first']], st.order, { 'aria-label': 'Order' });
+    const tagRow = el('div', { class: 'tagpick' });
+    const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
+    const list = el('div', { class: 'evlist' });
+
+    /** text with each search word wrapped in <mark>, still built from text nodes */
+    const marked = (text, words) => {
+      if (!words.length) return text;
+      const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+      return text.split(re).map((part, i) => (i % 2 ? el('mark', {}, part) : part));
+    };
+    const clip = t => (t.length > 220 ? `${t.slice(0, 219).trimEnd()}…` : t);
+    const row = (e, words) => {
+      const a = Number(e.abs_day), b = end(e);
+      const date = E.fmtDate(c, a, { noWeekday: true }) + (b !== a ? ` → ${E.fmtDate(c, b, { noWeekday: true })}` : '');
+      const state = b < d0 ? 'past' : a > d0 ? 'future' : 'now';
+      const notes = (e.notes || []).length;
+      return el('div', { class: `listrow evrow ${state}` + (Number(e.is_secret) ? ' secret' : '') },
+        el('div', { class: 'evwhen' },
+          el('a', { href: `#/c/${S.camp.id}/day/${a}`, 'data-tip': 'Open this day' }, date),
+          el('div', { class: 'small muted' }, shiftRange(e), state === 'now' ? el('span', { class: 'evnow' }, ' · Today') : null)),
+        el('div', { class: 'evbody' },
+          el('h4', {}, Number(e.is_secret) ? secretTag() : null, el('a', { href: `#/c/${S.camp.id}/day/${a}` }, marked(e.title, words))),
+          e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
+          e.body ? el('p', { class: 'small pre' }, marked(clip(e.body), words)) : null,
+          el('small', { class: 'muted' }, 'Added by ', byline(e), notes ? ` · ${notes} note${notes === 1 ? '' : 's'}` : '')));
+    };
+    const draw = () => {
+      const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = events.filter(e => (st.when === 'all' || (st.when === 'upcoming' ? end(e) >= d0 : end(e) < d0))
+        && (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase())))
+        && words.every(w => hay.get(e).includes(w)));
+      if (st.order === 'desc') shown = shown.slice().reverse();
+      count.textContent = shown.length === events.length ? `${events.length} event${events.length === 1 ? '' : 's'}` : `${shown.length} of ${events.length} events`;
+      list.replaceChildren(...(shown.length ? shown.map(e => row(e, words))
+        : [el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.')]));
+      tagRow.replaceChildren(...used.map(t => {
+        const k = t.name.toLowerCase(), on = st.tags.has(k);
+        const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+          'data-tip': on ? `Showing ${t.name} events. Click to stop filtering by it` : `Show only events tagged ${t.name}`,
+          onclick: () => { on ? st.tags.delete(k) : st.tags.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
+        b.style.setProperty('--tag', t.color);
+        return b;
+      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'link small', 'Show events with any tag, or none')] : []));
+    };
+    search.addEventListener('input', () => { st.q = search.value; draw(); });
+    when.addEventListener('change', () => { st.when = when.value; draw(); });
+    order.addEventListener('change', () => { st.order = order.value; draw(); });
+    draw();
+    mount(...campaignHeader('events'), el('div', { class: 'card' },
+      el('h2', {}, 'Events'),
+      el('div', { class: 'row evfilters' }, search, when, order),
+      used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
+      count, list));
   }
 
   // ------------------------------------------------------------ travel tab
@@ -2687,7 +2759,7 @@
         const viewToday = () => viewDay(today(), true);
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, calendar: viewCalendar, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }
