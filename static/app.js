@@ -1025,6 +1025,7 @@
     const groundNow = d === today() ? grounds[E.mod(nowShift(), spd())] : grounds.filter(Boolean).pop();
     const p = E.fromAbs(c, d);
     const sea = E.season(c, d, region?.settings?.hemisphere);
+    const sun = E.sunTimes(c, d, region?.settings?.hemisphere);
     const hol = E.holidaysOn(c, S.holidays, d);
 
     const toCalendar = btn(current ? 'Show in calendar' : 'Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
@@ -1055,6 +1056,8 @@
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         groundNow ? el('div', {}, el('span', { class: 'lbl' }, d === today() ? 'Ground now' : 'Ground at day\'s end',
           tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
+        sun ? el('div', { class: 'sun' }, el('span', { class: 'lbl' }, 'Sun', tip('Sunrise and sunset, blended between the times set on the seasons in Settings, and taken from half a year away for regions in the other hemisphere. Natural light at dawn and dusk follows them')),
+          `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null),
@@ -1082,6 +1085,9 @@
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview,
       el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard, remCard);
   }
+
+  /** Hours of daylight as "11h 40m". */
+  const fmtDaylight = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`; };
 
   /** The Current Day tab's banner and the day's shifts (or hours) at a glance. On today it shows the shift the campaign
    * clock is on, large; on any other day, the day's forecast (what the player may see of it). */
@@ -2591,9 +2597,12 @@
   }
 
   // ------------------------------------------------------------ season editor
+  /** A season's sunrise and sunset boxes as saved: both trimmed, or neither when both are blank. */
+  const sunPair = (r, t) => (r.trim() || t.trim() ? { sunrise: r.trim(), sunset: t.trim() } : {});
   const SEASON_LABELS = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', none: 'None (no climate change)' };
   const seasonChip = s => el('span', { class: `season s-${s.type || 'none'}` }, s.name || '—');
-  /** Editable list of seasons (name, climate type, start month & day) with a live month-by-month preview. */
+  /** Editable list of seasons (name, climate type, start month & day, and sunrise and sunset on that day) with a live
+   * month-by-month preview. */
   function seasonEditor(c) {
     const rows = el('div', { class: 'seasonrows' });
     const preview = el('div', { class: 'seasonmap' });
@@ -2603,32 +2612,39 @@
       type: r.querySelector('[data-k=type]').value,
       month: Number(r.querySelector('[data-k=month]').value),
       day: Math.max(1, Number(r.querySelector('[data-k=day]').value) || 1),
+      ...sunPair(r.querySelector('[data-k=sunrise]').value, r.querySelector('[data-k=sunset]').value),
     }));
     const redraw = () => {
       const test = { ...c, seasons: read().filter(s => s.name) };
       let map;
       try { E.prep(test); map = E.monthSeasons(test); } catch { return; }
+      const sunOn = month => { const t = E.sunTimes(test, E.toAbs(test, test.epochYear, month, 1)); return t && `☀ ${E.fmtClock(t.sunrise)}–${E.fmtClock(t.sunset)}`; };
       preview.replaceChildren(el('table', { class: 'tbl' }, el('tbody', {}, map.map(({ month, seasons }) =>
         el('tr', {}, el('td', {}, c.months[month].name), el('td', {}, test.seasons.length
           ? seasons.map(x => el('span', { class: 'seasonseg' }, seasonChip(x), seasons.length > 1 ? ` ${x.from}–${x.to}` : ''))
-          : el('span', { class: 'muted' }, 'No seasons')))))));
+          : el('span', { class: 'muted' }, 'No seasons')),
+          el('td', { class: 'muted small', 'data-tip': `Sunrise and sunset on day 1 of ${c.months[month].name}` }, sunOn(month) || ''))))));
     };
     const addRow = (s = { name: '', type: 'none', month: 0, day: 1 }) => {
       const month = select(monthOpts, s.month, { 'data-k': 'month', 'aria-label': 'Start month' });
       const day = el('input', { type: 'number', min: 1, value: s.day || 1, class: 'w-day', 'data-k': 'day', 'aria-label': 'Start day' });
       const syncMax = () => { const mo = c.months[month.value]; day.max = Number(mo.days) + Number(mo.leapDays || 0); };
       month.addEventListener('change', syncMax); syncMax();
+      const clock = (k, label, tipText) => el('input', { value: s[k] || '', placeholder: k === 'sunrise' ? '06:00' : '18:00', class: 'w-clock', inputmode: 'numeric',
+        'data-k': k, 'aria-label': label, 'data-tip': tipText });
       const row = el('div', { class: 'row seasonrow' },
         el('input', { value: s.name || '', placeholder: 'Season name', 'data-k': 'name', 'aria-label': 'Season name', class: 'grow' }),
         select(Object.entries(SEASON_LABELS), s.type || 'none', { 'data-k': 'type', 'aria-label': 'Climate', 'data-tip': 'Which season\'s weather odds regions use while this season lasts' }),
         month, day,
+        el('span', { class: 'sunpair' }, '☀', clock('sunrise', 'Sunrise', 'Sunrise on this season\'s first day, like 06:30. Leave both blank to skip'), '–',
+          clock('sunset', 'Sunset', 'Sunset on this season\'s first day, like 18:15. Days in between blend towards the next season\'s times')),
         btn('✕', () => { row.remove(); redraw(); }, 'small link', 'Remove this season'));
       rows.append(row);
     };
     (c.seasons || []).forEach(s => addRow(s));
-    const wrap = el('div', { class: 'seasoned' }, el('small', { class: 'muted' }, 'Name · climate · first month and day'), rows,
+    const wrap = el('div', { class: 'seasoned' }, el('small', { class: 'muted' }, 'Name · climate · first month and day · sunrise–sunset that day'), rows,
       el('div', { class: 'row' }, btn('+ Add season', () => { addRow(); redraw(); rows.lastChild.querySelector('input').focus(); }, 'small', 'Add another season, such as a monsoon or a festival winter'),
-        el('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use.')),
+        el('small', { class: 'muted' }, 'Each season runs from its start day until the next one begins, wrapping into the next year. The climate decides which weather table regions use. Sunrise and sunset are optional: set them and every day shows its times, blended from one season to the next, and natural light at dawn and dusk follows them.')),
       el('details', { open: true }, el('summary', {}, 'Seasons by month'), preview));
     wrap.addEventListener('input', redraw);
     wrap.addEventListener('change', redraw);
@@ -2636,6 +2652,13 @@
     wrap.getSeasons = () => {
       const list = read();
       if (list.some(s => !s.name)) throw new Error('Every season needs a name');
+      const H = Number(c.hoursPerDay) || 24;
+      for (const s of list) {
+        if (s.sunrise === undefined) continue;
+        const r = E.parseClock(s.sunrise), t = E.parseClock(s.sunset);
+        if (r === null || t === null) throw new Error(`${s.name}: give both sunrise and sunset as times like 06:30, or leave both blank`);
+        if (r > t || t > H) throw new Error(`${s.name}: sunrise has to come before sunset, within a ${H}-hour day`);
+      }
       return list;
     };
     return wrap;
