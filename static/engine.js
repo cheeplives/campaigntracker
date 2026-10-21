@@ -348,7 +348,8 @@
     let ph = t / cycle;
     if (moon.erratic) ph += 0.18 * Math.sin(d / 7.3) + 0.11 * Math.sin(d / 3.1 + 1.7);
     ph = mod(ph, 1);
-    const illum = (1 - Math.cos(2 * Math.PI * ph)) / 2;
+    // rounded, since Math.cos may differ in the last bit between engines (Firefox and V8 do on Eberron's moons)
+    const illum = Math.round((1 - Math.cos(2 * Math.PI * ph)) / 2 * 1e9) / 1e9;
     const idx = mod(Math.round(ph * 8), 8);
     return { name: moon.name, phase: ph, illum, label: MOON_PHASES[idx][0], icon: MOON_PHASES[idx][1], color: moon.color };
   }
