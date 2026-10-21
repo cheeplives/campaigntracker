@@ -1578,7 +1578,7 @@
   function encLinker() {
     if (encLinkMemo?.list !== S.encyclopedia) {
       encLinkMemo = { list: S.encyclopedia, linker: Nouns.linker(S.encyclopedia, (e, text) => el('a', { class: 'enc-link' + (e.is_secret ? ' secret' : ''),
-        href: `#/c/${S.camp.id}/encyclopedia/${e.id}`, 'data-tip': `${e.name}${e.is_secret ? ' (GM only)' : ''}: open it in the Encyclopedia` }, text)) };
+        href: `#/c/${S.camp.id}/encyclopedia/${e.id}`, 'data-tip': `📖 ${e.name}${e.is_secret ? ' (GM only)' : ''}${e.preview ? `: ${e.preview}` : '. Nothing written about it yet'}` }, text)) };
     }
     return encLinkMemo.linker;
   }
@@ -1600,16 +1600,29 @@
     return el('div', { class: 'enc-mentions small' }, el('span', { class: 'muted', 'data-tip': 'Encyclopedia entries named in this text. Open one to read or add to it' }, '📖 '),
       list.map(e => el('a', { class: 'enc-link' + (e.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${e.id}` }, e.name)));
   }
-  /** Words of the calendar itself, which are capitalized but never Encyclopedia entries. */
-  function calendarWords() {
+  /** Words the campaign already has names for, which the detector never offers: the calendar's months, weekdays, shifts,
+   * moons, seasons and eras, the members' names and character names, and the names of the event and Encyclopedia tags. */
+  function knownWords() {
     const c = cal();
+    const people = S.members.flatMap(m => [m.character_name, m.display_name]).filter(Boolean);
     return [...(c.months || []).map(m => m.name), ...(c.weekdays || []), ...shiftNames(), ...(c.moons || []).map(m => m.name),
-      ...(c.seasons || []).map(s => s.name), ...(c.eras || []).flatMap(e => [e?.name, e?.abbr])].filter(Boolean);
+      ...(c.seasons || []).map(s => s.name), ...(c.eras || []).flatMap(e => [e?.name, e?.abbr]),
+      ...people, ...people.flatMap(n => n.split(/\s+/)), ...S.tags.map(t => t.name), ...S.encTags.map(t => t.name)].filter(Boolean);
   }
+  /** Names the campaign knows the kind of: its regions are Locations and its holidays Events. */
+  function knownKinds() {
+    const h = {};
+    for (const r of S.regions) h[r.name] = 'Location';
+    for (const x of S.holidays) h[x.name] = 'Event';
+    return h;
+  }
+  const detectorOpts = () => ({ known: S.encyclopedia.flatMap(Nouns.namesOf), ignored: [...S.encIgnored, ...encSkipped], stop: knownWords(), hints: knownKinds() });
+  // Names skipped in the dialog (or left with Not now) aren't offered again until the page is reloaded; Scan campaign still lists them.
+  const encSkipped = new Set();
   /** Run the detector over what was just saved and offer what it finds. sources: see Nouns.find(). */
   async function offerNouns(sources) {
     if (!S.encReady) return;
-    const found = Nouns.find(sources.filter(s => s.text && String(s.text).trim()), { known: S.encyclopedia.map(e => e.name), ignored: S.encIgnored, stop: calendarWords() });
+    const found = Nouns.find(sources.filter(s => s.text && String(s.text).trim()), detectorOpts());
     if (found.length) await nounDialog(found.slice(0, 40));
   }
   /** Ask about each name found: Add it to the Encyclopedia (with a tag, and as GM only for a GM), Ignore it from now on,
@@ -1623,17 +1636,28 @@
         const name = el('input', { value: f.term, maxlength: 150, 'aria-label': `Name for ${f.term}`, class: 'grow' });
         const tag = select(tagOpts, f.tag || '', { 'aria-label': `Tag for ${f.term}` });
         const secret = isGM() ? el('input', { type: 'checkbox', checked: f.secret, 'aria-label': `${f.term} is GM only` }) : null;
-        const choice = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': `What to do with ${f.term}` }, [['add', 'Add', 'Add it to the Encyclopedia'],
-          ['ignore', 'Ignore', 'Never offer this word again. You can bring it back from the Encyclopedia tab'], ['skip', 'Skip', 'Not now: ask again next time']]
-          .map(([v, l, t]) => el('label', { 'data-tip': t }, el('input', { type: 'radio', name: `noun-${i}`, value: v, checked: v === (scan ? 'skip' : 'add') }), el('span', {}, l))));
+        // "Hoffmann" beside an entry for Gunther Hoffmann: it may be another name for that entry rather than a new one.
+        const like = Nouns.related(f.term, S.encyclopedia);
+        const aliasOf = like.length ? select(like.map(e => [e.id, e.name]), like[0].id, { 'aria-label': `Which entry ${f.term} is another name for` }) : null;
+        const choices = [['add', 'Add', 'Add it to the Encyclopedia'], like.length ? ['alias', 'Alias', 'Another name for an entry that exists. It links to that entry from now on'] : null,
+          ['ignore', 'Ignore', 'Never offer this word again. You can bring it back from the Encyclopedia tab'], ['skip', 'Skip', 'Not now: ask again next time']].filter(Boolean);
+        const choice = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': `What to do with ${f.term}` },
+          choices.map(([v, l, t]) => el('label', { 'data-tip': t }, el('input', { type: 'radio', name: `noun-${i}`, value: v, checked: v === (scan ? 'skip' : 'add') }), el('span', {}, l))));
+        const asEntry = el('div', { class: 'row' }, name, tag,
+          secret ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see this entry. Ticked when the name was found only in GM-only text' }, secret, ' 🔒 GM only') : null);
+        const asAlias = aliasOf ? el('div', { class: 'row', hidden: true }, el('span', { class: 'small' }, 'Another name for'), aliasOf) : null;
         const row = el('div', { class: 'noun-row', 'data-term': f.term }, choice,
-          el('div', { class: 'noun-what' }, el('div', { class: 'row' }, name, tag,
-            secret ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see this entry. Ticked when the name was found only in GM-only text' }, secret, ' 🔒 GM only') : null),
+          el('div', { class: 'noun-what' }, asEntry, asAlias,
             f.where.length ? el('small', { class: 'muted' }, `Found in ${f.where.join(', ')}${f.count > 1 ? ` · ${f.count} times` : ''}`) : null));
         const pick = () => choice.querySelector('input:checked')?.value || 'skip';
-        const sync = () => row.classList.toggle('off', pick() !== 'add');
+        const sync = () => {
+          const v = pick();
+          row.classList.toggle('off', v !== 'add' && v !== 'alias');
+          asEntry.hidden = v === 'alias';
+          if (asAlias) asAlias.hidden = v !== 'alias';
+        };
         choice.addEventListener('change', sync); sync();
-        return { f, row, name, tag, secret, pick, set: v => { choice.querySelector(`input[value=${v}]`).checked = true; sync(); } };
+        return { f, row, name, tag, secret, aliasOf, pick, set: v => { const r = choice.querySelector(`input[value=${v}]`); if (r) { r.checked = true; sync(); } } };
       });
       const all = v => rows.forEach(r => r.set(v));
       const d = el('dialog', { class: 'kit-dialog noun-dialog', 'aria-label': 'New names for the Encyclopedia' },
@@ -1650,25 +1674,30 @@
       d.addEventListener('cancel', () => { d.returnValue = 'cancel'; });
       d.addEventListener('close', async () => {
         d.remove();
-        if (d.returnValue !== 'save' || S.camp?.id !== cid) return resolve(false);
+        if (S.camp?.id !== cid) return resolve(false);
+        if (d.returnValue !== 'save') { if (!scan) for (const r of rows) encSkipped.add(r.f.term); return resolve(false); }
         const adds = [], ignores = [];
         for (const r of rows) {
           const v = r.pick(), n = r.name.value.trim().replace(/\s+/g, ' ');
           if (v === 'ignore') ignores.push(r.f.term);
+          if (v === 'skip' && !scan) encSkipped.add(r.f.term);
+          if (v === 'alias') adds.push({ name: r.f.term, alias_of: Number(r.aliasOf.value) });
           if (v !== 'add' || !n) continue;
           adds.push({ name: n, is_secret: !!r.secret?.checked, tags: r.tag.value ? [{ name: r.tag.value }] : [] });
           if (Nouns.keyOf(n) !== Nouns.keyOf(r.f.term)) ignores.push(r.f.term); // renamed: the word as found isn't offered again
         }
         try {
-          let added = [];
-          if (adds.length) added = (await post('entries_add', { entries: adds }, cid)).added;
+          let added = [], aliased = [];
+          if (adds.length) ({ added, aliased } = await post('entries_add', { entries: adds }, cid));
           if (ignores.length) { await post('terms_ignore', { terms: ignores }, cid); S.encIgnored = [...S.encIgnored, ...ignores]; }
-          if (added.length) {
-            S.encyclopedia = [...S.encyclopedia, ...added.map(a => ({ id: a.id, name: a.name, is_secret: !!adds.find(x => x.name === a.name)?.is_secret, blank: true }))]
+          if (added.length || aliased.length) {
+            const list = S.encyclopedia.map(e => ({ ...e, aliases: [...(e.aliases || []), ...aliased.filter(a => a.id === e.id).map(a => a.alias)] }));
+            S.encyclopedia = [...list, ...added.map(a => ({ id: a.id, name: a.name, aliases: [], is_secret: !!adds.find(x => x.name === a.name)?.is_secret, blank: true, preview: '' }))]
               .sort((a, b) => a.name.localeCompare(b.name));
           }
-          if (added.length || ignores.length) {
-            toast([added.length ? `Added ${added.length} to the Encyclopedia` : '', ignores.length ? `${ignores.length} ignored` : ''].filter(Boolean).join(' · '));
+          if (added.length || aliased.length || ignores.length) {
+            toast([added.length ? `Added ${added.length} to the Encyclopedia` : '', aliased.length ? `${aliased.length} other name${aliased.length === 1 ? '' : 's'} added` : '',
+              ignores.length ? `${ignores.length} ignored` : ''].filter(Boolean).join(' · '));
             route();
           }
           resolve(true);
@@ -1695,7 +1724,7 @@
   const scanSources = sources => sources.map(s => ({ ...s, title: ['event', 'reminder'].includes(s.kind), label: sourceLabel(s)[0] }));
   async function fullScan() {
     const { sources } = await api('encyclopedia_sources', { query: { cid: S.camp.id } });
-    const found = Nouns.find(scanSources(sources), { known: S.encyclopedia.map(e => e.name), ignored: S.encIgnored, stop: calendarWords() });
+    const found = Nouns.find(scanSources(sources), { ...detectorOpts(), ignored: S.encIgnored });
     if (!found.length) { toast('No names missing: everything the detector finds is in the Encyclopedia or ignored'); return; }
     await nounDialog(found.slice(0, 300), { scan: true });
   }
@@ -1712,20 +1741,20 @@
     const r = await api('encyclopedia', { query: { cid: S.camp.id } });
     const entries = r.entries;
     S.encTags = r.tags || []; S.encIgnored = r.ignored || [];
-    S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, is_secret: e.is_secret, blank: entryBlank(e) }));
+    S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }));
     const st = vs().enc || (vs().enc = { q: '', tags: new Set() });
     const current = sel === 'new' ? { tags: [] } : entries.find(e => e.id === Number(sel)) || null;
     const href = id => `#/c/${S.camp.id}/encyclopedia${id ? `/${id}` : ''}`;
 
     // --- the list
-    const hay = new Map(entries.map(e => [e, [e.name, ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : ''].join('\n').toLowerCase()]));
+    const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : ''].join('\n').toLowerCase()]));
     const used = tagsOf(entries).sort((a, b) => a.name.localeCompare(b.name));
     for (const k of [...st.tags]) if (!used.some(t => t.name.toLowerCase() === k)) st.tags.delete(k);
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
     const tagRow = el('div', { class: 'tagpick' });
     const lists = el('div', { class: 'enc-lists' });
     const item = e => el('a', { class: 'enc-item' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
-      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name),
+      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name, e.aliases?.length ? el('small', { class: 'muted' }, ` · ${e.aliases.join(', ')}`) : null),
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
     const draw = () => {
       const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -1800,6 +1829,7 @@
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
+      e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
         (e.notes || '').trim() ? note(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
@@ -1808,8 +1838,31 @@
       box]);
   }
 
+  /** The sentences across the campaign that name entry e, each with a button that puts it into the notes, so an entry the
+   * detector added starts from what was written rather than from nothing. Quotes from GM-only text go to the GM notes. */
+  function foundIn(e, pub, gm) {
+    const box = el('details', { class: 'enc-found', open: true }, el('summary', {}, 'Where it was found'), el('p', { class: 'muted small' }, 'Looking…'));
+    api('encyclopedia_sources', { query: { cid: S.camp.id } }).then(({ sources }) => {
+      const names = Nouns.namesOf(e), rows = [];
+      for (const s of sources) {
+        if (s.kind.startsWith('entry') && s.id === e.id) continue;
+        const [label, to] = sourceLabel(s);
+        for (const q of Nouns.excerpts(Nouns.plain(s.text, s.format), names).slice(0, 3)) {
+          if (rows.length >= 30) break;
+          const into = s.secret && gm ? gm : pub;
+          rows.push(el('div', { class: 'enc-quote' }, el('blockquote', {}, `“${q}”`, ' ', el('a', { href: to, class: 'small muted' }, label)),
+            btn(s.secret && gm ? 'Add to GM notes' : 'Add to notes', ev => { into.insertText(q); ev.currentTarget.disabled = true; }, 'small',
+              s.secret && gm ? 'Put this sentence at the end of the GM notes' : 'Put this sentence at the end of the Public notes')));
+        }
+      }
+      box.lastChild.replaceWith(rows.length ? el('div', { class: 'enc-quotes' }, rows) : el('p', { class: 'muted small' }, 'Nowhere yet.'));
+    }).catch(() => box.lastChild.replaceWith(el('p', { class: 'muted small' }, 'Could not look that up just now.')));
+    return box;
+  }
+
   function entryForm(e) {
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
+    const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there' });
@@ -1818,8 +1871,10 @@
       el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
       el('div', { class: 'grid2' },
         field('Name', name),
+        field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
       tags.node,
+      e.id ? foundIn(e, pub, gm) : null,
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
@@ -1828,13 +1883,14 @@
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
       const p = pub.value(), g = gm?.value();
-      const body = { id: e.id, name: name.value, notes: p.text, tags: tags.get() };
+      const body = { id: e.id, name: name.value, aliases: aliases.value.split(',').map(x => x.trim()).filter(Boolean), notes: p.text, tags: tags.get() };
       if (gm) Object.assign(body, { gm_notes: g.text, is_secret: secret.checked });
       try {
         const { id } = await post('entry_save', body, S.camp.id);
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
-        S.encyclopedia = [...was, { id, name: name.value.trim(), is_secret: !!secret?.checked, blank: false }].sort((a, b) => a.name.localeCompare(b.name));
+        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text,
+          preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
         if (location.hash === to) route(); else location.hash = to;

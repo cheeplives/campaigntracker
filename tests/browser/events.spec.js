@@ -1,7 +1,7 @@
 // Events run from a Shift Start to a Shift End (or all day), carry colour-coded
 // tags that show in week view, and events saved before either still work.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign , notNow } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
 
 test("an event gets a shift range and tags, shown in day and week view", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -33,7 +33,6 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await expect(form.getByRole("button", { name: "Siege", exact: true })).toHaveAttribute("aria-pressed", "true");
   await form.getByRole("button", { name: "Add event" }).click();
   await expect(page.getByText("Event saved")).toBeVisible();
-  await notNow(page); // the detector offers "Skirmish" for the Encyclopedia
 
   const ev = page.locator(".event", { hasText: "Skirmish at the ford" });
   await expect(ev).toContainText("Dawn → Midday");

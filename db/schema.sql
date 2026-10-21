@@ -319,6 +319,7 @@ CREATE TABLE IF NOT EXISTS encyclopedia_entries (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   name VARCHAR(150) NOT NULL,
+  aliases_json TEXT,                                -- other names for the same thing: ["Hoffmann", "the innkeeper"]
   notes MEDIUMTEXT,
   gm_notes MEDIUMTEXT,
   is_secret TINYINT(1) NOT NULL DEFAULT 0,

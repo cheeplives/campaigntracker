@@ -550,3 +550,8 @@ dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
 .seg input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 560px) { .noun-row { flex-direction: column; gap: 6px; } }
+.enc-found summary { cursor: pointer; font-weight: 600; }
+.enc-quotes { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.enc-quote { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.enc-quote blockquote { margin: 0; padding-left: 10px; border-left: 3px solid var(--line); flex: 1 1 260px; min-width: 0; }
+.noun-what [hidden] { display: none; }
