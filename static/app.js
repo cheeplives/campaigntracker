@@ -353,9 +353,9 @@
   function datePicker(abs) {
     const c = cal(), p = E.fromAbs(c, abs ?? today());
     // with eras the year is typed as its number in an era (27 RA), and the era is picked next to it
-    const eras = (c.eras || []).filter(e => e.name || e.abbr), at = E.eraOf(c, p.year);
+    const at = E.eraOf(c, p.year), eras = E.eraList(c);
     const y = el('input', { type: 'number', value: eras.length ? at.year : p.year, class: 'w-year', 'aria-label': 'Year' });
-    const era = eras.length ? select([...eras.map(e => [c.eras.indexOf(e), e.abbr || e.name]), ['', 'Calendar year']], at.era ? at.era.index : '',
+    const era = eras.length ? select([...eras.map(e => [e.index, e.abbr || e.name]), ['', 'Calendar year']], at.era ? at.era.index : '',
       { 'aria-label': 'Era', 'data-tip': 'The era the year is counted in. Calendar year: the plain year number, ignoring eras' }) : null;
     const m = select(c.months.map((mo, i) => [i, mo.name]), p.month, { 'aria-label': 'Month' });
     const d = el('input', { type: 'number', min: 1, value: p.day, class: 'w-day', 'aria-label': 'Day' });
@@ -558,7 +558,25 @@
 
   function viewCreate() {
     let preset = 'gregorian';
+    // the built-in presets, plus 'file' once a calendar is imported from a file
+    const presets = { ...E.PRESETS };
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
+    const importBtn = btn('Import calendar from file…', async () => {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const base = E.PRESETS.custom;
+        const hemisphere = r.calendar.hemisphere === 'south' ? 'south' : 'north';
+        presets.file = { label: `From file: ${r.calendar.name || 'calendar'}`, calendar: r.calendar, holidays: r.holidays, settings: base.settings,
+          regions: base.regions.map(x => ({ ...x, settings: { ...x.settings, hemisphere } })),
+          start: r.today || { year: Number(r.calendar.epochYear) || 0, month: 0, day: 1 } };
+        presetSel.querySelector('option[value=file]')?.remove();
+        presetSel.append(el('option', { value: 'file' }, presets.file.label));
+        presetSel.value = 'file';
+        presetSel.dispatchEvent(new Event('change'));
+        toast(`Imported ${r.calendar.name || 'the calendar'}${r.holidays.length ? ` and ${r.holidays.length} holiday${r.holidays.length === 1 ? '' : 's'}` : ''}`);
+      } catch (err) { toast(err.message, true); }
+    }, 'small', 'Start from a calendar exported from another campaign (Settings → Tools → Export calendar), with its holidays and the date it had reached');
     const startWrap = el('div');
     // the Custom preset's months, set on this form: how many there are and each one's length
     let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
@@ -568,13 +586,13 @@
     let customLeap = null;
     /** The preset's calendar, with the custom months, week, leap rule (and seasons spread over the months) when Custom is picked. */
     const presetCal = () => {
-      const c = E.PRESETS[preset].calendar;
+      const c = presets[preset].calendar;
       return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], leap: customLeap && { ...customLeap }, seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
     };
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
-      const p = E.PRESETS[preset], c = tmpCal();
+      const p = presets[preset], c = tmpCal();
       const saved = S.camp; S.camp = { calendar: c, current_shift: 0 }; // datePicker reads cal()
       picker = datePicker(E.toAbs(c, p.start.year, p.start.month, p.start.day));
       S.camp = saved;
@@ -584,11 +602,11 @@
     let seasons;
     const drawSeasons = () => {
       seasons = seasonEditor(tmpCal());
-      const hemi = E.PRESETS[preset].calendar.hemisphere;
+      const hemi = presets[preset].calendar.hemisphere;
       seasonWrap.replaceChildren(el('h3', {}, 'Seasons'),
         ...(hemi ? [el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`)] : []), seasons);
     };
-    const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
+    const homeRegion = () => presets[preset].regions.find(r => r.current) || presets[preset].regions[0];
     const climateWrap = el('div');
     let climateSel;
     const drawClimate = () => {
@@ -682,7 +700,7 @@
     const shiftSel = select([], 0, { name: 'shift' });
     const startShift = field('Starting shift', shiftSel, null, shiftTip({}));
     const drawShifts = () => {
-      const c = { ...E.PRESETS[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
+      const c = { ...presets[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
       const pick = { shifts4: 1, shifts2: 0, hours: Math.min(names.length - 1, Math.round(names.length / 3)) }[modeSel.value];
       shiftSel.replaceChildren(...names.map((n, i) => el('option', { value: i }, n)));
       shiftSel.value = String(pick);
@@ -696,7 +714,8 @@
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
-        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
+        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later, or import a calendar exported from another campaign.'),
+      el('div', { class: 'row' }, importBtn),
       monthsWrap, startWrap,
       field('Time tracking', modeSel, 'You can change this later on the Settings tab.',
         'How each day is split. Four shifts: Dawn, Midday, Dusk and Overnight, about six hours each. Two shifts: Day and Night. Hours: every hour of the day from midnight, like a normal calendar. Weather, light and visibility follow the time of day in every mode, and the travel planner counts in the same steps.'),
@@ -704,7 +723,7 @@
       el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
-      const p = E.PRESETS[preset], v = formData(f);
+      const p = presets[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
           name: v.name, description: v.description, calendar: { ...presetCal(), seasons: seasons.getSeasons(), timeMode: v.time_mode }, settings: { ...p.settings },
@@ -779,6 +798,11 @@
   }
 
   // ------------------------------------------------------------ calendar tab
+  /** "Reign of Aldric: year 27 of the era, calendar year 1526" for a year an era covers, else undefined. */
+  function eraTip(c, y) {
+    const { era, year } = E.eraOf(c, y);
+    return era ? `${era.name}: year ${year} of the era, calendar year ${y}` : undefined;
+  }
   const viewState = {};
   function vs() { return viewState[S.camp.id] || (viewState[S.camp.id] = { mode: settings().time_unit === 'day' ? 'week' : 'month', anchor: today() }); }
 
@@ -792,11 +816,16 @@
       from = E.toAbs(c, p.year, p.month, 1);
       to = from + E.monthLength(c, p.year, p.month) - 1;
       title = `${c.months[p.month].name} ${E.yearLabel(c, p.year)}`;
-      const era = E.eraOf(c, p.year).era;
-      if (era) titleTip = `${era.name}: year ${E.eraOf(c, p.year).year} of the era, calendar year ${p.year}`;
+      titleTip = eraTip(c, p.year);
       const segs = (c.seasons || []).length ? E.monthSeasons(c, p.year)[p.month].seasons : [];
       if (segs.length) seasonLine = el('div', { class: 'seasonline' }, segs.map((x, i) =>
         el('span', { class: 'seasonseg' }, seasonChip(x), i ? ` begins on day ${x.from}` : '')));
+    } else if (st.mode === 'year') {
+      const y = E.fromAbs(c, anchor).year;
+      from = E.toAbs(c, y, 0, 1);
+      to = from + E.yearLength(c, y) - 1;
+      title = E.yearLabel(c, y);
+      titleTip = eraTip(c, y);
     } else {
       // walk back to the first weekday, then forward through a full week (festival days have no weekday)
       const wl = E.weekLength(c);
@@ -817,7 +846,8 @@
           m += dir;
         }
         st.anchor = E.toAbs(c, y, m, 1);
-      } else st.anchor = anchor + dir * E.weekLength(c);
+      } else if (st.mode === 'year') st.anchor = E.toAbs(c, E.fromAbs(c, anchor).year + dir, 0, 1);
+      else st.anchor = anchor + dir * E.weekLength(c);
       route();
     };
     const jump = datePicker(anchor);
@@ -826,16 +856,17 @@
       btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
       el('span', { class: 'seg' },
         btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
-        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', hourMode() ? 'One row per day showing the hours with an activity, their visibility and activity' : 'One row per day showing every shift, its visibility and activity')),
+        btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', hourMode() ? 'One row per day showing the hours with an activity, their visibility and activity' : 'One row per day showing every shift, its visibility and activity'),
+        btn('Year', () => { st.mode = 'year'; route(); }, st.mode === 'year' ? 'small on' : 'small', 'Every month of the year on one page. Click a month\'s name to open it, or a day to open the day')),
       el('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
 
     mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
     body.append(el('p', { class: 'muted' }, 'Loading…'));
     const data = await fetchRange(from, to);
     const missing = []; for (let d = from; d <= to; d++) if (!data.days.get(d)?.weather) missing.push(d);
-    const content = st.mode === 'month' ? monthGrid(from, to, data) : weekList(from, to, data);
+    const content = st.mode === 'month' ? monthGrid(from, to, data) : st.mode === 'year' ? yearGrid(from, data) : weekList(from, to, data);
     body.replaceChildren(content);
-    if (isGM() && missing.length) {
+    if (isGM() && missing.length && st.mode !== 'year') { // a whole year is too much to forecast with one click
       const g = btn(`Generate weather for ${missing.length} day(s) here`, null, 'small', 'Roll weather now for the days shown that have none yet, using each day\'s region');
       g.addEventListener('click', busy(g, async () => { await ensureWeather(from, to); route(); }));
       body.append(el('div', { class: 'row' }, g, el('small', { class: 'muted' }, 'Days are generated automatically as time passes; this forecasts ahead. Players only see future weather if you allow it in Settings.')));
@@ -907,6 +938,47 @@
     return el('div', {},
       el('div', { class: 'grid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => el('div', { 'data-tip': n }, n.slice(0, 3)))),
       el('div', { class: 'grid', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, cells));
+  }
+
+  /** A small day for the year view: its number, marked when something is on, with the details in its tooltip. */
+  function yearCell(d, data) {
+    const c = cal(), p = E.fromAbs(c, d), row = data.days.get(d);
+    const evs = dayEvents(data, d), hol = E.holidaysOn(c, S.holidays, d), rems = dayReminders(d), np = data.notes.get(d);
+    const w = row?.weather;
+    const cls = ['ycell'];
+    if (d === today()) cls.push('today');
+    if (d < today()) cls.push('past');
+    if (p.intercalary) cls.push('festival');
+    if (evs.length || hol.length) cls.push('has-ev');
+    const tipLines = [E.fmtDate(c, d), w ? E.weatherLabel(w, tempUnit()) : null, ...keyMoonPhases(d).map(m => `${m.icon} ${m.name}: ${m.label} moon`),
+      ...hol.map(x => `Holiday: ${x.name}`), ...evs.map(e => `${Number(e.is_secret) ? '🔒' : '●'} ${e.title}`),
+      ...rems.map(x => `🔔 ${x.title}`), np ? `📝 ${np.count} note${np.count > 1 ? 's' : ''}` : null].filter(Boolean);
+    return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': tipLines.join('\n'),
+      style: hol.length ? { boxShadow: `inset 0 -3px 0 ${hol[0].color}` } : null },
+      p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? '★' : p.day);
+  }
+
+  /** Every month of the year starting on day `from`, each as a small grid. A month's name opens it in the month view. */
+  function yearGrid(from, data) {
+    const c = cal(), wl = E.weekLength(c), st = vs(), y = E.fromAbs(c, from).year;
+    const months = [];
+    c.months.forEach((mo, m) => {
+      const len = E.monthLength(c, y, m);
+      if (len <= 0) return; // leap-only months in common years
+      const start = E.toAbs(c, y, m, 1);
+      const cells = [];
+      const weeks = !mo.intercalary && c.weekdays.length;
+      if (weeks) for (let i = 0, lead = E.weekday(c, start) || 0; i < lead; i++) cells.push(el('span', { class: 'ycell empty' }));
+      for (let d = start; d < start + len; d++) cells.push(yearCell(d, data));
+      const cols = weeks ? wl : Math.min(wl, len);
+      const open = el('button', { type: 'button', class: 'ym-name', 'data-tip': `Open ${mo.name} in the month view`,
+        onclick: () => { st.mode = 'month'; st.anchor = start; route(); } }, len === 1 && mo.intercalary ? `★ ${mo.name}` : mo.name);
+      months.push(el('div', { class: 'ymonth' + (mo.intercalary ? ' festival' : '') + (today() >= start && today() < start + len ? ' current' : '') },
+        open,
+        weeks ? el('div', { class: 'ygrid ygrid-head', style: { gridTemplateColumns: `repeat(${wl}, minmax(0,1fr))` } }, c.weekdays.map(n => el('span', { 'data-tip': n }, n.slice(0, 2)))) : null,
+        el('div', { class: 'ygrid', style: { gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` } }, cells)));
+    });
+    return el('div', { class: 'yeargrid' }, months);
   }
 
   function weekList(from, to, data) {
@@ -2588,12 +2660,32 @@
     });
 
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
+    async function importCalendar() {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const name = r.calendar.name || 'the calendar';
+        if (!await confirmDialog(`Replace this campaign's calendar with ${name} from the file? Stored days keep their absolute day numbers.`)) return;
+        // holidays the campaign doesn't have yet, by name
+        const have = new Set(S.holidays.map(h => h.name.toLowerCase()));
+        const fresh = r.holidays.filter(h => !have.has(h.name.toLowerCase()));
+        const addHolidays = fresh.length && await confirmDialog(`Also add the file's ${fresh.length} holiday${fresh.length === 1 ? '' : 's'} this campaign doesn't have (${fresh.map(h => h.name).join(', ')})?`);
+        await post('campaign_update', { calendar: { ...r.calendar, timeMode: E.timeMode(c) } }, S.camp.id);
+        if (addHolidays) for (const h of fresh) await post('holiday_save', h, S.camp.id);
+        await loadCampaign(S.camp.id, true); toast(`Imported ${name}${addHolidays ? ` and ${fresh.length} holiday${fresh.length === 1 ? '' : 's'}` : ''}`); route();
+      } catch (err) { toast(err.message, true); }
+    }
     const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
       el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
         if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
         await post('campaign_update', { calendar: { ...E.PRESETS[presetSel.value].calendar, timeMode: E.timeMode(c) } }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
       }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
+      el('div', { class: 'row' },
+        btn('⬇ Export calendar', () => CalendarFile.download(S.camp, S.holidays), 'small',
+          'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
+        btn('Import calendar…', importCalendar, 'small',
+          'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
       el('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
         if (typed !== 'DELETE') return;

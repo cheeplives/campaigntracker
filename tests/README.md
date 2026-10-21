@@ -34,6 +34,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **year-view**: the year view shows every month with today ringed, marks days
+  with events and lists them in the tooltip, steps a year at a time, opens a
+  month from its name and a day from its number, and never gives a player a
+  secret event.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
@@ -75,6 +79,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
+- **calendar-file**: Settings exports the calendar, its holidays and the date reached
+  as JSON; importing it into another campaign's Settings replaces the calendar and adds
+  the holidays it lacks (only once), a file that isn't a calendar is refused, and the
+  new-campaign form starts a campaign on the file's calendar, holidays and date.
 - **reminders**: a GM's reminder, added from today's page on the next shift, pops up for
   the GM when time passes to it and on a player's open page at its next check; Dismiss stops
   it for that person only, Remind me later until the clock moves or the page reloads; moving

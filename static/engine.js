@@ -205,7 +205,9 @@
    * number. One era may be marked before: it covers the years before its start, counted back from 1 (like BC).
    */
   function eraList(cal) {
-    return (cal.eras || []).map((e, i) => ({ ...e, start: Number(e.start) || 0, index: i })).filter(e => e.name || e.abbr);
+    // an imported file or the raw JSON box can hold anything, so skip what isn't an era
+    return (Array.isArray(cal.eras) ? cal.eras : []).map((e, i) => (e && typeof e === 'object' ? { ...e, start: Number(e.start) || 0, index: i } : null))
+      .filter(e => e && (e.name || e.abbr));
   }
   /** The era year y falls in and its number there: { era, year }. era is null when no era covers y. */
   function eraOf(cal, y) {
@@ -1559,7 +1561,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
+    eraList, eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, moons, moonPhase, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,

@@ -24,6 +24,9 @@ test("engine: era labels, restarts and the years before", () => {
   }
   cal.dateFormat = "{d} {M} {Y}, {E}";
   expect(Engine.fmtDate(cal, Engine.toAbs(cal, 1526, 0, 3))).toBe("3 Hammer 27 RA, Reign of Aldric");
+  // an imported file can hold anything: what isn't an era is skipped
+  expect(Engine.yearLabel({ ...cal, eras: ["junk", null, { name: "Odd", abbr: "OD", start: "x" }] }, 5)).toBe("5 OD");
+  expect(Engine.yearLabel({ ...cal, eras: "junk" }, 5)).toBe("5 OLD");
   // without a "before" era, years before the first era keep the plain suffix
   const noBefore = { ...cal, eras: cal.eras.slice(0, 2) };
   expect(Engine.yearLabel(noBefore, 0)).toBe("0 OLD");
