@@ -1,6 +1,6 @@
 /* calendar-file.js — a campaign's calendar as a JSON file, and back.
  *
- * The file holds the calendar (months, weekdays, leap rule, moons, seasons,
+ * The file holds the calendar (months, weekdays, leap rule, eras, moons, seasons,
  * shift names), the campaign's holidays and the date it had reached, so it can
  * be kept as a backup, shared, or used to start a new campaign on the same
  * calendar. Days, events, notes and regions are not in it.

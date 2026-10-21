@@ -57,6 +57,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   shift (never the forecast), nothing for later days, and everything once allowed;
   Previous/Next day and Return to today stay on the tab and keep that rule; the
   day's Locations visited saves, survives a re-roll and is shown to players.
+- **eras**: era abbreviations label their years, a restart era counts from 1 and
+  a "before" era counts back (the Gregorian preset has no year 0); a GM types eras
+  in Settings, the month title uses them and the date picker takes a year in an
+  era; a second "before" era is refused.
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.

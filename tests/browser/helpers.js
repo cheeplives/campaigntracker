@@ -49,6 +49,9 @@ async function approve(browser, email, status = "approved") {
   await signIn(page, ADMIN);
   const { json } = await api(page, "users");
   const u = json.users.find(x => x.email === email);
+  // Every spec approves through the one admin account, so a full run goes past the admin's
+  // 60 changes a minute. Start its count afresh; signin.spec checks the real limits.
+  sql("DELETE FROM rate_limits WHERE bucket = 'admin'");
   const r = await api(page, "user_status", { id: u.id, status });
   expect(r.status).toBe(200);
   await ctx.close();
