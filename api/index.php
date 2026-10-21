@@ -784,13 +784,21 @@ try {
         $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes FROM days WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
         $st->execute([$cid, $from, $to]);
         $days = [];
+        $notes = []; // abs_day => short previews for the month grid, only what this member may read
+        $clip = fn(string $t): string => mb_strlen($t) > 280 ? rtrim(mb_substr($t, 0, 279)) . '…' : $t;
+        $addNote = function (int $ad, array $n) use (&$notes, $clip) {
+            $notes[$ad] ??= ['abs_day' => $ad, 'count' => 0, 'items' => []];
+            $notes[$ad]['count']++;
+            if (count($notes[$ad]['items']) < 8) $notes[$ad]['items'][] = ['text' => $clip(trim($n['text']))] + $n;
+        };
         foreach ($st->fetchAll() as $d) {
             $ad = (int)$d['abs_day'];
+            if (trim($d['notes'] ?? '') !== '') $addNote($ad, ['kind' => 'day', 'text' => $d['notes']]);
+            if ($isGm && trim($d['gm_notes'] ?? '') !== '') $addNote($ad, ['kind' => 'gm', 'text' => $d['gm_notes']]);
             $days[] = [
                 'abs_day' => $ad,
                 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
                 'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])),
-                'has_notes' => ($d['notes'] ?? '') !== '' || ($isGm && ($d['gm_notes'] ?? '') !== ''),
             ];
         }
         $st = db()->prepare('SELECT abs_day, shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
@@ -800,7 +808,14 @@ try {
         $st->execute([$cid, $to, $from]);
         $events = $st->fetchAll();
         attach_tags($events);
-        out(['days' => $days, 'shifts' => $shifts, 'events' => $events, 'today' => $today]);
+        $st = db()->prepare('SELECT n.abs_day, n.shift, n.body, ' . AUTHOR_SQL . ' AS author
+            FROM shift_notes n LEFT JOIN users u ON u.id=n.user_id LEFT JOIN campaign_members m ON m.campaign_id=n.campaign_id AND m.user_id=n.user_id
+            WHERE n.campaign_id=? AND n.abs_day BETWEEN ? AND ? ORDER BY n.abs_day, n.shift, n.created_at, n.id');
+        $st->execute([$cid, $from, $to]);
+        foreach ($st->fetchAll() as $n) {
+            if (trim($n['body']) !== '') $addNote((int)$n['abs_day'], ['kind' => 'shift', 'shift' => (int)$n['shift'], 'author' => $n['author'], 'text' => $n['body']]);
+        }
+        out(['days' => $days, 'shifts' => $shifts, 'events' => $events, 'notes' => array_values($notes), 'today' => $today]);
 
     // ===== single day drill-down =====
     case 'day':

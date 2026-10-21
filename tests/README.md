@@ -43,6 +43,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **shifts**: a GM picks baseline actions into a shift's activity next to
   their own text, and it saves; a player names their character on the Members tab, and
   their shift notes and events are signed with it; the GM adds shift notes too.
+- **calendar-notes**: the month grid and week view preview day notes and shift
+  notes, and GM notes for GMs only, which the server never sends to players.
 - **downtime**: a long rest takes at least half the day, labels the shifts after
   now next to their activity and moves the clock; a short rest of 0 shifts marks the
   current one; downtime covers whole days and its label comes off when deleted; the GM

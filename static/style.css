@@ -155,6 +155,10 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .evline { font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .evline.secret { color: var(--secret); }
 .evdot { color: var(--dim); }
+.dc-notes { min-width: 0; }
+.dc-note, .wr-note { font-size: .72rem; color: var(--dim); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; white-space: pre-line; }
+.wr-note { font-size: .78rem; -webkit-line-clamp: 3; line-clamp: 3; margin-top: 3px; }
+.dc-note.secret, .wr-note.secret { color: var(--secret); }
 .etags { margin: 2px 0 4px; }
 .weekrow .chip.tag { margin-top: 3px; }
 .tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
@@ -226,7 +230,7 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
 @media (max-width: 720px) {
   main { padding: 10px; }
   .daycell { min-height: 58px; padding: 3px; }
-  .daycell .chip, .daycell .evline { display: none; }
+  .daycell .chip, .daycell .evline, .daycell .np-text, .daycell .dc-notes-more { display: none; }
   .daycell .dc-icons { font-size: .7rem; }
   .daycell.has-ev::after { content: '•'; color: var(--accent); font-size: 1.2rem; line-height: .6; }
   .weekrow { grid-template-columns: 1fr; }
