@@ -34,6 +34,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
   receive secret events; a GM picks people from the approved accounts not yet in
   the campaign, which only GMs can list.
+- **holidays**: the last and Nth-from-last weekday of a month, every Nth year,
+  moon-phase holidays and limited runs (between two years, or N times) fall on
+  the right days; a GM builds them in the holiday form, which shows only the
+  fields each rule needs, and the calendar shows them.
 - **year-view**: the year view shows every month with today ringed, marks days
   with events and lists them in the tooltip, steps a year at a time, opens a
   month from its name and a day from its number, and never gives a player a
