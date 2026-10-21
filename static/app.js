@@ -1,5 +1,6 @@
 /* Campaign Chronicle — browser app (plain JS, no build step).
- * All user-supplied text is inserted with textContent (via el()), never innerHTML.
+ * All user-supplied text is inserted with textContent (via el()), never innerHTML. Rich text notes are rebuilt
+ * element by element from an allow-list by RichText.view() (static/richtext.js).
  * Permissions are enforced by api/index.php; the UI only hides controls a role can't use.
  * Sign-in is Google/GitHub with an admin approval queue, the same as Sinless (api/auth/). */
 (function () {
@@ -35,7 +36,7 @@
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '10';
+  const APP_VERSION = '11';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1049,13 +1050,11 @@
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'),
       exportBtn);
 
-    // --- overview card
-    const overview = el('div', { class: 'card' },
+    // --- weather and the day's conditions
+    const overview = el('div', { class: 'dayconditions' },
       el('div', { class: 'kv' },
         el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
-        el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—',
-          !isGM() && row.locations ? el('span', { class: 'lbl', style: { marginTop: '8px' } }, 'Locations visited') : null,
-          !isGM() && row.locations ? el('span', { class: 'pre' }, row.locations) : null),
+        el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         groundNow ? el('div', {}, el('span', { class: 'lbl' }, d === today() ? 'Ground now' : 'Ground at day\'s end',
           tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
@@ -1063,8 +1062,7 @@
           `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
-        d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null),
-      !isGM() && row.notes ? el('div', { class: 'notes' }, el('span', { class: 'lbl' }, 'Notes'), el('p', { class: 'pre' }, row.notes)) : null);
+        d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
 
     if (isGM()) overview.append(dayEditor(d, row, region, w));
 
@@ -1074,19 +1072,86 @@
       shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null)));
 
     // --- events
-    const evCard = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h3', {}, 'Events'),
-      (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => evCard.append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null),
-      r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
+    const evBox = dayBox('events', 'Events', {
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
+    }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
     const rems = dayReminders(d);
-    const remCard = el('div', { class: 'card' }, el('div', { class: 'row spread' },
-      el('h3', {}, 'Reminders', tip(`A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`)),
-      btn('+ Add reminder', () => remCard.append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`)),
-      rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
+    const remBox = dayBox('reminders', 'Reminders', {
+      tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
+      actions: btn('+ Add reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+    }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
-    mount(...campaignHeader(current ? 'today' : 'calendar'), nav, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview,
-      el('h3', { class: 'pad' }, `${Word()}s`, tip(shiftTip())), shiftCards, evCard, remCard);
+    mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
+      dayBox('weather', 'Weather', {}, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
+      notesBox(d, row),
+      dayBox('shifts', `${Word()}s`, { tip: shiftTip() }, shiftCards),
+      evBox, remBox);
+  }
+
+  // The day page is a column of boxes (Weather, Notes, Shifts or Hours, Events, Reminders), each of which folds
+  // to its heading. Which ones are folded is remembered in this browser, for each account.
+  const BOXES_KEY = 'chronicle:dayboxes';
+  function foldedBoxes() {
+    try { return JSON.parse(localStorage.getItem(`${BOXES_KEY}:${S.user?.id}`)) || {}; } catch { return {}; }
+  }
+  function rememberFold(key, folded) {
+    const all = foldedBoxes();
+    if (folded) all[key] = true; else delete all[key];
+    try { localStorage.setItem(`${BOXES_KEY}:${S.user?.id}`, JSON.stringify(all)); } catch { /* private mode: just this page */ }
+  }
+  /** A day box: its heading folds and unfolds it. opts: { tip, actions }, where actions sit at the right of the heading. */
+  function dayBox(key, title, opts, ...body) {
+    const folded = !!foldedBoxes()[key];
+    const inner = el('div', { class: 'daybox-body', id: `daybox-${key}`, hidden: folded }, body);
+    const toggle = el('button', { type: 'button', class: 'daybox-toggle', 'aria-expanded': String(!folded), 'aria-controls': inner.id,
+      'data-tip': 'Fold or unfold this box. It stays as you leave it in this browser' }, el('span', { class: 'daybox-caret', 'aria-hidden': 'true' }), title);
+    const box = el('section', { class: 'card daybox' + (folded ? ' folded' : ''), 'data-box': key },
+      el('div', { class: 'daybox-head' }, el('h3', {}, toggle, opts.tip ? tip(opts.tip) : null), opts.actions ? el('div', { class: 'row' }, opts.actions) : null),
+      inner);
+    toggle.addEventListener('click', () => setFold(box, !box.classList.contains('folded')));
+    return box;
+  }
+  function setFold(box, folded) {
+    box.classList.toggle('folded', folded);
+    box.querySelector('.daybox-body').hidden = folded;
+    box.querySelector('.daybox-toggle').setAttribute('aria-expanded', String(!folded));
+    rememberFold(box.dataset.box, folded);
+  }
+  /** Unfold a box (to add something to it) and return its body. */
+  function openBox(box) {
+    if (box.classList.contains('folded')) setFold(box, false);
+    return box.querySelector('.daybox-body');
+  }
+
+  /** The Notes box: the places the party went, Public notes everyone in the campaign reads and Secret notes only GMs
+   * see. The GM writes both notes in word-processor editors; players read the Public ones. */
+  function notesBox(d, row) {
+    const PUBLIC_TIP = 'Everyone in the campaign can read these. Only GMs can change them';
+    const SECRET_TIP = 'Only GMs ever see these. The server never sends them to players';
+    const LOC_TIP = 'The towns, sites and buildings the party went to this day. Players can see this';
+    if (!isGM()) {
+      return dayBox('notes', 'Notes', {},
+        row.locations ? el('div', { class: 'notes-locs' }, el('span', { class: 'lbl' }, 'Locations visited', tip(LOC_TIP)), el('div', { class: 'pre' }, row.locations)) : null,
+        el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)),
+          (row.notes || '').trim() ? RichText.view(row.notes, row.notes_format) : el('p', { class: 'muted' }, 'No notes for this day yet.')));
+    }
+    const locs = el('textarea', { name: 'locations', rows: 2, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
+    const pub = RichText.editor({ text: row.notes, format: row.notes_format, label: 'Public notes', placeholder: 'What happened today, for everyone to read' });
+    const sec = RichText.editor({ text: row.gm_notes, format: row.gm_notes_format, label: 'Secret notes', placeholder: 'Secrets, plans and reminders for GMs only' });
+    const save = btn('Save notes', null, 'primary small', 'Save the locations and both notes');
+    save.addEventListener('click', busy(save, async () => {
+      const p = pub.value(), g = sec.value();
+      await post('day_update', { abs_day: d, notes: p.text, notes_format: p.format, gm_notes: g.text, gm_notes_format: g.format, locations: locs.value }, S.camp.id);
+      toast('Notes saved'); route();
+    }));
+    return dayBox('notes', 'Notes', {},
+      field('Locations visited', locs, null, LOC_TIP),
+      el('div', { class: 'notes-grid' },
+        el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
+        el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
+      el('div', { class: 'row' }, save));
   }
 
   /** Hours of daylight as "11h 40m". */
@@ -1119,7 +1184,7 @@
           w ? el('div', {}, weatherText(w)) : null,
           ground ? el('div', { class: 'small' }, groundText(ground, d)) : null));
     }
-    return el('section', { class: 'card dayhero' }, main,
+    return el('div', { class: 'dayhero' }, main,
       el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
         const x = sws[i] || null, cls = ['dh-step'];
         if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
@@ -1160,26 +1225,19 @@
     const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
     const temp = el('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, tUnit)})`]), w?.wind || 0, { name: 'wind' });
-    const notes = el('textarea', { name: 'notes', rows: 3, value: row.notes || '' });
-    const gmn = el('textarea', { name: 'gm_notes', rows: 3, value: row.gm_notes || '' });
-    const locs = el('textarea', { name: 'locations', rows: 2, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
-        el('div', { class: 'stack' },
-          field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
-          field('Locations visited', locs, null, 'The towns, sites and buildings the party went to this day. Players can see this')),
+        field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
         field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
-          `Set the day's weather by hand. Rain, fog, snow and the like lower visibility; see the ${word()} cards below for the exact effect.`),
-        field('Day notes (players can see)', notes),
-        field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
-      el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save day'),
+          `Set the day's weather by hand. Rain, fog, snow and the like lower visibility; see the ${word()} cards below for the exact effect.`)),
+      el('div', { class: 'row' }, el('button', { class: 'primary small', 'data-tip': 'Save the region and weather. Notes save from the Notes box' }, 'Save day'),
         tipped(btn('🎲 Re-roll weather', async () => {
           let rid;
           try { rid = await regPick.resolve(); } catch (err) { return toast(err.message, true); }
           const reg = regionById(rid) || region;
           const prev = (await fetchRange(d - 1, d - 1)).days.get(d - 1)?.weather || null;
           const nw = E.genWeather(cal(), S.camp.seed, reg, d, prev, Date.now());
-          await post('day_update', { abs_day: d, region_id: rid || null, weather: withShiftWx(d, reg, nw), notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
+          await post('day_update', { abs_day: d, region_id: rid || null, weather: withShiftWx(d, reg, nw) }, S.camp.id);
           route();
         }, 'small'), 'Roll new weather for this day from the region\'s climate and the day before, and save it'),
         d !== today() ? btn('Make this day "now"', async () => { await passShifts(d * spd() + E.mod(nowShift(), spd()) - nowShift()); route(); }, 'small',
@@ -1195,7 +1253,7 @@
         weather = withShiftWx(d, regionById(rid) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
       try {
-        await post('day_update', { abs_day: d, region_id: rid || null, weather, notes: notes.value, gm_notes: gmn.value, locations: locs.value }, S.camp.id);
+        await post('day_update', { abs_day: d, region_id: rid || null, weather }, S.camp.id);
         toast('Day saved'); route();
       } catch (err) { toast(err.message, true); }
     });

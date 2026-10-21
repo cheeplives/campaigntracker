@@ -88,6 +88,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/009_party_funds_location.sql');
             $msg .= ' Party Funds now have a Location.';
         }
+        if (!$pdo->query("SHOW COLUMNS FROM days LIKE 'notes_format'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/010_day_notes_rich_text.sql');
+            $msg .= ' Day notes can now be formatted (Public and Secret notes).';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();

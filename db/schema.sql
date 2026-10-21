@@ -92,8 +92,10 @@ CREATE TABLE IF NOT EXISTS days (
   abs_day BIGINT NOT NULL,
   region_id INT UNSIGNED NULL,
   weather_json TEXT,
-  notes TEXT,
-  gm_notes TEXT,
+  notes MEDIUMTEXT,
+  notes_format VARCHAR(8) NOT NULL DEFAULT 'plain',   -- 'plain' text, or 'html': rich text cleaned by api/richtext.php
+  gm_notes MEDIUMTEXT,
+  gm_notes_format VARCHAR(8) NOT NULL DEFAULT 'plain',
   locations TEXT,
   PRIMARY KEY (campaign_id, abs_day),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,

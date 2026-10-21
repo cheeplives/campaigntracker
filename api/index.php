@@ -9,6 +9,7 @@
  */
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
+require __DIR__ . '/richtext.php';
 
 // ---------- helpers ----------
 function out($data, int $code = 200): void { json_out($data, $code); }
@@ -792,7 +793,7 @@ try {
         $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
         $order = shift_order($c);
 
-        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes FROM days WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
+        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format FROM days WHERE campaign_id=? AND abs_day BETWEEN ? AND ?');
         $st->execute([$cid, $from, $to]);
         $days = [];
         $notes = []; // abs_day => short previews for the month grid, only what this member may read
@@ -804,8 +805,10 @@ try {
         };
         foreach ($st->fetchAll() as $d) {
             $ad = (int)$d['abs_day'];
-            if (trim($d['notes'] ?? '') !== '') $addNote($ad, ['kind' => 'day', 'text' => $d['notes']]);
-            if ($isGm && trim($d['gm_notes'] ?? '') !== '') $addNote($ad, ['kind' => 'gm', 'text' => $d['gm_notes']]);
+            $dn = day_note_text($d['notes'], $d['notes_format']);
+            $gn = $isGm ? day_note_text($d['gm_notes'], $d['gm_notes_format']) : '';
+            if (trim($dn) !== '') $addNote($ad, ['kind' => 'day', 'text' => $dn]);
+            if (trim($gn) !== '') $addNote($ad, ['kind' => 'gm', 'text' => $gn]);
             $days[] = [
                 'abs_day' => $ad,
                 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
@@ -858,7 +861,7 @@ try {
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv((int)$c['current_shift'], camp_spd($c));
-        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, gm_notes, locations FROM days WHERE campaign_id=? AND abs_day=?');
+        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations FROM days WHERE campaign_id=? AND abs_day=?');
         $st->execute([$cid, $ad]);
         $d = $st->fetch() ?: null;
         $day = null;
@@ -867,8 +870,8 @@ try {
             $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
                 'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])), 'notes' => $d['notes'],
-                'locations' => $d['locations']];
-            if ($isGm) $day['gm_notes'] = $d['gm_notes'];
+                'notes_format' => $d['notes_format'], 'locations' => $d['locations']];
+            if ($isGm) $day += ['gm_notes' => $d['gm_notes'], 'gm_notes_format' => $d['gm_notes_format']];
         }
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
         $st->execute([$cid, $ad]);
@@ -924,12 +927,23 @@ try {
             $rid = $chk->fetchColumn() ? (int)$rid : null;
         }
         $weather = p('weather') !== null ? json_in(p('weather'), 5000) : null;
-        // locations is only changed when sent, so older callers don't wipe it
-        $hasLoc = array_key_exists('locations', body()) ? 1 : 0;
-        db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, gm_notes, locations) VALUES (?,?,?,?,?,?,?)
-            ON DUPLICATE KEY UPDATE region_id=VALUES(region_id), weather_json=COALESCE(VALUES(weather_json), weather_json), notes=VALUES(notes), gm_notes=VALUES(gm_notes),
+        // Region, notes and locations only change when sent, so the Weather and Notes boxes save apart and older
+        // callers don't wipe what they leave out. A note sent with format 'html' is rich text and is cleaned here.
+        $has = fn(string $k): int => array_key_exists($k, body()) ? 1 : 0;
+        $note = function (string $k): array {
+            if (p($k . '_format') !== 'html') return [str_in(p($k), 20000), 'plain'];
+            $html = rich_html_clean((string)str_in(p($k), 200000));
+            return [$html === '' ? null : $html, 'html'];
+        };
+        [$notes, $notesFmt] = $note('notes');
+        [$gmNotes, $gmNotesFmt] = $note('gm_notes');
+        db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations) VALUES (?,?,?,?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE region_id=IF(?, VALUES(region_id), region_id), weather_json=COALESCE(VALUES(weather_json), weather_json),
+            notes=IF(?, VALUES(notes), notes), notes_format=IF(?, VALUES(notes_format), notes_format),
+            gm_notes=IF(?, VALUES(gm_notes), gm_notes), gm_notes_format=IF(?, VALUES(gm_notes_format), gm_notes_format),
             locations=IF(?, VALUES(locations), locations)')
-            ->execute([$cid, $ad, $rid, $weather, str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), str_in(p('locations'), 5000), $hasLoc]);
+            ->execute([$cid, $ad, $rid, $weather, $notes, $notesFmt, $gmNotes, $gmNotesFmt, str_in(p('locations'), 5000),
+                $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations')]);
         out(['ok' => true]);
 
     case 'shift_save':
