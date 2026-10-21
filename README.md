@@ -46,6 +46,7 @@ The full runbook (OAuth apps, config fields, upgrading an older install) is in [
 - **Holidays:** same date every year, Nth weekday of a month, one-time, or every N days. Each can last several days and can be secret.
 - **About & sources** (footer link, readable signed out too): where every built-in figure comes from: each travel-planner speed and distance, the orbits and star positions, the station behind each Köppen baseline, the calendar presets and holidays, and a plain list of what has no open source (the fictional settings, the game tuning).
 - **Settings:** time scale, temperature units, whether players see future weather (when they don't, they get today's weather one shift at a time as the clock reaches it, and never the day's forecast, which would give the later shifts away; the server holds the rest back), whether players may add events, and a full calendar editor. The editor covers months, festival days that sit outside the week, leap rules, seasons (with the hemisphere their dates are for; regions in the other hemisphere get the opposite season), moons (including erratic ones like Morrslieb), shift names, date format and hours per day.
+- **Calendar export and import:** *Settings → Tools → Export calendar* downloads the campaign's calendar as a JSON file: months, weekdays, leap rule, moons, seasons, shift names and date format, with the campaign's holidays and the date it had reached. Days, events, notes and regions are not in it. *Import calendar…* on the same card replaces the calendar with one from a file (stored days keep their absolute day numbers, as with a preset) and offers to add the file's holidays the campaign doesn't have yet. On the new-campaign form, *Import calendar from file…* starts a campaign on an exported calendar, with its holidays and starting on the date it had reached, which is how to copy one campaign's calendar to another. Import also takes a bare calendar object, like the one in Settings' *raw calendar JSON* box.
 
 ## How visibility is scored (0 Pitch black … 5 Bright)
 
@@ -62,7 +63,7 @@ Hover over any visibility badge to see this breakdown.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `day-export.js` = a day as Markdown, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark mode and colour theme before first paint, `fonts/` = self-hosted fonts |
+| `index.html`, `static/` | The app: `engine.js` = calendar/weather/visibility/travel math, `app.js` = UI, `day-export.js` = a day as Markdown, `calendar-file.js` = calendar export and import as JSON, `kit.js` = UI kit shared with Sinless (DOM builder, toasts, tooltips, dialogs), `theme-init.js` = light/dark mode and colour theme before first paint, `fonts/` = self-hosted fonts |
 | `api/index.php` | JSON API for campaign data; enforces GM vs player permissions and secret filtering |
 | `api/auth/` | Google/GitHub sign-in (`login`, `callback`, `me`, `logout`), the same flow as Sinless |
 | `api/lib.php` | Shared server library ported from Sinless: config lookup, sessions, CSRF, rate limits, OAuth helpers |

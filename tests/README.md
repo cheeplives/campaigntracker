@@ -75,6 +75,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **export**: the day page's Export button downloads the day as Markdown; the
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
+- **calendar-file**: Settings exports the calendar, its holidays and the date reached
+  as JSON; importing it into another campaign's Settings replaces the calendar and adds
+  the holidays it lacks (only once), a file that isn't a calendar is refused, and the
+  new-campaign form starts a campaign on the file's calendar, holidays and date.
 - **reminders**: a GM's reminder, added from today's page on the next shift, pops up for
   the GM when time passes to it and on a player's open page at its next check; Dismiss stops
   it for that person only, Remind me later until the clock moves or the page reloads; moving

@@ -554,7 +554,25 @@
 
   function viewCreate() {
     let preset = 'gregorian';
+    // the built-in presets, plus 'file' once a calendar is imported from a file
+    const presets = { ...E.PRESETS };
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
+    const importBtn = btn('Import calendar from file…', async () => {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const base = E.PRESETS.custom;
+        const hemisphere = r.calendar.hemisphere === 'south' ? 'south' : 'north';
+        presets.file = { label: `From file: ${r.calendar.name || 'calendar'}`, calendar: r.calendar, holidays: r.holidays, settings: base.settings,
+          regions: base.regions.map(x => ({ ...x, settings: { ...x.settings, hemisphere } })),
+          start: r.today || { year: Number(r.calendar.epochYear) || 0, month: 0, day: 1 } };
+        presetSel.querySelector('option[value=file]')?.remove();
+        presetSel.append(el('option', { value: 'file' }, presets.file.label));
+        presetSel.value = 'file';
+        presetSel.dispatchEvent(new Event('change'));
+        toast(`Imported ${r.calendar.name || 'the calendar'}${r.holidays.length ? ` and ${r.holidays.length} holiday${r.holidays.length === 1 ? '' : 's'}` : ''}`);
+      } catch (err) { toast(err.message, true); }
+    }, 'small', 'Start from a calendar exported from another campaign (Settings → Tools → Export calendar), with its holidays and the date it had reached');
     const startWrap = el('div');
     // the Custom preset's months, set on this form: how many there are and each one's length
     let customMonths = E.PRESETS.custom.calendar.months.map(m => ({ ...m }));
@@ -564,13 +582,13 @@
     let customLeap = null;
     /** The preset's calendar, with the custom months, week, leap rule (and seasons spread over the months) when Custom is picked. */
     const presetCal = () => {
-      const c = E.PRESETS[preset].calendar;
+      const c = presets[preset].calendar;
       return preset === 'custom' ? { ...c, months: customMonths.map(m => ({ ...m })), weekdays: [...customWeekdays], leap: customLeap && { ...customLeap }, seasons: spreadSeasons(c.seasons, c.months, customMonths) } : c;
     };
     const tmpCal = () => { const c = JSON.parse(JSON.stringify(presetCal())); E.prep(c); return c; };
     let picker;
     const drawStart = () => {
-      const p = E.PRESETS[preset], c = tmpCal();
+      const p = presets[preset], c = tmpCal();
       const saved = S.camp; S.camp = { calendar: c, current_shift: 0 }; // datePicker reads cal()
       picker = datePicker(E.toAbs(c, p.start.year, p.start.month, p.start.day));
       S.camp = saved;
@@ -580,11 +598,11 @@
     let seasons;
     const drawSeasons = () => {
       seasons = seasonEditor(tmpCal());
-      const hemi = E.PRESETS[preset].calendar.hemisphere;
+      const hemi = presets[preset].calendar.hemisphere;
       seasonWrap.replaceChildren(el('h3', {}, 'Seasons'),
         ...(hemi ? [el('p', { class: 'muted' }, `Dates are for the ${hemi === 'south' ? 'southern' : 'northern'} hemisphere.`)] : []), seasons);
     };
-    const homeRegion = () => E.PRESETS[preset].regions.find(r => r.current) || E.PRESETS[preset].regions[0];
+    const homeRegion = () => presets[preset].regions.find(r => r.current) || presets[preset].regions[0];
     const climateWrap = el('div');
     let climateSel;
     const drawClimate = () => {
@@ -678,7 +696,7 @@
     const shiftSel = select([], 0, { name: 'shift' });
     const startShift = field('Starting shift', shiftSel, null, shiftTip({}));
     const drawShifts = () => {
-      const c = { ...E.PRESETS[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
+      const c = { ...presets[preset].calendar, timeMode: modeSel.value }, names = E.shiftNames(c);
       const pick = { shifts4: 1, shifts2: 0, hours: Math.min(names.length - 1, Math.round(names.length / 3)) }[modeSel.value];
       shiftSel.replaceChildren(...names.map((n, i) => el('option', { value: i }, n)));
       shiftSel.value = String(pick);
@@ -692,7 +710,8 @@
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
-        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later.'),
+        'Sets the months, weekdays, moons, seasons, starting regions and holidays. Pick the closest one and edit it later, or import a calendar exported from another campaign.'),
+      el('div', { class: 'row' }, importBtn),
       monthsWrap, startWrap,
       field('Time tracking', modeSel, 'You can change this later on the Settings tab.',
         'How each day is split. Four shifts: Dawn, Midday, Dusk and Overnight, about six hours each. Two shifts: Day and Night. Hours: every hour of the day from midnight, like a normal calendar. Weather, light and visibility follow the time of day in every mode, and the travel planner counts in the same steps.'),
@@ -700,7 +719,7 @@
       el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Create'), btn('Cancel', () => (location.hash = '#/'))));
     f.addEventListener('submit', async e => {
       e.preventDefault();
-      const p = E.PRESETS[preset], v = formData(f);
+      const p = presets[preset], v = formData(f);
       try {
         const r = await post('campaign_create', {
           name: v.name, description: v.description, calendar: { ...presetCal(), seasons: seasons.getSeasons(), timeMode: v.time_mode }, settings: { ...p.settings },
@@ -2617,12 +2636,32 @@
     });
 
     const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
+    async function importCalendar() {
+      try {
+        const r = await CalendarFile.pick();
+        if (!r) return;
+        const name = r.calendar.name || 'the calendar';
+        if (!await confirmDialog(`Replace this campaign's calendar with ${name} from the file? Stored days keep their absolute day numbers.`)) return;
+        // holidays the campaign doesn't have yet, by name
+        const have = new Set(S.holidays.map(h => h.name.toLowerCase()));
+        const fresh = r.holidays.filter(h => !have.has(h.name.toLowerCase()));
+        const addHolidays = fresh.length && await confirmDialog(`Also add the file's ${fresh.length} holiday${fresh.length === 1 ? '' : 's'} this campaign doesn't have (${fresh.map(h => h.name).join(', ')})?`);
+        await post('campaign_update', { calendar: { ...r.calendar, timeMode: E.timeMode(c) } }, S.camp.id);
+        if (addHolidays) for (const h of fresh) await post('holiday_save', h, S.camp.id);
+        await loadCampaign(S.camp.id, true); toast(`Imported ${name}${addHolidays ? ` and ${fresh.length} holiday${fresh.length === 1 ? '' : 's'}` : ''}`); route();
+      } catch (err) { toast(err.message, true); }
+    }
     const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
       el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
         if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
         await post('campaign_update', { calendar: { ...E.PRESETS[presetSel.value].calendar, timeMode: E.timeMode(c) } }, S.camp.id);
         await loadCampaign(S.camp.id, true); route();
       }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
+      el('div', { class: 'row' },
+        btn('⬇ Export calendar', () => CalendarFile.download(S.camp, S.holidays), 'small',
+          'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
+        btn('Import calendar…', importCalendar, 'small',
+          'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
       el('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
         if (typed !== 'DELETE') return;
