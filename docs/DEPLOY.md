@@ -63,6 +63,37 @@ blocks the config, `db/`, `docs/`, `tests/`, `.claude/`, `.git` and `.md/.sql/.s
 needs `mod_rewrite`, `mod_headers` and `mod_alias`. On nginx, copy the rules from
 Sinless's DEPLOY.md and add `location ~ /(db|tests|docs|\.claude)/ { return 404; }`.
 
+### Pictures and files (Encyclopedia uploads)
+
+Uploaded pictures and files are kept **outside the web root** and only sent
+through `api/index.php?a=file`, to members allowed to see the entry. By default
+they go in `<parent of the web root>/.chronicle-uploads` (for
+`~/public_html/chronicle` that is `~/.chronicle-uploads`), which the app creates
+itself when it can. To be sure, create it once:
+
+```sh
+mkdir -p ~/.chronicle-uploads && chmod 700 ~/.chronicle-uploads
+```
+
+To use another folder, set `'uploads' => ['path' => '/home/you/somewhere']` in
+the config. The app refuses a folder inside the web root. install.php says so
+if the folder can't be used.
+
+Each file can be up to `uploads.max_mb` (10 MB by default), and each campaign's
+files up to `uploads.campaign_mb` (500 MB). PHP's own limits must be at least
+as big, or they win (the default `upload_max_filesize` is often 2M). On
+DreamHost and similar hosts put a `.user.ini` in the app folder (or set them
+in the panel's PHP settings):
+
+```ini
+upload_max_filesize = 10M
+post_max_size = 12M
+```
+
+Allowed: JPEG, PNG, GIF and WebP pictures (shown on the page), PDF and plain
+text (.txt, .md, .csv, always downloaded). SVG and HTML are refused because
+they can carry scripts. Back up the uploads folder along with the database.
+
 ## Verify
 
 ```sh

@@ -77,6 +77,13 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   a GM-only connection, one touching a secret entry, or a label used only by those, can't set GM only and remove only
   their own; the notes suggest connections (a "Residents:" line suggests the label), and the list searches, filters by
   connection chips and "Show in list"; renaming a kind changes every page.
+- **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens
+  full size with its caption, the PDF downloads; players see both, add and remove their own, but can't change or
+  remove the GM's; GM-only files and every file on a secret entry are never listed or sent to players, and making a
+  file GM only or its entry secret takes it away at once; nobody outside the campaign, or signed out, gets a file;
+  deleting the entry deletes its files from disk; SVG, PHP, HTML, a fake picture, a picture named as another type, an
+  empty file, a file over the size limit and one over the campaign's total are refused; file names lose their folders;
+  files are sent sandboxed with nosniff, text and PDFs as downloads, and only revalidated from the cache.
 - **eras**: era abbreviations label their years, a restart era counts from 1 and
   a "before" era counts back (the Gregorian preset has no year 0); a GM types eras
   in Settings, the month title uses them and the date picker takes a year in an

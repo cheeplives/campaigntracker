@@ -112,6 +112,23 @@ return [
     'save_path'       => '',
   ],
 
+  // --- Pictures and files ---------------------------------------------------
+  // Pictures and files attached to Encyclopedia entries. They are kept OUTSIDE
+  // the web root and only sent through the app, to people allowed to see them.
+  // Leave 'path' blank and the app uses <parent of web root>/.chronicle-uploads
+  // (on shared hosting, your account home), creating it if it can. Set an
+  // absolute path to put them elsewhere; it must be writable by PHP and must not
+  // be inside the web root (the app refuses one that is).
+  // max_mb is the largest single file. PHP's own upload_max_filesize and
+  // post_max_size (php.ini, or .user.ini on DreamHost-style hosts) must be at
+  // least this big, or they win: e.g. upload_max_filesize = 10M, post_max_size = 12M.
+  // campaign_mb caps the total of each campaign's files.
+  'uploads' => [
+    'path'        => '',
+    'max_mb'      => 10,
+    'campaign_mb' => 500,
+  ],
+
   // --- Limits ---------------------------------------------------------------
   // Per-IP throttling on sign-in and per-admin throttling on user changes (needs
   // the rate_limits table from db/schema.sql). Leave true; set false only to debug.

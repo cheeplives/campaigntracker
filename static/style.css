@@ -662,6 +662,26 @@ dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
 .noun-what [hidden] { display: none; }
 
 /* Connections between Encyclopedia entries */
+/* Pictures and files on an entry (attachmentsCard in app.js) */
+.enc-files { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; border-radius: 4px; }
+.enc-files h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+.enc-files.drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.file-add { position: relative; cursor: pointer; }
+.file-input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; font-size: 0; }
+.file-add:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.file-pic { margin: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.file-pic figcaption { overflow-wrap: anywhere; }
+.file-thumb { padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); overflow: hidden; cursor: zoom-in; height: 160px; display: block; width: 100%; }
+.file-pic.secret .file-thumb { border-color: var(--secret); border-width: 2px; }
+.file-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.file-list { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.file-list a { overflow-wrap: anywhere; }
+.file-status:empty { display: none; }
+dialog.file-viewer { max-width: min(96vw, 1400px); width: auto; text-align: center; }
+.file-full { max-width: 100%; max-height: 75vh; display: block; margin: 0 auto; object-fit: contain; }
+.file-cap { margin: 8px 0 4px; overflow-wrap: anywhere; }
+.file-tools { justify-content: center; flex-wrap: wrap; }
 .enc-conns { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
 .enc-conns h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
 .enc-conn-list { display: flex; flex-direction: column; gap: 6px; }

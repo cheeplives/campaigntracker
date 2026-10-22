@@ -722,6 +722,131 @@ function relation_mine(array $r, bool $isGm): bool {
     return $isGm || ($r['created_by'] !== null && (int)$r['created_by'] === me()['id']);
 }
 
+// ---------- pictures and files ----------
+// A file hangs off a parent (an Encyclopedia entry, for now) and is seen by exactly the people who see that parent:
+// a file on a secret entry, or one a GM marked GM only, never reaches players. Uploads are checked by their contents
+// (images must decode as the type they claim), kept outside the web root under a random name, and only sent by the
+// 'file' action below with headers that stop the browser running or sniffing them.
+
+/** What a file can hang off. Add a kind here and a case to attachment_parent(). */
+const ATTACHMENT_PARENTS = ['encyclopedia'];
+/** The types allowed, by the type the contents show: [extensions, 'image' (shown on the page) or 'file' (downloaded)].
+ * No SVG or HTML: both can carry scripts. Text files are checked to be text and always downloaded. */
+const UPLOAD_TYPES = [
+    'image/jpeg' => [['jpg', 'jpeg'], 'image'], 'image/png' => [['png'], 'image'], 'image/gif' => [['gif'], 'image'],
+    'image/webp' => [['webp'], 'image'], 'application/pdf' => [['pdf'], 'file'], 'text/plain' => [['txt', 'md', 'csv'], 'file'],
+];
+const ATTACHMENTS_PER_PARENT = 50;
+
+/** Whether migration 013 has been run. */
+function has_attachments(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'attachments'")->fetchColumn();
+}
+function need_attachments(): void {
+    if (!has_attachments()) fail('Pictures and files need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+}
+/** The thing a file hangs off, checked: this member must be able to see it (or it fails as not found). secret: only
+ * GMs may see it, so its files are GM only too; manage_any: every member may change or remove its files, not only
+ * whoever uploaded them and the GMs. */
+function attachment_parent(int $cid, string $type, int $id, string $role): array {
+    switch ($type) {
+        case 'encyclopedia':
+            need_encyclopedia();
+            $e = entry_row($cid, $id, $role);
+            return ['secret' => (bool)(int)$e['is_secret'], 'manage_any' => false];
+    }
+    fail('Files can\'t be attached to that', 400);
+}
+function attachment_out(array $a): array {
+    $id = (int)$a['id'];
+    return ['id' => $id, 'parent_type' => $a['parent_type'], 'parent_id' => (int)$a['parent_id'], 'name' => $a['original_name'],
+        'mime' => $a['mime'], 'kind' => $a['kind'], 'size' => (int)$a['size_bytes'],
+        'width' => $a['width'] !== null ? (int)$a['width'] : null, 'height' => $a['height'] !== null ? (int)$a['height'] : null,
+        'caption' => $a['caption'], 'is_secret' => (bool)(int)$a['is_secret'], 'created_by' => $a['created_by'] !== null ? (int)$a['created_by'] : null,
+        'url' => 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$a['campaign_id'], 'id' => $id])];
+}
+/** The files on every Encyclopedia entry this member may see. */
+function entry_files(int $cid, bool $isGm): array {
+    if (!has_attachments()) return [];
+    $st = db()->prepare("SELECT a.* FROM attachments a JOIN encyclopedia_entries e ON e.id=a.parent_id AND e.campaign_id=a.campaign_id
+        WHERE a.campaign_id=? AND a.parent_type='encyclopedia'" . ($isGm ? '' : ' AND a.is_secret=0 AND e.is_secret=0') . ' ORDER BY a.id');
+    $st->execute([$cid]);
+    return array_map('attachment_out', $st->fetchAll());
+}
+/** A file of campaign $cid this member may see, with its parent's checks, or fail. */
+function attachment_row(int $cid, int $id, string $role): array {
+    $st = db()->prepare('SELECT * FROM attachments WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    $a = $st->fetch();
+    if (!$a) fail('File not found', 404);
+    $parent = attachment_parent($cid, $a['parent_type'], (int)$a['parent_id'], $role);
+    if ($role !== 'gm' && ($parent['secret'] || (int)$a['is_secret'])) fail('File not found', 404);
+    return $a + ['_parent' => $parent];
+}
+/** Whether this member may change or remove file $a: whoever uploaded it, GMs, and anyone when its parent says so. */
+function attachment_mine(array $a, string $role): bool {
+    return $role === 'gm' || $a['_parent']['manage_any'] || ($a['created_by'] !== null && (int)$a['created_by'] === me()['id']);
+}
+/** Delete files and their rows: those of one parent, or with $type null every file of the campaign. The rows go first,
+ * so a file that can't be removed from disk is only left over, never served. */
+function attachments_purge(int $cid, ?string $type = null, ?int $id = null): void {
+    if (!has_attachments()) return;
+    $where = 'campaign_id=?' . ($type !== null ? ' AND parent_type=? AND parent_id=?' : '');
+    $args = $type !== null ? [$cid, $type, $id] : [$cid];
+    $st = db()->prepare("SELECT stored_name FROM attachments WHERE $where");
+    $st->execute($args);
+    $names = $st->fetchAll(PDO::FETCH_COLUMN);
+    if (!$names) return;
+    db()->prepare("DELETE FROM attachments WHERE $where")->execute($args);
+    $dir = upload_dir()['dir'];
+    if ($dir) foreach ($names as $n) if (preg_match('/^[0-9a-f]{32}$/', $n)) @unlink("$dir/$n");
+}
+/** An uploaded file's name, safe to keep and to send back: no folders, no control characters, 200 characters at most. */
+function upload_name(string $name): string {
+    $name = preg_replace('/[\x00-\x1F\x7F"\\\\\/:*?<>|]+/u', '_', basename(str_replace('\\', '/', $name))) ?? '';
+    $name = trim($name, " .\t");
+    if ($name === '' || !mb_check_encoding($name, 'UTF-8')) $name = 'file';
+    return mb_strlen($name) > 200 ? mb_substr($name, -200) : $name;
+}
+/** [mime, kind, width, height] of an uploaded file, from its contents and its extension, or fail when it isn't one of
+ * UPLOAD_TYPES. A file whose contents and extension disagree is refused: a .jpg must be a JPEG. */
+function upload_type(string $path, string $name): array {
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    $mime = class_exists('finfo') ? (string)(new finfo(FILEINFO_MIME_TYPE))->file($path) : '';
+    $allowed = 'Pictures can be JPEG, PNG, GIF or WebP; files can be PDF or plain text (.txt, .md, .csv)';
+    if (in_array($ext, ['txt', 'md', 'csv'], true)) {
+        // Plain text whatever finfo calls it (text/x-markdown, text/csv…), as long as it is text and not markup.
+        $head = (string)file_get_contents($path, false, null, 0, 65536);
+        if ($mime !== '' && !str_starts_with($mime, 'text/') && $mime !== 'application/csv' && $mime !== 'application/x-empty') fail("That isn't a text file. $allowed", 415, 'unsupported_type');
+        if (str_contains($head, "\0") || preg_match('/^\s*<(?:!doctype|html|svg|script)/i', $head)) fail("That isn't a text file. $allowed", 415, 'unsupported_type');
+        return ['text/plain', 'file', null, null];
+    }
+    foreach (UPLOAD_TYPES as $m => [$exts, $kind]) {
+        if (!in_array($ext, $exts, true)) continue;
+        if ($kind === 'image') {
+            $info = @getimagesize($path);
+            if (!$info || ($info['mime'] ?? '') !== $m || ($mime !== '' && $mime !== $m) || $info[0] < 1 || $info[1] < 1)
+                fail("That file isn't a working ." . $ext . ' picture', 415, 'unsupported_type');
+            return [$m, 'image', min(65535, (int)$info[0]), min(65535, (int)$info[1])];
+        }
+        if ($mime !== $m && !($m === 'application/pdf' && str_starts_with((string)file_get_contents($path, false, null, 0, 5), '%PDF-')))
+            fail("That file isn't a working ." . $ext . ' file', 415, 'unsupported_type');
+        return [$m, $kind, null, null];
+    }
+    fail("Files of that type can't be uploaded. $allowed", 415, 'unsupported_type');
+}
+/** What the browser needs before it sends a file: whether uploads work here, the size limit and the types allowed. */
+function upload_info(): array {
+    $up = upload_dir();
+    $out = ['ready' => has_attachments() && $up['dir'] !== null, 'max_bytes' => upload_max_bytes(),
+        'accept' => implode(',', array_merge(array_keys(UPLOAD_TYPES), array_map(fn($e) => ".$e", array_merge(...array_column(UPLOAD_TYPES, 0)))))];
+    // The folder's path is for whoever runs the server, not for every player.
+    if (!$out['ready']) $out['problem'] = !has_attachments() ? 'Pictures and files need a database upgrade: open install.php and press Install or upgrade.'
+        : (me()['is_admin'] ? 'Uploads aren\'t set up on this server: ' . $up['problem'] : 'Uploads aren\'t set up on this server yet. Ask whoever runs it.');
+    return $out;
+}
+
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -768,7 +893,7 @@ require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome'];
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -779,7 +904,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete'];
+    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -957,6 +1082,7 @@ try {
     case 'campaign_delete':
         $cid = cid(); need_gm($cid);
         if (p('confirm') !== 'DELETE') fail('Confirmation missing');
+        attachments_purge($cid);
         db()->prepare('DELETE FROM campaigns WHERE id=?')->execute([$cid]);
         out(['ok' => true]);
 
@@ -1668,7 +1794,8 @@ try {
         }, $st->fetchAll());
         attach_tags($entries, 'entry');
         out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role),
-            'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm)]);
+            'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
+            'files' => entry_files($cid, $isGm), 'uploads' => upload_info()]);
 
     case 'encyclopedia_sources':
         // Everything written in the campaign that this member may read, for the detector's full scan and for an
@@ -1835,7 +1962,10 @@ try {
         need_encyclopedia();
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
+        db()->beginTransaction();
+        attachments_purge($cid, 'encyclopedia', (int)$e['id']);
         db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);
+        db()->commit();
         out(['ok' => true]);
 
     case 'terms_ignore': // the detector stops offering these words to this member's side (the GMs, or the players)
@@ -2019,6 +2149,111 @@ try {
         $t = tome_row($cid, int_in(p('id'), 1));
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
+        out(['ok' => true]);
+
+    // ===== pictures and files =====
+    case 'files': // the files on one parent that this member may see
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        $type = (string)($_GET['parent_type'] ?? '');
+        $pid = int_in($_GET['parent_id'] ?? null, 1);
+        attachment_parent($cid, $type, $pid, $role);
+        $st = db()->prepare('SELECT * FROM attachments WHERE campaign_id=? AND parent_type=? AND parent_id=?' . ($role === 'gm' ? '' : ' AND is_secret=0') . ' ORDER BY id');
+        $st->execute([$cid, $type, $pid]);
+        out(['files' => array_map('attachment_out', $st->fetchAll()), 'uploads' => upload_info()]);
+
+    case 'file': // the file itself, to show or download, only to someone who may see it
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        $a = attachment_row($cid, int_in($_GET['id'] ?? null, 1), $role);
+        $dir = upload_dir()['dir'];
+        $path = $dir && preg_match('/^[0-9a-f]{32}$/', $a['stored_name']) ? "$dir/{$a['stored_name']}" : '';
+        if ($path === '' || !is_file($path)) fail('File not found', 404);
+        if (!isset(UPLOAD_TYPES[$a['mime']])) fail('File not found', 404);
+        // The stored file never changes, so its name is its version. no-cache: the browser asks each time, so a file
+        // a GM has since hidden is refused rather than shown from the cache.
+        $etag = '"' . $a['stored_name'] . '"';
+        header('Cache-Control: private, no-cache');
+        header('ETag: ' . $etag);
+        if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) { http_response_code(304); exit; }
+        $inline = $a['kind'] === 'image' && empty($_GET['dl']);
+        $ascii = preg_replace('/[^A-Za-z0-9._ -]/', '_', $a['original_name']);
+        header('Content-Type: ' . $a['mime'] . ($a['mime'] === 'text/plain' ? '; charset=utf-8' : ''));
+        header('Content-Length: ' . filesize($path));
+        header(sprintf('Content-Disposition: %s; filename="%s"; filename*=UTF-8\'\'%s', $inline ? 'inline' : 'attachment', $ascii, rawurlencode($a['original_name'])));
+        // Even opened on its own, the file runs nothing and loads nothing, and no other site may embed it.
+        header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+        header('Cross-Origin-Resource-Policy: same-origin');
+        readfile($path);
+        exit;
+
+    case 'file_upload': // multipart form: parent_type, parent_id, file, caption, is_secret (GMs)
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        $max = upload_max_bytes();
+        $limit = round($max / 1048576, 1) . ' MB';
+        // Past post_max_size PHP drops the whole request, so all there is to go on is its length.
+        if (empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) fail("That file is too big: files can be $limit at most", 413);
+        $type = (string)($_POST['parent_type'] ?? '');
+        $pid = int_in($_POST['parent_id'] ?? null, 1);
+        $parent = attachment_parent($cid, $type, $pid, $role);
+        $f = $_FILES['file'] ?? null;
+        if (!is_array($f) || is_array($f['error'] ?? null)) fail('Pick a file to upload');
+        if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) fail("That file is too big: files can be $limit at most", 413);
+        if ($f['error'] === UPLOAD_ERR_NO_FILE) fail('Pick a file to upload');
+        if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { error_log('upload failed: error ' . $f['error']); fail('The upload didn\'t arrive. Try again', 500); }
+        $size = (int)filesize($f['tmp_name']);
+        if ($size < 1) fail('That file is empty');
+        if ($size > $max) fail("That file is too big: files can be $limit at most", 413);
+        $up = upload_dir();
+        if (!$up['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+        $st = db()->prepare('SELECT COUNT(*) FROM attachments WHERE campaign_id=? AND parent_type=? AND parent_id=?');
+        $st->execute([$cid, $type, $pid]);
+        if ((int)$st->fetchColumn() >= ATTACHMENTS_PER_PARENT) fail('There are ' . ATTACHMENTS_PER_PARENT . ' files here already. Remove one first', 409);
+        $quota = max(1, (int)(cfg('uploads', [])['campaign_mb'] ?? 500)) << 20;
+        $st = db()->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=?');
+        $st->execute([$cid]);
+        if ((int)$st->fetchColumn() + $size > $quota) fail('This campaign\'s files are using all of its ' . ($quota >> 20) . ' MB. Remove some first', 413);
+        $name = upload_name((string)($f['name'] ?? ''));
+        [$mime, $kind, $w, $h] = upload_type($f['tmp_name'], $name);
+        $caption = trim((string)str_in($_POST['caption'] ?? null, 200)) ?: null;
+        $secret = $role === 'gm' && !empty($_POST['is_secret']) && $_POST['is_secret'] !== '0' && $_POST['is_secret'] !== 'false' ? 1 : 0;
+        $stored = bin2hex(random_bytes(16));
+        $dest = "{$up['dir']}/$stored";
+        if (!move_uploaded_file($f['tmp_name'], $dest)) { error_log("upload: couldn't move the file to $dest"); fail('The file couldn\'t be saved on the server', 500); }
+        @chmod($dest, 0600);
+        try {
+            db()->prepare('INSERT INTO attachments (campaign_id, parent_type, parent_id, stored_name, original_name, mime, kind, size_bytes, width, height, caption, is_secret, created_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$cid, $type, $pid, $stored, $name, $mime, $kind, $size, $w, $h, $caption, $secret, me()['id']]);
+        } catch (Throwable $e) { @unlink($dest); throw $e; }
+        $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
+        $st->execute([(int)db()->lastInsertId()]);
+        out(['ok' => true, 'file' => attachment_out($st->fetch())]);
+
+    case 'file_update': // a file's caption, and (GMs) whether it is GM only
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        $a = attachment_row($cid, int_in(p('id'), 1), $role);
+        if (!attachment_mine($a, $role)) fail('Only a GM can change a file someone else added', 403);
+        $caption = array_key_exists('caption', body()) ? (trim((string)str_in(p('caption'), 200)) ?: null) : $a['caption'];
+        $secret = $role === 'gm' && array_key_exists('is_secret', body()) ? (p('is_secret') ? 1 : 0) : (int)$a['is_secret'];
+        db()->prepare('UPDATE attachments SET caption=?, is_secret=? WHERE id=?')->execute([$caption, $secret, $a['id']]);
+        $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
+        $st->execute([$a['id']]);
+        out(['ok' => true, 'file' => attachment_out($st->fetch())]);
+
+    case 'file_delete':
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        $a = attachment_row($cid, int_in(p('id'), 1), $role);
+        if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
+        db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$a['id']]);
+        if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', $a['stored_name'])) @unlink("$dir/{$a['stored_name']}");
         out(['ok' => true]);
 
     default:
