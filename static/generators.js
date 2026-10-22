@@ -6,7 +6,7 @@
  * file only makes text. Gen.seed(n) makes the rolls repeatable (the tests use it); Gen.seed() goes back to random.
  *
  * Genres: fantasy, scifi, cyberpunk, modern, western. Each generator returns plain objects:
- *   name()    -> { name, note }
+ *   name()    -> { name }
  *   tavern()  -> { name, note }
  *   company() -> { name, note }
  *   town()    -> { name, kind, population, facts: [[label, text]], places: [{ name, note }], people: [{ name, note }], hooks: [] } */
@@ -55,36 +55,36 @@ const Gen = (() => {
   // given names, and a way of making family names. gender: 'm', 'f' or '' for either.
   const SYL = {
     human: { a: w('Al Ber Cor Ed Gar Hal Os Ran Wil Ald Bran Dun Ger Leo Mar Tor Ul Wen Ced Har God Eth Rod Sig Wal Mer Bea Ros Is Ma'),
-      m: w('ric win bert mund wald ard an ulf ger old red frith helm stan wick'), f: w('a wyn hild eth ina ris elle gyth lin ena ith mild ra ia'),
+      m: w('ric win bert mund wald ard an ulf ger old red frith helm stan wick'), f: w('a wyn hild eth ina ris elle gyth lin ena ith mild ra ia'), n: w('en is ery el ith ley wen an ly'),
       s: w('Ash Black Brook Cold Fair Green Hart Hollow Iron Marsh Oak Red Stone Thorn White Wolf Ward Mill Hay Wy Brad Lang Under Wether'),
       t: w('field ford wood well more ley ton by wick hurst brook ridge stone combe ham worth'),
       trades: w('Cooper Fletcher Thatcher Mason Chandler Tanner Carter Fowler Webb Salter Turner Sawyer Barker Glover Potter Fuller Brewer Roper Weaver Shepherd') },
     elf: { a: w('Ae Ca Ela Fi Gal Ili Lae Mi Nae Ri Sae Tha Vae Yl Ere Ithi Lu Sy Aru Cel Fae Isi Nil Ola Qui Vel'),
       b: w('la ri the ve si lo na ra e lia ndi ae ri sa'), m: w('dor thil ran rion vel las wyn ndir th aen ril sar'),
-      f: w('wen thiel la riel ra wyn sa nae lise ien dra ssa'),
+      f: w('wen thiel la riel ra wyn sa nae lise ien dra ssa'), n: w('ae ir ian is el yn eth or ven'),
       s: w('Silver Moon Star Dawn Dusk Leaf Mist Song Wind Thorn Willow Sun Frost Bright Glimmer'),
       t: w('bough whisper glade shade water petal bloom river wing brook spire veil'),
       house: w('Aelindor Caelthir Ilivane Nethrael Saevaris Thalorien Vaelith Yllomir Erethiel Quiloran Faelinde Sylvarin') },
     dwarf: { a: w('Bal Bor Dur Grim Kaz Thra Brun Dag Hur Mor Rag Ulf Vond Gor Thal Bof Dva Ok Fen Har Kil Nor Rur Stor'),
-      m: w('in ek ar grim dok rak und ur orn ik ald unn bur'), f: w('a ra hild dis ga run da nna ris li va'),
+      m: w('in ek ar grim dok rak und ur orn ik ald unn bur'), f: w('a ra hild dis ga run da nna ris li va'), n: w('i ri al un is el ka'),
       s: w('Stone Iron Granite Anvil Coal Deep Flint Hammer Copper Ember Gold Rock Slate Bronze Forge Ore Silver'),
       t: w('beard hand fist delver shield brow forge mantle heart helm axe vein mail bellow') },
     halfling: { a: w('Bram Cob Dod Fen Hob Lin Mil Nob Per Tam Wil Ad Bel Cal Dar Gil Hal Lob Mer Rob Sam Tod'),
-      m: w('o by kin well rick wise ble ard ert fast an lo'), f: w('ella ie idy wen ry isa ina belle lily o etta'),
+      m: w('o by kin well rick wise ble ard ert fast an lo'), f: w('ella ie idy wen ry isa ina belle lily o etta'), n: w('y ie by kin ly o well'),
       s: w('Bramble Burrow Butter Clover Honey Kettle Meadow Puddle Tumble Under Apple Thistle Mossy Barley Hazel Pepper Sweet'),
       t: w('foot hill bottle leaf bank brook hedge dale bun cake tree wick top root') },
     orc: { a: w('Brak Drog Gruk Hrak Kor Mog Narz Ruk Shak Thrug Ug Vrak Zug Gash Murz Ozg Bul Grot Krag Lug Skar Urg Yaz'),
-      m: w('ash dak gul nak rok ul za gra ok uk dush mak'), f: w('a ka ra sha zha gra uka ash ga lka'),
+      m: w('ash dak gul nak rok ul za gra ok uk dush mak'), f: w('a ka ra sha zha gra uka ash ga lka'), n: w('ug az ak urz ash og'),
       epi: w('Skull-Splitter Bone-Chewer Iron-Tusk One-Ear Blood-Eye Gut-Ripper Wolf-Rider Stone-Fist Ash-Walker Black-Tongue Rot-Tooth Scar-Back Dirt-Eater Fire-Belly Ghost-Killer Head-Taker'),
       clan: w('Broken_Tusk Red_Hand Bleeding_Moon Black_Teeth Burnt_Hill Splintered_Shield Howling_Pit Gnawed_Bone Rusted_Blade Grey_Ash') },
     gnome: { a: w('Bim Dil Fizz Gim Nim Pip Wiz Zan Quib Orl Bel Dab Erk Fon Glim Jeb Lum Nack Pol Rib Sni Tib Wob'),
-      m: w('ble wick nock bin dle ry fen pet bert lo mo nik'), f: w('ella i ina bell ly ra wyn sie nella ette ka'),
+      m: w('ble wick nock bin dle ry fen pet bert lo mo nik'), f: w('ella i ina bell ly ra wyn sie nella ette ka'), n: w('i bit ly zz pip le wick'),
       s: w('Cog Gear Spark Copper Glitter Fizz Whistle Sprocket Bolt Tumble Puzzle Brass Gizmo Thimble Kettle'),
       t: w('wheel spindle bottom button whistle top nose pocket wiggle tock bang snap fiddle') },
     insectoid: { a: w("K'th Tch Xik Zz Kri Chi Trr Ixa Skr Vik Qek Thx Kz Rrik Tik"), b: w("a i e ' ix ak et ik"),
-      m: w('tharr rik kk ssk tchk ka zt kix'), f: w('tharr rik kk ssk tchk ka zt kix'), hive: w('Amber Hive Seventh_Brood Glass_Mound Deep_Comb Ninth_Swarm Red_Chitin Silent_Hive Spire_Brood') },
+      m: w('tharr rik kk ssk tchk ka zt kix'), f: w('tharr rik kk ssk tchk ka zt kix'), n: w('tharr rik kk ssk tchk ka zt kix'), hive: w('Amber Hive Seventh_Brood Glass_Mound Deep_Comb Ninth_Swarm Red_Chitin Silent_Hive Spire_Brood') },
     reptilian: { a: w('Ssa Ras Ish Sev Tsal Vash Ksa Zeh Ash Hiss Sith Tal Ves Zor Rhas Ske'),
-      b: w('a e i o ra sa ka ri'), m: w('ssk than riss eth ozz ar ess ith ash rak'), f: w('ssa thi ira esh iss ala eth sha ria'),
+      b: w('a e i o ra sa ka ri'), m: w('ssk than riss eth ozz ar ess ith ash rak'), f: w('ssa thi ira esh iss ala eth sha ria'), n: w('ss ess iss ath ia eth'),
       clutch: w('Sun-Warmed Stone Long_Tide Cold_Sand Third_Egg Basking_Rock Red_Mire Deep_Burrow Shed_Skin Burning_Dune') },
     synthetic: { pre: w('ARC DEX HALO ION JUNO KAI LUX MAV NOVA ORO PAX REX SOL TESS VEX ECHO ADA CASS MIRA OTTO'),
       title: w('Archivist Custodian Navigator Steward Auditor Warden Courier Tender Quartermaster Surveyor Pilot Medic'),
@@ -93,91 +93,122 @@ const Gen = (() => {
   // Real given names and family names, mixed from many places, for humans in the near and far future.
   const SPACER = { m: w('Arjun Kenji Mateo Tomas Idris Rafael Yusuf Anton Kofi Lev Dmitri Jae Emeka Teo Silas Bram Darius Hiro Joaquin Kwame Nikolai Oskar Ravi Soren Tariq Viktor Wen Zane'),
     f: w('Amara Saoirse Mei Noor Zara Ines Yuki Ada Leila Nadia Priya Sana Thandi Vera Ilse Juno Freya Hana Kalinda Lucia Marisol Oksana Rhea Sigrid Tova Yara Esi Ingrid'),
+    n: w('Alex Ash Avery Cam Dakota Eden Indigo Jules Kai Kit Lux Morgan Nova Quinn Remy Riley Rowan Sage Sky Tam Wren Ari Noa Robin Sasha'),
     s: w('Okafor Varga Castellanos Nakamura Lindqvist Adeyemi Petrov Kowalski Haddad Reyes Takeda Osei Novak Chen Kaur Moreau Ibarra Sorensen Abara Mensah Halvorsen Quist Rahman Szabo Tanaka Vasquez Wojcik Yilmaz Zhou Achterberg') };
+  // Common given names (masculine, feminine, and n: used for anyone) and family names of each language or region.
   const MODERN = {
     english: { m: w('James Ethan Liam Noah Owen Caleb Marcus Daniel Ryan Tyler Henry Jack Luke Simon Grant Neil Adam Cole Wesley Graham Dean Trevor'),
       f: w('Emma Olivia Grace Chloe Hannah Megan Rachel Sarah Laura Claire Jess Abigail Holly Kate Lucy Nora Paige Ruth Tessa Vanessa Fiona Dana'),
+      n: w('Alex Avery Casey Charlie Dakota Drew Ellis Emerson Finley Hayden Jamie Jordan Jules Kendall Logan Morgan Parker Quinn Reese Riley Robin Rowan Sam Skyler Taylor'),
       s: w('Walker Hughes Bennett Carter Fletcher Harding Morgan Pearson Reed Sutton Turner Whitaker Lowell Barrett Doyle Ellis Foster Graves Holloway Kendall Mercer Prescott Quinn Sloane') },
     spanish: { m: w('Alejandro Diego Javier Mateo Santiago Rafael Andrés Emilio Joaquín Luis Pablo Ricardo Tomás Héctor Ignacio Marco Óscar Raúl Sergio Víctor'),
       f: w('Lucía Sofía Valentina Camila Isabel Elena Carmen Paula Marisol Inés Gabriela Daniela Rosa Alba Beatriz Julia Lorena Pilar Ximena Adriana'),
+      n: w('Alexis Ariel Cruz Guadalupe Noa Paz Rosario Trinidad Sol Reyes'),
       s: w('García Morales Herrera Castillo Vega Navarro Romero Ortega Delgado Ramos Medina Fuentes Guzmán Ibarra Salazar Cortés Aguilar Molina Rojas Serrano') },
+    french: { m: w('Antoine Baptiste Bastien Benoît Clément Damien Étienne Fabien Gaspard Guillaume Hugo Julien Laurent Louis Lucien Marcel Mathis Olivier Philippe Quentin Rémi Sébastien Thibault Yves'),
+      f: w('Amélie Aurélie Béatrice Céline Chloé Claire Colette Delphine Élodie Émilie Geneviève Hélène Inès Juliette Léa Manon Margaux Mathilde Nathalie Océane Odile Solène Sylvie Agathe'),
+      n: w('Camille Claude Dominique Sacha Alix Charlie Lou Eden Céleste Ange Noa Morgan'),
+      s: w('Bernard Dubois Durand Fontaine Garnier Girard Lambert Lefèvre Leroy Marchand Mercier Moreau Morel Perrin Roux Rousseau Vincent Fournier Chevalier Blanchard Gauthier Dupont Caron Lacroix') },
     german: { m: w('Lukas Jonas Felix Maximilian Tobias Matthias Stefan Florian Johannes Klaus Dieter Jürgen Wolfgang Rainer Moritz Niklas Sebastian Bernd Uwe Henrik'),
       f: w('Anna Lena Hannah Katharina Johanna Sabine Ursula Petra Monika Greta Ilse Frieda Clara Marlene Heike Birgit Annika Theresa Lotte Svenja'),
+      n: w('Kim Luca Robin Toni Sascha Alex Charlie Kai Eike Jo Maxi Ulli'),
       s: w('Becker Hoffmann Schäfer Krüger Richter Wagner Neumann Vogel Lange Fischer Brandt Zimmermann Hartmann Schulte Lorenz Engel Keller Albrecht Winkler Busch') },
-    slavic: { m: w('Ivan Dmitri Pavel Nikolai Andrei Bogdan Marek Tomasz Jakub Milan Viktor Stanislav Oleg Yuri Luka Petar Radek Zoran Borys Kirill'),
-      f: w('Anya Katya Natalia Irina Olga Zofia Agnieszka Milena Daria Svetlana Vera Ludmila Jelena Marta Kasia Nadia Elena Yana Alina Ksenia'),
-      s: w('Ivanov Novak Kowalski Petrov Horvat Dvořák Sokolov Volkov Morozov Wiśniewski Lebedev Popescu Kovač Zielinski Orlov Krawczyk Babić Kuznetsov Pavlović Marek') },
+    russian: { m: w('Aleksandr Alexei Anatoly Boris Dmitri Fyodor Gennady Grigory Igor Ilya Ivan Kirill Konstantin Leonid Maksim Mikhail Nikolai Oleg Pavel Pyotr Roman Sergei Vadim Viktor Vladimir Yuri'),
+      f: w('Alina Anastasia Anna Daria Ekaterina Elena Galina Irina Ksenia Larisa Lyudmila Marina Natalia Nadezhda Oksana Olga Polina Svetlana Tatiana Valentina Vera Yana Yulia Zoya'),
+      n: w('Sasha Zhenya Valya Shura Slava Nika'),
+      s: w('Ivanov Smirnov Kuznetsov Popov Volkov Sokolov Lebedev Kozlov Novikov Morozov Petrov Orlov Pavlov Fyodorov Mikhailov Belov Tarasov Zaitsev Vinogradov Bogdanov Vorobyov Yegorov Gusev Komarov Medvedev Ilyin') },
+    arabic: { m: w('Ahmed Ali Omar Khalid Hassan Hussein Ibrahim Yusuf Karim Tariq Samir Rashid Faisal Hamza Jamal Nabil Walid Ziad Mahmoud Mustafa Bilal Adel Saeed Nasser'),
+      f: w('Fatima Aisha Layla Mariam Huda Amira Yasmin Salma Rania Dalia Hala Leila Lina Nadia Samira Zainab Khadija Farah Jamila Rana Sara Zahra Amal Mona'),
+      n: w('Noor Iman Salam Wafa Hikmat Ihsan Sabah Nur'),
+      s: w('Al-Masri Haddad Khoury Nasser Saleh Hamdan Al-Rashid Mansour Aziz Farouk Hakim Darwish Qasim Suleiman Abboud Najjar Tahan Bakr Hijazi Sabbagh Halabi Al-Amin Shami Khalil Yassin') },
+    indian: { m: w('Aarav Arjun Vikram Rohan Rahul Sanjay Anil Amit Deepak Karan Nikhil Pranav Rajesh Ravi Suresh Vivek Aditya Ishaan Kabir Manish Harish Gaurav Siddharth Varun'),
+      f: w('Aanya Ananya Priya Pooja Kavya Diya Isha Lakshmi Meera Neha Nisha Riya Sanya Shreya Sunita Divya Anjali Deepika Lata Radha Sita Tara Aditi Rekha'),
+      n: w('Kiran Jyoti Ashwini Kanchan Suman Shashi Santosh Gurpreet Harpreet Manpreet Amandeep Navjot Sharan'),
+      s: w('Sharma Patel Singh Kumar Gupta Reddy Iyer Nair Rao Mehta Joshi Desai Kapoor Malhotra Banerjee Chatterjee Mukherjee Pillai Menon Bhat Chopra Verma Agarwal Kulkarni Shah') },
+    chinese: { m: w('Wei Jun Hao Lei Jie Tao Qiang Bo Yong Gang Jian Peng Kai Long Feng Bin Zhiwei Haoran Yuxuan Zihao Junjie Jianguo Dong Zhen'),
+      f: w('Mei Li Na Jing Ying Xia Yan Fang Hui Lan Xiu Ling Yue Qian Jia Ting Hong Xiaoyu Yuting Shuang Lijuan Meiling Ruoxi Xue'),
+      n: w('Ming Yu Xin Chen Lin Hua Qing Ning Wen An Le Yi Zihan Yuxi Haiyan'),
+      s: w('Wang Li Zhang Liu Chen Yang Huang Zhao Wu Zhou Xu Sun Ma Zhu Hu Guo He Lin Gao Luo Zheng Liang Xie Tang Song Han Feng Deng Cao') },
+    japanese: { m: w('Haruto Hiroshi Kenji Takeshi Daiki Sota Yuto Kaito Riku Shota Kazuki Satoshi Yusuke Taro Kenta Naoki Hayato Tatsuya Shin Isamu Kenichi Masato'),
+      f: w('Yui Aoi Hina Sakura Mio Rin Haruka Ayaka Emi Kaori Mai Natsuki Saki Yoko Akiko Keiko Megumi Nanami Misaki Chiyo Hanako Asuka Tomoko'),
+      n: w('Akira Hikaru Kaoru Makoto Nao Ren Ryo Shinobu Tsubasa Yuki Haru Hinata Sora Izumi Jun Chihiro'),
+      s: w('Sato Suzuki Takahashi Tanaka Watanabe Ito Yamamoto Nakamura Kobayashi Kato Yoshida Yamada Sasaki Yamaguchi Matsumoto Inoue Kimura Hayashi Shimizu Mori Ikeda Hashimoto Ishikawa Ogawa Fujita Okada Maeda') },
   };
+  const MODERN_KEYS = Object.keys(MODERN);
+  // Chinese and Japanese names are written family name first
+  const FAMILY_FIRST = new Set(['chinese', 'japanese']);
   const CYBER = { handle: w('Zero Glitch Static Wire Neon Hex Rook Vandal Cipher Ghost Razor Echo Spike Chrome Drift Patch Proxy Hush Byte Jinx Torque Lynx Mantis Volt Nyx Rivet Kilo Sable Vector Wraith'),
-    tail: w('wire byte run jack lock kill burn tooth spark dog fox cat lag dust vox'),
-    corpTitle: w('VP Director Senior_Partner Chief_Analyst Regional_Manager Head_of_Security Board_Member Fixer') };
+    tail: w('wire byte run jack lock kill burn tooth spark dog fox cat lag dust vox') };
   const WEST = { m: w('Amos Eli Silas Jebediah Wyatt Cyrus Ezra Hank Jesse Levi Luther Otis Clayton Virgil Abner Boone Cash Dallas Emmett Gideon Hollis Jasper Thaddeus Wade'),
     f: w('Abigail Clementine Delilah Hattie Josephine Lottie Mae Opal Pearl Ruby Sadie Tillie Ada Beulah Cora Etta Ida Lula Minnie Nell Rosalie Verna Winifred Zelda'),
     s: w('Calloway Dawson Pike McCready Hollister Grimes Whitlock Barlow Cutter Durango Fenwick Garrity Hatch Kincaid Ledbetter Maddox Odell Pruitt Quarles Ruckett Slade Tatum Vance Wheeler Yates'),
+    n: w('Billie Frankie Jessie Lee Marion Jo Sam Charlie Ray Dale Clem Tommie Bobbie Ollie'),
     nick: w('Dusty Two-Bit Slim Doc Lucky Red Shorty Deadeye Mad Whiskey Tex Sawbones Snake Ace Calico Cactus Preacher Kid Buckshot Big Three-Finger'), };
 
   const PEOPLES = {
     fantasy: [['human', 'Human'], ['elf', 'Elf'], ['dwarf', 'Dwarf'], ['halfling', 'Halfling'], ['gnome', 'Gnome'], ['orc', 'Orc']],
     scifi: [['spacer', 'Human spacer'], ['synthetic', 'Synthetic'], ['insectoid', 'Insectoid'], ['reptilian', 'Reptilian']],
     cyberpunk: [['street', 'Street name'], ['handle', 'Netrunner handle'], ['corporate', 'Corporate'], ['ai', 'Rogue AI']],
-    modern: [['english', 'English-speaking'], ['spanish', 'Spanish-speaking'], ['german', 'German'], ['slavic', 'Slavic']],
+    modern: [['english', 'English-speaking'], ['spanish', 'Spanish-speaking'], ['french', 'French'], ['german', 'German'], ['russian', 'Russian'], ['arabic', 'Arabic'],
+      ['indian', 'Indian'], ['chinese', 'Chinese'], ['japanese', 'Japanese']],
     western: [['settler', 'Settler'], ['outlaw', 'Outlaw'], ['lawman', 'Lawman']],
   };
-  const sex = g => g || (chance(0.5) ? 'm' : 'f');
-  const SEX_WORD = { m: 'masculine', f: 'feminine' };
+  /** gender: 'm', 'f', 'n' (a name used for anyone) or '' for any of them, gender-neutral less often. */
+  const GENDERS = [['', 'Any'], ['f', 'Feminine'], ['m', 'Masculine'], ['n', 'Gender-neutral']];
+  const sex = g => (['m', 'f', 'n'].includes(g) ? g : chance(0.15) ? 'n' : chance(0.5) ? 'm' : 'f');
   /** A given name made from syllables: start + (middle) + ending. */
   const sylName = (t, g, mid = 0) => glue(pick(t.a), chance(mid) ? pick(t.b) : '', pick(t[g]));
   const compound = t => glue(pick(t.s), pick(t.t));
+  /** A full name from one of MODERN's cultures, written its own way. */
+  function modernName(c, g) {
+    const M = MODERN[c];
+    let first = pick(M[g]), fam = pick(M.s);
+    if (c === 'russian' && g === 'f' && /(ov|ev|yov|in)$/.test(fam)) fam += 'a';
+    if (FAMILY_FIRST.has(c)) return `${fam} ${first}`;
+    if (c === 'spanish' && chance(0.4)) fam += ` ${pick(M.s.filter(x => x !== fam))}`; // Spanish speakers often carry both family names
+    if (c === 'arabic' && g !== 'n' && chance(0.25)) first += ` ${g === 'f' ? 'bint' : 'ibn'} ${pick(M.m)}`;
+    return `${first} ${fam}`;
+  }
+  /** A spacer's or street name: from the far-future mix, or from any modern culture. */
+  const spacerName = g => (chance(0.5) ? modernName(pick(MODERN_KEYS), g) : `${pick(SPACER[g])} ${pick(SPACER.s)}${chance(0.15) ? `-${pick(SPACER.s)}` : ''}`);
 
-  /** One person's name. genre and people as in PEOPLES; gender 'm', 'f' or ''. */
+  /** One person's name. genre and people as in PEOPLES; gender as in GENDERS. */
   function name(genre = 'fantasy', people = '', gender = '') {
     const list = PEOPLES[genre] || PEOPLES.fantasy;
     const p = list.some(([k]) => k === people) ? people : pick(list)[0];
-    const label = list.find(([k]) => k === p)?.[1] || p;
-    const g = sex(gender), note = `${label}, ${SEX_WORD[g]}`;
-    const T = SYL[p];
+    const g = sex(gender), T = SYL[p];
+    if (MODERN[p]) return { name: modernName(p, g) };
     switch (p) {
-      case 'human': {
-        const first = sylName(T, g);
-        return { name: `${first} ${chance(0.35) ? pick(T.trades) : compound(T)}`, note };
-      }
-      case 'elf': return { name: `${sylName(T, g, 0.5)} ${chance(0.5) ? compound(T) : pick(T.house)}`, note };
-      case 'dwarf': return { name: chance(0.3) ? `${sylName(T, g)}, ${g === 'f' ? 'daughter' : 'son'} of ${sylName(T, 'm')}` : `${sylName(T, g)} ${compound(T)}`, note };
-      case 'halfling': return { name: `${sylName(T, g)} ${compound(T)}`, note };
-      case 'gnome': return { name: `${sylName(T, g)}${chance(0.4) ? ` "${pick(T.a)}${pick(T.m)}"` : ''} ${compound(T)}`.replace(/"(\w)/, (m, c) => `"${c.toUpperCase()}`), note };
-      case 'orc': return { name: chance(0.5) ? `${sylName(T, g)} ${pick(T.epi)}` : `${sylName(T, g)} of the ${pick(T.clan)}`, note };
-      case 'spacer': return { name: `${pick(SPACER[g])} ${pick(SPACER.s)}${chance(0.15) ? `-${pick(SPACER.s)}` : ''}`, note };
-      case 'synthetic': {
-        const n = chance(0.5) ? `${pick(T.pre)}-${roll(1, 99)}` : chance(0.5) ? `${cap(pick(T.pre).toLowerCase())} ${roll(2, 9)}` : `${pick(T.ord)} ${pick(T.title)}`;
-        return { name: n, note: label };
-      }
-      case 'insectoid': return { name: `${glue(pick(T.a), pick(T.b), pick(T.m))}${chance(0.4) ? ` of the ${pick(T.hive)}` : ''}`, note: label };
-      case 'reptilian': return { name: `${sylName(T, g, 0.6)}${chance(0.5) ? ` of the ${pick(T.clutch)} clutch` : ''}`, note };
-      case 'street': return { name: `${pick(SPACER[g])} "${pick(CYBER.handle)}" ${pick(SPACER.s)}`, note };
+      case 'human': return { name: `${sylName(T, g)} ${chance(0.35) ? pick(T.trades) : compound(T)}` };
+      case 'elf': return { name: `${sylName(T, g, 0.5)} ${chance(0.5) ? compound(T) : pick(T.house)}` };
+      case 'dwarf': return { name: chance(0.3) ? `${sylName(T, g)}, ${{ f: 'daughter', m: 'son', n: 'child' }[g]} of ${sylName(T, 'm')}` : `${sylName(T, g)} ${compound(T)}` };
+      case 'halfling': return { name: `${sylName(T, g)} ${compound(T)}` };
+      case 'gnome': return { name: `${sylName(T, g)}${chance(0.4) ? ` "${pick(T.a)}${pick(T.m)}"` : ''} ${compound(T)}`.replace(/"(\w)/, (m, c) => `"${c.toUpperCase()}`) };
+      case 'orc': return { name: chance(0.5) ? `${sylName(T, g)} ${pick(T.epi)}` : `${sylName(T, g)} of the ${pick(T.clan)}` };
+      case 'spacer': return { name: spacerName(g) };
+      case 'synthetic': return { name: chance(0.5) ? `${pick(T.pre)}-${roll(1, 99)}` : chance(0.5) ? `${cap(pick(T.pre).toLowerCase())} ${roll(2, 9)}` : `${pick(T.ord)} ${pick(T.title)}` };
+      case 'insectoid': return { name: `${glue(pick(T.a), pick(T.b), pick(T.m))}${chance(0.4) ? ` of the ${pick(T.hive)}` : ''}` };
+      case 'reptilian': return { name: `${sylName(T, g, 0.6)}${chance(0.5) ? ` of the ${pick(T.clutch)} clutch` : ''}` };
+      case 'street': return { name: spacerName(g).replace(' ', ` "${pick(CYBER.handle)}" `) };
       case 'handle': {
         const [a, b] = take(CYBER.handle, 2);
-        return { name: chance(0.5) ? `${a}${pick(CYBER.tail)}` : `${a} ${b}`, note: label };
+        return { name: chance(0.5) ? `${a}${pick(CYBER.tail)}` : `${a} ${b}` };
       }
-      case 'corporate': return { name: `${pick(SPACER[g])} ${pick(SPACER.f)[0]}. ${pick(SPACER.s)}${chance(0.3) ? `-${pick(SPACER.s)}` : ''}`, note: `${label}, ${pick(CYBER.corpTitle)}` };
-      case 'ai': {
-        const forms = [() => `${pick(SYL.synthetic.pre)}/${pick(CYBER.handle).toUpperCase()}`, () => `${pick(SYL.synthetic.ord)} ${pick(CYBER.handle)}`,
-          () => `${pick(CYBER.handle)}.${pick(['exe', 'sys', 'core', 'mind', 'net'])}`];
-        return { name: pick(forms)(), note: label };
+      case 'corporate': {
+        const c = pick(MODERN_KEYS.filter(k => !FAMILY_FIRST.has(k)));
+        return { name: `${pick(MODERN[c][g])} ${pick(SPACER.f)[0]}. ${pick(MODERN[c].s)}${chance(0.3) ? `-${pick(SPACER.s)}` : ''}` };
       }
-      case 'english': case 'spanish': case 'german': case 'slavic': {
-        const M = MODERN[p];
-        // Spanish speakers often carry both family names
-        return { name: `${pick(M[g])} ${pick(M.s)}${p === 'spanish' && chance(0.4) ? ` ${pick(M.s)}` : ''}`, note };
-      }
-      case 'settler': return { name: `${pick(WEST[g])} ${pick(WEST.s)}`, note };
-      case 'outlaw': return { name: `"${pick(WEST.nick)}" ${pick(WEST[g])} ${pick(WEST.s)}`, note };
-      case 'lawman': return { name: `${pick(['Marshal', 'Sheriff', 'Deputy', 'Ranger', 'Judge', 'Constable'])} ${pick(WEST[g])} ${pick(WEST.s)}`, note };
+      case 'ai': return { name: pick([() => `${pick(SYL.synthetic.pre)}/${pick(CYBER.handle).toUpperCase()}`, () => `${pick(SYL.synthetic.ord)} ${pick(CYBER.handle)}`,
+        () => `${pick(CYBER.handle)}.${pick(['exe', 'sys', 'core', 'mind', 'net'])}`])() };
+      case 'settler': return { name: `${pick(WEST[g])} ${pick(WEST.s)}` };
+      case 'outlaw': return { name: `"${pick(WEST.nick)}" ${pick(WEST[g])} ${pick(WEST.s)}` };
+      case 'lawman': return { name: `${pick(['Marshal', 'Sheriff', 'Deputy', 'Ranger', 'Judge', 'Constable'])} ${pick(WEST[g])} ${pick(WEST.s)}` };
     }
-    return { name: sylName(SYL.human, g), note };
+    return { name: sylName(SYL.human, g) };
   }
   /** A given name only, for the people a town or tavern mentions. */
   const personFor = genre => name(genre, genre === 'fantasy' ? pick(['human', 'human', 'human', 'dwarf', 'elf', 'halfling', 'gnome', 'orc']) : genre === 'cyberpunk' ? 'street'
-    : genre === 'scifi' ? pick(['spacer', 'spacer', 'spacer', 'synthetic', 'reptilian']) : genre === 'western' ? 'settler' : pick(['english', 'english', 'spanish', 'german', 'slavic'])).name;
+    : genre === 'scifi' ? pick(['spacer', 'spacer', 'spacer', 'synthetic', 'reptilian']) : genre === 'western' ? 'settler' : chance(0.4) ? 'english' : pick(MODERN_KEYS)).name;
   const surnameFor = genre => ({ fantasy: () => chance(0.5) ? pick(SYL.human.trades) : compound(SYL.human), scifi: () => pick(SPACER.s), cyberpunk: () => pick(SPACER.s),
     modern: () => pick(MODERN.english.s), western: () => pick(WEST.s) }[genre] || (() => pick(WEST.s)))();
   const firstFor = genre => ({ fantasy: () => sylName(SYL.human, sex()), western: () => pick(WEST[sex()]), modern: () => pick(MODERN.english[sex()]) }[genre] || (() => pick(SPACER[sex()])))();
@@ -413,7 +444,7 @@ const Gen = (() => {
   }
 
   return {
-    GENRES, PEOPLES, SECTORS, SIZE_KEYS, sizeLabel, seed, many,
+    GENRES, PEOPLES, GENDERS, SECTORS, SIZE_KEYS, sizeLabel, seed, many,
     name, tavern, company, town, townName,
   };
 })();
