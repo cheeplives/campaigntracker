@@ -1179,9 +1179,9 @@
   // Overland, sea and air all use the speed × shifts maths ('ground'); the rest are the space modes.
   const SPEED_MODES = ['overland', 'sea', 'air'];
   const GENRE_MODES = {
-    fantasy: ['overland', 'sea', 'air', 'pershift'],
-    modern: ['overland', 'sea', 'air', 'pershift', 'hohmann'],
-    scifi: ['overland', 'sea', 'air', 'pershift', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
+    fantasy: ['overland', 'sea', 'air'],
+    modern: ['overland', 'sea', 'air', 'hohmann'],
+    scifi: ['overland', 'sea', 'air', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
   };
   const genreOf = settings => (settings && GENRES[settings.genre] ? settings.genre : 'scifi');
   // Real-world speeds in km/h, by speed mode: [label, km/h, genres, source key]. Each figure is the one its source
@@ -1267,7 +1267,7 @@
 
   /**
    * Compute a travel duration. Returns {hours, worldHours?, lines[]}.
-   * modes: 'ground' (or 'overland' | 'sea' | 'air') | 'pershift' | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
+   * modes: 'ground' (or 'overland' | 'sea' | 'air') | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
    */
   function travel(mode, q) {
     if (SPEED_MODES.includes(mode)) mode = 'ground';
@@ -1291,22 +1291,6 @@
         : `${moving.toFixed(1)} hours moving at ${speed}/h${terr} = ${travelShifts.toFixed(1)} ${word}s of ${+shiftH.toFixed(2)} h`);
       lines.push(`${perDay} ${word}${perDay === 1 ? '' : 's'} on the move a day → ${(elapsed / spd).toFixed(1)} days`);
       return { hours: elapsed * shiftH, lines };
-    }
-    if (mode === 'pershift') {
-      // A rate in distance per slot (e.g. a hexcrawl's "15 km a shift"): the trip takes whole slots, a part slot counting as one.
-      const spd = n('slots_per_day') > 0 ? Math.round(n('slots_per_day')) : 4, word = q.slot === 'hour' ? 'hour' : 'shift';
-      const dist = n('distance'), rate = n('per_shift'), perDay = Math.min(spd, Math.max(1, Math.round(n('shifts')) || Math.min(2, spd)));
-      const shiftH = n('shift_hours') > 0 ? n('shift_hours') : 24 / spd;
-      if (!(dist > 0 && rate > 0)) throw new Error(`Enter a distance and a distance per ${word}`);
-      const exact = dist / rate * (n('terrain') || 1);
-      const need = Math.max(1, Math.ceil(exact - 1e-9));
-      const fullDays = Math.ceil(need / perDay) - 1;
-      const elapsed = fullDays * spd + (need - fullDays * perDay);
-      const u = q.dist_unit ? ` ${q.dist_unit}` : '', terr = n('terrain') && n('terrain') !== 1 ? ` × terrain ${n('terrain')}` : '';
-      const s = k => `${k} ${word}${k === 1 ? '' : 's'}`;
-      lines.push(`${dist}${u} ÷ ${rate}${u} a ${word}${terr} = ${+exact.toFixed(2)} → ${s(need)} of travel`);
-      lines.push(`${s(perDay)} on the move a day → ${s(elapsed)} pass in all, rests included (${(elapsed / spd).toFixed(1)} days)`);
-      return { hours: elapsed * shiftH, shifts: need, word, lines };
     }
     if (mode === 'hohmann') {
       const sys = SYSTEMS[q.system] || SYSTEMS.sun;
