@@ -2688,6 +2688,15 @@
       } catch (err) { out.replaceChildren(el('p', { class: 'bad' }, err.message)); }
     });
 
+    /** Add names to a day's Locations visited, after what is there and skipping any it already lists. */
+    const addLocations = async (d, names) => {
+      names = names.map(x => x.trim()).filter(Boolean);
+      if (!names.length) return;
+      const cur = ((await api('day', { query: { cid: S.camp.id, d } })).day?.locations || '').trim();
+      const have = new Set(cur.split(/[,\n]/).map(x => x.trim().toLowerCase()).filter(Boolean));
+      const add = names.filter(x => !have.has(x.toLowerCase()) && have.add(x.toLowerCase()));
+      if (add.length) await post('day_update', { abs_day: d, locations: [cur, ...add].filter(Boolean).join(', ') }, S.camp.id);
+    };
     const departForm = () => {
       const travelReg = regionPicker([['', '— no change —']], ''), arriveReg = regionPicker([['', '— no change —']], '');
       const useWorld = el('input', { type: 'checkbox' });
@@ -2706,6 +2715,9 @@
         const startDay = today();
         const travelId = await travelReg.resolve(), arriveId = await arriveReg.resolve();
         await passShifts(n, label, travelId || null, arriveId || null);
+        // From joins the departure day's Locations visited and To the arrival day's (one day's list for a same-day trip).
+        await addLocations(startDay, [fromName.value]);
+        await addLocations(today(), [toName.value]);
         vs().anchor = today();
         await post('event_save', { abs_day: startDay, end_day: today() > startDay ? today() : null, shift: null,
           title: `${label}`, body: result.lines.join('\n'), is_secret: false }, S.camp.id);
@@ -2718,7 +2730,7 @@
           field('Region on arrival', arriveReg.node, null, 'The party is moved here when the trip ends'),
           result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
         info, el('div', { class: 'row' }, go),
-        el('small', { class: 'muted' }, `Labels every passed ${word()} with the trip (without overwriting existing activity) and logs a multi-day travel event.`));
+        el('small', { class: 'muted' }, `Labels every passed ${word()} with the trip (without overwriting existing activity), logs a multi-day travel event, and adds From to the first day's Locations visited and To to the last day's.`));
     };
     mount(...campaignHeader('travel'), f);
   }

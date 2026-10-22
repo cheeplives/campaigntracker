@@ -120,7 +120,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Determine shifts in the shifts-a-day box gives the whole shifts a trip needs, with terrain;
   star pickers fill the light-years between two systems; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
-  a Custom region typed on the day page or in the travel planner joins the campaign's regions.
+  a Custom region typed on the day page or in the travel planner joins the campaign's regions; a trip's From and To join
+  the first and last days' Locations visited.
 - **time-modes**: four shifts, two shifts (Day and Night) and hours each have
   their slot names, weather quarters and travel maths; switching a campaign's mode
   moves the clock, shift activities, shift notes and timed events to the same time
