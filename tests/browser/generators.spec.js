@@ -147,7 +147,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(rumors.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
   const entry = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.tags.some(t => t.name === "Rumor"));
   expect(entry.name).toMatch(/^Rumor: /);
-  expect(entry.notes).toContain(rumor.replace(/'/g, "&#039;").split(" ")[0]);
+  const plain = entry.notes.replace(/<[^>]+>/g, " ").replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+  expect(plain).toContain(rumor);
   expect(entry.notes).toContain("Heard from");
   expectNoErrors(errors);
 });
