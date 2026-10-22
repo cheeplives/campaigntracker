@@ -3261,8 +3261,8 @@
 
     const peoples = Gen.PEOPLES[g];
     const people = keep('people_' + g, select([['', 'Any'], ...peoples], pref['people_' + g] || peoples[0][0], { 'aria-label': 'Race or people' }));
-    const gender = keep('gender', select([['', 'Either'], ['f', 'Feminine'], ['m', 'Masculine']], pref.gender || '', { 'aria-label': 'Gender' }));
-    const names = genCard('Names', 'Character names for this genre. Each people has its own sounds; pick Any to mix them. 📖 Add puts a name in the Encyclopedia as a Person',
+    const gender = keep('gender', select(Gen.GENDERS, pref.gender || '', { 'aria-label': 'Gender' }));
+    const names = genCard('Names', 'Character names for this genre. Each people or culture has its own sounds; pick Any to mix them. Gender-neutral gives names used for anyone. 📖 Add puts a name in the Encyclopedia as a Person',
       [field('Race or people', people), field('Gender', gender)],
       () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.name(g, people.value, gender.value)).map(r => genRow(r, 'Person'))));
 
@@ -3709,6 +3709,7 @@
           ['The notes editor: ', cite('quill'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
+          'The Generators tab\'s names, syllables and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       section('No open source',
         p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),

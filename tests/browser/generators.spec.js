@@ -14,7 +14,7 @@ test("every generator gives real text in every genre, and a seed repeats it", as
     };
     for (let i = 0; i < 40; i++) {
       for (const [g] of Gen.GENRES) {
-        for (const [p] of [["", ""], ...Gen.PEOPLES[g]]) for (const sex of ["", "m", "f"]) check(`name ${g}/${p}`, Gen.name(g, p, sex));
+        for (const [p] of [["", ""], ...Gen.PEOPLES[g]]) for (const sex of ["", "m", "f", "n"]) check(`name ${g}/${p}`, Gen.name(g, p, sex));
         check(`tavern ${g}`, Gen.tavern(g));
         for (const [s] of Gen.SECTORS) check(`company ${g}/${s}`, Gen.company(g, s));
         for (const [s] of Gen.SIZE_KEYS) {
@@ -29,6 +29,16 @@ test("every generator gives real text in every genre, and a seed repeats it", as
   expect(bad).toEqual([]);
   const twice = await page.evaluate(() => [1, 2].map(() => { Gen.seed(42); return [Gen.name("fantasy", "dwarf", "f").name, Gen.town("western", "small").name]; }));
   expect(twice[0]).toEqual(twice[1]);
+  // Modern names follow each culture's own order and forms; gender-neutral names come from their own lists.
+  const modern = await page.evaluate(() => {
+    Gen.seed(7);
+    const many = (p, g) => Array.from({ length: 60 }, () => Gen.name("modern", p, g).name);
+    return { ja: many("japanese", "m"), ru: many("russian", "f"), en: many("english", "n"), peoples: Gen.PEOPLES.modern.map(([k]) => k) };
+  });
+  expect(modern.peoples).toEqual(["english", "spanish", "french", "german", "russian", "arabic", "indian", "chinese", "japanese"]);
+  expect(modern.ja.every(n => /^(Sato|Suzuki|Takahashi|Tanaka|Watanabe|Ito|Yamamoto|Nakamura|Kobayashi|Kato|Yoshida|Yamada|Sasaki|Yamaguchi|Matsumoto|Inoue|Kimura|Hayashi|Shimizu|Mori|Ikeda|Hashimoto|Ishikawa|Ogawa|Fujita|Okada|Maeda) /.test(n))).toBe(true);
+  expect(modern.ru.every(n => !/(ov|ev|in)$/.test(n))).toBe(true); // Ivanova, not Ivanov
+  expect(modern.en.some(n => /^(Alex|Avery|Casey|Charlie|Jordan|Morgan|Quinn|Riley|Robin|Sam|Taylor) /.test(n))).toBe(true);
 });
 
 test("a GM rolls each generator and adds results to the Encyclopedia; a player adds one too", async ({ page, browser }) => {
@@ -49,7 +59,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await page.getByLabel("Genre", { exact: true }).selectOption("western");
   await expect(page.getByRole("heading", { name: "Saloons & inns" })).toBeVisible();
   await names.getByLabel("Race or people", { exact: true }).selectOption("outlaw");
-  await expect(names.locator(".gen-item .muted").first()).toContainText("Outlaw");
+  await expect(names.locator(".gen-name").first()).toHaveText(/^"[^"]+" \S+ \S+$/); // an outlaw's "Nickname" First Last
+  await expect(names.locator(".gen-item .muted")).toHaveCount(0); // just the name, nothing under it
   const before = await names.locator(".gen-name").allTextContents();
   await names.getByRole("button", { name: "🎲 Generate" }).click();
   await expect.poll(async () => (await names.locator(".gen-name").allTextContents()).join()).not.toBe(before.join());
