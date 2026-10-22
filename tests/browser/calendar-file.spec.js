@@ -40,7 +40,10 @@ test("a calendar exports to JSON and imports into Settings and a new campaign", 
 
   // Import into another campaign's Settings: the calendar is replaced and the missing holiday added.
   const other = await makeCampaign(page, `Other ${gm.id}`);
+  // Only the hash changes, so goto returns before the new campaign's Settings replace the old ones. A click while the page
+  // is being swapped can land half on each and open no file picker, so wait for the new campaign's name first.
   await page.goto(`index.html#/c/${other}/settings`);
+  await expect(page.getByRole("heading", { name: `Other ${gm.id}` })).toBeVisible();
   await importFile(page, "Import calendar…", "not json");
   await expect(page.locator("#toast")).toHaveText("That file is not JSON.");
   await importFile(page, "Import calendar…", { months: [] });
