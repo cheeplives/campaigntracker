@@ -68,7 +68,8 @@ function user_prefs(int $uid): array {
     $p = dec($st->fetchColumn() ?: null);
     return is_array($p) ? $p : [];
 }
-const TEMP_UNITS = ['C', 'F', 'K', 'R', 'Re', 'none'];
+/** A user's units preference (static/app.js unitSystem). */
+const UNIT_SYSTEMS = ['metric', 'imperial'];
 /** Colour themes (data-scheme blocks in static/style.css, SCHEMES in static/app.js). */
 const SCHEMES = ['parchment', 'nightsky', 'console', 'arctic', 'wildwood'];
 function need_admin(): array { $u = me(); if (!$u['is_admin']) fail('Admins only', 403, 'not_admin'); return $u; }
@@ -758,10 +759,13 @@ try {
         // Only the keys sent are changed, so the theme picker and the units form don't overwrite each other.
         $u = me();
         $prefs = user_prefs($u['id']);
-        if (array_key_exists('temp_unit', body())) {
-            $unit = p('temp_unit');
-            if ($unit !== null && !in_array($unit, TEMP_UNITS, true)) fail('Unknown temperature unit');
-            if ($unit === null) unset($prefs['temp_unit']); else $prefs['temp_unit'] = $unit;
+        // units: 'metric' or 'imperial' for every length, speed and temperature, or null to show each campaign's own.
+        // It replaces the older temperature-only temp_unit, which is dropped once units is saved.
+        if (array_key_exists('units', body())) {
+            $units = p('units');
+            if ($units !== null && !in_array($units, UNIT_SYSTEMS, true)) fail('Units must be metric or imperial');
+            unset($prefs['temp_unit']);
+            if ($units === null) unset($prefs['units']); else $prefs['units'] = $units;
         }
         if (array_key_exists('scheme', body())) {
             $scheme = p('scheme');
@@ -817,14 +821,12 @@ try {
     // ===== campaigns =====
     case 'campaigns':
         $u = me();
-        if ($u['is_admin']) {
-            $rows = db()->query("SELECT id, name, description, 'gm' AS role FROM campaigns ORDER BY name")->fetchAll();
-        } else {
-            $st = db()->prepare('SELECT c.id, c.name, c.description, m.role FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
-            $st->execute([$u['id']]);
-            $rows = $st->fetchAll();
-        }
-        out(['campaigns' => $rows]);
+        // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
+        $st = db()->prepare($u['is_admin']
+            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
+            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
+        $st->execute([$u['id']]);
+        out(['campaigns' => array_map(fn($r) => ['member' => (bool)(int)$r['member']] + $r, $st->fetchAll())]);
 
     case 'campaign':
         $cid = cid();
