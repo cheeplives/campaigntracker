@@ -1718,6 +1718,37 @@ try {
             $add(['kind' => 'reminder', 'id' => (int)$r['id'], 'abs_day' => floordiv((int)$r['due_shift'], $spdC), 'title' => $r['title']],
                 trim($r['title'] . "\n" . $r['body']), $isGm && $r['audience'] !== 'all');
         }
+        $st = db()->prepare('SELECT id, kind, title, start_shift, notes' . ($isGm ? ', gm_notes' : '') . ' FROM downtimes WHERE campaign_id=? ORDER BY start_shift, id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $d) {
+            $src = ['kind' => 'downtime', 'id' => (int)$d['id'], 'abs_day' => floordiv((int)$d['start_shift'], $spdC), 'title' => $d['title'] ?: ucwords(str_replace('_', ' ', $d['kind']))];
+            $add($src, trim($d['title'] . "\n" . $d['notes']));
+            if ($isGm) $add(['kind' => 'downtime_gm_notes'] + $src, $d['gm_notes'], true);
+        }
+        // Party Holdings: short boxes (names, places, items) are read as titles, where an everyday first word isn't a name.
+        $st = db()->prepare('SELECT id, name, location, description FROM holdings WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $h) {
+            $add(['kind' => 'holding', 'id' => (int)$h['id'], 'title' => $h['name'], 'short' => true], trim($h['name'] . "\n" . $h['location']));
+            $add(['kind' => 'holding', 'id' => (int)$h['id'], 'title' => $h['name']], $h['description']);
+        }
+        $st = db()->prepare('SELECT h.name, s.item FROM holding_storage s JOIN holdings h ON h.id=s.holding_id WHERE h.campaign_id=? ORDER BY s.id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $x) $add(['kind' => 'storage', 'title' => $x['name'], 'short' => true], $x['item']);
+        $st = db()->prepare('SELECT item, location FROM party_gear WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $g) $add(['kind' => 'gear', 'short' => true], trim($g['item'] . "\n" . $g['location']));
+        $st = db()->prepare('SELECT currency, location FROM party_funds WHERE campaign_id=? ORDER BY id');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $f) $add(['kind' => 'funds', 'short' => true], trim($f['currency'] . "\n" . $f['location']));
+        if (has_library()) {
+            $st = db()->prepare('SELECT id, title, description, body FROM library_tomes WHERE campaign_id=? ORDER BY title');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $t) {
+                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title'], 'short' => true], trim($t['title'] . "\n" . $t['description']));
+                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], $t['body'], false, 'html');
+            }
+        }
         if (has_encyclopedia()) {
             $st = db()->prepare('SELECT id, name, notes, is_secret' . ($isGm ? ', gm_notes' : '') . ' FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
             $st->execute([$cid]);

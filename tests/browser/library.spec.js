@@ -109,3 +109,44 @@ test("a save from an older copy is refused, the body is cleaned, and only the au
   expect((await api(op, "library", undefined, cid)).status).toBe(403);
   expect((await api(op, "tome_save", { kind: "book", title: "Intruder" }, cid)).status).toBe(403);
 });
+
+test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector, on save and in Scan campaign", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Library nouns");
+  const row = (p, n) => p.locator(`.noun-row[data-term="${n}"]`);
+  // Saving a tome offers the new names in its title, description and contents.
+  await pp.goto(`index.html#/c/${cid}/library/new`);
+  await pp.locator(".lib-form input[name=title]").fill("A letter from Nuln");
+  await pp.locator(".lib-form textarea[name=description]").fill("Found in the satchel.");
+  await pp.locator(".lib-form .ql-editor").click();
+  await pp.keyboard.type("Magda wrote that the Countess of Averheim is watching us.");
+  await pp.getByRole("button", { name: "Add tome" }).click();
+  const dlg = pp.locator("dialog.noun-dialog");
+  await expect(dlg).toBeVisible();
+  for (const n of ["Nuln", "Magda", "Countess of Averheim"]) await expect(row(pp, n)).toBeVisible();
+  await expect(row(pp, "A")).toHaveCount(0);
+  await expect(row(pp, "Found")).toHaveCount(0);
+  // Add Magda now and leave the others for later.
+  await row(pp, "Magda").getByText("Add").click();
+  await row(pp, "Nuln").getByText("Skip").click();
+  await row(pp, "Countess of Averheim").getByText("Skip").click();
+  await dlg.getByRole("button", { name: "Save choices" }).click();
+  await expect(dlg).toHaveCount(0);
+
+  // Scan campaign reads the Library, downtime and Party Holdings too, and the entry lists where it is mentioned.
+  expect((await api(page, "gear_save", { item: "Sword of Teclis", claimed_by: "", location: "Wagon", amount: 1 }, cid)).status).toBe(200);
+  expect((await api(page, "holding_save", { name: "The Wandering Goose", kind: "vehicle", location: "Kemperbad docks", description: "Bought from Old Hilde.", amount: 1, stats: {}, tags: [] }, cid)).status).toBe(200);
+  expect((await api(page, "downtime_save", { kind: "long_rest", slots: 2, title: "", notes: "Resting at Ubersreik." }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  await page.getByRole("button", { name: "🔍 Scan campaign" }).click();
+  await expect(page.locator("dialog.noun-dialog")).toBeVisible();
+  for (const n of ["Nuln", "Countess of Averheim", "Sword of Teclis", "Wandering Goose", "Kemperbad docks", "Old Hilde", "Ubersreik"]) await expect(row(page, n)).toBeVisible();
+  await expect(row(page, "Long Rest")).toHaveCount(0); // the label a rest writes into the shifts
+  await expect(row(page, "Magda")).toHaveCount(0);
+  await page.locator("dialog.noun-dialog").getByRole("button", { name: /Save choices|Not now/ }).first().click();
+  const magda = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.name === "Magda");
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${magda.id}`);
+  await page.locator(".enc-form, .enc-detail").first().waitFor();
+  await expect(page.locator(".enc-found")).toContainText("Library: A letter from Nuln");
+  expectNoErrors(errors);
+});

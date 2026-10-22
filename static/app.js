@@ -1725,13 +1725,15 @@
       list.map(e => el('a', { class: 'enc-link' + (e.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${e.id}` }, e.name)));
   }
   /** Words the campaign already has names for, which the detector never offers: the calendar's months, weekdays, shifts,
-   * moons, seasons and eras, the members' names and character names, and the names of the event and Encyclopedia tags. */
+   * moons, seasons and eras, the members' names and character names, the names of the event and Encyclopedia tags, and the
+   * Long Rest, Short Rest and Downtime labels a rest writes into the shifts. */
   function knownWords() {
     const c = cal();
     const people = S.members.flatMap(m => [m.character_name, m.display_name]).filter(Boolean);
     return [...(c.months || []).map(m => m.name), ...(c.weekdays || []), ...shiftNames(), ...(c.moons || []).map(m => m.name),
       ...(c.seasons || []).map(s => s.name), ...(c.eras || []).flatMap(e => [e?.name, e?.abbr]),
-      ...people, ...people.flatMap(n => n.split(/\s+/)), ...S.tags.map(t => t.name), ...S.encTags.map(t => t.name)].filter(Boolean);
+      ...people, ...people.flatMap(n => n.split(/\s+/)), ...S.tags.map(t => t.name), ...S.encTags.map(t => t.name),
+      ...Object.values(DOWNTIME_KINDS).map(k => k.label)].filter(Boolean);
   }
   /** Names the campaign knows the kind of: its regions are Locations and its holidays Events. */
   function knownKinds() {
@@ -1842,10 +1844,14 @@
       activity: [`${date}, ${shift}: activity`, day], shift_gm_notes: [`${date}, ${shift}: GM notes`, day], shift_note: [`${date}, ${shift}: a note`, day],
       event: [`${date}: event "${s.title}"`, day], event_note: [`${date}: a note on "${s.title}"`, day], reminder: [`${date}: reminder "${s.title}"`, day],
       entry: [`Encyclopedia: ${s.title}`, `#/c/${S.camp.id}/encyclopedia/${s.id}`], entry_gm_notes: [`Encyclopedia: ${s.title} (GM notes)`, `#/c/${S.camp.id}/encyclopedia/${s.id}`],
+      downtime: [`${date}: ${s.title}`, `#/c/${S.camp.id}/downtime`], downtime_gm_notes: [`${date}: ${s.title} (GM notes)`, `#/c/${S.camp.id}/downtime`],
+      holding: [`Party Holdings: ${s.title}`, `#/c/${S.camp.id}/holdings`], storage: [`Party Holdings: ${s.title} storage`, `#/c/${S.camp.id}/holdings`],
+      gear: ['Party Holdings: Gear and Loot', `#/c/${S.camp.id}/holdings`], funds: ['Party Holdings: Party Funds', `#/c/${S.camp.id}/holdings`],
+      tome: [`Library: ${s.title}`, `#/c/${S.camp.id}/library/${s.id}`],
     })[s.kind] || [s.kind, day];
   }
-  /** The campaign's text for the detector: event and reminder titles read as titles. */
-  const scanSources = sources => sources.map(s => ({ ...s, title: ['event', 'reminder'].includes(s.kind), label: sourceLabel(s)[0] }));
+  /** The campaign's text for the detector: event, reminder and downtime titles, and short boxes like a holding's name, read as titles. */
+  const scanSources = sources => sources.map(s => ({ ...s, title: !!s.short || ['event', 'reminder', 'downtime'].includes(s.kind), label: sourceLabel(s)[0] }));
   async function fullScan() {
     const { sources } = await api('encyclopedia_sources', { query: { cid: S.camp.id } });
     const found = Nouns.find(scanSources(sources), { ...detectorOpts(), ignored: S.encIgnored });
@@ -1928,7 +1934,7 @@
     ctx.draw = draw;
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     draw();
-    const scanBtn = btn('🔍 Scan campaign', null, 'small', 'Run the Proper Noun Detector over every note, event, reminder and Locations visited list in the campaign, and offer the names that are missing');
+    const scanBtn = btn('🔍 Scan campaign', null, 'small', 'Run the Proper Noun Detector over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
     scanBtn.addEventListener('click', busy(scanBtn, fullScan));
     const ignored = S.encIgnored.length ? el('details', { class: 'enc-ignored' },
       el('summary', { class: 'small' }, `Ignored words (${S.encIgnored.length})`),
@@ -1946,7 +1952,7 @@
     // --- the entry picked
     const right = el('section', { class: 'card enc-detail' });
     if (!current) right.append(el('p', { class: 'muted' }, entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.'),
-      el('p', { class: 'small muted' }, 'When you save a note, an event, a reminder or a day\'s Locations visited, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".'));
+      el('p', { class: 'small muted' }, 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".'));
     else if (!current.id || entryBlank(current)) right.append(entryForm(current));
     else right.append(...entryView(current, ctx));
     mount(...campaignHeader('encyclopedia'), el('div', { class: 'enc-page' + (current ? ' has-sel' : '') }, left, right));
@@ -2353,6 +2359,7 @@
         toast(t.id ? 'Tome saved' : 'Added to the Library');
         const to = `#/c/${S.camp.id}/library/${tome.id}`;
         if (location.hash === to) route(); else location.hash = to;
+        offerNouns([{ text: `${title.value}\n${desc.value}`, title: true, label: `tome "${tome.title}"` }, { text: b.text, format: 'html', label: `tome "${tome.title}"` }]);
       } catch (err) { toast(err.message, true); save.disabled = false; }
     });
     return f;
@@ -2996,6 +3003,7 @@
       d.close();
       toast(`${DOWNTIME_KINDS[k].label} added`);
       route();
+      offerNouns([{ text: body.title, title: true, label: `${DOWNTIME_KINDS[k].label} title` }]);
     }));
     document.body.append(d);
     d.showModal();
@@ -3033,7 +3041,10 @@
           return el('li', {}, el('strong', {}, a.name), who.length ? el('span', { class: 'muted' }, ` · ${who.join(', ')}`) : null);
         })) : el('p', { class: 'muted' }, 'No activities picked yet.'));
       const save = btn('Save notes', null, 'small primary', 'Save the notes on this card');
-      save.addEventListener('click', busy(save, async () => { await post('downtime_save', { id: x.id, notes: notes.value }, S.camp.id); toast('Notes saved'); }));
+      save.addEventListener('click', busy(save, async () => {
+        await post('downtime_save', { id: x.id, notes: notes.value }, S.camp.id); toast('Notes saved');
+        offerNouns([{ text: notes.value, label: `${k.label} notes` }]);
+      }));
       card.append(field('Notes', notes), el('div', { class: 'row' }, save));
       return card;
     }
@@ -3073,6 +3084,8 @@
       const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => ({ name: n, members: [...picked.get(n)] }));
       await post('downtime_save', { id: x.id, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
       toast(`${k.label} saved`); route();
+      offerNouns([{ text: `${title.value}\n${custom.filter(n => picked.has(n)).join('\n')}`, title: true, label: `${k.label} title and activities` },
+        { text: notes.value, label: `${k.label} notes` }, { text: gmn.value, secret: true, label: `${k.label} GM notes` }]);
     }));
     const del = btn('Delete', async () => {
       if (!await confirmDialog(`Delete this ${k.label.toLowerCase()}? Its label comes off the shifts it covered; the clock stays where it is.`, { ok: 'Delete', danger: true })) return;
@@ -3393,6 +3406,7 @@
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
       route();
+      offerNouns([{ text: `${name.value}\n${loc.value}`, title: true, label: `holding "${name.value.trim()}"` }, { text: desc.value, label: `holding "${name.value.trim()}"` }]);
     }));
     document.body.append(d);
     d.showModal();

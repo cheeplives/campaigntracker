@@ -2,7 +2,7 @@
 // and a card per holding on the right, added from a dialog whose fields follow the type.
 // GM and players alike can add, change and remove both.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, notNow } = require("./helpers");
 
 async function campaignWithPlayer(page, browser, tag) {
   const gm = person("Gwen"), player = person("Pip");
@@ -109,6 +109,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await dlg.getByRole("button", { name: "+ Add tag" }).click();
   await dlg.getByRole("button", { name: "Add holding" }).click();
   await expect(dlg).toHaveCount(0);
+  await notNow(pp); // the names in it go to the Proper Noun Detector
 
   const card = pp.locator(".holding");
   await expect(card).toHaveCount(1);
