@@ -145,15 +145,41 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .nowtag { font: 700 .8rem var(--disp); letter-spacing: .1em; background: var(--accent); color: var(--on-accent); padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
 .secret-tag { font: 600 .68rem var(--body); color: #fff; background: var(--secret); padding: 2px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
 
-/* Tabs wrap onto a second row rather than hiding Members and Settings off the right edge (iPad portrait, narrow windows).
- * Phones keep one row that scrolls sideways, which takes less of a small screen. */
-.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 3px solid var(--accent); margin-top: 6px; padding-left: 8px; }
-@media (max-width: 560px) { .tabs { flex-wrap: nowrap; overflow-x: auto; } }
+/* Tabs stay pinned under the sticky top bar as the page scrolls (--topbar-h is its height, kept by app.js).
+ * Up to 1000px wide they are folder dividers across the top: wrapped onto a second row on an iPad in portrait,
+ * rather than hiding Members and Settings off the right edge, and one row that scrolls sideways on phones. */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 3px solid var(--accent); padding: 6px 0 0 8px;
+  position: sticky; top: var(--topbar-h, 0px); z-index: 4; background: var(--bg); }
+/* phones: the top bar runs to three rows, so it scrolls away and only the tabs stay pinned */
+@media (max-width: 560px) { .tabs { flex-wrap: nowrap; overflow-x: auto; top: 0; } .topbar { position: static; } }
 /* folder dividers on the accent baseline; the open one is filled, so it joins the rule */
 .tabs a { padding: 7px 14px 5px; color: var(--dim); white-space: nowrap; font: 700 1.05rem var(--disp); text-transform: uppercase; letter-spacing: .05em;
   background: var(--tab-bg); border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; }
 .tabs a:hover { color: var(--text); }
 .tabs a.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+
+/* Wider (desktop, iPad in landscape) the tabs are a "Legend" down the left, beside everything else.
+ * It spans every row of the page grid; the last row is 1fr so a Legend taller than a short page grows only that row. */
+@media (min-width: 1001px) {
+  main:has(> nav.tabs) { max-width: 1400px; display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: repeat(12, auto) 1fr;
+    column-gap: 20px; row-gap: 0; align-items: start; }
+  main:has(> nav.tabs) > * { grid-column: 2; }
+  main:has(> nav.tabs) > * + :not(nav.tabs) { margin-top: 14px; }
+  main > nav.tabs { grid-column: 1; grid-row: 1 / -1; top: calc(var(--topbar-h, 0px) + 14px); max-height: calc(100vh - var(--topbar-h, 0px) - 28px); overflow-y: auto;
+    flex-direction: column; flex-wrap: nowrap; gap: 1px; padding: 0 0 8px; border: 0; border-top: 6px solid var(--accent); border-radius: var(--radius);
+    background: var(--stock); box-shadow: 0 1px 0 var(--line), 0 10px 24px -18px rgb(0 0 0 / .6); }
+  /* the heading over a tapered rule; the rule is ::after moved up under it */
+  main > nav.tabs::before { content: 'Legend'; order: -2; padding: 10px 14px 4px; font: 700 1.35rem var(--disp); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+  main > nav.tabs::after { content: ''; order: -1; flex: none; height: 5px; margin: 0 14px 8px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
+  main > nav.tabs a { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border: 0; border-radius: 0; background: none; }
+  main > nav.tabs a::before { content: ''; flex: none; width: 8px; height: 8px; border: 1.5px solid currentColor; transform: rotate(45deg); opacity: .6; }
+  main > nav.tabs a:hover { background: var(--tab-bg); }
+  /* the open one is filled and points at the page */
+  main > nav.tabs a.on { color: var(--on-accent); background: var(--accent); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
+  main > nav.tabs a.on::before { background: currentColor; opacity: 1; }
+  :root[data-scheme="console"] main > nav.tabs a { padding-left: 14px; padding-right: 14px; }
+  main:has(> nav.tabs) ~ .footer { max-width: 1400px; }
+}
 
 /* calendar */
 .calbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -538,7 +564,7 @@ dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
 .hold-dialog [hidden] { display: none; }
 .hold-fields { margin: 4px 0; padding-top: 6px; border-top: 1px dashed var(--line); }
 .hold-fields:empty { display: none; }
-@media (max-width: 900px) { .holdings-page { grid-template-columns: 1fr; } }
+@media (max-width: 1180px) { .holdings-page { grid-template-columns: 1fr; } }  /* up to 1000px, then beside the Legend */
 @media (max-width: 560px) {
   /* each item takes two lines: its name, then who claimed it, where it is and how many */
   .gear-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
@@ -557,6 +583,7 @@ a.enc-link:hover { color: var(--accent); }
 a.enc-link.secret { text-decoration-color: var(--secret); }
 .enc-mentions { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .enc-page { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (min-width: 1001px) { .enc-page { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); } }  /* beside the Legend */
 .enc-index { display: flex; flex-direction: column; gap: 8px; }
 .enc-index input[type=search] { width: 100%; }
 .enc-lists h3 { font-size: 1.05rem; letter-spacing: .08em; color: var(--accent); margin: 10px 0 4px; }

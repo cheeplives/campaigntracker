@@ -10,6 +10,8 @@
   const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog } = KIT;
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
+  // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice
+  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${$('.topbar').offsetHeight}px`)).observe($('.topbar'));
   function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
   function field(label, input, hint, tipText) {
     return el('label', { class: 'field' }, el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? el('small', { class: 'muted' }, hint) : null);
@@ -37,7 +39,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '14';
+  const APP_VERSION = '15';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -3207,11 +3209,11 @@
       };
       const renderList = () => {
         const m = matches();
-        list.replaceChildren(...(m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
+        list.replaceChildren(...clean([m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
           el('div', {}, el('strong', {}, u.display_name || u.email || 'Unnamed account'), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
           el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email || 'them'} to this campaign`))))
-          : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Everyone registered is already in this campaign. Add someone new by their sign-in email.')]),
-          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null);
+          : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Everyone registered is already in this campaign. Add someone new by their sign-in email.')],
+          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null]));
       };
       q.addEventListener('input', renderList);
       const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));

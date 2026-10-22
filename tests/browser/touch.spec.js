@@ -53,6 +53,22 @@ test("the theme menu closes on a tap or click outside it", async ({ page, browse
   expectNoErrors(errors);
 });
 
+test("the campaign tabs stay on screen as the page scrolls", async ({ page, browser, viewport }) => {
+  const errors = watchErrors(page);
+  const cid = await gmCampaign(page, browser, "Pinned");
+  await page.goto(`index.html#/c/${cid}/today`);
+  const on = page.locator("nav.tabs a.on");
+  await expect(on).toHaveText("Current Day");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
+  const box = await on.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  // and nothing on the page sits over it
+  expect(await on.evaluate(a => { const r = a.getBoundingClientRect(); return a.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); })).toBe(true);
+  expectNoErrors(errors);
+});
+
 test("every campaign tab is on screen at tablet and desktop widths", async ({ page, browser, viewport }) => {
   test.skip(viewport.width <= 560, "phones keep one row of tabs that scrolls sideways");
   const errors = watchErrors(page);
