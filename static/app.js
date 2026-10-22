@@ -37,7 +37,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '13';
+  const APP_VERSION = '14';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };

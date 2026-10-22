@@ -337,6 +337,8 @@ test("the notes suggest connections, and the list searches and filters by them",
   await expect(list).toHaveCount(3);
   await page.locator(".enc-relpick button.tagopt", { hasText: "Residents" }).click();
   await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf}`);
+  // Only a hash change, so Hans's page (and its own Show in list) is still up until Altdorf's draws.
+  await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
   await page.getByRole("button", { name: "Show in list" }).click();
   await expect(page.locator(".enc-index")).toContainText("Connected to");
   await expect(list).toHaveCount(3);
