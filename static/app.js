@@ -268,10 +268,73 @@
     });
     return sel;
   }
-  /** Suggestions for a single-line activity input (the browser shows them as you type). */
-  function actionList(id) {
-    return el('datalist', { id }, E.SHIFT_ACTIONS.map(a => el('option', { value: a.name, label: a.desc })));
+  /** A single-line activity box with its own drop-down of the baseline shift actions, filtered as you type.
+   * Not a <datalist>: Android Chrome shows those as a sideways strip above the keyboard, not a list.
+   * Picking an action puts its name in the box, which stays free text. */
+  function actionCombo(input) {
+    const list = el('ul', { class: 'combo-list', role: 'listbox', id: `combo-${++actionCombo.n}`, hidden: true });
+    const toggle = el('button', { type: 'button', class: 'combo-btn', tabindex: -1, 'aria-label': 'Show actions' }, '▾');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', list.id);
+    input.autocomplete = 'off';
+    let wrap = null, opts = [], at = -1;
+    // pointerdown, not click: iPad Safari sends no click for a tap on plain page background
+    const outside = e => { if (!wrap.contains(e.target)) close(); };
+    const close = () => {
+      list.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
+      document.removeEventListener('pointerdown', outside);
+    };
+    const mark = i => {
+      opts.forEach((o, j) => o.setAttribute('aria-selected', String(j === i)));
+      at = i;
+      if (opts[i]) { input.setAttribute('aria-activedescendant', opts[i].id); opts[i].scrollIntoView({ block: 'nearest' }); }
+      else input.removeAttribute('aria-activedescendant');
+    };
+    const pick = a => { input.value = a.name; close(); };
+    /** Fill the list with the actions matching q (all of them when q is empty), under their group headings. */
+    function open(q = '') {
+      const needle = q.trim().toLowerCase();
+      const hits = E.SHIFT_ACTIONS.filter(a => !needle || a.name.toLowerCase().includes(needle));
+      if (!hits.length) return close();
+      opts = [];
+      list.replaceChildren(...Object.entries(E.SHIFT_ACTION_GROUPS).flatMap(([g, label]) => {
+        const mine = hits.filter(a => a.group === g);
+        return mine.length ? [el('li', { class: 'combo-group', role: 'presentation' }, label), ...mine.map(a => {
+          const o = el('li', { class: 'combo-opt', role: 'option', id: `${list.id}-${opts.length}`, 'aria-selected': 'false' },
+            el('span', { class: 'combo-name' }, `${a.icon} ${a.name}`), el('small', {}, a.desc));
+          // keep focus (and the on-screen keyboard state) in the box while choosing
+          o.addEventListener('mousedown', e => e.preventDefault());
+          o.addEventListener('click', () => pick(a));
+          o._action = a;
+          opts.push(o);
+          return o;
+        })] : [];
+      }));
+      at = -1;
+      hideTip(); // its tooltip would sit on top of the list
+      if (list.hidden) { list.hidden = false; input.setAttribute('aria-expanded', 'true'); document.addEventListener('pointerdown', outside); }
+      list.scrollTop = 0;
+    }
+    toggle.addEventListener('mousedown', e => e.preventDefault());
+    toggle.addEventListener('click', () => { if (list.hidden) open(); else close(); });
+    input.addEventListener('input', () => open(input.value));
+    input.addEventListener('click', () => { if (list.hidden && !input.value.trim()) open(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (list.hidden) { open(); if (e.key === 'ArrowUp') mark(opts.length - 1); else mark(0); return; }
+        mark(e.key === 'ArrowDown' ? Math.min(at + 1, opts.length - 1) : Math.max(at - 1, 0));
+      } else if (e.key === 'Enter' && !list.hidden && opts[at]) {
+        e.preventDefault(); pick(opts[at]._action);
+      } else if (e.key === 'Escape' && !list.hidden) {
+        e.preventDefault(); close();
+      } else if (e.key === 'Tab') close();
+    });
+    return (wrap = el('span', { class: 'combo grow' }, input, toggle, list));
   }
+  actionCombo.n = 0;
 
   const SHIFT_TIPS = {
     shifts4: 'Every day is split into four shifts of about six hours (by default Dawn, Midday, Dusk and Overnight, in that order). Time passes, activities are logged and visibility is worked out shift by shift.',
@@ -792,8 +855,8 @@
     const amt = el('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });
     const unit = select([['shift', `${word()}(s)`], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit',
       'data-tip': `A day has ${hourMode() ? `${spd()} hours` : spd() === 2 ? 'two shifts, Day and Night' : 'four shifts'}. Months and years follow this campaign's calendar` });
-    const act = el('input', { placeholder: `Activity for the passed ${word()}s (optional)`, class: 'grow', list: 'pass-actions',
-      'data-tip': `Written into every ${word()} that passes, e.g. "Marching to Altdorf". Pick a common action from the suggestions or type your own. ${Word()}s that already have an activity keep it` });
+    const act = el('input', { placeholder: `Activity for the passed ${word()}s (optional)`, 'aria-label': 'Activity',
+      'data-tip': `Written into every ${word()} that passes, e.g. "Marching to Altdorf". Pick a common action from the ▾ list or type your own. ${Word()}s that already have an activity keep it` });
     const go = btn('Pass time ▶', null, 'primary', 'Move "now" forward and roll weather for every new day');
     go.addEventListener('click', busy(go, async () => {
       const n = unitShifts(unit.value, Number(amt.value) || 0);
@@ -805,7 +868,7 @@
     }));
     const back = btn(`◀ 1 ${word()}`, null, 'small', `Step back one ${word()}. Recorded weather, notes and activities stay`);
     back.addEventListener('click', busy(back, async () => { await passShifts(-1); route(); }));
-    return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, act, actionList('pass-actions'), go, back);
+    return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, actionCombo(act), go, back);
   }
 
   // ------------------------------------------------------------ calendar tab

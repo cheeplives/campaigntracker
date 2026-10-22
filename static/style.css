@@ -136,6 +136,19 @@ button.on { background: var(--accent); color: var(--on-accent); }
 :root[data-scheme="console"] .tabs a { font-size: .9rem; letter-spacing: 0; padding-left: 10px; padding-right: 10px; }
 .now-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; font-size: .95rem; }
 .passtime { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+/* Activity box with its own drop-down of shift actions (app.js actionCombo), in place of a <datalist> */
+.combo { position: relative; display: flex; min-width: 0; }
+.combo > input { flex: 1; width: 100%; min-width: 0; padding-right: 36px; }
+.combo-btn { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 34px; padding: 0; border: 0; background: none; color: var(--dim); font-size: 1rem; }
+.combo-btn:hover { color: var(--accent); }
+.combo-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10; list-style: none; margin: 0; padding: 4px;
+  max-height: min(340px, 50vh); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+.combo-group { padding: 8px 8px 2px; font: 700 .75rem var(--disp); text-transform: uppercase; letter-spacing: .1em; color: var(--label); }
+.combo-opt { padding: 8px 10px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; }
+.combo-opt:hover, .combo-opt[aria-selected="true"] { background: var(--panel-2); border-color: var(--accent); }
+.combo-name { display: block; font-weight: 600; }
+.combo-opt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--dim); }
 .chip { display: inline-block; color: #fff; font: 700 .82rem var(--disp); text-transform: uppercase; letter-spacing: .04em; padding: 1px 7px; border-radius: 3px; margin: 1px 2px 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .moon { font-size: 1.05rem; }
 .vis { font: 700 .85rem var(--disp); text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 3px; white-space: nowrap; border: 1px solid transparent; }

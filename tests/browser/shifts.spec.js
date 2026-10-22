@@ -27,8 +27,51 @@ test("shift actions are picked into the activity alongside free text", async ({ 
   const s = (await r.json()).shifts.find(x => Number(x.shift) === 0);
   expect(s.activity).toBe("Ana and Bo; Scout ahead; Keep watch");
 
-  // The pass-time box suggests the same actions.
-  await expect(page.locator("#pass-actions option")).toHaveCount(await page.evaluate(() => Engine.SHIFT_ACTIONS.length));
+  expectNoErrors(errors);
+});
+
+// Not a <datalist>: Android Chrome shows those as a sideways strip above the keyboard.
+test("the pass-time activity box drops down a list of actions that works by tap, mouse and keyboard", async ({ page, browser, hasTouch }) => {
+  const errors = watchErrors(page);
+  const gm = person("Pip");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Pass actions ${gm.id}`);
+  await page.goto(`index.html#/c/${cid}/today`);
+
+  const box = page.getByRole("combobox", { name: "Activity" });
+  const list = page.locator(".passtime .combo-list");
+  await expect(page.locator(".passtime datalist")).toHaveCount(0);
+  await expect(list).toBeHidden();
+
+  // The ▾ opens every action, grouped, and a pick fills the box and closes the list.
+  const arrow = page.locator(".passtime .combo-btn");
+  hasTouch ? await arrow.tap() : await arrow.click();
+  await expect(list).toBeVisible();
+  await expect(list.getByRole("option")).toHaveCount(await page.evaluate(() => Engine.SHIFT_ACTIONS.length));
+  await expect(list.locator(".combo-group").first()).toHaveText("On the move");
+  const nav = list.getByRole("option", { name: /Navigate/ });
+  hasTouch ? await nav.tap() : await nav.click();
+  await expect(box).toHaveValue("Navigate");
+  await expect(list).toBeHidden();
+
+  // Typing filters it; arrow keys and Enter pick; anything else stays free text.
+  await box.fill("");
+  await box.pressSequentially("watch");
+  await expect(list.getByRole("option")).toHaveCount(1);
+  await box.press("ArrowDown");
+  await box.press("Enter");
+  await expect(box).toHaveValue("Keep watch");
+  await expect(list).toBeHidden();
+  await box.fill("Marching to Altdorf");
+  await expect(list).toBeHidden();
+
+  // A tap or click elsewhere closes it.
+  hasTouch ? await arrow.tap() : await arrow.click();
+  await expect(list).toBeVisible();
+  const label = page.locator(".passtime .lbl");
+  hasTouch ? await label.tap({ position: { x: 4, y: 4 } }) : await label.click({ position: { x: 4, y: 4 } });
+  await expect(list).toBeHidden();
   expectNoErrors(errors);
 });
 
