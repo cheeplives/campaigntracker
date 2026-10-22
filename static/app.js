@@ -3653,9 +3653,9 @@
         el('h1', {}, 'About Campaign Chronicle'),
         p('Campaign Chronicle is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
           'This page lists where every built-in figure comes from: the sample speeds and distances in the travel planner, the climate baselines behind the weather, and the calendar presets.'),
-        p('The sources are open: Wikipedia articles (CC BY-SA 4.0, which in turn cite national weather services, NOAA, NASA and the like), ',
+        p('Open sources come first: Wikipedia articles (CC BY-SA 4.0, which in turn cite national weather services, NOAA, NASA and the like), ',
           'NASA, JPL and other US government pages (public domain), UK government statistics (Open Government Licence) and openly licensed papers. ',
-          'Where a figure has no open source, such as the fictional settings, this page says so under "No open source" at the bottom.'),
+          'Where a figure has no open source, such as the fictional settings, the source is still credited with its owner and terms, and this page says so under "No open source" at the bottom.'),
         S.user ? null : el('p', {}, el('a', { href: '#/' }, 'Sign in'))),
       section('Travel planner: sample speeds',
         p('Each sample is the figure its source states, converted to km/h where it gives mph or knots. The label says when it is a top, cruising or free-flow speed rather than an average.'),
@@ -3681,11 +3681,15 @@
           'coastal from ', extLink(wiki('Bergen'), 'Bergen'), ', mountains from ', extLink(wiki('Davos'), 'Davos'), ' and swamp from ', extLink(wiki('Pinsk'), 'Pinsk'), ' in the Pripyat Marshes. ',
           'Underground air holds near the surface\'s yearly mean: ', cite('cave'), '. The starship is kept at room temperature (20–22 °C): ', cite('room'), '. ',
           'Open space spans the Moon\'s equatorial range of 95–390 K: ', cite('moonFacts'), '.'),
+        p('The wind speeds shown for Calm, Breezy, Windy and Gale are Beaufort forces 0–3, 4–5, 6–7 and 8 and up: ', cite('beaufort'), '. ',
+          'The rates the weather tooltips give for rain, snow and hail are the usual intensity bands, rounded: ', cite('rain'), ', ', cite('snowfall'), ' and ', cite('hail'), '.'),
         p('Game tuning, not measurements: how often thunderstorms, fog and dust storms turn up (0–3) in each class, the weather mix of the simple climates, ',
-          'how each kind of weather changes visibility, and how the four shifts ease off from the day\'s forecast. These are the app\'s own choices.')),
+          'how each kind of weather changes visibility, how the four shifts ease off from the day\'s forecast, and the ground conditions model (how much snow and rain each kind of weather leaves, ',
+          'how fast it melts and dries, and where the ground turns soft, muddy or frozen). These are the app\'s own choices.')),
       section('Calendars and holidays',
         list([
           ['Gregorian calendar months and leap years: ', cite('gregorian'), '. Season start dates (equinoxes and solstices): ', cite('usno'), '.'],
+          ['Preset sunrise and sunset times: local solar time on each season\'s start date at about 45° latitude, from ', cite('sunrise'), '.'],
           ['The Moon\'s mean synodic month (29.530588 days) and reference new moon of 6 January 2000, 18:14 UT: ', cite('phases'), '.'],
           ['New Year\'s Day, Thanksgiving (fourth Thursday in November) and Christmas Day: ', cite('usHolidays'), '. Christmas Eve: ', cite('xmasEve'), '.'],
           ['Middle-earth (Shire Reckoning): months, Yule and Lithe days, the Overlithe leap rule and the fixed weekdays from Appendix D of The Lord of the Rings, as summarised by ', cite('shire'), '.'],
@@ -3700,6 +3704,12 @@
       section('Game rules',
         p('The four shifts of a day, the shift tasks under "Add an action" and the terrain multipliers follow ', cite('yze'), '. ',
           'The visibility score (0–5), its base values per shift and its modifiers are this app\'s own design.')),
+      section('Software and fonts',
+        list([
+          ['The notes editor: ', cite('quill'), '.'],
+          ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
+          'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
+        ])),
       section('No open source',
         p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),
         list([
@@ -3714,7 +3724,10 @@
           'Exandria preset (© Critical Role): the calendar follows the official setting via a fan wiki. Which weekday the year starts on is not given, and Catha\'s 33-day and Ruidus\'s 164-day cycles are the app\'s choice within what the wiki says. Region climates are judgement calls (Tal\'Dorei and the Dwendalian Empire as temperate Europe, Marquet as North Africa).',
           'Golarion preset (© Paizo): the calendar follows the official setting via a fan wiki; weekdays line up with the real year 2700 years earlier, and Somal is given the Moon\'s mean synodic month. Holidays that fall on an equinox or solstice take the seasons\' usual days. Region climates are judgement calls (the Inner Sea as the Mediterranean, Osirion as Egypt, the Mwangi Expanse as the Congo).',
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
-          'Storm, fog and dust frequencies, the weather mixes of the simple climates, and the visibility rules (see above).',
+          'Storm, fog and dust frequencies, the weather mixes of the simple climates, the ground conditions model and the visibility rules (see above).',
+          ['Fan sites and pages used above that are not openly licensed, each credited where it is used: the Warhammer Fantasy Lexicanum (CC BY-NC, non-commercial use only), ',
+            cite('balazar'), ', ', cite('runequestCults'), ', ', cite('gloranthaWeather'), ', ', cite('galifarHolidays'), ' and ', cite('imaginarymaps'), '. ',
+            'Each was used only for facts (dates, names, cycles and climate zones), not copied text. If an owner asks, the figures taken from their page will be replaced or removed.'],
         ])));
   }
 

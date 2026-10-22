@@ -8,7 +8,7 @@ test("About & sources: open signed out from the footer, with every travel sample
   await page.goto("index.html");
   await page.getByRole("link", { name: "About & sources" }).click();
   await expect(page.getByRole("heading", { name: "About Campaign Chronicle" })).toBeVisible();
-  for (const h of ["Travel planner: sample speeds", "Travel planner: space", "Weather and climate", "Calendars and holidays", "No open source"]) {
+  for (const h of ["Travel planner: sample speeds", "Travel planner: space", "Weather and climate", "Calendars and holidays", "Software and fonts", "No open source"]) {
     await expect(page.getByRole("heading", { name: h })).toBeVisible();
   }
   // One row per sample speed, each with a source link that opens in a new tab.
@@ -18,6 +18,10 @@ test("About & sources: open signed out from the footer, with every travel sample
   for (let i = 1; i < rows; i++) await expect(speeds.nth(i).locator("a[target=_blank]")).toHaveCount(1);
   // Every Köppen class names its station.
   await expect(page.getByRole("link", { name: "London Heathrow, UK" })).toBeVisible();
+  // Wind speeds, the bundled editor and the fonts are credited too.
+  await expect(page.getByRole("link", { name: "Beaufort scale" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Quill 2 rich text editor/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Inter typeface" })).toBeVisible();
   // Leaving the page goes back to the sign-in card.
   await page.goto("index.html#/");
   await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();
