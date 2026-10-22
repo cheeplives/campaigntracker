@@ -3247,7 +3247,7 @@
     const out = el('div', { class: 'gen-out' });
     const draw = () => { hideTip(); out.replaceChildren(...clean([roll()])); };
     const go = btn('🎲 Generate', draw, 'primary', 'Roll a new set');
-    for (const c of controls) c.querySelector('select')?.addEventListener('change', draw);
+    for (const c of controls) (c.matches('input') ? c : c.querySelector('select, input'))?.addEventListener('change', draw);
     draw();
     return el('section', { class: `card gen-card ${cls || ''}` }, el('h2', {}, title, tip(tipText)), el('div', { class: 'gen-controls' }, controls, go), out);
   }
@@ -3262,9 +3262,15 @@
     const peoples = Gen.PEOPLES[g];
     const people = keep('people_' + g, select([['', 'Any'], ...peoples], pref['people_' + g] || peoples[0][0], { 'aria-label': 'Race or people' }));
     const gender = keep('gender', select(Gen.GENDERS, pref.gender || '', { 'aria-label': 'Gender' }));
-    const names = genCard('Names', 'Character names for this genre. Each people or culture has its own sounds; pick Any to mix them. Gender-neutral gives names used for anyone. 📖 Add puts a name in the Encyclopedia as a Person',
-      [field('Race or people', people), field('Gender', gender)],
-      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.name(g, people.value, gender.value)).map(r => genRow(r, 'Person'))));
+    const traits = el('input', { type: 'checkbox', checked: !!pref.traits, onchange: e => setGenPrefs({ traits: e.target.checked }) });
+    const names = genCard('Names', 'Character names for this genre. Each people or culture has its own sounds; pick Any to mix them. Gender-neutral gives names used for anyone. 📖 Add puts a name in the Encyclopedia as a Person, with its look and quirk as notes',
+      [field('Race or people', people), field('Gender', gender),
+        el('label', { class: 'inline small gen-traits', 'data-tip': 'Give each name how they look and a habit or manner, for an NPC on the spot' }, traits, 'Add a look and a quirk')],
+      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.name(g, people.value, gender.value)).map(r => {
+        if (!traits.checked) return genRow({ name: r.name }, 'Person');
+        const t = Gen.traits(g, r.people);
+        return genRow({ name: r.name, note: `${t.look}. ${t.quirk}.` }, 'Person');
+      })));
 
     const taverns = genCard(g === 'western' ? 'Saloons & inns' : g === 'scifi' || g === 'cyberpunk' ? 'Bars & clubs' : 'Taverns, inns & pubs',
       'Places to eat, drink and sleep, each with what it\'s known for and who runs it. 📖 Add puts one in the Encyclopedia as a Location', [],
