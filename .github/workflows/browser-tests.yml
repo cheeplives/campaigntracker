@@ -19,7 +19,7 @@ jobs:
   test:
     name: ${{ matrix.project }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false          # one engine failing must not hide another's result
       matrix:
@@ -62,9 +62,8 @@ jobs:
           cache: npm
           cache-dependency-path: tests/package-lock.json
       - run: npm ci
-      # The browser download has hung until the job's 20-minute limit (webkit, ipad), so the browsers are cached per
-      # Playwright version, and each download try is cut off after 3 minutes and tried again, up to three times.
-      # The playwright binary is run directly so the timeout stops the download itself, not just an npx wrapper.
+      # Playwright's browsers are cached per Playwright version. Each download try is cut off after 3 minutes and tried
+      # again, up to three times; the binary is run directly so the timeout stops the download itself.
       - id: pw
         run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
@@ -79,9 +78,30 @@ jobs:
             echo "::warning::Playwright's ${{ matrix.browser }} download failed or stalled (try $try of 3)"
           done
           exit 1
+      # WebKit needs about a hundred Ubuntu packages (GStreamer, codecs), and the runners' apt mirror has served them so
+      # slowly that the jobs ran out of time. apt keeps what it downloads in a folder that is cached between runs, so
+      # only a cold cache or a package update downloads anything.
+      - name: Keep apt's downloads for the cache
+        run: |
+          mkdir -p "$HOME/apt-archives/partial"
+          printf '%s\n' "Dir::Cache::Archives \"$HOME/apt-archives\";" 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+            'APT::Keep-Downloaded-Packages "true";' 'APT::Sandbox::User "root";' 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99ci-cache
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+      - id: aptcache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-archives
+          key: apt-${{ env.ImageOS }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
       - name: Install ${{ matrix.browser }}'s system libraries
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: ./node_modules/.bin/playwright install-deps ${{ matrix.browser }}
+      - if: steps.aptcache.outputs.cache-hit != 'true'
+        run: sudo rm -rf "$HOME/apt-archives/partial" && sudo chmod -R a+rX "$HOME/apt-archives"
+      - if: steps.aptcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/apt-archives
+          key: apt-${{ env.ImageOS }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
       - run: npx playwright test --project=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v4
