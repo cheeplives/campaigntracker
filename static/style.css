@@ -262,6 +262,12 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 .dh-step.past { opacity: .6; }
 .dh-step-icon { font-size: 1.6rem; line-height: 1.2; }
 .dh-step .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* The NOW flag sits on the top edge of the current step; a GM's other steps are buttons that take it (styled in .nowpick below) */
+.dh-strip { margin-top: 10px; }
+.dh-step { position: relative; }
+.dh-step .nowtag { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); margin: 0; font-size: .68rem; padding: 1px 5px; line-height: 1.2; }
+button.dh-step { font: inherit; color: inherit; cursor: pointer; }
+button.dh-step:hover, button.dh-step:focus-visible { opacity: 1; background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .dayedit { margin-top: 14px; padding-top: 12px; }
 /* The day page's boxes (Weather, Notes, Shifts or Hours, Events, Reminders), each folding to its heading */
 .daybox { display: flex; flex-direction: column; gap: 12px; }
@@ -347,6 +353,16 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .shiftcard.now { box-shadow: inset 0 0 0 2px var(--accent); }
 .shiftcard.now > .row.spread:first-child { background: var(--accent); color: var(--on-accent); }
 .shiftcard.now .nowtag { background: var(--on-accent); color: var(--accent); }
+/* A GM moves the NOW flag by clicking another shift's title: there the flag waits as a faint outline, filled on hover or focus */
+h4 > .nowpick { all: unset; cursor: pointer; display: inline-flex; align-items: center; border-radius: 3px; }
+.nowpick .nowtag { background: var(--bg); color: var(--dim); box-shadow: inset 0 0 0 1px var(--line); opacity: .7; transition: opacity .12s, background .12s, color .12s; }
+.nowpick:hover .nowtag, .nowpick:focus-visible .nowtag { background: var(--accent); color: var(--on-accent); box-shadow: none; opacity: 1; }
+.nowpick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nowpick:disabled { cursor: progress; opacity: .6; }
+/* An hour strip has 24 narrow steps: there the waiting flags show only on hover or focus */
+.dh-strip.hours .nowpick .nowtag { opacity: 0; }
+.dh-strip.hours .nowpick:hover .nowtag, .dh-strip.hours .nowpick:focus-visible .nowtag { opacity: 1; }
+.dh-strip.hours .nowtag { font-size: .55rem; padding: 0 2px; letter-spacing: 0; }
 .shiftcard .actpick { align-self: flex-start; max-width: 100%; }
 .shiftcard .actpick + textarea + small:empty { display: none; }
 .shiftnotes { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
