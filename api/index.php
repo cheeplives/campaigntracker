@@ -725,11 +725,50 @@ function relation_mine(array $r, bool $isGm): bool {
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
+
+// ---------- the Library ----------
+// The campaign's books, journals and notes ("tomes"): a title, a short description and a rich-text body. Every member,
+// GM or player, can add one and change any of them; deleting is for whoever added it, or a GM, as with Encyclopedia entries.
+
+const TOME_KINDS = ['book', 'journal', 'note'];
+/** Whether migration 014 has been run, so the rest of the app still works on an install that hasn't. */
+function has_library(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'library_tomes'")->fetchColumn();
+}
+function need_library(): void {
+    if (!has_library()) fail('The Library needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+}
+function tome_row(int $cid, int $id): array {
+    $st = db()->prepare('SELECT * FROM library_tomes WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    return $st->fetch() ?: fail('Tome not found', 404);
+}
+/** A tome as the browser gets it; the body only when $full (the list sends a word count instead). */
+function tome_out(array $t, bool $full): array {
+    $plain = rich_html_plain((string)$t['body']);
+    $o = ['id' => (int)$t['id'], 'kind' => $t['kind'], 'title' => $t['title'], 'description' => (string)$t['description'],
+        'version' => (int)$t['version'], 'created_by' => $t['created_by'] !== null ? (int)$t['created_by'] : null,
+        'created_at' => $t['created_at'], 'updated_at' => $t['updated_at'], 'author' => $t['author'] ?? null, 'player' => $t['player'] ?? null,
+        'editor' => $t['editor'] ?? null, 'words' => $plain === '' ? 0 : count(preg_split('/\s+/u', $plain))];
+    if ($full) $o['body'] = (string)$t['body'];
+    return $o;
+}
+/** Tomes of campaign $cid with who added and who last changed each (character name first); one tome when $id is given. */
+function tomes(int $cid, ?int $id = null): array {
+    $st = db()->prepare('SELECT t.*, ' . AUTHOR_SQL . ' AS author, u.display_name AS player, COALESCE(NULLIF(m2.character_name, \'\'), u2.display_name) AS editor
+        FROM library_tomes t LEFT JOIN users u ON u.id=t.created_by LEFT JOIN campaign_members m ON m.campaign_id=t.campaign_id AND m.user_id=t.created_by
+        LEFT JOIN users u2 ON u2.id=t.updated_by LEFT JOIN campaign_members m2 ON m2.campaign_id=t.campaign_id AND m2.user_id=t.updated_by
+        WHERE t.campaign_id=?' . ($id ? ' AND t.id=?' : '') . ' ORDER BY t.title');
+    $st->execute($id ? [$cid, $id] : [$cid]);
+    return $st->fetchAll();
+}
+
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources'];
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -740,7 +779,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete'];
+    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -854,7 +893,7 @@ try {
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid)]);
+            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library()]);
 
     case 'changed': // polled by open pages: a new value means a GM changed something since
         $cid = cid();
@@ -1897,6 +1936,58 @@ try {
         need_relations();
         $t = relation_type_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM encyclopedia_relation_types WHERE id=?')->execute([$t['id']]);
+        out(['ok' => true]);
+
+    // ===== the Library =====
+    case 'library':
+        $cid = cid();
+        role($cid);
+        need_library();
+        out(['tomes' => array_map(fn($t) => tome_out($t, false), tomes($cid))]);
+
+    case 'tome':
+        $cid = cid();
+        role($cid);
+        need_library();
+        $t = tomes($cid, int_in($_GET['id'] ?? null, 1))[0] ?? fail('Tome not found', 404);
+        out(['tome' => tome_out($t, true)]);
+
+    case 'tome_save':
+        // A new tome, or a change to one, by any member. version is the copy the browser opened: when someone else has
+        // saved since, the save is refused so it doesn't overwrite their words.
+        $cid = cid();
+        role($cid);
+        need_library();
+        $id = p('id') ? int_in(p('id'), 1) : null;
+        $old = $id ? tome_row($cid, $id) : null;
+        $kind = (string)p('kind', $old['kind'] ?? 'book');
+        if (!in_array($kind, TOME_KINDS, true)) fail('Pick a book, a journal or a note');
+        $title = trim(preg_replace('/\s+/u', ' ', (string)str_in(p('title'), 200, false)));
+        if ($title === '') fail('Title required');
+        $desc = trim((string)str_in(p('description'), 1000)) ?: null;
+        $body = rich_html_clean((string)str_in(p('body'), 2_000_000)) ?: null;
+        $uid = me()['id'];
+        if ($old) {
+            $st = db()->prepare('UPDATE library_tomes SET kind=?, title=?, description=?, body=?, version=version+1, updated_by=? WHERE id=? AND version=?');
+            $st->execute([$kind, $title, $desc, $body, $uid, $id, int_in(p('version'), 1)]);
+            if (!$st->rowCount()) {
+                $now = tomes($cid, $id)[0];
+                fail(($now['editor'] ?: 'Someone') . ' saved this tome after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
+            }
+        } else {
+            db()->prepare('INSERT INTO library_tomes (campaign_id, kind, title, description, body, created_by, updated_by) VALUES (?,?,?,?,?,?,?)')
+                ->execute([$cid, $kind, $title, $desc, $body, $uid, $uid]);
+            $id = (int)db()->lastInsertId();
+        }
+        out(['ok' => true, 'tome' => tome_out(tomes($cid, $id)[0], true)]);
+
+    case 'tome_delete':
+        $cid = cid();
+        $role = role($cid);
+        need_library();
+        $t = tome_row($cid, int_in(p('id'), 1));
+        if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
+        db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
         out(['ok' => true]);
 
     default:

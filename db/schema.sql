@@ -394,3 +394,24 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (type_id) REFERENCES encyclopedia_relation_types(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The Library: the campaign's books, journals and notes (see db/migrations/014_library.sql).
+-- kind: 'book', 'journal' or 'note'. version goes up by one on every save, so a save made from an older copy
+-- (someone else saved in between) is refused instead of overwriting their words.
+CREATE TABLE IF NOT EXISTS library_tomes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(8) NOT NULL DEFAULT 'book',
+  title VARCHAR(200) NOT NULL,
+  description VARCHAR(1000) NULL,
+  body MEDIUMTEXT,
+  version INT UNSIGNED NOT NULL DEFAULT 1,
+  created_by BIGINT UNSIGNED NULL,
+  updated_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY ix_tome_campaign (campaign_id, title),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

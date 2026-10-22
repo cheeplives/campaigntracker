@@ -37,7 +37,7 @@
 
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
-    encReady: false, encyclopedia: [], encIgnored: [], encTags: [] };
+    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '16';
   async function api(action, { query = {}, body = null } = {}) {
@@ -185,6 +185,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
+    S.libReady = !!r.library_ready;
     E.prep(S.camp.calendar);
     hideChangeBanner();
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
@@ -840,7 +841,7 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['encyclopedia', 'Encyclopedia'], ['generators', 'Generators'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
@@ -849,6 +850,7 @@
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
     encyclopedia: 'The people, places, items and groups met in play, linked wherever their names are written',
+    library: 'The campaign\'s books, journals and notes, written out in full. Anyone can add or change one',
     generators: 'Random names, taverns, companies and towns, to use on the spot or add to the Encyclopedia',
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
@@ -2246,6 +2248,112 @@
         if (location.hash === to) route(); else location.hash = to;
         offerNouns([{ text: p.text, format: 'html', secret: !!secret?.checked, label: 'Public notes' }, gm ? { text: g.text, format: 'html', secret: true, label: 'GM notes' } : null].filter(Boolean));
       } catch (err) { toast(err.message, true); }
+    });
+    return f;
+  }
+
+  // ------------------------------------------------------------ library tab
+  // The campaign's books, journals and notes ("tomes"): a title, a short description and a long body in the same
+  // word-processor editor as the day notes. Every member, GM or player, can add a tome and change any of them.
+  const TOME_KINDS = [['book', 'Book', '📕'], ['journal', 'Journal', '📓'], ['note', 'Note', '📜']];
+  const tomeKind = k => TOME_KINDS.find(x => x[0] === k) || TOME_KINDS[0];
+
+  /** The Library tab: the tomes down the left, the one picked on the right. sel: a tome id, 'new', or nothing. */
+  async function viewLibrary(sel) {
+    if (!S.libReady) {
+      return mount(...campaignHeader('library'), el('div', { class: 'card' }, el('h2', {}, 'Library'),
+        el('p', {}, isGM() ? 'The Library needs a database upgrade first: open install.php on the server and press Install or upgrade.'
+          : 'The Library isn\'t set up on this server yet. Ask whoever runs it to open install.php.')));
+    }
+    const [{ tomes }, one] = await Promise.all([api('library', { query: { cid: S.camp.id } }),
+      sel && sel !== 'new' ? api('tome', { query: { cid: S.camp.id, id: sel } }).catch(() => null) : null]);
+    const current = sel === 'new' ? { kind: 'book', title: '', description: '', body: '' } : one?.tome || null;
+    const st = vs().lib || (vs().lib = { q: '', kinds: new Set() });
+    const href = id => `#/c/${S.camp.id}/library${id ? `/${id}` : ''}`;
+
+    // --- the list
+    const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and descriptions', 'aria-label': 'Search the Library' });
+    const kindRow = el('div', { class: 'tagpick' });
+    const list = el('div', { class: 'lib-list' });
+    const item = t => el('a', { class: 'enc-item lib-item' + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+      el('span', { class: 'enc-name' }, el('span', { 'aria-hidden': 'true' }, `${tomeKind(t.kind)[2]} `), t.title),
+      t.description ? el('small', { class: 'lib-desc' }, t.description) : null);
+    const draw = () => {
+      const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
+      const shown = tomes.filter(t => (!st.kinds.size || st.kinds.has(t.kind)) && words.every(w => `${t.title}\n${t.description}`.toLowerCase().includes(w)));
+      list.replaceChildren(el('h3', {}, `Tomes (${shown.length}${shown.length !== tomes.length ? ` of ${tomes.length}` : ''})`),
+        ...(shown.length ? shown.map(item) : [el('p', { class: 'muted small' }, tomes.length ? 'Nothing matches. Clear the search or the kinds to see more.'
+          : 'The shelves are empty. Add a book, a journal or a note.')]));
+      kindRow.replaceChildren(...TOME_KINDS.map(([k, label, icon]) => {
+        const on = st.kinds.has(k), n = tomes.filter(t => t.kind === k).length;
+        return el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+          'data-tip': on ? `Showing ${label.toLowerCase()}s. Click to stop filtering by it` : `Show only ${label.toLowerCase()}s`,
+          onclick: () => { on ? st.kinds.delete(k) : st.kinds.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), `${icon} ${label}s (${n})`);
+      }));
+    };
+    search.addEventListener('input', () => { st.q = search.value; draw(); });
+    draw();
+    const left = el('section', { class: 'card enc-index' },
+      el('div', { class: 'row spread' }, el('h2', {}, 'Library', tip('The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them')),
+        el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome')),
+      search, kindRow, list);
+
+    // --- the tome picked
+    const right = el('section', { class: 'card enc-detail lib-detail' });
+    if (sel && sel !== 'new' && !current) right.append(el('p', { class: 'muted' }, 'That tome isn\'t in the Library any more.'));
+    else if (!current) right.append(el('p', { class: 'muted' }, tomes.length ? 'Pick a tome to read it.' : 'Nothing on the shelves yet.'),
+      el('p', { class: 'small muted' }, 'A tome is a book the party found, a character\'s journal, or a note passed across the table. Give it a title and a line about it, then write it out in full.'));
+    else if (!current.id) right.append(tomeForm(current));
+    else right.append(...tomeView(current));
+    mount(...campaignHeader('library'), el('div', { class: 'enc-page' + (current || sel ? ' has-sel' : '') }, left, right));
+  }
+
+  function tomeView(t) {
+    const [, label, icon] = tomeKind(t.kind);
+    const canDelete = isGM() || t.created_by === S.user.id;
+    const changed = t.editor && (t.editor !== t.author || t.updated_at !== t.created_at);
+    return clean([
+      el('div', { class: 'row spread' },
+        el('h2', {}, t.title),
+        el('div', { class: 'row' },
+          btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
+          canDelete ? btn('Delete', async () => {
+            if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
+            try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
+          }, 'small danger', 'Delete this tome and everything written in it') : null)),
+      el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
+      t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
+      el('div', { class: 'lib-body' }, (t.body || '').trim() ? linkedNote(t.body, 'html') : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
+      el('small', { class: 'muted' }, t.author ? ['Added by ', byline(t)] : 'Added', ` on ${t.created_at.slice(0, 10)}`,
+        changed ? `; last changed by ${t.editor} on ${t.updated_at.slice(0, 10)}` : '')]);
+  }
+
+  function tomeForm(t) {
+    const kind = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Kind of tome' }, TOME_KINDS.map(([k, label, icon]) =>
+      el('label', {}, el('input', { type: 'radio', name: 'kind', value: k, checked: t.kind === k }), el('span', {}, `${icon} ${label}`))));
+    const title = el('input', { name: 'title', value: t.title || '', required: true, maxlength: 200, placeholder: 'e.g. The Codex of Vitreous Night' });
+    const desc = el('textarea', { name: 'description', rows: 2, maxlength: 1000, placeholder: 'A line or two: what it is, who wrote it, where it was found' }, t.description || '');
+    const body = RichText.editor({ text: t.body || '', format: 'html', label: 'Contents', placeholder: 'Write out the tome: its chapters, entries, or the note itself' });
+    body.node.classList.add('rt-tall');
+    const f = el('form', { class: 'enc-form lib-form' },
+      el('h2', {}, t.id ? `Edit ${t.title}` : 'New tome'),
+      el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Kind'), kind),
+      field('Title', title),
+      field('Description', desc, null, 'A short summary, shown under the title and in the Library list'),
+      el('div', { class: 'notepanel public' }, el('h4', {}, 'Contents', tip('Everyone in the campaign can read and change this')), body.node),
+      el('div', { class: 'row' }, el('button', { class: 'primary small' }, t.id ? 'Save tome' : 'Add tome'),
+        t.id ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/library` }, 'Cancel')));
+    f.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const b = body.value();
+      const save = f.querySelector('button.primary');
+      save.disabled = true;
+      try {
+        const { tome } = await post('tome_save', { id: t.id, version: t.version, kind: f.elements.kind.value, title: title.value, description: desc.value, body: b.text }, S.camp.id);
+        toast(t.id ? 'Tome saved' : 'Added to the Library');
+        const to = `#/c/${S.camp.id}/library/${tome.id}`;
+        if (location.hash === to) route(); else location.hash = to;
+      } catch (err) { toast(err.message, true); save.disabled = false; }
     });
     return f;
   }
@@ -3881,6 +3989,7 @@
         const viewToday = () => viewDay(today(), true);
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
+        else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);

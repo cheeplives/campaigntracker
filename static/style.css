@@ -717,3 +717,18 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-hooks li + li { margin-top: 6px; }
 @media (max-width: 1180px) { .gen-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gen-cols > :last-child { grid-column: 1 / -1; } }
 @media (max-width: 760px) { .gen-page, .gen-cols { grid-template-columns: 1fr; } }
+
+/* Library: the tomes reuse the Encyclopedia's list and page layout */
+.lib-item { flex-direction: column; flex-wrap: nowrap; }
+.lib-item .lib-desc { color: var(--dim); font-size: .82rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.lib-item.on .lib-desc { color: inherit; opacity: .85; }
+.lib-list h3 { font-size: 1.05rem; letter-spacing: .08em; color: var(--accent); margin: 10px 0 4px; }
+.lib-kind { color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.lib-blurb { margin: 0; font-style: italic; color: var(--dim); font-size: 1.05rem; overflow-wrap: anywhere; }
+.lib-body { border-top: 1px solid var(--line); padding-top: 10px; }
+.lib-form textarea { width: 100%; resize: vertical; }
+.lib-form .seg { align-self: flex-start; }
+.rt-editor.rt-tall .ql-editor { min-height: 45vh; max-height: 75vh; }
+.enc-detail .richtext h1 { font-size: 1.45rem; line-height: 1.2; } /* headings inside notes, not the page's own title */
+.enc-detail .richtext h2 { font-size: 1.25rem; line-height: 1.2; }
+.enc-detail .richtext h3 { font-size: 1.1rem; line-height: 1.2; }

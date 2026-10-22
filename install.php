@@ -100,6 +100,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/012_encyclopedia_relations.sql');
             $msg .= ' Encyclopedia entries can now be connected to each other.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'library_tomes'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/014_library.sql');
+            $msg .= ' Added the Library tab for books, journals and notes.';
+        }
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();
