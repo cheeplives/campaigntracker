@@ -16,6 +16,7 @@ test("every generator gives real text in every genre, and a seed repeats it", as
       for (const [g] of Gen.GENRES) {
         for (const [p] of [["", ""], ...Gen.PEOPLES[g]]) for (const sex of ["", "m", "f", "n"]) check(`name ${g}/${p}`, Gen.name(g, p, sex));
         check(`tavern ${g}`, Gen.tavern(g));
+        for (const r of Gen.rumors(g, 6)) { check(`rumor ${g}`, r); if (!/^\p{Lu}.+\.$/u.test(r.name) || !r.title.startsWith("Rumor: ") || !/^Heard from /.test(r.note)) out.push(`rumor ${g}: ${JSON.stringify(r)}`); }
         for (const [s] of Gen.SECTORS) check(`company ${g}/${s}`, Gen.company(g, s));
         for (const [s] of Gen.SIZE_KEYS) {
           const t = Gen.town(g, s);
@@ -40,6 +41,11 @@ test("every generator gives real text in every genre, and a seed repeats it", as
   expect(modern.ja.some(n => jaFamily.test(n.split(" ")[0]))).toBe(true); // family name first
   expect(modern.ja.some(n => jaFamily.test(n.split(" ")[1]))).toBe(false);
   expect(modern.ru.every(n => !/(ov|ev|in)$/.test(n))).toBe(true); // Ivanova, not Ivanov
+  // Rumors use the campaign's names they're given, each at most once in a batch, and "The" goes lower case mid-sentence.
+  const rum = await page.evaluate(() => Array.from({ length: 30 }, () => Gen.rumors("western", 6, { person: ["Ada Quill"], place: ["Gallows Rock"], group: ["The Iron Combine"] }).map(r => r.name).join("\n")));
+  expect(rum.some(b => b.includes("Ada Quill") && b.includes("Gallows Rock"))).toBe(true);
+  expect(rum.every(b => (b.match(/Ada Quill/g) || []).length <= 2)).toBe(true); // once a batch, though a rumor may name them twice
+  expect(rum.some(b => /\bthe Iron Combine\b/.test(b))).toBe(true);
   const t = await page.evaluate(() => [Gen.traits("fantasy", "dwarf"), Gen.traits("scifi", "insectoid")]);
   for (const x of t) { expect(x.look.length).toBeGreaterThan(10); expect(x.quirk).toMatch(/^[A-Z]/); }
   expect(modern.en.some(n => /^(Alex|Avery|Casey|Charlie|Jordan|Morgan|Quinn|Riley|Robin|Sam|Taylor) /.test(n))).toBe(true);
@@ -55,8 +61,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await page.goto(`index.html#/c/${cid}/generators`);
   await expect(page.locator(".tabs a.on")).toHaveText("Generators");
   const cards = page.locator(".gen-card");
-  await expect(cards).toHaveCount(4);
-  const names = cards.filter({ has: page.getByRole("heading", { name: "Names" }) });
+  await expect(cards).toHaveCount(5);
+  const names = cards.filter({ has: page.getByRole("heading", { name: /^Names/ }) });
   await expect(names.locator(".gen-item")).toHaveCount(10);
 
   // A new genre redraws every card with its own peoples; the choice is remembered.
@@ -125,5 +131,24 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expect(JSON.stringify(pj)).not.toContain(townName);
   expectNoErrors(perrors);
   await pctx.close();
+
+  // Rumors name the campaign's own entries (the town and its person are tagged Location and Person); one goes in as a Rumor.
+  await page.goto(`index.html#/c/${cid}/generators`);
+  const rumors = cards.filter({ has: page.getByRole("heading", { name: /^Rumors/ }) });
+  await expect(rumors.getByRole("checkbox", { name: "Use Encyclopedia names" })).toBeChecked();
+  await expect.poll(async () => {
+    await rumors.getByRole("button", { name: "🎲 Generate" }).click();
+    const text = (await rumors.locator(".gen-rumor").allTextContents()).join("\n");
+    return text.includes(townName) || text.includes(personName);
+  }, { timeout: 15000 }).toBe(true);
+  await expect(rumors.locator(".gen-item .muted").first()).toHaveText(/^Heard from .+\.$/);
+  const rumor = await rumors.locator(".gen-rumor").first().textContent();
+  await rumors.locator(".gen-add").first().click();
+  await expect(rumors.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  const entry = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.tags.some(t => t.name === "Rumor"));
+  expect(entry.name).toMatch(/^Rumor: /);
+  const plain = entry.notes.replace(/<[^>]+>/g, " ").replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+  expect(plain).toContain(rumor);
+  expect(entry.notes).toContain("Heard from");
   expectNoErrors(errors);
 });
