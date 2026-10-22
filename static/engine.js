@@ -1283,6 +1283,15 @@
       if (!(dist > 0 && speed > 0)) throw new Error('Enter a distance and a speed');
       const moving = dist / speed * (n('terrain') || 1);
       const travelShifts = moving / shiftH;
+      const terr0 = n('terrain') && n('terrain') !== 1 ? ` (terrain ×${n('terrain')})` : '';
+      if (q.shifts === 'auto') {
+        // "Determine shifts": just the whole slots of travel the trip needs (a part slot counts as one), back to back.
+        const need = Math.max(1, Math.ceil(travelShifts - 1e-9));
+        lines.push(word === 'hour' && shiftH === 1 ? `${moving.toFixed(2)} hours moving at ${speed}/h${terr0}`
+          : `${moving.toFixed(1)} hours moving at ${speed}/h${terr0} = ${+travelShifts.toFixed(2)} ${word}s of ${+shiftH.toFixed(2)} h`);
+        lines.push(`→ ${need} ${word}${need === 1 ? '' : 's'} of travel, a part ${word} counting as a whole one`);
+        return { hours: need * shiftH, shifts: need, word, lines };
+      }
       // Whole days of travel, then the last day's remaining slots: arrival comes at the end of the last moving slot.
       const fullDays = Math.max(0, Math.ceil(travelShifts / perDay) - 1);
       const elapsed = fullDays * spd + (travelShifts - fullDays * perDay);

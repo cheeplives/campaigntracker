@@ -2589,7 +2589,7 @@
         const h = shiftH(), n = spd(), dayH = +(h * n).toFixed(2), w = word();
         // How much of the day the party travels, in this campaign's shifts or hours (Settings → Time tracking).
         // The options are just the counts; what they mean goes in the hint under the box.
-        const perDay = select(Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]),
+        const perDay = select([...Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]), ['auto', `Determine ${w}s`]],
           m === 'sea' ? n : hourMode() ? Math.min(8, n) : n === 2 ? 1 : 2, { name: 'shifts' });
         const hh = `${+h.toFixed(2)} h each. `;
         const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch sail all ${n}` : m === 'overland' ? 'About 8 is a normal day' : `${n} keeps going around the clock`)
@@ -2599,8 +2599,9 @@
           field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
           field(`Speed (${speedUnit})`, speed),
           field(`${Word()}s traveled per day`, perDay, perDayHint,
-            hourMode() ? `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`
-              : `A shift is ${n === 2 ? 'half' : 'a quarter'} of the calendar's ${dayH}-hour day. The party rests for the other${n === 2 ? '' : ' shifts'}`),
+            (hourMode() ? `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`
+              : `A shift is ${n === 2 ? 'half' : 'a quarter'} of the calendar's ${dayH}-hour day. The party rests for the other${n === 2 ? '' : ' shifts'}`)
+              + `. Determine ${w}s instead works out how many ${w}s of travel the trip needs, a part ${w} counting as a whole one, and passes just those`),
           el('input', { type: 'hidden', name: 'shift_hours', value: h }),
           el('input', { type: 'hidden', name: 'slots_per_day', value: n }),
           el('input', { type: 'hidden', name: 'slot', value: word() }),
@@ -2680,7 +2681,7 @@
         if (modeSel.value === 'hohmann' && E.SYSTEMS[q.system]?.unit === 'km' && imp()) { q.r1 = Number(q.r1) * KM_MI; q.r2 = Number(q.r2) * KM_MI; }
         result = E.travel(modeSel.value, q);
         out.replaceChildren(el('div', { class: 'result' },
-          el('h3', {}, `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
+          el('h3', {}, result.shifts ? `${result.shifts} ${result.word}${result.shifts === 1 ? '' : 's'} of travel` : `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
           el('ul', {}, result.lines.map(l => el('li', {}, l))),
           result.worldHours ? el('p', { class: 'muted' }, 'The tracker follows the party, so it advances by ship time unless you pick world time below.') : null),
           isGM() ? departForm() : el('p', { class: 'muted' }, 'Only the GM can advance time.'));
