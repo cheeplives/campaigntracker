@@ -154,9 +154,22 @@ test("a custom region typed on the day page or the travel planner is added to th
   await expect(arrive.locator("option", { hasText: "Sunken Road" })).toHaveCount(1);
   await arrive.selectOption("custom");
   await page.locator(".depart").getByLabel("Custom region name").nth(1).fill("Harbour Town");
+  // From and To join the first and last days' Locations visited, after what the day already lists and not twice.
+  const dayOf = c => Math.floor(c.current_shift / 4);
+  const startDay = dayOf((await api(page, "campaign", undefined, cid)).json.campaign);
+  await api(page, "day_update", { abs_day: startDay, locations: "Old Mill" }, cid);
+  await page.locator(".depart").getByLabel("From", { exact: true }).fill("Riverford");
+  await page.locator(".depart").getByLabel("To", { exact: true }).fill("Old Mill");
   await page.getByRole("button", { name: /Depart/ }).click();
   await expect(page).toHaveURL(/\/calendar$/);
   ({ json } = await api(page, "campaign", undefined, cid));
+  const locs = async d => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=${d}`)).json()).day.locations;
+  const endDay = dayOf(json.campaign);
+  if (endDay === startDay) expect(await locs(startDay)).toBe("Old Mill, Riverford");
+  else {
+    expect(await locs(startDay)).toBe("Old Mill, Riverford");
+    expect(await locs(endDay)).toBe("Old Mill");
+  }
   const town = json.regions.find(r => r.name === "Harbour Town");
   expect(town, JSON.stringify(json.regions)).toBeTruthy();
   expect(json.campaign.settings.current_region).toBe(town.id);
