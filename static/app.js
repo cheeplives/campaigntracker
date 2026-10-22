@@ -37,7 +37,7 @@
 
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
-    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false };
+    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '16';
   async function api(action, { query = {}, body = null } = {}) {
@@ -2418,6 +2418,7 @@
     const [{ tomes }, one] = await Promise.all([api('library', { query: { cid: S.camp.id } }),
       sel && sel !== 'new' ? api('tome', { query: { cid: S.camp.id, id: sel } }).catch(() => null) : null]);
     const current = sel === 'new' ? { kind: 'book', title: '', description: '', body: '' } : one?.tome || null;
+    if (one) S.libUploads = one.uploads;
     const st = vs().lib || (vs().lib = { q: '', kinds: new Set() });
     const href = id => `#/c/${S.camp.id}/library${id ? `/${id}` : ''}`;
 
@@ -2474,9 +2475,13 @@
       el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
       t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
       el('div', { class: 'lib-body' }, (t.body || '').trim() ? linkedNote(t.body, 'html') : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
+      tomeFiles(t),
       el('small', { class: 'muted' }, t.author ? ['Added by ', byline(t)] : 'Added', ` on ${t.created_at.slice(0, 10)}`,
         changed ? `; last changed by ${t.editor} on ${t.updated_at.slice(0, 10)}` : '')]);
   }
+
+  /** A tome's pictures and files: anyone in the campaign adds them or takes them off, as with the tome itself. */
+  const tomeFiles = t => attachmentsCard('library', t.id, t.files || (t.files = []), { uploads: S.libUploads, manageAny: true });
 
   function tomeForm(t) {
     const kind = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Kind of tome' }, TOME_KINDS.map(([k, label, icon]) =>
@@ -2491,6 +2496,7 @@
       field('Title', title),
       field('Description', desc, null, 'A short summary, shown under the title and in the Library list'),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Contents', tip('Everyone in the campaign can read and change this')), body.node),
+      t.id ? tomeFiles(t) : el('p', { class: 'small muted' }, 'You can add pictures and files once the tome is saved.'),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, t.id ? 'Save tome' : 'Add tome'),
         t.id ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/library` }, 'Cancel')));
     f.addEventListener('submit', async ev => {

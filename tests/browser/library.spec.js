@@ -1,7 +1,10 @@
 // The Library tab: books, journals and notes ("tomes") with a title, a description and a long rich-text body. Every
 // member, GM or player, adds tomes and changes any of them; a save from a copy someone else has saved over is refused.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+
+// A 2×1 PNG, inline so the test needs no image files.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
@@ -148,5 +151,42 @@ test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector
   await page.goto(`index.html#/c/${cid}/encyclopedia/${magda.id}`);
   await page.locator(".enc-form, .enc-detail").first().waitFor();
   await expect(page.locator(".enc-found")).toContainText("Library: A letter from Nuln");
+  expectNoErrors(errors);
+});
+
+test("anyone in the campaign adds pictures to a tome and takes them off, and deleting the tome deletes them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Library pictures");
+  const t = (await api(page, "tome_save", { kind: "book", title: "Bestiary", description: "Monsters of the Drakwald" }, cid)).json.tome;
+  // A new tome can't take files until it is saved.
+  await pp.goto(`index.html#/c/${cid}/library/new`);
+  await expect(pp.locator(".lib-form")).toContainText("once the tome is saved");
+  // The player adds a picture to the GM's tome from its page.
+  await pp.goto(`index.html#/c/${cid}/library/${t.id}`);
+  const box = pp.locator(".lib-detail .enc-files");
+  await box.locator("input[type=file]").setInputFiles([{ name: "beastman.png", mimeType: "image/png", buffer: PNG }]);
+  const pic = box.locator(".file-pic img");
+  await expect(pic).toHaveCount(1);
+  await expect.poll(() => pic.evaluate(img => img.complete && img.naturalWidth)).toBe(2);
+  // The GM sees it, also from the editor, where it stays while the contents are half written.
+  await page.goto(`index.html#/c/${cid}/library/${t.id}`);
+  await expect(page.locator(".lib-detail .file-pic img")).toHaveCount(1);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.locator(".lib-form .file-pic img")).toHaveCount(1);
+  const files = (await (await page.request.get(`api/index.php?a=tome&cid=${cid}&id=${t.id}`)).json()).tome.files;
+  expect(files.map(f => f.name)).toEqual(["beastman.png"]);
+  // A GM's file on a tome can be taken off by a player, as with the tome itself.
+  const gmFile = await (async () => {
+    const me = await (await page.request.get("api/auth/me.php")).json();
+    const res = await page.request.post(`api/index.php?a=file_upload&cid=${cid}`, { headers: { "X-CSRF-Token": me.csrf },
+      multipart: { parent_type: "library", parent_id: String(t.id), file: { name: "map.png", mimeType: "image/png", buffer: PNG } } });
+    expect(res.status()).toBe(200);
+    return (await res.json()).file;
+  })();
+  expect((await api(pp, "file_delete", { id: gmFile.id }, cid)).status).toBe(200);
+  // Deleting the tome takes its files with it.
+  expect((await api(page, "tome_delete", { id: t.id }, cid)).status).toBe(200);
+  expect(sql(`SELECT COUNT(*) FROM attachments WHERE parent_type='library' AND parent_id=${t.id}`).trim()).toBe("0");
+  expect((await pp.request.get(`api/index.php?a=file&cid=${cid}&id=${files[0].id}`)).status()).toBe(404);
   expectNoErrors(errors);
 });

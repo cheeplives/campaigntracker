@@ -729,7 +729,7 @@ function relation_mine(array $r, bool $isGm): bool {
 // 'file' action below with headers that stop the browser running or sniffing them.
 
 /** What a file can hang off. Add a kind here and a case to attachment_parent(). */
-const ATTACHMENT_PARENTS = ['encyclopedia'];
+const ATTACHMENT_PARENTS = ['encyclopedia', 'library'];
 /** The types allowed, by the type the contents show: [extensions, 'image' (shown on the page) or 'file' (downloaded)].
  * No SVG or HTML: both can carry scripts. Text files are checked to be text and always downloaded. */
 const UPLOAD_TYPES = [
@@ -755,6 +755,10 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
             need_encyclopedia();
             $e = entry_row($cid, $id, $role);
             return ['secret' => (bool)(int)$e['is_secret'], 'manage_any' => false];
+        case 'library':                                   // every member reads and changes every tome, and its files
+            need_library();
+            tome_row($cid, $id);
+            return ['secret' => false, 'manage_any' => true];
     }
     fail('Files can\'t be attached to that', 400);
 }
@@ -2108,10 +2112,16 @@ try {
 
     case 'tome':
         $cid = cid();
-        role($cid);
+        $role = role($cid);
         need_library();
         $t = tomes($cid, int_in($_GET['id'] ?? null, 1))[0] ?? fail('Tome not found', 404);
-        out(['tome' => tome_out($t, true)]);
+        $files = [];
+        if (has_attachments()) {
+            $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='library' AND parent_id=?" . ($role === 'gm' ? '' : ' AND is_secret=0') . ' ORDER BY id');
+            $st->execute([$cid, (int)$t['id']]);
+            $files = array_map('attachment_out', $st->fetchAll());
+        }
+        out(['tome' => tome_out($t, true) + ['files' => $files], 'uploads' => upload_info()]);
 
     case 'tome_save':
         // A new tome, or a change to one, by any member. version is the copy the browser opened: when someone else has
@@ -2149,6 +2159,7 @@ try {
         $t = tome_row($cid, int_in(p('id'), 1));
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
+        if (has_attachments()) attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
         out(['ok' => true]);
 
     // ===== pictures and files =====

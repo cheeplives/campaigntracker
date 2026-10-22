@@ -417,6 +417,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   KEY ix_attachment_parent (campaign_id, parent_type, parent_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- The Library: the campaign's books, journals and notes (see db/migrations/014_library.sql).
 -- kind: 'book', 'journal' or 'note'. version goes up by one on every save, so a save made from an older copy
