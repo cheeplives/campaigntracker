@@ -2541,6 +2541,7 @@
       ['overland', 'Overland (on foot, mounted, by road or rail)'],
       ['sea', 'Sea and river (oar, sail, engine)'],
       ['air', 'Air (wing, airship, aircraft)'],
+      ['pershift', `Distance and rate per ${word()} (how many ${word()}s a trip takes)`],
       ['hohmann', 'Orbital transfer (Hohmann, minimum fuel)'],
       ['brachistochrone', 'Constant-thrust burn (flip-and-burn / torch drive)'],
       ['relativistic', 'Interstellar at relativistic speed'],
@@ -2574,6 +2575,26 @@
       return [field('From star system', from, null, 'Pick two star systems to fill in the distance between them, or type your own distance'),
         field('To star system', to)];
     };
+    /** The "shifts traveled per day" box and terrain multiplier shared by the speed and per-shift modes. */
+    const dayFields = m => {
+      const h = shiftH(), n = spd(), dayH = +(h * n).toFixed(2), w = word();
+      // How much of the day the party travels, in this campaign's shifts or hours (Settings → Time tracking).
+      // The options are just the counts; what they mean goes in the hint under the box.
+      const perDay = select(Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]),
+        m === 'sea' ? n : hourMode() ? Math.min(8, n) : n === 2 ? 1 : 2, { name: 'shifts' });
+      const hh = `${+h.toFixed(2)} h each. `;
+      const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch sail all ${n}` : m === 'overland' ? 'About 8 is a normal day' : `${n} keeps going around the clock`)
+        : n === 2 ? hh + (m === 'sea' ? 'Ships with a crew on watch sail both' : m === 'overland' ? '1 is a normal day' : '2 keeps going around the clock')
+        : hh + (m === 'sea' ? 'Ships with a crew on watch sail all 4' : m === 'overland' ? '2 is a normal day, 3 a forced march' : '4 keeps going around the clock');
+      return [field(`${Word()}s traveled per day`, perDay, perDayHint,
+        hourMode() ? `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`
+          : `A shift is ${n === 2 ? 'half' : 'a quarter'} of the calendar's ${dayH}-hour day. The party rests for the other${n === 2 ? '' : ' shifts'}`),
+        el('input', { type: 'hidden', name: 'shift_hours', value: h }),
+        el('input', { type: 'hidden', name: 'slots_per_day', value: n }),
+        el('input', { type: 'hidden', name: 'slot', value: word() }),
+        m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [2, 'Woods, hills or ruins ×2'], [3, 'Mountains ×3'], [4, 'Swamp ×4']], 1, { name: 'terrain' }), null,
+          'Multiplies the travel time for slow going. ×2 means the trip takes twice as long. These follow the terrain speeds in the Year Zero Engine reference document (woods at half speed, mountains a third, swamp a quarter)') : null];
+    };
     const drawFields = () => {
       const m = modeSel.value;
       const F = [];
@@ -2586,26 +2607,21 @@
         samples.name = 'sample';
         samples.selectedIndex = 1;
         speed.addEventListener('input', () => { samples.value = ''; });
-        const h = shiftH(), n = spd(), dayH = +(h * n).toFixed(2), w = word();
-        // How much of the day the party travels, in this campaign's shifts or hours (Settings → Time tracking).
-        // The options are just the counts; what they mean goes in the hint under the box.
-        const perDay = select(Array.from({ length: n }, (_, i) => [i + 1, `${i + 1} ${w}${i ? 's' : ''}`]),
-          m === 'sea' ? n : hourMode() ? Math.min(8, n) : n === 2 ? 1 : 2, { name: 'shifts' });
-        const hh = `${+h.toFixed(2)} h each. `;
-        const perDayHint = hourMode() ? (m === 'sea' ? `Ships with a crew on watch sail all ${n}` : m === 'overland' ? 'About 8 is a normal day' : `${n} keeps going around the clock`)
-          : n === 2 ? hh + (m === 'sea' ? 'Ships with a crew on watch sail both' : m === 'overland' ? '1 is a normal day' : '2 keeps going around the clock')
-          : hh + (m === 'sea' ? 'Ships with a crew on watch sail all 4' : m === 'overland' ? '2 is a normal day, 3 a forced march' : '4 keeps going around the clock');
         F.push(field('Sample speed', samples, 'Real-world figures, each from a source listed on the About page. Fills in the speed'),
           field(`Distance (${imp() ? 'miles' : 'km'})`, dist),
           field(`Speed (${speedUnit})`, speed),
-          field(`${Word()}s traveled per day`, perDay, perDayHint,
-            hourMode() ? `How many of the calendar's ${n} hours a day the party is on the move. They rest for the others`
-              : `A shift is ${n === 2 ? 'half' : 'a quarter'} of the calendar's ${dayH}-hour day. The party rests for the other${n === 2 ? '' : ' shifts'}`),
-          el('input', { type: 'hidden', name: 'shift_hours', value: h }),
-          el('input', { type: 'hidden', name: 'slots_per_day', value: n }),
-          el('input', { type: 'hidden', name: 'slot', value: word() }),
-          m === 'overland' ? field('Terrain multiplier', select([[1, 'Road / open ground ×1'], [2, 'Woods, hills or ruins ×2'], [3, 'Mountains ×3'], [4, 'Swamp ×4']], 1, { name: 'terrain' }), null,
-            'Multiplies the travel time for slow going. ×2 means the trip takes twice as long. These follow the terrain speeds in the Year Zero Engine reference document (woods at half speed, mountains a third, swamp a quarter)') : null);
+          ...dayFields(m));
+      } else if (m === 'pershift') {
+        // Distance ÷ a rate per shift (or hour), rounded up to whole shifts: no speeds or hours to work out.
+        const du = imp() ? 'miles' : 'km', w = word();
+        const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: imp() ? 40 : 60 });
+        const rate = el('input', { name: 'per_shift', type: 'number', step: 'any', value: imp() ? 10 : 15 });
+        const walk = num((imp() ? 5 / KM_MI : 5) * shiftH());
+        F.push(field(`Distance (${du})`, dist),
+          field(`Distance per ${w} (${du})`, rate, `e.g. walking at ${imp() ? num(5 / KM_MI) + ' mph' : '5 km/h'} covers about ${walk} ${du} in a ${+shiftH().toFixed(2)}-hour ${w}`,
+            `How far the party gets in one ${w} on the move. A part ${w} at the end counts as a whole one`),
+          el('input', { type: 'hidden', name: 'dist_unit', value: imp() ? 'mi' : 'km' }),
+          ...dayFields('overland'));
       } else if (m === 'hohmann') {
         const sys = el('select', { name: 'system' }, Object.entries(E.SYSTEMS).map(([k, s]) => el('option', { value: k }, s.label)));
         const r1 = el('input', { name: 'r1', type: 'number', step: 'any', value: 1 }), r2 = el('input', { name: 'r2', type: 'number', step: 'any', value: 1.524 });
@@ -2660,15 +2676,16 @@
       const conv = n => (before[n] === '' ? '' : num(Number(before[n]) * k));
       drawFields();
       const set = (n, v) => { const x = fieldsWrap.querySelector(`[name=${n}]`); if (x && v !== undefined) x.value = v; };
-      for (const n of Object.keys(before)) if (n !== 'shift_hours') set(n, before[n]);
+      for (const n of Object.keys(before)) if (n !== 'shift_hours' && n !== 'dist_unit') set(n, before[n]);
       if (E.SPEED_MODES.includes(m)) { set('distance', conv('distance')); set('speed', conv('speed')); }
+      else if (m === 'pershift') { set('distance', conv('distance')); set('per_shift', conv('per_shift')); }
       else if (before.unit === 'km' || before.unit === 'mi') { set('unit', imp() ? 'mi' : 'km'); set('distance', conv('distance')); }
       else if (m === 'hohmann' && E.SYSTEMS[before.system]?.unit === 'km') fieldsWrap.querySelector('[name=system]').dispatchEvent(new Event('change'));
     });
 
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const f = el('form', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Travel planner'), units),
-      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive.`),
+      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Distance and rate per ${word()}: distance ÷ how far you get in a ${word()}, rounded up to whole ${word()}s. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive.`),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
@@ -2680,7 +2697,7 @@
         if (modeSel.value === 'hohmann' && E.SYSTEMS[q.system]?.unit === 'km' && imp()) { q.r1 = Number(q.r1) * KM_MI; q.r2 = Number(q.r2) * KM_MI; }
         result = E.travel(modeSel.value, q);
         out.replaceChildren(el('div', { class: 'result' },
-          el('h3', {}, `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
+          el('h3', {}, result.shifts ? `${result.shifts} ${result.word}${result.shifts === 1 ? '' : 's'} of travel` : `Travel time: ${E.fmtDuration(result.hours)}`, result.worldHours ? ' (ship time)' : ''),
           el('ul', {}, result.lines.map(l => el('li', {}, l))),
           result.worldHours ? el('p', { class: 'muted' }, 'The tracker follows the party, so it advances by ship time unless you pick world time below.') : null),
           isGM() ? departForm() : el('p', { class: 'muted' }, 'Only the GM can advance time.'));
