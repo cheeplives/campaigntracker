@@ -683,6 +683,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-card > h2 { margin: 0; }
 .gen-controls { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: flex-end; }
 .gen-controls .field { margin: 0; }
+.gen-traits { align-self: center; padding-top: 18px; }   /* level with the boxes under their labels */
 .gen-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .gen-item { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .gen-what { flex: 1; min-width: 0; display: flex; flex-direction: column; }

@@ -36,8 +36,12 @@ test("every generator gives real text in every genre, and a seed repeats it", as
     return { ja: many("japanese", "m"), ru: many("russian", "f"), en: many("english", "n"), peoples: Gen.PEOPLES.modern.map(([k]) => k) };
   });
   expect(modern.peoples).toEqual(["english", "spanish", "french", "german", "russian", "arabic", "indian", "chinese", "japanese"]);
-  expect(modern.ja.every(n => /^(Sato|Suzuki|Takahashi|Tanaka|Watanabe|Ito|Yamamoto|Nakamura|Kobayashi|Kato|Yoshida|Yamada|Sasaki|Yamaguchi|Matsumoto|Inoue|Kimura|Hayashi|Shimizu|Mori|Ikeda|Hashimoto|Ishikawa|Ogawa|Fujita|Okada|Maeda) /.test(n))).toBe(true);
+  const jaFamily = /^(Sato|Suzuki|Takahashi|Tanaka|Watanabe|Ito|Yamamoto|Nakamura|Kobayashi|Kato|Yoshida|Yamada|Sasaki|Yamaguchi|Matsumoto|Inoue|Kimura|Hayashi|Shimizu|Mori|Ikeda|Hashimoto|Ishikawa|Ogawa|Fujita|Okada|Maeda)$/;
+  expect(modern.ja.some(n => jaFamily.test(n.split(" ")[0]))).toBe(true); // family name first
+  expect(modern.ja.some(n => jaFamily.test(n.split(" ")[1]))).toBe(false);
   expect(modern.ru.every(n => !/(ov|ev|in)$/.test(n))).toBe(true); // Ivanova, not Ivanov
+  const t = await page.evaluate(() => [Gen.traits("fantasy", "dwarf"), Gen.traits("scifi", "insectoid")]);
+  for (const x of t) { expect(x.look.length).toBeGreaterThan(10); expect(x.quirk).toMatch(/^[A-Z]/); }
   expect(modern.en.some(n => /^(Alex|Avery|Casey|Charlie|Jordan|Morgan|Quinn|Riley|Robin|Sam|Taylor) /.test(n))).toBe(true);
 });
 
@@ -61,12 +65,20 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await names.getByLabel("Race or people", { exact: true }).selectOption("outlaw");
   await expect(names.locator(".gen-name").first()).toHaveText(/^"[^"]+" \S+ \S+$/); // an outlaw's "Nickname" First Last
   await expect(names.locator(".gen-item .muted")).toHaveCount(0); // just the name, nothing under it
+  // A batch never repeats a name or a family name.
+  const fams = (await names.locator(".gen-name").allTextContents()).map(n => n.split(" ").pop());
+  expect(new Set(fams).size).toBe(fams.length);
+  // The toggle gives each name a look and a quirk, kept as its notes when added to the Encyclopedia.
+  await names.getByText("Add a look and a quirk").click();
+  await expect(names.locator(".gen-item .muted")).toHaveCount(10);
+  await expect(names.locator(".gen-item .muted").first()).toHaveText(/^[A-Z].+\. [A-Z].+\.$/);
   const before = await names.locator(".gen-name").allTextContents();
   await names.getByRole("button", { name: "🎲 Generate" }).click();
   await expect.poll(async () => (await names.locator(".gen-name").allTextContents()).join()).not.toBe(before.join());
   await page.reload();
   await expect(page.getByLabel("Genre", { exact: true })).toHaveValue("western");
   await expect(names.getByLabel("Race or people", { exact: true })).toHaveValue("outlaw");
+  await expect(names.getByRole("checkbox", { name: "Add a look and a quirk" })).toBeChecked();
 
   // The town goes in as a GM-only Location with its whole write-up; one of its people as a Person.
   const town = page.locator(".gen-town");
