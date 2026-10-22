@@ -19,89 +19,52 @@ jobs:
   test:
     name: ${{ matrix.project }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
+    # Playwright's own image, with every browser and the system libraries they need already in it. Installing WebKit's
+    # ~100 Ubuntu packages on the runner depended on the runners' apt mirror, which at times served them so slowly
+    # that the webkit, mobile-safari and ipad jobs ran out of time. The tag must match @playwright/test in
+    # tests/package.json (the first step checks).
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --ipc=host
     strategy:
       fail-fast: false          # one engine failing must not hide another's result
       matrix:
-        include:
-          - { project: chromium,      browser: chromium }
-          - { project: firefox,       browser: firefox }
-          - { project: webkit,        browser: webkit }
-          - { project: mobile-safari, browser: webkit }
-          - { project: mobile-chrome, browser: chromium }
-          - { project: ipad,          browser: webkit }
+        project: [chromium, firefox, webkit, mobile-safari, mobile-chrome, ipad]
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: ci
-        ports: ["3306:3306"]
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -pci"
           --health-interval=5s --health-timeout=5s --health-retries=20
     env:
-      DB_HOST: 127.0.0.1
+      DB_HOST: mysql            # the service's name on the job's network
       DB_PORT: "3306"
       DB_USER: root
       DB_PASSWORD: ci
       DB_NAME: chronicle_test
+      HOME: /root               # Firefox won't start as root with a HOME owned by someone else
     defaults:
       run:
         working-directory: tests
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          extensions: pdo_mysql, curl
-          coverage: none
+      - name: Image matches @playwright/test
+        run: |
+          want=$(node -p 'require("./package-lock.json").packages["node_modules/@playwright/test"].version')
+          test "$want" = "1.56.1" || { echo "::error::tests/package-lock.json has @playwright/test $want; set the container image to v$want-noble"; exit 1; }
+      # PHP and the MySQL client, from Ubuntu's own archive: a few MB, where WebKit's libraries were hundreds.
+      - name: Install PHP and the MySQL client
+        timeout-minutes: 6
+        run: |
+          echo 'Acquire::Retries "5"; Acquire::http::Timeout "30";' > /etc/apt/apt.conf.d/80-retries
+          apt-get update -q
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            php8.3-cli php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml mysql-client-core-8.0
       - run: find ../api ../install.php ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: tests/package-lock.json
       - run: npm ci
-      # Playwright's browsers are cached per Playwright version. Each download try is cut off after 3 minutes and tried
-      # again, up to three times; the binary is run directly so the timeout stops the download itself.
-      - id: pw
-        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
-      - name: Install ${{ matrix.browser }}
-        timeout-minutes: 10
-        run: |
-          for try in 1 2 3; do
-            timeout 180 ./node_modules/.bin/playwright install ${{ matrix.browser }} && exit 0
-            echo "::warning::Playwright's ${{ matrix.browser }} download failed or stalled (try $try of 3)"
-          done
-          exit 1
-      # WebKit needs about a hundred Ubuntu packages (GStreamer, codecs), and the runners' apt mirror has served them so
-      # slowly that the jobs ran out of time. apt keeps what it downloads in a folder that is cached between runs, so
-      # only a cold cache or a package update downloads anything.
-      - name: Keep apt's downloads for the cache
-        run: |
-          mkdir -p "$HOME/apt-archives/partial"
-          printf '%s\n' "Dir::Cache::Archives \"$HOME/apt-archives\";" 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
-            'APT::Keep-Downloaded-Packages "true";' 'APT::Sandbox::User "root";' 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99ci-cache
-          sudo rm -f /etc/apt/apt.conf.d/docker-clean
-      - id: aptcache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/apt-archives
-          key: apt-${{ env.ImageOS }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
-      - name: Install ${{ matrix.browser }}'s system libraries
-        timeout-minutes: 15
-        run: ./node_modules/.bin/playwright install-deps ${{ matrix.browser }}
-      - if: steps.aptcache.outputs.cache-hit != 'true'
-        run: sudo rm -rf "$HOME/apt-archives/partial" && sudo chmod -R a+rX "$HOME/apt-archives"
-      - if: steps.aptcache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~/apt-archives
-          key: apt-${{ env.ImageOS }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
       - run: npx playwright test --project=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v4

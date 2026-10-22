@@ -50,7 +50,8 @@ test("one units choice sets temperatures, distances and speeds, and None follows
   await signIn(page, who);
   await approve(browser, who.email);
   const cid = await makeCampaign(page); // campaign default: °C, so Metric
-  const units = page.getByLabel("Units");
+  // the select, not the travel planner's Units radio group, which is still on the page for a moment after a hash-only goto
+  const units = page.getByRole("combobox", { name: "Units" });
   const save = async v => {
     await page.goto("index.html#/account");
     await units.selectOption(v);
