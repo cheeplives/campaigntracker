@@ -104,6 +104,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/013_attachments.sql');
             $msg .= ' Encyclopedia entries can now have pictures and files.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'library_tomes'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/014_library.sql');
+            $msg .= ' Added the Library tab for books, journals and notes.';
+        }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
         $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];

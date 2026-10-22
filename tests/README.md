@@ -104,6 +104,12 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
+- **library**: the Library tab sits just under the Encyclopedia; a player adds a journal with a title, a description and
+  formatted contents, the GM opens and changes it and the player sees who changed it; search and the kind buttons narrow the
+  list; a save from an older copy is refused naming who saved since, the contents are cleaned of scripts, images and unsafe
+  links, a bad kind or empty title is refused, only the author or a GM deletes, and someone outside the campaign gets nothing; saving a tome offers its new names, and Scan campaign finds names in tomes,
+  downtime, holdings and Gear and Loot (but not the Long Rest label a rest writes), with an entry quoting the tome it was found in; a player adds a picture to the GM's tome and the GM sees it on the page
+  and in the editor, anyone can take a tome's files off, and deleting the tome deletes its files.
 - **generators**: every generator gives real text for every genre, people, line of business
   and size, and a seed repeats it; rumors use the names they're given; modern names follow each culture's order and forms (Japanese family name first, Russian
   feminine surnames) and gender-neutral names come from their own lists; a GM switches genre (remembered), re-rolls, sees just the names with no family name twice, turns on looks and quirks, and adds a town and one of its people
