@@ -501,14 +501,14 @@
     debris:    { label: 'Debris field', icon: '☄️', day: -1, night: -1, moon: 0.6 },
   };
   const WIND = ['Calm', 'Breezy', 'Windy', 'Gale'];
-  // Sustained wind speed for each WIND level in km/h [from, to] (Beaufort scale), so the GM needn't look it up. Gale has no top.
+  // Sustained wind speed for each WIND level in km/h [from, to] (beaufort), so the GM needn't look it up. Gale has no top.
   const WIND_SPEEDS = [
     { kmh: [0, 19], mph: [0, 12], beaufort: '0–3' },
     { kmh: [20, 38], mph: [13, 24], beaufort: '4–5' },
     { kmh: [39, 61], mph: [25, 38], beaufort: '6–7' },
     { kmh: [62, null], mph: [39, null], beaufort: '8+' },
   ];
-  // How hard each precipitating weather falls, by the usual meteorological intensity bands (snow as depth of fresh snow).
+  // How hard each precipitating weather falls, by the usual meteorological intensity bands (rain, snowfall, hail; snow as depth of fresh snow).
   const PRECIP_RATES = {
     drizzle:   { metric: 'under 2.5 mm an hour', imperial: 'under 0.1 in an hour' },
     rain:      { metric: '4–15 mm an hour', imperial: '0.15–0.6 in an hour' },
@@ -1062,7 +1062,9 @@
   // ---------------------------------------------------------------- sources
   // Where the app's reference figures come from, shown on the About page. Data entries below name their source
   // by key. Wikipedia text is CC BY-SA 4.0; NASA, JPL and US government pages are public domain; GOV.UK
-  // statistics are under the Open Government Licence v3.0.
+  // statistics are under the Open Government Licence v3.0. Open sources come first; a source that is not openly
+  // licensed is used only when nothing open has the figure, is credited here, and also goes in the gitignored
+  // SOURCES-TO-LICENSE.md so its owner can be asked for permission.
   const wp = (page, title) => ({ title: title || page.replace(/_/g, ' ').replace(/ \(.*\)$/, ''), by: 'Wikipedia', licence: 'CC BY-SA 4.0',
     url: `https://en.wikipedia.org/wiki/${page}` });
   const nasa = (title, url, by = 'NASA') => ({ title, by, licence: 'Public domain (US government work)', url });
@@ -1093,16 +1095,17 @@
       by: 'Scientific Data', licence: 'CC BY 4.0', url: 'https://doi.org/10.1038/sdata.2018.214' },
     cave: nasa('Mammoth Cave weather (cave air a constant 12 °C)', 'https://home.nps.gov/maca/planyourvisit/weather.htm', 'US National Park Service'),
     room: wp('Room_temperature'),
+    beaufort: wp('Beaufort_scale'), rain: wp('Rain'), snowfall: wp('Snow'), hail: wp('Hail'),
     // calendars
-    gregorian: wp('Gregorian_calendar'),
+    gregorian: wp('Gregorian_calendar'), sunrise: wp('Sunrise_equation'),
     usno: nasa('Earth’s seasons and apsides (equinox and solstice dates)', 'https://aa.usno.navy.mil/data/Earth_Seasons', 'US Naval Observatory'),
     phases: { title: 'Six Millennium Catalog of Phases of the Moon (mean synodic month 29.530588 days; moon phase predictions by Fred Espenak, NASA/GSFC)',
       by: 'NASA Goddard', licence: 'Free to reproduce with acknowledgment', url: 'https://eclipse.gsfc.nasa.gov/phase/phasecat.html' },
     usHolidays: nasa('5 U.S.C. § 6103, federal holidays (New Year’s Day, Thanksgiving, Christmas Day)', 'https://www.govinfo.gov/link/uscode/5/6103', 'US Code'),
     xmasEve: wp('Christmas_Eve'),
-    imperial: { title: 'Imperial Calendar', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'Not openly licensed; setting © Games Workshop',
+    imperial: { title: 'Imperial Calendar', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'CC BY-NC (wiki text, non-commercial use only); setting © Games Workshop',
       url: 'https://whfb.lexicanum.com/wiki/Imperial_Calendar' },
-    imperialMoons: { title: 'Mannslieb & Morrslieb', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'Not openly licensed; setting © Games Workshop',
+    imperialMoons: { title: 'Mannslieb & Morrslieb', by: 'Warhammer Fantasy Lexicanum (fan wiki)', licence: 'CC BY-NC (wiki text, non-commercial use only); setting © Games Workshop',
       url: 'https://whfb.lexicanum.com/wiki/Moon' },
     shire: { title: 'Shire Calendar', by: 'Tolkien Gateway (fan wiki)', licence: 'CC BY-SA 4.0 (wiki text); the setting © the Tolkien Estate',
       url: 'https://tolkiengateway.net/wiki/Shire_Calendar' },
@@ -1141,6 +1144,12 @@
     // rules
     yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
       licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
+    // software and fonts bundled with the app
+    quill: { title: 'Quill 2 rich text editor (static/vendor/quill)', by: 'Slab and the Quill contributors', licence: 'BSD 3-Clause',
+      url: 'https://github.com/slab/quill' },
+    inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
+    barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',
+      url: 'https://fonts.google.com/specimen/Barlow+Condensed' },
   };
 
   // ---------------------------------------------------------------- travel planner
@@ -1367,7 +1376,8 @@
 
   // ---------------------------------------------------------------- presets
   // Astronomical seasons: the usual equinox and solstice dates (usno). Month indexes are 0-based. Sunrise and sunset
-  // are local solar time (no daylight saving) on those dates at about 45° latitude, the middle of the preset's regions.
+  // are local solar time (no daylight saving) on those dates at about 45° latitude, the middle of the preset's regions
+  // (sunrise).
   const GREGORIAN_SEASONS = {
     north: [
       { name: 'Spring', type: 'spring', month: 2, day: 20, sunrise: '06:00', sunset: '18:10' }, { name: 'Summer', type: 'summer', month: 5, day: 21, sunrise: '04:25', sunset: '19:35' },

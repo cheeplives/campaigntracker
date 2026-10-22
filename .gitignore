@@ -13,3 +13,6 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Private list of data sources that are not openly licensed, for asking their owners for permission.
+SOURCES-TO-LICENSE.md
