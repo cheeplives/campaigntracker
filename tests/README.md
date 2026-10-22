@@ -94,9 +94,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
 - **generators**: every generator gives real text for every genre, people, line of business
-  and size, and a seed repeats it; modern names follow each culture's order and forms (Japanese family name first, Russian
+  and size, and a seed repeats it; rumors use the names they're given; modern names follow each culture's order and forms (Japanese family name first, Russian
   feminine surnames) and gender-neutral names come from their own lists; a GM switches genre (remembered), re-rolls, sees just the names with no family name twice, turns on looks and quirks, and adds a town and one of its people
-  to the Encyclopedia as GM only, then a company for everyone; a player has no GM only switch and never sees the GM's.
+  to the Encyclopedia as GM only, then a company for everyone; rumors name the campaign's own tagged entries and one is added as a Rumor; a player has no GM only switch and never sees the GM's.
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;

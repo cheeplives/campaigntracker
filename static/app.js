@@ -3315,6 +3315,28 @@
     return el('section', { class: `card gen-card ${cls || ''}` }, el('h2', {}, title, tip(tipText)), el('div', { class: 'gen-controls' }, controls, go), out);
   }
 
+  /** The campaign's Encyclopedia names sorted by tag, for rumors: {person, place, group, item}. Fetched once per change to the
+   * Encyclopedia; until it arrives this gives {} and then calls ready() so the rumors can be drawn again. */
+  let genCastMemo = null;
+  function genCast(ready) {
+    if (!S.encReady) return {};
+    if (genCastMemo?.list === S.encyclopedia && genCastMemo.cid === S.camp.id) return genCastMemo.cast || {};
+    const memo = genCastMemo = { list: S.encyclopedia, cid: S.camp.id, cast: null };
+    const kinds = { person: /^(person|people|npc|character|pc)s?$/, place: /^(location|place|city|town|region|planet|station|building)s?$/,
+      group: /^(group|faction|organi[sz]ation|company|guild|gang|corporation|house)s?$/, item: /^(item|object|artifact|artefact)s?$/ };
+    api('encyclopedia', { query: { cid: S.camp.id } }).then(r => {
+      const cast = { person: [], place: [], group: [], item: [] };
+      for (const e of r.entries || []) {
+        const tags = (e.tags || []).map(t => t.name.toLowerCase());
+        const k = Object.keys(kinds).find(k => tags.some(t => kinds[k].test(t)));
+        if (k) cast[k].push(e.name);
+      }
+      memo.cast = cast;
+      if (Object.values(cast).some(x => x.length)) ready();
+    }).catch(() => { memo.cast = {}; });
+    return {};
+  }
+
   function viewGenerators() {
     const pref = genPrefs();
     const genre = select(Gen.GENRES, pref.genre, { 'aria-label': 'Genre' });
@@ -3344,6 +3366,14 @@
       'Businesses, guilds and corporations for this genre. 📖 Add puts one in the Encyclopedia as a Group', [field('Line of business', sector)],
       () => el('ul', { class: 'gen-list' }, Gen.many(6, () => Gen.company(g, sector.value)).map(r => genRow(r, 'Group'))));
 
+    const useEnc = el('input', { type: 'checkbox', checked: pref.useEnc !== false, onchange: e => setGenPrefs({ useEnc: e.target.checked }) });
+    const rumors = genCard('Rumors', 'Talk the party overhears, and who they heard it from. With the box ticked, rumors are about the people, places, groups and items in your Encyclopedia (by their tags), with made-up names for the rest. 📖 Add puts one in the Encyclopedia, tagged Rumor',
+      [S.encReady ? el('label', { class: 'inline small gen-traits', 'data-tip': 'Use names from your Encyclopedia tagged Person, Location, Group or Item' }, useEnc, 'Use Encyclopedia names') : null].filter(Boolean),
+      () => el('ul', { class: 'gen-list' }, Gen.rumors(g, 6, useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {}).map(r => el('li', { class: 'gen-item' },
+        el('div', { class: 'gen-what' }, el('span', { class: 'gen-rumor' }, r.name), el('span', { class: 'small muted' }, r.note)),
+        el('button', { type: 'button', class: 'small', 'aria-label': 'Copy the rumor', 'data-tip': 'Copy the rumor', onclick: () => genCopy(r.name) }, '📋'),
+        genAddButton(r.title, 'Rumor', () => genHtml(el('p', {}, r.name), el('p', {}, el('em', {}, r.note))))))));
+
     const size = keep('size', select(Gen.SIZE_KEYS.map(([k, l]) => [k, k ? `${l}: ${Gen.sizeLabel(g, k)}` : l]), pref.size || '', { 'aria-label': 'Size' }));
     const towns = genCard('Towns', 'A whole settlement: who runs it, what pays for it, a few places and people, and trouble for the party to walk into. 📖 Add puts the town, or any place or person in it, in the Encyclopedia',
       [field('Size', size)], () => genTown(Gen.town(g, size.value)), 'gen-town');
@@ -3352,9 +3382,9 @@
       el('input', { type: 'checkbox', checked: pref.secret !== false, onchange: e => setGenPrefs({ secret: e.target.checked }) }), 'Add to the Encyclopedia as GM only') : null;
     mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
       el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Generators', tip('Random names, places, businesses and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
+        el('h2', {}, 'Generators', tip('Random names, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
         el('div', { class: 'row' }, field('Genre', genre), secret))),
-      names, taverns, companies, towns));
+      names, taverns, companies, rumors, towns));
   }
 
   /** A generated town as a stat block, with 📖 Add for the town and for each place and person in it. */
@@ -3778,7 +3808,7 @@
           ['The notes editor: ', cite('quill'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
-          'The Generators tab\'s names, syllables and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
+          'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       section('No open source',
         p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),

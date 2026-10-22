@@ -490,6 +490,67 @@ const Gen = (() => {
     };
   }
 
+  // ------------------------------------------------------------ rumors
+  // A rumor is a template with blanks for people {p} {q}, places {l} {m}, a group {g} and a thing {t}. rumors() fills the
+  // blanks from the campaign's own Encyclopedia names when it's given some, and makes the rest up.
+  const RUMOR_ANY = [
+    '{p} owes {g} more than they could ever pay back.', '{p} has been seen slipping into {l} after dark.', '{p} and {q} were close once, until something happened at {l}.',
+    '{g} is looking for someone to do a quiet job, no questions asked.', '{g} has someone on the inside at {l}.', 'Something is buried under {l}, and {p} knows where.',
+    '{p} isn\'t who they say they are.', '{p} is dying, and doesn\'t want anyone to know.', '{q} paid {p} a lot of money to forget what they saw at {l}.',
+    '{g} is about to split in two, and half of them want {p} gone.', 'Nobody who goes into {l} alone comes back quite the same.', '{p} has {t} hidden somewhere, and someone is coming for it.',
+    '{g} wants {l}, and won\'t take no for an answer.', '{p} is secretly working for {g}.', 'There\'s a price on {p}\'s head, and nobody will say who\'s paying it.',
+    '{p} was at {l} the night the trouble started, whatever they say now.', '{p} has been asking a lot of questions about {q}.', 'Whoever brings {t} to {p} will be set for life.',
+    '{g} is hiring, far more people than any honest work needs.', '{p} and {q} are planning to marry, and their families are furious.', 'Someone at {l} is selling {g}\'s secrets.',
+    'The last person to cross {g} was found outside {l} a week later.', '{p} left {m} in a hurry, and won\'t talk about why.', '{t} turned up at {l}, and three people already claim it.',
+  ];
+  const RUMOR = {
+    fantasy: { t: w('a_dragon\'s_egg a_map_to_a_lost_dwarven_hold a_cursed_sword a_stolen_temple_relic a_letter_under_the_king\'s_seal a_vial_of_basilisk_blood a_crown_that_isn\'t_theirs a_spellbook_nobody_can_read the_last_key_to_the_old_vault a_bag_of_elven_gold'),
+      from: w('a_drunk_sellsword a_temple_acolyte the_barmaid a_travelling_tinker a_guard_off_duty a_beggar_on_the_bridge a_wandering_bard a_ferryman a_washerwoman the_miller\'s_boy a_pilgrim a_retired_adventurer'),
+      say: ['{l} is haunted, and the ghost only speaks to children.', 'A dragon has been seen circling over {l}.', '{p} made a bargain with something in the deep woods.', 'The priests at {l} are scared of something, and won\'t say what.',
+        '{g} is buying up every sword and horse it can find.', '{p} can do magic, and is hiding it.', 'The wells around {l} have started to taste of iron.', 'Wolves are walking on two legs near {l}.',
+        '{p} is the true heir, and {g} knows it.', 'An old tomb opened under {l} when the earth shook.'] },
+    scifi: { t: w('an_alien_artifact a_black_box_from_a_lost_ship a_stolen_jump_key unregistered_cargo a_chart_past_the_frontier a_crate_of_banned_AI_cores a_sample_that_shouldn\'t_be_alive a_military_cipher_drive a_prototype_drive_coil a_dead_admiral\'s_codes'),
+      from: w('a_dock_worker a_freighter_pilot a_medic_off_shift a_customs_officer a_hydroponics_tech a_bored_security_guard a_salvager a_courier a_station_bartender a_cargo_loader an_ex-navy_gunner a_comms_officer'),
+      say: ['Ships leaving {l} are picking up a signal nobody can decode.', '{g} is quietly buying every berth at {l}.', '{p} came back from the last jump with one more crew member than they left with.',
+        'Life support at {l} is failing, and someone is faking the readings.', '{p} deserted from the war and changed their name.', 'Something on the far side of {l} is answering our transmissions.',
+        '{g} lost a whole ship near {l} and told nobody.', '{p} has a clone, and nobody knows which one we\'ve met.', 'The quarantine at {l} isn\'t about a disease.', '{g} has a weapon that shouldn\'t exist, and is testing it near {l}.'] },
+    cyberpunk: { t: w('a_data_shard a_prototype_cyberarm a_list_of_undercover_agents a_backdoor_into_the_grid a_crate_of_military_chrome a_stolen_identity a_corp_exec\'s_memory_chip a_cure_the_corps_buried an_unregistered_AI a_ledger_of_bribes'),
+      from: w('a_ripperdoc a_street_kid a_fixer a_burned-out_netrunner a_noodle-stall_cook a_corp_wageslave a_cab_driver a_bouncer a_gang_lookout a_tired_cop a_black-market_dealer a_club_DJ'),
+      say: ['{g} is running experiments on people in the basement of {l}.', '{p}\'s chrome is stolen, and its owner wants it back.', 'There\'s a ghost in the net around {l}, an AI that shouldn\'t exist.',
+        '{p} sold out their whole crew to {g}.', '{g} is about to buy {l}, and the people living there won\'t be staying.', 'Half the cops at {l} are on {g}\'s payroll.',
+        '{p} died last month, and someone is wearing their face.', 'A new drug is coming out of {l}, and it isn\'t making anyone happy.', '{g} is going to take over {l} by force before the month is out.', 'Someone is hunting netrunners near {l}.'] },
+    modern: { t: w('a_briefcase_of_cash a_hard_drive an_envelope_of_photographs a_stolen_painting a_second_set_of_accounts a_will_nobody\'s_seen a_storage_unit_key a_burner_phone a_police_file_that_went_missing a_winning_lottery_ticket'),
+      from: w('a_barista a_cab_driver a_retired_cop a_nurse a_local_reporter the_mailman a_hairdresser a_bartender a_security_guard a_neighbour a_delivery_driver an_intern'),
+      say: ['{g} is under investigation, and someone inside is talking.', '{p} has a second family in another city.', '{l} is being sold to developers, and someone on the council took a cut.',
+        'The fire at {l} wasn\'t an accident.', '{p} won the lottery and hasn\'t told anyone.', '{g} is going under, and the bosses are moving the money out.', '{p} was in prison under another name.',
+        'People keep seeing lights in the closed-up wing of {l}.', '{p} has been meeting a lawyer from out of town.', 'There\'s a body under the new building at {l}.'] },
+    western: { t: w('a_sack_of_gold_dust the_deed_to_a_silver_claim a_wanted_poster_with_the_wrong_face a_map_to_a_lost_mine a_crate_of_stolen_army_rifles a_strongbox_off_the_stage a_railroad_survey a_pardon_signed_by_the_governor a_ledger_from_the_bank a_jar_of_Confederate_gold'),
+      from: w('the_barber a_cowhand a_stage_driver a_saloon_girl a_drifter the_blacksmith a_prospector a_telegraph_clerk a_trail_cook a_preacher a_mule_skinner the_undertaker'),
+      say: ['The stage to {l} is getting robbed this week.', '{g} is buying up land along the new rail line through {l}.', '{p} rode with a gang before they ever came here.', 'There\'s silver under {l}, and {p} is keeping it quiet.',
+        'The well at {l} has been poisoned.', '{p} shot a man in another territory and changed their name.', '{g} is fixing to run every homesteader off {l}.', 'The army\'s missing payroll is hidden somewhere near {l}.',
+        'The sheriff in {l} answers to {g}, not the law.', 'Something has been killing cattle near {l}, and it isn\'t wolves.'] },
+  };
+  /** A rumor's short name for an Encyclopedia entry: its first few words. */
+  const rumorTitle = text => { const ws = text.replace(/[.,]$/, '').split(' '); return `Rumor: ${ws.slice(0, 7).join(' ').replace(/[,.]$/, '')}${ws.length > 7 ? '…' : ''}`; };
+
+  /** n rumors for genre. cast is {person, place, group, item}: names from the campaign to use first, each at most once a batch. */
+  function rumors(genre = 'fantasy', n = 6, cast = {}) {
+    const g = RUMOR[genre] ? genre : 'fantasy', R = RUMOR[g];
+    const pool = Object.fromEntries(['person', 'place', 'group', 'item'].map(k => [k, take(cast[k] || [], 99)]));
+    const fill = (k, made) => (pool[k].length && chance(0.8) ? pool[k].shift() : made());
+    const make = {
+      p: () => fill('person', () => personFor(g)), l: () => fill('place', () => (chance(0.75) ? townName(g) : tavern(g).name)),
+      g: () => fill('group', () => company(g, '').name), t: () => fill('item', () => pick(R.t)),
+    };
+    const lines = take([...take(R.say, Math.ceil(n / 2)), ...take(RUMOR_ANY, n)], n), from = take(R.from, n);
+    return lines.map((line, i) => {
+      const got = {};
+      // "The Grey Hand" reads "the Grey Hand" inside a sentence.
+      const text = cap(line.replace(/\{([pqlmgt])\}/g, (_, k, at) => { got[k] ??= make[{ q: 'p', m: 'l' }[k] || k](); return at ? got[k].replace(/^The /, 'the ') : got[k]; }));
+      return { name: text, title: rumorTitle(text), note: `Heard from ${from[i % from.length]}.` };
+    });
+  }
+
   let sharedWords = null;
   /** Words that join names rather than make them ("of", "Inn", "Holdings"), so a batch from many() may repeat them. */
   const shared = () => sharedWords ??= new Set(['the', 'of', 'and', '&', '+', 'son', 'daughter', 'child', 'ibn', 'bint', 'al', 'clutch', 'brothers', 'brothers\'',
@@ -500,6 +561,6 @@ const Gen = (() => {
 
   return {
     GENRES, PEOPLES, GENDERS, SECTORS, SIZE_KEYS, sizeLabel, seed, many,
-    name, traits, tavern, company, town, townName,
+    name, traits, tavern, company, town, townName, rumors,
   };
 })();
