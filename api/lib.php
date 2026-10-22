@@ -515,5 +515,54 @@ function post_signup_webhook(string $text): void {
   }
 }
 
+// --- uploads ---------------------------------------------------------------
+/**
+ * The folder uploaded pictures and files are kept in: ['dir' => absolute path, or null when it can't be used,
+ * 'problem' => why not]. `uploads.path` in config wins; otherwise <parent of web root>/.chronicle-uploads, which on
+ * shared hosting is the account home. A folder inside the web root is refused, so an uploaded file can never be
+ * fetched, or run, by its own URL: files only go out through api/index.php?a=file, after the access checks.
+ */
+function upload_dir(): array {
+  static $res = null;
+  if ($res !== null) return $res;
+  $configured = trim((string) (cfg('uploads', [])['path'] ?? ''));
+  $dir = $configured;
+  $root = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+  if ($dir === '') {
+    $parent = $root !== '' ? dirname($root) : '';
+    if ($parent === '' || $parent === '/' || $parent === '.' || !is_dir($parent))
+      return $res = ['dir' => null, 'problem' => "set 'uploads' => ['path' => '/absolute/folder/outside/the/web/root'] in the config."];
+    $dir = $parent . '/.chronicle-uploads';
+  }
+  if (!is_dir($dir)) @mkdir($dir, 0700, true);
+  if (!is_dir($dir) || !is_writable($dir))
+    return $res = ['dir' => null, 'problem' => "the folder $dir doesn't exist or PHP can't write to it. Create it (chmod 700) or set 'uploads' => ['path' => ...] in the config."];
+  $real = realpath($dir);
+  $realRoot = $root !== '' ? realpath($root) : false;
+  if ($realRoot && $real !== $realRoot && strncmp($real . '/', $realRoot . '/', strlen($realRoot) + 1) === 0)
+    return $res = ['dir' => null, 'problem' => "the folder $dir is inside the web root, where anyone could fetch it. Pick a folder outside it in 'uploads' => ['path' => ...]."];
+  if ($realRoot && $real === $realRoot)
+    return $res = ['dir' => null, 'problem' => "the uploads folder can't be the web root. Pick a folder outside it in 'uploads' => ['path' => ...]."];
+  // In case the folder is ever served after all: Apache refuses everything in it.
+  $ht = $real . '/.htaccess';
+  if (!file_exists($ht)) @file_put_contents($ht, "Require all denied\n");
+  return $res = ['dir' => $real, 'problem' => ''];
+}
+
+/** A php.ini size ("8M", "1G", "512K") in bytes; 0 for none. */
+function ini_bytes(string $v): int {
+  $v = trim($v);
+  if ($v === '') return 0;
+  $n = (int) $v;
+  return match (strtolower(substr($v, -1))) { 'g' => $n << 30, 'm' => $n << 20, 'k' => $n << 10, default => $n };
+}
+/** The largest file one upload may be: the config's uploads.max_mb (10 by default), and never more than PHP's own
+ * upload_max_filesize and post_max_size let through. */
+function upload_max_bytes(): int {
+  $limits = [max(1, (int) (cfg('uploads', [])['max_mb'] ?? 10)) << 20];
+  foreach (['upload_max_filesize', 'post_max_size'] as $k) if (($b = ini_bytes((string) ini_get($k))) > 0) $limits[] = $b;
+  return min($limits);
+}
+
 // Every endpoint runs inside a session.
 boot_session();

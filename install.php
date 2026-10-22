@@ -100,6 +100,13 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/012_encyclopedia_relations.sql');
             $msg .= ' Encyclopedia entries can now be connected to each other.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'attachments'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/013_attachments.sql');
+            $msg .= ' Encyclopedia entries can now have pictures and files.';
+        }
+        // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
+        $up = upload_dir();
+        $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];
         $ok = true;
     } catch (Throwable $e) {
         $msg = 'Install failed: ' . $e->getMessage();

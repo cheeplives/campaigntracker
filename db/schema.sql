@@ -394,3 +394,27 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (type_id) REFERENCES encyclopedia_relation_types(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pictures and files attached to Encyclopedia entries and the like (see db/migrations/013_attachments.sql).
+-- One row per file. is_secret: GMs only; a file on a secret entry is never sent to players either.
+CREATE TABLE IF NOT EXISTS attachments (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  parent_type VARCHAR(16) NOT NULL,
+  parent_id INT UNSIGNED NOT NULL,
+  stored_name CHAR(32) NOT NULL,                    -- the file's name on disk: 32 random hex characters
+  original_name VARCHAR(200) NOT NULL,              -- as uploaded, for the download
+  mime VARCHAR(100) NOT NULL,                       -- worked out from the file's contents, never taken from the browser
+  kind VARCHAR(8) NOT NULL DEFAULT 'file',          -- 'image' (shown on the page) or 'file' (downloaded)
+  size_bytes INT UNSIGNED NOT NULL,
+  width SMALLINT UNSIGNED NULL,
+  height SMALLINT UNSIGNED NULL,
+  caption VARCHAR(200) NULL,
+  is_secret TINYINT(1) NOT NULL DEFAULT 0,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_attachment_stored (stored_name),
+  KEY ix_attachment_parent (campaign_id, parent_type, parent_id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

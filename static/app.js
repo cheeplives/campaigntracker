@@ -1883,6 +1883,9 @@
     S.encTags = r.tags || []; S.encIgnored = r.ignored || [];
     const rel = { ready: !!r.relations_ready, list: r.relations || [], types: r.relation_types || [], entries };
     const conns = connIndex(rel);
+    const files = { list: r.files || [], uploads: r.uploads || { ready: false } };
+    S.encUploads = files.uploads;
+    for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
     S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }));
     const st = vs().enc || (vs().enc = { q: '', tags: new Set() });
     st.rels ||= new Set();
@@ -1892,7 +1895,7 @@
 
     // --- the list
     const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
-      ...conns.get(e.id).flatMap(c => [c.label, c.other.name])].join('\n').toLowerCase()]));
+      ...conns.get(e.id).flatMap(c => [c.label, c.other.name]), ...files.list.filter(f => f.parent_id === e.id).flatMap(f => [f.name, f.caption || ''])].join('\n').toLowerCase()]));
     // The connection labels in use, as seen from either end, for the chips: "has resident" and "resident of".
     const relUsed = new Map();
     for (const list of conns.values()) for (const c of list) relUsed.set(c.label.toLowerCase(), { name: c.label, color: c.type.color });
@@ -1904,7 +1907,7 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
     const tagRow = el('div', { class: 'tagpick' });
     const lists = el('div', { class: 'enc-lists' });
-    const ctx = { rel, conns, entries, st, draw: null };
+    const ctx = { rel, conns, entries, st, files, draw: null };
     const item = e => el('a', { class: 'enc-item' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
       el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name, e.aliases?.length ? el('small', { class: 'muted' }, ` · ${e.aliases.join(', ')}`) : null),
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
@@ -1997,6 +2000,7 @@
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
+      attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret }),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
         (e.notes || '').trim() ? note(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
@@ -2004,6 +2008,145 @@
       connectionsCard(e, ctx),
       e.author ? el('small', { class: 'muted' }, 'Added by ', byline(e)) : null,
       box]);
+  }
+
+  // ------------------------------------------------------------ pictures and files
+  // A portrait on a character, a map on a location: pictures show on the page, other files are downloaded. The server
+  // checks every upload's contents, keeps it outside the web root and sends it only to members who may see its parent,
+  // so a file on a GM-only entry, or one marked GM only, never reaches players.
+  const fileSize = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+  /** Send one file to the server (multipart, so not through api()). */
+  async function uploadFile(parentType, parentId, file, { caption = '', secret = false } = {}) {
+    const fd = new FormData();
+    fd.append('parent_type', parentType); fd.append('parent_id', String(parentId)); fd.append('file', file, file.name);
+    if (caption) fd.append('caption', caption);
+    if (secret) fd.append('is_secret', '1');
+    const res = await fetch('api/index.php?' + new URLSearchParams({ a: 'file_upload', cid: S.camp.id }), { method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'X-CSRF-Token': S.csrf }, body: fd });
+    let data;
+    try { data = await res.json(); } catch { throw new Error(res.status === 413 ? 'That file is too big for the server' : `Server error (${res.status})`); }
+    if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
+    if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
+    ownWrite();
+    return data.file;
+  }
+
+  /** The Pictures and files box on a page. files: what the server sent for this parent; opts.uploads: { ready, max_bytes,
+   * accept, problem }; opts.secret: the parent is GM only, so every file on it is too; opts.manageAny: every member may
+   * change or remove its files (otherwise whoever added one, and GMs). After a change the box fetches its files again and
+   * redraws only itself, so notes being typed beside it are kept; files is updated in place. */
+  function attachmentsCard(parentType, parentId, files, opts = {}) {
+    const up = opts.uploads || { ready: false };
+    const cid = S.camp.id;
+    const refresh = async () => {
+      try {
+        const r = await api('files', { query: { cid, parent_type: parentType, parent_id: parentId } });
+        files.splice(0, files.length, ...r.files);
+        if (S.camp?.id === cid && box.isConnected) box.replaceWith(attachmentsCard(parentType, parentId, files, { ...opts, uploads: r.uploads }));
+      } catch (err) { toast(err.message, true); }
+    };
+    opts = { ...opts, refresh };
+    const mine = f => isGM() || opts.manageAny || f.created_by === S.user.id;
+    const hidden = f => f.is_secret || opts.secret;
+    const pics = files.filter(f => f.kind === 'image'), docs = files.filter(f => f.kind !== 'image');
+    const status = el('p', { class: 'small muted file-status', role: 'status' });
+    const gmOnly = isGM() && !opts.secret ? el('input', { type: 'checkbox', 'aria-label': 'Upload as GM only' }) : null;
+    const send = async list => {
+      list = [...list];
+      if (!list.length) return;
+      let done = 0;
+      for (const file of list) {
+        if (file.size > up.max_bytes) { toast(`${file.name} is too big: files can be ${fileSize(up.max_bytes)} at most`, true); continue; }
+        status.textContent = `Uploading ${file.name}…`;
+        try { await uploadFile(parentType, parentId, file, { secret: !!gmOnly?.checked }); done++; } catch (err) { toast(`${file.name}: ${err.message}`, true); }
+      }
+      status.textContent = '';
+      if (done) { toast(done === 1 ? 'File added' : `${done} files added`); refresh(); }
+    };
+    const input = el('input', { type: 'file', multiple: true, accept: up.accept || 'image/*', class: 'file-input', 'aria-label': 'Add pictures or files' });
+    input.addEventListener('change', () => { send(input.files); input.value = ''; });
+    const addBtn = up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
+    const gallery = pics.length ? el('div', { class: 'file-gallery' }, pics.map((f, i) =>
+      el('figure', { class: 'file-pic' + (hidden(f) ? ' secret' : ''), 'data-id': f.id },
+        el('button', { type: 'button', class: 'file-thumb', 'aria-label': `Open ${f.caption || f.name}`, onclick: () => fileViewer(pics, i, { ...opts, mine, hidden }) },
+          el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height })),
+        el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name))))) : null;
+    const docList = docs.length ? el('ul', { class: 'file-list' }, docs.map(f => el('li', { 'data-id': f.id },
+      hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null,
+      el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
+      el('small', { class: 'muted' }, ` ${fileSize(f.size)}`), f.caption ? el('span', { class: 'small' }, ` · ${f.caption}`) : null,
+      mine(f) ? btn('✎', () => fileEdit(f, opts), 'link small', 'Change the caption') : null,
+      mine(f) ? btn('×', () => fileDelete(f, opts), 'link small', `Remove ${f.name}`) : null))) : null;
+    const box = el('section', { class: 'enc-files' },
+      el('div', { class: 'row spread' }, el('h4', {}, 'Pictures and files', tip(opts.secret ? 'GM only, like the entry. Pictures show here; other files download'
+          : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
+        el('div', { class: 'row' }, gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see what you add' }, gmOnly, ' 🔒 GM only') : null, addBtn)),
+      gallery, docList,
+      !files.length ? el('p', { class: 'muted small' }, up.ready ? 'No pictures or files yet. Add a portrait, a map or a handout.' : isGM() && up.problem ? up.problem : 'No pictures or files yet.') : null,
+      status);
+    if (up.ready) {
+      box.addEventListener('dragover', ev => { if ([...ev.dataTransfer.types].includes('Files')) { ev.preventDefault(); box.classList.add('drop'); } });
+      box.addEventListener('dragleave', ev => { if (!box.contains(ev.relatedTarget)) box.classList.remove('drop'); });
+      box.addEventListener('drop', ev => { ev.preventDefault(); box.classList.remove('drop'); send(ev.dataTransfer.files); });
+    }
+    return box;
+  }
+  async function fileDelete(f, opts) {
+    if (!await confirmDialog(`Remove ${f.name}? It can't be brought back.`, { ok: 'Remove', danger: true })) return false;
+    try { await post('file_delete', { id: f.id }, S.camp.id); toast('File removed'); opts.refresh(); return true; } catch (err) { toast(err.message, true); return false; }
+  }
+  /** Change a file's caption and (GMs) whether it is GM only. */
+  function fileEdit(f, opts, after) {
+    hideTip();
+    const caption = el('input', { value: f.caption || '', maxlength: 200, placeholder: 'e.g. Gunther, sketched by Ilse', 'aria-label': 'Caption' });
+    const secret = isGM() ? el('input', { type: 'checkbox', checked: f.is_secret || opts.secret, disabled: !!opts.secret }) : null;
+    const form = el('form', {}, el('h3', {}, `✎ ${f.name}`), field('Caption', caption),
+      secret ? el('label', { class: 'inline small', 'data-tip': opts.secret ? 'Everything on a GM-only entry is GM only' : 'Only GMs will see this file' }, secret, ' 🔒 GM only') : null,
+      el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, 'Save'),
+        el('button', { type: 'button', onclick: () => d.close() }, 'Cancel')));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': `Change ${f.name}` }, form);
+    form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const body = { id: f.id, caption: caption.value.trim() };
+      if (secret && !opts.secret) body.is_secret = secret.checked;
+      try { await post('file_update', body, S.camp.id); d.close(); after?.(); toast('Saved'); opts.refresh(); } catch (err) { toast(err.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+    caption.focus();
+  }
+  /** A picture at full size, with the others on the page a step away (arrow keys too). */
+  function fileViewer(pics, start, opts) {
+    hideTip();
+    let i = start;
+    const img = el('img', { class: 'file-full' });
+    const cap = el('p', { class: 'file-cap' });
+    const tools = el('div', { class: 'row file-tools' });
+    const show = () => {
+      const f = pics[i];
+      img.src = f.url; img.alt = f.caption || f.name;
+      cap.replaceChildren(opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`));
+      tools.replaceChildren(
+        pics.length > 1 ? btn('‹', () => { i = (i + pics.length - 1) % pics.length; show(); }, 'small', 'Previous picture') : null,
+        pics.length > 1 ? el('span', { class: 'small muted' }, `${i + 1} / ${pics.length}`) : null,
+        pics.length > 1 ? btn('›', () => { i = (i + 1) % pics.length; show(); }, 'small', 'Next picture') : null,
+        el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
+        opts.mine(f) ? btn('✎ Caption', () => fileEdit(f, opts, () => d.close()), 'small') : null,
+        opts.mine(f) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
+        btn('Close', () => d.close(), 'small primary'));
+    };
+    const d = el('dialog', { class: 'kit-dialog file-viewer', 'aria-label': 'Picture' }, img, cap, tools);
+    d.addEventListener('keydown', ev => {
+      if (pics.length < 2 || ev.target.closest('input, textarea')) return;
+      if (ev.key === 'ArrowLeft') { i = (i + pics.length - 1) % pics.length; show(); }
+      if (ev.key === 'ArrowRight') { i = (i + 1) % pics.length; show(); }
+    });
+    d.addEventListener('click', ev => { if (ev.target === d) d.close(); });
+    d.addEventListener('close', () => d.remove());
+    show();
+    document.body.append(d);
+    d.showModal();
   }
 
   // Connections between entries: London "Has resident" Gunther, Gunther "Resident of" London. Each relationship type
@@ -2242,6 +2385,7 @@
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
       tags.node,
+      e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret }) : null,
       e.id ? foundIn(e, pub, gm) : null,
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
