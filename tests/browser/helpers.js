@@ -6,7 +6,11 @@ const { expect } = require("@playwright/test");
  * before navigating; assert with expectNoErrors() at the end of the test. */
 function watchErrors(page) {
   const errors = [];
-  page.on("pageerror", e => errors.push(`pageerror: ${e.message}`));
+  // WebKit logs "Fetch API cannot load <url> due to access control checks." for a same-origin request that a reload or
+  // navigation cancels mid-flight, and Playwright reports that log line as a page error. It is not a script error (the
+  // app's own catch still runs), so it is dropped for this site's API; anything cross-origin or elsewhere still counts.
+  const cancelledFetch = /\/127\.0\.0\.1:\d+\/api\/\S+ due to access control checks\.$/;
+  page.on("pageerror", e => { if (!cancelledFetch.test(e.message)) errors.push(`pageerror: ${e.message}`); });
   page.on("console", m => {
     // A 401 from the sign-in probe is how a signed-out page learns it is signed out.
     if (m.type() === "error" && !/status of 40[13]/.test(m.text())) errors.push(`console: ${m.text()}`);

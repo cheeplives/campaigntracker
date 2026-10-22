@@ -10,8 +10,14 @@
   const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog } = KIT;
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
-  // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice
-  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${$('.topbar').offsetHeight}px`)).observe($('.topbar'));
+  // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice.
+  // The height is written on the next frame, and only when it changed: a layout change made inside the observer's own
+  // callback makes Safari report "ResizeObserver loop completed with undelivered notifications" as a page error.
+  let topbarH = -1;
+  new ResizeObserver(() => requestAnimationFrame(() => {
+    const h = $('.topbar').offsetHeight;
+    if (h !== topbarH) { topbarH = h; document.documentElement.style.setProperty('--topbar-h', `${h}px`); }
+  })).observe($('.topbar'));
   function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
   function field(label, input, hint, tipText) {
     return el('label', { class: 'field' }, el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? el('small', { class: 'muted' }, hint) : null);

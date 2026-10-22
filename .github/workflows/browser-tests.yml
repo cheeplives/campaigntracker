@@ -62,7 +62,26 @@ jobs:
           cache: npm
           cache-dependency-path: tests/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # The browser download has hung until the job's 20-minute limit (webkit, ipad), so the browsers are cached per
+      # Playwright version, and each download try is cut off after 3 minutes and tried again, up to three times.
+      # The playwright binary is run directly so the timeout stops the download itself, not just an npx wrapper.
+      - id: pw
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+      - name: Install ${{ matrix.browser }}
+        timeout-minutes: 10
+        run: |
+          for try in 1 2 3; do
+            timeout 180 ./node_modules/.bin/playwright install ${{ matrix.browser }} && exit 0
+            echo "::warning::Playwright's ${{ matrix.browser }} download failed or stalled (try $try of 3)"
+          done
+          exit 1
+      - name: Install ${{ matrix.browser }}'s system libraries
+        timeout-minutes: 8
+        run: ./node_modules/.bin/playwright install-deps ${{ matrix.browser }}
       - run: npx playwright test --project=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v4
