@@ -10,8 +10,26 @@
   const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog } = KIT;
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
-  // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice
-  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${$('.topbar').offsetHeight}px`)).observe($('.topbar'));
+  // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice.
+  // Not a ResizeObserver: Safari raises "ResizeObserver loop completed with undelivered notifications" as a page error
+  // whenever the bar's size also moves in the layout pass straight after the callback (a web font landing, say), which no
+  // callback can prevent. Instead the height is measured on the next frame after anything that can change it.
+  let topbarH = -1, fitQueued = false;
+  const fitTopbar = () => {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => {
+      fitQueued = false;
+      const h = $('.topbar').offsetHeight;
+      if (h !== topbarH) { topbarH = h; document.documentElement.style.setProperty('--topbar-h', `${h}px`); }
+    });
+  };
+  new MutationObserver(fitTopbar).observe($('.topbar'), { childList: true, subtree: true, characterData: true, attributes: true });
+  new MutationObserver(fitTopbar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-scheme'] });
+  window.addEventListener('resize', fitTopbar);
+  document.fonts?.addEventListener?.('loadingdone', fitTopbar);
+  document.fonts?.ready.then(fitTopbar);
+  fitTopbar();
   function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
   function field(label, input, hint, tipText) {
     return el('label', { class: 'field' }, el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? el('small', { class: 'muted' }, hint) : null);
@@ -4143,7 +4161,7 @@
     renderNav();
     try {
       if (parts[0] === '') return await viewCampaigns();
-      if (parts[0] === 'account') return viewAccount();
+      if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
       if (parts[0] === 'admin') return await viewAdmin();
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
