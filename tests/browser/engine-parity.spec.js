@@ -30,6 +30,7 @@ function workload(E) {
     trip("ground", { distance: 120, speed: 3, shifts: 2, shift_hours: 6, terrain: 1.5 }),
     trip("ground", { distance: 50, speed: 5, shifts: 3, shift_hours: 7.5 }),
     trip("sea", { distance: 300, speed: 9, shifts: 4 }),
+    trip("pershift", { distance: 100, per_shift: 15, shifts: 2, shift_hours: 6, terrain: 2, dist_unit: "km" }),
     trip("hohmann", { system: "sun", r1: 1, r2: 1.524 }),
     trip("brachistochrone", { distance: 1.5, g: 1 }),
     trip("relativistic", { distance: 4.2, g: 1 }),
