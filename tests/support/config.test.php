@@ -20,6 +20,7 @@ return [
   'admin_identities' => ['gm@example.test'],
   'approval_webhook_url' => '',
   'session' => ['name' => 'chronicle_sid', 'cookie_secure' => false, 'save_path' => sys_get_temp_dir()],
+  'uploads' => ['path' => sys_get_temp_dir() . '/chronicle-test-uploads', 'max_mb' => 2, 'campaign_mb' => 6],
   'rate_limit_enabled' => true,
   'allow_install' => false,
   // Turns on tests/support/login.php. Never set this in a real config.
