@@ -162,7 +162,20 @@
   const currentRegion = () => regionById(settings().current_region) || S.regions[0] || null;
   /** Campaign default (set by the GM) for anyone who hasn't picked their own units. */
   const campTempUnit = () => (S.camp && settings().temp_unit) || 'C';
-  const tempUnit = () => S.user?.prefs?.temp_unit || campTempUnit();
+  /** The user's own units, 'metric' or 'imperial', or '' to show each campaign's as its GM set them. An older
+   * temperature-only choice still counts until they save a new one. */
+  const myUnits = () => {
+    const p = S.user?.prefs || {};
+    if (p.units) return p.units;
+    return !p.temp_unit || p.temp_unit === 'none' ? '' : E.isImperial(p.temp_unit) ? 'imperial' : 'metric';
+  };
+  /** Metric or Imperial for every length and speed: the user's own choice, else the campaign's temperature unit's (°F and °R are Imperial). */
+  const unitSystem = () => myUnits() || (E.isImperial(campTempUnit()) ? 'imperial' : 'metric');
+  /** The temperature unit to show: °C for Metric, °F for Imperial, else the campaign's. A campaign set to hide temperatures keeps them hidden. */
+  const tempUnit = () => {
+    const mine = myUnits(), camp = campTempUnit();
+    return !mine || camp === 'none' ? camp : mine === 'imperial' ? 'F' : 'C';
+  };
   const tempSym = unit => E.TEMP_UNITS[unit]?.sym.trim() || '°C';
   const TEMP_OPTIONS = [...Object.entries(E.TEMP_UNITS).map(([k, u]) => [k, `${u.label} (${u.sym.trim()})`]), ['none', 'Hide temperatures']];
   const shiftNames = () => E.shiftNames(cal());
@@ -371,9 +384,9 @@
    * 'Windy: 25–38 mph (Beaufort 6–7)'. Empty for dry, calm weather. */
   function wxTip(w) {
     if (!w) return '';
-    const rate = E.precipRate(w.type, tempUnit());
+    const rate = E.precipRate(w.type, unitSystem());
     return (rate ? `\n${E.WEATHER[w.type].label}: ${rate}` : '')
-      + (w.wind ? `\n${E.WIND[w.wind]}: ${E.windSpeed(w.wind, tempUnit())} (Beaufort ${E.WIND_SPEEDS[w.wind].beaufort})` : '');
+      + (w.wind ? `\n${E.WIND[w.wind]}: ${E.windSpeed(w.wind, unitSystem())} (Beaufort ${E.WIND_SPEEDS[w.wind].beaufort})` : '');
   }
   function weatherText(w, what = FORECAST_TIP) {
     if (!w) return el('span', { class: 'muted' }, 'No weather recorded');
@@ -407,7 +420,7 @@
   }
   /** The ground underfoot in a word or two, with what it means for travel and how it got that way in its tooltip. */
   function groundText(g, d) {
-    const l = E.groundLabel(g, tempUnit());
+    const l = E.groundLabel(g, unitSystem());
     if (!l) return null;
     const ago = n => n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`;
     const lines = [`Ground underfoot: ${l.label}. ${l.going}`,
@@ -543,18 +556,37 @@
     if (!revoked) pendingTimer = setTimeout(boot, 20000);
   }
 
-  function viewAccount() {
+  const UNIT_OPTIONS = [['', 'None (each campaign\'s own)'], ['imperial', 'Imperial (°F, miles, inches, mph)'], ['metric', 'Metric (°C, km, cm, km/h)']];
+  async function viewAccount() {
+    const { campaigns } = await api('campaigns');
     const prefs = el('form', { class: 'card narrow' }, el('h2', {}, 'Preferences'),
       el('p', { class: 'muted' }, `Signed in as ${S.user.email}. Your name comes from your Google or GitHub account.`),
-      field('Temperature units', select([['', 'Campaign default'], ...TEMP_OPTIONS], S.user.prefs?.temp_unit || '', { name: 'temp_unit' }),
-        'Only changes what you see. Each campaign\'s GM sets the default for players who leave this alone.'),
+      field('Units', select(UNIT_OPTIONS, myUnits(), { name: 'units' }),
+        'Every temperature, distance, depth and speed the app works out. Only changes what you see. With None you see each campaign in the units its GM picked.'),
       el('button', { class: 'primary' }, 'Save'));
     prefs.addEventListener('submit', async e => {
       e.preventDefault();
-      const v = formData(prefs).temp_unit;
-      try { S.user.prefs = (await post('prefs_save', { temp_unit: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
+      const v = formData(prefs).units;
+      try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
-    mount(prefs);
+    // The campaigns they belong to (not every campaign an admin can open), each with their character there. A box saves when you leave it.
+    const mine = campaigns.filter(c => c.member);
+    const list = el('div', { class: 'card narrow' }, el('h2', {}, 'Your campaigns'),
+      mine.length ? el('ul', { class: 'camplist account-camps' }, mine.map(c => {
+        const name = el('input', { value: c.character_name || '', maxlength: 150, placeholder: 'Your own name', 'aria-label': `Your character in ${c.name}` });
+        name.addEventListener('change', async () => {
+          try {
+            await post('member_character', { character_name: name.value }, c.id);
+            c.character_name = name.value.trim();
+            const m = S.camp?.id === c.id && S.members.find(x => Number(x.id) === S.user.id);
+            if (m) m.character_name = c.character_name;
+            toast('Saved');
+          } catch (err) { toast(err.message, true); }
+        });
+        return el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
+          field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'));
+      })) : el('p', { class: 'muted' }, 'You aren\'t in any campaigns yet.'));
+    mount(prefs, list);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -1301,7 +1333,7 @@
     const tUnit = tempUnit();
     const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
     const temp = el('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
-    const wind = select(E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, tUnit)})`]), w?.wind || 0, { name: 'wind' });
+    const wind = select(E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, unitSystem())})`]), w?.wind || 0, { name: 'wind' });
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
         field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
@@ -2234,7 +2266,7 @@
     const modeSel = select(modes, 'overland', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
     // One Metric / Imperial choice for every distance and speed box below; the maths itself always runs in km.
-    const startUnits = campTempUnit() === 'F' ? 'imperial' : 'metric';
+    const startUnits = unitSystem();
     const units = el('div', { class: 'travel-units', role: 'radiogroup', 'aria-label': 'Units', 'data-tip': 'Metric or Imperial for every distance and speed in the planner' },
       [['metric', 'Metric'], ['imperial', 'Imperial']].map(([v, l]) =>
         el('label', {}, el('input', { type: 'radio', name: 'travel_units', value: v, checked: v === startUnits }), l)));
@@ -3568,8 +3600,8 @@
         field('Time tracking', select(Object.entries(E.TIME_MODES), E.timeMode(c), { name: 'time_mode' }), 'Also used by the travel planner',
           'How each day is split. Four shifts: Dawn, Midday, Dusk and Overnight, about six hours each. Two shifts: Day and Night. Hours: every hour of the day from midnight, like a normal calendar.\nChanging it moves the clock, shift activities, notes and timed events to the matching time of day. Going to fewer, longer steps joins the activities that land together.'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
-        field('Default temperature units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick their own units on their account page',
-          'Used for anyone who hasn\'t chosen their own units'),
+        field('Default units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick Metric or Imperial for themselves on their account page',
+          'Used for anyone who hasn\'t chosen their own units. Fahrenheit and Rankine show distances, depths and speeds in Imperial (miles, inches, mph); the rest in Metric'),
         field('Players see future weather', el('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
         field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),

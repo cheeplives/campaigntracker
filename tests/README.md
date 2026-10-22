@@ -28,6 +28,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   locked out; the admin identity is approved as admin; an account from before
   Google/GitHub sign-in is taken over by the email an admin linked to it;
   sign-in starts are rate-limited per IP.
+- **account**: the account page lists only the campaigns you belong to, each with your role, and a
+  character name typed there is the one the Members tab shows; the None / Imperial / Metric units choice
+  sets the travel planner and temperatures, None follows the campaign, an older temperature-only choice
+  reads as its system, and anything else is refused.
 - **campaign**: a GM creates a campaign and every tab renders with no script
   errors; a custom calendar is created with its own number of months, each
   with its own length, and a week of its own length and day names; a custom calendar takes leap days in a month and a leap rule

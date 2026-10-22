@@ -15,7 +15,7 @@ if (!$u) {
   json_out(['error' => 'not_authenticated', 'providers' => configured_providers()], 401);
 }
 
-/** Per-user display preferences (temperature units, colour theme). */
+/** Per-user display preferences (units, colour theme). */
 $st = db()->prepare('SELECT prefs_json FROM user_prefs WHERE user_id = ?');
 $st->execute([$u['id']]);
 $prefs = json_decode((string) ($st->fetchColumn() ?: ''), true);

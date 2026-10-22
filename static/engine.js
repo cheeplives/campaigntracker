@@ -518,16 +518,18 @@
     blizzard:  { metric: '2.5+ cm of snow an hour, blowing and drifting', imperial: '1+ in of snow an hour, blowing and drifting' },
     hail:      { metric: 'hailstones 0.5–2.5 cm across', imperial: 'hailstones ¼–1 in across' },
   };
-  /** Weather type -> how much falls, e.g. '4–15 mm an hour', or '' for dry weather. Imperial temperature units (°F, °R) get inches. */
+  /** Whether lengths and speeds are shown in Imperial: unit is 'imperial' or 'metric', or a temperature unit (°F and °R count as Imperial). */
+  const isImperial = unit => unit === 'imperial' || unit === 'F' || unit === 'R';
+  /** Weather type -> how much falls, e.g. '4–15 mm an hour', or '' for dry weather. Imperial (see isImperial) gets inches. */
   function precipRate(type, unit) {
     const p = PRECIP_RATES[type];
-    return p ? (unit === 'F' || unit === 'R' ? p.imperial : p.metric) : '';
+    return p ? (isImperial(unit) ? p.imperial : p.metric) : '';
   }
-  /** Wind level -> its speed range, e.g. '39–61 km/h'. Imperial temperature units (°F, °R) get mph. */
+  /** Wind level -> its speed range, e.g. '39–61 km/h'. Imperial (see isImperial) gets mph. */
   function windSpeed(level, unit) {
     const ws = WIND_SPEEDS[level];
     if (!ws) return '';
-    const mph = unit === 'F' || unit === 'R', [a, b] = mph ? ws.mph : ws.kmh, sym = mph ? 'mph' : 'km/h';
+    const mph = isImperial(unit), [a, b] = mph ? ws.mph : ws.kmh, sym = mph ? 'mph' : 'km/h';
     return b == null ? `${a}+ ${sym}` : a === 0 ? `under ${b + 1} ${sym}` : `${a}–${b} ${sym}`;
   }
 
@@ -962,12 +964,12 @@
     return out.map(g => g && { ...g, wetDays });
   }
 
-  /** {icon, label, going}: the ground in a word or two, with snow depth in cm, or inches for a Fahrenheit or Rankine unit. */
+  /** {icon, label, going}: the ground in a word or two, with snow depth in cm, or inches for Imperial (see isImperial). */
   function groundLabel(g, unit) {
     if (!g) return null;
     if (g.snow >= 0.5) {
       const [, label, going] = GROUND_SNOW.find(([min]) => g.snow >= min);
-      const depth = unit === 'F' || unit === 'R' ? `${Math.max(1, Math.round(g.snow / 2.54))} in` : `${Math.max(1, Math.round(g.snow))} cm`;
+      const depth = isImperial(unit) ? `${Math.max(1, Math.round(g.snow / 2.54))} in` : `${Math.max(1, Math.round(g.snow))} cm`;
       return { icon: '⛄', label: `${label}, ${depth}${g.melting ? ', melting' : ''}`, going: g.melting ? `${going} Slush and meltwater make it slippery.` : going };
     }
     const [, wl, wgo] = GROUND_WET.find(([min]) => g.wet >= min);
@@ -1934,7 +1936,7 @@
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
     eraList, eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
-    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
