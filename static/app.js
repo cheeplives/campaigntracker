@@ -39,7 +39,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [] };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '15';
+  const APP_VERSION = '16';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1196,8 +1196,13 @@
       el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
         const x = sws[i] || null, cls = ['dh-step'];
         if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
-        return el('div', { class: cls.join(' '), 'data-tip': x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${wxTip(x)}` : `${names[i]}: weather not known yet` },
-          el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i]));
+        const wxt = x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${wxTip(x)}` : `${names[i]}: weather not known yet`;
+        const kids = [el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i])];
+        if (i === sh) return el('div', { class: cls.join(' '), 'data-tip': `${wxt}. The campaign clock is on this ${word()}` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids);
+        if (!isGM()) return el('div', { class: cls.join(' '), 'data-tip': wxt }, ...kids);
+        cls.push('nowpick');
+        return moveNowButton(d, i, el('button', { type: 'button', class: cls.join(' '), 'aria-label': `Move Now to ${names[i]}`,
+          'data-tip': `${wxt}. Click to move the NOW flag, and the campaign clock, here` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids));
       })));
   }
 
@@ -1268,13 +1273,33 @@
     return f;
   }
 
+  /** A shift card's title, with the NOW flag on the current one. A GM moves the flag, and the campaign clock,
+   * by clicking (or tapping) another shift's title, where a faint flag shows it can go. */
+  function shiftTitle(d, i, isNow) {
+    const name = shiftNames()[i];
+    const flag = el('span', { class: 'nowtag' }, 'NOW');
+    if (isNow) return el('h4', {}, name, tipped(flag, `The campaign clock is on this ${word()}`));
+    if (!isGM()) return el('h4', {}, name);
+    return el('h4', {}, moveNowButton(d, i, el('button', { type: 'button', class: 'nowpick', 'aria-label': `Move Now to ${name}`,
+      'data-tip': `Move the NOW flag, and the campaign clock, to this ${word()}` }, name, flag)));
+  }
+  /** Make button b move the campaign clock to shift i of day d (from a shift title or the Weather box's strip). */
+  function moveNowButton(d, i, b) {
+    b.addEventListener('click', e => e.preventDefault()); // inside a folded card's summary: don't open it as well
+    b.addEventListener('click', busy(b, async () => {
+      await passShifts(d * spd() + i - nowShift());
+      toast(`Now: ${shiftNames()[i]}`); route();
+    }));
+    return b;
+  }
+
   /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
   function shiftCard(d, i, s, region, sw, hiddenWx, notes, ground) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * spd() + i === nowShift();
     const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
-      el('div', { class: 'row spread' }, el('h4', {}, names[i], isNow ? el('span', { class: 'nowtag', 'data-tip': `The campaign clock is on this ${word()}` }, 'NOW') : null), visPill(v)),
+      el('div', { class: 'row spread' }, shiftTitle(d, i, isNow), visPill(v)),
       sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
         : hiddenWx ? el('div', { class: 'small muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet') : null,
       ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
@@ -1305,9 +1330,8 @@
       toast(`${names[i]} saved`); route();
       offerNouns([{ text: act.value, label: `${names[i]} activity` }, { text: gmn.value, secret: true, label: `${names[i]} GM notes` }]);
     }));
-    card.append(pick, act, hint, gmn, mentionRow(s.activity, s.gm_notes), el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
-      tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)), save,
-      !isNow ? btn('Set as now', async () => { await passShifts(d * spd() + i - nowShift()); route(); }, 'small', `Move the campaign clock to this ${word()}`) : null),
+    card.append(pick, act, hint, gmn, mentionRow(s.activity, s.gm_notes) || '', el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
+      tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)), save),
       shiftNotes(d, i, notes));
     return fold(card);
   }
