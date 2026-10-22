@@ -3889,7 +3889,7 @@
     renderNav();
     try {
       if (parts[0] === '') return await viewCampaigns();
-      if (parts[0] === 'account') return viewAccount();
+      if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
       if (parts[0] === 'admin') return await viewAdmin();
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
