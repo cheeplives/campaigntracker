@@ -745,7 +745,7 @@
   }
 
   // ------------------------------------------------------------ campaign shell
-  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['encyclopedia', 'Encyclopedia'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
+  const TABS = [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings'], ['encyclopedia', 'Encyclopedia'], ['generators', 'Generators'], ['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
@@ -754,6 +754,7 @@
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
     encyclopedia: 'The people, places, items and groups met in play, linked wherever their names are written',
+    generators: 'Random names, taverns, companies and towns, to use on the spot or add to the Encyclopedia',
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
@@ -3195,6 +3196,120 @@
     name.focus();
   }
 
+  // ------------------------------------------------------------ generators tab
+  // Random names, taverns, companies and towns from static/generators.js. Nothing is stored until someone presses 📖 on
+  // a result, which adds it to the Encyclopedia. The genre and each card's choices are remembered in this browser for
+  // each campaign.
+  const GEN_KEY = 'cc-generators';
+  function genPrefs() {
+    let all = {};
+    try { all = JSON.parse(localStorage.getItem(GEN_KEY)) || {}; } catch { /* private mode: defaults */ }
+    const name = cal().name || '';
+    return { genre: /ship time/i.test(name) ? 'scifi' : /gregorian/i.test(name) ? 'modern' : 'fantasy', secret: true, ...all[S.camp.id] };
+  }
+  function setGenPrefs(p) {
+    try {
+      const all = JSON.parse(localStorage.getItem(GEN_KEY)) || {};
+      all[S.camp.id] = { ...all[S.camp.id], ...p };
+      localStorage.setItem(GEN_KEY, JSON.stringify(all));
+    } catch { /* private mode: just this page */ }
+  }
+  /** Rich text for an Encyclopedia note, built from nodes so every word goes in as text. */
+  const genHtml = (...kids) => el('div', {}, kids).innerHTML;
+  async function genCopy(text) {
+    try { await navigator.clipboard.writeText(text); toast('Copied'); } catch { toast('This browser won\'t let the page copy. Select the text instead', true); }
+  }
+
+  /** The 📖 button on a result: adds it to the Encyclopedia with tag and notes (rich text), then becomes a link to it. */
+  function genAddButton(name, tag, notes) {
+    const b = el('button', { type: 'button', class: 'small gen-add', 'aria-label': `Add ${name} to the Encyclopedia`,
+      'data-tip': `Add ${name} to the Encyclopedia, tagged ${tag}${isGM() && genPrefs().secret ? ', as GM only' : ''}` }, '📖 Add');
+    b.addEventListener('click', busy(b, async () => {
+      if (!S.encReady) throw new Error('The Encyclopedia isn\'t set up on this server yet: install.php needs to be run');
+      const secret = isGM() && !!genPrefs().secret;
+      const { id } = await post('entry_save', { name, notes: notes(), tags: [{ name: tag }], ...(isGM() ? { is_secret: secret } : {}) }, S.camp.id);
+      S.encyclopedia = [...S.encyclopedia.filter(x => x.id !== id), { id, name, aliases: [], is_secret: secret, blank: false,
+        preview: Nouns.plain(notes(), 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, x) => a.name.localeCompare(x.name));
+      toast(`Added ${name} to the Encyclopedia`);
+      b.replaceWith(el('a', { class: 'button small gen-add', href: `#/c/${S.camp.id}/encyclopedia/${id}`, 'data-tip': 'Open its Encyclopedia entry' }, '📖 Open'));
+    }));
+    return b;
+  }
+  /** One result line: the name, a note under it, Copy and 📖 Add. */
+  function genRow(r, tag) {
+    return el('li', { class: 'gen-item' },
+      el('div', { class: 'gen-what' }, el('span', { class: 'gen-name' }, r.name), r.note ? el('span', { class: 'small muted' }, r.note) : null),
+      el('button', { type: 'button', class: 'small', 'aria-label': `Copy ${r.name}`, 'data-tip': 'Copy the name', onclick: () => genCopy(r.name) }, '📋'),
+      genAddButton(r.name, tag, () => genHtml(r.note ? el('p', {}, r.note) : null)));
+  }
+  /** A generator card: a title, its own choices, the Generate button and the results under them. roll() gives the nodes. */
+  function genCard(title, tipText, controls, roll, cls) {
+    const out = el('div', { class: 'gen-out' });
+    const draw = () => { hideTip(); out.replaceChildren(...clean([roll()])); };
+    const go = btn('🎲 Generate', draw, 'primary', 'Roll a new set');
+    for (const c of controls) c.querySelector('select')?.addEventListener('change', draw);
+    draw();
+    return el('section', { class: `card gen-card ${cls || ''}` }, el('h2', {}, title, tip(tipText)), el('div', { class: 'gen-controls' }, controls, go), out);
+  }
+
+  function viewGenerators() {
+    const pref = genPrefs();
+    const genre = select(Gen.GENRES, pref.genre, { 'aria-label': 'Genre' });
+    genre.addEventListener('change', () => { setGenPrefs({ genre: genre.value }); viewGenerators(); });
+    const g = genre.value;
+    const keep = (k, sel) => { sel.addEventListener('change', () => setGenPrefs({ [k]: sel.value })); return sel; };
+
+    const peoples = Gen.PEOPLES[g];
+    const people = keep('people_' + g, select([['', 'Any'], ...peoples], pref['people_' + g] || peoples[0][0], { 'aria-label': 'Race or people' }));
+    const gender = keep('gender', select([['', 'Either'], ['f', 'Feminine'], ['m', 'Masculine']], pref.gender || '', { 'aria-label': 'Gender' }));
+    const names = genCard('Names', 'Character names for this genre. Each people has its own sounds; pick Any to mix them. 📖 Add puts a name in the Encyclopedia as a Person',
+      [field('Race or people', people), field('Gender', gender)],
+      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.name(g, people.value, gender.value)).map(r => genRow(r, 'Person'))));
+
+    const taverns = genCard(g === 'western' ? 'Saloons & inns' : g === 'scifi' || g === 'cyberpunk' ? 'Bars & clubs' : 'Taverns, inns & pubs',
+      'Places to eat, drink and sleep, each with what it\'s known for and who runs it. 📖 Add puts one in the Encyclopedia as a Location', [],
+      () => el('ul', { class: 'gen-list' }, Gen.many(6, () => Gen.tavern(g)).map(r => genRow(r, 'Location'))));
+
+    const sector = keep('sector', select(Gen.SECTORS, pref.sector || '', { 'aria-label': 'Line of business' }));
+    const companies = genCard(g === 'fantasy' ? 'Guilds & companies' : g === 'western' ? 'Companies' : 'Companies & corporations',
+      'Businesses, guilds and corporations for this genre. 📖 Add puts one in the Encyclopedia as a Group', [field('Line of business', sector)],
+      () => el('ul', { class: 'gen-list' }, Gen.many(6, () => Gen.company(g, sector.value)).map(r => genRow(r, 'Group'))));
+
+    const size = keep('size', select(Gen.SIZE_KEYS.map(([k, l]) => [k, k ? `${l}: ${Gen.sizeLabel(g, k)}` : l]), pref.size || '', { 'aria-label': 'Size' }));
+    const towns = genCard('Towns', 'A whole settlement: who runs it, what pays for it, a few places and people, and trouble for the party to walk into. 📖 Add puts the town, or any place or person in it, in the Encyclopedia',
+      [field('Size', size)], () => genTown(Gen.town(g, size.value)), 'gen-town');
+
+    const secret = isGM() ? el('label', { class: 'inline small', 'data-tip': 'What you add with 📖 stays hidden from players until you untick GM only on its entry' },
+      el('input', { type: 'checkbox', checked: pref.secret !== false, onchange: e => setGenPrefs({ secret: e.target.checked }) }), 'Add to the Encyclopedia as GM only') : null;
+    mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
+      el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
+        el('h2', {}, 'Generators', tip('Random names, places, businesses and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
+        el('div', { class: 'row' }, field('Genre', genre), secret))),
+      names, taverns, companies, towns));
+  }
+
+  /** A generated town as a stat block, with 📖 Add for the town and for each place and person in it. */
+  function genTown(t) {
+    const pop = `${t.kind}, population about ${t.population.toLocaleString()}`;
+    const facts = t.facts;
+    const notes = () => genHtml(el('p', {}, el('strong', {}, pop)), el('ul', {}, facts.map(([k, v]) => el('li', {}, el('strong', {}, `${k}: `), v))),
+      el('h3', {}, 'Places'), el('ul', {}, t.places.map(p => el('li', {}, `${p.name} (${p.note})`))),
+      el('h3', {}, 'People'), el('ul', {}, t.people.map(p => el('li', {}, `${p.name}: ${p.note}`))),
+      el('h3', {}, 'Trouble'), el('ul', {}, t.hooks.map(h => el('li', {}, h))));
+    const text = [t.name, pop, ...facts.map(([k, v]) => `${k}: ${v}`), '', 'Places:', ...t.places.map(p => `- ${p.name} (${p.note})`),
+      '', 'People:', ...t.people.map(p => `- ${p.name}: ${p.note}`), '', 'Trouble:', ...t.hooks.map(h => `- ${h}`)].join('\n');
+    const sub = (title, list, tag, where) => el('div', { class: 'gen-sub' }, el('h3', {}, title), el('ul', { class: 'gen-list' }, list.map(r => el('li', { class: 'gen-item' },
+      el('div', { class: 'gen-what' }, el('span', { class: 'gen-name' }, r.name), el('span', { class: 'small muted' }, r.note)),
+      genAddButton(r.name, tag, () => genHtml(el('p', {}, `${r.note}, in ${where}.`)))))));
+    return el('div', { class: 'gen-townblock' },
+      el('div', { class: 'gen-town-title' }, el('div', {}, el('h3', {}, t.name), el('span', { class: 'muted' }, pop)),
+        el('div', { class: 'row' }, el('button', { type: 'button', class: 'small', 'data-tip': 'Copy the whole town as text', onclick: () => genCopy(text) }, '📋 Copy'),
+          genAddButton(t.name, 'Location', notes))),
+      el('dl', { class: 'gen-facts' }, facts.map(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])),
+      el('div', { class: 'gen-cols' }, sub('Places', t.places, 'Location', t.name), sub('People', t.people, 'Person', t.name),
+        el('div', { class: 'gen-sub' }, el('h3', {}, 'Trouble'), el('ul', { class: 'gen-hooks' }, t.hooks.map(h => el('li', {}, h))))));
+  }
+
   // ------------------------------------------------------------ members tab
   function viewMembers() {
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
@@ -3622,7 +3737,7 @@
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }

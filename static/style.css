@@ -673,3 +673,31 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
   .enc-conn-row { flex-direction: column; align-items: flex-start; gap: 2px; }
   .enc-conn-row .enc-conn-names { flex: none; }
 }
+
+/* generators tab: a card per generator, two across, the town as a full-width stat block */
+.gen-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.gen-page > .gen-head, .gen-page > .gen-town { grid-column: 1 / -1; }
+.gen-head .row { margin-top: 0; }
+.gen-head .field { margin: 0; }
+.gen-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; border-top: 6px solid var(--accent); }
+.gen-card > h2 { margin: 0; }
+.gen-controls { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: flex-end; }
+.gen-controls .field { margin: 0; }
+.gen-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.gen-item { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.gen-what { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gen-name { font-weight: 600; overflow-wrap: anywhere; }
+.gen-add { flex: none; white-space: nowrap; }
+.gen-town-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 6px 12px; }
+.gen-town-title .row { margin-top: 0; }
+.gen-town-title h3 { margin: 0; font-size: 2.2rem; line-height: 1; color: var(--accent); overflow-wrap: anywhere; }
+.gen-town-title::after { content: ''; flex-basis: 100%; height: 5px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
+.gen-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 10px 0; }
+.gen-facts dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--label); font-weight: 600; padding-top: 2px; }
+.gen-facts dd { margin: 0; }
+.gen-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.gen-sub h3 { font-size: 1.05rem; letter-spacing: .08em; color: var(--accent); margin: 4px 0; }
+.gen-hooks { margin: 0; padding-left: 18px; border-top: 1px solid var(--line); padding-top: 6px; }
+.gen-hooks li + li { margin-top: 6px; }
+@media (max-width: 1180px) { .gen-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gen-cols > :last-child { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .gen-page, .gen-cols { grid-template-columns: 1fr; } }
