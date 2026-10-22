@@ -117,7 +117,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;
-  a distance and a rate per shift give the whole shifts a trip takes, with terrain and units;
+  Determine shifts in the shifts-a-day box gives the whole shifts a trip needs, with terrain;
   star pickers fill the light-years between two systems; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions.

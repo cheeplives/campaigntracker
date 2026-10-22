@@ -14,7 +14,7 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
 
   // A campaign with no genre saved keeps every mode.
   const mode = page.locator("select.travel-mode");
-  await expect(mode.locator("option")).toHaveCount(8);
+  await expect(mode.locator("option")).toHaveCount(7);
 
   // Each speed mode lists only its own samples, and the first one is filled in.
   const sample = page.getByLabel("Sample", { exact: true });
@@ -51,7 +51,7 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   const sb = await sample.boundingBox(), db = await page.locator("input[name=distance]").boundingBox();
   if (Math.abs(sb.y - db.y) < sb.height) expect(Math.abs(sb.y - db.y)).toBeLessThan(2);
   await expect(page.locator("select[name=shifts]")).toHaveValue("2");
-  await expect(page.locator("select[name=shifts] option")).toHaveText(["1 shift", "2 shifts", "3 shifts", "4 shifts"]);
+  await expect(page.locator("select[name=shifts] option")).toHaveText(["1 shift", "2 shifts", "3 shifts", "4 shifts", "Determine shifts"]);
   // On a wide screen the distance and speed boxes are a quarter narrower than the shifts box, and the sample list wider.
   const wid = async sel => (await page.locator(sel).boundingBox()).width;
   if (await wid("select[name=shifts]") > 150 && (await sample.boundingBox()).y === (await page.locator("select[name=shifts]").boundingBox()).y) {
@@ -74,27 +74,19 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await page.getByRole("button", { name: "Calculate" }).click();
   await expect(page.locator(".depart")).toContainText("6 shifts (1.5 days)");
 
-  // Distance and rate per shift: 100 km at 15 km a shift is 6.67, so 7 whole shifts; two a day means four days on the clock.
-  await mode.selectOption("pershift");
-  await expect(page.getByText("Distance per shift (km)")).toBeVisible();
+  // Determine shifts: 100 km at 5 km/h through woods (×2) is 40 hours, 6.67 six-hour shifts, so 7 shifts of travel, passed back to back.
   await page.locator("input[name=distance]").fill("100");
-  await page.locator("input[name=per_shift]").fill("15");
-  await page.locator("select[name=shifts]").selectOption("2");
+  await page.locator("select[name=terrain]").selectOption("2");
+  await page.locator("select[name=shifts]").selectOption("auto");
   await page.getByRole("button", { name: "Calculate" }).click();
   await expect(page.locator(".result h3")).toHaveText("7 shifts of travel");
-  await expect(page.locator(".result")).toContainText("100 km ÷ 15 km a shift = 6.67 → 7 shifts of travel");
-  await expect(page.locator(".depart")).toContainText("13 shifts (3.3 days)");
-  // Terrain multiplies the shifts; Imperial converts both boxes and relabels them.
-  await page.locator("select[name=terrain]").selectOption("2");
-  await page.getByRole("button", { name: "Calculate" }).click();
-  await expect(page.locator(".result h3")).toHaveText("14 shifts of travel");
+  await expect(page.locator(".result")).toContainText("40.0 hours moving at 5/h (terrain ×2) = 6.67 shifts of 6 h");
+  await expect(page.locator(".depart")).toContainText("7 shifts (1.8 days)");
+  // The choice survives a units switch.
   await units.selectOption("imperial");
-  await expect(page.getByText("Distance per shift (miles)")).toBeVisible();
-  await expect(page.locator("input[name=distance]")).toHaveValue("62.1");
-  await expect(page.locator("input[name=per_shift]")).toHaveValue("9.32");
-  await page.getByRole("button", { name: "Calculate" }).click();
-  await expect(page.locator(".result")).toContainText("62.1 mi ÷ 9.32 mi a shift × terrain 2");
+  await expect(page.locator("select[name=shifts]")).toHaveValue("auto");
   await units.selectOption("metric");
+  await page.locator("select[name=terrain]").selectOption("1");
 
   // Space: star pickers fill the light-years between two systems.
   await mode.selectOption("relativistic");
@@ -112,26 +104,26 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await expect(page.locator("input[name=distance]")).toHaveValue("239000");
   await units.selectOption("metric");
 
-  // Fantasy: overland, sea, air and distance per shift, with no engines among the samples.
+  // Fantasy: overland, sea and air, with no engines among the samples.
   await page.goto(`index.html#/c/${cid}/settings`);
   await page.locator("select[name=genre]").selectOption("fantasy");
   await page.getByRole("button", { name: "Save campaign settings" }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
   await page.goto(`index.html#/c/${cid}/travel`);
-  await expect(mode.locator("option")).toHaveCount(4);
+  await expect(mode.locator("option")).toHaveCount(3);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Horseback, at a walk" })).toHaveCount(1);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "motorway" })).toHaveCount(0);
   await mode.selectOption("air");
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Golden eagle" })).toHaveCount(1);
   await expect(page.getByLabel("Sample", { exact: true }).locator("option", { hasText: "Airliner" })).toHaveCount(0);
 
-  // Modern: overland, sea, air, distance per shift and orbital transfers.
+  // Modern: overland, sea, air and orbital transfers.
   await page.goto(`index.html#/c/${cid}/settings`);
   await page.locator("select[name=genre]").selectOption("modern");
   await page.getByRole("button", { name: "Save campaign settings" }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
   await page.goto(`index.html#/c/${cid}/travel`);
-  await expect(mode.locator("option")).toHaveText(["Overland (on foot, mounted, by road or rail)", "Sea and river (oar, sail, engine)", "Air (wing, airship, aircraft)", "Distance and rate per shift (how many shifts a trip takes)", "Orbital transfer (Hohmann, minimum fuel)"]);
+  await expect(mode.locator("option")).toHaveText(["Overland (on foot, mounted, by road or rail)", "Sea and river (oar, sail, engine)", "Air (wing, airship, aircraft)", "Orbital transfer (Hohmann, minimum fuel)"]);
   expectNoErrors(errors);
 });
 
