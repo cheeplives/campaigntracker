@@ -2545,6 +2545,7 @@
       ['brachistochrone', 'Constant-thrust burn (flip-and-burn / torch drive)'],
       ['relativistic', 'Interstellar at relativistic speed'],
       ['ftl', 'FTL / jump drive'],
+      ['hyperspace', 'Hyperspace (Star Wars hyperdrive)'],
     ].filter(([k]) => E.GENRE_MODES[genre].includes(k));
     const modeSel = select(modes, 'overland', { class: 'travel-mode' });
     const fieldsWrap = el('div', { class: 'grid2' });
@@ -2639,6 +2640,18 @@
           field('Acceleration (g)', el('input', { name: 'g', type: 'number', step: 'any', value: m === 'relativistic' ? 1 : 0.3 }), '1 g = 9.81 m/s². The Expanse-style "juice" burns run 3–7 g; comfortable cruising is 0.3–1 g'),
           field('Speed cap (fraction of light, optional)', el('input', { name: 'max_speed_c', type: 'number', step: 'any', min: 0, max: 0.999, placeholder: 'none' }), 'Ship accelerates to the cap, coasts, then decelerates',
             '0.1 means a tenth of the speed of light. Leave empty to burn all the way to the midpoint'));
+      } else if (m === 'hyperspace') {
+        const base = el('input', { name: 'base_hours', type: 'number', step: 'any', min: 0, value: 96 });
+        const trips = samplePicker(E.HYPER_TRIPS.map(g => ({ group: g.group, items: g.items.map(([label, h]) => ({ label, h })) })),
+          i => { base.value = i.h; }, i => `${i.label}: ${E.fmtDuration(i.h)}`);
+        trips.selectedIndex = 6;
+        base.addEventListener('input', () => { trips.value = ''; });
+        F.push(field('Sample trip', trips, 'Fills in the trip time. The app\'s own guide, as the films leave trip times loose'),
+          field('Trip time at Class 1 (hours)', base, 'How long a Class 1 hyperdrive takes on a main hyperlane'),
+          field('Hyperdrive class', select(E.HYPERDRIVE_CLASSES, 1, { name: 'hyperdrive_class' }), null,
+            'The class multiplies the trip time: Class 2 takes twice as long as Class 1, Class 0.5 half as long'),
+          field('Route', select(E.HYPER_ROUTES, 1, { name: 'route' }), null,
+            'Main hyperlanes are mapped and fast. Off them, the navicomputer plots shorter, more careful jumps'));
       } else {
         const kind = select([['rate', 'Speed in light-years per day'], ['fixed', 'Fixed duration per jump']], 'rate', { name: 'ftl_kind' });
         const dist = el('input', { name: 'distance', type: 'number', step: 'any', value: 4.25 });
@@ -2669,7 +2682,7 @@
 
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
     const f = el('form', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Travel planner'), units),
-      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive.`),
+      field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive. Hyperspace: a Star Wars trip time, scaled by the hyperdrive's class and the route.`),
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
@@ -4100,6 +4113,8 @@
           ['Constants: the speed of light, the astronomical unit and every GM (gravitational parameter): ', cite('jplConst'), '. Standard gravity: ', cite('g0'), '. Light-year: ', cite('ly'), '.'],
           ['Planet orbits for the Hohmann transfers and distances: ', cite('jplPlanets'), '; Pluto: ', cite('pluto'), '; Ceres: ', cite('ceres'), '.'],
           ['Moon orbits (Jupiter, Saturn and Earth systems): ', cite('jplSats'), '. Geostationary orbit: ', cite('geo'), '.'],
+          ['Hyperspace: a hyperdrive\'s class multiplies the trip time, Class 1 being the stock drive and Class 0.5 twice as fast, from ', cite('falcon'),
+            '. The other classes, the route multipliers and the sample trip times are the app\'s own guide (see "No open source" below).'],
         ]),
         aboutTable(['Sample distance', 'Source'], distRows),
         p('Star distances and positions (J2000 right ascension and declination), from which the planner works out the distance between any two:'),
@@ -4133,6 +4148,8 @@
           ['Eberron (Galifar Calendar): months, weekdays, seasons and the twelve moons\' names from ', cite('galifar'), '; the holidays from ', cite('galifarHolidays'), '.'],
           ['Exandria (Critical Role): months, weekdays, seasons and holidays from ', cite('exandria'), '; the moons from ', cite('catha'), ' and ', cite('ruidus'), '.'],
           ['Golarion (Absalom Reckoning): months, weekdays and Leap Day from ', cite('absalom'), '; the holidays from ', cite('golarionHolidays'), '.'],
+          ['Star Wars (Galactic Standard Calendar): the ten months, the five-day week and the three festival weeks from ', cite('gsc'), ', ', cite('gscWeek'), ' and ', cite('gscYear'),
+            '; the worlds given as regions from ', cite('wookPlanets'), '.'],
           'The Starship clock and the Custom calendar are made up for this app.',
         ])),
       section('Game rules',
@@ -4158,6 +4175,10 @@
           'Eberron preset (© Wizards of the Coast): the calendar follows the official setting via a fan wiki, and the holidays via a fan world page. The setting gives the twelve moons no cycles, so the app makes Zarantyr full every 28 days and each farther moon a week slower. Region climates are judgement calls (the Five Nations as temperate Europe, Q\'barra and Xen\'drik as jungle); the Mournland\'s weather is magical, so it keeps Cyre\'s old climate.',
           'Exandria preset (© Critical Role): the calendar follows the official setting via a fan wiki. Which weekday the year starts on is not given, and Catha\'s 33-day and Ruidus\'s 164-day cycles are the app\'s choice within what the wiki says. Region climates are judgement calls (Tal\'Dorei and the Dwendalian Empire as temperate Europe, Marquet as North Africa).',
           'Golarion preset (© Paizo): the calendar follows the official setting via a fan wiki; weekdays line up with the real year 2700 years earlier, and Somal is given the Moon\'s mean synodic month. Holidays that fall on an equinox or solstice take the seasons\' usual days. Region climates are judgement calls (the Inner Sea as the Mediterranean, Osirion as Egypt, the Mwangi Expanse as the Congo).',
+          ['Star Wars preset (© Lucasfilm): the calendar follows Wookieepedia, which notes that sources disagree (some give a 368-day year with three extra holidays, others twelve months). ',
+            'The app keeps the ten-month version, 365 days, without the three holidays, whose dates no source gives. Wookieepedia numbers the months rather than naming them, so the app calls them Month 1 to Month 10. ',
+            'There are no seasons or moons, since each world has its own. Region climates are judgement calls from how each world is shown (Tatooine and Jakku as hot desert, Hoth as ice cap, Endor and Kashyyyk as forest), using the Köppen classes above. ',
+            'In the travel planner, hyperdrive classes other than 0.5 and 1, the route multipliers and the sample trip times are the app\'s own guide, as the films leave trip times loose.'],
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
           'Storm, fog and dust frequencies, the weather mixes of the simple climates, the ground conditions model and the visibility rules (see above).',
           ['Fan sites and pages used above that are not openly licensed, each credited where it is used: the Warhammer Fantasy Lexicanum (CC BY-NC, non-commercial use only), ',

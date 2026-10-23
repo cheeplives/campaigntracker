@@ -35,6 +35,7 @@ function workload(E) {
     trip("brachistochrone", { distance: 1.5, g: 1 }),
     trip("relativistic", { distance: 4.2, g: 1 }),
     trip("ftl", { fixed_hours: 168 }),
+    trip("hyperspace", { base_hours: 96, hyperdrive_class: 0.5, route: 2 }),
   ];
   out.stars = [E.starDistance(0, 6), E.starDistance(1, 2), E.starDistance(2, 6)];
   return JSON.parse(JSON.stringify(out));

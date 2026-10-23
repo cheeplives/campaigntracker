@@ -1143,6 +1143,16 @@
       url: 'https://pathfinderwiki.com/wiki/Absalom_Reckoning' },
     golarionHolidays: { title: 'Holidays and festivals', by: 'PathfinderWiki', licence: 'CC BY-SA 3.0 (wiki text); the setting © Paizo',
       url: 'https://pathfinderwiki.com/wiki/Holidays_and_festivals' },
+    gsc: { title: 'Galactic standard calendar (ten 35-day months of five-day weeks, the three festival weeks; from Build the Millennium Falcon 61)', by: 'Wookieepedia (fandom), read via the Archivum mirror',
+      licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm', url: 'https://starwars.archivum.wiki/article/galactic_standard_calendar' },
+    gscWeek: { title: 'Standard week (Primeday, Centaxday, Taungsday, Zhellday, Benduday)', by: 'Wookieepedia (fandom)', licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm',
+      url: 'https://starwars.fandom.com/wiki/Standard_week/Legends' },
+    gscYear: { title: 'Standard year (a 368-day Coruscant year in some sources, 24-hour standard days)', by: 'Wookieepedia (fandom)', licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm',
+      url: 'https://starwars.fandom.com/wiki/Standard_year/Legends' },
+    wookPlanets: { title: 'Planets (the worlds listed as regions, and where in the galaxy each lies)', by: 'Wookieepedia (fandom)', licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm',
+      url: 'https://starwars.fandom.com/wiki/Category:Planets' },
+    falcon: { title: 'Millennium Falcon (stock Class 1 SSP05 hyperdrive, modified to Class 0.5)', by: 'Wookieepedia (fandom)', licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm',
+      url: 'https://starwars.fandom.com/wiki/Millennium_Falcon' },
     // rules
     yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
       licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
@@ -1181,7 +1191,7 @@
   const GENRE_MODES = {
     fantasy: ['overland', 'sea', 'air'],
     modern: ['overland', 'sea', 'air', 'hohmann'],
-    scifi: ['overland', 'sea', 'air', 'hohmann', 'brachistochrone', 'relativistic', 'ftl'],
+    scifi: ['overland', 'sea', 'air', 'hohmann', 'brachistochrone', 'relativistic', 'ftl', 'hyperspace'],
   };
   const genreOf = settings => (settings && GENRES[settings.genre] ? settings.genre : 'scifi');
   // Real-world speeds in km/h, by speed mode: [label, km/h, genres, source key]. Each figure is the one its source
@@ -1265,9 +1275,26 @@
     return Math.round(Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * 100) / 100;
   }
 
+  // Star Wars hyperspace. A hyperdrive's class multiplies the trip time: a Class 1 drive is the stock SSP05 and
+  // the Millennium Falcon's jury-rigged Class 0.5 runs twice as fast (falcon). The other classes, the route
+  // multipliers and the sample trips (hours for a Class 1 drive on a main hyperlane) are the app's own game
+  // guidance, since the films and books leave trip times loose.
+  const HYPERDRIVE_CLASSES = [
+    [0.5, 'Class 0.5 (the Millennium Falcon, modified)'], [0.75, 'Class 0.75 (a tuned racer or courier)'],
+    [1, 'Class 1 (stock SSP05, fast freighters and starfighters)'], [2, 'Class 2 (warships and liners)'],
+    [3, 'Class 3 (bulk freighters)'], [4, 'Class 4 (old or cheap drives)'], [10, 'Class 10 (a backup hyperdrive)'],
+    [15, 'Class 15 (a failing backup)']];
+  const HYPER_ROUTES = [[1, 'Major hyperlane ×1'], [2, 'Minor or unmapped route ×2'], [4, 'Uncharted, jump by jump ×4']];
+  const HYPER_TRIPS = [
+    { group: 'Short jumps', items: [['Micro-jump within a star system', 0.25], ['Neighbouring system, same sector', 4], ['Across a sector', 12]] },
+    { group: 'Across the galaxy', items: [['Across a region (the Mid Rim, the Colonies)', 30], ['Core Worlds to the Mid Rim', 48],
+      ['Core Worlds to the Outer Rim (Coruscant to Tatooine)', 96], ['One side of the Outer Rim to the other', 168],
+      ['Into the Unknown Regions', 336]] },
+  ];
+
   /**
    * Compute a travel duration. Returns {hours, worldHours?, lines[]}.
-   * modes: 'ground' (or 'overland' | 'sea' | 'air') | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl'
+   * modes: 'ground' (or 'overland' | 'sea' | 'air') | 'hohmann' | 'brachistochrone' | 'relativistic' | 'ftl' | 'hyperspace'
    */
   function travel(mode, q) {
     if (SPEED_MODES.includes(mode)) mode = 'ground';
@@ -1369,6 +1396,15 @@
       const days = dist / rate;
       lines.push(`${dist} LY at ${rate} LY/day: ${fmtH(days * 24)}`);
       return { hours: days * 24, lines };
+    }
+    if (mode === 'hyperspace') {
+      // the trip's time for a Class 1 drive on a main hyperlane, times the drive's class and the route's multiplier
+      const base = n('base_hours'), cls = n('hyperdrive_class'), route = n('route') || 1;
+      if (!(base > 0 && cls > 0)) throw new Error('Enter the trip time and a hyperdrive class');
+      const h = base * cls * route;
+      lines.push(`${fmtH(base)} at Class 1 × Class ${cls} drive${route !== 1 ? ` × route ×${route}` : ''} = ${fmtH(h)} in hyperspace`);
+      if (cls >= 10) lines.push('A backup drive: fine for limping to the nearest port, slow for anything farther.');
+      return { hours: h, lines };
     }
     throw new Error('Unknown travel mode');
   }
@@ -1901,6 +1937,58 @@
       settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
     },
 
+    galactic: {
+      label: 'Star Wars (Galactic Standard Calendar, BBY/ABY)',
+      calendar: {
+        // Ten months of seven five-day weeks, with the New Year Fete Week before the first month, the Festival of
+        // Life after the sixth and the Festival of Stars after the ninth (gsc): 365 days, which is 73 weeks, so every
+        // year starts on Primeday. The festival weeks are whole weeks, so the weekdays run through them. Wookieepedia
+        // gives the months numbers, not names. Years count from the Battle of Yavin, 0 BBY (also 0 ABY).
+        name: 'Galactic Standard Calendar', epochYear: 0, yearSuffix: 'ABY', dateFormat: '{W}, {M}, Day {d}, {Y}', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Primeday', 'Centaxday', 'Taungsday', 'Zhellday', 'Benduday'],
+        months: [
+          { name: 'New Year Fete Week', days: 5, intercalary: true, keepWeekday: true },
+          ...[1, 2, 3, 4, 5, 6].map(n => ({ name: `Month ${n}`, days: 35 })),
+          { name: 'Festival of Life', days: 5, intercalary: true, keepWeekday: true },
+          ...[7, 8, 9].map(n => ({ name: `Month ${n}`, days: 35 })),
+          { name: 'Festival of Stars', days: 5, intercalary: true, keepWeekday: true },
+          { name: 'Month 10', days: 35 }],
+        leap: null,
+        eras: [{ name: 'After the Battle of Yavin', abbr: 'ABY', start: 0 }, { name: 'Before the Battle of Yavin', abbr: 'BBY', start: 0, before: true }],
+        // a standard calendar for a whole galaxy: every world keeps its own seasons and moons, so it has none,
+        // and each region's weather is its climate's year-round average
+        seasons: [], moons: [],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 0, month: 0, day: 1 },
+      // No open data exists for a fictional galaxy. Each world takes the Köppen climate of how Wookieepedia
+      // describes it (wookPlanets), a judgement call: Tatooine, Jakku and Geonosis as hot desert, Hoth and Ilum as
+      // ice cap, the forest moon of Endor, Kashyyyk and Yavin 4 as rainforest, Kamino as stormy subpolar ocean.
+      // Mustafar's lava fields are given hot desert. Two ship regions follow for time spent in transit.
+      regions: [
+        ...koppenRegions('north', [
+          ['Coruscant (Core Worlds)', 'Cfb'], ['Alderaan (Core Worlds)', 'Cfb'], ['Corellia (Core Worlds)', 'Csb'],
+          ['Chandrila (Core Worlds)', 'Cfb'], ['Naboo (Mid Rim)', 'Cfb'], ['Kashyyyk (Mid Rim)', 'Af', -2],
+          ['Takodana (Mid Rim)', 'Cfb', -1], ['Bespin, Cloud City (Outer Rim)', 'Cfb'], ['Tatooine (Outer Rim)', 'BWh', 1],
+          ['Hoth (Outer Rim)', 'EF', 1], ['Dagobah (Outer Rim)', 'Af', -2], ['Endor, the forest moon (Outer Rim)', 'Cfb', -2],
+          ['Yavin 4 (Outer Rim)', 'Af', -2], ['Geonosis (Outer Rim)', 'BWh', 1], ['Kamino (Wild Space)', 'Cfc'],
+          ['Mustafar (Outer Rim)', 'BWh', 1], ['Mandalore (Outer Rim)', 'BWk', 1], ['Ryloth (Outer Rim)', 'BWh', 1],
+          ['Lothal (Outer Rim)', 'BSk'], ['Dantooine (Outer Rim)', 'BSk'], ['Felucia (Outer Rim)', 'Af', -2],
+          ['Utapau (Outer Rim)', 'BSk'], ['Jakku (Western Reaches)', 'BWh', 1], ['Scarif (Outer Rim)', 'Aw'],
+          ['Jedha (Mid Rim)', 'BWk', 1], ['Ilum (Unknown Regions)', 'EF', 1], ['Ahch-To (Unknown Regions)', 'Cfc'],
+          ['Crait (Outer Rim)', 'BWk', 1], ['Kessel (Outer Rim)', 'BWk'], ['Dathomir (Outer Rim)', 'Cfa', -1],
+        ]),
+        { name: 'Starship interior (hyperspace)', settings: { climate: 'ship', lighting: 'artificial', light_levels: [4, 5, 4, 2], terrain_mod: 0 } },
+        { name: 'Open space / EVA', settings: { climate: 'vacuum', lighting: 'artificial', light_levels: [1, 1, 1, 1], terrain_mod: 0 } }],
+      // the three festival weeks (gsc); the holidays each world keeps on top of them vary too much to list
+      holidays: [
+        { name: 'New Year Fete Week', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 5 }, description: 'The first five days of the year, before the first month.' },
+        { name: 'Festival of Life', color: '#2e8b57', rule: { type: 'fixed', month: 7, day: 1, span: 5 }, description: 'The festival week between the sixth and seventh months.' },
+        { name: 'Festival of Stars', color: '#7b4fa0', rule: { type: 'fixed', month: 11, day: 1, span: 5 }, description: 'The festival week between the ninth and tenth months.' },
+      ],
+      settings: { genre: 'scifi', time_unit: 'week', temp_unit: 'C' },
+    },
+
     shipclock: {
       label: 'Starship clock (Standard Ship Time)',
       calendar: {
@@ -1947,7 +2035,7 @@
     eraList, eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
-    travel, fmtDuration, hoursToShifts, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
+    travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;
