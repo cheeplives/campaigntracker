@@ -171,6 +171,9 @@ button.on { background: var(--accent); color: var(--on-accent); }
   background: var(--tab-bg); border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; }
 .tabs a:hover { color: var(--text); }
 .tabs a.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+/* the Legend's group headings: across the top they are just a thin divider between groups (none before the first) */
+.tab-group { flex: none; align-self: stretch; width: 1px; margin: 6px 4px 4px; overflow: hidden; font-size: 0; background: var(--line); }
+.tab-group:first-child { display: none; }
 
 /* Wider (desktop, iPad in landscape) the tabs are a "Legend" down the left, beside everything else.
  * It spans every row of the page grid; the last row is 1fr so a Legend taller than a short page grows only that row. */
@@ -185,6 +188,9 @@ button.on { background: var(--accent); color: var(--on-accent); }
   /* the heading over a tapered rule; the rule is ::after moved up under it */
   main > nav.tabs::before { content: 'Legend'; order: -2; padding: 10px 14px 4px; font: 700 1.35rem var(--disp); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
   main > nav.tabs::after { content: ''; order: -1; flex: none; height: 5px; margin: 0 14px 8px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
+  main > nav.tabs .tab-group { display: block; width: auto; margin: 0; padding: 12px 14px 3px; background: none; overflow: visible; cursor: default;
+    font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
+  main > nav.tabs .tab-group:first-child { padding-top: 0; }
   main > nav.tabs a { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border: 0; border-radius: 0; background: none; }
   main > nav.tabs a::before { content: ''; flex: none; width: 8px; height: 8px; border: 1.5px solid currentColor; transform: rotate(45deg); opacity: .6; }
   main > nav.tabs a:hover { background: var(--tab-bg); }
