@@ -27,6 +27,10 @@
   new MutationObserver(fitTopbar).observe($('.topbar'), { childList: true, subtree: true, characterData: true, attributes: true });
   new MutationObserver(fitTopbar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-scheme'] });
   window.addEventListener('resize', fitTopbar);
+  // The installed app's title bar takes the top bar's colour, so it follows the theme and light/dark mode.
+  const fitThemeColor = () => $('meta[name="theme-color"]')?.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+  new MutationObserver(fitThemeColor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-scheme'] });
+  fitThemeColor();
   document.fonts?.addEventListener?.('loadingdone', fitTopbar);
   document.fonts?.ready.then(fitTopbar);
   fitTopbar();
@@ -4247,5 +4251,7 @@
   window.addEventListener('hashchange', () => (S.user ? route() : boot()));
   $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
   $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
+  // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
+  if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   boot();
 })();

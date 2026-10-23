@@ -9,6 +9,9 @@ const { defineConfig, devices } = require("@playwright/test");
 const path = require("path");
 
 const PORT = process.env.PORT || "8755";
+// Lets offline mode and request routing reach the service worker's own fetches in Chromium, so install.spec.js can
+// check the "you're offline" page. The worker only passes page loads through, so nothing else sees a difference.
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1";
 
 module.exports = defineConfig({
   testDir: "./browser",
