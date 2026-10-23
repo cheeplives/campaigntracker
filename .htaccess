@@ -34,6 +34,12 @@
   </FilesMatch>
 </IfModule>
 
+# --- Installable app ------------------------------------------------------
+# Older Apache builds don't know the manifest's extension.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
 # --- Don't serve secrets / SQL / docs / tooling / dotfiles -----------------
 <FilesMatch "^config\.php$">
   Require all denied

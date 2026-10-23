@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The favicon's crescent and star on a full-bleed panel, for the installed
+       app's icon: Android and ChromeOS crop it to a circle or squircle, so the
+       artwork sits inside the middle 80% (the maskable safe zone). -->
+  <defs>
+    <mask id="crescent">
+      <rect width="64" height="64" fill="#fff"/>
+      <circle cx="39" cy="27" r="15" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" fill="#211e17"/>
+  <g transform="translate(32 32) scale(0.72) translate(-32.5 -32.5)">
+    <circle cx="29" cy="34" r="19" fill="#d9a441" mask="url(#crescent)"/>
+    <path d="M46 12l2.4 6.6L55 21l-6.6 2.4L46 30l-2.4-6.6L37 21l6.6-2.4z" fill="#ece4d2"/>
+  </g>
+</svg>

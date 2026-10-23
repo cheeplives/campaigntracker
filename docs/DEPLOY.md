@@ -63,6 +63,13 @@ blocks the config, `db/`, `docs/`, `tests/`, `.claude/`, `.git` and `.md/.sql/.s
 needs `mod_rewrite`, `mod_headers` and `mod_alias`. On nginx, copy the rules from
 Sinless's DEPLOY.md and add `location ~ /(db|tests|docs|\.claude)/ { return 404; }`.
 
+### Installable app
+
+Chrome and Edge offer *Install app* only over HTTPS, which the `.htaccess` above
+already forces. `sw.js` must stay at the app's root (next to `index.html`) so it
+covers the whole app; nothing else needs setting up. It caches only
+`offline.html`, so deploys show up straight away as before.
+
 ### Pictures and files (Encyclopedia uploads)
 
 Uploaded pictures and files are kept **outside the web root** and only sent
@@ -102,6 +109,7 @@ curl -s https://www.discreteinfinity.com/chronicle/api/auth/me.php
 #   → {"error":"not_authenticated","providers":["google","github"]}
 curl -sI https://www.discreteinfinity.com/chronicle/tests/support/login.php   # → 404
 curl -sI https://www.discreteinfinity.com/chronicle/api/config.php            # → 403/404
+curl -sI https://www.discreteinfinity.com/chronicle/manifest.webmanifest      # → 200, application/manifest+json
 ```
 
 Then sign in with your `admin_identities` account, have a second account sign
