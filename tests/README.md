@@ -44,6 +44,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   full moons; Eberron's months all start on Sul, with its twelve moons and
   holidays; Exandria's 328-day year, seasons and holy days; Golarion's Leap
   Day, real-world-aligned weekdays and the last-Sunday Breaching Festival;
+  the Galactic Standard Calendar's 365-day year of five-day weeks that always
+  starts on Primeday, BBY/ABY years and festival weeks;
   every setting region has a Köppen climate; a GM starts a Forgotten Realms
   campaign with its holidays and regions, and About & sources cites all four.
 - **holidays**: the last and Nth-from-last weekday of a month, every Nth year,
@@ -118,7 +120,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;
   Determine shifts in the shifts-a-day box gives the whole shifts a trip needs, with terrain;
-  star pickers fill the light-years between two systems; the campaign's genre
+  star pickers fill the light-years between two systems; hyperspace multiplies a sample
+  trip's Class 1 time by the hyperdrive class and route; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions; a trip's From and To join
   the first and last days' Locations visited.

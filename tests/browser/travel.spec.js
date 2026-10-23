@@ -14,7 +14,7 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
 
   // A campaign with no genre saved keeps every mode.
   const mode = page.locator("select.travel-mode");
-  await expect(mode.locator("option")).toHaveCount(7);
+  await expect(mode.locator("option")).toHaveCount(8);
 
   // Each speed mode lists only its own samples, and the first one is filled in.
   const sample = page.getByLabel("Sample", { exact: true });
@@ -103,6 +103,17 @@ test("samples fill the planner, trips count shifts, and the genre limits the mod
   await expect(page.locator("select[name=unit]")).toHaveValue("mi");
   await expect(page.locator("input[name=distance]")).toHaveValue("239000");
   await units.selectOption("metric");
+
+  // Hyperspace: the sample trip's Class 1 time, times the drive's class and the route.
+  await mode.selectOption("hyperspace");
+  await expect(page.locator("input[name=base_hours]")).toHaveValue("96");
+  await page.getByLabel("Sample", { exact: true }).selectOption({ label: "Across a sector: 12.0 h" });
+  await expect(page.locator("input[name=base_hours]")).toHaveValue("12");
+  await page.locator("select[name=hyperdrive_class]").selectOption("0.5");
+  await page.locator("select[name=route]").selectOption("2");
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await expect(page.locator(".result h3")).toHaveText("Travel time: 12.0 h");
+  await expect(page.locator(".result")).toContainText("12.0 h at Class 1 × Class 0.5 drive × route ×2 = 12.0 h in hyperspace");
 
   // Fantasy: overland, sea and air, with no engines among the samples.
   await page.goto(`index.html#/c/${cid}/settings`);

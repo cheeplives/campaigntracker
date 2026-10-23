@@ -92,9 +92,29 @@ test("a GM starts a Forgotten Realms campaign, and About & sources cites the fou
   const aboutErrors = watchErrors(about);
   await about.goto("index.html#/about");
   const calendars = about.locator("section", { has: about.getByRole("heading", { name: "Calendars and holidays" }) });
-  for (const link of [/Calendar of Harptos/, /Galifar Calendar/, /Calendar of Exandria/, /Absalom Reckoning/]) {
+  for (const link of [/Calendar of Harptos/, /Galifar Calendar/, /Calendar of Exandria/, /Absalom Reckoning/, /Galactic standard calendar/]) {
     await expect(calendars.getByRole("link", { name: link })).toHaveAttribute("target", "_blank");
   }
   expectNoErrors(errors);
   expectNoErrors(aboutErrors);
+});
+
+test("Star Wars: the Galactic Standard Calendar's ten months, five-day weeks and festival weeks", () => {
+  const cal = calOf("galactic");
+  // 10 × 35 days and three five-day festival weeks: 365 days, exactly 73 weeks, so every year starts on Primeday
+  expect([-19, 0, 4].map(y => Engine.yearLength(cal, y))).toEqual([365, 365, 365]);
+  for (const y of [-19, 0, 4]) expect(cal.weekdays[Engine.weekday(cal, Engine.toAbs(cal, y, 0, 1))]).toBe("Primeday");
+  expect(Engine.fmtDate(cal, Engine.toAbs(cal, 0, 1, 1))).toBe("Primeday, Month 1, Day 1, 0 ABY");
+  expect(Engine.fmtDate(cal, Engine.toAbs(cal, -19, 4, 35))).toBe("Benduday, Month 4, Day 35, 19 BBY");
+  // the festival weeks keep the weekdays running
+  const life = Engine.toAbs(cal, 0, 7, 3);
+  expect(Engine.fmtDate(cal, life)).toBe("Taungsday, Festival of Life, Day 3, 0 ABY");
+  expect(names("galactic", cal, life)).toEqual(["Festival of Life"]);
+  expect(names("galactic", cal, Engine.toAbs(cal, 0, 11, 5))).toEqual(["Festival of Stars"]);
+  expect(cal.seasons).toEqual([]);
+  // worlds with Köppen climates, one starting region, plus a ship and open space for transit
+  const regions = Engine.PRESETS.galactic.regions;
+  expect(regions.filter(r => r.current).map(r => r.name)).toEqual(["Coruscant (Core Worlds)"]);
+  for (const r of regions.filter(r => r.settings.climate.startsWith("koppen:"))) expect(Engine.KOPPEN[r.settings.climate.slice(7)], r.name).toBeTruthy();
+  expect(regions.map(r => r.settings.climate)).toContain("ship");
 });
