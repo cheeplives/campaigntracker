@@ -94,7 +94,34 @@
     return html;
   }
 
-  const Sessions = { mark, parseJump, stampAt, draftHtml, sentence };
+  /** "Session 12: A Locked Box", or "Session 12" when it has no title. */
+  const name = s => `Session ${s.number}${s.title ? `: ${s.title}` : ''}`;
+  /** The in-game days a session covered, as text. */
+  function daysCovered(cal, s) {
+    const f = d => E.fmtDate(cal, d, { noWeekday: true });
+    if (s.last_day === null || s.last_day === undefined) return `${f(s.first_day)} onwards`;
+    return s.last_day === s.first_day ? f(s.first_day) : `${f(s.first_day)} to ${f(s.last_day)}`;
+  }
+  /** A session as a Markdown file, laid out like the day export: a # title, an italic byline, the summary and, when
+   * withNotes, the notes as a nested list. toMarkdown turns the summary's rich text into Markdown (RichText.toMarkdown
+   * in the browser). Only what the reader was sent goes in. */
+  function markdown({ cal, session, notes = [], gm = false, withNotes = false, toMarkdown }) {
+    const L = [`# ${name(session)}`, '',
+      `*${session.played_on ? `Played ${session.played_on} · ` : ''}${daysCovered(cal, session)}*`, ''];
+    const body = session.summary ? toMarkdown(session.summary) : '';
+    L.push(body || '*No summary written yet.*', '');
+    if (withNotes && notes.length) {
+      L.push('## Notes', '');
+      for (const n of notes) L.push(`${'   '.repeat(Number(n.depth) || 0)}- ${String(n.text).replace(/\s+/g, ' ')}`);
+      L.push('');
+    }
+    L.push(`*Exported from Campaign Chronicle · ${gm ? 'GM' : 'player'} view · ${new Date().toISOString().slice(0, 10)}*`);
+    return L.join('\n') + '\n';
+  }
+  /** "Session 12 - A Locked Box.md", without characters a file name can't hold. */
+  const fileName = s => `${`Session ${s.number}${s.title ? ` - ${s.title}` : ''}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()}.md`;
+
+  const Sessions = { mark, parseJump, stampAt, draftHtml, sentence, name, daysCovered, markdown, fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = Sessions;
   else root.Sessions = Sessions;
 })(typeof window !== 'undefined' ? window : globalThis);

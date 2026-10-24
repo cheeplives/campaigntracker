@@ -252,7 +252,15 @@ const RichText = (() => {
       }
       quill.setSelection(quill.getLength() - 1, 0, 'silent');
     }
-    return { node, value, insertText, ready: () => !!quill };
+    /** Put rich text (already cleaned, or built from escaped text) in the editor, in place of what's there or below it. */
+    function setHtml(html, append = false) {
+      if (!quill) { text = append && text ? `${text}${html}` : html; format = 'html'; return; }
+      const delta = quill.clipboard.convert({ html });
+      if (append && quill.getText().trim()) quill.updateContents({ ops: [{ retain: quill.getLength() }, ...delta.ops] }, 'user');
+      else quill.setContents(delta, 'user');
+      quill.setSelection(quill.getLength() - 1, 0, 'silent');
+    }
+    return { node, value, insertText, setHtml, ready: () => !!quill };
   }
 
   // ------------------------------------------------------------ @ mentions

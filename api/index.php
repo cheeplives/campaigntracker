@@ -2402,8 +2402,17 @@ try {
         $text = snote_text(p('text'));
         $depth = int_in(p('depth', 0), 0, 3);
         $at = int_in(p('abs_shift'));
+        $key = p('key') !== null ? (string)str_in(p('key'), 40) : null;
         db()->beginTransaction();
         $c = campaign_row($cid);
+        if ($key !== null) { // sent before, and the reply lost: the note that was saved then
+            $st = db()->prepare('SELECT * FROM session_notes WHERE campaign_id=? AND client_key=?');
+            $st->execute([$cid, $key]);
+            if ($n = $st->fetch()) {
+                db()->commit();
+                out(['ok' => true, 'note' => snote_out($n), 'session' => session_out(session_row($cid, (int)$n['session_id']), false, true)]);
+            }
+        }
         db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]); // one new session at a time
         if (p('session_id')) $s = session_row($cid, int_in(p('session_id'), 1), true, true);
         else {
@@ -2411,9 +2420,9 @@ try {
             if (!$s) $s = session_row($cid, session_create($cid, floordiv($at, slots_per_day(dec($c['calendar_json'])))));
             $s = session_row($cid, (int)$s['id'], true, true);
         }
-        db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, created_by)
-            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ? FROM session_notes WHERE session_id=?')
-            ->execute([$cid, $s['id'], $depth, $text, $at, me()['id'], $s['id']]);
+        db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, client_key, created_by)
+            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ?, ? FROM session_notes WHERE session_id=?')
+            ->execute([$cid, $s['id'], $depth, $text, $at, $key, me()['id'], $s['id']]);
         $nid = (int)db()->lastInsertId();
         db()->commit();
         out(['ok' => true, 'note' => snote_out(snote_row($cid, $nid)), 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);

@@ -2,7 +2,7 @@
 // Sessions tab with the summary written from them, Build draft, publishing to players and the Markdown export.
 // Players never get the notes, an unpublished session, or the summary's GM-only paragraphs.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, notNow } = require("./helpers");
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
@@ -66,6 +66,10 @@ test("a note can be changed, ticked, moved to another session or deleted, within
   expect((await add(page, cid, "x".repeat(1001))).status).toBe(400);
   expect((await add(page, cid, "deep", { depth: 4 })).status).toBe(400);
   expect((await add(page, cid, "   ")).status).toBe(400);
+  // the browser resends a note whose reply it never got: it is saved once
+  const k1 = await add(page, cid, "resent", { key: "abc123" }), k2 = await add(page, cid, "resent", { key: "abc123" });
+  expect(k2.json.note.id).toBe(k1.json.note.id);
+  await api(page, "snote_delete", { id: k1.json.note.id }, cid);
 
   // reorder: the second note first
   expect((await api(page, "snote_move", { id: b.json.note.id, position: 1 }, cid)).status).toBe(200);
@@ -254,4 +258,136 @@ test("on a phone the ⇥ and ⇤ buttons indent", async ({ page, browser, isMobi
   await box(page).getByRole("button", { name: "Indent", exact: true }).click();
   await type(page, "Under it");
   await expect(box(page).locator(".snote").nth(1)).toHaveClass(/snote-d1/);
+});
+
+// ---------------------------------------------------------------- the Sessions tab
+async function sessionWithNotes(page, cid) {
+  const first = await add(page, cid, "Sensor set off on approach to Jupiter");
+  const sid = first.json.session.id;
+  for (const [text, depth] of [["Listening Station - comm relay satellite", 1], ["edited data to remove Tevari", 2], ["! +2 Sensor Roll", 0], ["? Who is Essen", 0]])
+    await add(page, cid, text, { depth });
+  return sid;
+}
+const draftText = "Sensor set off on approach to Jupiter. Listening Station - comm relay satellite. Edited data to remove Tevari.";
+
+test("a session's page: notes beside the summary, Build draft ticks what it used, and the summary saves", async ({ page, browser, isMobile }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Sessions tab");
+  const sid = await sessionWithNotes(page, cid);
+  await page.goto(`index.html#/c/${cid}/sessions`);
+  await expect(page.locator(".tabs a.on")).toHaveText("Sessions");
+  const tabs = await page.locator(".tabs a").allTextContents();
+  expect(tabs.indexOf("Sessions")).toBe(tabs.indexOf("Events") + 1);
+  await expect(page.locator(".sess-item")).toHaveCount(1);
+  await expect(page.locator(".sess-item")).toContainText("Session 1");
+  await page.locator(".sess-item").click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/sessions/${sid}$`));
+
+  const notesCol = page.locator(".sess-notes"), summary = page.locator(".sess-summary .ql-editor");
+  await expect(notesCol.locator(".snote")).toHaveCount(5);
+  await expect(notesCol.locator("h3")).toContainText("0 of 5 covered");
+  if (isMobile) await page.getByRole("button", { name: "Summary", exact: true }).click(); // a phone shows one column at a time
+  await expect(summary).toBeVisible();
+  await page.getByRole("button", { name: "Build draft", exact: true }).click();
+  await expect(summary.locator("p").first()).toHaveText(draftText);
+  await expect(summary.locator("aside")).toHaveText("Loose ends: Who is Essen");
+  await expect(notesCol.locator("h3")).toContainText("4 of 5 covered"); // everything but the ! line
+
+  // a second draft asks before touching what's there
+  await page.getByRole("button", { name: "Build draft", exact: true }).click();
+  await page.locator("dialog").getByRole("button", { name: "Add below" }).click();
+  await expect(summary.locator("p", { hasText: draftText })).toHaveCount(2);
+  await page.getByRole("button", { name: "Build draft", exact: true }).click();
+  await page.locator("dialog").getByRole("button", { name: "Replace" }).click();
+  await expect(summary.locator("p", { hasText: draftText })).toHaveCount(1);
+
+  await summary.locator("p").first().click();
+  await summary.press("End");
+  await summary.pressSequentially(" Hera handled the rest.");
+  await page.getByRole("button", { name: "Save summary" }).click();
+  await expect(page.getByText("Summary saved")).toBeVisible();
+  await notNow(page); // the summary names Jupiter and Tevari: the Proper Noun Detector offers them
+  const saved = (await one(page, cid, sid)).json.session.summary;
+  expect(saved).toContain("Hera handled the rest.");
+  expect(saved).toContain("<aside>Loose ends: Who is Essen</aside>");
+
+  // a save from a page opened before someone else's save is refused
+  await api(page, "session_summary_save", { id: sid, version: (await one(page, cid, sid)).json.session.version, summary: "<p>Elsewhere</p>" }, cid);
+  await summary.pressSequentially(" More.");
+  await page.getByRole("button", { name: "Save summary" }).click();
+  await expect(page.locator("#toast")).toContainText("saved somewhere else");
+
+  // title, date played and publishing
+  await page.getByLabel("Title").fill("A Locked Box");
+  await page.getByLabel("Played on").fill("2024-06-24");
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.locator(".sess-detail h2")).toContainText("Session 1: A Locked Box");
+  expect((await one(page, cid, sid)).json.session).toMatchObject({ title: "A Locked Box", played_on: "2024-06-24", is_published: false });
+  expectNoErrors(errors.filter(e => !/409/.test(e)));
+});
+
+test("a published session is the player's to read and export; notes move between sessions; a session deletes", async ({ page, browser }) => {
+  const { cid, pp } = await gmAndPlayer(page, browser, "Sessions publish");
+  await api(page, "entry_save", { name: "Tevari" }, cid);
+  const sid = await sessionWithNotes(page, cid);
+  const v = (await one(page, cid, sid)).json.session.version;
+  await api(page, "session_summary_save", { id: sid, version: v, summary: `<p>${draftText}</p><aside>Loose ends: Who is Essen</aside>` }, cid);
+  await api(page, "session_save", { id: sid, title: "A Locked Box", played_on: "2024-06-24" }, cid);
+
+  await pp.goto(`index.html#/c/${cid}/sessions`);
+  await expect(pp.locator(".sess-item")).toHaveCount(0);
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await page.getByLabel("Published").check();
+  await expect(page.getByText("Published for players")).toBeVisible();
+
+  await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(pp.locator(".sess-detail h2")).toContainText("Session 1: A Locked Box");
+  await expect(pp.locator(".sess-detail .richtext a.enc-link")).toHaveText("Tevari");
+  await expect(pp.locator(".sess-detail")).not.toContainText("Loose ends");
+  await expect(pp.locator(".sess-notes")).toHaveCount(0);
+  const [dl] = await Promise.all([pp.waitForEvent("download"), pp.getByRole("button", { name: /Export/ }).click()]);
+  expect(dl.suggestedFilename()).toBe("Session 1 - A Locked Box.md");
+  const md = require("fs").readFileSync(await dl.path(), "utf8");
+  expect(md.startsWith("# Session 1: A Locked Box\n")).toBe(true);
+  expect(md).toContain(draftText);
+  expect(md).not.toContain("Essen");
+
+  // the GM's export can take the notes as a list
+  await page.getByLabel("Include notes").check();
+  const [gdl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Export/ }).click()]);
+  const gmd = require("fs").readFileSync(await gdl.path(), "utf8");
+  expect(gmd).toContain("GM only: Loose ends: Who is Essen");
+  expect(gmd).toMatch(/## Notes\n\n- Sensor set off on approach to Jupiter\n   - Listening Station - comm relay satellite\n      - edited data to remove Tevari/);
+
+  // the player finds the summary in Search, but not the notes
+  await pp.goto(`index.html#/c/${cid}/search?q=Listening`);
+  await expect(pp.locator(".search-group", { hasText: "Sessions" })).toContainText("A Locked Box");
+  await pp.goto(`index.html#/c/${cid}/search?q=Sensor+Roll`);
+  await expect(pp.getByText("Nothing in the campaign matches every word.")).toBeVisible();
+
+  // move a note to a second session, then delete that session
+  await api(page, "session_end", {}, cid);
+  const other = (await add(page, cid, "Took a quick job to Europa")).json.session.id;
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await page.reload(); // the page was already open there: load the new session into its Move to list
+  await page.locator(".sess-notes .snote").first().getByLabel("Move to another session").selectOption(String(other));
+  await expect(page.locator(".sess-notes .snote")).toHaveCount(4);
+  expect((await one(page, cid, other)).json.notes.map(n => n.text)).toEqual(["Took a quick job to Europa", "Sensor set off on approach to Jupiter"]);
+  await page.goto(`index.html#/c/${cid}/sessions/${other}`);
+  await page.getByRole("button", { name: "Delete session" }).click();
+  await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/sessions$`));
+  await expect(page.locator(".sess-item")).toHaveCount(1);
+});
+
+test("on a phone a session's notes and summary are two tabs", async ({ page, browser, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  const { cid } = await gmAndPlayer(page, browser, "Sessions phone");
+  const sid = await sessionWithNotes(page, cid);
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(page.locator(".sess-notes")).toBeVisible();
+  await expect(page.locator(".sess-summary")).toBeHidden();
+  await page.getByRole("button", { name: "Summary", exact: true }).click();
+  await expect(page.locator(".sess-summary")).toBeVisible();
+  await expect(page.locator(".sess-notes")).toBeHidden();
 });

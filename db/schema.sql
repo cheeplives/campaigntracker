@@ -478,10 +478,12 @@ CREATE TABLE IF NOT EXISTS session_notes (
   text VARCHAR(1000) NOT NULL,
   abs_shift BIGINT NOT NULL,
   is_covered TINYINT(1) NOT NULL DEFAULT 0,
+  client_key VARCHAR(40) NULL,                  -- the browser's name for a note it sends, so a resend after a lost reply saves it once
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY ix_snote_session (session_id, position),
+  UNIQUE KEY uq_snote_client (campaign_id, client_key),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

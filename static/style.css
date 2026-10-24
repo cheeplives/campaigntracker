@@ -819,7 +819,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 /* Session notes: the GM's quick notes during play (Current Day) and on a session's page */
 .snotes { display: flex; flex-direction: column; gap: 2px; max-height: 26em; overflow-y: auto; }
 .snote { display: flex; align-items: baseline; gap: 6px; padding: 2px 4px; border-radius: 4px; }
-.snote:hover, .snote:focus-within { background: var(--panel2, rgba(127, 127, 127, .08)); }
+.snote:hover, .snote:focus-within { background: var(--panel-2); }
 .snote-d1 { padding-left: 1.6em; } .snote-d2 { padding-left: 3.2em; } .snote-d3 { padding-left: 4.8em; }
 .snote-text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: text; }
 .snote.covered .snote-text { opacity: .65; }
@@ -829,14 +829,26 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { opacity: 1; }
 .snote-tools select { font-size: .8em; padding: 0 2px; min-height: 0; }
 .snote-unsaved { opacity: .7; font-style: italic; }
-.snote-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line, currentColor); font-size: .9em; }
+.snote-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .9em; }
 .snote-jump-at { font-weight: 700; color: var(--accent); }
 .snote-input { display: flex; gap: 6px; align-items: center; position: relative; }
 .snote-input input { flex: 1; min-width: 0; }
 .snote-input[data-depth="1"] input { margin-left: 1.6em; } .snote-input[data-depth="2"] input { margin-left: 3.2em; } .snote-input[data-depth="3"] input { margin-left: 4.8em; }
 .snote-phone { display: none; }
 .snote-err:empty { display: none; }
-.snote-err { color: var(--bad, #b33); margin: 0; }
+.snote-err { color: var(--bad); margin: 0; }
 .snote-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
 .snote-help dd { margin: 0; }
 @media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { opacity: 1; } }
+.sess-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.sess-fields .field { max-width: 28em; }
+.sess-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+.sess-cols h3 { margin: 0 0 6px; }
+.sess-cols .snotes { max-height: 70vh; }
+.sess-tabs { display: none; grid-column: 1 / -1; }
+.sess-open { margin-left: 6px; font-size: .75em; background: var(--accent); color: var(--on-accent); }
+@media (max-width: 720px) {
+  .sess-cols { grid-template-columns: minmax(0, 1fr); }
+  .sess-tabs { display: flex; }
+  .sess-cols[data-show="notes"] .sess-summary, .sess-cols[data-show="summary"] .sess-notes { display: none; }
+}

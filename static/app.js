@@ -61,7 +61,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '16';
+  const APP_VERSION = '17';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -875,7 +875,7 @@
   // ------------------------------------------------------------ campaign shell
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
-    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events']]],
+    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
     ['Party', 'What the party does and owns: journeys, rests and holdings', [['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']]],
@@ -884,6 +884,7 @@
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list: search it and filter it by tag',
+    sessions: 'Each game night\'s quick notes and the summary written from them',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -1530,7 +1531,7 @@
       try {
         for (let p = pendingNotes()[0]; p; p = pendingNotes()[0]) {
           let r;
-          try { r = await post('snote_add', { text: p.text, depth: p.depth, abs_shift: p.abs_shift }, cid); } catch (e) {
+          try { r = await post('snote_add', { key: p.key, text: p.text, depth: p.depth, abs_shift: p.abs_shift }, cid); } catch (e) {
             if (e instanceof TypeError) break;              // no connection: try again later
             toast(e.message, true);                        // refused (too long, say): drop it rather than retry forever
           }
@@ -1554,7 +1555,7 @@
         if (at === null) { err.textContent = 'Couldn\'t read that jump; try >+1, >dusk or >12 Firstmonth'; return; }
       }
       err.textContent = '';
-      setPending([...pendingNotes(), { key: `${Date.now()}-${Math.random()}`, text, depth, abs_shift: at }]);
+      setPending([...pendingNotes(), { key: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`, text, depth, abs_shift: at }]);
       input.value = '';
       draw();
       flush();
@@ -2198,6 +2199,7 @@
       holding: [`Party Holdings: ${s.title}`, `#/c/${S.camp.id}/holdings`], storage: [`Party Holdings: ${s.title} storage`, `#/c/${S.camp.id}/holdings`],
       gear: ['Party Holdings: Gear and Loot', `#/c/${S.camp.id}/holdings`], funds: ['Party Holdings: Party Funds', `#/c/${S.camp.id}/holdings`],
       tome: [`Library: ${s.title}`, `#/c/${S.camp.id}/library/${s.id}`],
+      session: [`Sessions: ${s.title}`, `#/c/${S.camp.id}/sessions/${s.id}`], session_note: [`Sessions: ${s.title} (notes)`, `#/c/${S.camp.id}/sessions/${s.id}`],
     })[s.kind] || [s.kind, day];
   }
   /** The campaign's text for the detector: event, reminder and downtime titles, and short boxes like a holding's name, read as titles. */
@@ -2976,6 +2978,149 @@
       } catch (err) { toast(err.message, true); save.disabled = false; }
     });
     return f;
+  }
+
+  // ------------------------------------------------------------ sessions tab
+  /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
+   * from them, with Build draft; for players the published summary. */
+  async function viewSessions(sel) {
+    const cid = S.camp.id;
+    if (!S.sessionsReady) {
+      return mount(...campaignHeader('sessions'), el('div', { class: 'card' }, el('h2', {}, 'Sessions'),
+        el('p', {}, isGM() ? 'Sessions need a database upgrade first: open install.php on the server and press Install or upgrade.'
+          : 'Sessions aren\'t set up on this server yet. Ask whoever runs it to open install.php.')));
+    }
+    const [{ sessions }, one] = await Promise.all([api('sessions', { query: { cid } }),
+      sel ? api('session', { query: { cid, id: sel } }).catch(() => null) : null]);
+    const href = id => `#/c/${cid}/sessions${id ? `/${id}` : ''}`;
+    const item = x => el('a', { class: 'enc-item sess-item' + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
+      el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'The open session: notes typed on Current Day go here' }, 'open') : null),
+      el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
+        isGM() ? `${x.covered} of ${x.notes} notes covered` : null, isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
+    const add = isGM() ? btn('+ Session', busy(null, async () => {
+      const r = await post('session_save', {}, cid);
+      S.openSession = r.session;
+      location.hash = href(r.session.id);
+    }), 'primary small', 'Start a session by hand, on the campaign\'s current day. Typing a note on Current Day starts one too') : null;
+    const left = el('section', { class: 'card enc-index' },
+      el('div', { class: 'row spread' }, el('h2', {}, 'Sessions', tip(isGM()
+        ? 'Each game night: your quick notes from the Session notes box on Current Day, and the summary you write from them. Players read a summary once you publish it'
+        : 'A summary of each game night, as the GM writes it up')), add),
+      el('div', { class: 'lib-list' }, sessions.length ? sessions.map(item)
+        : el('p', { class: 'muted small' }, isGM() ? 'No sessions yet. Type a note in the Session notes box on Current Day and one starts.' : 'No session summaries published yet.')));
+    const right = el('section', { class: 'card enc-detail sess-detail' });
+    if (sel && !one) right.append(el('p', { class: 'muted' }, 'That session isn\'t here any more.'));
+    else if (!one) right.append(el('p', { class: 'muted' }, sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.'));
+    else right.append(...sessionPage(one.session, one.notes || [], sessions));
+    mount(...campaignHeader('sessions'), el('div', { class: 'enc-page' + (sel ? ' has-sel' : '') }, left, right));
+  }
+
+  function sessionPage(s, notes, sessions) {
+    const cid = S.camp.id, gm = isGM();
+    const withNotes = gm ? el('input', { type: 'checkbox' }) : null;
+    const exportBtn = btn('⬇ Export', () => {
+      const md = Sessions.markdown({ cal: cal(), session: { ...s, summary: gm ? editor.value().text : s.summary }, notes, gm,
+        withNotes: !!withNotes?.checked, toMarkdown: RichText.toMarkdown });
+      const a = el('a', { href: URL.createObjectURL(new Blob([md], { type: 'text/markdown' })), download: Sessions.fileName(s) });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    }, 'small', 'Download this session as a Markdown file to paste into Scabard or another wiki. It holds only what you can see here');
+    const head = [el('h2', {}, sessionName(s)),
+      el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
+    if (!gm) {
+      return [...head, el('div', { class: 'row' }, exportBtn),
+        el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.'))];
+    }
+
+    // --- details: title, date played, publishing, open or ended
+    const title = el('input', { value: s.title, maxlength: 200, placeholder: `Session ${s.number}` });
+    const played = el('input', { type: 'date', value: s.played_on || '' });
+    const saveDetails = btn('Save details', busy(null, async () => {
+      await post('session_save', { id: s.id, title: title.value, played_on: played.value || null }, cid);
+      toast('Session saved'); route();
+    }), 'small', 'Save the title and the date you played');
+    const pub = el('input', { type: 'checkbox', checked: s.is_published,
+      onchange: async ev => {
+        try {
+          await post('session_save', { id: s.id, is_published: ev.target.checked }, cid);
+          s.is_published = ev.target.checked;
+          toast(s.is_published ? 'Published for players' : 'Hidden from players again');
+        } catch (err) { ev.target.checked = !ev.target.checked; toast(err.message, true); }
+      } });
+    const openClose = s.last_day === null
+      ? btn('End session', busy(null, async () => { await post('session_end', { id: s.id }, cid); S.openSession = null; route(); }), 'small', 'Close this session at the campaign\'s current day. The next note on Current Day starts a new one')
+      : btn('Reopen', busy(null, async () => { const r = await post('session_save', { id: s.id, reopen: true }, cid); S.openSession = r.session; route(); }), 'small',
+        'Make this the open session again, so notes typed on Current Day go to it. Any other open session ends');
+    const del = btn('Delete session', async () => {
+      if (!await confirmDialog(`Delete ${sessionName(s)} with its notes and summary?`, { ok: 'Delete', danger: true })) return;
+      try {
+        await post('session_delete', { id: s.id }, cid);
+        if (S.openSession?.id === s.id) S.openSession = null;
+        location.hash = `#/c/${cid}/sessions`;
+      } catch (err) { toast(err.message, true); }
+    }, 'small danger', 'Delete this session, its notes and its summary');
+    const details = el('div', { class: 'sess-fields' },
+      field('Title', title), field('Played on', played, null, 'The real-world date of the game night'),
+      el('div', { class: 'row' }, saveDetails, openClose),
+      el('div', { class: 'row' },
+        el('label', { class: 'inline', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
+        exportBtn, el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes'), del));
+
+    // --- the notes, each ticked once the summary covers it
+    const notesHead = el('h3', {});
+    const notesList = el('div', { class: 'snotes' });
+    const others = sessions.filter(x => x.id !== s.id);
+    const opts = { onChange: () => reloadNotes(), notes: () => notes, tick: true, move: others, onTick: () => countNotes() };
+    const countable = () => notes.filter(n => Sessions.mark(n.text) !== '>');
+    const countNotes = () => notesHead.replaceChildren('Notes ', el('span', { class: 'muted small' }, `${countable().filter(n => n.is_covered).length} of ${countable().length} covered`),
+      tip('Your notes from the game. Tick one once the summary covers it, so you can see what\'s left. Build draft ticks the ones it uses'));
+    const drawNotes = () => {
+      countNotes();
+      notesList.replaceChildren(...(notes.length ? notes.map(n => snoteRow(n, opts)) : [el('p', { class: 'muted small' }, 'No notes in this session.')]));
+    };
+    async function reloadNotes() {
+      try { notes = (await api('session', { query: { cid, id: s.id } })).notes || []; } catch (err) { toast(err.message, true); }
+      drawNotes();
+    }
+    drawNotes();
+
+    // --- the summary
+    const editor = RichText.editor({ text: s.summary || '', format: 'html', label: 'Summary', placeholder: 'What happened this session, for the players to read',
+      secret: true, mentions: encMentions() });
+    editor.node.classList.add('rt-tall');
+    const draft = btn('Build draft', async () => {
+      const html = Sessions.draftHtml(cal(), notes);
+      if (!html) return toast('Nothing to draft: every note is a ! aside or a time jump', true);
+      let append = false;
+      if (editor.value().text) {
+        const v = await KIT.dialog({ message: 'The summary already has writing in it. Replace it with the draft, or add the draft below it?', buttons: [
+          { value: 'add', label: 'Add below', cls: 'primary', focus: true }, { value: 'replace', label: 'Replace', cls: 'danger' }, { value: '', label: 'Cancel' }] });
+        if (!v) return;
+        append = v === 'add';
+      }
+      editor.setHtml(html, append);
+      for (const n of notes) {
+        const k = Sessions.mark(n.text);
+        if (k === '!' || k === '>' || n.is_covered) continue;
+        try { await post('snote_save', { id: n.id, is_covered: true }, cid); n.is_covered = true; } catch (err) { toast(err.message, true); break; }
+      }
+      drawNotes();
+    }, 'small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out and ? lines listed GM only at the end. Then rewrite it as you like');
+    const save = btn('Save summary', null, 'primary small', 'Save the summary. Players read it once the session is published');
+    save.addEventListener('click', busy(save, async () => {
+      const r = await post('session_summary_save', { id: s.id, version: s.version, summary: editor.value().text }, cid);
+      s.version = r.session.version; s.summary = r.session.summary;
+      toast('Summary saved');
+      offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` }]);
+    }));
+
+    const cols = el('div', { class: 'sess-cols', 'data-show': 'notes' });
+    const tabBtn = (key, label) => btn(label, () => { cols.dataset.show = key; }, 'small', `Show the ${label.toLowerCase()}`);
+    cols.append(el('div', { class: 'sess-tabs row' }, tabBtn('notes', 'Notes'), tabBtn('summary', 'Summary')),
+      el('div', { class: 'sess-notes' }, notesHead, notesList),
+      el('div', { class: 'sess-summary' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
+        editor.node, el('div', { class: 'row' }, draft, save)));
+    return [...head, details, cols];
   }
 
   // ------------------------------------------------------------ travel tab
@@ -4637,8 +4782,8 @@
   // ------------------------------------------------------------ search page
   // Which heading each kind of text from encyclopedia_sources goes under. Encyclopedia entries and events come from their
   // own lists instead, which also carry their aliases and tags.
-  const SEARCH_GROUPS = [['entry', 'Encyclopedia'], ['day', 'Days and events'], ['tome', 'Library'], ['holding', 'Party Holdings'], ['downtime', 'Downtime']];
-  const searchGroupOf = kind => (kind.startsWith('downtime') ? 'downtime' : ['holding', 'storage', 'gear', 'funds'].includes(kind) ? 'holding'
+  const SEARCH_GROUPS = [['entry', 'Encyclopedia'], ['day', 'Days and events'], ['session', 'Sessions'], ['tome', 'Library'], ['holding', 'Party Holdings'], ['downtime', 'Downtime']];
+  const searchGroupOf = kind => (kind.startsWith('downtime') ? 'downtime' : kind.startsWith('session') ? 'session' : ['holding', 'storage', 'gear', 'funds'].includes(kind) ? 'holding'
     : kind === 'tome' ? 'tome' : 'day');
 
   /** The Search page: everything in the campaign this member may read, matched on every word typed. The server sends a
@@ -4669,7 +4814,7 @@
       if (['entry', 'entry_gm_notes', 'event', 'event_note'].includes(s.kind)) continue;
       const [label, href] = sourceLabel(s), group = searchGroupOf(s.kind);
       // under its own heading a tome or holding needs no "Library: " in front, and its name isn't repeated as its text
-      const it = item(label, group, label.replace(/^(Library|Party Holdings): /, ''), href, s.abs_day ?? Infinity);
+      const it = item(label, group, label.replace(/^(Library|Party Holdings|Sessions): /, ''), href, s.abs_day ?? Infinity);
       let text = Nouns.plain(s.text, s.format);
       if (s.short && s.title && text.startsWith(s.title)) text = text.slice(s.title.length);
       it.segs.push({ text, secret: !!s.secret });
@@ -4739,6 +4884,7 @@
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
+        else if (tab === 'sessions') await viewSessions(parts[3]);
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
