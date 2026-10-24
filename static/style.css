@@ -641,8 +641,14 @@ a.enc-link.secret { text-decoration-color: var(--secret); }
 .enc-ignored summary { cursor: pointer; color: var(--dim); }
 .enc-ignored-list { display: flex; flex-wrap: wrap; gap: 4px; }
 .enc-ignored-word { background: var(--panel-2); border-radius: 99px; padding: 1px 4px 1px 10px; font-size: .85rem; }
+/* Wide list: the list takes the room and lays its entries out in columns, the entry narrows beside it */
+.enc-page.wide { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
+.enc-page.wide .enc-lists > section { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 8px; align-content: start; }
+.enc-page.wide .enc-lists > section > :not(.enc-item) { grid-column: 1 / -1; }
+.enc-page.wide .enc-detail h2 { font-size: 1.9rem; }
 @media (max-width: 900px) {
-  .enc-page { grid-template-columns: 1fr; }
+  .enc-page, .enc-page.wide { grid-template-columns: 1fr; }
+  .enc-widebtn { display: none; } /* one column already: nothing to swap */
   .enc-page.has-sel .enc-detail { order: -1; } /* the entry picked comes first, the list after it */
 }
 
