@@ -277,18 +277,23 @@ test("a note typed offline waits in the box, survives a reload and is saved once
   expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["Online note", "Typed with no signal"]);
 });
 
-test("a note the server can't take right now (signed out, a deploy, an error page) waits instead of being lost", async ({ page, browser }) => {
-  const { cid } = await gmAndPlayer(page, browser, "Notes errors");
-  await page.goto(`index.html#/c/${cid}`);
-  await type(page, "First");
-  await page.route(/a=snote_add/, r => r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Down for maintenance</h1>" }));
-  await type(page, "During the deploy", false);
-  await expect(box(page).locator(".snote-unsaved")).toContainText("During the deploy");
-  await page.unroute(/a=snote_add/);
-  await page.reload();
-  await expect(box(page).locator(".snote")).toHaveCount(2);
-  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
-  expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["First", "During the deploy"]);
+// The service worker would see the page's requests first, and in WebKit page.route() then never fakes them.
+test.describe("an error page", () => {
+  test.use({ serviceWorkers: "block" });
+
+  test("a note the server can't take right now (signed out, a deploy, an error page) waits instead of being lost", async ({ page, browser }) => {
+    const { cid } = await gmAndPlayer(page, browser, "Notes errors");
+    await page.goto(`index.html#/c/${cid}`);
+    await type(page, "First");
+    await page.route(/a=snote_add/, r => r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Down for maintenance</h1>" }));
+    await type(page, "During the deploy", false);
+    await expect(box(page).locator(".snote-unsaved")).toContainText("During the deploy");
+    await page.unroute(/a=snote_add/);
+    await page.reload();
+    await expect(box(page).locator(".snote")).toHaveCount(2);
+    await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
+    expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["First", "During the deploy"]);
+  });
 });
 
 test("a note takes a jump typed in another tab", async ({ page, browser }) => {
@@ -320,7 +325,7 @@ async function sessionWithNotes(page, cid) {
 }
 const draftText = "Sensor set off on approach to Jupiter. Listening Station - comm relay satellite. Edited data to remove Tevari.";
 
-test("a session's page: notes beside the summary, Build draft ticks what it used, and the summary saves", async ({ page, browser, isMobile }) => {
+test("a session's page: notes beside the summary, Build draft ticks what it used, and the summary saves", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid } = await gmAndPlayer(page, browser, "Sessions tab");
   const sid = await sessionWithNotes(page, cid);
@@ -336,7 +341,8 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   const notesCol = page.locator(".sess-notes"), summary = page.locator(".sess-summary .ql-editor");
   await expect(notesCol.locator(".snote")).toHaveCount(5);
   await expect(notesCol.locator("h3")).toContainText("0 of 5 covered");
-  if (isMobile) await page.getByRole("button", { name: "Summary", exact: true }).click(); // a phone shows one column at a time
+  const narrow = page.viewportSize().width <= 720; // a phone shows one column at a time
+  if (narrow) await page.getByRole("button", { name: "Summary", exact: true }).click();
   await expect(summary).toBeVisible();
   await page.getByRole("button", { name: "Build draft", exact: true }).click();
   await expect(summary.locator("p").first()).toHaveText(draftText);
@@ -431,8 +437,8 @@ test("a published session is the player's to read and export; notes move between
   await expect(page.locator(".sess-item")).toHaveCount(1);
 });
 
-test("on a phone a session's notes and summary are two tabs", async ({ page, browser, isMobile }) => {
-  test.skip(!isMobile, "phone layout");
+test("on a phone a session's notes and summary are two tabs", async ({ page, browser }) => {
+  test.skip(page.viewportSize().width > 720, "phone layout; a tablet shows both columns");
   const { cid } = await gmAndPlayer(page, browser, "Sessions phone");
   const sid = await sessionWithNotes(page, cid);
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
