@@ -174,6 +174,8 @@ button.on { background: var(--accent); color: var(--on-accent); }
 /* the Legend's group headings: across the top they are just a thin divider between groups (none before the first) */
 .tab-group { flex: none; align-self: stretch; width: 1px; margin: 6px 4px 4px; overflow: hidden; font-size: 0; background: var(--line); }
 .tab-group:first-of-type { display: none; }
+/* only the Legend folds its groups: across the top every tab shows */
+.tab-group button { display: none; }
 /* the search box: at the end of the tabs across the top, under the Legend's heading down the left, and a 🔍 tab on phones */
 .tab-search { order: 99; margin: 0 8px 0 auto; align-self: center; padding-bottom: 3px; }
 .tab-search input { width: 190px; padding: 4px 8px; }
@@ -193,9 +195,16 @@ button.on { background: var(--accent); color: var(--on-accent); }
   /* the heading over a tapered rule; the rule is ::after moved up under it */
   main > nav.tabs::before { content: 'Legend'; order: -2; padding: 10px 14px 4px; font: 700 1.35rem var(--disp); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
   main > nav.tabs::after { content: ''; order: -1; flex: none; height: 5px; margin: 0 14px 8px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
-  main > nav.tabs .tab-group { display: block; width: auto; margin: 0; padding: 12px 14px 3px; background: none; overflow: visible; cursor: default;
+  main > nav.tabs .tab-group { display: block; width: auto; margin: 0; padding: 12px 14px 3px; background: none; overflow: visible;
     font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
   main > nav.tabs .tab-group:first-of-type { padding-top: 0; }
+  main > nav.tabs .tab-group button { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; background: none; border: 0; border-radius: 0;
+    font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit; text-align: left; cursor: pointer; }
+  main > nav.tabs .tab-group button:hover { color: var(--text); }
+  .tab-group-caret::before { content: '▼'; display: inline-block; font-size: .75em; transition: transform .15s; }
+  .tab-group.folded .tab-group-caret::before { transform: rotate(-90deg); }
+  /* a folded group still shows the open page's tab, so you can see where you are */
+  main > nav.tabs a.folded:not(.on) { display: none; }
   main > nav.tabs .tab-search { order: 0; margin: 0 14px 6px; align-self: stretch; padding: 0; }
   main > nav.tabs .tab-search input { width: 100%; }
   main > nav.tabs a { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border: 0; border-radius: 0; background: none; }

@@ -96,3 +96,43 @@ test("the Legend groups its tabs under Play, Party, World and Setup", async ({ p
   else expect((await heading.boundingBox()).width).toBeLessThanOrEqual(2);
   expectNoErrors(errors);
 });
+
+test("the Legend's groups fold, Setup starts folded, and they stay as left", async ({ page, browser, viewport }) => {
+  const errors = watchErrors(page);
+  const cid = await gmCampaign(page, browser, "Fold");
+  await page.goto(`index.html#/c/${cid}/today`);
+  const tab = name => page.locator("nav.tabs a", { hasText: name });
+  if (viewport.width <= 1000) {
+    // across the top nothing folds: every tab is there
+    await expect(tab("Settings")).toHaveCount(1);
+    if (viewport.width > 560) await expect(tab("Settings")).toBeVisible();
+    await expect(page.locator(".tab-group button").first()).toBeHidden();
+    expectNoErrors(errors);
+    return;
+  }
+  const toggle = g => page.locator("nav.tabs .tab-group button", { hasText: g });
+  await expect(tab("Calendar")).toBeVisible();
+  await expect(tab("Regions")).toBeHidden();
+  await expect(toggle("Setup")).toHaveAttribute("aria-expanded", "false");
+  await toggle("Setup").click();
+  await expect(tab("Regions")).toBeVisible();
+  await toggle("Play").click();
+  await expect(toggle("Play")).toHaveAttribute("aria-expanded", "false");
+  // the open page's tab stays in view in a folded group
+  await expect(tab("Current Day")).toBeVisible();
+  await expect(tab("Calendar")).toBeHidden();
+  // remembered after a reload, and on another page
+  await page.reload();
+  await expect(tab("Regions")).toBeVisible();
+  await expect(tab("Current Day")).toBeVisible();
+  await expect(tab("Events")).toBeHidden();
+  await tab("Encyclopedia").click();
+  await expect(tab("Current Day")).toBeHidden();
+  await expect(tab("Regions")).toBeVisible();
+  await toggle("Setup").click();
+  await expect(tab("Regions")).toBeHidden();
+  await page.goto(`index.html#/c/${cid}/settings`);
+  await expect(tab("Settings")).toBeVisible();
+  await expect(tab("Regions")).toBeHidden();
+  expectNoErrors(errors);
+});

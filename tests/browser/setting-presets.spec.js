@@ -83,6 +83,9 @@ test("a GM starts a Forgotten Realms campaign, and About & sources cites the fou
   const { json } = await api(page, "campaign", undefined, cid);
   expect(json.campaign.calendar.name).toBe("Calendar of Harptos");
   expect(json.campaign.calendar.months.filter(m => !m.intercalary)).toHaveLength(12);
+  // the Legend's Setup group starts folded
+  const setup = page.locator("nav.tabs .tab-group button", { hasText: "Setup" });
+  if (await setup.isVisible()) await setup.click();
   await page.getByRole("navigation").getByRole("link", { name: "Holidays", exact: true }).click();
   await expect(page.getByText("Shieldmeet").first()).toBeVisible();
   await page.getByRole("navigation").getByRole("link", { name: "Regions", exact: true }).click();
