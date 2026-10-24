@@ -405,11 +405,23 @@ CREATE TABLE IF NOT EXISTS attachments (
   stored_name CHAR(32) NOT NULL,                    -- the file's name on disk: 32 random hex characters
   original_name VARCHAR(200) NOT NULL,              -- as uploaded, for the download
   mime VARCHAR(100) NOT NULL,                       -- worked out from the file's contents, never taken from the browser
-  kind VARCHAR(8) NOT NULL DEFAULT 'file',          -- 'image' (shown on the page) or 'file' (downloaded)
+  kind VARCHAR(8) NOT NULL DEFAULT 'file',          -- 'image' (shown on the page), 'file' (downloaded) or 'embed' (shown from DeviantArt)
   size_bytes INT UNSIGNED NOT NULL,
   width SMALLINT UNSIGNED NULL,
   height SMALLINT UNSIGNED NULL,
   caption VARCHAR(200) NULL,
+  -- Where a picture found with Find Image came from (see db/migrations/017_attachment_credits.sql); empty for uploads.
+  credit_title VARCHAR(200) NULL,
+  credit_author VARCHAR(200) NULL,
+  credit_author_url VARCHAR(500) NULL,
+  credit_license VARCHAR(60) NULL,
+  credit_license_url VARCHAR(300) NULL,
+  credit_source VARCHAR(60) NULL,
+  credit_source_url VARCHAR(500) NULL,
+  -- kind 'embed': no file, the picture loads from DeviantArt. embed_src is what its oEmbed last gave, at embed_checked_at.
+  embed_url VARCHAR(500) NULL,
+  embed_src VARCHAR(1000) NULL,
+  embed_checked_at DATETIME NULL,
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

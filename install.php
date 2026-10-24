@@ -116,6 +116,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/016_session_rewards.sql');
             $msg .= ' Sessions can now record Session Rewards and Loot Found.';
         }
+        if ($pdo->query("SHOW TABLES LIKE 'attachments'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM attachments LIKE 'credit_license'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/017_attachment_credits.sql');
+            $msg .= ' Encyclopedia entries can now find pictures with Find Image, credited, or embedded from DeviantArt.';
+        }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
         $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];
