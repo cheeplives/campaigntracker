@@ -87,6 +87,15 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   their own; the notes suggest connections (a "Residents:" line suggests the label), and the list searches, filters by
   connection chips and "Show in list"; renaming a kind changes every page; the Wide list button swaps the widths of the list and the
   entry and this browser remembers it, and is hidden where the page is one column.
+- **find-image**: Find Image's sources answered by `tests/support/image-stub.php` (named as `image_search.stub` in the test
+  config, so nothing leaves the machine): Openverse, the museums and DeviantArt list results in one shape with their
+  licences, the mature work and anything closed left out of Use this picture; a source that is down says so while the
+  others answer; outsiders can't search and members may make 30 searches a minute; Use this picture copies an open
+  picture with its credit, refuses a closed one, keeps the thumbnail when the full picture is too big, ignores a
+  player's GM only and refuses them on a secret entry; Embed from DeviantArt keeps only the link, redirects to
+  DeviantArt's picture, asks oEmbed again after 6 hours, says the work is gone once oEmbed does, and refuses a picture
+  on another host; the panel opens with the entry's name, shows credit links, adds a picture with its credit line,
+  and a closed DeviantArt work links to the work and the artist in new tabs and embeds.
 - **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens
   full size with its caption, the PDF downloads; players see both, add and remove their own, but can't change or
   remove the GM's; GM-only files and every file on a secret entry are never listed or sent to players, and making a

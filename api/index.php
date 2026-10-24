@@ -865,7 +865,7 @@ function upload_type(string $path, string $name): array {
 /** What the browser needs before it sends a file: whether uploads work here, the size limit and the types allowed. */
 function upload_info(): array {
     $up = upload_dir();
-    $out = ['ready' => has_attachments() && $up['dir'] !== null, 'max_bytes' => upload_max_bytes(), 'find' => has_credits(), 'deviantart' => deviantart_ready(),
+    $out = ['ready' => has_attachments() && $up['dir'] !== null, 'max_bytes' => upload_max_bytes(),
         'accept' => implode(',', array_merge(array_keys(UPLOAD_TYPES), array_map(fn($e) => ".$e", array_merge(...array_column(UPLOAD_TYPES, 0)))))];
     // The folder's path is for whoever runs the server, not for every player.
     if (!$out['ready']) $out['problem'] = !has_attachments() ? 'Pictures and files need a database upgrade: open install.php and press Install or upgrade.'
