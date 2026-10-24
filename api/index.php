@@ -903,11 +903,87 @@ function tomes(int $cid, ?int $id = null): array {
     return $st->fetchAll();
 }
 
+// ---------- play sessions ----------
+// A session is one game night: the GM's quick notes taken during it (session_notes, GMs only) and the summary written
+// from them afterwards, which players read once it is published. A campaign has at most one open session (last_day
+// NULL); the Session notes box adds to it, and starts one when there is none.
+
+/** Whether migration 015 has been run, so the rest of the app still works on an install that hasn't. */
+function has_sessions(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn();
+}
+function need_sessions(): void {
+    if (!has_sessions()) fail('Sessions need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+}
+/** A session of campaign $cid; a player only gets a published one. $lock: FOR UPDATE, inside a transaction. */
+function session_row(int $cid, int $id, bool $isGm = true, bool $lock = false): array {
+    $st = db()->prepare('SELECT * FROM play_sessions WHERE id=? AND campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ($lock ? ' FOR UPDATE' : ''));
+    $st->execute([$id, $cid]);
+    return $st->fetch() ?: fail('Session not found', 404);
+}
+/** The campaign's open session, or null. */
+function open_session(int $cid): ?array {
+    $st = db()->prepare('SELECT * FROM play_sessions WHERE campaign_id=? AND last_day IS NULL ORDER BY number DESC LIMIT 1');
+    $st->execute([$cid]);
+    return $st->fetch() ?: null;
+}
+/** A session as the browser gets it: the summary only when $full, without its secret paragraphs for a player. */
+function session_out(array $s, bool $full, bool $isGm): array {
+    $o = ['id' => (int)$s['id'], 'number' => (int)$s['number'], 'title' => $s['title'], 'played_on' => $s['played_on'],
+        'first_day' => (int)$s['first_day'], 'last_day' => $s['last_day'] === null ? null : (int)$s['last_day'],
+        'is_published' => (bool)(int)$s['is_published'], 'version' => (int)$s['version']];
+    if ($full) $o['summary'] = (string)rich_for($s['summary'], $isGm);
+    if ($isGm && isset($s['notes'])) { $o['notes'] = (int)$s['notes']; $o['covered'] = (int)$s['covered']; }
+    return $o;
+}
+function snote_out(array $n): array {
+    return ['id' => (int)$n['id'], 'session_id' => (int)$n['session_id'], 'position' => (int)$n['position'], 'depth' => (int)$n['depth'],
+        'text' => $n['text'], 'abs_shift' => (int)$n['abs_shift'], 'is_covered' => (bool)(int)$n['is_covered']];
+}
+function snote_row(int $cid, int $id): array {
+    $st = db()->prepare('SELECT * FROM session_notes WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    return $st->fetch() ?: fail('Note not found', 404);
+}
+function snotes(int $sid): array {
+    $st = db()->prepare('SELECT * FROM session_notes WHERE session_id=? ORDER BY position, id');
+    $st->execute([$sid]);
+    return array_map('snote_out', $st->fetchAll());
+}
+/** A note's text: one line, 1 to 1000 characters. */
+function snote_text($v): string {
+    $t = trim(preg_replace('/\s+/u', ' ', (string)str_in($v, 1000, false)));
+    if ($t === '') fail('Write something first');
+    return $t;
+}
+/** End every open session of the campaign at the current day. */
+function sessions_end_all(int $cid): void {
+    $c = campaign_row($cid);
+    $day = floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
+    db()->prepare('UPDATE play_sessions SET last_day=GREATEST(first_day, ?) WHERE campaign_id=? AND last_day IS NULL')->execute([$day, $cid]);
+}
+/** A new open session (any open one ended first), numbered after the campaign's last. */
+function session_create(int $cid, int $firstDay, string $title = '', ?string $playedOn = null): int {
+    sessions_end_all($cid);
+    $st = db()->prepare('SELECT COALESCE(MAX(number), 0) + 1 FROM play_sessions WHERE campaign_id=? FOR UPDATE');
+    $st->execute([$cid]);
+    db()->prepare('INSERT INTO play_sessions (campaign_id, number, title, played_on, first_day, created_by) VALUES (?,?,?,?,?,?)')
+        ->execute([$cid, (int)$st->fetchColumn(), $title, $playedOn ?? date('Y-m-d'), $firstDay, me()['id']]);
+    return (int)db()->lastInsertId();
+}
+/** A real-world date as YYYY-MM-DD, or null. */
+function date_in($v): ?string {
+    if ($v === null || $v === '') return null;
+    if (!is_string($v) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) || !checkdate((int)substr($v, 5, 2), (int)substr($v, 8, 2), (int)substr($v, 0, 4))) fail('Pick a date');
+    return $v;
+}
+
 require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file'];
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -918,7 +994,8 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete', 'secret_reveal'];
+    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete', 'secret_reveal',
+    'session_save', 'session_end', 'session_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1032,7 +1109,9 @@ try {
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library(), 'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]);
+            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library(), 'sessions_ready' => has_sessions(),
+            'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
+            + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
     case 'changed': // polled by open pages: a new value means a GM changed something since
         $cid = cid();
@@ -1899,6 +1978,21 @@ try {
                 if ($isGm) $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_secrets($t['body']), true, 'html');
             }
         }
+        if (has_sessions()) {
+            // a published summary for everyone (its secret paragraphs for GMs only); the rest, and the notes, for GMs
+            $st = db()->prepare('SELECT id, number, title, summary, is_published FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $x) {
+                $src = ['kind' => 'session', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}"];
+                $add($src, rich_open($x['summary']), !(int)$x['is_published'], 'html');
+                if ($isGm) $add($src, rich_secrets($x['summary']), true, 'html');
+            }
+            if ($isGm) {
+                $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? ORDER BY s.number, n.position');
+                $st->execute([$cid]);
+                foreach ($st->fetchAll() as $x) $add(['kind' => 'session_note', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}", 'short' => true], $x['text'], true);
+            }
+        }
         if (has_encyclopedia()) {
             $st = db()->prepare('SELECT id, name, notes, is_secret' . ($isGm ? ', gm_notes' : '') . ' FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
             $st->execute([$cid]);
@@ -2224,6 +2318,147 @@ try {
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
         if (has_attachments()) attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
+        out(['ok' => true]);
+
+    // ===== play sessions =====
+    case 'sessions': // newest first; a player gets the published ones only, without the GMs' note counts
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_sessions();
+        $st = db()->prepare($isGm
+            ? 'SELECT s.*, COUNT(n.id) AS notes, COALESCE(SUM(n.is_covered), 0) AS covered FROM play_sessions s LEFT JOIN session_notes n ON n.session_id=s.id
+               WHERE s.campaign_id=? GROUP BY s.id ORDER BY s.number DESC'
+            : 'SELECT * FROM play_sessions WHERE campaign_id=? AND is_published=1 ORDER BY number DESC');
+        $st->execute([$cid]);
+        out(['sessions' => array_map(fn($x) => session_out($x, false, $isGm), $st->fetchAll())]);
+
+    case 'session': // one session with its summary; GMs get its notes too
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_sessions();
+        $s = session_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
+        out(['session' => session_out($s, true, $isGm)] + ($isGm ? ['notes' => snotes((int)$s['id'])] : []));
+
+    case 'session_save': // GMs: a new session, or a change to one's title, dates or publishing; reopen makes it the open one
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        db()->beginTransaction();
+        if (p('id')) {
+            $s = session_row($cid, int_in(p('id'), 1), true, true);
+            $title = array_key_exists('title', body()) ? trim(preg_replace('/\s+/u', ' ', (string)str_in(p('title'), 200))) : $s['title'];
+            $played = array_key_exists('played_on', body()) ? date_in(p('played_on')) : $s['played_on'];
+            $first = array_key_exists('first_day', body()) ? int_in(p('first_day')) : (int)$s['first_day'];
+            $last = array_key_exists('last_day', body()) ? (p('last_day') === null ? null : int_in(p('last_day'))) : ($s['last_day'] === null ? null : (int)$s['last_day']);
+            if (p('reopen')) { sessions_end_all($cid); $last = null; }
+            if ($last !== null && $last < $first) fail('The last day can\'t be before the first');
+            $pub = array_key_exists('is_published', body()) ? (p('is_published') ? 1 : 0) : (int)$s['is_published'];
+            db()->prepare('UPDATE play_sessions SET title=?, played_on=?, first_day=?, last_day=?, is_published=? WHERE id=?')
+                ->execute([$title, $played, $first, $last, $pub, $s['id']]);
+            $id = (int)$s['id'];
+        } else {
+            $c = campaign_row($cid);
+            $first = array_key_exists('first_day', body()) ? int_in(p('first_day')) : floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
+            $id = session_create($cid, $first, trim((string)str_in(p('title'), 200)), date_in(p('played_on')));
+        }
+        db()->commit();
+        out(['ok' => true, 'session' => session_out(session_row($cid, $id), true, true)]);
+
+    case 'session_summary_save': // GMs: the summary, from the copy the page opened (version)
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $s = session_row($cid, int_in(p('id'), 1));
+        $html = rich_html_clean((string)str_in(p('summary'), 2_000_000)) ?: null;
+        $st = db()->prepare('UPDATE play_sessions SET summary=?, summary_format=\'html\', version=version+1 WHERE id=? AND version=?');
+        $st->execute([$html, $s['id'], int_in(p('version'), 1)]);
+        if (!$st->rowCount()) fail('This summary was saved somewhere else after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
+        out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), true, true)]);
+
+    case 'session_end': // GMs: the open session (or the one named) ends on the current day
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        if (p('id')) {
+            $s = session_row($cid, int_in(p('id'), 1));
+            $c = campaign_row($cid);
+            $day = floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
+            db()->prepare('UPDATE play_sessions SET last_day=GREATEST(first_day, ?) WHERE id=? AND last_day IS NULL')->execute([$day, $s['id']]);
+        } else sessions_end_all($cid);
+        out(['ok' => true]);
+
+    case 'session_delete': // GMs: the session and its notes
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $s = session_row($cid, int_in(p('id'), 1));
+        db()->prepare('DELETE FROM play_sessions WHERE id=?')->execute([$s['id']]);
+        out(['ok' => true]);
+
+    case 'snote_add': // GMs: a quick note, at the end of the session named, else the open one, else a new one
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $text = snote_text(p('text'));
+        $depth = int_in(p('depth', 0), 0, 3);
+        $at = int_in(p('abs_shift'));
+        db()->beginTransaction();
+        $c = campaign_row($cid);
+        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]); // one new session at a time
+        if (p('session_id')) $s = session_row($cid, int_in(p('session_id'), 1), true, true);
+        else {
+            $s = open_session($cid);
+            if (!$s) $s = session_row($cid, session_create($cid, floordiv($at, slots_per_day(dec($c['calendar_json'])))));
+            $s = session_row($cid, (int)$s['id'], true, true);
+        }
+        db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, created_by)
+            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ? FROM session_notes WHERE session_id=?')
+            ->execute([$cid, $s['id'], $depth, $text, $at, me()['id'], $s['id']]);
+        $nid = (int)db()->lastInsertId();
+        db()->commit();
+        out(['ok' => true, 'note' => snote_out(snote_row($cid, $nid)), 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);
+
+    case 'snote_save': // GMs: a note's text, indent, stamp or tick
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $n = snote_row($cid, int_in(p('id'), 1));
+        $text = array_key_exists('text', body()) ? snote_text(p('text')) : $n['text'];
+        $depth = array_key_exists('depth', body()) ? int_in(p('depth'), 0, 3) : (int)$n['depth'];
+        $at = array_key_exists('abs_shift', body()) ? int_in(p('abs_shift')) : (int)$n['abs_shift'];
+        $cov = array_key_exists('is_covered', body()) ? (p('is_covered') ? 1 : 0) : (int)$n['is_covered'];
+        db()->prepare('UPDATE session_notes SET text=?, depth=?, abs_shift=?, is_covered=? WHERE id=?')->execute([$text, $depth, $at, $cov, $n['id']]);
+        out(['ok' => true, 'note' => snote_out(snote_row($cid, (int)$n['id']))]);
+
+    case 'snote_move': // GMs: a note to another place in its session (position, from 1), or to the end of another session
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        db()->beginTransaction();
+        $n = snote_row($cid, int_in(p('id'), 1));
+        $sid = (int)$n['session_id'];
+        if (p('session_id') && int_in(p('session_id'), 1) !== $sid) {
+            $to = session_row($cid, int_in(p('session_id'), 1), true, true);
+            db()->prepare('UPDATE session_notes SET session_id=?, position=(SELECT p FROM (SELECT COALESCE(MAX(position), 0) + 1 AS p FROM session_notes WHERE session_id=?) x) WHERE id=?')
+                ->execute([$to['id'], $to['id'], $n['id']]);
+        } else {
+            session_row($cid, $sid, true, true);
+            $ids = array_column(snotes($sid), 'id');
+            $ids = array_values(array_filter($ids, fn($i) => $i !== (int)$n['id']));
+            $pos = int_in(p('position', count($ids) + 1), 1);
+            array_splice($ids, min($pos, count($ids) + 1) - 1, 0, [(int)$n['id']]);
+            $up = db()->prepare('UPDATE session_notes SET position=? WHERE id=?');
+            foreach ($ids as $i => $id) $up->execute([$i + 1, $id]);
+        }
+        db()->commit();
+        out(['ok' => true]);
+
+    case 'snote_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $n = snote_row($cid, int_in(p('id'), 1));
+        db()->prepare('DELETE FROM session_notes WHERE id=?')->execute([$n['id']]);
         out(['ok' => true]);
 
     // ===== pictures and files =====

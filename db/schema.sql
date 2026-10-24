@@ -439,3 +439,50 @@ CREATE TABLE IF NOT EXISTS library_tomes (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Play sessions and their quick notes (see db/migrations/015_sessions.sql).
+-- One row per game night. number counts the campaign's sessions from 1; a blank title shows as "Session {number}".
+-- first_day and last_day are the absolute campaign days it covered; last_day is NULL while the session is open, and a
+-- campaign has at most one open session, which the Session notes box on Current Day adds to. summary is rich text
+-- (cleaned by api/richtext.php); version goes up on every summary save, so one made from an older copy is refused.
+CREATE TABLE IF NOT EXISTS play_sessions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  number INT UNSIGNED NOT NULL,
+  title VARCHAR(200) NOT NULL DEFAULT '',
+  played_on DATE NULL,
+  first_day BIGINT NOT NULL,
+  last_day BIGINT NULL,
+  summary MEDIUMTEXT,
+  summary_format VARCHAR(8) NOT NULL DEFAULT 'html',
+  is_published TINYINT(1) NOT NULL DEFAULT 0,
+  version INT UNSIGNED NOT NULL DEFAULT 1,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY ix_session_campaign (campaign_id, number),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The GM's quick notes during a session, one line each, in order (position). depth 0 to 3 indents a line under the
+-- one above. text is plain; a leading ! is a GM aside, ? a loose end and > a time jump (static/sessions.js).
+-- abs_shift is the in-game shift the note was taken in (its day is abs_shift / shifts per day). is_covered: ticked
+-- once the summary covers it. Only GMs ever get these rows.
+CREATE TABLE IF NOT EXISTS session_notes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  session_id INT UNSIGNED NOT NULL,
+  position INT UNSIGNED NOT NULL,
+  depth TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  text VARCHAR(1000) NOT NULL,
+  abs_shift BIGINT NOT NULL,
+  is_covered TINYINT(1) NOT NULL DEFAULT 0,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY ix_snote_session (session_id, position),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
