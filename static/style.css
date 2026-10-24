@@ -132,8 +132,8 @@ button.on { background: var(--accent); color: var(--on-accent); }
   box-shadow: 0 1px 0 var(--line), 0 10px 24px -16px rgb(0 0 0 / .6); }
 .nowbar::after { position: absolute; left: 20px; right: 20px; bottom: -3px; height: 6px; }
 .now-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .now-title h1 { margin: 0; font-size: 1.2rem; color: var(--dim); letter-spacing: .12em; }
-.now-date { font: 700 2.5rem/1 var(--disp); text-transform: uppercase; letter-spacing: .01em; color: var(--text); display: block; }
-:root[data-scheme="console"] .now-date { font-size: 2rem; }   /* monospace caps run wide */
+.now-date { font: 700 2.2rem/1 var(--disp); text-transform: uppercase; letter-spacing: .01em; color: var(--text); display: block; }
+:root[data-scheme="console"] .now-date { font-size: 1.8rem; }   /* monospace caps run wide */
 :root[data-scheme="console"] .tabs a { font-size: .9rem; letter-spacing: 0; padding-left: 10px; padding-right: 10px; }
 .now-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; font-size: .95rem; }
 .passtime { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
@@ -454,7 +454,7 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
   main { padding: 10px; }
   .daycell { min-height: 58px; padding: 3px; }
   .dnum { font-size: 1.25rem; }
-  .now-date { font-size: 1.8rem; }
+  .now-date { font-size: 1.6rem; }
   .tabs a { padding: 6px 10px 4px; font-size: .95rem; }
   .dayconditions .kv { grid-template-columns: 1fr 1fr; }
   .daycell .chip, .daycell .evline, .daycell .np-text, .daycell .dc-notes-more { display: none; }
