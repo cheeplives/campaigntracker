@@ -152,7 +152,10 @@ test.describe("Find Image API", () => {
   });
 });
 
+// The service worker would see the page's requests for pictures first, and in WebKit page.route() then never fakes them.
 test.describe("Find Image panel", () => {
+  test.use({ serviceWorkers: "block" });
+
   test("opens with the entry's name, lists each tab's pictures with their credits, and adds the one picked", async ({ page, browser }) => {
     const errors = watchErrors(page);
     await routeImages(page);
