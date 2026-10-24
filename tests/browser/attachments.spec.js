@@ -64,13 +64,15 @@ test("a GM adds a portrait and a handout to an entry; the picture shows and open
   await page.getByRole("textbox", { name: "Caption" }).fill("Gunther, sketched by Ilse");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(viewer).toHaveCount(0);
-  await expect(box.locator(".file-pic figcaption")).toHaveText("Gunther, sketched by Ilse");
+  // Only the picture shows under the entry; its caption is in the "?" on its corner.
+  await expect(box.locator(".file-pic figcaption")).toHaveCount(0);
+  await expect(box.locator(".file-pic .tip")).toHaveAttribute("data-tip", "Gunther, sketched by Ilse");
 
   // A player reads both, and the picture loads for them too. The PDF is sent as a download, never shown inline.
   const perrors = watchErrors(pp);
   await pp.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
   const pbox = pp.locator(".enc-detail .enc-files");
-  await expect(pbox.locator(".file-pic figcaption")).toHaveText("Gunther, sketched by Ilse");
+  await expect(pbox.locator(".file-pic .tip")).toHaveAttribute("data-tip", "Gunther, sketched by Ilse");
   await expect.poll(() => pbox.locator(".file-pic img").evaluate(img => img.complete && img.naturalWidth)).toBe(2);
   const { json } = await api(pp, "encyclopedia", undefined, cid);
   const pdf = json.files.find(f => f.name === "Wanted poster.pdf");

@@ -2582,9 +2582,10 @@
         el('button', { type: 'button', class: 'file-thumb', 'aria-label': `Open ${f.caption || f.name}`, onclick: () => fileViewer(pics, i, { ...opts, mine, hidden }) },
           f.embed?.gone ? el('span', { class: 'muted small file-gone' }, 'No longer on DeviantArt')
             : el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height, referrerpolicy: f.embed ? 'no-referrer' : null })),
-        el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name),
-          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' · Embedded') : null,
-          f.credit ? [' ', tip(creditText(f))] : null)))) : null;
+        // Only the picture shows; its name, caption, GM only, embed and credit are in the "?" on its corner.
+        el('span', { class: 'file-pic-info' }, tip([f.caption || f.name, hidden(f) ? '🔒 GM only: players never see this' : null,
+          f.embed ? 'Embedded: shown from DeviantArt each time, not copied here, so it needs a connection' : null,
+          f.credit ? creditText(f) : null].filter(Boolean).join('\n')))))) : null;
     const docList = docs.length ? el('ul', { class: 'file-list' }, docs.map(f => el('li', { 'data-id': f.id },
       hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null,
       el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
