@@ -675,6 +675,7 @@ dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
 .enc-wiki-out:empty { display: none; }
 .enc-wiki-hits { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
 .enc-wiki-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; max-width: 100%; }
+.enc-wiki-several { margin-left: 8px; padding: 0 6px; border: 1px solid var(--line); border-radius: 3px; font-size: .78rem; font-weight: 600; color: var(--muted); }
 .noun-what [hidden] { display: none; }
 
 /* Connections between Encyclopedia entries */

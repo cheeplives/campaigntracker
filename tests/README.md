@@ -74,8 +74,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   entry quotes where it was found with Add to notes, players write Public notes but never get GM notes, secret entries
   or the GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own;
   Generate Summary asks (a faked) Wikipedia only when pressed, lists the matching articles with their descriptions,
-  and adds the picked summary to the Public notes with a link to the article and CC BY-SA 4.0; no article or no
-  connection says so in a line;
+  and adds the picked summary to the Public notes with a link to the article and CC BY-SA 4.0; a name with several
+  meanings is labelled and lists the meanings from its disambiguation page, in its order and without See also; no
+  article or no connection says so in a line;
   the Link dialog connects one entry to many with one kind of connection, each page reads it from its own end ("Has
   resident" / "Resident of"), the same fact made from either end or with the labels typed the other way round is one
   row, a symmetric kind is kept once, unticking removes, and deleting an entry takes its connections; players never get
