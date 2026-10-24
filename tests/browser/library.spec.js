@@ -174,6 +174,7 @@ test("Scan on an entry or a tome runs the Proper Noun Detector over just that on
   await expect(dlg).toHaveCount(0);
   // The entry's scan reads its Public and GM notes, and nothing else.
   await page.goto(`index.html#/c/${cid}/encyclopedia/${entry.id}`);
+  await expect(page.locator(".enc-detail h2")).toHaveText("Hexe"); // the Library's page is an .enc-detail too: wait for the entry
   await page.locator(".enc-detail").getByRole("button", { name: "🔍 Scan" }).click();
   await expect(dlg).toBeVisible();
   for (const n of ["Bögenhafen", "Tzeentch"]) await expect(row(n)).toBeVisible();
