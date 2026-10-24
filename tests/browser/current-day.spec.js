@@ -24,6 +24,8 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   await expect(page.locator(".daybox")).toHaveCount(5);
   expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "notes", "shifts", "events", "reminders"]);
   await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
+  // The banner shows the current shift, so the conditions list under it leaves out its own Now line.
+  await expect(page.locator(".dayconditions .lbl", { hasText: /^Now$/ })).toHaveCount(0);
   // Locations visited sits in the Notes box, saves with the notes and survives a weather re-roll.
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
   await page.getByRole("button", { name: "Save notes" }).click();

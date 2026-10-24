@@ -921,9 +921,56 @@
         isGM() ? passTimeWidget() : null]));
     };
     draw();
-    const tabs = el('nav', { class: 'tabs' }, searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => [el('span', { class: 'tab-group', 'data-tip': gTip }, g),
-      ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => el('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l))]).flat());
+    const folds = legendFolds();
+    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
+      const folded = !!folds[g];
+      const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
+        el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
+      const links = ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) =>
+        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
+      const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
+      toggle.addEventListener('click', () => {
+        const f = !heading.classList.contains('folded');
+        heading.classList.toggle('folded', f);
+        toggle.setAttribute('aria-expanded', String(!f));
+        links.forEach(a => a.classList.toggle('folded', f));
+        rememberLegendFold(g, f);
+      });
+      return [heading, links];
+    }).flat());
     return [head, tabs];
+  }
+  // Which of the Legend's groups are folded, remembered in this browser for each account. Setup starts folded.
+  const LEGEND_KEY = 'chronicle:legend';
+  function legendFolds() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(`${LEGEND_KEY}:${S.user?.id}`)); } catch { /* private mode: defaults */ }
+    return { Setup: true, ...saved };
+  }
+  function rememberLegendFold(g, folded) {
+    const all = { ...legendFolds(), [g]: folded };
+    try { localStorage.setItem(`${LEGEND_KEY}:${S.user?.id}`, JSON.stringify(all)); } catch { /* private mode: just this page */ }
+  }
+  // The whole Legend tucks away to a thin strip on the left, also remembered in this browser for each account
+  function legendHidden() {
+    try { return localStorage.getItem(`${LEGEND_KEY}:tucked:${S.user?.id}`) === '1'; } catch { return false; }
+  }
+  /** The « / » button at the top of the Legend that tucks it away to the left and brings it back. Across the top it is hidden. */
+  function legendTuck() {
+    const btn = el('button', { type: 'button', class: 'legend-tuck' });
+    const show = tucked => {
+      btn.textContent = tucked ? '»' : '«';
+      btn.setAttribute('aria-expanded', String(!tucked));
+      btn.setAttribute('aria-label', tucked ? 'Show the tabs' : 'Hide the tabs');
+      btn.dataset.tip = tucked ? 'Show the tabs down the left' : 'Tuck the tabs away to the left, to give the page more room. It stays as you leave it in this browser';
+    };
+    show(legendHidden());
+    btn.addEventListener('click', () => {
+      const tucked = btn.closest('nav').classList.toggle('tucked');
+      show(tucked);
+      try { tucked ? localStorage.setItem(`${LEGEND_KEY}:tucked:${S.user?.id}`, '1') : localStorage.removeItem(`${LEGEND_KEY}:tucked:${S.user?.id}`); } catch { /* private mode: just this page */ }
+    });
+    return btn;
   }
 
   /** The search box with the tabs: Enter opens the Search page. On a phone, where the tabs scroll sideways, it is a 🔍 tab instead. */
@@ -1229,7 +1276,8 @@
           `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
-        d === today() ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
+        // The Current Day tab's banner already shows the shift the clock is on.
+        d === today() && !current ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
 
     if (isGM()) overview.append(dayEditor(d, row, region, w));
 
