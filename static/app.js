@@ -61,7 +61,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '20';
+  const APP_VERSION = '21';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1585,7 +1585,9 @@
     };
     const helpBtn = btn('?', () => { help.hidden = !help.hidden; }, 'small', 'Show the shorthand this box understands');
     helpBtn.setAttribute('aria-label', 'Shorthand');
-    const addBtn = btn('Add to notes', busy(null, async () => {
+    let adding = false;  // one add at a time: a second press while one is on its way would send the same lines under a new key
+    async function add() {
+      err.textContent = '';
       const lines = Sessions.parseLines(box.value);
       if (!lines.length) { err.textContent = 'Type a note first'; return; }
       const long = lines.find(l => l.text.length > 1000);
@@ -1610,6 +1612,11 @@
       box.value = ''; changed();
       toast(`Added ${notes.length} note${notes.length === 1 ? '' : 's'}`);
       onAdded();
+    }
+    const addBtn = btn('Add to notes', busy(null, async () => {
+      if (adding) return;
+      adding = true;
+      try { await add(); } finally { adding = false; }
     }), 'primary small', 'Add each line you typed to this session\'s notes, below. Nothing is added until you press this');
     changed();
     return el('div', { class: 'snote-entry-all' },

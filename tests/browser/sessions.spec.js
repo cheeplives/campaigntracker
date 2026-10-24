@@ -322,9 +322,12 @@ test.describe("an error page", () => {
     await expect(box(page)).toHaveValue("During the deploy\n  with a sub line");
     mode = "lost";
     await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
-    await expect(notesCol(page).locator(".snote-err")).toContainText("Not added");
+    await expect(notesCol(page).locator(".snote-err")).toContainText("Not added"); // a fresh error: each add clears the last
+    expect((await notesOf(page, cid, sid)).length).toBe(2); // the server did take them
     mode = "ok";
-    await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+    // pressing Add twice at once sends the lines once
+    const addButton = notesCol(page).getByRole("button", { name: "Add to notes" });
+    await addButton.evaluate(b => { b.click(); b.click(); });
     await expect(box(page)).toHaveValue("");
     await expect(rowsOf(page)).toHaveCount(2);
     expect((await notesOf(page, cid, sid)).map(n => n.text)).toEqual(["During the deploy", "with a sub line"]);
