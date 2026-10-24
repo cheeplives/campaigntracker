@@ -136,3 +136,32 @@ test("the Legend's groups fold, Setup starts folded, and they stay as left", asy
   await expect(tab("Regions")).toBeHidden();
   expectNoErrors(errors);
 });
+
+test("the Legend has no heading and tucks away to the left, and stays as left", async ({ page, browser, viewport }) => {
+  const errors = watchErrors(page);
+  const cid = await gmCampaign(page, browser, "Tuck");
+  await page.goto(`index.html#/c/${cid}/today`);
+  const nav = page.locator("nav.tabs"), tuck = page.locator("nav.tabs .legend-tuck"), today = page.locator("nav.tabs a.on");
+  await expect(today).toHaveText("Current Day");
+  expect(await nav.evaluate(n => getComputedStyle(n, "::before").content)).toBe("none");
+  if (viewport.width <= 1000) {
+    await expect(tuck).toBeHidden();
+    expectNoErrors(errors);
+    return;
+  }
+  const pageLeft = () => page.locator(".nowbar").evaluate(n => n.getBoundingClientRect().left);
+  const before = await pageLeft();
+  await tuck.click();
+  await expect(tuck).toHaveAttribute("aria-expanded", "false");
+  await expect(today).toBeHidden();
+  await expect(page.locator("nav.tabs .tab-search")).toBeHidden();
+  expect(await pageLeft()).toBeLessThan(before - 100);
+  await page.reload();
+  await expect(tuck).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("nav.tabs a.on")).toBeHidden();
+  await tuck.click();
+  await expect(page.locator("nav.tabs a.on")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("nav.tabs a.on")).toBeVisible();
+  expectNoErrors(errors);
+});

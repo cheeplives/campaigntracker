@@ -176,7 +176,9 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .tab-group:first-of-type { display: none; }
 /* only the Legend folds its groups: across the top every tab shows */
 .tab-group button { display: none; }
-/* the search box: at the end of the tabs across the top, under the Legend's heading down the left, and a 🔍 tab on phones */
+/* the button that tucks the Legend away: only down the left */
+.legend-tuck { display: none; }
+/* the search box: at the end of the tabs across the top, at the top of the Legend down the left, and a 🔍 tab on phones */
 .tab-search { order: 99; margin: 0 8px 0 auto; align-self: center; padding-bottom: 3px; }
 .tab-search input { width: 190px; padding: 4px 8px; }
 .tabs a.tab-search-link { display: none; }
@@ -190,11 +192,16 @@ button.on { background: var(--accent); color: var(--on-accent); }
   main:has(> nav.tabs) > * { grid-column: 2; }
   main:has(> nav.tabs) > * + :not(nav.tabs) { margin-top: 14px; }
   main > nav.tabs { grid-column: 1; grid-row: 1 / -1; top: calc(var(--topbar-h, 0px) + 14px); max-height: calc(100vh - var(--topbar-h, 0px) - 28px); overflow-y: auto;
-    flex-direction: column; flex-wrap: nowrap; gap: 1px; padding: 0 0 8px; border: 0; border-top: 6px solid var(--accent); border-radius: var(--radius);
+    flex-direction: column; flex-wrap: nowrap; gap: 1px; padding: 10px 0 8px; border: 0; border-top: 6px solid var(--accent); border-radius: var(--radius);
     background: var(--stock); box-shadow: 0 1px 0 var(--line), 0 10px 24px -18px rgb(0 0 0 / .6); }
-  /* the heading over a tapered rule; the rule is ::after moved up under it */
-  main > nav.tabs::before { content: 'Legend'; order: -2; padding: 10px 14px 4px; font: 700 1.35rem var(--disp); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
-  main > nav.tabs::after { content: ''; order: -1; flex: none; height: 5px; margin: 0 14px 8px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
+  /* the search box shares the top row with the « button that tucks the Legend away */
+  main > nav.tabs .legend-tuck { display: block; position: absolute; top: 10px; right: 8px; width: 30px; height: 30px; padding: 0; line-height: 1;
+    font-size: 1.2rem; color: var(--dim); background: none; border: 1px solid transparent; }
+  main > nav.tabs .legend-tuck:hover { color: var(--text); border-color: var(--line); }
+  /* tucked away, the Legend is a thin strip with just the » button, and the page takes the room */
+  main:has(> nav.tabs.tucked) { grid-template-columns: 46px minmax(0, 1fr); }
+  main > nav.tabs.tucked { padding-bottom: 0; min-height: 50px; }
+  main > nav.tabs.tucked > :not(.legend-tuck) { display: none !important; }
   main > nav.tabs .tab-group { display: block; width: auto; margin: 0; padding: 12px 14px 3px; background: none; overflow: visible;
     font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
   main > nav.tabs .tab-group:first-of-type { padding-top: 0; }
@@ -205,7 +212,7 @@ button.on { background: var(--accent); color: var(--on-accent); }
   .tab-group.folded .tab-group-caret::before { transform: rotate(-90deg); }
   /* a folded group still shows the open page's tab, so you can see where you are */
   main > nav.tabs a.folded:not(.on) { display: none; }
-  main > nav.tabs .tab-search { order: 0; margin: 0 14px 6px; align-self: stretch; padding: 0; }
+  main > nav.tabs .tab-search { order: 0; margin: 0 44px 10px 14px; align-self: stretch; padding: 0; }
   main > nav.tabs .tab-search input { width: 100%; }
   main > nav.tabs a { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border: 0; border-radius: 0; background: none; }
   main > nav.tabs a::before { content: ''; flex: none; width: 8px; height: 8px; border: 1.5px solid currentColor; transform: rotate(45deg); opacity: .6; }
