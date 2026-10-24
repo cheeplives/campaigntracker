@@ -11,7 +11,7 @@ const RichText = (() => {
   const { el } = KIT;
   // Keep these three lists the same as api/richtext.php.
   const TAGS = new Set(['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'h1', 'h2', 'h3', 'blockquote', 'ul', 'ol', 'li', 'hr',
-    'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td']);
+    'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'aside']);
   const ALIAS = { b: 'strong', i: 'em', strike: 's', del: 's', h4: 'h3', h5: 'h3', h6: 'h3', div: 'p' };
   const DROP = new Set(['script', 'style', 'template', 'noscript', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'svg', 'math',
     'head', 'title', 'meta', 'link', 'base', 'textarea', 'select', 'option', 'button', 'input', 'form', 'img', 'picture', 'video', 'audio',
@@ -27,22 +27,23 @@ const RichText = (() => {
   // A DOMParser document is inert: its scripts never run and its images never load. Nothing from it is kept;
   // only allowed elements are rebuilt, with no attributes but a checked href.
   const parse = html => new DOMParser().parseFromString(String(html || ''), 'text/html').body;
-  function copy(from, to, depth) {
+  function copy(from, to, depth, inSecret = false) {
     for (const n of from.childNodes) {
       if (n.nodeType === 3) { to.append(document.createTextNode(n.nodeValue)); continue; }
       if (n.nodeType !== 1) continue;
       let tag = n.nodeName.toLowerCase();
       if (DROP.has(tag)) continue;
       tag = ALIAS[tag] || tag;
-      if (!TAGS.has(tag) || depth >= MAX_DEPTH) { copy(n, to, depth); continue; }
+      if (!TAGS.has(tag) || depth >= MAX_DEPTH || (tag === 'aside' && inSecret)) { copy(n, to, depth, inSecret); continue; }
       let node;
       if (tag === 'a') {
         const href = safeHref(n.getAttribute('href'));
         if (!href) { copy(n, to, depth); continue; }
         node = el('a', { href, target: '_blank', rel: 'noopener noreferrer nofollow' });
-      } else node = document.createElement(tag);
+      } else if (tag === 'aside') node = el('aside', { class: 'rt-secret', 'data-tip': 'Only GMs ever see this paragraph. The server never sends it to players' });
+      else node = document.createElement(tag);
       to.append(node);
-      copy(n, node, depth + 1);
+      copy(n, node, depth + 1, inSecret || tag === 'aside');
     }
   }
   /** Stored rich text as a DocumentFragment of allowed elements. */
@@ -56,8 +57,13 @@ const RichText = (() => {
     ? el('div', { class: `richtext ${cls}`.trim() }, render(text))
     : el('div', { class: `pre ${cls}`.trim() }, text);
 
+  /** Stored rich text split into what everyone may read and its secret paragraphs (GM only), each still rich text.
+   * Stored text is already clean, so each secret paragraph is exactly <aside>…</aside>, never nested. */
+  const SECRET_RE = /<aside>[\s\S]*?<\/aside>/g;
+  const split = html => ({ open: String(html || '').replace(SECRET_RE, ''), secret: (String(html || '').match(SECRET_RE) || []).join('') });
+
   // ------------------------------------------------------------ Markdown, for the day export
-  const BLOCK = new Set(['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'blockquote', 'pre', 'table', 'hr']);
+  const BLOCK = new Set(['p', 'h1', 'h2', 'h3', 'ul', 'ol', 'blockquote', 'pre', 'table', 'hr', 'aside']);
   function inline(n) {
     let s = '';
     for (const k of n.childNodes) {
@@ -101,6 +107,7 @@ const RichText = (() => {
       else if (tag === 'blockquote') out.push(blocks(k).split('\n').map(l => `> ${l}`.trimEnd()).join('\n'));
       else if (tag === 'pre') out.push('```\n' + k.textContent.replace(/\n$/, '') + '\n```');
       else if (tag === 'hr') out.push('---');
+      else if (tag === 'aside') out.push(`> 🔒 GM only: ${inline(k).trim()}`);
       else if (tag === 'table') {
         const rows = [...k.querySelectorAll('tr')].map(tr => [...tr.children].map(td => inline(td).trim().replace(/\|/g, '\\|').replace(/\n/g, ' ')));
         if (!rows.length) continue;
@@ -134,11 +141,22 @@ const RichText = (() => {
   }
 
   const FORMATS = ['bold', 'italic', 'underline', 'strike', 'code', 'link', 'header', 'list', 'indent', 'blockquote', 'code-block',
-    'table', 'table-row', 'table-body', 'table-container'];
+    'table', 'table-row', 'table-body', 'table-container', 'secret'];
+  /** A secret paragraph in the editor: a line saved as <aside>, which the server never sends to players. */
+  let secretReady = false;
+  function registerSecret() {
+    if (secretReady) return;
+    const Block = window.Quill.import('blots/block');
+    class Secret extends Block {}
+    Secret.blotName = 'secret';
+    Secret.tagName = 'ASIDE';
+    window.Quill.register(Secret, true);
+    secretReady = true;
+  }
   const TABLE_ACTIONS = [['', 'Table…'], ['insert', 'Insert a 3 × 3 table'], ['row', 'Add a row below'], ['col', 'Add a column to the right'],
     ['delrow', 'Delete this row'], ['delcol', 'Delete this column'], ['deltable', 'Delete the table']];
 
-  function toolbar(label) {
+  function toolbar(label, secret) {
     const b = (cls, tipText, value) => el('button', { type: 'button', class: cls, value, 'aria-label': tipText, 'data-tip': tipText });
     const heading = el('select', { class: 'ql-header', 'aria-label': 'Paragraph style' },
       el('option', { value: '1' }), el('option', { value: '2' }), el('option', { value: '3' }), el('option', { selected: true }));
@@ -151,6 +169,8 @@ const RichText = (() => {
       el('span', { class: 'ql-formats' }, heading),
       el('span', { class: 'ql-formats' }, b('ql-bold', 'Bold'), b('ql-italic', 'Italic'), b('ql-underline', 'Underline'), b('ql-strike', 'Strikethrough')),
       el('span', { class: 'ql-formats' }, b('ql-list', 'Numbered list', 'ordered'), b('ql-list', 'Bulleted list', 'bullet'), b('ql-blockquote', 'Quote'), b('ql-link', 'Link')),
+      secret ? el('span', { class: 'ql-formats' }, el('button', { type: 'button', class: 'ql-secret', 'aria-label': 'GM only paragraph',
+        'data-tip': 'Make the paragraphs you have picked GM only: players never see them. Press again to make them public' }, '🔒')) : null,
       el('span', { class: 'ql-formats' }, b('ql-clean', 'Clear formatting')));
     const node = el('div', { class: 'rt-toolbar', role: 'toolbar', 'aria-label': `${label} formatting` },
       quillBar, el('span', { class: 'rt-extra' }, table, undo, redo));
@@ -158,13 +178,16 @@ const RichText = (() => {
   }
 
   /** A rich text editor for one note. text/format: what is stored now ('plain' text is opened as paragraphs).
+   * secret: offer the 🔒 button that makes paragraphs GM only (for GMs, in notes players can read).
+   * mentions: { list, create } for the @ list of Encyclopedia names (see mentionPicker).
    * Returns { node, value() }, where value() gives { text, format: 'html' } to save ('' for an empty note). */
-  function editor({ text = '', format = 'plain', label = 'Notes', placeholder = '' } = {}) {
-    const bar = toolbar(label);
+  function editor({ text = '', format = 'plain', label = 'Notes', placeholder = '', secret = false, mentions = null } = {}) {
+    const bar = toolbar(label, secret);
     const area = el('div', { class: 'rt-area' });
     const node = el('div', { class: 'rt-editor loading' }, bar.node, area);
     let quill = null;
     load().then(() => {
+      registerSecret();
       quill = new window.Quill(area, {
         theme: 'snow', bounds: node, placeholder, formats: FORMATS,
         modules: {
@@ -178,6 +201,7 @@ const RichText = (() => {
       quill.root.setAttribute('aria-label', label);
       quill.root.setAttribute('aria-multiline', 'true');
       quill.root.setAttribute('role', 'textbox');
+      if (mentions) mentionPicker(quill, node, mentions);
       node.classList.remove('loading');
     }).catch(err => { node.classList.remove('loading'); area.textContent = err.message; });
 
@@ -231,5 +255,72 @@ const RichText = (() => {
     return { node, value, insertText, ready: () => !!quill };
   }
 
-  return { render, view, toMarkdown, editor, load, safeHref };
+  // ------------------------------------------------------------ @ mentions
+  /** Typing @ and a few letters lists the Encyclopedia names (and other names) that match; picking one writes the
+   * entry's name in place of the @ and what was typed, and the note links it the way it links every name. The last
+   * line adds what was typed as a new entry. m: { list() → [{ name, aliases }], create(name) → Promise<bool> }. */
+  function mentionPicker(quill, node, m) {
+    const box = el('ul', { class: 'rt-mentions', role: 'listbox', 'aria-label': 'Encyclopedia names', hidden: true });
+    node.append(box);
+    let at = -1, items = [], pick = 0, dismissed = -1;
+    const close = () => { at = -1; box.hidden = true; box.replaceChildren(); };
+    /** The @ being typed before the cursor, as [where the @ is, what follows it], or null. */
+    function typed() {
+      const sel = quill.getSelection();
+      if (!sel || sel.length) return null;
+      const before = quill.getText(Math.max(0, sel.index - 41), Math.min(41, sel.index));
+      const hit = /(^|[\s(["'])@([^@\n]{0,40})$/.exec(before);
+      if (!hit || /^\s/.test(hit[2])) return null;
+      return [sel.index - hit[2].length - 1, hit[2]];
+    }
+    function show() {
+      const t = typed();
+      if (!t) return close();
+      const [where, q] = t, low = q.toLowerCase().trim();
+      if (where === dismissed) return close();
+      at = where;
+      const seen = new Set();
+      items = [];
+      for (const e of m.list()) {
+        const names = [e.name, ...(e.aliases || [])];
+        const hit = !low ? e.name : names.find(n => n.toLowerCase().startsWith(low)) || names.find(n => n.toLowerCase().split(/\s+/).some(w => w.startsWith(low)));
+        if (!hit || seen.has(e.name)) continue;
+        seen.add(e.name);
+        items.push({ name: e.name, via: hit !== e.name ? hit : '' });
+        if (items.length >= 8) break;
+      }
+      if (q.trim() && !m.list().some(e => [e.name, ...(e.aliases || [])].some(n => n.toLowerCase() === low))) items.push({ name: q.trim(), create: true });
+      if (!items.length) return close();
+      pick = Math.min(pick, items.length - 1);
+      box.replaceChildren(...items.map((it, i) => el('li', { role: 'option', class: i === pick ? 'on' : '', 'aria-selected': String(i === pick),
+        onmousedown: ev => { ev.preventDefault(); choose(i); } },
+        it.create ? ['Add ', el('strong', {}, `"${it.name}"`), ' to the Encyclopedia'] : [el('strong', {}, it.name), it.via ? el('span', { class: 'muted' }, ` (${it.via})`) : null])));
+      const b = quill.getBounds(where), top = quill.root.offsetTop + b.bottom + 4;
+      Object.assign(box.style, { top: `${top}px`, left: `${Math.max(0, Math.min(b.left, node.clientWidth - 260))}px` });
+      box.hidden = false;
+    }
+    async function choose(i) {
+      const it = items[i], start = at, sel = quill.getSelection(true);
+      if (!it || start < 0) return;
+      close();
+      if (it.create && !await m.create(it.name)) return;
+      quill.deleteText(start, sel.index - start, 'user');
+      quill.insertText(start, `${it.name} `, 'user');
+      quill.setSelection(start + it.name.length + 1, 0, 'user');
+    }
+    quill.on('text-change', (delta, old, source) => { if (source === 'user') { pick = 0; show(); } });
+    quill.on('selection-change', range => { if (!range) close(); else if (at >= 0) show(); });
+    // Ahead of Quill's own keys while the list is open: arrows move, Enter or Tab picks, Escape leaves the @ as typed.
+    node.addEventListener('keydown', ev => {
+      if (box.hidden) return;
+      const keys = { ArrowDown: () => { pick = (pick + 1) % items.length; show(); }, ArrowUp: () => { pick = (pick - 1 + items.length) % items.length; show(); },
+        Enter: () => choose(pick), Tab: () => choose(pick), Escape: () => { dismissed = at; close(); } };
+      if (!keys[ev.key]) return;
+      ev.preventDefault(); ev.stopPropagation();
+      keys[ev.key]();
+    }, true);
+    return { close };
+  }
+
+  return { render, view, toMarkdown, editor, load, safeHref, split };
 })();

@@ -380,7 +380,10 @@ const Nouns = (() => {
       const hit = parts.map(x => byKey.get(keyOf(x)));
       return parts.length && hit.every(Boolean) ? [{ label: tidy(m[1]), entries: hit }] : [];
     });
-    const texts = x => [[x.notes, false], gm ? [x.gm_notes, true] : null].filter(t => t && String(t[0] || '').trim())
+    // GM-only paragraphs (<aside>) in the public notes count as secret, like the GM notes
+    const asides = t => (String(t || '').match(/<aside>[\s\S]*?<\/aside>/g) || []).join('');
+    const texts = x => [[String(x.notes || '').replace(/<aside>[\s\S]*?<\/aside>/g, ''), false], gm ? [asides(x.notes), true] : null, gm ? [x.gm_notes, true] : null]
+      .filter(t => t && String(t[0] || '').trim())
       .map(([t, secret]) => [plain(t, 'html'), secret]);
     const others = entries.filter(x => x.id !== e.id);
     const mine = linker(others, () => null);

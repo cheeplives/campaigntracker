@@ -82,11 +82,20 @@ function role(int $cid): string {
     $st = db()->prepare('SELECT id FROM campaigns WHERE id=?');
     $st->execute([$cid]);
     if (!$st->fetch()) fail('Campaign not found', 404);
-    if ($u['is_admin']) return $cache[$cid] = 'gm';
-    $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
-    $st->execute([$cid, $u['id']]);
-    $r = $st->fetchColumn();
-    if (!$r) fail('You are not a member of this campaign', 403);
+    if ($u['is_admin']) $r = 'gm';
+    else {
+        $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
+        $st->execute([$cid, $u['id']]);
+        $r = $st->fetchColumn();
+        if (!$r) fail('You are not a member of this campaign', 403);
+    }
+    // View as player: a GM's page sends X-View-As: player, and is answered exactly as a player would be, through the
+    // same filtering. Nothing can be changed meanwhile, so a preview never saves anything by accident.
+    if ($r === 'gm' && ($_SERVER['HTTP_X_VIEW_AS'] ?? '') === 'player') {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') fail('You are viewing as a player. Leave player view to make changes', 403, 'viewing_as_player');
+        $GLOBALS['viewing_as_player'] = true;
+        $r = 'player';
+    }
     return $cache[$cid] = $r;
 }
 function need_gm(int $cid): void { if (role($cid) !== 'gm') fail('Only the GM can do that', 403); }
@@ -532,7 +541,7 @@ function entry_index(int $cid, bool $isGm): array {
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
     return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
-        'blank' => (bool)$e['blank'], 'preview' => entry_preview($e['notes'])], $st->fetchAll());
+        'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm))], $st->fetchAll());
 }
 /** An entry row's aliases as a list. */
 function entry_aliases(array $e): array {
@@ -873,8 +882,9 @@ function tome_row(int $cid, int $id): array {
     $st->execute([$id, $cid]);
     return $st->fetch() ?: fail('Tome not found', 404);
 }
-/** A tome as the browser gets it; the body only when $full (the list sends a word count instead). */
-function tome_out(array $t, bool $full): array {
+/** A tome as the browser gets it, without its secret paragraphs for a player; the body only when $full (the list sends a word count instead). */
+function tome_out(array $t, bool $full, bool $isGm): array {
+    $t['body'] = rich_for($t['body'], $isGm);
     $plain = rich_html_plain((string)$t['body']);
     $o = ['id' => (int)$t['id'], 'kind' => $t['kind'], 'title' => $t['title'], 'description' => (string)$t['description'],
         'version' => (int)$t['version'], 'created_by' => $t['created_by'] !== null ? (int)$t['created_by'] : null,
@@ -1022,7 +1032,7 @@ try {
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library()]);
+            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library(), 'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]);
 
     case 'changed': // polled by open pages: a new value means a GM changed something since
         $cid = cid();
@@ -1210,9 +1220,13 @@ try {
         };
         foreach ($st->fetchAll() as $d) {
             $ad = (int)$d['abs_day'];
-            $dn = day_note_text($d['notes'], $d['notes_format']);
+            // a Public note's secret paragraphs preview with the GM notes, for GMs only
+            $html = $d['notes_format'] === 'html';
+            $dn = day_note_text($html ? rich_open($d['notes']) : $d['notes'], $d['notes_format']);
             $gn = $isGm ? day_note_text($d['gm_notes'], $d['gm_notes_format']) : '';
+            $sn = $isGm && $html ? rich_html_plain(rich_secrets($d['notes'])) : '';
             if (trim($dn) !== '') $addNote($ad, ['kind' => 'day', 'text' => $dn]);
+            if (trim($sn) !== '') $addNote($ad, ['kind' => 'gm', 'text' => $sn]);
             if (trim($gn) !== '') $addNote($ad, ['kind' => 'gm', 'text' => $gn]);
             $days[] = [
                 'abs_day' => $ad,
@@ -1274,7 +1288,7 @@ try {
             $hideFuture = !$isGm && empty($settings['players_see_future_weather']);
             $order = shift_order($c);
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
-                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])), 'notes' => $d['notes'],
+                'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])), 'notes' => note_for($d['notes'], $d['notes_format'], $isGm),
                 'notes_format' => $d['notes_format'], 'locations' => $d['locations']];
             if ($isGm) $day += ['gm_notes' => $d['gm_notes'], 'gm_notes_format' => $d['gm_notes_format']];
         }
@@ -1788,9 +1802,10 @@ try {
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
-        $entries = array_map(function ($e) {
+        $entries = array_map(function ($e) use ($isGm) {
             $e['id'] = (int)$e['id'];
             $e['aliases'] = entry_aliases($e);
+            $e['notes'] = rich_for($e['notes'], $isGm);
             unset($e['aliases_json']);
             $e['is_secret'] = (bool)$e['is_secret'];
             $e['created_by'] = $e['created_by'] !== null ? (int)$e['created_by'] : null;
@@ -1818,7 +1833,10 @@ try {
         foreach ($st->fetchAll() as $d) {
             $ad = (int)$d['abs_day'];
             $add(['kind' => 'locations', 'abs_day' => $ad], $d['locations']);
-            $add(['kind' => 'day_notes', 'abs_day' => $ad], $d['notes'], false, $d['notes_format']);
+            if ($d['notes_format'] === 'html') {
+                $add(['kind' => 'day_notes', 'abs_day' => $ad], rich_open($d['notes']), false, 'html');
+                if ($isGm) $add(['kind' => 'day_notes', 'abs_day' => $ad], rich_secrets($d['notes']), true, 'html');
+            } else $add(['kind' => 'day_notes', 'abs_day' => $ad], $d['notes'], false, $d['notes_format']);
             if ($isGm) $add(['kind' => 'day_gm_notes', 'abs_day' => $ad], $d['gm_notes'], true, $d['gm_notes_format']);
         }
         $st = db()->prepare('SELECT abs_day, shift, activity' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? ORDER BY abs_day, shift');
@@ -1877,7 +1895,8 @@ try {
             $st->execute([$cid]);
             foreach ($st->fetchAll() as $t) {
                 $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title'], 'short' => true], trim($t['title'] . "\n" . $t['description']));
-                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], $t['body'], false, 'html');
+                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_open($t['body']), false, 'html');
+                if ($isGm) $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_secrets($t['body']), true, 'html');
             }
         }
         if (has_encyclopedia()) {
@@ -1885,7 +1904,8 @@ try {
             $st->execute([$cid]);
             foreach ($st->fetchAll() as $e) {
                 $src = ['kind' => 'entry', 'id' => (int)$e['id'], 'title' => $e['name']];
-                $add($src, $e['notes'], (bool)$e['is_secret'], 'html');
+                $add($src, rich_open($e['notes']), (bool)$e['is_secret'], 'html');
+                if ($isGm) $add($src, rich_secrets($e['notes']), true, 'html');
                 if ($isGm) $add(['kind' => 'entry_gm_notes'] + $src, $e['gm_notes'], true, 'html');
             }
         }
@@ -1906,6 +1926,8 @@ try {
         $aliases = array_key_exists('aliases', body()) ? aliases_in(p('aliases'), $cid, $name, $id) : ($old['aliases_json'] ?? null);
         $rich = fn(string $k) => array_key_exists($k, body()) ? (rich_html_clean((string)str_in(p($k), 200000)) ?: null) : ($old[$k] ?? null);
         $notes = $rich('notes');
+        // a player never had the GM's secret paragraphs to send back, so they are kept from the stored copy
+        if (!$isGm && array_key_exists('notes', body())) $notes = rich_keep_secrets($old['notes'] ?? null, (string)$notes) ?: null;
         $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
         $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
         db()->beginTransaction();
@@ -2106,9 +2128,9 @@ try {
     // ===== the Library =====
     case 'library':
         $cid = cid();
-        role($cid);
+        $isGm = role($cid) === 'gm';
         need_library();
-        out(['tomes' => array_map(fn($t) => tome_out($t, false), tomes($cid))]);
+        out(['tomes' => array_map(fn($t) => tome_out($t, false, $isGm), tomes($cid))]);
 
     case 'tome':
         $cid = cid();
@@ -2121,13 +2143,13 @@ try {
             $st->execute([$cid, (int)$t['id']]);
             $files = array_map('attachment_out', $st->fetchAll());
         }
-        out(['tome' => tome_out($t, true) + ['files' => $files], 'uploads' => upload_info()]);
+        out(['tome' => tome_out($t, true, $role === 'gm') + ['files' => $files], 'uploads' => upload_info()]);
 
     case 'tome_save':
         // A new tome, or a change to one, by any member. version is the copy the browser opened: when someone else has
         // saved since, the save is refused so it doesn't overwrite their words.
         $cid = cid();
-        role($cid);
+        $isGm = role($cid) === 'gm';
         need_library();
         $id = p('id') ? int_in(p('id'), 1) : null;
         $old = $id ? tome_row($cid, $id) : null;
@@ -2136,7 +2158,9 @@ try {
         $title = trim(preg_replace('/\s+/u', ' ', (string)str_in(p('title'), 200, false)));
         if ($title === '') fail('Title required');
         $desc = trim((string)str_in(p('description'), 1000)) ?: null;
-        $body = rich_html_clean((string)str_in(p('body'), 2_000_000)) ?: null;
+        $body = rich_html_clean((string)str_in(p('body'), 2_000_000));
+        // a player never had the GM's secret paragraphs to send back, so they are kept from the stored copy
+        $body = ($isGm ? $body : rich_keep_secrets($old['body'] ?? null, $body)) ?: null;
         $uid = me()['id'];
         if ($old) {
             $st = db()->prepare('UPDATE library_tomes SET kind=?, title=?, description=?, body=?, version=version+1, updated_by=? WHERE id=? AND version=?');
@@ -2150,7 +2174,7 @@ try {
                 ->execute([$cid, $kind, $title, $desc, $body, $uid, $uid]);
             $id = (int)db()->lastInsertId();
         }
-        out(['ok' => true, 'tome' => tome_out(tomes($cid, $id)[0], true)]);
+        out(['ok' => true, 'tome' => tome_out(tomes($cid, $id)[0], true, $isGm)]);
 
     case 'tome_delete':
         $cid = cid();
