@@ -154,6 +154,41 @@ test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector
   expectNoErrors(errors);
 });
 
+test("Scan on an entry or a tome runs the Proper Noun Detector over just that one", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Scan one");
+  const row = n => page.locator(`.noun-row[data-term="${n}"]`);
+  const dlg = page.locator("dialog.noun-dialog");
+  const tome = (await api(page, "tome_save", { kind: "book", title: "Ledger", description: "", body: "<p>We paid Brother Udo in Wurtbad.</p>" }, cid)).json.tome;
+  expect((await api(page, "event_save", { abs_day: 2, title: "Raid", body: "Bandits from Grissenwald.", tags: [] }, cid)).status).toBe(200);
+  const entry = (await api(page, "entry_save", { name: "Hexe", notes: "<p>She lives near Bögenhafen.</p>", gm_notes: "<p>She serves Tzeentch.</p>", tags: [] }, cid)).json;
+  // The tome's scan offers only the names in the tome.
+  await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
+  await page.locator(".lib-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await expect(dlg).toBeVisible();
+  await expect(dlg).toContainText('in "Ledger" that');
+  for (const n of ["Brother Udo", "Wurtbad"]) await expect(row(n)).toBeVisible();
+  for (const n of ["Grissenwald", "Bögenhafen"]) await expect(row(n)).toHaveCount(0);
+  await row("Wurtbad").getByText("Add").click();
+  await dlg.getByRole("button", { name: "Save choices" }).click();
+  await expect(dlg).toHaveCount(0);
+  // The entry's scan reads its Public and GM notes, and nothing else.
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${entry.id}`);
+  await expect(page.locator(".enc-detail h2")).toHaveText("Hexe"); // the Library's page is an .enc-detail too: wait for the entry
+  await page.locator(".enc-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await expect(dlg).toBeVisible();
+  for (const n of ["Bögenhafen", "Tzeentch"]) await expect(row(n)).toBeVisible();
+  for (const n of ["Grissenwald", "Brother Udo", "Wurtbad", "Hexe"]) await expect(row(n)).toHaveCount(0);
+  await dlg.getByRole("button", { name: "Not now" }).click();
+  // Nothing left to find says so.
+  await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
+  expect((await api(page, "terms_ignore", { terms: ["Brother Udo", "Ledger"] }, cid)).status).toBe(200);
+  await page.reload();
+  await page.locator(".lib-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await expect(page.getByText('No names missing: everything the detector finds in "Ledger"')).toBeVisible();
+  expectNoErrors(errors);
+});
+
 test("anyone in the campaign adds pictures to a tome and takes them off, and deleting the tome deletes them", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Library pictures");

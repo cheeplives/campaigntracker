@@ -1781,8 +1781,9 @@
     if (found.length) await nounDialog(found.slice(0, 40));
   }
   /** Ask about each name found: Add it to the Encyclopedia (with a tag, and as GM only for a GM), Ignore it from now on,
-   * or Skip it this time. scan: the full check of the campaign, where every name starts on Skip. */
-  function nounDialog(found, { scan = false } = {}) {
+   * or Skip it this time. scan: the full check of the campaign (or of one entry or tome, named by where), where every
+   * name starts on Skip. */
+  function nounDialog(found, { scan = false, where = 'the campaign' } = {}) {
     return new Promise(resolve => {
       hideTip();
       const cid = S.camp.id;
@@ -1819,7 +1820,7 @@
         el('form', { method: 'dialog' },
           el('h3', {}, scan ? '📖 Names missing from the Encyclopedia' : '📖 New names for the Encyclopedia'),
           el('p', { class: 'small muted' }, scan
-            ? `The Proper Noun Detector found ${found.length} name${found.length === 1 ? '' : 's'} in the campaign that ${found.length === 1 ? 'isn\'t' : 'aren\'t'} in the Encyclopedia. Pick Add for the ones to keep; Ignore stops a word being offered again.`
+            ? `The Proper Noun Detector found ${found.length} name${found.length === 1 ? '' : 's'} in ${where} that ${found.length === 1 ? 'isn\'t' : 'aren\'t'} in the Encyclopedia. Pick Add for the ones to keep; Ignore stops a word being offered again.`
             : 'The Proper Noun Detector found these in what you saved. Add puts one in the Encyclopedia, Ignore stops it being offered again, Skip asks next time.'),
           el('div', { class: 'row small' }, el('span', { class: 'muted' }, 'All:'), btn('Add', () => all('add'), 'link small'), btn('Ignore', () => all('ignore'), 'link small'), btn('Skip', () => all('skip'), 'link small')),
           el('div', { class: 'noun-list' }, rows.map(r => r.row)),
@@ -1881,11 +1882,18 @@
   }
   /** The campaign's text for the detector: event, reminder and downtime titles, and short boxes like a holding's name, read as titles. */
   const scanSources = sources => sources.map(s => ({ ...s, title: !!s.short || ['event', 'reminder', 'downtime'].includes(s.kind), label: sourceLabel(s)[0] }));
-  async function fullScan() {
+  /** The full scan, or with only (a test of each source) and where (its name for the dialog) a scan of part of it. */
+  async function fullScan(only = null, where = 'the campaign') {
     const { sources } = await api('encyclopedia_sources', { query: { cid: S.camp.id } });
-    const found = Nouns.find(scanSources(sources), { ...detectorOpts(), ignored: S.encIgnored });
-    if (!found.length) { toast('No names missing: everything the detector finds is in the Encyclopedia or ignored'); return; }
-    await nounDialog(found.slice(0, 300), { scan: true });
+    const found = Nouns.find(scanSources(only ? sources.filter(only) : sources), { ...detectorOpts(), ignored: S.encIgnored });
+    if (!found.length) { toast(`No names missing: everything the detector finds in ${where} is in the Encyclopedia or ignored`); return; }
+    await nounDialog(found.slice(0, 300), { scan: true, where });
+  }
+  /** A 🔍 Scan button for one entry or tome: the full scan, over only the text kept with it. */
+  function scanOneBtn(what, only, where) {
+    const b = btn('🔍 Scan', null, 'small', `Run the Proper Noun Detector over just this ${what} and offer the names in it that are missing from the Encyclopedia`);
+    b.addEventListener('click', busy(b, () => fullScan(only, where)));
+    return b;
   }
 
   const entryBlank = e => !(e.notes || '').trim() && !(isGM() && (e.gm_notes || '').trim());
@@ -1967,7 +1975,7 @@
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     draw();
     const scanBtn = btn('🔍 Scan campaign', null, 'small', 'Run the Proper Noun Detector over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
-    scanBtn.addEventListener('click', busy(scanBtn, fullScan));
+    scanBtn.addEventListener('click', busy(scanBtn, () => fullScan()));
     const ignored = S.encIgnored.length ? el('details', { class: 'enc-ignored' },
       el('summary', { class: 'small' }, `Ignored words (${S.encIgnored.length})`),
       el('p', { class: 'small muted' }, isGM() ? 'Words the GMs told the detector not to offer. Restore one to have it offered again.'
@@ -2013,6 +2021,7 @@
         el('h2', {}, e.is_secret ? secretTag() : null, e.name),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), 'small primary', 'Change this entry'),
+          scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
@@ -2550,6 +2559,7 @@
         el('h2', {}, t.title),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
+          scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
             try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
