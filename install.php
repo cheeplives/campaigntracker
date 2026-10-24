@@ -108,6 +108,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/014_library.sql');
             $msg .= ' Added the Library tab for books, journals and notes.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/015_sessions.sql');
+            $msg .= ' Added Session notes on Current Day and the Sessions tab.';
+        }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
         $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];

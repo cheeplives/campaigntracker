@@ -20,9 +20,9 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
-  // The boxes come in order: Weather, Notes, Shifts, Events, Reminders.
-  await expect(page.locator(".daybox")).toHaveCount(5);
-  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "notes", "shifts", "events", "reminders"]);
+  // The boxes come in order: Weather, Notes, Session notes (GMs), Shifts, Events, Reminders.
+  await expect(page.locator(".daybox")).toHaveCount(6);
+  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "notes", "session", "shifts", "events", "reminders"]);
   await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
   // The banner shows the current shift, so the conditions list under it leaves out its own Now line.
   await expect(page.locator(".dayconditions .lbl", { hasText: /^Now$/ })).toHaveCount(0);

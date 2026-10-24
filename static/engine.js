@@ -241,6 +241,28 @@
       .replace('{E}', (eraOf(cal, p.year).era || {}).name || '');
     return out.replace(/(,\s*)+,/g, ',').replace(/^[\s,·—-]+/, '').trim();
   }
+  /** A date typed as words, the inverse of fmtDate: "12 Firstmonth", "Firstmonth 12", "12 Firstmonth 1492" or
+   * "12 Firstmonth 1492 DR". The month is matched from the start of its name (the first in calendar order); the year
+   * defaults to nearDay's. Returns the absolute day, or null when it can't be read or the month hasn't that day. */
+  function parseDate(cal, text, nearDay) {
+    prep(cal);
+    const words = String(text || '').trim().split(/[\s,]+/).filter(Boolean);
+    const nums = [], name = [];
+    let era = null;
+    for (const w of words) {
+      if (/^\d+$/.test(w)) nums.push(Number(w));
+      else if (nums.length >= 2 && !era && (era = eraList(cal).find(e => (e.abbr || '').toLowerCase() === w.toLowerCase()))) continue;
+      else name.push(w.toLowerCase());
+    }
+    if (!nums.length || nums.length > 2 || !name.length) return null;
+    const q = name.join(' ');
+    const m = cal.months.findIndex(mo => String(mo.name || '').toLowerCase().startsWith(q));
+    if (m < 0) return null;
+    const y = nums.length === 2 ? eraYear(era, nums[1]) : fromAbs(cal, nearDay || 0).year;
+    const day = nums[0];
+    if (day < 1 || day > monthLength(cal, y, m)) return null;
+    return toAbs(cal, y, m, day);
+  }
   function fmtShift(cal, absShift) {
     const n = slotsPerDay(cal), d = Math.floor(absShift / n), s = mod(absShift, n);
     return `${shiftNames(cal)[s]} · ${fmtDate(cal, d)}`;
@@ -2032,7 +2054,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    eraList, eraOf, eraYear, yearLabel, fmtDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
+    eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,

@@ -252,26 +252,36 @@ const RichText = (() => {
       }
       quill.setSelection(quill.getLength() - 1, 0, 'silent');
     }
-    return { node, value, insertText, ready: () => !!quill };
+    /** Put rich text (already cleaned, or built from escaped text) in the editor, in place of what's there or below it. */
+    function setHtml(html, append = false) {
+      if (!quill) { text = append && text ? `${text}${html}` : html; format = 'html'; return; }
+      const delta = quill.clipboard.convert({ html });
+      if (append && quill.getText().trim()) quill.updateContents({ ops: [{ retain: quill.getLength() }, ...delta.ops] }, 'user');
+      else quill.setContents(delta, 'user');
+      quill.setSelection(quill.getLength() - 1, 0, 'silent');
+    }
+    return { node, value, insertText, setHtml, ready: () => !!quill };
   }
 
   // ------------------------------------------------------------ @ mentions
   /** Typing @ and a few letters lists the Encyclopedia names (and other names) that match; picking one writes the
    * entry's name in place of the @ and what was typed, and the note links it the way it links every name. The last
-   * line adds what was typed as a new entry. m: { list() → [{ name, aliases }], create(name) → Promise<bool> }. */
-  function mentionPicker(quill, node, m) {
+   * line adds what was typed as a new entry. m: { list() → [{ name, aliases }], create(name) → Promise<bool> }.
+   * a, the text it works in: { caret() → index or null, textBefore(index, n) → string, replace(start, end, text),
+   * anchor(index) → { top, left } in node's coordinates }. Returns { show, close, keydown(ev) → whether it took the key }. */
+  function mentionList(a, node, m) {
     const box = el('ul', { class: 'rt-mentions', role: 'listbox', 'aria-label': 'Encyclopedia names', hidden: true });
     node.append(box);
     let at = -1, items = [], pick = 0, dismissed = -1;
     const close = () => { at = -1; box.hidden = true; box.replaceChildren(); };
     /** The @ being typed before the cursor, as [where the @ is, what follows it], or null. */
     function typed() {
-      const sel = quill.getSelection();
-      if (!sel || sel.length) return null;
-      const before = quill.getText(Math.max(0, sel.index - 41), Math.min(41, sel.index));
+      const i = a.caret();
+      if (i === null) return null;
+      const before = a.textBefore(i, 41);
       const hit = /(^|[\s(["'])@([^@\n]{0,40})$/.exec(before);
       if (!hit || /^\s/.test(hit[2])) return null;
-      return [sel.index - hit[2].length - 1, hit[2]];
+      return [i - hit[2].length - 1, hit[2]];
     }
     function show() {
       const t = typed();
@@ -295,32 +305,63 @@ const RichText = (() => {
       box.replaceChildren(...items.map((it, i) => el('li', { role: 'option', class: i === pick ? 'on' : '', 'aria-selected': String(i === pick),
         onmousedown: ev => { ev.preventDefault(); choose(i); } },
         it.create ? ['Add ', el('strong', {}, `"${it.name}"`), ' to the Encyclopedia'] : [el('strong', {}, it.name), it.via ? el('span', { class: 'muted' }, ` (${it.via})`) : null])));
-      const b = quill.getBounds(where), top = quill.root.offsetTop + b.bottom + 4;
-      Object.assign(box.style, { top: `${top}px`, left: `${Math.max(0, Math.min(b.left, node.clientWidth - 260))}px` });
+      const b = a.anchor(where);
+      Object.assign(box.style, { top: `${b.top}px`, left: `${Math.max(0, Math.min(b.left, node.clientWidth - 260))}px` });
       box.hidden = false;
     }
     async function choose(i) {
-      const it = items[i], start = at, sel = quill.getSelection(true);
-      if (!it || start < 0) return;
+      const it = items[i], start = at, end = a.caret();
+      if (!it || start < 0 || end === null) return;
       close();
       if (it.create && !await m.create(it.name)) return;
-      quill.deleteText(start, sel.index - start, 'user');
-      quill.insertText(start, `${it.name} `, 'user');
-      quill.setSelection(start + it.name.length + 1, 0, 'user');
+      a.replace(start, end, `${it.name} `);
     }
-    quill.on('text-change', (delta, old, source) => { if (source === 'user') { pick = 0; show(); } });
-    quill.on('selection-change', range => { if (!range) close(); else if (at >= 0) show(); });
-    // Ahead of Quill's own keys while the list is open: arrows move, Enter or Tab picks, Escape leaves the @ as typed.
-    node.addEventListener('keydown', ev => {
-      if (box.hidden) return;
+    /** Ahead of the text's own keys while the list is open: arrows move, Enter or Tab picks, Escape leaves the @ as typed. */
+    function keydown(ev) {
+      if (box.hidden) return false;
       const keys = { ArrowDown: () => { pick = (pick + 1) % items.length; show(); }, ArrowUp: () => { pick = (pick - 1 + items.length) % items.length; show(); },
         Enter: () => choose(pick), Tab: () => choose(pick), Escape: () => { dismissed = at; close(); } };
-      if (!keys[ev.key]) return;
+      if (!keys[ev.key]) return false;
       ev.preventDefault(); ev.stopPropagation();
       keys[ev.key]();
-    }, true);
-    return { close };
+      return true;
+    }
+    return { show: () => { pick = 0; show(); }, refresh: () => { if (at >= 0) show(); }, close, keydown };
+  }
+  /** The @ list in a Quill editor. */
+  function mentionPicker(quill, node, m) {
+    const list = mentionList({
+      caret: () => { const sel = quill.getSelection(); return sel && !sel.length ? sel.index : null; },
+      textBefore: (i, n) => quill.getText(Math.max(0, i - n), Math.min(n, i)),
+      replace: (start, end, text) => {
+        quill.deleteText(start, end - start, 'user');
+        quill.insertText(start, text, 'user');
+        quill.setSelection(start + text.length, 0, 'user');
+      },
+      anchor: where => { const b = quill.getBounds(where); return { top: quill.root.offsetTop + b.bottom + 4, left: b.left }; },
+    }, node, m);
+    quill.on('text-change', (delta, old, source) => { if (source === 'user') list.show(); });
+    quill.on('selection-change', range => { if (!range) list.close(); else list.refresh(); });
+    node.addEventListener('keydown', ev => list.keydown(ev), true);
+    return { close: list.close };
+  }
+  /** The @ list in a one-line text box; holder is the positioned element the list hangs under. Returns { keydown }
+   * for the box's own key handler to ask first. */
+  function inputMentions(input, holder, m) {
+    const list = mentionList({
+      caret: () => (input.selectionStart === input.selectionEnd ? input.selectionStart : null),
+      textBefore: (i, n) => input.value.slice(Math.max(0, i - n), i),
+      replace: (start, end, text) => {
+        input.value = input.value.slice(0, start) + text + input.value.slice(end);
+        input.setSelectionRange(start + text.length, start + text.length);
+        input.focus();
+      },
+      anchor: () => ({ top: input.offsetTop + input.offsetHeight + 4, left: input.offsetLeft }),
+    }, holder, m);
+    input.addEventListener('input', () => list.show());
+    input.addEventListener('blur', () => list.close());
+    return { keydown: ev => list.keydown(ev), close: list.close };
   }
 
-  return { render, view, toMarkdown, editor, load, safeHref, split };
+  return { render, view, toMarkdown, editor, load, safeHref, split, inputMentions };
 })();
