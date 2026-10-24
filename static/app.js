@@ -2429,7 +2429,7 @@
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
-      attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret }),
+      attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret, name: e.name }),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
         (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
@@ -2460,9 +2460,82 @@
     return data.file;
   }
 
+  /** A found picture's credit: "Title by Author, Licence, via Source", each part linked when it can be; an embed's
+   * reads "Title by Author on DeviantArt". */
+  function creditLine(f) {
+    const c = f.credit, link = (href, text) => href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text) : text;
+    const by = c.author ? [' by ', link(c.author_url, c.author)] : [];
+    return el('p', { class: 'small muted file-credit' }, c.title || 'Untitled', by,
+      f.embed ? [' on ', link(f.embed.url || c.source_url, c.source || 'DeviantArt')] : [', ', link(c.license_url, c.license), c.source ? [', via ', link(c.source_url, c.source)] : null]);
+  }
+
+  // Find Image: an entry's name looked up in open picture libraries, only when asked. The server does the searching (so
+  // the keys stay there) and decides what may be copied: only CC0, public domain, CC BY and CC BY-SA pictures get Use
+  // this picture, and each keeps its credit. A DeviantArt work under any other licence can be embedded instead, which
+  // keeps only its link, or followed to its page and its artist's to ask before copying it.
+  const FIND_SOURCES = [
+    ['openverse', 'Open web', 'Openly licensed pictures from Flickr, Wikimedia Commons, museums and more, through Openverse'],
+    ['museums', 'Museums', 'Public-domain paintings, armour, maps and the like from The Met, the Art Institute of Chicago and the Smithsonian'],
+    ['deviantart', 'DeviantArt', 'Searched by tag, so the words are joined into one: "ruined keep" looks for ruinedkeep'],
+  ];
+  function findImage(parentType, parentId, name, opts) {
+    const cid = S.camp.id;
+    let source = 'openverse', seq = 0;
+    const q = el('input', { type: 'search', value: name || '', maxlength: 200, placeholder: 'e.g. ruined keep', 'aria-label': 'Search for pictures', enterkeyhint: 'search' });
+    q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); run(); } });
+    const gmOnly = opts.gmOnly;                       // the Pictures and files box's own GM only box
+    const out = el('div', { class: 'find-results', 'aria-live': 'polite' });
+    const say = t => out.replaceChildren(el('p', { class: 'muted small' }, t));
+    const tabs = el('div', { class: 'seg find-tabs', role: 'tablist', 'aria-label': 'Where to search' }, FIND_SOURCES.map(([k, label, t]) =>
+      el('button', { type: 'button', role: 'tab', class: 'small' + (k === source ? ' on' : ''), 'aria-selected': String(k === source), 'data-source': k, 'data-tip': t,
+        onclick: () => { source = k; for (const b of tabs.children) { const on = b.dataset.source === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); } run(); } }, label)));
+    const link = (href, text, cls) => href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', class: cls }, text) : text;
+    async function run() {
+      const words = q.value.trim(), mine = ++seq;
+      if (!words) return say('Type something to search for.');
+      say('Looking…');
+      try {
+        const r = await api('image_search', { query: { cid, source, q: words } });
+        if (mine !== seq) return;
+        if (!r.results.length) return say(`Nothing found for "${words}".`);
+        out.replaceChildren(el('div', { class: 'find-grid' }, r.results.map(result)));
+      } catch (err) { if (mine === seq) say(err.message); }
+    }
+    function result(it) {
+      const pick = async (mode, ev) => {
+        const b = ev.currentTarget;
+        b.disabled = true;
+        try {
+          await post('image_import', { parent_type: parentType, parent_id: parentId, source: it.source, id: it.id, mode, is_secret: !!gmOnly?.checked }, cid);
+          toast('Picture added');
+          opts.onAdded();
+        } catch (err) { b.disabled = false; toast(err.message, true); }
+      };
+      const da = it.source === 'deviantart';
+      return el('figure', { class: 'find-result' },
+        el('a', { class: 'find-thumb', href: it.landing_url, target: '_blank', rel: 'noopener noreferrer', 'data-tip': `Open "${it.title}" where it was found` },
+          el('img', { src: it.thumb, alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' })),
+        el('figcaption', { class: 'small' },
+          el('strong', {}, it.title),
+          it.author ? el('span', {}, 'by ', link(it.author_url, it.author)) : null,
+          el('span', {}, link(it.license_url, it.license), ' · ', link(it.landing_url, it.via || 'Source'))),
+        it.open ? btn('Use this picture', ev => pick('copy', ev), 'small primary', 'Copy this picture to the entry, with its credit')
+          : el('div', { class: 'find-closed' },
+            el('p', { class: 'small muted' }, da ? 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.' : 'Not openly licensed, so it can\'t be copied here.'),
+            da ? el('div', { class: 'row' }, link(it.landing_url, 'View on DeviantArt', 'button small'), link(it.author_url, 'Artist\'s page', 'button small'),
+              btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
+    }
+    const panel = el('div', { class: 'find-image' },
+      el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs),
+      out);
+    run();
+    return panel;
+  }
+
   /** The Pictures and files box on a page. files: what the server sent for this parent; opts.uploads: { ready, max_bytes,
    * accept, problem }; opts.secret: the parent is GM only, so every file on it is too; opts.manageAny: every member may
-   * change or remove its files (otherwise whoever added one, and GMs). After a change the box fetches its files again and
+   * change or remove its files (otherwise whoever added one, and GMs); opts.name: an Encyclopedia entry's name, which
+   * Find Image starts from. After a change the box fetches its files again and
    * redraws only itself, so notes being typed beside it are kept; files is updated in place. */
   function attachmentsCard(parentType, parentId, files, opts = {}) {
     const up = opts.uploads || { ready: false };
@@ -2477,7 +2550,8 @@
     opts = { ...opts, refresh };
     const mine = f => isGM() || opts.manageAny || f.created_by === S.user.id;
     const hidden = f => f.is_secret || opts.secret;
-    const pics = files.filter(f => f.kind === 'image'), docs = files.filter(f => f.kind !== 'image');
+    const isPic = f => f.kind === 'image' || f.kind === 'embed';
+    const pics = files.filter(isPic), docs = files.filter(f => !isPic(f));
     const status = el('p', { class: 'small muted file-status', role: 'status' });
     const gmOnly = isGM() && !opts.secret ? el('input', { type: 'checkbox', 'aria-label': 'Upload as GM only' }) : null;
     const send = async list => {
@@ -2494,12 +2568,19 @@
     };
     const input = el('input', { type: 'file', multiple: true, accept: up.accept || 'image/*', class: 'file-input', 'aria-label': 'Add pictures or files' });
     input.addEventListener('change', () => { send(input.files); input.value = ''; });
+    const findSlot = el('div', { class: 'find-slot' });
+    const findBtn = up.ready && parentType === 'encyclopedia' && opts.name ? btn('🖼️ Find Image', () => {
+      findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(findImage(parentType, parentId, opts.name, { gmOnly, onAdded: refresh }));
+    }, 'small', 'Search open picture libraries, museums and DeviantArt for a picture of this, credited') : null;
     const addBtn = up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
     const gallery = pics.length ? el('div', { class: 'file-gallery' }, pics.map((f, i) =>
       el('figure', { class: 'file-pic' + (hidden(f) ? ' secret' : ''), 'data-id': f.id },
         el('button', { type: 'button', class: 'file-thumb', 'aria-label': `Open ${f.caption || f.name}`, onclick: () => fileViewer(pics, i, { ...opts, mine, hidden }) },
-          el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height })),
-        el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name))))) : null;
+          f.embed?.gone ? el('span', { class: 'muted small file-gone' }, 'No longer on DeviantArt')
+            : el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height, referrerpolicy: f.embed ? 'no-referrer' : null })),
+        el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name),
+          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' · Embedded') : null),
+        f.credit ? creditLine(f) : null))) : null;
     const docList = docs.length ? el('ul', { class: 'file-list' }, docs.map(f => el('li', { 'data-id': f.id },
       hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null,
       el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
@@ -2509,8 +2590,8 @@
     const box = el('section', { class: 'enc-files' },
       el('div', { class: 'row spread' }, el('h4', {}, 'Pictures and files', tip(opts.secret ? 'GM only, like the entry. Pictures show here; other files download'
           : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
-        el('div', { class: 'row' }, gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see what you add' }, gmOnly, ' 🔒 GM only') : null, addBtn)),
-      gallery, docList,
+        el('div', { class: 'row' }, gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see what you add' }, gmOnly, ' 🔒 GM only') : null, findBtn, addBtn)),
+      findSlot, gallery, docList,
       !files.length ? el('p', { class: 'muted small' }, up.ready ? 'No pictures or files yet. Add a portrait, a map or a handout.' : isGM() && up.problem ? up.problem : 'No pictures or files yet.') : null,
       status);
     if (up.ready) {
@@ -2554,13 +2635,15 @@
     const tools = el('div', { class: 'row file-tools' });
     const show = () => {
       const f = pics[i];
-      img.src = f.url; img.alt = f.caption || f.name;
-      cap.replaceChildren(opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`));
+      img.src = f.url; img.alt = f.caption || f.name; img.referrerPolicy = f.embed ? 'no-referrer' : '';
+      cap.replaceChildren(opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, f.embed ? null : el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`),
+        f.credit ? creditLine(f) : null);
       tools.replaceChildren(
         pics.length > 1 ? btn('‹', () => { i = (i + pics.length - 1) % pics.length; show(); }, 'small', 'Previous picture') : null,
         pics.length > 1 ? el('span', { class: 'small muted' }, `${i + 1} / ${pics.length}`) : null,
         pics.length > 1 ? btn('›', () => { i = (i + 1) % pics.length; show(); }, 'small', 'Next picture') : null,
-        el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
+        f.embed ? el('a', { class: 'button small', href: f.embed.url, target: '_blank', rel: 'noopener noreferrer' }, 'View on DeviantArt')
+          : el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
         opts.mine(f) ? btn('✎ Caption', () => fileEdit(f, opts, () => d.close()), 'small') : null,
         opts.mine(f) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
         btn('Close', () => d.close(), 'small primary'));
@@ -2896,7 +2979,7 @@
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
       tags.node,
-      e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret }) : null,
+      e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       e.id ? foundIn(e, pub, gm) : null,
       e.id ? wikiSummary(name, pub) : null,
       el('div', { class: 'notes-grid' },
@@ -4845,6 +4928,13 @@
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
             ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
+          ['Find Image on an Encyclopedia entry searches, only when asked: ', extLink({ url: 'https://openverse.org/', title: 'Openverse' }),
+            ' (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), the public-domain collections of ',
+            extLink({ url: 'https://www.metmuseum.org/hubs/open-access', title: 'The Met (Open Access)' }), ' and the ',
+            extLink({ url: 'https://www.artic.edu/open-access/public-api', title: 'Art Institute of Chicago (public API)' }), ' and the ',
+            extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', and ',
+            extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA are copied, ',
+            'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       section('No open source',
@@ -4865,6 +4955,8 @@
             'There are no seasons or moons, since each world has its own. Region climates are judgement calls from how each world is shown (Tatooine and Jakku as hot desert, Hoth as ice cap, Endor and Kashyyyk as forest), using the Köppen classes above. ',
             'In the travel planner, hyperdrive classes other than 0.5 and 1, the route multipliers and the sample trip times are the app\'s own guide, as the films leave trip times loose.'],
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
+          ['DeviantArt, through its API and oEmbed, for Find Image: artists there keep their copyright unless they chose a Creative Commons licence, so the app copies only works under an open one and embeds the rest, linked to the work and its artist. ',
+            'If an artist or DeviantArt asks, a work will be removed.'],
           'Storm, fog and dust frequencies, the weather mixes of the simple climates, the ground conditions model and the visibility rules (see above).',
           ['Fan sites and pages used above that are not openly licensed, each credited where it is used: the Warhammer Fantasy Lexicanum (CC BY-NC, non-commercial use only), ',
             cite('balazar'), ', ', cite('runequestCults'), ', ', cite('gloranthaWeather'), ', ', cite('galifarHolidays'), ' and ', cite('imaginarymaps'), '. ',

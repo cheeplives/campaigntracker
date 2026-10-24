@@ -444,6 +444,7 @@ function http_request(string $method, string $url, array $opts = []): array {
     CURLOPT_HTTPHEADER     => $opts['headers'] ?? [],
   ]);
   if (isset($opts['post_fields'])) curl_setopt($ch, CURLOPT_POSTFIELDS, $opts['post_fields']);
+  if (!empty($opts['compress'])) curl_setopt($ch, CURLOPT_ENCODING, '');   // accept gzip and the like
   $body = curl_exec($ch);
   $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err = curl_error($ch);

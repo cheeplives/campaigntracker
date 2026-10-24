@@ -24,6 +24,14 @@ test("About & sources: open signed out from the footer, with every travel sample
   await expect(page.getByRole("link", { name: "Inter typeface" })).toBeVisible();
   // and Wikipedia, for the summaries Generate Summary adds to Encyclopedia entries
   await expect(page.getByText(/Generate Summary on an Encyclopedia entry/)).toContainText("CC BY-SA 4.0");
+  // and the picture libraries Find Image searches, with DeviantArt also under No open source
+  const find = page.locator("li", { hasText: "Find Image on an Encyclopedia entry" });
+  await expect(find.getByRole("link", { name: "Openverse" })).toHaveAttribute("href", "https://openverse.org/");
+  await expect(find.getByRole("link", { name: /The Met/ })).toBeVisible();
+  await expect(find.getByRole("link", { name: /Art Institute of Chicago/ })).toBeVisible();
+  await expect(find.getByRole("link", { name: /Smithsonian/ })).toBeVisible();
+  await expect(find.getByRole("link", { name: "DeviantArt" })).toBeVisible();
+  await expect(page.locator("li", { hasText: "DeviantArt, through its API and oEmbed" })).toBeVisible();
   // Leaving the page goes back to the sign-in card.
   await page.goto("index.html#/");
   await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();

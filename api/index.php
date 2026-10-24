@@ -10,6 +10,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
+require __DIR__ . '/images.php';
 
 // ---------- helpers ----------
 function out($data, int $code = 200): void { json_out($data, $code); }
@@ -771,12 +772,24 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
     }
     fail('Files can\'t be attached to that', 400);
 }
+/** Whether migration 017 has been run: found pictures keep their credit, and DeviantArt works can be embedded. */
+function has_credits(): bool {
+    static $has = null;
+    return $has ??= has_attachments() && (bool)db()->query("SHOW COLUMNS FROM attachments LIKE 'credit_license'")->fetchColumn();
+}
+/** A found picture's credit, null for a file uploaded by hand. */
+function attachment_credit(array $a): ?array {
+    if (($a['credit_license'] ?? null) === null && ($a['credit_source'] ?? null) === null) return null;
+    return ['title' => $a['credit_title'], 'author' => $a['credit_author'], 'author_url' => $a['credit_author_url'], 'license' => $a['credit_license'],
+        'license_url' => $a['credit_license_url'], 'source' => $a['credit_source'], 'source_url' => $a['credit_source_url']];
+}
 function attachment_out(array $a): array {
     $id = (int)$a['id'];
     return ['id' => $id, 'parent_type' => $a['parent_type'], 'parent_id' => (int)$a['parent_id'], 'name' => $a['original_name'],
         'mime' => $a['mime'], 'kind' => $a['kind'], 'size' => (int)$a['size_bytes'],
         'width' => $a['width'] !== null ? (int)$a['width'] : null, 'height' => $a['height'] !== null ? (int)$a['height'] : null,
         'caption' => $a['caption'], 'is_secret' => (bool)(int)$a['is_secret'], 'created_by' => $a['created_by'] !== null ? (int)$a['created_by'] : null,
+        'credit' => attachment_credit($a), 'embed' => $a['kind'] === 'embed' ? ['url' => $a['embed_url'], 'gone' => ($a['embed_src'] ?? null) === null] : null,
         'url' => 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$a['campaign_id'], 'id' => $id])];
 }
 /** The files on every Encyclopedia entry this member may see. */
@@ -858,6 +871,59 @@ function upload_info(): array {
     if (!$out['ready']) $out['problem'] = !has_attachments() ? 'Pictures and files need a database upgrade: open install.php and press Install or upgrade.'
         : (me()['is_admin'] ? 'Uploads aren\'t set up on this server: ' . $up['problem'] : 'Uploads aren\'t set up on this server yet. Ask whoever runs it.');
     return $out;
+}
+
+/** Fail unless parent ($type, $pid) has room for one more file and the campaign for $size more bytes. */
+function attachment_room(int $cid, string $type, int $pid, int $size): void {
+    $st = db()->prepare('SELECT COUNT(*) FROM attachments WHERE campaign_id=? AND parent_type=? AND parent_id=?');
+    $st->execute([$cid, $type, $pid]);
+    if ((int)$st->fetchColumn() >= ATTACHMENTS_PER_PARENT) fail('There are ' . ATTACHMENTS_PER_PARENT . ' files here already. Remove one first', 409);
+    $quota = max(1, (int)(cfg('uploads', [])['campaign_mb'] ?? 500)) << 20;
+    $st = db()->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=?');
+    $st->execute([$cid]);
+    if ((int)$st->fetchColumn() + $size > $quota) fail('This campaign\'s files are using all of its ' . ($quota >> 20) . ' MB. Remove some first', 413);
+}
+/** Keep the file at $tmp (already checked) under a new random name and add its row; $row holds the columns besides
+ * campaign_id, stored_name and created_by. $tmp null: a row with no file (an embed). Returns the row as the browser gets it. */
+function attachment_store(int $cid, ?string $tmp, array $row, bool $uploaded = false): array {
+    $stored = bin2hex(random_bytes(16));
+    $dest = null;
+    if ($tmp !== null) {
+        $up = upload_dir();
+        if (!$up['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+        $dest = "{$up['dir']}/$stored";
+        $moved = $uploaded ? move_uploaded_file($tmp, $dest) : (@rename($tmp, $dest) || (@copy($tmp, $dest) && (@unlink($tmp) || true)));
+        if (!$moved) { error_log("upload: couldn't move the file to $dest"); fail('The file couldn\'t be saved on the server', 500); }
+        @chmod($dest, 0600);
+    }
+    $row = ['campaign_id' => $cid, 'stored_name' => $stored, 'created_by' => me()['id']] + $row;
+    try {
+        db()->prepare('INSERT INTO attachments (' . implode(', ', array_keys($row)) . ') VALUES (' . implode(',', array_fill(0, count($row), '?')) . ')')->execute(array_values($row));
+    } catch (Throwable $e) { if ($dest) @unlink($dest); throw $e; }
+    $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
+    $st->execute([(int)db()->lastInsertId()]);
+    return attachment_out($st->fetch());
+}
+/** A found picture's credit as attachments columns. */
+function credit_columns(array $i): array {
+    return ['credit_title' => mb_substr($i['title'], 0, 200), 'credit_author' => $i['author'] !== null ? mb_substr($i['author'], 0, 200) : null,
+        'credit_author_url' => $i['author_url'] !== null && strlen($i['author_url']) <= 500 ? $i['author_url'] : null, 'credit_license' => mb_substr($i['license'], 0, 60),
+        'credit_license_url' => $i['license_url'], 'credit_source' => mb_substr($i['via'] ?: ucfirst($i['source']), 0, 60),
+        'credit_source_url' => $i['landing_url'] !== null && strlen($i['landing_url']) <= 500 ? $i['landing_url'] : null];
+}
+/** An embed's picture address, asked of oEmbed again once EMBED_RECHECK has passed; null once DeviantArt says it's gone. */
+function embed_refresh(array $a): ?string {
+    $fresh = $a['embed_checked_at'] && strtotime($a['embed_checked_at']) > time() - EMBED_RECHECK;
+    if ($fresh) return embed_src_ok($a['embed_src']);
+    try { $o = deviantart_oembed((string)$a['embed_url']); } catch (ImageSourceDown) { return embed_src_ok($a['embed_src']); }  // keep the last one meanwhile
+    db()->prepare('UPDATE attachments SET embed_src=?, embed_checked_at=NOW() WHERE id=?')->execute([$o['src'] ?? null, $a['id']]);
+    return $o['src'] ?? null;
+}
+/** The file name a found picture is kept under: its title, and the extension its contents call for. */
+function found_name(string $title, string $path): string {
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'][@getimagesize($path)['mime'] ?? ''] ?? 'jpg';
+    $base = trim(preg_replace('/[^\p{L}\p{N} ._-]+/u', ' ', $title) ?? '') ?: 'picture';
+    return upload_name(mb_substr($base, 0, 150) . ".$ext");
 }
 
 // ---------- routing ----------
@@ -989,7 +1055,7 @@ require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session'];
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search'];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -1000,7 +1066,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete', 'secret_reveal',
+    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
     'session_save', 'session_end', 'session_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
@@ -2537,6 +2603,14 @@ try {
         $role = role($cid);
         need_attachments();
         $a = attachment_row($cid, int_in($_GET['id'] ?? null, 1), $role);
+        if ($a['kind'] === 'embed') {
+            // An embedded DeviantArt work: no file here, so the browser is sent to DeviantArt's picture, and only there.
+            $src = embed_refresh($a);
+            if (!$src) fail('No longer on DeviantArt', 404, 'embed_gone');
+            header('Cache-Control: private, no-cache');
+            header('Location: ' . $src, true, 302);
+            exit;
+        }
         $dir = upload_dir()['dir'];
         $path = $dir && preg_match('/^[0-9a-f]{32}$/', $a['stored_name']) ? "$dir/{$a['stored_name']}" : '';
         if ($path === '' || !is_file($path)) fail('File not found', 404);
@@ -2577,30 +2651,73 @@ try {
         $size = (int)filesize($f['tmp_name']);
         if ($size < 1) fail('That file is empty');
         if ($size > $max) fail("That file is too big: files can be $limit at most", 413);
-        $up = upload_dir();
-        if (!$up['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
-        $st = db()->prepare('SELECT COUNT(*) FROM attachments WHERE campaign_id=? AND parent_type=? AND parent_id=?');
-        $st->execute([$cid, $type, $pid]);
-        if ((int)$st->fetchColumn() >= ATTACHMENTS_PER_PARENT) fail('There are ' . ATTACHMENTS_PER_PARENT . ' files here already. Remove one first', 409);
-        $quota = max(1, (int)(cfg('uploads', [])['campaign_mb'] ?? 500)) << 20;
-        $st = db()->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=?');
-        $st->execute([$cid]);
-        if ((int)$st->fetchColumn() + $size > $quota) fail('This campaign\'s files are using all of its ' . ($quota >> 20) . ' MB. Remove some first', 413);
+        if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+        attachment_room($cid, $type, $pid, $size);
         $name = upload_name((string)($f['name'] ?? ''));
         [$mime, $kind, $w, $h] = upload_type($f['tmp_name'], $name);
         $caption = trim((string)str_in($_POST['caption'] ?? null, 200)) ?: null;
         $secret = $role === 'gm' && !empty($_POST['is_secret']) && $_POST['is_secret'] !== '0' && $_POST['is_secret'] !== 'false' ? 1 : 0;
-        $stored = bin2hex(random_bytes(16));
-        $dest = "{$up['dir']}/$stored";
-        if (!move_uploaded_file($f['tmp_name'], $dest)) { error_log("upload: couldn't move the file to $dest"); fail('The file couldn\'t be saved on the server', 500); }
-        @chmod($dest, 0600);
-        try {
-            db()->prepare('INSERT INTO attachments (campaign_id, parent_type, parent_id, stored_name, original_name, mime, kind, size_bytes, width, height, caption, is_secret, created_by)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$cid, $type, $pid, $stored, $name, $mime, $kind, $size, $w, $h, $caption, $secret, me()['id']]);
-        } catch (Throwable $e) { @unlink($dest); throw $e; }
-        $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
-        $st->execute([(int)db()->lastInsertId()]);
-        out(['ok' => true, 'file' => attachment_out($st->fetch())]);
+        out(['ok' => true, 'file' => attachment_store($cid, $f['tmp_name'], ['parent_type' => $type, 'parent_id' => $pid, 'original_name' => $name, 'mime' => $mime,
+            'kind' => $kind, 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'caption' => $caption, 'is_secret' => $secret], true)]);
+
+    case 'image_search': // Find Image: source (openverse, museums or deviantart), q. Results as image_item() describes.
+        $cid = cid();
+        role($cid);
+        $source = (string)($_GET['source'] ?? '');
+        if (!in_array($source, IMAGE_SOURCES, true)) fail('Unknown picture source', 400);
+        $q = trim((string)str_in($_GET['q'] ?? '', 200));
+        if ($q === '') fail('Type something to search for');
+        rate_limit('image_search', (string)me()['id'], 30, 60);
+        if ($source === 'deviantart' && !deviantart_ready())
+            fail(me()['is_admin'] ? "DeviantArt isn't set up on this server: register an app at deviantart.com/developers and put its client_id and client_secret under 'image_search' => ['deviantart' => …] in the config."
+                : 'DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
+        try { out(['results' => image_search($source, $q)]); }
+        catch (ImageSourceDown) { fail(['openverse' => 'Openverse', 'museums' => 'The museums', 'deviantart' => 'DeviantArt'][$source] . ' couldn\'t be reached just now. Try again later.', 502, 'source_unavailable'); }
+
+    case 'image_import': // Find Image's picks: parent_type, parent_id, source, id, mode ('copy' or 'embed'), is_secret (GMs)
+        $cid = cid();
+        $role = role($cid);
+        need_attachments();
+        if (!has_credits()) fail('Saving found pictures needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+        $type = (string)p('parent_type', '');
+        $pid = int_in(p('parent_id'), 1);
+        attachment_parent($cid, $type, $pid, $role);
+        $source = (string)p('source', '');
+        $id = (string)str_in(p('id'), 100);
+        $mode = (string)p('mode', 'copy');
+        if (!in_array($source, IMAGE_SOURCES, true) || !in_array($mode, ['copy', 'embed'], true)) fail('Unknown picture source', 400);
+        if ($mode === 'embed' && $source !== 'deviantart') fail('Only DeviantArt works can be embedded', 400);
+        if ($source === 'deviantart' && !deviantart_ready()) fail('DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
+        $secret = $role === 'gm' && p('is_secret') ? 1 : 0;
+        $down = fn() => fail('That picture couldn\'t be fetched just now. Try again later.', 502, 'source_unavailable');
+        try { $item = image_lookup($source, $id); } catch (ImageSourceDown) { $down(); }
+        if (!$item) fail('That picture isn\'t there any more', 404);
+        if ($mode === 'embed') {
+            try { $o = deviantart_oembed((string)$item['landing_url']); } catch (ImageSourceDown) { $down(); }
+            if (!$o) fail('DeviantArt won\'t let that work be embedded', 422, 'not_embeddable');
+            attachment_room($cid, $type, $pid, 0);
+            out(['ok' => true, 'file' => attachment_store($cid, null, ['parent_type' => $type, 'parent_id' => $pid,
+                'original_name' => upload_name($item['title']), 'mime' => 'image/jpeg', 'kind' => 'embed', 'size_bytes' => 0,
+                'width' => $o['width'] ? min(65535, $o['width']) : null, 'height' => $o['height'] ? min(65535, $o['height']) : null, 'is_secret' => $secret,
+                'embed_url' => $item['landing_url'], 'embed_src' => $o['src'], 'embed_checked_at' => date('Y-m-d H:i:s')] + credit_columns($item))]);
+        }
+        if (!$item['open']) fail('That picture isn\'t openly licensed, so it can\'t be copied here', 403, 'not_open');
+        if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+        $max = upload_max_bytes();
+        $tmp = null;
+        // The full picture, or the thumbnail when that is too big or won't come.
+        foreach (array_unique(array_filter([$item['full'], $item['thumb']])) as $url) {
+            try { $tmp = image_download($url, $max); break; } catch (ImageSourceDown | LengthException) {}
+        }
+        if (!$tmp) $down();
+        register_shutdown_function(fn() => is_file($tmp) && @unlink($tmp));   // when it is refused below; a kept one has moved
+        $size = (int)filesize($tmp);
+        attachment_room($cid, $type, $pid, $size);
+        $name = found_name($item['title'], $tmp);
+        [$mime, $kind, $w, $h] = upload_type($tmp, $name);
+        if ($kind !== 'image') fail('That isn\'t a picture', 415, 'unsupported_type');
+        out(['ok' => true, 'file' => attachment_store($cid, $tmp, ['parent_type' => $type, 'parent_id' => $pid, 'original_name' => $name, 'mime' => $mime,
+            'kind' => 'image', 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'is_secret' => $secret] + credit_columns($item))]);
 
     case 'file_update': // a file's caption, and (GMs) whether it is GM only
         $cid = cid();
