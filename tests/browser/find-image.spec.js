@@ -192,7 +192,8 @@ test.describe("Find Image panel", () => {
     await expect(fig).toHaveCount(1);
     // Under the picture the credit is only a "?" to hover or tap; the picture at full size has it with its links.
     await expect(fig.locator(".file-credit")).toHaveCount(0);
-    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /^Ruined keep at dusk by Ann Photo, CC BY-SA 4\.0, via Flickr\./);
+    await expect(fig.locator("figcaption")).toHaveCount(0);
+    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /^Ruined keep at dusk\.png\nRuined keep at dusk by Ann Photo, CC BY-SA 4\.0, via Flickr\./);
     await fig.locator(".file-thumb").click();
     const credit = page.locator("dialog.file-viewer .file-credit");
     await expect(credit).toContainText("Ruined keep at dusk by Ann Photo, CC BY-SA 4.0, via Flickr");
@@ -237,8 +238,7 @@ test.describe("Find Image panel", () => {
     await expect(page.getByText("Picture added")).toBeVisible();
     const fig = page.locator(".enc-detail .enc-files .file-pic");
     await expect(fig).toHaveCount(1);
-    await expect(fig).toContainText("Embedded");
-    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /^The Grey Keep by greyartist on DeviantArt\./);
+    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /\nEmbedded: shown from DeviantArt each time.*\nThe Grey Keep by greyartist on DeviantArt\./);
     await expect.poll(() => fig.locator("img").evaluate(img => img.complete && img.naturalWidth)).toBe(2);
     await fig.locator(".file-thumb").click();
     const viewer = page.locator("dialog.file-viewer");

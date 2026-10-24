@@ -734,8 +734,9 @@ dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
 .file-input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; font-size: 0; }
 .file-add:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .file-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.file-pic { margin: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.file-pic figcaption { overflow-wrap: anywhere; }
+.file-pic { margin: 0; min-width: 0; position: relative; }
+.file-pic-info { position: absolute; top: 6px; right: 6px; }
+.file-pic-info .tip { margin: 0; background: var(--bg); }
 .file-thumb { padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); overflow: hidden; cursor: zoom-in; height: 160px; display: block; width: 100%; }
 .file-pic.secret .file-thumb { border-color: var(--secret); border-width: 2px; }
 .file-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -759,7 +760,6 @@ dialog.file-viewer { max-width: min(96vw, 1400px); width: auto; text-align: cent
 .find-closed p { margin: 0 0 4px; }
 .find-closed .row { flex-wrap: wrap; gap: 4px; }
 .file-credit { margin: 0; overflow-wrap: anywhere; }
-.file-embedded { color: var(--dim); font-size: .8rem; }
 .file-gone { display: flex; align-items: center; justify-content: center; height: 100%; padding: 6px; }
 .enc-conns { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
 .enc-conns h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }

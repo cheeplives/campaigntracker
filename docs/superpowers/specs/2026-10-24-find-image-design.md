@@ -28,8 +28,8 @@ credit kept. Agreed with Josh on 2026-10-24.
   the picture loads from DeviantArt each time it is shown (through DeviantArt's oEmbed), credited "Title by Artist on
   DeviantArt" with both linked. It is marked *Embedded* in the gallery, can't be downloaded, and doesn't show offline.
   If the artist deletes the work, the picture shows "No longer on DeviantArt" instead.
-- **Credit on saved pictures:** "Title by Author, Licence, via Source". In the gallery it is a *?* beside the picture's
-  name that shows it on hover or tap (changed 24 October at Josh's request, as the lines were too loud); the picture
+- **Credit on saved pictures:** "Title by Author, Licence, via Source". In the gallery only the picture shows, with a *?* on
+  its corner that shows its name, caption, GM only, embed note and credit on hover or tap (changed 24 October at Josh's request, as the lines were too loud); the picture
   viewer shows it in full, each part a link when known. A picture uploaded by hand has no credit.
 - **Errors:** a source that can't be reached or isn't set up says so in its tab ("DeviantArt isn't set up on this
   server" for admins, with what to add to the config; "not available" for everyone else). The other tabs still work.
