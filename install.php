@@ -110,7 +110,11 @@ if (!cfg('allow_install')) {
         }
         if (!$pdo->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn()) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/015_sessions.sql');
-            $msg .= ' Added Session notes on Current Day and the Sessions tab.';
+            $msg .= ' Added the Sessions tab.';
+        }
+        if ($pdo->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM play_sessions LIKE 'rewards'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/016_session_rewards.sql');
+            $msg .= ' Sessions can now record Session Rewards and Loot Found.';
         }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();

@@ -1,11 +1,13 @@
-/* sessions.js — the shorthand of the Session notes box, and the draft summary built from a session's notes.
+/* sessions.js — the shorthand of a session's notes box, and the draft summary built from a session's notes.
  *
  * Plain script, no build step, and no page needed: app.js hands it the calendar and the notes and gets back numbers
  * and text, so the same file runs under Node in the tests. A note is { id, position, depth, text, abs_shift,
  * is_covered }; its first character can mark it:
  *   !  a GM aside (dice, rules): never in the draft;
  *   ?  a loose end: in the draft only as a GM-only "Loose ends" paragraph at the end;
- *   >  a time jump: the notes after it take the day and shift it reaches (see parseJump). */
+ *   >  a time jump: the notes after it take the day and shift it reaches (see parseJump);
+ *   🔒 (at the start of an unindented line) a GM-only block: it and the lines indented under it reach the draft only as a
+ *      GM-only paragraph. Notes imported from a day's Secret notes are written this way. */
 'use strict';
 
 (function (root) {
@@ -16,6 +18,21 @@
     const c = String(text || '').trimStart().charAt(0);
     return '!?>'.includes(c) && c ? c : '';
   };
+
+  /** The text typed in the notes box as notes: one per non-blank line, trimmed, its depth from how far it is indented
+   * (tabs count four spaces; a line indented further than the one above is a level deeper, at most 3; one indented less
+   * goes back to the level it matches). line is its place in the text, from 1. */
+  function parseLines(text) {
+    const out = [], stack = [0];
+    String(text || '').split(/\r?\n/).forEach((raw, i) => {
+      if (!raw.trim()) return;
+      const w = /^[ \t]*/.exec(raw)[0].replace(/\t/g, '    ').length;
+      if (w > stack[stack.length - 1]) stack.push(w);
+      else while (stack.length > 1 && w < stack[stack.length - 1]) stack.pop();
+      out.push({ text: raw.trim(), depth: Math.min(3, stack.length - 1), line: i + 1 });
+    });
+    return out;
+  }
 
   /** The slot named by a word: a shift name from its start ("du" is Dusk), or in hours mode an hour, "14" or "14:00". */
   function slotOf(cal, word) {
@@ -72,12 +89,17 @@
    * indented notes as further sentences, grouped under a heading per in-game day when there are several; ! and >
    * lines left out; ? lines in one GM-only "Loose ends" paragraph at the end. '' when nothing is left. */
   function draftHtml(cal, notes) {
-    const n = E.slotsPerDay(cal), paras = [], loose = [];
+    const n = E.slotsPerDay(cal), paras = [], loose = [], secret = [];
     // where indented lines go: the paragraph above, the loose end above (in brackets), or nowhere under a ! line
     let cur = null;
     for (const x of notes) {
       const k = mark(x.text), top = Number(x.depth) === 0 || !cur;
       if (k === '>') continue;
+      if (top && String(x.text).trim().startsWith('🔒')) {
+        secret.push({ text: String(x.text).trim().slice('🔒'.length).trim(), more: [] });
+        cur = { secret: secret[secret.length - 1] };
+        continue;
+      }
       if (k === '!' || k === '?') {
         if (!top) continue;                                   // an indented ! or ? line: just that line is left out
         const t = String(x.text).trim().slice(1).trim();
@@ -87,6 +109,7 @@
       const t = String(x.text).trim();
       if (!t) continue;
       if (top) { paras.push(cur = { day: Math.floor(Number(x.abs_shift) / n), parts: [] }); cur.parts.push(sentence(t)); }
+      else if (cur.secret) cur.secret.more.push(t);
       else if (cur.loose) cur.loose.more.push(t);
       else if (!cur.sink) cur.parts.push(sentence(t));
     }
@@ -97,6 +120,7 @@
       if (days.length > 1) html += `<h3>${esc(E.fmtDate(cal, d))}</h3>`;
       for (const p of paras) if (p.day === d) html += `<p>${esc(p.parts.join(' '))}</p>`;
     }
+    for (const g of secret) html += `<aside>${esc(g.more.length ? `${g.text}: ${g.more.join('; ')}` : g.text)}</aside>`;
     if (loose.length) html += `<aside>${esc(`Loose ends: ${loose.map(l => l.more.length ? `${l.text} (${l.more.join('; ')})` : l.text).join('; ')}`)}</aside>`;
     return html;
   }
@@ -117,6 +141,10 @@
       `*${session.played_on ? `Played ${session.played_on} · ` : ''}${daysCovered(cal, session)}*`, ''];
     const body = session.summary ? toMarkdown(session.summary) : '';
     L.push(body || '*No summary written yet.*', '');
+    for (const [key, title] of [['rewards', 'Session Rewards'], ['loot', 'Loot Found']]) {
+      const md = session[key] ? toMarkdown(session[key]) : '';
+      if (md) L.push(`## ${title}`, '', md, '');
+    }
     if (withNotes && notes.length) {
       L.push('## Notes', '');
       for (const n of notes) L.push(`${'   '.repeat(Number(n.depth) || 0)}- ${String(n.text).replace(/\s+/g, ' ')}`);
@@ -128,7 +156,7 @@
   /** "Session 12 - A Locked Box.md", without characters a file name can't hold. */
   const fileName = s => `${`Session ${s.number}${s.title ? ` - ${s.title}` : ''}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()}.md`;
 
-  const Sessions = { mark, parseJump, stampAt, draftHtml, sentence, name, daysCovered, markdown, fileName };
+  const Sessions = { mark, parseLines, parseJump, stampAt, draftHtml, sentence, name, daysCovered, markdown, fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = Sessions;
   else root.Sessions = Sessions;
 })(typeof window !== 'undefined' ? window : globalThis);

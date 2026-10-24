@@ -97,3 +97,18 @@ test("draftHtml puts one heading per day in day order, whatever order the notes 
   const notes = [note(1, "on day two", 0, 9), note(2, "back on day one", 0, 5), note(3, "day two again", 0, 10)];
   expect(Sessions.draftHtml(c, notes)).toBe(`<h3>${E.fmtDate(c, 1)}</h3><p>Back on day one.</p><h3>${E.fmtDate(c, 2)}</h3><p>On day two.</p><p>Day two again.</p>`);
 });
+
+test("parseLines makes a note of each non-blank line, its depth from the indent, in spaces or tabs", () => {
+  const got = Sessions.parseLines("Docked at Iapetus\n\n  Listening station quiet\n    edited the data\n  Harbormaster called\n\tTabbed in\nBack out\n          too deep\n");
+  expect(got.map(n => [n.text, n.depth, n.line])).toEqual([["Docked at Iapetus", 0, 1], ["Listening station quiet", 1, 3], ["edited the data", 2, 4],
+    ["Harbormaster called", 1, 5], ["Tabbed in", 2, 6], ["Back out", 0, 7], ["too deep", 1, 8]]);
+  expect(Sessions.parseLines("a\n b\n  c\n   d\n    e").map(n => n.depth)).toEqual([0, 1, 2, 3, 3]);
+  expect(Sessions.parseLines("  \n\n")).toEqual([]);
+});
+
+test("draftHtml puts a 🔒 line and the lines under it in a GM-only paragraph, never a plain one", () => {
+  const c = calendar();
+  const notes = [note(1, "Arrived at the station", 0, 9), note(2, "🔒 Secret notes · 3 Firstmonth", 0, 9), note(3, "Essen is Tevari's agent", 1, 9),
+    note(4, "the seal is forged", 1, 9), note(5, "Left at dusk", 0, 9)];
+  expect(Sessions.draftHtml(c, notes)).toBe("<p>Arrived at the station.</p><p>Left at dusk.</p><aside>Secret notes · 3 Firstmonth: Essen is Tevari's agent; the seal is forged</aside>");
+});

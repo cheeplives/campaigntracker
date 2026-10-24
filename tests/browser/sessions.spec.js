@@ -1,4 +1,4 @@
-// Session notes: the GM's quick notes during play (the Session notes box on Current Day), each session's page on the
+// Session notes: the GM's running notes during play (the notes box on a session's page), each session's page on the
 // Sessions tab with the summary written from them, Build draft, publishing to players and the Markdown export.
 // Players never get the notes, an unpublished session, or the summary's GM-only paragraphs.
 const { test, expect } = require("@playwright/test");
@@ -6,8 +6,6 @@ const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign,
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
-  // most tests want each note saved as Enter is pressed; the box holds them until Save unless this says otherwise
-  await page.addInitScript(() => { try { if (localStorage.getItem("chronicle:snotes-hold") === null) localStorage.setItem("chronicle:snotes-hold", "0"); } catch { /* none */ } });
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
@@ -156,193 +154,252 @@ test("players get only published sessions, never the notes or the summary's GM-o
   expect((await api(op, "sessions", undefined, cid)).status).toBe(403);
 });
 
-// ---------------------------------------------------------------- the Session notes box on Current Day
-const SHORTHAND = "Enter adds the line · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
-const box = page => page.locator("[data-box=session]");
-const input = page => box(page).getByRole("textbox", { name: "New note" });
-/** Type a note and press Enter; saved: wait until the server has it (not when it is meant to wait in the box). */
-async function type(page, text, saved = true) {
-  await input(page).fill(text);
-  await input(page).press("Enter");
-  await expect(input(page)).toHaveValue("");
-  if (saved) await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
+// ---------------------------------------------------------------- the notes box on a session's page
+const SHORTHAND = "Enter starts a new line · Tab / Shift+Tab indents · Ctrl+Enter adds them to the session · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
+const notesCol = page => page.locator(".sess-notes");
+const box = page => notesCol(page).getByRole("textbox", { name: "New notes" });
+const rowsOf = page => notesCol(page).locator(".snote, .snote-jump");
+/** A session to take notes in, and its page. */
+async function openSession(page, cid) {
+  const sid = (await api(page, "session_save", {}, cid)).json.session.id;
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(box(page)).toBeVisible();
+  return sid;
 }
-async function notesOf(page, cid) {
-  const open = (await api(page, "campaign", undefined, cid)).json.open_session;
-  return open ? (await one(page, cid, open.id)).json.notes : [];
+/** Type lines into the notes box (newlines are lines) and press Add to notes; added: wait until they are in the list. */
+async function typeAdd(page, text, added = true) {
+  await box(page).fill(text);
+  await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+  if (added) {
+    await expect(box(page)).toHaveValue("");
+    await expect(notesCol(page).locator(".snotes")).toContainText(text.trim().split("\n").pop().trim());
+  }
+}
+async function notesOf(page, cid, sid) {
+  return (await one(page, cid, sid)).json.notes;
 }
 
-test("the GM types notes on Current Day: Enter saves, Tab indents, marks show, and the first note starts a session", async ({ page, browser }) => {
+test("a session's notes box: Enter makes a line, Tab indents, Add to notes saves a note per line with marks, @ names and edits", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Notes box");
   await api(page, "entry_save", { name: "Dulled Fang" }, cid);
-  await page.goto(`index.html#/c/${cid}`);
-  await expect(box(page)).toContainText("No session open: your first note starts one");
-  await expect(input(page)).toHaveAttribute("data-tip", SHORTHAND);
+  const sid = await openSession(page, cid);
+  await expect(box(page)).toHaveAttribute("data-tip", SHORTHAND);
+  await expect(notesCol(page)).toContainText("No notes in this session.");
 
-  await type(page, "Spotted the Dulled Fang at Iapetus");
-  await expect(box(page).locator("h3")).toContainText("Session 1");
-  await input(page).press("Tab");
-  await type(page, "Hera tipped off the Harbormaster");
-  await type(page, "! +2 Sensor Roll");
-  await input(page).press("Shift+Tab");
-  await type(page, "? Who is Essen");
-  const rows = box(page).locator(".snote");
-  await expect(rows).toHaveCount(4);
-  await expect(box(page).locator(".snotes")).not.toContainText("null");
-  await expect(rows.nth(0).locator("a.enc-link")).toHaveText("Dulled Fang");
-  await expect(rows.nth(1)).toHaveClass(/snote-d1/);
-  await expect(rows.nth(2)).toHaveClass(/snote-d1/); // a new line keeps the last one's indent
-  await expect(rows.nth(2).locator(".snote-mark")).toHaveAttribute("data-tip", /GM aside/);
-  await expect(rows.nth(3)).toHaveClass(/snote-d0/);
-  await expect(rows.nth(3).locator(".snote-mark")).toHaveAttribute("data-tip", /Loose end/);
-  expect((await notesOf(page, cid)).map(n => [n.text, n.depth, n.abs_shift])).toEqual([
-    ["Spotted the Dulled Fang at Iapetus", 0, 8], ["Hera tipped off the Harbormaster", 1, 8], ["! +2 Sensor Roll", 1, 8], ["? Who is Essen", 0, 8]]);
+  await box(page).fill("Spotted the Dulled Fang at Iapetus");
+  await box(page).press("Enter");
+  await box(page).press("Tab");
+  await box(page).pressSequentially("Hera tipped off the Harbormaster");
+  await box(page).press("Enter");
+  await box(page).pressSequentially("! +2 Sensor Roll");
+  await box(page).press("Enter");
+  await box(page).pressSequentially("? Who is Essen");
+  await expect(box(page)).toHaveValue("Spotted the Dulled Fang at Iapetus\n  Hera tipped off the Harbormaster\n! +2 Sensor Roll\n? Who is Essen");
+  await expect(notesCol(page)).toContainText("4 lines not added yet");
+  expect(await notesOf(page, cid, sid)).toEqual([]); // Enter and Tab only type
+  await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+  await expect(rowsOf(page)).toHaveCount(4);
+  await expect(box(page)).toHaveValue("");
+  await expect(notesCol(page)).not.toContainText("null");
+  await expect(rowsOf(page).nth(0).locator("a.enc-link")).toHaveText("Dulled Fang");
+  await expect(rowsOf(page).nth(1)).toHaveClass(/snote-d1/);
+  await expect(rowsOf(page).nth(2)).toHaveClass(/snote-d0/);
+  await expect(rowsOf(page).nth(2).locator(".snote-mark")).toHaveAttribute("data-tip", /GM aside/);
+  await expect(rowsOf(page).nth(3).locator(".snote-mark")).toHaveAttribute("data-tip", /Loose end/);
+  expect((await notesOf(page, cid, sid)).map(n => [n.text, n.depth, n.abs_shift])).toEqual([
+    ["Spotted the Dulled Fang at Iapetus", 0, 8], ["Hera tipped off the Harbormaster", 1, 8], ["! +2 Sensor Roll", 0, 8], ["? Who is Essen", 0, 8]]);
+
+  // Shift+Tab brings a line back out; Ctrl+Enter adds
+  await box(page).fill("  Indented\nPlain");
+  await box(page).press("ControlOrMeta+Home");
+  await box(page).press("Shift+Tab");
+  await expect(box(page)).toHaveValue("Indented\nPlain");
+  await box(page).press("ControlOrMeta+Enter");
+  await expect(rowsOf(page)).toHaveCount(6);
 
   // @ lists the Encyclopedia's names, as in the editors
-  await input(page).fill("Fitz hacked into the @Dul");
-  await expect(box(page).locator(".rt-mentions li").first()).toContainText("Dulled Fang");
-  await input(page).press("Enter");
-  await expect(input(page)).toHaveValue("Fitz hacked into the Dulled Fang ");
-  await input(page).press("Enter");
-  await expect(rows).toHaveCount(5);
+  await box(page).fill("Fitz hacked into the @Dul");
+  await expect(notesCol(page).locator(".rt-mentions li").first()).toContainText("Dulled Fang");
+  await box(page).press("Enter");
+  await expect(box(page)).toHaveValue("Fitz hacked into the Dulled Fang ");
+  await box(page).press("ControlOrMeta+Enter");
+  await expect(rowsOf(page)).toHaveCount(7);
 
   // fix a typo, then delete a line
-  await rows.nth(0).locator(".snote-text").click();
-  const edit = box(page).getByRole("textbox", { name: "Change this note" });
+  await rowsOf(page).nth(0).locator(".snote-text").click();
+  const edit = notesCol(page).getByRole("textbox", { name: "Change this note" });
   await edit.fill("Spotted the Dulled Fang at Iapetus Station");
   await edit.press("Enter");
-  await expect(rows.nth(0)).toContainText("Iapetus Station");
-  await rows.nth(4).hover(); // a row's tools show on hover (always, on a touch screen)
-  await rows.nth(4).getByRole("button", { name: "Delete note" }).click();
+  await expect(rowsOf(page).nth(0)).toContainText("Iapetus Station");
+  await rowsOf(page).nth(6).hover(); // a row's tools show on hover (always, on a touch screen)
+  await rowsOf(page).nth(6).getByRole("button", { name: "Delete note" }).click();
   await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
-  await expect(rows).toHaveCount(4);
-  expect((await notesOf(page, cid))[0].text).toBe("Spotted the Dulled Fang at Iapetus Station");
+  await expect(rowsOf(page)).toHaveCount(6);
 
   // the shorthand, for a phone where tips don't hover
-  await box(page).getByRole("button", { name: "Shorthand" }).click();
-  await expect(box(page).locator(".snote-help")).toContainText(">+1 dawn");
+  await notesCol(page).getByRole("button", { name: "Shorthand" }).click();
+  await expect(notesCol(page).locator(".snote-help")).toContainText(">+1 dawn");
 
-  // players never see the box
-  await pp.goto(`index.html#/c/${cid}`);
-  await expect(pp.locator("[data-box=notes]")).toBeVisible();
-  await expect(box(pp)).toHaveCount(0);
+  // Current Day has no notes box any more, and a player gets no session until it is published
+  await page.goto(`index.html#/c/${cid}`);
+  await expect(page.locator("[data-box=notes]")).toBeVisible();
+  await expect(page.locator("[data-box=session]")).toHaveCount(0);
+  expect((await one(pp, cid, sid)).status).toBe(404);
   expectNoErrors(errors);
+});
+
+test("what is typed waits in the box across a reload until Add to notes, then goes in order with its indents", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes held");
+  const sid = await openSession(page, cid);
+  await box(page).fill("Docked at Iapetus\n  Listening station is quiet\n\n    nobody on the comm\nHera called the Harbormaster");
+  await page.waitForTimeout(300);
+  await page.reload();
+  await expect(box(page)).toHaveValue("Docked at Iapetus\n  Listening station is quiet\n\n    nobody on the comm\nHera called the Harbormaster");
+  await expect(notesCol(page)).toContainText("4 lines not added yet");
+  expect(await notesOf(page, cid, sid)).toEqual([]);
+  await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+  await expect(rowsOf(page)).toHaveCount(4);
+  expect((await notesOf(page, cid, sid)).map(n => [n.text, n.depth])).toEqual([["Docked at Iapetus", 0], ["Listening station is quiet", 1], ["nobody on the comm", 2], ["Hera called the Harbormaster", 0]]);
+  await page.reload();
+  await expect(box(page)).toHaveValue("");
+  await expect(rowsOf(page)).toHaveCount(4);
 });
 
 test("a > line jumps the notes' day and shift; Set the clock here moves the campaign's clock too", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid } = await gmAndPlayer(page, browser, "Notes jumps");
-  await page.goto(`index.html#/c/${cid}`);
-  await type(page, "Arrived at Iapetus");
-  await type(page, ">+1");
-  const jump = box(page).locator(".snote-jump");
-  await expect(jump).toHaveCount(1);
-  await expect(jump).toContainText("Dawn");
-  await expect(jump).toContainText("4 Firstmonth");
-  await type(page, "Flip and burn");
-  await type(page, ">dusk");
-  await type(page, "Debris cloud sunward");
-  expect((await notesOf(page, cid)).map(n => [n.text, n.abs_shift])).toEqual([["Arrived at Iapetus", 8], [">+1", 12], ["Flip and burn", 12], [">dusk", 14], ["Debris cloud sunward", 14]]);
+  const sid = await openSession(page, cid);
+  await typeAdd(page, "Arrived at Iapetus\n>+1\nFlip and burn\n>dusk\nDebris cloud sunward");
+  const jump = notesCol(page).locator(".snote-jump");
+  await expect(jump).toHaveCount(2);
+  await expect(jump.first()).toContainText("Dawn");
+  await expect(jump.first()).toContainText("4 Firstmonth");
+  expect((await notesOf(page, cid, sid)).map(n => [n.text, n.abs_shift])).toEqual([["Arrived at Iapetus", 8], [">+1", 12], ["Flip and burn", 12], [">dusk", 14], ["Debris cloud sunward", 14]]);
   expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(8); // a jump alone leaves the clock
 
-  // a jump it can't read stays in the box to fix
-  await input(page).fill(">wibble");
-  await input(page).press("Enter");
-  await expect(box(page).locator(".snote-err")).toHaveText("Couldn't read that jump; try >+1, >dusk or >12 Firstmonth");
-  await expect(input(page)).toHaveValue(">wibble");
+  // a jump it can't read names its line, adds nothing, and stays in the box to fix
+  await typeAdd(page, "Fine line\n>wibble", false);
+  await expect(notesCol(page).locator(".snote-err")).toHaveText("Line 2: couldn't read that jump; try >+1, >dusk or >12 Firstmonth");
+  await expect(box(page)).toHaveValue("Fine line\n>wibble");
+  expect((await notesOf(page, cid, sid)).length).toBe(5);
+  await box(page).fill("");
 
   // after a reload the stamp carries on from the last jump
   await page.reload();
-  await type(page, "Still at dusk");
-  expect((await notesOf(page, cid)).pop().abs_shift).toBe(14);
+  await typeAdd(page, "Still at dusk");
+  expect((await notesOf(page, cid, sid)).pop().abs_shift).toBe(14);
 
   await jump.last().getByRole("button", { name: "Set the clock here" }).click();
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(14);
   expectNoErrors(errors);
 });
 
-test("with Hold notes ticked Enter only adds the line; Save notes sends them all, in order, and they survive a reload", async ({ page, browser }) => {
-  const { cid } = await gmAndPlayer(page, browser, "Notes held");
-  await page.goto(`index.html#/c/${cid}`);
-  await page.evaluate(() => localStorage.setItem("chronicle:snotes-hold", "1"));
-  await page.reload();
-  await expect(box(page).getByLabel("Hold notes until I save")).toBeChecked();
-  await type(page, "Docked at Iapetus", false);
-  await input(page).press("Tab");
-  await type(page, "Listening station is quiet", false);
-  await input(page).press("Shift+Tab");
-  await type(page, "Hera called the Harbormaster", false);
-  await expect(box(page).locator(".snote-unsaved")).toHaveCount(3);
-  await expect(box(page).locator(".snote-unsaved").first()).toContainText("Not saved yet");
-  await page.waitForTimeout(500);
-  expect(await notesOf(page, cid)).toEqual([]);
-  await page.reload();
-  await expect(box(page).locator(".snote-unsaved")).toHaveCount(3);
-  await box(page).getByRole("button", { name: "Save 3 notes" }).click();
-  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
-  await expect(box(page).locator(".snote")).toHaveCount(3);
-  const saved = await notesOf(page, cid);
-  expect(saved.map(n => [n.text, n.depth])).toEqual([["Docked at Iapetus", 0], ["Listening station is quiet", 1], ["Hera called the Harbormaster", 0]]);
-  // unticking it saves as you go again
-  await box(page).getByLabel("Hold notes until I save").uncheck();
-  await type(page, "Saved at once");
-  expect((await notesOf(page, cid)).length).toBe(4);
-});
-
-test("a note typed offline waits in the box, survives a reload and is saved once", async ({ page, browser, context }) => {
-  const { cid } = await gmAndPlayer(page, browser, "Notes offline");
-  await page.goto(`index.html#/c/${cid}`);
-  await type(page, "Online note");
-  await context.setOffline(true);
-  await type(page, "Typed with no signal", false);
-  await expect(box(page).locator(".snote-unsaved")).toContainText("Typed with no signal");
-  await expect(box(page).locator(".snote-unsaved")).toContainText("Not saved, retrying");
-  await context.setOffline(false);
-  await page.reload();
-  await expect(box(page).locator(".snote")).toHaveCount(2);
-  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
-  await page.reload();
-  await expect(box(page).locator(".snote")).toHaveCount(2);
-  expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["Online note", "Typed with no signal"]);
+test("notes take a jump typed in another tab", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes two tabs");
+  const sid = await openSession(page, cid);
+  await typeAdd(page, "From this tab");
+  await add(page, cid, ">dusk", { abs_shift: 10, session_id: sid }); // the other tab's jump
+  await typeAdd(page, "After the other tab's jump");
+  expect((await notesOf(page, cid, sid)).pop().abs_shift).toBe(10);
 });
 
 // The service worker would see the page's requests first, and in WebKit page.route() then never fakes them.
 test.describe("an error page", () => {
   test.use({ serviceWorkers: "block" });
 
-  test("a note the server can't take right now (signed out, a deploy, an error page) waits instead of being lost", async ({ page, browser }) => {
+  test("notes the server can't take right now stay in the box, and a retry after a lost reply adds them once", async ({ page, browser }) => {
     const { cid } = await gmAndPlayer(page, browser, "Notes errors");
-    await page.goto(`index.html#/c/${cid}`);
-    await type(page, "First");
-    await page.route(/a=snote_add/, r => r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Down for maintenance</h1>" }));
-    await type(page, "During the deploy", false);
-    await expect(box(page).locator(".snote-unsaved")).toContainText("During the deploy");
-    await page.unroute(/a=snote_add/);
-    await page.reload();
-    await expect(box(page).locator(".snote")).toHaveCount(2);
-    await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
-    expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["First", "During the deploy"]);
+    const sid = await openSession(page, cid);
+    let mode = "down";   // down: the server is away; lost: it takes the notes but the reply never arrives; ok: as normal
+    await page.route(/a=snote_bulk/, async r => {
+      if (mode === "down") return r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Down for maintenance</h1>" });
+      if (mode === "lost") { await r.fetch(); return r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Gateway timeout</h1>" }); }
+      return r.continue();
+    });
+    await typeAdd(page, "During the deploy\n  with a sub line", false);
+    await expect(notesCol(page).locator(".snote-err")).toContainText("Not added");
+    await expect(box(page)).toHaveValue("During the deploy\n  with a sub line");
+    mode = "lost";
+    await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+    await expect(notesCol(page).locator(".snote-err")).toContainText("Not added");
+    mode = "ok";
+    await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+    await expect(box(page)).toHaveValue("");
+    await expect(rowsOf(page)).toHaveCount(2);
+    expect((await notesOf(page, cid, sid)).map(n => n.text)).toEqual(["During the deploy", "with a sub line"]);
   });
-});
-
-test("a note takes a jump typed in another tab", async ({ page, browser }) => {
-  const { cid } = await gmAndPlayer(page, browser, "Notes two tabs");
-  await page.goto(`index.html#/c/${cid}`);
-  await type(page, "From this tab");
-  await add(page, cid, ">dusk", { abs_shift: 10 }); // the other tab's jump
-  await type(page, "After the other tab's jump");
-  expect((await notesOf(page, cid)).pop().abs_shift).toBe(10);
 });
 
 test("on a phone the ⇥ and ⇤ buttons indent", async ({ page, browser, isMobile }) => {
   test.skip(!isMobile, "phone layout");
   const { cid } = await gmAndPlayer(page, browser, "Notes phone");
+  const sid = await openSession(page, cid);
+  await box(page).fill("Top line\nUnder it");
+  await notesCol(page).getByRole("button", { name: "Indent", exact: true }).click();
+  await expect(box(page)).toHaveValue("Top line\n  Under it");
+  await notesCol(page).getByRole("button", { name: "Outdent", exact: true }).click();
+  await expect(box(page)).toHaveValue("Top line\nUnder it");
+  await notesCol(page).getByRole("button", { name: "Indent", exact: true }).click();
+  await notesCol(page).getByRole("button", { name: "Add to notes" }).click();
+  await expect(rowsOf(page).nth(1)).toHaveClass(/snote-d1/);
+  expect((await notesOf(page, cid, sid)).map(n => n.depth)).toEqual([0, 1]);
+});
+
+test("Import to a session on Current Day copies the day's Public and Secret notes into a session, secrets under a 🔒 line", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Notes import");
+  const today = Math.floor((await api(page, "campaign", undefined, cid)).json.campaign.current_shift / 4);
+  expect((await api(page, "day_update", { abs_day: today, notes_format: "html", gm_notes_format: "html",
+    notes: "<p>Docked at Iapetus</p><ul><li>Hera called<ul><li>Harbormaster answered</li></ul></li></ul><aside>Essen is a spy</aside>",
+    gm_notes: "<p>The seal is forged</p>" }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}`);
-  await type(page, "Top line");
-  await box(page).getByRole("button", { name: "Indent", exact: true }).click();
-  await type(page, "Under it");
-  await expect(box(page).locator(".snote").nth(1)).toHaveClass(/snote-d1/);
+  await page.getByRole("button", { name: "Import to a session…" }).click();
+  const dlg = page.locator("dialog");
+  await expect(dlg.getByLabel("Session to add the notes to")).toHaveValue("new");
+  await expect(dlg).toContainText("Public notes (3 lines)");
+  await expect(dlg).toContainText("Secret notes (2 lines)");
+  await dlg.getByRole("button", { name: "Import" }).click();
+  await expect(page.locator("#toast")).toContainText("Added 6 notes to a new session");
+  const list = (await api(page, "sessions", undefined, cid)).json.sessions;
+  expect(list).toHaveLength(1);
+  const notes = (await one(page, cid, list[0].id)).json.notes;
+  expect(notes.map(n => [n.text.replace(/ · .*/, ""), n.depth])).toEqual([["Docked at Iapetus", 0], ["Hera called", 0], ["Harbormaster answered", 1],
+    ["🔒 Secret notes", 0], ["Essen is a spy", 1], ["The seal is forged", 1]]);
+  expect(new Set(notes.map(n => n.abs_shift))).toEqual(new Set([today * 4]));
+
+  // into a session that is there, public notes only
+  await page.getByRole("button", { name: "Import to a session…" }).click();
+  await expect(dlg.getByLabel("Session to add the notes to")).toHaveValue(String(list[0].id));
+  await dlg.getByLabel(/Secret notes/).uncheck();
+  await dlg.getByRole("button", { name: "Import" }).click();
+  await expect(page.locator("#toast")).toContainText("Added 3 notes to Session 1");
+  expect((await one(page, cid, list[0].id)).json.notes).toHaveLength(9);
+  // the draft keeps the secrets out of the plain paragraphs
+  await page.goto(`index.html#/c/${cid}/sessions/${list[0].id}`);
+  if (page.viewportSize().width <= 720) await page.getByRole("button", { name: "Summary", exact: true }).click();
+  await page.getByRole("button", { name: "Build draft", exact: true }).click();
+  const summary = page.locator(".sess-summary .ql-editor").first();
+  await expect(summary.locator("aside")).toContainText("Essen is a spy; The seal is forged");
+  await expect(summary.locator("p").filter({ hasText: "Essen is a spy" })).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("the Sessions tab has a wide view, remembered, with the list of sessions along the top", async ({ page, browser }) => {
+  test.skip(page.viewportSize().width <= 900, "one column already");
+  const { cid } = await gmAndPlayer(page, browser, "Sessions wide");
+  const sid = await openSession(page, cid);
+  const wideBtn = page.getByRole("button", { name: "⇥ Wide view" });
+  await wideBtn.click();
+  await expect(page.locator(".sess-page")).toHaveClass(/wide/);
+  await expect(page.getByRole("button", { name: "⇤ Narrow view" })).toHaveAttribute("aria-pressed", "true");
+  const list = await page.locator(".sess-item").first().boundingBox(), detail = await page.locator(".sess-detail").boundingBox();
+  expect(list.y + list.height).toBeLessThan(detail.y + 1); // the list sits above the session
+  await page.reload();
+  await expect(page.locator(".sess-page")).toHaveClass(/wide/);
+  await page.getByRole("button", { name: "⇤ Narrow view" }).click();
+  await expect(page.locator(".sess-page")).not.toHaveClass(/wide/);
+  expect(sid).toBeGreaterThan(0);
 });
 
 // ---------------------------------------------------------------- the Sessions tab
@@ -368,7 +425,7 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await page.locator(".sess-item").click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/sessions/${sid}$`));
 
-  const notesCol = page.locator(".sess-notes"), summary = page.locator(".sess-summary .ql-editor");
+  const notesCol = page.locator(".sess-notes"), summary = page.locator(".sess-summary .ql-editor").first();
   await expect(notesCol.locator(".snote")).toHaveCount(5);
   await expect(notesCol.locator("h3")).toContainText("0 of 5 covered");
   const narrow = page.viewportSize().width <= 720; // a phone shows one column at a time
@@ -390,20 +447,27 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await summary.locator("p").first().click();
   await summary.press("End");
   await summary.pressSequentially(" Hera handled the rest.");
-  await page.getByRole("button", { name: "Save summary" }).click();
-  await expect(page.getByText("Summary saved")).toBeVisible();
+  // Session Rewards and Loot Found sit under the summary, and one Save keeps all three
+  await expect(page.locator(".sess-summary h3")).toHaveText([/^Summary/, /^Session Rewards/, /^Loot Found/]);
+  await page.locator(".sess-summary .ql-editor").nth(1).fill("300 XP each and the Harbormaster's favour");
+  await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed Tevari ledger and 40 crowns");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
   await notNow(page); // the summary names Jupiter and Tevari: the Proper Noun Detector offers them
   const saved = (await one(page, cid, sid)).json.session.summary;
   expect(saved).toContain("Hera handled the rest.");
   expect(saved).toContain("<aside>Loose ends: Who is Essen</aside>");
+  expect((await one(page, cid, sid)).json.session).toMatchObject({ rewards: "<p>300 XP each and the Harbormaster's favour</p>", loot: "<p>A sealed Tevari ledger and 40 crowns</p>" });
 
   // a save from a page opened before someone else's save is refused
   await api(page, "session_summary_save", { id: sid, version: (await one(page, cid, sid)).json.session.version, summary: "<p>Elsewhere</p>" }, cid);
   await summary.pressSequentially(" More.");
-  await page.getByRole("button", { name: "Save summary" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("saved somewhere else");
 
   // title, date played and publishing
+  const tb = await page.getByLabel("Title").boundingBox(), pb = await page.getByLabel("Played on").boundingBox();
+  if (page.viewportSize().width > 560) expect(Math.abs(tb.y - pb.y)).toBeLessThan(4); // Title and Played on share a row
   await page.getByLabel("Title").fill("A Locked Box");
   await page.getByLabel("Played on").fill("2024-06-24");
   await page.getByRole("button", { name: "Save details" }).click();
@@ -417,13 +481,14 @@ test("a published session is the player's to read and export; notes move between
   await api(page, "entry_save", { name: "Tevari" }, cid);
   const sid = await sessionWithNotes(page, cid);
   const v = (await one(page, cid, sid)).json.session.version;
-  await api(page, "session_summary_save", { id: sid, version: v, summary: `<p>${draftText}</p><aside>Loose ends: Who is Essen</aside>` }, cid);
+  await api(page, "session_summary_save", { id: sid, version: v, summary: `<p>${draftText}</p><aside>Loose ends: Who is Essen</aside>`,
+    rewards: "<p>300 XP each</p><aside>Hidden bonus for Hera</aside>", loot: "<p>A sealed ledger</p>" }, cid);
   await api(page, "session_save", { id: sid, title: "A Locked Box", played_on: "2024-06-24" }, cid);
 
   await pp.goto(`index.html#/c/${cid}/sessions`);
   await expect(pp.locator(".sess-item")).toHaveCount(0);
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
-  await page.getByLabel("Published").check();
+  await page.getByLabel("Published", { exact: true }).check();
   await expect(page.getByText("Published for players")).toBeVisible();
 
   await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
@@ -437,6 +502,12 @@ test("a published session is the player's to read and export; notes move between
   expect(md.startsWith("# Session 1: A Locked Box\n")).toBe(true);
   expect(md).toContain(draftText);
   expect(md).not.toContain("Essen");
+  await expect(pp.locator(".sess-extra[data-box=rewards]")).toContainText("300 XP each");
+  await expect(pp.locator(".sess-extra[data-box=rewards]")).not.toContainText("Hidden bonus");
+  await expect(pp.locator(".sess-extra[data-box=loot]")).toContainText("A sealed ledger");
+  expect(md).toContain("## Session Rewards\n\n300 XP each");
+  expect(md).toContain("## Loot Found\n\nA sealed ledger");
+  expect(md).not.toContain("Hidden bonus");
 
   // the GM's export can take the notes as a list
   await page.getByLabel("Include notes").check();

@@ -455,6 +455,8 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   last_day BIGINT NULL,
   summary MEDIUMTEXT,
   summary_format VARCHAR(8) NOT NULL DEFAULT 'html',
+  rewards MEDIUMTEXT NULL,
+  loot MEDIUMTEXT NULL,
   is_published TINYINT(1) NOT NULL DEFAULT 0,
   version INT UNSIGNED NOT NULL DEFAULT 1,
   created_by BIGINT UNSIGNED NULL,
