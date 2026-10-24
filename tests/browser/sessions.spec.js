@@ -6,6 +6,8 @@ const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign,
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
+  // most tests want each note saved as Enter is pressed; the box holds them until Save unless this says otherwise
+  await page.addInitScript(() => { try { if (localStorage.getItem("chronicle:snotes-hold") === null) localStorage.setItem("chronicle:snotes-hold", "0"); } catch { /* none */ } });
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
@@ -155,7 +157,7 @@ test("players get only published sessions, never the notes or the summary's GM-o
 });
 
 // ---------------------------------------------------------------- the Session notes box on Current Day
-const SHORTHAND = "Enter saves · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
+const SHORTHAND = "Enter adds the line · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
 const box = page => page.locator("[data-box=session]");
 const input = page => box(page).getByRole("textbox", { name: "New note" });
 /** Type a note and press Enter; saved: wait until the server has it (not when it is meant to wait in the box). */
@@ -258,6 +260,34 @@ test("a > line jumps the notes' day and shift; Set the clock here moves the camp
   await jump.last().getByRole("button", { name: "Set the clock here" }).click();
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(14);
   expectNoErrors(errors);
+});
+
+test("with Hold notes ticked Enter only adds the line; Save notes sends them all, in order, and they survive a reload", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes held");
+  await page.goto(`index.html#/c/${cid}`);
+  await page.evaluate(() => localStorage.setItem("chronicle:snotes-hold", "1"));
+  await page.reload();
+  await expect(box(page).getByLabel("Hold notes until I save")).toBeChecked();
+  await type(page, "Docked at Iapetus", false);
+  await input(page).press("Tab");
+  await type(page, "Listening station is quiet", false);
+  await input(page).press("Shift+Tab");
+  await type(page, "Hera called the Harbormaster", false);
+  await expect(box(page).locator(".snote-unsaved")).toHaveCount(3);
+  await expect(box(page).locator(".snote-unsaved").first()).toContainText("Not saved yet");
+  await page.waitForTimeout(500);
+  expect(await notesOf(page, cid)).toEqual([]);
+  await page.reload();
+  await expect(box(page).locator(".snote-unsaved")).toHaveCount(3);
+  await box(page).getByRole("button", { name: "Save 3 notes" }).click();
+  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
+  await expect(box(page).locator(".snote")).toHaveCount(3);
+  const saved = await notesOf(page, cid);
+  expect(saved.map(n => [n.text, n.depth])).toEqual([["Docked at Iapetus", 0], ["Listening station is quiet", 1], ["Hera called the Harbormaster", 0]]);
+  // unticking it saves as you go again
+  await box(page).getByLabel("Hold notes until I save").uncheck();
+  await type(page, "Saved at once");
+  expect((await notesOf(page, cid)).length).toBe(4);
 });
 
 test("a note typed offline waits in the box, survives a reload and is saved once", async ({ page, browser, context }) => {
