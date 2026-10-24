@@ -2401,33 +2401,63 @@
     if (!res.ok) throw new Error(`Wikipedia said ${res.status}`);
     return res.json();
   }
+  const WIKI_API = params => `${WIKI}/w/api.php?${new URLSearchParams({ ...params, format: 'json', formatversion: 2, origin: '*' })}`;
+  /** The meanings a disambiguation page lists, in its order: each bulleted line's first link to an article, with the
+   * line as written. See also and everything after it, navigation boxes and links to missing pages are left out. */
+  function wikiMeanings(html) {
+    const body = new DOMParser().parseFromString(String(html || ''), 'text/html').body, out = [];
+    for (const n of body.querySelectorAll('h2, li')) {
+      if (n.tagName === 'H2') { if (/^see also$/i.test(n.textContent.trim())) break; continue; }
+      if (n.closest('.navbox, .toc, .metadata, .hatnote, .mw-references-wrap')) continue;
+      const a = [...n.querySelectorAll('a[href^="/wiki/"]')].find(x => x.closest('li') === n && !x.classList.contains('new'));
+      const title = a?.getAttribute('title');
+      if (!title || /^(Wiktionary|Special|File|Category|Help|Wikipedia|Template|Portal|Talk):/.test(title) || out.some(m => m.title === title)) continue;
+      const line = n.cloneNode(true);
+      line.querySelectorAll('ul, ol, sup').forEach(x => x.remove());
+      out.push({ title, line: line.textContent.replace(/\s+/g, ' ').trim() });
+    }
+    return out.slice(0, 40);
+  }
   function wikiSummary(name, pub) {
     const out = el('div', { class: 'enc-wiki-out', 'aria-live': 'polite' });
     const say = (...t) => out.replaceChildren(el('p', { class: 'muted small' }, ...t));
     const gone = () => say('Could not reach Wikipedia just now. Try again later.');
+    /** A list of articles to pick from: [{ title, line, several }]. */
+    const pickList = (intro, items) => out.replaceChildren(el('p', { class: 'muted small' }, intro),
+      el('div', { class: 'enc-wiki-hits' }, items.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', onclick: () => (h.several ? meanings(h.title) : show(h.title)),
+        'data-tip': h.several ? `"${h.title}" has several meanings: list them` : `Show the summary of "${h.title}"` },
+        el('strong', {}, h.title, h.several ? el('span', { class: 'enc-wiki-several' }, 'Several meanings') : null), h.line ? el('span', { class: 'muted small' }, h.line) : null))),
+      el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'link small')));
     async function search() {
       const q = name.value.trim();
       if (!q) return say('Give the entry a name first.');
       say('Looking…');
       try {
-        const data = await wikiJson(`${WIKI}/w/api.php?${new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: q, gsrlimit: 5,
-          prop: 'description', redirects: 1, format: 'json', formatversion: 2, origin: '*' })}`);
+        const data = await wikiJson(WIKI_API({ action: 'query', generator: 'search', gsrsearch: q, gsrlimit: 5, prop: 'description|pageprops', ppprop: 'disambiguation', redirects: 1 }));
         const hits = (data.query?.pages || []).sort((a, b) => a.index - b.index);
         if (!hits.length) return say(`Wikipedia has no article matching "${q}".`);
-        out.replaceChildren(el('p', { class: 'muted small' }, 'Which of these is it? Pick one to see its summary.'),
-          el('div', { class: 'enc-wiki-hits' }, hits.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', 'data-tip': `Show the summary of "${h.title}"`, onclick: () => show(h.title) },
-            el('strong', {}, h.title), h.description ? el('span', { class: 'muted small' }, h.description) : null))),
-          btn('None of these', () => out.replaceChildren(), 'link small'));
+        pickList('Which of these is it? Pick one to see its summary.', hits.map(h => ({ title: h.title, line: h.description, several: !!h.pageprops && 'disambiguation' in h.pageprops })));
       } catch { gone(); }
+    }
+    async function meanings(title) {
+      say('Looking…');
+      const vague = () => out.replaceChildren(el('p', { class: 'muted small' }, `"${title}" has several meanings on Wikipedia. Search with a more specific name, such as "${title} (place)", by changing the Name above.`),
+        btn('Back', search, 'link small'));
+      try {
+        const data = await wikiJson(WIKI_API({ action: 'parse', page: title, prop: 'text', redirects: 1 }));
+        const list = wikiMeanings(data.parse?.text);
+        if (!list.length) return vague();
+        pickList(`"${title}" has several meanings. Which one is it?`, list);
+        out.querySelector('.row').append(btn('Back', search, 'link small'));
+      } catch { vague(); }
     }
     async function show(title) {
       say('Looking…');
       try {
         const s = await wikiJson(`${WIKI}/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`);
         const text = String(s.extract || '').trim();
-        if (s.type === 'disambiguation' || !text) {
-          return out.replaceChildren(el('p', { class: 'muted small' }, `"${title}" is a list of articles, not one thing. Pick another.`), btn('Back', search, 'link small'));
-        }
+        if (s.type === 'disambiguation') return meanings(s.title || title);
+        if (!text) return out.replaceChildren(el('p', { class: 'muted small' }, `Wikipedia has no summary for "${title}". Pick another.`), btn('Back', search, 'link small'));
         const url = wikiPage(s.title || title);
         out.replaceChildren(el('div', { class: 'enc-quote' },
           el('blockquote', {}, text, ' ', el('a', { href: url, target: '_blank', rel: 'noopener', class: 'small muted' }, `${s.title || title}, Wikipedia`)),

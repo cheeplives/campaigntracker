@@ -426,4 +426,67 @@ test.describe("Generate Summary", () => {
     await expect(form.locator(".enc-wiki")).toContainText("Could not reach Wikipedia");
     await expect(form.locator(".notepanel.public .ql-editor")).not.toContainText("Source:");
   });
+
+  test("a name with several meanings lists them from Wikipedia's disambiguation page, in its order, to pick one", async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    const gm = person("Gwen");
+    await signIn(page, gm);
+    await approve(browser, gm.email);
+    const cid = await makeCampaign(page, `Meanings ${gm.id}`);
+    const sol = (await api(page, "entries_add", { entries: [{ name: "Sol" }] }, cid)).json.added[0];
+    // The disambiguation page as Wikipedia's parser gives it: sections of bulleted meanings, a nested list, a red link,
+    // then See also and a navigation box, which are not meanings.
+    const disambig = `<div class="mw-parser-output"><p><b>Sol</b> or <b>SOL</b> may refer to:</p>
+      <div class="mw-heading mw-heading2"><h2 id="Astronomy">Astronomy</h2></div>
+      <ul><li><a href="/wiki/Sun" title="Sun">Sol</a>, the Sun, the star at the centre of the Solar System</li>
+        <li><a href="/wiki/Sol_(day_on_Mars)" title="Sol (day on Mars)">Sol (day on Mars)</a>, a solar day on Mars</li></ul>
+      <div class="mw-heading mw-heading2"><h2 id="Other">Other</h2></div>
+      <ul><li>Currencies<ul><li><a href="/wiki/Peruvian_sol" title="Peruvian sol">Peruvian sol</a>, the currency of Peru</li></ul></li>
+        <li><a href="/w/index.php?title=Sol_(ship)&amp;action=edit&amp;redlink=1" class="new" title="Sol (ship) (page does not exist)">Sol (ship)</a>, a ship</li></ul>
+      <div class="mw-heading mw-heading2"><h2 id="See_also">See also</h2></div>
+      <ul><li><a href="/wiki/Soul" title="Soul">Soul</a></li></ul>
+      <div class="navbox"><ul><li><a href="/wiki/Help:Disambiguation" title="Help:Disambiguation">Help</a></li></ul></div></div>`;
+    let parseOk = true;
+    await page.route("https://en.wikipedia.org/**", route => {
+      const url = new URL(route.request().url());
+      const cors = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
+      const send = body => route.fulfill({ headers: cors, body: JSON.stringify(body) });
+      if (url.pathname === "/w/api.php" && url.searchParams.get("action") === "parse") {
+        if (!parseOk) return route.fulfill({ status: 500, headers: cors, body: "{}" });
+        expect(url.searchParams.get("page")).toBe("Sol");
+        return send({ parse: { title: "Sol", text: disambig } });
+      }
+      if (url.pathname === "/w/api.php") return send({ query: { pages: [
+        { pageid: 1, title: "Sol", index: 1, description: "Topics referred to by the same term", pageprops: { disambiguation: "" } },
+        { pageid: 2, title: "Sol (band)", index: 2, description: "Danish band" },
+      ] } });
+      if (url.pathname === "/api/rest_v1/page/summary/Sol_(band)") return send({ type: "disambiguation", title: "Sol (band)", extract: "Sol may be one of these." });
+      expect(url.pathname).toBe("/api/rest_v1/page/summary/Sun");
+      return send({ type: "standard", title: "Sun", extract: "The Sun is the star at the centre of the Solar System." });
+    });
+
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${sol.id}`);
+    const form = page.locator(".enc-form"), box = form.locator(".enc-wiki");
+    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    // the disambiguation page is labelled as a list of meanings before it is opened
+    await expect(box.locator(".enc-wiki-hit").first()).toContainText("Several meanings");
+    await expect(box.locator(".enc-wiki-hit").nth(1)).not.toContainText("Several meanings");
+    await box.locator(".enc-wiki-hit").first().click();
+    // its meanings, in the page's order, each with its line, and none from See also, the navigation box or a red link
+    await expect(box.locator(".enc-wiki-hit strong")).toHaveText(["Sun", "Sol (day on Mars)", "Peruvian sol"]);
+    await expect(box.locator(".enc-wiki-hit").first()).toContainText("Sol, the Sun, the star at the centre of the Solar System");
+    await box.locator(".enc-wiki-hit").first().click();
+    await expect(box.locator("blockquote")).toContainText("The Sun is the star at the centre of the Solar System.");
+    await box.getByRole("button", { name: "Add to notes" }).click();
+    await expect(form.locator(".notepanel.public .ql-editor a")).toHaveAttribute("href", "https://en.wikipedia.org/wiki/Sun");
+
+    // A result that only turns out to be a list of meanings when opened goes to its meanings too; when they can't be
+    // read, it says to search with a more specific name.
+    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    parseOk = false;
+    await box.locator(".enc-wiki-hit").nth(1).click();
+    await expect(box).toContainText("\"Sol (band)\" has several meanings");
+    await expect(box).toContainText("more specific name");
+    expect(errors.filter(e => !/status of 500/.test(e))).toEqual([]);
+  });
 });
