@@ -2483,7 +2483,7 @@
     let source = 'openverse', seq = 0;
     const q = el('input', { type: 'search', value: name || '', maxlength: 200, placeholder: 'e.g. ruined keep', 'aria-label': 'Search for pictures', enterkeyhint: 'search' });
     q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); run(); } });
-    const gmOnly = isGM() && !opts.secret ? el('input', { type: 'checkbox', 'aria-label': 'Add as GM only' }) : null;
+    const gmOnly = opts.gmOnly;                       // the Pictures and files box's own GM only box
     const out = el('div', { class: 'find-results', 'aria-live': 'polite' });
     const say = t => out.replaceChildren(el('p', { class: 'muted small' }, t));
     const tabs = el('div', { class: 'seg find-tabs', role: 'tablist', 'aria-label': 'Where to search' }, FIND_SOURCES.map(([k, label, t]) =>
@@ -2526,8 +2526,7 @@
               btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
     }
     const panel = el('div', { class: 'find-image' },
-      el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs,
-        gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see the picture you add' }, gmOnly, ' 🔒 GM only') : null),
+      el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs),
       out);
     run();
     return panel;
@@ -2571,7 +2570,7 @@
     input.addEventListener('change', () => { send(input.files); input.value = ''; });
     const findSlot = el('div', { class: 'find-slot' });
     const findBtn = up.ready && parentType === 'encyclopedia' && opts.name ? btn('🖼️ Find Image', () => {
-      findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(findImage(parentType, parentId, opts.name, { secret: opts.secret, onAdded: refresh }));
+      findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(findImage(parentType, parentId, opts.name, { gmOnly, onAdded: refresh }));
     }, 'small', 'Search open picture libraries, museums and DeviantArt for a picture of this, credited') : null;
     const addBtn = up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
     const gallery = pics.length ? el('div', { class: 'file-gallery' }, pics.map((f, i) =>
@@ -2580,7 +2579,7 @@
           f.embed?.gone ? el('span', { class: 'muted small file-gone' }, 'No longer on DeviantArt')
             : el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height, referrerpolicy: f.embed ? 'no-referrer' : null })),
         el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name),
-          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' Embedded') : null),
+          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' · Embedded') : null),
         f.credit ? creditLine(f) : null))) : null;
     const docList = docs.length ? el('ul', { class: 'file-list' }, docs.map(f => el('li', { 'data-id': f.id },
       hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null,
