@@ -918,7 +918,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete'];
+    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'file_update', 'file_delete', 'secret_reveal'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1941,6 +1941,46 @@ try {
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
         db()->commit();
         out(['ok' => true, 'id' => $id]);
+
+    case 'secret_reveal':
+        // GM: make a run of GM-only paragraphs public, in an entry's public notes or a tome, and (log) note it as an
+        // event on the campaign's current day. which: the indexes of those <aside>s in the stored text, with the text the
+        // GM's page showed for each, so a note changed since is refused rather than the wrong paragraphs revealed.
+        $cid = cid(); need_gm($cid);
+        $kind = p('kind');
+        $id = int_in(p('id'), 1);
+        if ($kind === 'entry') { need_encyclopedia(); $row = entry_row($cid, $id, 'gm'); $html = (string)$row['notes']; $name = $row['name']; }
+        elseif ($kind === 'tome') { need_library(); $row = tome_row($cid, $id); $html = (string)$row['body']; $name = $row['title']; }
+        else fail('Pick an entry or a tome');
+        $which = p('which');
+        if (!is_array($which) || !$which || count($which) > 200) fail('Pick the paragraphs to reveal');
+        preg_match_all(RICH_SECRET_RE, $html, $m, PREG_OFFSET_CAPTURE);
+        $plain = [];
+        foreach ($which as $w) {
+            $i = is_array($w) ? int_in($w['index'] ?? null) : -1;
+            $hit = $m[0][$i] ?? null;
+            $flat = fn(string $t) => trim(preg_replace('/\s+/u', ' ', $t) ?? '');
+            $text = $hit ? rich_html_plain($hit[0]) : null;
+            if ($text === null || $flat($text) !== $flat((string)($w['text'] ?? ''))) fail('This note has changed since you opened it. Reload and try again', 409, 'stale');
+            $plain[$i] = $text;
+        }
+        krsort($plain);  // from the end, so the earlier offsets still hold
+        foreach (array_keys($plain) as $i) {
+            [$tag, $at] = $m[0][$i];
+            $html = substr_replace($html, '<p>' . substr($tag, 7, -8) . '</p>', $at, strlen($tag));
+        }
+        if ($kind === 'entry') db()->prepare('UPDATE encyclopedia_entries SET notes=? WHERE id=?')->execute([$html, $id]);
+        else db()->prepare('UPDATE library_tomes SET body=?, version=version+1, updated_by=? WHERE id=?')->execute([$html, me()['id'], $id]);
+        $event = null;
+        if (p('log')) {
+            $c = campaign_row($cid);
+            $today = floordiv((int)$c['current_shift'], camp_spd($c));
+            db()->prepare('INSERT INTO events (abs_day, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,0,?,?)')
+                ->execute([$today, mb_substr("Revealed: $name", 0, 200), implode("\n", array_reverse($plain)), $cid, me()['id']]);
+            $event = (int)db()->lastInsertId();
+            save_event_tags($cid, $event, [['name' => 'Revealed']]);
+        }
+        out(['ok' => true, 'event_id' => $event]);
 
     case 'entries_add':
         // The detector's approved names: [{name, is_secret, tags: [{name, color?}]}], or {name, alias_of: entry id} to add

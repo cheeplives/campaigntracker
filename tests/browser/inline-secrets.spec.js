@@ -157,3 +157,40 @@ test("typing @ lists Encyclopedia names to write into a note, and can add a new 
   expect(entries.map(e => e.name)).toContain("Black Barrow");
   expectNoErrors(errors);
 });
+
+test("Reveal makes a run of GM-only paragraphs public in one click, and can log it on today's events", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Reveal");
+  const id = (await api(page, "entry_save", { name: "Gunther Hoffmann", notes: "<p>Runs the inn.</p><aside>Smuggles wine.</aside><aside>Owes the <strong>Guild</strong>.</aside><p>Has a dog.</p><aside>Born in Marienburg.</aside>" }, cid)).json.id;
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+  const reveal = page.getByRole("button", { name: "🔓 Reveal" });
+  await expect(reveal).toHaveCount(2);
+  await reveal.first().click();
+  await page.getByRole("button", { name: "Reveal and log it today" }).click();
+  await expect(page.getByText("Revealed, and logged on today's events")).toBeVisible();
+  await expect(reveal).toHaveCount(1);
+
+  const entry = async who => (await (await who.request.get(`api/index.php?a=encyclopedia&cid=${cid}`)).json()).entries.find(e => e.id === id);
+  expect((await entry(page)).notes).toBe("<p>Runs the inn.</p><p>Smuggles wine.</p><p>Owes the <strong>Guild</strong>.</p><p>Has a dog.</p><aside>Born in Marienburg.</aside>");
+  expect((await entry(pp)).notes).toBe("<p>Runs the inn.</p><p>Smuggles wine.</p><p>Owes the <strong>Guild</strong>.</p><p>Has a dog.</p>");
+  const { events } = await (await pp.request.get(`api/index.php?a=events&cid=${cid}`)).json();
+  expect(events.map(e => [e.abs_day, e.title, e.body, e.tags.map(t => t.name)])).toEqual([[2, "Revealed: Gunther Hoffmann", "Smuggles wine.\nOwes the Guild.", ["Revealed"]]]);
+
+  // Just reveal logs nothing; a stale page is refused; players can't reveal.
+  expect((await api(page, "secret_reveal", { kind: "entry", id, which: [{ index: 0, text: "Something else" }] }, cid)).status).toBe(409);
+  expect((await api(pp, "secret_reveal", { kind: "entry", id, which: [{ index: 0, text: "Born in Marienburg." }] }, cid)).status).toBe(403);
+  await reveal.click();
+  await page.getByRole("button", { name: "Just reveal" }).click();
+  await expect(reveal).toHaveCount(0);
+  expect((await entry(pp)).notes).toContain("<p>Born in Marienburg.</p>");
+  expect((await (await pp.request.get(`api/index.php?a=events&cid=${cid}`)).json()).events).toHaveLength(1);
+
+  // Tomes too.
+  const t = (await api(page, "tome_save", { kind: "book", title: "Ledger", body: "<p>Ale.</p><aside>Hidden debts.</aside>" }, cid)).json.tome;
+  await page.goto(`index.html#/c/${cid}/library/${t.id}`);
+  await page.getByRole("button", { name: "🔓 Reveal" }).click();
+  await page.getByRole("button", { name: "Just reveal" }).click();
+  await expect(page.getByRole("button", { name: "🔓 Reveal" })).toHaveCount(0);
+  expect((await (await pp.request.get(`api/index.php?a=tome&cid=${cid}&id=${t.id}`)).json()).tome.body).toBe("<p>Ale.</p><p>Hidden debts.</p>");
+  expectNoErrors(errors);
+});

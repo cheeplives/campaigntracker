@@ -21,6 +21,12 @@ Logger). Agreed with Josh on 2026-10-24.
 - **Detector:** a name found only in a secret paragraph is offered as GM only (the server splits its sources; the
   browser splits what was just saved, and the connection suggestions).
 
+- **Reveal:** on an entry's or a tome's page, a GM's *🔓 Reveal* on the first of a run of secret paragraphs makes the
+  run public (`secret_reveal`: each `<aside>` becomes `<p>`). The request names each paragraph by its index and its text,
+  so a note changed since is refused (409). *Reveal and log it today* also adds a public event, *Revealed: name*, tagged
+  Revealed, on the campaign's current day; *Just reveal* logs nothing. Day notes are unlocked with the 🔒 button in their
+  editor, which is how the GM always sees them.
+
 ## View as player
 
 - A GM's 👁 *View as player* button sets a per-tab flag for the campaign (sessionStorage). Every request for that

@@ -1780,6 +1780,28 @@
     if (format === 'html') encLinker().tree(node); else node.replaceChildren(...linked(text));
     return node;
   }
+  /** GMs: a 🔓 Reveal button on each run of GM-only paragraphs in a shown entry or tome (kind 'entry' or 'tome'),
+   * which makes them public and can note it as an event on the current day. */
+  function revealButtons(node, kind, id) {
+    if (!isGM()) return node;
+    const all = [...node.querySelectorAll('aside')];
+    all.forEach((a, i) => {
+      if (a.previousElementSibling?.nodeName === 'ASIDE') return;  // the button goes on the first of a run
+      const run = [];
+      for (let x = a, j = i; x && x.nodeName === 'ASIDE' && all[j] === x; x = x.nextElementSibling, j++) run.push({ index: j, text: x.textContent.trim() });
+      a.prepend(btn('🔓 Reveal', async () => {
+        const v = await KIT.dialog({ title: 'Reveal to the players?', message: run.length > 1 ? `These ${run.length} paragraphs become public now.` : 'This paragraph becomes public now.',
+          buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
+        if (v !== 'log' && v !== 'quiet') return;
+        try {
+          await post('secret_reveal', { kind, id, which: run, log: v === 'log' }, S.camp.id);
+          toast(v === 'log' ? 'Revealed, and logged on today\'s events' : 'Revealed to the players');
+          route();
+        } catch (err) { toast(err.message, true); }
+      }, 'small rt-reveal', 'Make this GM-only text public: players see it from now on'));
+    });
+    return node;
+  }
   /** For text still open in an editor, where links can't go: a line of links to the entries it mentions. */
   function mentionRow(...texts) {
     const seen = new Set(), list = [];
@@ -2094,6 +2116,7 @@
     // An entry's own name isn't linked in its notes.
     const others = Nouns.linker(S.encyclopedia.filter(x => x.id !== e.id), (x, text) => el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.id}`, 'data-tip': `${x.name}: open it in the Encyclopedia` }, text));
     const note = html => others.tree(RichText.view(html, 'html'));
+    const publicNote = html => revealButtons(note(html), 'entry', e.id);
     return clean([
       el('div', { class: 'row spread' },
         el('h2', {}, e.is_secret ? secretTag() : null, e.name),
@@ -2108,7 +2131,7 @@
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
       attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret }),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
-        (e.notes || '').trim() ? note(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
+        (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
         (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
       connectionsCard(e, ctx),
@@ -2674,7 +2697,7 @@
           }, 'small danger', 'Delete this tome and everything written in it') : null)),
       el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
       t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
-      el('div', { class: 'lib-body' }, (t.body || '').trim() ? linkedNote(t.body, 'html') : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
+      el('div', { class: 'lib-body' }, (t.body || '').trim() ? revealButtons(linkedNote(t.body, 'html'), 'tome', t.id) : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
       tomeFiles(t),
       el('small', { class: 'muted' }, t.author ? ['Added by ', byline(t)] : 'Added', ` on ${t.created_at.slice(0, 10)}`,
         changed ? `; last changed by ${t.editor} on ${t.updated_at.slice(0, 10)}` : '')]);
