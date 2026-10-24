@@ -357,3 +357,73 @@ test("the notes suggest connections, and the list searches and filters by them",
   expect(r.relations).toHaveLength(2);
   expectNoErrors(errors);
 });
+
+// The service worker would see the page's requests to Wikipedia first, and in WebKit page.route() then never fakes them.
+test.describe("Generate Summary", () => {
+  test.use({ serviceWorkers: "block" });
+
+  test("Generate Summary looks the name up on Wikipedia only when asked, and adds the summary with its source and licence", async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    const gm = person("Gwen");
+    await signIn(page, gm);
+    await approve(browser, gm.email);
+    const cid = await makeCampaign(page, `Summary ${gm.id}`);
+    const { json } = await api(page, "entries_add", { entries: [{ name: "Altdorf" }, { name: "Grey Lady inn" }] }, cid);
+    const [altdorf, inn] = json.added;
+    // Wikipedia is faked: a search for Altdorf finds two articles, anything else finds none.
+    const asked = [];
+    let down = false;
+    await page.route("https://en.wikipedia.org/**", route => {
+      const url = new URL(route.request().url());
+      asked.push(url.href);
+      if (down) return route.abort();
+      const cors = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
+      if (url.pathname === "/w/api.php") {
+        const hits = url.searchParams.get("gsrsearch") === "Altdorf" ? [
+          { pageid: 2, title: "Altdorf bei Nürnberg", index: 2, description: "Town in Bavaria, Germany" },
+          { pageid: 1, title: "Altdorf, Uri", index: 1, description: "Municipality in the canton of Uri, Switzerland" },
+        ] : [];
+        return route.fulfill({ headers: cors, body: JSON.stringify(hits.length ? { query: { pages: hits } } : { batchcomplete: true }) });
+      }
+      expect(url.pathname).toBe("/api/rest_v1/page/summary/Altdorf%2C_Uri");
+      return route.fulfill({ headers: cors, body: JSON.stringify({ type: "standard", title: "Altdorf, Uri",
+        extract: "Altdorf is the capital of the Swiss canton of Uri. It is known for <its> statue of William Tell." }) });
+    });
+
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf.id}`);
+    const form = page.locator(".enc-form");
+    await expect(form.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    expect(asked).toEqual([]); // nothing goes to Wikipedia until the button is pressed
+    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    const box = form.locator(".enc-wiki");
+    // the matching articles, in Wikipedia's order, each with its description, so a namesake can be passed over
+    await expect(box.locator(".enc-wiki-hit strong")).toHaveText(["Altdorf, Uri", "Altdorf bei Nürnberg"]);
+    await expect(box.locator(".enc-wiki-hit").first()).toContainText("Municipality in the canton of Uri, Switzerland");
+    await box.locator(".enc-wiki-hit").first().click();
+    await expect(box.locator("blockquote")).toContainText("Altdorf is the capital of the Swiss canton of Uri.");
+    await box.getByRole("button", { name: "Add to notes" }).click();
+    const editor = form.locator(".notepanel.public .ql-editor");
+    await expect(editor).toContainText("It is known for <its> statue of William Tell.");
+    await expect(editor).toContainText("Source: Altdorf, Uri, Wikipedia, CC BY-SA 4.0");
+    await expect(editor.locator("a")).toHaveAttribute("href", "https://en.wikipedia.org/wiki/Altdorf,_Uri");
+    await form.getByRole("button", { name: "Save entry" }).click();
+    await expect(page.getByText("Entry saved")).toBeVisible();
+    // the summary is notes like any other, so the detector offers the names in it
+    await expect(nounRow(page, "William Tell")).toBeVisible();
+    await page.locator("dialog.noun-dialog").getByRole("button", { name: "Not now" }).click();
+    const saved = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.id === altdorf.id);
+    expect(saved.notes).toContain("It is known for &lt;its&gt; statue of William Tell.");
+    expect(saved.notes).toContain('href="https://en.wikipedia.org/wiki/Altdorf,_Uri"');
+    await expect(page.locator(".enc-detail .richtext a[href='https://en.wikipedia.org/wiki/Altdorf,_Uri']")).toHaveText("Altdorf, Uri");
+
+    // No article, or no connection: it says so in a line and the notes are left alone.
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${inn.id}`);
+    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await expect(form.locator(".enc-wiki")).toContainText("Wikipedia has no article matching \"Grey Lady inn\"");
+    expectNoErrors(errors); // checked before the outage, which every browser logs as a failed load
+    down = true;
+    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await expect(form.locator(".enc-wiki")).toContainText("Could not reach Wikipedia");
+    await expect(form.locator(".notepanel.public .ql-editor")).not.toContainText("Source:");
+  });
+});

@@ -22,6 +22,8 @@ test("About & sources: open signed out from the footer, with every travel sample
   await expect(page.getByRole("link", { name: "Beaufort scale" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Quill 2 rich text editor/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Inter typeface" })).toBeVisible();
+  // and Wikipedia, for the summaries Generate Summary adds to Encyclopedia entries
+  await expect(page.getByText(/Generate Summary on an Encyclopedia entry/)).toContainText("CC BY-SA 4.0");
   // Leaving the page goes back to the sign-in card.
   await page.goto("index.html#/");
   await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();

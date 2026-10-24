@@ -2390,6 +2390,58 @@
     return box;
   }
 
+  /** Generate Summary: looks the entry's name up on Wikipedia, only when pressed, and lists the matching articles with
+   * their descriptions so a namesake (the Swiss Altdorf for the Empire's) can be passed over. The picked article's
+   * summary goes at the end of the Public notes with a link to the article and its licence, CC BY-SA 4.0, which asks for
+   * both. The browser asks Wikipedia itself, so index.html's connect-src lets the page reach en.wikipedia.org. */
+  const WIKI = 'https://en.wikipedia.org';
+  const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
+  async function wikiJson(url) {
+    const res = await fetch(url, { credentials: 'omit' });
+    if (!res.ok) throw new Error(`Wikipedia said ${res.status}`);
+    return res.json();
+  }
+  function wikiSummary(name, pub) {
+    const out = el('div', { class: 'enc-wiki-out', 'aria-live': 'polite' });
+    const say = (...t) => out.replaceChildren(el('p', { class: 'muted small' }, ...t));
+    const gone = () => say('Could not reach Wikipedia just now. Try again later.');
+    async function search() {
+      const q = name.value.trim();
+      if (!q) return say('Give the entry a name first.');
+      say('Looking…');
+      try {
+        const data = await wikiJson(`${WIKI}/w/api.php?${new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: q, gsrlimit: 5,
+          prop: 'description', redirects: 1, format: 'json', formatversion: 2, origin: '*' })}`);
+        const hits = (data.query?.pages || []).sort((a, b) => a.index - b.index);
+        if (!hits.length) return say(`Wikipedia has no article matching "${q}".`);
+        out.replaceChildren(el('p', { class: 'muted small' }, 'Which of these is it? Pick one to see its summary.'),
+          el('div', { class: 'enc-wiki-hits' }, hits.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', 'data-tip': `Show the summary of "${h.title}"`, onclick: () => show(h.title) },
+            el('strong', {}, h.title), h.description ? el('span', { class: 'muted small' }, h.description) : null))),
+          btn('None of these', () => out.replaceChildren(), 'link small'));
+      } catch { gone(); }
+    }
+    async function show(title) {
+      say('Looking…');
+      try {
+        const s = await wikiJson(`${WIKI}/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`);
+        const text = String(s.extract || '').trim();
+        if (s.type === 'disambiguation' || !text) {
+          return out.replaceChildren(el('p', { class: 'muted small' }, `"${title}" is a list of articles, not one thing. Pick another.`), btn('Back', search, 'link small'));
+        }
+        const url = wikiPage(s.title || title);
+        out.replaceChildren(el('div', { class: 'enc-quote' },
+          el('blockquote', {}, text, ' ', el('a', { href: url, target: '_blank', rel: 'noopener', class: 'small muted' }, `${s.title || title}, Wikipedia`)),
+          el('div', { class: 'row' },
+            btn('Add to notes', ev => { pub.insertText(text); pub.insertText('Source: ', { text: s.title || title, link: url }, ', Wikipedia, CC BY-SA 4.0'); ev.currentTarget.disabled = true; }, 'small',
+              'Put this summary at the end of the Public notes, with a link to the article. Rewrite it as you like'),
+            btn('Back', search, 'link small'))));
+      } catch { gone(); }
+    }
+    return el('div', { class: 'enc-wiki' },
+      btn('📚 Generate Summary', search, 'small', 'Look this name up on Wikipedia and add a short summary of the article to the Public notes, as a start for a real-world place, person or thing'),
+      out);
+  }
+
   function entryForm(e) {
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
@@ -2406,6 +2458,7 @@
       tags.node,
       e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret }) : null,
       e.id ? foundIn(e, pub, gm) : null,
+      e.id ? wikiSummary(name, pub) : null,
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
@@ -4171,6 +4224,8 @@
           ['The notes editor: ', cite('quill'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
+          ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
+            ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       section('No open source',
