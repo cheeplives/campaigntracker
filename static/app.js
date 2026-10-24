@@ -2067,7 +2067,8 @@
   function encLinker() {
     if (encLinkMemo?.list !== S.encyclopedia) {
       encLinkMemo = { list: S.encyclopedia, linker: Nouns.linker(S.encyclopedia, (e, text) => el('a', { class: 'enc-link' + (e.is_secret ? ' secret' : ''),
-        href: `#/c/${S.camp.id}/encyclopedia/${e.id}`, 'data-tip': `📖 ${e.name}${e.is_secret ? ' (GM only)' : ''}${e.preview ? `: ${e.preview}` : '. Nothing written about it yet'}` }, text)) };
+        href: `#/c/${S.camp.id}/encyclopedia/${e.id}`, 'data-tip': `📖 ${e.name}${e.is_secret ? ' (GM only)' : ''}${e.preview ? `: ${e.preview}` : '. Nothing written about it yet'}`,
+        'data-tip-img': e.pic || null }, text)) };
     }
     return encLinkMemo.linker;
   }
@@ -2293,7 +2294,8 @@
     const files = { list: r.files || [], uploads: r.uploads || { ready: false } };
     S.encUploads = files.uploads;
     for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
-    S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }));
+    S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
+      pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
     const st = vs().enc || (vs().enc = { q: '', tags: new Set() });
     st.rels ||= new Set();
     if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
@@ -2414,7 +2416,7 @@
         list.length ? el('ul', { class: 'enc-where' }, list.slice(0, 100)) : el('p', { class: 'muted small' }, 'Nowhere yet.'));
     }).catch(() => box.lastChild.replaceWith(el('p', { class: 'muted small' }, 'Could not look that up just now.')));
     // An entry's own name isn't linked in its notes.
-    const others = Nouns.linker(S.encyclopedia.filter(x => x.id !== e.id), (x, text) => el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.id}`, 'data-tip': `${x.name}: open it in the Encyclopedia` }, text));
+    const others = Nouns.linker(S.encyclopedia.filter(x => x.id !== e.id), (x, text) => el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.id}`, 'data-tip': `${x.name}: open it in the Encyclopedia`, 'data-tip-img': x.pic || null }, text));
     const note = html => others.tree(RichText.view(html, 'html'));
     const publicNote = html => revealButtons(note(html), 'entry', e.id);
     return clean([
@@ -2429,13 +2431,13 @@
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
-      attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret, name: e.name }),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
         (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
         (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
       connectionsCard(e, ctx),
       e.author ? el('small', { class: 'muted' }, 'Added by ', byline(e)) : null,
+      attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret, name: e.name }),
       box]);
   }
 
@@ -2462,6 +2464,8 @@
 
   /** A found picture's credit: "Title by Author, Licence, via Source", each part linked when it can be; an embed's
    * reads "Title by Author on DeviantArt". */
+  const creditText = f => { const c = f.credit;
+    return `${c.title || 'Untitled'}${c.author ? ` by ${c.author}` : ''}${f.embed ? ` on ${c.source || 'DeviantArt'}` : `, ${c.license}${c.source ? `, via ${c.source}` : ''}`}. Open the picture for the links`; };
   function creditLine(f) {
     const c = f.credit, link = (href, text) => href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text) : text;
     const by = c.author ? [' by ', link(c.author_url, c.author)] : [];
@@ -2579,8 +2583,8 @@
           f.embed?.gone ? el('span', { class: 'muted small file-gone' }, 'No longer on DeviantArt')
             : el('img', { src: f.url, alt: f.caption || f.name, loading: 'lazy', width: f.width, height: f.height, referrerpolicy: f.embed ? 'no-referrer' : null })),
         el('figcaption', { class: 'small' }, hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null, f.caption || el('span', { class: 'muted' }, f.name),
-          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' · Embedded') : null),
-        f.credit ? creditLine(f) : null))) : null;
+          f.embed ? el('span', { class: 'file-embedded', 'data-tip': 'Shown from DeviantArt each time, not copied here, so it needs a connection' }, ' · Embedded') : null,
+          f.credit ? [' ', tip(creditText(f))] : null)))) : null;
     const docList = docs.length ? el('ul', { class: 'file-list' }, docs.map(f => el('li', { 'data-id': f.id },
       hidden(f) ? el('span', { 'data-tip': 'GM only: players never see this' }, '🔒 ') : null,
       el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
@@ -2979,12 +2983,12 @@
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
       tags.node,
-      e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       e.id ? foundIn(e, pub, gm) : null,
       e.id ? wikiSummary(name, pub) : null,
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
+      e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save entry' : 'Add entry'),
         e.id && !entryBlank(e) ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia` }, 'Cancel')));
     f.addEventListener('submit', async ev => {
@@ -2996,7 +3000,7 @@
         const { id } = await post('entry_save', body, S.camp.id);
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
-        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text,
+        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null,
           preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
