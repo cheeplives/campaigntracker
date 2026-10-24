@@ -933,7 +933,13 @@ function session_out(array $s, bool $full, bool $isGm): array {
     $o = ['id' => (int)$s['id'], 'number' => (int)$s['number'], 'title' => $s['title'], 'played_on' => $s['played_on'],
         'first_day' => (int)$s['first_day'], 'last_day' => $s['last_day'] === null ? null : (int)$s['last_day'],
         'is_published' => (bool)(int)$s['is_published'], 'version' => (int)$s['version']];
-    if ($full) $o['summary'] = (string)rich_for($s['summary'], $isGm);
+    if ($full) {
+        $o['summary'] = (string)rich_for($s['summary'], $isGm);
+        if (array_key_exists('rewards', $s)) { // the Session Rewards and Loot Found columns, once install.php has added them
+            $o['rewards'] = (string)rich_for($s['rewards'], $isGm);
+            $o['loot'] = (string)rich_for($s['loot'], $isGm);
+        }
+    }
     if ($isGm && isset($s['notes'])) { $o['notes'] = (int)$s['notes']; $o['covered'] = (int)$s['covered']; }
     return $o;
 }
@@ -1980,12 +1986,15 @@ try {
         }
         if (has_sessions()) {
             // a published summary for everyone (its secret paragraphs for GMs only); the rest, and the notes, for GMs
-            $st = db()->prepare('SELECT id, number, title, summary, is_published FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number');
+            $st = db()->prepare('SELECT * FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number');
             $st->execute([$cid]);
             foreach ($st->fetchAll() as $x) {
                 $src = ['kind' => 'session', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}"];
-                $add($src, rich_open($x['summary']), !(int)$x['is_published'], 'html');
-                if ($isGm) $add($src, rich_secrets($x['summary']), true, 'html');
+                foreach (['summary', 'rewards', 'loot'] as $f) {
+                    if (!array_key_exists($f, $x)) continue;
+                    $add($src, rich_open($x[$f]), !(int)$x['is_published'], 'html');
+                    if ($isGm) $add($src, rich_secrets($x[$f]), true, 'html');
+                }
             }
             if ($isGm) {
                 $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? ORDER BY s.number, n.position');
@@ -2371,8 +2380,14 @@ try {
         need_sessions();
         $s = session_row($cid, int_in(p('id'), 1));
         $html = rich_html_clean((string)str_in(p('summary'), 2_000_000)) ?: null;
-        $st = db()->prepare('UPDATE play_sessions SET summary=?, summary_format=\'html\', version=version+1 WHERE id=? AND version=?');
-        $st->execute([$html, $s['id'], int_in(p('version'), 1)]);
+        $set = 'summary=?'; $args = [$html];
+        foreach (['rewards', 'loot'] as $f) if (array_key_exists($f, body())) {
+            if (!array_key_exists($f, $s)) fail('Open install.php on the server and press Install or upgrade first', 400);
+            $set .= ", $f=?";
+            $args[] = rich_html_clean((string)str_in(p($f), 2_000_000)) ?: null;
+        }
+        $st = db()->prepare("UPDATE play_sessions SET $set, summary_format='html', version=version+1 WHERE id=? AND version=?");
+        $st->execute([...$args, $s['id'], int_in(p('version'), 1)]);
         if (!$st->rowCount()) fail('This summary was saved somewhere else after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
         out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), true, true)]);
 
@@ -2428,6 +2443,34 @@ try {
         $nid = (int)db()->lastInsertId();
         db()->commit();
         out(['ok' => true, 'note' => snote_out(snote_row($cid, $nid)), 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);
+
+    case 'snote_bulk': // GMs: many notes at once (typed in the session's notes box, or taken from a day's notes), at the end of the session named
+        $cid = cid();
+        need_gm($cid);
+        need_sessions();
+        $list = p('notes');
+        if (!is_array($list) || !$list) fail('There are no notes to add', 400);
+        if (count($list) > 500) fail('That is more than 500 notes at once. Add them in parts', 400);
+        $rows = [];
+        foreach ($list as $x) {
+            if (!is_array($x)) fail('Those notes could not be read', 400);
+            $rows[] = [snote_text($x['text'] ?? null), int_in($x['depth'] ?? 0, 0, 3), int_in($x['abs_shift'] ?? null)];
+        }
+        $key = p('key') !== null ? (string)str_in(p('key'), 30) : null;
+        db()->beginTransaction();
+        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);
+        $s = session_row($cid, int_in(p('session_id'), 1), true, true);
+        if ($key !== null) { // sent before, and the reply lost: nothing more to add
+            $st = db()->prepare('SELECT 1 FROM session_notes WHERE campaign_id=? AND client_key=?');
+            $st->execute([$cid, $key . '.0']);
+            if ($st->fetch()) { db()->commit(); out(['ok' => true, 'added' => 0, 'again' => true]); }
+        }
+        $ins = db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, client_key, created_by)
+            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ?, ? FROM session_notes WHERE session_id=?');
+        foreach ($rows as $i => [$text, $depth, $at])
+            $ins->execute([$cid, $s['id'], $depth, $text, $at, $key !== null ? "$key.$i" : null, me()['id'], $s['id']]);
+        db()->commit();
+        out(['ok' => true, 'added' => count($rows)]);
 
     case 'snote_save': // GMs: a note's text, indent, stamp or tick
         $cid = cid();

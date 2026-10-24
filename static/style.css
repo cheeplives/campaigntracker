@@ -812,6 +812,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .lib-form textarea { width: 100%; resize: vertical; }
 .lib-form .seg { align-self: flex-start; }
 .rt-editor.rt-tall .ql-editor { min-height: 45vh; max-height: 75vh; }
+.rt-editor.rt-small .ql-editor { min-height: 4.5em; max-height: 30vh; }
+.rt-editor.rt-medium .ql-editor { min-height: 12em; max-height: 50vh; }
 .enc-detail .richtext h1 { font-size: 1.45rem; line-height: 1.2; } /* headings inside notes, not the page's own title */
 .enc-detail .richtext h2 { font-size: 1.25rem; line-height: 1.2; }
 .enc-detail .richtext h3 { font-size: 1.1rem; line-height: 1.2; }
@@ -829,12 +831,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote-tools { display: none; gap: 2px; align-items: center; margin-left: auto; }
 .snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { display: inline-flex; }
 .snote-tools select { font-size: .8em; padding: 0 2px; min-height: 0; }
-.snote-unsaved { opacity: .7; font-style: italic; }
 .snote-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .9em; }
 .snote-jump-at { font-weight: 700; color: var(--accent); }
-.snote-input { display: flex; gap: 6px; align-items: center; position: relative; }
-.snote-input input { flex: 1; min-width: 0; }
-.snote-input[data-depth="1"] input { margin-left: 1.6em; } .snote-input[data-depth="2"] input { margin-left: 3.2em; } .snote-input[data-depth="3"] input { margin-left: 4.8em; }
 .snote-phone { display: none; }
 .snote-err:empty { display: none; }
 .snote-err { color: var(--bad); margin: 0; }
@@ -843,6 +841,9 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 @media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { display: inline-flex; } }
 .sess-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .sess-fields .field { max-width: 28em; }
+.sess-fields-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+.sess-fields-row .field { flex: 1 1 14em; }
+.sess-fields-row .field:last-child { flex: 0 0 11em; }
 .sess-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
 .sess-cols h3 { margin: 0 0 6px; }
 .sess-cols .snotes { max-height: 70vh; }
@@ -853,5 +854,14 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
   .sess-tabs { display: flex; }
   .sess-cols[data-show="notes"] .sess-summary, .sess-cols[data-show="summary"] .sess-notes { display: none; }
 }
-.snote-hold { align-items: center; gap: 10px; margin-top: 6px; }
-.snote-holdbox { display: inline-flex; align-items: center; gap: 4px; }
+/* The notes box on a session's page: free text, a line a note */
+.snote-entry { position: relative; }
+.snote-box { display: block; width: 100%; box-sizing: border-box; min-height: 8em; resize: vertical; tab-size: 2; line-height: 1.4; }
+.snote-entry-all { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.snote-entry-bar { align-items: center; gap: 8px; }
+/* Wide view: the sessions run across the top, the session picked takes the width below */
+.sess-page.wide { grid-template-columns: minmax(0, 1fr); }
+.sess-page.wide .lib-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.sess-page.wide .lib-list .sess-item { flex: 0 1 240px; }
+@media (min-width: 721px) { .sess-page.wide .sess-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 900px) { .sess-page.wide .lib-list { display: block; } }
