@@ -908,10 +908,32 @@
         isGM() ? passTimeWidget() : null]));
     };
     draw();
-    const tabs = el('nav', { class: 'tabs' }, TAB_GROUPS.map(([g, gTip, ts]) => [el('span', { class: 'tab-group', 'data-tip': gTip }, g),
+    const tabs = el('nav', { class: 'tabs' }, searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => [el('span', { class: 'tab-group', 'data-tip': gTip }, g),
       ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => el('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l))]).flat());
     return [head, tabs];
   }
+
+  /** The search box with the tabs: Enter opens the Search page. On a phone, where the tabs scroll sideways, it is a 🔍 tab instead. */
+  function searchBox(active) {
+    const input = el('input', { type: 'search', name: 'q', placeholder: 'Search', 'aria-label': 'Search the campaign', enterkeyhint: 'search',
+      'data-tip': 'Search the whole campaign: the Encyclopedia, days and events, the Library, Party Holdings and downtime. Press / to jump here' });
+    const form = el('form', { class: 'tab-search', role: 'search' }, input);
+    form.addEventListener('submit', ev => {
+      ev.preventDefault();
+      const q = input.value.trim();
+      if (q) location.hash = searchHref(q);
+    });
+    return [form, el('a', { href: `#/c/${S.camp.id}/search`, class: 'tab-search-link' + (active === 'search' ? ' on' : ''), 'aria-label': 'Search', 'data-tip': 'Search the whole campaign' }, '🔍')];
+  }
+  const searchHref = q => `#/c/${S.camp.id}/search` + (q ? `?q=${encodeURIComponent(q)}` : '');
+  // "/" anywhere but in a text box jumps to the search box, as on many sites
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const box = $('.tab-search input');
+    if (!box || !box.offsetParent) return;
+    ev.preventDefault();
+    box.focus();
+  });
 
   function passTimeWidget() {
     const def = { day: 'shift', week: 'day', month: 'week' }[settings().time_unit || 'day'] || 'shift';
@@ -1650,6 +1672,13 @@
     return f;
   }
 
+  /** text with each search word wrapped in <mark>, still built from text nodes */
+  function markWords(text, words) {
+    if (!words.length) return text;
+    const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+    return text.split(re).map((part, i) => (i % 2 ? el('mark', {}, part) : part));
+  }
+
   // ------------------------------------------------------------ events tab
   /** Every event the member can see in one list, newest or oldest first, narrowed by a search and by tags. */
   async function viewEvents() {
@@ -1670,12 +1699,7 @@
     const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
     const list = el('div', { class: 'evlist' });
 
-    /** text with each search word wrapped in <mark>, still built from text nodes */
-    const marked = (text, words) => {
-      if (!words.length) return text;
-      const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-      return text.split(re).map((part, i) => (i % 2 ? el('mark', {}, part) : part));
-    };
+    const marked = markWords;
     const clip = t => (t.length > 220 ? `${t.slice(0, 219).trimEnd()}…` : t);
     const row = (e, words) => {
       const a = Number(e.abs_day), b = end(e);
@@ -4313,9 +4337,95 @@
         ])));
   }
 
+  // ------------------------------------------------------------ search page
+  // Which heading each kind of text from encyclopedia_sources goes under. Encyclopedia entries and events come from their
+  // own lists instead, which also carry their aliases and tags.
+  const SEARCH_GROUPS = [['entry', 'Encyclopedia'], ['day', 'Days and events'], ['tome', 'Library'], ['holding', 'Party Holdings'], ['downtime', 'Downtime']];
+  const searchGroupOf = kind => (kind.startsWith('downtime') ? 'downtime' : ['holding', 'storage', 'gear', 'funds'].includes(kind) ? 'holding'
+    : kind === 'tome' ? 'tome' : 'day');
+
+  /** The Search page: everything in the campaign this member may read, matched on every word typed. The server sends a
+   * player nothing secret, so a player's search can't find it either. */
+  async function viewSearch(q0) {
+    const cid = S.camp.id, gm = isGM();
+    const [{ sources }, enc, { events }] = await Promise.all([api('encyclopedia_sources', { query: { cid } }),
+      S.encReady ? api('encyclopedia', { query: { cid } }) : { entries: [] }, api('events', { query: { cid } })]);
+    // Each result: a title, a link, where it sits in time (for sorting the days), and its text in segments, each GM only or not.
+    const items = new Map();
+    const item = (key, group, title, href, at = Infinity) => items.get(key) || (items.set(key, { group, title, href, at, segs: [], extra: [], secret: false }), items.get(key));
+    for (const e of enc.entries || []) {
+      const it = item(`entry:${e.id}`, 'entry', e.name, `#/c/${cid}/encyclopedia/${e.id}`);
+      it.secret = !!e.is_secret;
+      it.extra.push(...(e.aliases || []), ...(e.tags || []).map(t => t.name));
+      if (e.aliases?.length) it.segs.push({ text: `Also called ${e.aliases.join(', ')}` });
+      it.segs.push({ text: Nouns.plain(e.notes, 'html') });
+      if (gm) it.segs.push({ text: Nouns.plain(e.gm_notes, 'html'), secret: true });
+    }
+    for (const e of events) {
+      const a = Number(e.abs_day);
+      const it = item(`event:${e.id}`, 'day', `${E.fmtDate(cal(), a, { noWeekday: true })}: ${e.title}`, `#/c/${cid}/day/${a}`, a);
+      it.secret = !!Number(e.is_secret);
+      it.extra.push(...(e.tags || []).map(t => t.name), e.author || '');
+      it.segs.push({ text: e.body || '' }, ...(e.notes || []).map(n => ({ text: n })));
+    }
+    for (const s of sources) {
+      if (['entry', 'entry_gm_notes', 'event', 'event_note'].includes(s.kind)) continue;
+      const [label, href] = sourceLabel(s), group = searchGroupOf(s.kind);
+      // under its own heading a tome or holding needs no "Library: " in front, and its name isn't repeated as its text
+      const it = item(label, group, label.replace(/^(Library|Party Holdings): /, ''), href, s.abs_day ?? Infinity);
+      let text = Nouns.plain(s.text, s.format);
+      if (s.short && s.title && text.startsWith(s.title)) text = text.slice(s.title.length);
+      it.segs.push({ text, secret: !!s.secret });
+    }
+    const all = [...items.values()].map(it => ({ ...it, segs: it.segs.filter(g => g.text.trim()),
+      hay: [it.title, ...it.extra, ...it.segs.map(g => g.text)].join('\n').toLowerCase() }));
+
+    const input = el('input', { type: 'search', value: q0, placeholder: 'Names, places, words from any note', 'aria-label': 'Search everything', autocomplete: 'off' });
+    const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
+    const out = el('div', { class: 'search-results' });
+    const clip = (text, words) => {  // a stretch of text around the first word found in it
+      const flat = text.replace(/\s+/g, ' ').trim(), low = flat.toLowerCase();
+      const at = Math.min(...words.map(w => low.indexOf(w)).filter(i => i >= 0));
+      if (!Number.isFinite(at) || flat.length <= 220) return flat.length > 220 ? `${flat.slice(0, 219).trimEnd()}…` : flat;
+      const from = Math.max(0, at - 70), to = Math.min(flat.length, from + 220);
+      return (from ? '…' : '') + flat.slice(from, to).trim() + (to < flat.length ? '…' : '');
+    };
+    const row = (it, words) => {
+      const seg = it.segs.find(g => words.some(w => g.text.toLowerCase().includes(w))) || it.segs[0];
+      const secret = it.secret || seg?.secret;
+      return el('div', { class: 'listrow search-row' + (secret ? ' secret' : '') },
+        el('h4', {}, secret ? secretTag() : null, el('a', { href: it.href }, markWords(it.title, words))),
+        it.extra.filter(Boolean).length && it.group === 'entry' ? el('div', { class: 'small muted' }, it.extra.filter(Boolean).join(' · ')) : null,
+        seg ? el('p', { class: 'small' }, markWords(clip(seg.text, words), words)) : null);
+    };
+    const draw = () => {
+      const q = input.value.trim(), words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      history.replaceState(null, '', location.pathname + location.search + searchHref(q));
+      if (!words.length) { count.textContent = ''; out.replaceChildren(el('p', { class: 'muted' }, 'Type a name or a few words. Every word has to appear, in any order.')); return; }
+      const hits = all.filter(it => words.every(w => it.hay.includes(w)));
+      count.textContent = hits.length ? `${hits.length} result${hits.length === 1 ? '' : 's'}` : '';
+      if (!hits.length) { out.replaceChildren(el('p', { class: 'muted' }, 'Nothing in the campaign matches every word.')); return; }
+      // names and titles that match come first; days and events then run in date order
+      const inTitle = it => (words.some(w => it.title.toLowerCase().includes(w) || it.extra.some(x => x.toLowerCase().includes(w))) ? 0 : 1);
+      out.replaceChildren(...clean(SEARCH_GROUPS.map(([g, heading]) => {
+        const list = hits.filter(it => it.group === g).sort((a, b) => inTitle(a) - inTitle(b) || a.at - b.at || a.title.localeCompare(b.title));
+        if (!list.length) return null;
+        return el('section', { class: 'card search-group' }, el('h3', {}, heading, el('span', { class: 'muted small' }, ` ${list.length}`)),
+          list.slice(0, 50).map(it => row(it, words)),
+          list.length > 50 ? el('p', { class: 'small muted' }, `and ${list.length - 50} more: add a word to narrow them down`) : null);
+      })));
+    };
+    input.addEventListener('input', draw);
+    mount(...campaignHeader('search'), el('div', { class: 'card' }, el('h2', {}, 'Search',
+      tip(gm ? 'Everything in the campaign, GM notes and secrets included (marked 🔒)' : 'Everything in the campaign you can see')), input, count), out);
+    draw();
+    input.focus();
+  }
+
   // ------------------------------------------------------------ router
   async function route() {
-    const parts = (location.hash.replace(/^#\/?/, '') || '').split('/');
+    const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
+    const parts = (path || '').split('/');
     if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too
     if (!S.user) return; // boot() shows the sign-in or waiting screen
     renderNav();
@@ -4332,6 +4442,7 @@
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
+        else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);

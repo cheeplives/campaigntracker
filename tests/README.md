@@ -56,6 +56,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   with events and lists them in the tooltip, steps a year at a time, opens a
   month from its name and a day from its number, and never gives a player a
   secret event.
+- **search**: the box with the tabs (a 🔍 tab on a phone) opens the Search page, which finds Encyclopedia names, aliases, tags and notes, events by title, tag and text, day notes and Library tomes, grouped and with matching titles first; every word must match; a result opens its page and Back keeps the search; a GM's secret results are marked and a player finds none of them; `/` jumps to the box.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
