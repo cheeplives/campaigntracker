@@ -6,8 +6,10 @@ credit kept. Agreed with Josh on 2026-10-24.
 
 ## What the user sees
 
-- **Where:** on an entry's page, a *🖼️ Find Image* button beside *📚 Generate Summary*, for anyone who may add pictures
-  to that entry (the same people `file_upload` lets in). Hidden when uploads aren't ready (`upload_info().ready`).
+- **Where:** in an entry's *Pictures and files* box, a *🖼️ Find Image* button beside *📎 Add*, on the entry's page and
+  in its edit form, for anyone who may add pictures to that entry (the same people `file_upload` lets in). Hidden when
+  uploads aren't ready (`upload_info().ready`). (It sits with the pictures rather than beside *📚 Generate Summary*, so
+  it shows on the entry's page too and the box redraws with the new picture.)
 - **Search box:** opens below the buttons with the entry's name filled in; it can be changed (e.g. "ruined keep") and
   searched again. Three tabs, each searched only when opened:
   - **Open web:** Openverse (Flickr, Wikimedia Commons, museums and others).
@@ -18,8 +20,13 @@ credit kept. Agreed with Josh on 2026-10-24.
 - **Use this picture:** on every result whose licence is open (below). It saves the picture to the entry, shows it in
   the entry's pictures, and disables the button. A GM gets the usual *GM only* checkbox beside it.
 - **DeviantArt works that aren't openly licensed:** no *Use this picture*. They show *View on DeviantArt* (the
-  deviation's page) and *Artist's page* (`https://www.deviantart.com/<username>`), and a short line: "Ask the artist
-  before using this. If they agree, upload it with Add picture." Mature works are never shown.
+  deviation's page), *Artist's page* (`https://www.deviantart.com/<username>`) and *Embed from DeviantArt*, with a
+  short line: "Not openly licensed: embed it from DeviantArt, or ask the artist before copying it." Mature works are
+  never shown.
+- **Embed from DeviantArt:** adds the work to the entry's pictures without copying it. The app keeps only the link;
+  the picture loads from DeviantArt each time it is shown (through DeviantArt's oEmbed), credited "Title by Artist on
+  DeviantArt" with both linked. It is marked *Embedded* in the gallery, can't be downloaded, and doesn't show offline.
+  If the artist deletes the work, the picture shows "No longer on DeviantArt" instead.
 - **Credit on saved pictures:** under the picture, wherever entry pictures show (entry page and the picture viewer):
   "Title by Author, Licence, via Source", each part a link when known. A picture uploaded by hand has no credit line.
 - **Errors:** a source that can't be reached or isn't set up says so in its tab ("DeviantArt isn't set up on this
@@ -60,7 +67,18 @@ the image hosts for thumbnails).
   the full image (the largest the source offers up to the upload size limit; redirects not followed; only from that
   source's image hosts), and then runs exactly the `file_upload` checks (parent, count per parent, campaign quota,
   `upload_type`) and stores it with its credit. The shared steps of `file_upload` move into one function both use.
-- **`attachment_out`** adds `credit` (null, or the stored fields) for the browser.
+- **`image_import`** with `mode=embed` (DeviantArt only, any licence): the server looks the deviation up
+  (`/api/v1/oauth2/deviation/<id>`), refuses mature works, asks oEmbed (`https://backend.deviantart.com/oembed?url=`)
+  for the picture, and stores a row with `kind='embed'`, no file (`size_bytes` 0, so it doesn't count to the quota;
+  it does count to the 50 per entry), `embed_url` (the deviation's page), `embed_src` and `embed_checked_at`.
+- **`file`** for an embed answers with a redirect (302) to `embed_src`, first asking oEmbed again when
+  `embed_checked_at` is more than 6 hours old (so DeviantArt's image links can expire safely). When oEmbed says the
+  work is gone, it answers 404 (`embed_gone` in `attachment_out`), and the gallery shows the "No longer on DeviantArt"
+  line. Only https URLs on `*.wixmp.com` or `*.deviantart.net` are ever redirected to.
+- **`attachment_out`** adds `credit` (null, or the stored fields) and, for an embed, `embed_url`.
+- **Testing seam:** every outbound call goes through `image_http(string $method, string $url, array $opts): array`.
+  When the config sets `image_search.stub` (a PHP file returning a function), it answers instead, so the tests reach
+  nothing outside (and the PHP test server never calls itself).
 
 ## Database change
 
@@ -68,7 +86,8 @@ Yes. New migration **`db/migrations/017_attachment_credits.sql`**, also folded i
 (*Install or upgrade*) after deploying. It adds nullable columns to `attachments`:
 `credit_title VARCHAR(200)`, `credit_author VARCHAR(200)`, `credit_author_url VARCHAR(500)`,
 `credit_license VARCHAR(60)`, `credit_license_url VARCHAR(300)`, `credit_source VARCHAR(60)`,
-`credit_source_url VARCHAR(500)`. Until it has run, *Find Image* still searches but *Use this picture* answers
+`credit_source_url VARCHAR(500)`, `embed_url VARCHAR(500)`, `embed_src VARCHAR(1000)`, `embed_checked_at DATETIME`.
+Until it has run, *Find Image* still searches but *Use this picture* answers
 "Saving found pictures needs a database upgrade" (409 `needs_upgrade`), like the other features.
 
 ## Config
@@ -80,7 +99,7 @@ User-Agent, which the Art Institute and Openverse ask for). Only Josh's real con
 ## Security policy
 
 `img-src` in both `.htaccess` and `index.html` adds the thumbnail hosts: `https://api.openverse.org`,
-`https://www.artic.edu`, `https://images.metmuseum.org`, `https://*.wixmp.com` (DeviantArt's image host).
+`https://www.artic.edu`, `https://images.metmuseum.org`, `https://*.wixmp.com` and `https://*.deviantart.net` (DeviantArt's image hosts, which embeds redirect to).
 `connect-src` doesn't change, since searches go to the app. Saved pictures are served by the app as now.
 
 ## About page and sources
@@ -94,11 +113,12 @@ User-Agent, which the Art Institute and Openverse ask for). Only Josh's real con
 
 ## Testing
 
-Playwright, in the existing style. The test config points each source at a stub in `tests/support/` (a
-`image_search.endpoints` override in the config, used only when set), so no test reaches the internet. Tests: the
+Playwright, in the existing style. The test config sets `image_search.stub` to `tests/support/image-stub.php`, which
+answers each source's URLs with fixed results (thumbnails as `data:` pictures), so no test reaches the internet. Tests: the
 button opens with the name filled in; each tab lists stub results with author, licence and source links; an NC result
 has no *Use this picture*; a non-CC DeviantArt result shows only the two links, both pointing at the right pages;
-*Use this picture* adds the picture with its credit line; `image_import` refuses a non-open work and a player saving
+*Use this picture* adds the picture with its credit line; *Embed from DeviantArt* adds an embedded picture whose
+`file` redirects to DeviantArt's image, refreshed after 6 hours, and shows "No longer on DeviantArt" once it is gone; `image_import` refuses a non-open work and a player saving
 to a secret entry; the throttle; a source that fails shows its message while the others work; the About page lists the
 new sources. The real services can't be reached from the build machine, so the live shapes are checked against their
 documentation and once by hand after deploying.
