@@ -23,7 +23,7 @@
   # are self-hosted in static/fonts/. Generate Summary on an Encyclopedia entry
   # asks Wikipedia from the browser, so connect-src allows en.wikipedia.org.
   # Keep this in step with the meta tag in index.html: a browser applies both.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
 # --- Make browsers check for a new app after each deploy -------------------

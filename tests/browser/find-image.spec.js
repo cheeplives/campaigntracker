@@ -27,9 +27,16 @@ async function search(page, cid, source, q) {
   return { status: res.status(), json: await res.json() };
 }
 const pick = (page, cid, id, body) => api(page, "image_import", { parent_type: "encyclopedia", parent_id: id, mode: "copy", ...body }, cid);
-/** Image routes for pictures the browser loads from outside: the Art Institute's IIIF server and DeviantArt's. */
+/** Pictures the browser loads from outside: the Art Institute's IIIF server, and DeviantArt's for an embed. Playwright
+ * doesn't route a request a redirect made, so an embed's picture is answered at the app's redirect, once it is seen to
+ * point at DeviantArt. */
 async function routeImages(page) {
-  await page.route(/^https:\/\/(www\.artic\.edu|[a-z0-9-]+\.wixmp\.com)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
+  await page.route(/^https:\/\/www\.artic\.edu\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
+  await page.route(/\/api\/index\.php\?a=file&/, async route => {
+    const res = await route.fetch({ maxRedirects: 0 });
+    if (res.status() === 302 && /^https:\/\/[a-z0-9-]+\.wixmp\.com\//.test(res.headers().location)) return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
+    return route.fulfill({ response: res });
+  });
 }
 
 test.describe("Find Image API", () => {

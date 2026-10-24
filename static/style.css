@@ -745,6 +745,21 @@ dialog.file-viewer { max-width: min(96vw, 1400px); width: auto; text-align: cent
 .file-full { max-width: 100%; max-height: 75vh; display: block; margin: 0 auto; object-fit: contain; }
 .file-cap { margin: 8px 0 4px; overflow-wrap: anywhere; }
 .file-tools { justify-content: center; flex-wrap: wrap; }
+/* Find Image (findImage in app.js) */
+.find-slot:empty { display: none; }
+.find-image { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+.find-bar { flex-wrap: wrap; align-items: center; }
+.find-bar input[type=search] { flex: 1 1 180px; min-width: 0; }
+.find-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.find-result { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.find-result figcaption { display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
+.find-thumb { display: block; height: 130px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--bg); }
+.find-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.find-closed p { margin: 0 0 4px; }
+.find-closed .row { flex-wrap: wrap; gap: 4px; }
+.file-credit { margin: 0; overflow-wrap: anywhere; }
+.file-embedded { color: var(--dim); font-size: .8rem; }
+.file-gone { display: flex; align-items: center; justify-content: center; height: 100%; padding: 6px; }
 .enc-conns { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
 .enc-conns h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
 .enc-conn-list { display: flex; flex-direction: column; gap: 6px; }
