@@ -216,6 +216,7 @@
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
     S.libReady = !!r.library_ready;
+    S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
     hideChangeBanner();
@@ -1298,9 +1299,12 @@
       actions: btn('+ Add reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
+    // --- the GM's quick notes during play, on the Current Day tab
+    const snBox = current && isGM() && S.sessionsReady ? await sessionBox() : null;
+
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
       dayBox('weather', 'Weather', {}, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
-      notesBox(d, row),
+      notesBox(d, row), snBox,
       dayBox('shifts', `${Word()}s`, { tip: shiftTip() }, shiftCards),
       evBox, remBox);
   }
@@ -1370,6 +1374,194 @@
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow(row.locations, [row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
       el('div', { class: 'row' }, save));
+  }
+
+  // ------------------------------------------------------------ session notes
+  // The GM's quick notes during play: one line each, typed on the Current Day tab into the open session (the first note
+  // starts one). The shorthand (static/sessions.js): ! a GM aside, ? a loose end, > a time jump. Each note saves on
+  // Enter; one that can't be sent waits in this browser and goes on the next try, so nothing typed is lost.
+  const SNOTE_TIP = 'Enter saves · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock';
+  const SNOTE_HELP = [['Enter', 'saves the line'], ['Tab, Shift+Tab', 'indent it under the line above, or bring it back out'], ['@', 'names an Encyclopedia entry'],
+    ['!', 'at the start: a GM aside (dice, rules), kept out of the summary'], ['?', 'at the start: a loose end, listed apart at the end of the summary'],
+    ['>+1, >+9, >+2w', 'jump on a day, nine days, two weeks'], ['>dusk', 'jump to that part of the day'], ['>+1 dawn', 'the next day at dawn'],
+    ['>12 Firstmonth', 'jump to a date'], ['>', 'alone: back to the campaign\'s clock']];
+  const SNOTE_MARKS = { '!': ['🎲', 'GM aside: kept out of the summary\'s draft'], '?': ['❓', 'Loose end: not in the summary, listed under Loose ends'] };
+  const sessionName = s => `Session ${s.number}${s.title ? `: ${s.title}` : ''}`;
+  /** Notes typed but not yet saved, kept in this browser per account and campaign. */
+  const pendingKey = () => `chronicle:snotes-pending:${S.user?.id}:${S.camp?.id}`;
+  const pendingNotes = () => { try { return JSON.parse(localStorage.getItem(pendingKey())) || []; } catch { return []; } };
+  const setPending = list => { try { localStorage.setItem(pendingKey(), JSON.stringify(list)); } catch { /* private mode: kept on the page only */ } };
+  let snoteFlush = null;  // the open box's "send what's waiting", run on the change poll and when the browser comes back online
+  setInterval(() => snoteFlush?.(), CHANGE_POLL_MS);
+  window.addEventListener('online', () => snoteFlush?.());
+
+  /** Where a note sits in time, short: the shift alone on the campaign's current day, else the date too. */
+  function snoteStamp(abs) {
+    const n = spd(), d = Math.floor(abs / n), sh = shiftNames()[E.mod(abs, n)];
+    return d === today() ? sh : `${sh} · ${E.fmtDate(cal(), d, { noWeekday: true })}`;
+  }
+  /** One note as a row. opts: { onChange(), notes() → the session's notes, tick, move: [sessions] }. A > line is a divider. */
+  function snoteRow(n, opts) {
+    const k = Sessions.mark(n.text);
+    const del = btn('✕', async () => {
+      if (!await confirmDialog('Delete this note?', { ok: 'Delete', danger: true })) return;
+      try { await post('snote_delete', { id: n.id }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+    }, 'link small snote-del', 'Delete this note');
+    del.setAttribute('aria-label', 'Delete note');
+    const nudge = (dir, label, glyph) => {
+      const b = btn(glyph, async () => {
+        const list = opts.notes(), i = list.findIndex(x => x.id === n.id), to = i + dir;
+        if (to < 0 || to >= list.length) return;
+        try { await post('snote_move', { id: n.id, position: to + 1 }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+      }, 'link small snote-nudge', label);
+      b.setAttribute('aria-label', label);
+      return b;
+    };
+    const tools = el('span', { class: 'snote-tools' }, nudge(-1, 'Move up', '▲'), nudge(1, 'Move down', '▼'),
+      opts.move?.length ? select([['', 'Move to…'], ...opts.move.map(s => [s.id, sessionName(s)])], '', {
+        'aria-label': 'Move to another session', 'data-tip': 'Move this note to another session, at its end',
+        onchange: async ev => {
+          try { await post('snote_move', { id: n.id, session_id: Number(ev.target.value) }, S.camp.id); toast('Note moved'); opts.onChange(); } catch (err) { toast(err.message, true); }
+        } }) : null, del);
+    if (k === '>') {
+      const clock = btn('Set the clock here', busy(null, async () => {
+        await passShifts(n.abs_shift - nowShift());
+        toast(`The clock is now ${snoteStamp(n.abs_shift)}`); route();
+      }), 'small', 'Move the campaign\'s clock (weather, reminders and everyone\'s pages) to this day and shift');
+      return el('div', { class: 'snote-jump', 'data-tip': 'Time jump: the notes after this take this day and shift. Set the clock here also moves the campaign\'s clock' },
+        el('span', { class: 'snote-jump-at' }, `${shiftNames()[E.mod(n.abs_shift, spd())]} · ${E.fmtDate(cal(), Math.floor(n.abs_shift / spd()))}`),
+        el('code', { class: 'small muted' }, n.text), clock, tools);
+    }
+    const textEl = el('span', { class: 'snote-text' }, linked(n.text));
+    const row = el('div', { class: `snote snote-d${n.depth}` + (n.is_covered ? ' covered' : '') },
+      opts.tick ? el('input', { type: 'checkbox', checked: n.is_covered, 'aria-label': 'Covered by the summary', 'data-tip': 'Ticked once the summary covers this note',
+        onchange: async ev => {
+          try { await post('snote_save', { id: n.id, is_covered: ev.target.checked }, S.camp.id); n.is_covered = ev.target.checked; opts.onTick?.(); } catch (err) { toast(err.message, true); }
+        } }) : null,
+      SNOTE_MARKS[k] ? el('span', { class: 'snote-mark', 'data-tip': SNOTE_MARKS[k][1], 'aria-label': SNOTE_MARKS[k][1] }, SNOTE_MARKS[k][0]) : null,
+      textEl,
+      el('button', { type: 'button', class: 'link small muted snote-stamp', 'data-tip': 'When in the campaign this happened. Click to move it to another day or shift' ,
+        onclick: async () => {
+          const v = await promptDialog('Move this note in time. Write it as a jump from where it is: +1, -1, dusk, +1 dawn or 12 Firstmonth', { ok: 'Move' });
+          if (v === null || !v.trim()) return;
+          const back = /^\s*-(\d+)\s*$/.exec(v);
+          const to = back ? n.abs_shift - Number(back[1]) * spd() : Sessions.parseJump(cal(), `>${v}`, n.abs_shift, nowShift());
+          if (to === null) return toast('Couldn\'t read that; try +1, dusk or 12 Firstmonth', true);
+          try { await post('snote_save', { id: n.id, abs_shift: to }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+        } }, snoteStamp(n.abs_shift)),
+      tools);
+    // a click on the text (not a link in it) changes it: Enter saves, Escape leaves it, Tab and Shift+Tab indent
+    textEl.addEventListener('click', ev => {
+      if (ev.target.closest('a')) return;
+      let depth = n.depth;
+      const edit = el('input', { class: 'snote-edit', value: n.text, maxlength: 1000, 'aria-label': 'Change this note', 'data-tip': SNOTE_TIP });
+      edit.addEventListener('keydown', async e => {
+        if (e.key === 'Escape') return opts.onChange();
+        if (e.key === 'Tab') { e.preventDefault(); depth = Math.max(0, Math.min(3, depth + (e.shiftKey ? -1 : 1))); row.className = `snote snote-d${depth}`; return; }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        try { await post('snote_save', { id: n.id, text: edit.value, depth }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+      });
+      textEl.replaceWith(edit);
+      edit.focus();
+    });
+    return row;
+  }
+
+  /** The Session notes box (GMs, Current Day tab): the open session's notes and a line to type the next one. */
+  async function sessionBox() {
+    const cid = S.camp.id;
+    let notes = [];
+    if (S.openSession) {
+      try { notes = (await api('session', { query: { cid, id: S.openSession.id } })).notes || []; } catch { S.openSession = null; }
+    }
+    const list = el('div', { class: 'snotes', 'aria-live': 'polite' });
+    const err = el('p', { class: 'snote-err small', role: 'alert' });
+    const acts = el('div', { class: 'row' });
+    const help = el('div', { class: 'snote-help small', hidden: true },
+      el('dl', {}, SNOTE_HELP.map(([k, v]) => [el('dt', {}, el('code', {}, k)), el('dd', {}, v)])));
+    const inputWrap = el('div', { class: 'snote-input' });
+    const input = el('input', { type: 'text', maxlength: 1000, autocomplete: 'off', 'aria-label': 'New note', 'data-tip': SNOTE_TIP,
+      placeholder: 'What just happened? Enter saves, Tab indents' });
+    let depth = notes.length ? notes[notes.length - 1].depth : 0;
+    const setDepth = v => { depth = Math.max(0, Math.min(3, v)); inputWrap.dataset.depth = depth; };
+    const phoneBtn = (glyph, label, dir) => {
+      const b = btn(glyph, () => { setDepth(depth + dir); input.focus(); }, 'small snote-phone', label);
+      b.setAttribute('aria-label', label);
+      return b;
+    };
+    const helpBtn = btn('?', () => { help.hidden = !help.hidden; }, 'small', 'Show the shorthand this box understands');
+    helpBtn.setAttribute('aria-label', 'Shorthand');
+    inputWrap.append(phoneBtn('⇤', 'Outdent', -1), phoneBtn('⇥', 'Indent', 1), input, helpBtn);
+    setDepth(depth);
+    const mentions = encMentions() ? RichText.inputMentions(input, inputWrap, encMentions()) : null;
+
+    const box = dayBox('session', 'Session notes', {
+      tip: 'Your quick notes during play, for writing the session\'s summary afterwards on the Sessions tab. Only GMs see them',
+      actions: acts }, list, inputWrap, err, help);
+    const toggle = box.querySelector('.daybox-toggle');
+    const opts = { onChange: () => reload(), notes: () => notes };
+    async function reload() {
+      if (S.openSession) { try { notes = (await api('session', { query: { cid, id: S.openSession.id } })).notes || []; } catch (e) { toast(e.message, true); } }
+      draw();
+    }
+    function draw() {
+      const open = S.openSession;
+      toggle.lastChild.textContent = open ? `Session notes · ${sessionName(open)}` : 'Session notes';
+      acts.replaceChildren(...(open ? [
+        el('a', { class: 'button small', href: `#/c/${cid}/sessions/${open.id}`, 'data-tip': 'This session\'s page: its notes beside the summary' }, 'Open session →'),
+        btn('End session', busy(null, async () => {
+          if (!await confirmDialog(`End ${sessionName(open)}? Your next note will start a new session.`, { ok: 'End session' })) return;
+          await post('session_end', { id: open.id }, cid);
+          S.openSession = null; notes = []; draw();
+        }), 'small', 'Close this session at the current day. Your next note starts a new one')] : []));
+      const waiting = pendingNotes();
+      list.replaceChildren(
+        !open && !waiting.length ? el('p', { class: 'muted small' }, 'No session open: your first note starts one') : null,
+        ...notes.map(n => snoteRow(n, opts)),
+        ...waiting.map(p => el('div', { class: `snote snote-d${p.depth} snote-unsaved` }, el('span', { class: 'snote-text' }, p.text),
+          el('small', { class: 'muted' }, ' Not saved, retrying'))));
+      list.scrollTop = list.scrollHeight;
+    }
+    let flushing = false;
+    async function flush() {
+      if (flushing || !box.isConnected) return;
+      flushing = true;
+      try {
+        for (let p = pendingNotes()[0]; p; p = pendingNotes()[0]) {
+          let r;
+          try { r = await post('snote_add', { text: p.text, depth: p.depth, abs_shift: p.abs_shift }, cid); } catch (e) {
+            if (e instanceof TypeError) break;              // no connection: try again later
+            toast(e.message, true);                        // refused (too long, say): drop it rather than retry forever
+          }
+          setPending(pendingNotes().filter(x => x.key !== p.key));
+          if (r) { notes.push(r.note); S.openSession = r.session; }
+        }
+      } finally { flushing = false; draw(); }
+    }
+    snoteFlush = flush;
+    input.addEventListener('keydown', ev => {
+      if (mentions?.keydown(ev)) return;
+      if (ev.key === 'Tab') { ev.preventDefault(); setDepth(depth + (ev.shiftKey ? -1 : 1)); return; }
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      const stamp = Sessions.stampAt([...notes, ...pendingNotes()], nowShift());
+      let at = stamp;
+      if (Sessions.mark(text) === '>') {
+        at = Sessions.parseJump(cal(), text, stamp, nowShift());
+        if (at === null) { err.textContent = 'Couldn\'t read that jump; try >+1, >dusk or >12 Firstmonth'; return; }
+      }
+      err.textContent = '';
+      setPending([...pendingNotes(), { key: `${Date.now()}-${Math.random()}`, text, depth, abs_shift: at }]);
+      input.value = '';
+      draw();
+      flush();
+    });
+    draw();
+    flush();
+    return box;
   }
 
   /** Hours of daylight as "11h 40m". */

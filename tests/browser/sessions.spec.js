@@ -126,3 +126,132 @@ test("players get only published sessions, never the notes or the summary's GM-o
   await approve(browser, outsider.email);
   expect((await api(op, "sessions", undefined, cid)).status).toBe(403);
 });
+
+// ---------------------------------------------------------------- the Session notes box on Current Day
+const SHORTHAND = "Enter saves · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
+const box = page => page.locator("[data-box=session]");
+const input = page => box(page).getByRole("textbox", { name: "New note" });
+async function type(page, text) {
+  await input(page).fill(text);
+  await input(page).press("Enter");
+  await expect(input(page)).toHaveValue("");
+}
+async function notesOf(page, cid) {
+  const open = (await api(page, "campaign", undefined, cid)).json.open_session;
+  return open ? (await one(page, cid, open.id)).json.notes : [];
+}
+
+test("the GM types notes on Current Day: Enter saves, Tab indents, marks show, and the first note starts a session", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Notes box");
+  await api(page, "entry_save", { name: "Dulled Fang" }, cid);
+  await page.goto(`index.html#/c/${cid}`);
+  await expect(box(page)).toContainText("No session open: your first note starts one");
+  await expect(input(page)).toHaveAttribute("data-tip", SHORTHAND);
+
+  await type(page, "Spotted the Dulled Fang at Iapetus");
+  await expect(box(page).locator("h3")).toContainText("Session 1");
+  await input(page).press("Tab");
+  await type(page, "Hera tipped off the Harbormaster");
+  await type(page, "! +2 Sensor Roll");
+  await input(page).press("Shift+Tab");
+  await type(page, "? Who is Essen");
+  const rows = box(page).locator(".snote");
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0).locator("a.enc-link")).toHaveText("Dulled Fang");
+  await expect(rows.nth(1)).toHaveClass(/snote-d1/);
+  await expect(rows.nth(2)).toHaveClass(/snote-d1/); // a new line keeps the last one's indent
+  await expect(rows.nth(2).locator(".snote-mark")).toHaveAttribute("data-tip", /GM aside/);
+  await expect(rows.nth(3)).toHaveClass(/snote-d0/);
+  await expect(rows.nth(3).locator(".snote-mark")).toHaveAttribute("data-tip", /Loose end/);
+  expect((await notesOf(page, cid)).map(n => [n.text, n.depth, n.abs_shift])).toEqual([
+    ["Spotted the Dulled Fang at Iapetus", 0, 8], ["Hera tipped off the Harbormaster", 1, 8], ["! +2 Sensor Roll", 1, 8], ["? Who is Essen", 0, 8]]);
+
+  // @ lists the Encyclopedia's names, as in the editors
+  await input(page).fill("Fitz hacked into the @Dul");
+  await expect(box(page).locator(".rt-mentions li").first()).toContainText("Dulled Fang");
+  await input(page).press("Enter");
+  await expect(input(page)).toHaveValue("Fitz hacked into the Dulled Fang ");
+  await input(page).press("Enter");
+  await expect(rows).toHaveCount(5);
+
+  // fix a typo, then delete a line
+  await rows.nth(0).locator(".snote-text").click();
+  const edit = box(page).getByRole("textbox", { name: "Change this note" });
+  await edit.fill("Spotted the Dulled Fang at Iapetus Station");
+  await edit.press("Enter");
+  await expect(rows.nth(0)).toContainText("Iapetus Station");
+  await rows.nth(4).getByRole("button", { name: "Delete note" }).click();
+  await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(rows).toHaveCount(4);
+  expect((await notesOf(page, cid))[0].text).toBe("Spotted the Dulled Fang at Iapetus Station");
+
+  // the shorthand, for a phone where tips don't hover
+  await box(page).getByRole("button", { name: "Shorthand" }).click();
+  await expect(box(page).locator(".snote-help")).toContainText(">+1 dawn");
+
+  // players never see the box
+  await pp.goto(`index.html#/c/${cid}`);
+  await expect(pp.locator("[data-box=notes]")).toBeVisible();
+  await expect(box(pp)).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("a > line jumps the notes' day and shift; Set the clock here moves the campaign's clock too", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Notes jumps");
+  await page.goto(`index.html#/c/${cid}`);
+  await type(page, "Arrived at Iapetus");
+  await type(page, ">+1");
+  const jump = box(page).locator(".snote-jump");
+  await expect(jump).toHaveCount(1);
+  await expect(jump).toContainText("Dawn");
+  await expect(jump).toContainText("4 Firstmonth");
+  await type(page, "Flip and burn");
+  await type(page, ">dusk");
+  await type(page, "Debris cloud sunward");
+  expect((await notesOf(page, cid)).map(n => [n.text, n.abs_shift])).toEqual([["Arrived at Iapetus", 8], [">+1", 12], ["Flip and burn", 12], [">dusk", 14], ["Debris cloud sunward", 14]]);
+  expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(8); // a jump alone leaves the clock
+
+  // a jump it can't read stays in the box to fix
+  await input(page).fill(">wibble");
+  await input(page).press("Enter");
+  await expect(box(page).locator(".snote-err")).toHaveText("Couldn't read that jump; try >+1, >dusk or >12 Firstmonth");
+  await expect(input(page)).toHaveValue(">wibble");
+
+  // after a reload the stamp carries on from the last jump
+  await page.reload();
+  await type(page, "Still at dusk");
+  expect((await notesOf(page, cid)).pop().abs_shift).toBe(14);
+
+  await jump.last().getByRole("button", { name: "Set the clock here" }).click();
+  await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(14);
+  expectNoErrors(errors);
+});
+
+test("a note typed offline waits in the box, survives a reload and is saved once", async ({ page, browser, context }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes offline");
+  await page.goto(`index.html#/c/${cid}`);
+  await type(page, "Online note");
+  await context.setOffline(true);
+  await type(page, "Typed with no signal");
+  await expect(box(page).locator(".snote-unsaved")).toContainText("Typed with no signal");
+  await expect(box(page).locator(".snote-unsaved")).toContainText("Not saved, retrying");
+  await context.setOffline(false);
+  await page.reload();
+  await expect(box(page).locator(".snote")).toHaveCount(2);
+  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
+  await page.reload();
+  await expect(box(page).locator(".snote")).toHaveCount(2);
+  expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["Online note", "Typed with no signal"]);
+});
+
+test("on a phone the ⇥ and ⇤ buttons indent", async ({ page, browser, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  const { cid } = await gmAndPlayer(page, browser, "Notes phone");
+  await page.goto(`index.html#/c/${cid}`);
+  await type(page, "Top line");
+  await box(page).getByRole("button", { name: "Indent", exact: true }).click();
+  await type(page, "Under it");
+  await expect(box(page).locator(".snote").nth(1)).toHaveClass(/snote-d1/);
+});
