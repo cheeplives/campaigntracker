@@ -47,6 +47,28 @@ A **Session notes** box (GM only) between Notes and Shifts. It folds like the ot
 - **Marks:** a line that starts with `!` is a GM aside (dice, rules, "+2 Sensor Roll") and is left out of the draft.
   A line that starts with `?` is a loose end. Both show with a small icon; the character stays in the text so it
   can be edited away.
+- **Time jumps:** a line that starts with `>` moves the stamp that the notes after it take, until the next jump:
+  - `>+1` the next day, `>+9` nine days on, `>+2w` two weeks on (`d`, `w` and, when the calendar has months, `m`);
+  - `>dusk`, `>night`: that shift of the day the stamp is on (the names come from the calendar's shifts, matched
+    from the start of the word, so `>du` works; `>14:00` or `>14` when the campaign runs on hours);
+  - `>+1 dawn`: the next day at dawn (a day part and a shift part, in that order);
+  - `>12 Firstmonth` or `>12 Firstmonth 1492`: a date in the campaign's calendar (a new `E.parseDate(cal, text, nearDay)` in
+    `engine.js`, the inverse of `E.fmtDate`: day number, a month name matched from its start, an optional year
+    that defaults to the stamp's year; the Calendar can use it for a "go to date" box later);
+  - `>` alone: back to the campaign's clock.
+  A jump is saved as its own row (its `text` keeps the `>` line, its `abs_shift` is where it landed) and shows as a
+  thin divider labelled with the day and shift it reached, never as a note. A jump the box can't read is refused
+  with a short message under the input ("Couldn't read that jump; try >+1, >dusk or >12 Firstmonth") and left in
+  the input to fix. The divider has a *Set the clock here* button, which calls `set_time` to move the campaign's
+  clock (weather, reminders, every open page) to the same day and shift; a jump never moves the clock on its own.
+  Opening the box after a reload starts the stamp from the last jump of the open session, or the clock when there
+  is none.
+- **Tooltips:** the input's tooltip (`data-tip`, as every control in the app) lists the shorthand: "Enter saves ·
+  Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end
+  · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock". A small `?` button beside the
+  input shows the same list in a popover for phones, where tooltips don't hover. Each mark's icon on a saved line
+  has a tooltip naming it ("Loose end: not in the summary, listed under Loose ends", and so on), and the divider's
+  tooltip says what it does and that *Set the clock here* also moves the campaign's clock.
 - **Editing:** a click on a note turns it into an input (Enter saves, Escape leaves it); ✕ deletes it after a
   confirm. Notes can be dragged to reorder on desktop; ▲ ▼ buttons do it on a phone.
 - **Sessions in the box:** the heading reads "Session notes · Session 12" with *Open session →* (the session's page)
@@ -85,7 +107,8 @@ GM view, in two columns on a desktop and two tabs (*Notes*, *Summary*) on a phon
 **Build draft** makes rich text from the notes, in the browser, and puts it in the editor. If the editor already has
 text it asks: *Replace* or *Add below*. The draft:
 
-1. Takes the notes in order, dropping `!` lines.
+1. Takes the notes in order, dropping `!` lines and `>` jumps (the jumps have already done their work as the
+   stamps on the notes that follow them).
 2. Groups them by in-game day. With more than one day, each group starts with a heading (`<h3>`) of the day in the
    campaign's calendar ("5 Firstmonth 1492, Tuesday"). A group with one day needs no heading.
 3. Turns each depth-0 note into a paragraph. Its indented notes (any depth) are appended to that paragraph as
@@ -134,7 +157,7 @@ CREATE TABLE IF NOT EXISTS session_notes (
   session_id INT UNSIGNED NOT NULL,
   position INT UNSIGNED NOT NULL,               -- order within the session
   depth TINYINT UNSIGNED NOT NULL DEFAULT 0,    -- 0 to 3
-  text VARCHAR(1000) NOT NULL,                  -- plain text; a leading ! or ? is a mark
+  text VARCHAR(1000) NOT NULL,                  -- plain text; a leading ! or ? is a mark, a leading > a time jump
   abs_shift BIGINT NOT NULL,                    -- the in-game shift it was taken in (day = abs_shift / shifts per day)
   is_covered TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
@@ -159,7 +182,7 @@ CREATE TABLE IF NOT EXISTS session_notes (
 | `session_summary_save` | GM | summary (cleaned by `api/richtext.php`) with `version`; 409 when stale |
 | `session_end` | GM | sets `last_day` to the current day |
 | `session_delete` | GM | after the browser's confirm; notes go with it |
-| `snote_add` | GM | text, depth; `session_id` optional: none means the open session, or a new one; stamps `abs_shift` from the campaign; returns the note and the session (so the box learns a session it started) |
+| `snote_add` | GM | text, depth, `abs_shift` (the box's stamp: the last jump's, or the clock's); `session_id` optional: none means the open session, or a new one; returns the note and the session (so the box learns a session it started). The browser reads `>` jumps (`engine.js`), so the server stores a jump like any line |
 | `snote_save` | GM | text, depth, abs_shift, is_covered |
 | `snote_move` | GM | new position and/or `session_id` |
 | `snote_delete` | GM | |
@@ -181,7 +204,8 @@ Markdown list under `## Notes`. It reuses `static/day-export.js`'s helpers.
 the sessions list and a session swap as the Library's do. Nothing needs a hover.
 
 **Testing:** `tests/browser/sessions.spec.js`: typing starts a session; Enter saves and Tab indents; stamps follow the
-current shift and can be changed; `!` and `?` marks; a player never receives notes, the box, or an unpublished
+current shift and can be changed; `!` and `?` marks; every form of `>` jump, a bad one refused, the divider, and
+*Set the clock here* moving the clock while a jump alone does not; the tooltips and the `?` popover; a player never receives notes, the box, or an unpublished
 session (API and page); Build draft's grouping, sentences and loose ends; a stale summary save gets a 409; moving a
 note between sessions; the export's text; the phone layout. `tests/browser/security.spec.js` gains the new write
 actions in its player-refused list. The whole suite is run before the PR.
