@@ -210,11 +210,22 @@ const RichText = (() => {
       // Quill writes spaces as &nbsp;, which would stop lines wrapping.
       return { text: empty ? '' : quill.getSemanticHTML().replace(/&nbsp;/g, ' '), format: 'html' };
     }
-    /** Add a paragraph of plain text at the end (what was written about something elsewhere, quoted into an entry). */
-    function insertText(t) {
-      if (!quill) { text = (format === 'html' ? `${text || ''}<p>${t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</p>` : `${text ? `${text}\n` : ''}${t}`); return; }
-      const end = quill.getLength() - 1;
-      quill.insertText(end, (quill.getText().trim() ? '\n' : '') + t, 'user');
+    /** Add a paragraph of plain text at the end (what was written about something elsewhere, quoted into an entry).
+     * runs: more text for the same paragraph, each a string or { text, link } for a link. */
+    function insertText(t, ...runs) {
+      const parts = [{ text: t }, ...runs.map(r => typeof r === 'string' ? { text: r } : r)];
+      if (!quill) {
+        const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        const html = parts.map(r => r.link && safeHref(r.link) ? `<a href="${esc(r.link)}">${esc(r.text)}</a>` : esc(r.text)).join('');
+        text = format === 'html' ? `${text || ''}<p>${html}</p>` : `${text ? `${text}\n` : ''}${parts.map(r => r.text).join('')}`;
+        return;
+      }
+      let at = quill.getLength() - 1;
+      if (quill.getText().trim()) quill.insertText(at++, '\n', 'user');
+      for (const r of parts) {
+        quill.insertText(at, r.text, { link: r.link && safeHref(r.link) || false }, 'user');
+        at += r.text.length;
+      }
       quill.setSelection(quill.getLength() - 1, 0, 'silent');
     }
     return { node, value, insertText, ready: () => !!quill };
