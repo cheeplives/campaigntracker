@@ -166,6 +166,13 @@ test.describe("Find Image panel", () => {
     const { cid, id } = await setup(page, browser, "Panel");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const box = page.locator(".enc-detail .enc-files");
+    // The pictures come after the notes and connections, just before Mentioned in.
+    await expect(page.locator(".enc-detail .enc-mentioned")).toBeVisible();
+    expect(await page.locator(".enc-detail").evaluate(d => {
+      const files = d.querySelector(".enc-files"), before = n => !!(n.compareDocumentPosition(files) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return [...d.querySelectorAll(".notepanel")].every(before) && before(d.querySelector(".enc-conn, .enc-connections") || d.querySelector(".notepanel"))
+        && !before(d.querySelector(".enc-mentioned"));
+    })).toBe(true);
     await box.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel = box.locator(".find-image");
     await expect(panel.getByRole("searchbox", { name: "Search for pictures" })).toHaveValue("Greywater Keep");
@@ -183,9 +190,15 @@ test.describe("Find Image panel", () => {
     await expect(page.getByText("Picture added")).toBeVisible();
     const fig = page.locator(".enc-detail .enc-files .file-pic");
     await expect(fig).toHaveCount(1);
-    const credit = fig.locator(".file-credit");
+    // Under the picture the credit is only a "?" to hover or tap; the picture at full size has it with its links.
+    await expect(fig.locator(".file-credit")).toHaveCount(0);
+    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /^Ruined keep at dusk by Ann Photo, CC BY-SA 4\.0, via Flickr\./);
+    await fig.locator(".file-thumb").click();
+    const credit = page.locator("dialog.file-viewer .file-credit");
     await expect(credit).toContainText("Ruined keep at dusk by Ann Photo, CC BY-SA 4.0, via Flickr");
     await expect(credit.getByRole("link", { name: "CC BY-SA 4.0" })).toHaveAttribute("href", "https://creativecommons.org/licenses/by-sa/4.0/");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog.file-viewer")).toHaveCount(0);
 
     // Changing the words searches again; Museums and an empty search.
     const box2 = page.locator(".enc-detail .enc-files");
@@ -225,12 +238,40 @@ test.describe("Find Image panel", () => {
     const fig = page.locator(".enc-detail .enc-files .file-pic");
     await expect(fig).toHaveCount(1);
     await expect(fig).toContainText("Embedded");
-    await expect(fig.locator(".file-credit")).toContainText("The Grey Keep by greyartist on DeviantArt");
+    await expect(fig.locator(".tip")).toHaveAttribute("data-tip", /^The Grey Keep by greyartist on DeviantArt\./);
     await expect.poll(() => fig.locator("img").evaluate(img => img.complete && img.naturalWidth)).toBe(2);
     await fig.locator(".file-thumb").click();
     const viewer = page.locator("dialog.file-viewer");
     await expect(viewer.getByRole("link", { name: "View on DeviantArt" })).toHaveAttribute("href", "https://www.deviantart.com/greyartist/art/The-Grey-Keep-2");
     await expect(viewer.getByRole("link", { name: "Download" })).toHaveCount(0);
+    expectNoErrors(errors);
+  });
+  test("a linked entry name shows the entry's first picture with its tooltip, and a GM-only picture only to GMs", async ({ page, browser, isMobile }) => {
+    const errors = watchErrors(page);
+    const { cid, id, pp } = await setup(page, browser, "Hover");
+    const camp = async p => (await p.request.get(`api/index.php?${new URLSearchParams({ a: "campaign", cid })}`)).json();
+    expect((await camp(page)).encyclopedia.find(e => e.id === id).pic).toBeNull();
+    const secret = await pick(page, cid, id, { source: "museums", id: "met:436535", is_secret: 1 });
+    expect(secret.status, JSON.stringify(secret.json)).toBe(200);
+    expect((await camp(page)).encyclopedia.find(e => e.id === id).pic).toContain(`id=${secret.json.file.id}`);
+    expect((await camp(pp)).encyclopedia.find(e => e.id === id).pic).toBeNull();
+    const open = await pick(page, cid, id, { source: "openverse", id: OV_OPEN });
+    expect((await camp(pp)).encyclopedia.find(e => e.id === id).pic).toContain(`id=${open.json.file.id}`);
+
+    // Touch screens have no hover, and a tap on a link follows it, so the picture is a mouse's alone.
+    if (isMobile) return expectNoErrors(errors);
+    const other = await api(page, "entry_save", { name: "Old Ferry", notes: "<p>It crosses below Greywater Keep.</p>" }, cid);
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${other.json.id}`);
+    const link = page.locator(".enc-detail .notepanel a.enc-link", { hasText: "Greywater Keep" });
+    await expect(link).toHaveAttribute("data-tip-img", new RegExp(`id=${secret.json.file.id}$`));
+    // Tooltips follow the mouse only where the browser says it can hover, which headless Firefox may not.
+    if (!await page.evaluate(() => matchMedia("(hover: hover)").matches)) return expectNoErrors(errors);
+    await page.locator(".enc-detail .enc-mentioned h4 .tip").waitFor();
+    await link.hover();
+    const img = page.locator("#tipbox.show img");
+    await expect(img).toHaveAttribute("src", new RegExp(`id=${secret.json.file.id}$`));
+    await expect.poll(() => img.evaluate(i => i.complete && i.naturalWidth)).toBe(2);
+    await expect(page.locator("#tipbox")).toContainText("Greywater Keep");
     expectNoErrors(errors);
   });
 });

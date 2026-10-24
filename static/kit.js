@@ -60,8 +60,13 @@ const KIT = (() => {
   function showTip(target) {
     if (!tipBox) document.body.append(tipBox = el('div', { id: 'tipbox', role: 'tooltip' }));
     tipEl = target;
-    tipBox.textContent = target.dataset.tip;
-    tipBox.className = 'show';
+    // data-tip-img adds a picture above the text; the box is placed again once it has loaded and has its size.
+    const src = target.dataset.tipImg;
+    tipBox.replaceChildren(...(src ? [el('img', { src, alt: '', referrerpolicy: 'no-referrer', onload: () => { if (tipEl === target) placeTip(target); } }), el('span', {}, target.dataset.tip)] : [target.dataset.tip]));
+    tipBox.className = 'show' + (src ? ' with-img' : '');
+    placeTip(target);
+  }
+  function placeTip(target) {
     const r = target.getBoundingClientRect(), bw = tipBox.offsetWidth, bh = tipBox.offsetHeight;
     const x = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8));
     const y = r.bottom + 8 + bh > innerHeight - 8 && r.top - bh - 8 > 0 ? r.top - bh - 8 : r.bottom + 8;

@@ -541,8 +541,20 @@ function entry_index(int $cid, bool $isGm): array {
     $st = db()->prepare("SELECT id, name, aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
+    $pics = entry_pics($cid, $isGm);
     return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
-        'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm))], $st->fetchAll());
+        'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm)),
+        'pic' => $pics[(int)$e['id']] ?? null], $st->fetchAll());
+}
+/** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
+function entry_pics(int $cid, bool $isGm): array {
+    if (!has_attachments()) return [];
+    $st = db()->prepare("SELECT a.parent_id, MIN(a.id) AS id FROM attachments a WHERE a.campaign_id=? AND a.parent_type='encyclopedia'
+        AND " . (has_credits() ? "(a.kind='image' OR (a.kind='embed' AND a.embed_src IS NOT NULL))" : "a.kind='image'") . ($isGm ? '' : ' AND a.is_secret=0') . ' GROUP BY a.parent_id');
+    $st->execute([$cid]);
+    $out = [];
+    foreach ($st->fetchAll() as $r) $out[(int)$r['parent_id']] = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['id']]);
+    return $out;
 }
 /** An entry row's aliases as a list. */
 function entry_aliases(array $e): array {
