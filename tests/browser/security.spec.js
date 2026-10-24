@@ -61,3 +61,15 @@ test("only those who may see future weather are sent the weather seed", async ({
   expect(typeof (await api(pp, "campaign", undefined, cid)).json.campaign.seed).toBe("number");
   await pctx.close();
 });
+
+test("the server's Content-Security-Policy header and index.html's meta tag allow the same things", async () => {
+  // A browser applies both, so a host the page may reach in one but not the other is blocked on the live site only
+  // (php -S, which the tests run on, never reads .htaccess).
+  const fs = require("fs"), path = require("path");
+  const root = path.join(__dirname, "..", "..");
+  const header = fs.readFileSync(path.join(root, ".htaccess"), "utf8").match(/Content-Security-Policy "([^"]+)"/)[1];
+  const meta = fs.readFileSync(path.join(root, "index.html"), "utf8").match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+  // frame-ancestors only works as a header, so the meta tag leaves it out
+  const directives = csp => csp.split(";").map(d => d.trim()).filter(d => d && !d.startsWith("frame-ancestors")).sort();
+  expect(directives(meta)).toEqual(directives(header));
+});
