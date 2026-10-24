@@ -157,7 +157,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **touch**: on a touch screen a tooltip opens on tap and closes on a second
   tap or a tap elsewhere, while a tap inside a link still follows it; the theme
   menu closes on a tap or click outside it; every campaign tab is on screen at
-  tablet and desktop widths.
+  tablet and desktop widths; the Legend's Play, Party, World and Setup groups fold
+  and unfold (Setup starts folded), stay as left after a reload, and a folded group
+  still shows the open page's tab, while across the top nothing folds.
 - **install**: the page links a manifest with the name, start page and 192/512 and maskable icons Chrome needs to offer *Install app*, and every icon loads; the installed window's title bar colour follows the theme and light/dark mode; the service worker (Chromium only) takes control without serving any script or API call itself, caches only the offline page, and shows it when the app is opened with no connection.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility, travel and star-distance results in the browser as under Node.

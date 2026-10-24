@@ -908,9 +908,35 @@
         isGM() ? passTimeWidget() : null]));
     };
     draw();
-    const tabs = el('nav', { class: 'tabs' }, searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => [el('span', { class: 'tab-group', 'data-tip': gTip }, g),
-      ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) => el('a', { href: `#/c/${S.camp.id}/${k}`, class: k === active ? 'on' : '', 'data-tip': TAB_TIPS[k] }, l))]).flat());
+    const folds = legendFolds();
+    const tabs = el('nav', { class: 'tabs' }, searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
+      const folded = !!folds[g];
+      const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
+        el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
+      const links = ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) =>
+        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
+      const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
+      toggle.addEventListener('click', () => {
+        const f = !heading.classList.contains('folded');
+        heading.classList.toggle('folded', f);
+        toggle.setAttribute('aria-expanded', String(!f));
+        links.forEach(a => a.classList.toggle('folded', f));
+        rememberLegendFold(g, f);
+      });
+      return [heading, links];
+    }).flat());
     return [head, tabs];
+  }
+  // Which of the Legend's groups are folded, remembered in this browser for each account. Setup starts folded.
+  const LEGEND_KEY = 'chronicle:legend';
+  function legendFolds() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(`${LEGEND_KEY}:${S.user?.id}`)); } catch { /* private mode: defaults */ }
+    return { Setup: true, ...saved };
+  }
+  function rememberLegendFold(g, folded) {
+    const all = { ...legendFolds(), [g]: folded };
+    try { localStorage.setItem(`${LEGEND_KEY}:${S.user?.id}`, JSON.stringify(all)); } catch { /* private mode: just this page */ }
   }
 
   /** The search box with the tabs: Enter opens the Search page. On a phone, where the tabs scroll sideways, it is a 🔍 tab instead. */
