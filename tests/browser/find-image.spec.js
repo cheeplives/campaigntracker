@@ -263,6 +263,10 @@ test.describe("Find Image panel", () => {
     const other = await api(page, "entry_save", { name: "Old Ferry", notes: "<p>It crosses below Greywater Keep.</p>" }, cid);
     await page.goto(`index.html#/c/${cid}/encyclopedia/${other.json.id}`);
     const link = page.locator(".enc-detail .notepanel a.enc-link", { hasText: "Greywater Keep" });
+    await expect(link).toHaveAttribute("data-tip-img", new RegExp(`id=${secret.json.file.id}$`));
+    // Tooltips follow the mouse only where the browser says it can hover, which headless Firefox may not.
+    if (!await page.evaluate(() => matchMedia("(hover: hover)").matches)) return expectNoErrors(errors);
+    await page.locator(".enc-detail .enc-mentioned h4 .tip").waitFor();
     await link.hover();
     const img = page.locator("#tipbox.show img");
     await expect(img).toHaveAttribute("src", new RegExp(`id=${secret.json.file.id}$`));
