@@ -84,3 +84,16 @@ test("draftHtml heads each in-game day when there are several, escapes the text,
   // an indented line with no paragraph yet starts one
   expect(Sessions.draftHtml(c, [note(1, "just a detail", 2, 9)])).toBe("<p>Just a detail.</p>");
 });
+
+test("draftHtml keeps the lines under a ! or ? line out of the paragraphs players read", () => {
+  const c = calendar();
+  const notes = [note(1, "Arrived at the station", 0, 9), note(2, "? Who sent the letter", 0, 9), note(3, "Tevari's seal on it", 1, 9),
+    note(4, "! Stealth roll", 0, 9), note(5, "failed by 2", 1, 9), note(6, "Left at dusk", 0, 9)];
+  expect(Sessions.draftHtml(c, notes)).toBe("<p>Arrived at the station.</p><p>Left at dusk.</p><aside>Loose ends: Who sent the letter (Tevari's seal on it)</aside>");
+});
+
+test("draftHtml puts one heading per day in day order, whatever order the notes are in", () => {
+  const c = calendar();
+  const notes = [note(1, "on day two", 0, 9), note(2, "back on day one", 0, 5), note(3, "day two again", 0, 10)];
+  expect(Sessions.draftHtml(c, notes)).toBe(`<h3>${E.fmtDate(c, 1)}</h3><p>Back on day one.</p><h3>${E.fmtDate(c, 2)}</h3><p>On day two.</p><p>Day two again.</p>`);
+});

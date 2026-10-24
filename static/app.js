@@ -69,10 +69,10 @@
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
     const res = await fetch('api/index.php?' + qs, opt);
     let data;
-    try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
+    try { data = await res.json(); } catch { throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
-    if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status });
     if (body) ownWrite();
     return data;
   }
@@ -1413,7 +1413,9 @@
       const b = btn(glyph, async () => {
         const list = opts.notes(), i = list.findIndex(x => x.id === n.id), to = i + dir;
         if (to < 0 || to >= list.length) return;
-        try { await post('snote_move', { id: n.id, position: to + 1 }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+        // named by the note it goes after, so a list another tab has changed since still puts it in the right place
+        const after = dir < 0 ? list[i - 2]?.id ?? 0 : list[i + 1].id;
+        try { await post('snote_move', { id: n.id, after_id: after }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
       }, 'link small snote-nudge', label);
       b.setAttribute('aria-label', label);
       return b;
@@ -1504,9 +1506,12 @@
     const opts = { onChange: () => reload(), notes: () => notes };
     async function reload() {
       if (S.openSession) { try { notes = (await api('session', { query: { cid, id: S.openSession.id } })).notes || []; } catch (e) { toast(e.message, true); } }
-      draw();
+      draw(true);
     }
-    function draw() {
+    /** force: draw even over a note being changed (it has just been saved or left). */
+    function draw(force = false) {
+      // otherwise a note being changed keeps its box, and the list is drawn again once that is saved or left (onChange)
+      if (!force && list.querySelector('.snote-edit')) return;
       const open = S.openSession;
       toggle.lastChild.textContent = open ? `Session notes · ${sessionName(open)}` : 'Session notes';
       acts.replaceChildren(...(open ? [
@@ -1532,22 +1537,27 @@
         for (let p = pendingNotes()[0]; p; p = pendingNotes()[0]) {
           let r;
           try { r = await post('snote_add', { key: p.key, text: p.text, depth: p.depth, abs_shift: p.abs_shift }, cid); } catch (e) {
-            if (e instanceof TypeError) break;              // no connection: try again later
-            toast(e.message, true);                        // refused (too long, say): drop it rather than retry forever
+            // Only a note the server refuses as it stands (400, 413) is dropped, or it would be retried forever. Anything
+            // else (no connection, signed out, a deploy, an error page) keeps it for the next try.
+            if (![400, 413].includes(e.status)) break;
+            toast(`Not saved: ${e.message}`, true);
           }
           setPending(pendingNotes().filter(x => x.key !== p.key));
-          if (r) { notes.push(r.note); S.openSession = r.session; }
+          // a resend of a note whose first send did arrive gets that note back, which this page may have loaded already
+          if (r) { if (!notes.some(x => x.id === r.note.id)) notes.push(r.note); S.openSession = r.session; }
         }
       } finally { flushing = false; draw(); }
     }
     snoteFlush = flush;
-    input.addEventListener('keydown', ev => {
+    input.addEventListener('keydown', async ev => {
       if (mentions?.keydown(ev)) return;
       if (ev.key === 'Tab') { ev.preventDefault(); setDepth(depth + (ev.shiftKey ? -1 : 1)); return; }
       if (ev.key !== 'Enter') return;
       ev.preventDefault();
       const text = input.value.trim();
       if (!text) return;
+      // another tab may have jumped in time since: start from the session as saved, or from what this page has offline
+      if (S.openSession) { try { notes = (await api('session', { query: { cid, id: S.openSession.id } })).notes || notes; } catch { /* offline */ } }
       const stamp = Sessions.stampAt([...notes, ...pendingNotes()], nowShift());
       let at = stamp;
       if (Sessions.mark(text) === '>') {
@@ -1556,12 +1566,12 @@
       }
       err.textContent = '';
       setPending([...pendingNotes(), { key: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`, text, depth, abs_shift: at }]);
-      input.value = '';
+      if (input.value.trim() === text) input.value = '';
       draw();
       flush();
     });
     draw();
-    flush();
+    setTimeout(flush, 0);  // once the box is on the page: send what an earlier visit left waiting
     return box;
   }
 
@@ -2397,7 +2407,7 @@
     let data;
     try { data = await res.json(); } catch { throw new Error(res.status === 413 ? 'That file is too big for the server' : `Server error (${res.status})`); }
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
-    if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status });
     ownWrite();
     return data.file;
   }

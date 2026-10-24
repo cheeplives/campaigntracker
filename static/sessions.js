@@ -73,24 +73,31 @@
    * lines left out; ? lines in one GM-only "Loose ends" paragraph at the end. '' when nothing is left. */
   function draftHtml(cal, notes) {
     const n = E.slotsPerDay(cal), paras = [], loose = [];
+    // where indented lines go: the paragraph above, the loose end above (in brackets), or nowhere under a ! line
     let cur = null;
     for (const x of notes) {
-      const k = mark(x.text);
-      if (k === '!' || k === '>') continue;
-      if (k === '?') { const t = String(x.text).trim().slice(1).trim(); if (t) loose.push(t); continue; }
-      const s = sentence(x.text);
-      if (!s) continue;
-      if (!cur || Number(x.depth) === 0) paras.push(cur = { day: Math.floor(Number(x.abs_shift) / n), parts: [] });
-      cur.parts.push(s);
+      const k = mark(x.text), top = Number(x.depth) === 0 || !cur;
+      if (k === '>') continue;
+      if (k === '!' || k === '?') {
+        if (!top) continue;                                   // an indented ! or ? line: just that line is left out
+        const t = String(x.text).trim().slice(1).trim();
+        cur = k === '?' && t ? (loose.push({ text: t, more: [] }), { loose: loose[loose.length - 1] }) : { sink: true };
+        continue;
+      }
+      const t = String(x.text).trim();
+      if (!t) continue;
+      if (top) { paras.push(cur = { day: Math.floor(Number(x.abs_shift) / n), parts: [] }); cur.parts.push(sentence(t)); }
+      else if (cur.loose) cur.loose.more.push(t);
+      else if (!cur.sink) cur.parts.push(sentence(t));
     }
-    const days = [...new Set(paras.map(p => p.day))];
-    let html = '', last = null;
-    for (const p of paras) {
-      if (days.length > 1 && p.day !== last) html += `<h3>${esc(E.fmtDate(cal, p.day))}</h3>`;
-      last = p.day;
-      html += `<p>${esc(p.parts.join(' '))}</p>`;
+    // one heading per day, in day order; the notes keep their order within a day
+    const days = [...new Set(paras.map(p => p.day))].sort((a, b) => a - b);
+    let html = '';
+    for (const d of days) {
+      if (days.length > 1) html += `<h3>${esc(E.fmtDate(cal, d))}</h3>`;
+      for (const p of paras) if (p.day === d) html += `<p>${esc(p.parts.join(' '))}</p>`;
     }
-    if (loose.length) html += `<aside>${esc(`Loose ends: ${loose.join('; ')}`)}</aside>`;
+    if (loose.length) html += `<aside>${esc(`Loose ends: ${loose.map(l => l.more.length ? `${l.text} (${l.more.join('; ')})` : l.text).join('; ')}`)}</aside>`;
     return html;
   }
 

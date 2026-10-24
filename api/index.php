@@ -2357,6 +2357,7 @@ try {
                 ->execute([$title, $played, $first, $last, $pub, $s['id']]);
             $id = (int)$s['id'];
         } else {
+            db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]); // one new session at a time
             $c = campaign_row($cid);
             $first = array_key_exists('first_day', body()) ? int_in(p('first_day')) : floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
             $id = session_create($cid, $first, trim((string)str_in(p('title'), 200)), date_in(p('played_on')));
@@ -2404,6 +2405,8 @@ try {
         $at = int_in(p('abs_shift'));
         $key = p('key') !== null ? (string)str_in(p('key'), 40) : null;
         db()->beginTransaction();
+        // The campaign's lock first, before any other read: one note (and one new session) at a time, each seeing the last.
+        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);
         $c = campaign_row($cid);
         if ($key !== null) { // sent before, and the reply lost: the note that was saved then
             $st = db()->prepare('SELECT * FROM session_notes WHERE campaign_id=? AND client_key=?');
@@ -2413,7 +2416,6 @@ try {
                 out(['ok' => true, 'note' => snote_out($n), 'session' => session_out(session_row($cid, (int)$n['session_id']), false, true)]);
             }
         }
-        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]); // one new session at a time
         if (p('session_id')) $s = session_row($cid, int_in(p('session_id'), 1), true, true);
         else {
             $s = open_session($cid);
@@ -2454,7 +2456,12 @@ try {
             session_row($cid, $sid, true, true);
             $ids = array_column(snotes($sid), 'id');
             $ids = array_values(array_filter($ids, fn($i) => $i !== (int)$n['id']));
-            $pos = int_in(p('position', count($ids) + 1), 1);
+            if (p('after_id') !== null) {               // after this note (0: first), wherever it is now
+                $after = int_in(p('after_id'), 0);
+                $at = $after ? array_search($after, $ids, true) : -1;
+                if ($at === false) fail('That note is no longer in this session. Reload and try again', 409);
+                $pos = $at + 2;
+            } else $pos = int_in(p('position', count($ids) + 1), 1);
             array_splice($ids, min($pos, count($ids) + 1) - 1, 0, [(int)$n['id']]);
             $up = db()->prepare('UPDATE session_notes SET position=? WHERE id=?');
             foreach ($ids as $i => $id) $up->execute([$i + 1, $id]);

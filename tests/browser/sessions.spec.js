@@ -56,6 +56,29 @@ test("notes start a session, join the open one in order, and a new one after End
   expect(list.find(s => s.number === 1)).toMatchObject({ notes: 7, covered: 0 });
 });
 
+test("the first notes from two tabs at once go into one new session", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Sessions race");
+  const many = await Promise.all([1, 2, 3, 4, 5, 6].map(i => add(page, cid, `first ${i}`)));
+  expect(many.map(r => r.status)).toEqual([200, 200, 200, 200, 200, 200]);
+  expect(new Set(many.map(r => r.json.session.id)).size).toBe(1);
+  expect((await api(page, "sessions", undefined, cid)).json.sessions).toHaveLength(1);
+  // the same note sent twice at once is still one note
+  const twice = await Promise.all([add(page, cid, "twice", { key: "k-race" }), add(page, cid, "twice", { key: "k-race" })]);
+  expect(twice.map(r => r.status)).toEqual([200, 200]);
+  expect(twice[0].json.note.id).toBe(twice[1].json.note.id);
+});
+
+test("a note moves after a neighbour, so a stale list still puts it in the right place", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Sessions after");
+  const ids = [];
+  for (const t of ["a", "b", "c", "d"]) ids.push((await add(page, cid, t)).json.note.id);
+  const sid = (await api(page, "campaign", undefined, cid)).json.open_session.id;
+  expect((await api(page, "snote_move", { id: ids[3], after_id: ids[0] }, cid)).status).toBe(200);
+  expect((await one(page, cid, sid)).json.notes.map(n => n.text)).toEqual(["a", "d", "b", "c"]);
+  expect((await api(page, "snote_move", { id: ids[2], after_id: 0 }, cid)).status).toBe(200);
+  expect((await one(page, cid, sid)).json.notes.map(n => n.text)).toEqual(["c", "a", "d", "b"]);
+});
+
 test("a note can be changed, ticked, moved to another session or deleted, within the limits", async ({ page, browser }) => {
   const { cid } = await gmAndPlayer(page, browser, "Sessions edits");
   const a = await add(page, cid, "first");
@@ -135,10 +158,12 @@ test("players get only published sessions, never the notes or the summary's GM-o
 const SHORTHAND = "Enter saves · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock";
 const box = page => page.locator("[data-box=session]");
 const input = page => box(page).getByRole("textbox", { name: "New note" });
-async function type(page, text) {
+/** Type a note and press Enter; saved: wait until the server has it (not when it is meant to wait in the box). */
+async function type(page, text, saved = true) {
   await input(page).fill(text);
   await input(page).press("Enter");
   await expect(input(page)).toHaveValue("");
+  if (saved) await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
 }
 async function notesOf(page, cid) {
   const open = (await api(page, "campaign", undefined, cid)).json.open_session;
@@ -238,7 +263,7 @@ test("a note typed offline waits in the box, survives a reload and is saved once
   await page.goto(`index.html#/c/${cid}`);
   await type(page, "Online note");
   await context.setOffline(true);
-  await type(page, "Typed with no signal");
+  await type(page, "Typed with no signal", false);
   await expect(box(page).locator(".snote-unsaved")).toContainText("Typed with no signal");
   await expect(box(page).locator(".snote-unsaved")).toContainText("Not saved, retrying");
   await context.setOffline(false);
@@ -248,6 +273,29 @@ test("a note typed offline waits in the box, survives a reload and is saved once
   await page.reload();
   await expect(box(page).locator(".snote")).toHaveCount(2);
   expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["Online note", "Typed with no signal"]);
+});
+
+test("a note the server can't take right now (signed out, a deploy, an error page) waits instead of being lost", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes errors");
+  await page.goto(`index.html#/c/${cid}`);
+  await type(page, "First");
+  await page.route(/a=snote_add/, r => r.fulfill({ status: 503, contentType: "text/html", body: "<h1>Down for maintenance</h1>" }));
+  await type(page, "During the deploy", false);
+  await expect(box(page).locator(".snote-unsaved")).toContainText("During the deploy");
+  await page.unroute(/a=snote_add/);
+  await page.reload();
+  await expect(box(page).locator(".snote")).toHaveCount(2);
+  await expect(box(page).locator(".snote-unsaved")).toHaveCount(0);
+  expect((await notesOf(page, cid)).map(n => n.text)).toEqual(["First", "During the deploy"]);
+});
+
+test("a note takes a jump typed in another tab", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Notes two tabs");
+  await page.goto(`index.html#/c/${cid}`);
+  await type(page, "From this tab");
+  await add(page, cid, ">dusk", { abs_shift: 10 }); // the other tab's jump
+  await type(page, "After the other tab's jump");
+  expect((await notesOf(page, cid)).pop().abs_shift).toBe(10);
 });
 
 test("on a phone the ⇥ and ⇤ buttons indent", async ({ page, browser, isMobile }) => {
