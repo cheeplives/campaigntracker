@@ -32,8 +32,9 @@ const pick = (page, cid, id, body) => api(page, "image_import", { parent_type: "
  * point at DeviantArt. */
 async function routeImages(page) {
   await page.route(/^https:\/\/www\.artic\.edu\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
+  // Asked through the page's own API client, not route.fetch(), which WebKit lets follow the redirect regardless.
   await page.route(/\/api\/index\.php\?a=file&/, async route => {
-    const res = await route.fetch({ maxRedirects: 0 });
+    const res = await page.request.get(route.request().url(), { maxRedirects: 0 });
     if (res.status() === 302 && /^https:\/\/[a-z0-9-]+\.wixmp\.com\//.test(res.headers().location)) return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
     return route.fulfill({ response: res });
   });
