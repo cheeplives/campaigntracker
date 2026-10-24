@@ -853,3 +853,5 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
   .sess-tabs { display: flex; }
   .sess-cols[data-show="notes"] .sess-summary, .sess-cols[data-show="summary"] .sess-notes { display: none; }
 }
+.snote-hold { align-items: center; gap: 10px; margin-top: 6px; }
+.snote-holdbox { display: inline-flex; align-items: center; gap: 4px; }

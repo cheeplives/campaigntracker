@@ -61,7 +61,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '17';
+  const APP_VERSION = '18';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -1381,8 +1381,8 @@
   // The GM's quick notes during play: one line each, typed on the Current Day tab into the open session (the first note
   // starts one). The shorthand (static/sessions.js): ! a GM aside, ? a loose end, > a time jump. Each note saves on
   // Enter; one that can't be sent waits in this browser and goes on the next try, so nothing typed is lost.
-  const SNOTE_TIP = 'Enter saves · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock';
-  const SNOTE_HELP = [['Enter', 'saves the line'], ['Tab, Shift+Tab', 'indent it under the line above, or bring it back out'], ['@', 'names an Encyclopedia entry'],
+  const SNOTE_TIP = 'Enter adds the line · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock';
+  const SNOTE_HELP = [['Enter', 'adds the line (with Hold notes ticked, Save notes sends them all; unticked, each line is saved at once)'], ['Tab, Shift+Tab', 'indent it under the line above, or bring it back out'], ['@', 'names an Encyclopedia entry'],
     ['!', 'at the start: a GM aside (dice, rules), kept out of the summary'], ['?', 'at the start: a loose end, listed apart at the end of the summary'],
     ['>+1, >+9, >+2w', 'jump on a day, nine days, two weeks'], ['>dusk', 'jump to that part of the day'], ['>+1 dawn', 'the next day at dawn'],
     ['>12 Firstmonth', 'jump to a date'], ['>', 'alone: back to the campaign\'s clock']];
@@ -1392,6 +1392,9 @@
   const pendingKey = () => `chronicle:snotes-pending:${S.user?.id}:${S.camp?.id}`;
   const pendingNotes = () => { try { return JSON.parse(localStorage.getItem(pendingKey())) || []; } catch { return []; } };
   const setPending = list => { try { localStorage.setItem(pendingKey(), JSON.stringify(list)); } catch { /* private mode: kept on the page only */ } };
+  /** Hold notes until Save is pressed (the default), kept in this browser. */
+  const holdNotes = () => { try { return localStorage.getItem('chronicle:snotes-hold') !== '0'; } catch { return true; } };
+  const setHoldNotes = on => { try { localStorage.setItem('chronicle:snotes-hold', on ? '1' : '0'); } catch { /* private mode: held this visit */ } };
   let snoteFlush = null;  // the open box's "send what's waiting", run on the change poll and when the browser comes back online
   setInterval(() => snoteFlush?.(), CHANGE_POLL_MS);
   window.addEventListener('online', () => snoteFlush?.());
@@ -1484,8 +1487,9 @@
     const help = el('div', { class: 'snote-help small', hidden: true },
       el('dl', {}, SNOTE_HELP.map(([k, v]) => [el('dt', {}, el('code', {}, k)), el('dd', {}, v)])));
     const inputWrap = el('div', { class: 'snote-input' });
+    const holdBar = el('div', { class: 'snote-hold row small' });
     const input = el('input', { type: 'text', maxlength: 1000, autocomplete: 'off', 'aria-label': 'New note', 'data-tip': SNOTE_TIP,
-      placeholder: 'What just happened? Enter saves, Tab indents' });
+      placeholder: 'What just happened? Enter adds the line, Tab indents' });
     let depth = notes.length ? notes[notes.length - 1].depth : 0;
     const setDepth = v => { depth = Math.max(0, Math.min(3, v)); inputWrap.dataset.depth = depth; };
     const phoneBtn = (glyph, label, dir) => {
@@ -1501,7 +1505,7 @@
 
     const box = dayBox('session', 'Session notes', {
       tip: 'Your quick notes during play, for writing the session\'s summary afterwards on the Sessions tab. Only GMs see them',
-      actions: acts }, list, inputWrap, err, help);
+      actions: acts }, list, inputWrap, holdBar, err, help);
     const toggle = box.querySelector('.daybox-toggle');
     const opts = { onChange: () => reload(), notes: () => notes };
     async function reload() {
@@ -1526,12 +1530,19 @@
         !open && !waiting.length ? el('p', { class: 'muted small' }, 'No session open: your first note starts one') : null,
         notes.map(n => snoteRow(n, opts)),
         ...waiting.map(p => el('div', { class: `snote snote-d${p.depth} snote-unsaved` }, el('span', { class: 'snote-text' }, p.text),
-          el('small', { class: 'muted' }, ' Not saved, retrying')))]));
+          el('small', { class: 'muted' }, holdNotes() ? ' Not saved yet' : ' Not saved, retrying'),
+          btn('✕', () => { setPending(pendingNotes().filter(x => x.key !== p.key)); draw(); }, 'link small snote-del', 'Throw this unsaved line away')))]));
       list.scrollTop = list.scrollHeight;
+      const hold = holdNotes(), n = waiting.length;
+      holdBar.replaceChildren(...clean([
+        el('label', { class: 'snote-holdbox', 'data-tip': 'Ticked: Enter only adds the line here and nothing is sent until you press Save notes. Unticked: each line is saved as you press Enter' },
+          el('input', { type: 'checkbox', checked: hold, onchange: ev => { setHoldNotes(ev.target.checked); if (!ev.target.checked) flush(true); draw(); } }), ' Hold notes until I save'),
+        n ? btn(`Save ${n} note${n === 1 ? '' : 's'}`, busy(null, () => flush(true)), 'small primary', 'Send the notes waiting in this box to the session') : null,
+        n && hold ? el('span', { class: 'muted' }, 'Kept in this browser until you save') : null]));
     }
     let flushing = false;
-    async function flush() {
-      if (flushing || !box.isConnected) return;
+    async function flush(all = false) {
+      if (flushing || !box.isConnected || (all !== true && holdNotes())) return;
       flushing = true;
       try {
         for (let p = pendingNotes()[0]; p; p = pendingNotes()[0]) {
@@ -1568,7 +1579,7 @@
       setPending([...pendingNotes(), { key: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`, text, depth, abs_shift: at }]);
       if (input.value.trim() === text) input.value = '';
       draw();
-      flush();
+      flush();  // sends it now, unless notes are being held
     });
     draw();
     setTimeout(flush, 0);  // once the box is on the page: send what an earlier visit left waiting
