@@ -20,8 +20,10 @@
   # CSP: everything from same origin, the same policy as Sinless. No
   # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
   # STYLE attributes produced by el() need 'unsafe-inline' in style-src. Fonts
-  # are self-hosted in static/fonts/.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  # are self-hosted in static/fonts/. Generate Summary on an Encyclopedia entry
+  # asks Wikipedia from the browser, so connect-src allows en.wikipedia.org.
+  # Keep this in step with the meta tag in index.html: a browser applies both.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
 # --- Make browsers check for a new app after each deploy -------------------
