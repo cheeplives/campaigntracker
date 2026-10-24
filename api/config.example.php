@@ -131,18 +131,21 @@ return [
 
   // --- Find Image ------------------------------------------------------------
   // The Encyclopedia's Find Image button searches Openverse, The Met and the Art
-  // Institute of Chicago (no keys needed) and DeviantArt (keys needed). The server
+  // Institute of Chicago (no keys needed), the Smithsonian and DeviantArt (keys needed). The server
   // does the searching, so these keys never reach the browser.
   // contact: an email or web address sent with each request, as the Art Institute
   //   and Openverse ask, so they can reach you about your app's traffic.
   // openverse: optional. Without keys the anonymous rate limit applies; register at
   //   https://api.openverse.org/v1/#tag/auth/operation/register for higher limits.
+  // smithsonian: optional. A free api.data.gov key (https://api.data.gov/signup/)
+  //   adds the Smithsonian's CC0 pictures to the Museums tab.
   // deviantart: register an app at https://www.deviantart.com/developers/ (any
   //   redirect URI will do; the app only uses "client credentials"). Leave the keys
   //   empty and the DeviantArt tab says it isn't set up.
   'image_search' => [
     'contact'    => '',
     'openverse'  => ['client_id' => '', 'client_secret' => ''],
+    'smithsonian' => ['api_key' => ''],
     'deviantart' => ['client_id' => '', 'client_secret' => ''],
   ],
 

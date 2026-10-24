@@ -88,7 +88,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   connection chips and "Show in list"; renaming a kind changes every page; the Wide list button swaps the widths of the list and the
   entry and this browser remembers it, and is hidden where the page is one column.
 - **find-image**: Find Image's sources answered by `tests/support/image-stub.php` (named as `image_search.stub` in the test
-  config, so nothing leaves the machine): Openverse, the museums and DeviantArt list results in one shape with their
+  config, so nothing leaves the machine): Openverse, the museums (the Smithsonian's record without a CC0 picture left out) and DeviantArt list results in one shape with their
   licences, the mature work and anything closed left out of Use this picture; a source that is down says so while the
   others answer; outsiders can't search and members may make 30 searches a minute; Use this picture copies an open
   picture with its credit, refuses a closed one, keeps the thumbnail when the full picture is too big, ignores a

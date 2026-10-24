@@ -13,7 +13,8 @@ credit kept. Agreed with Josh on 2026-10-24.
 - **Search box:** opens below the buttons with the entry's name filled in; it can be changed (e.g. "ruined keep") and
   searched again. Three tabs, each searched only when opened:
   - **Open web:** Openverse (Flickr, Wikimedia Commons, museums and others).
-  - **Museums:** The Met and the Art Institute of Chicago, searched together, public-domain works only.
+  - **Museums:** The Met, the Art Institute of Chicago and, when the config has an api.data.gov key, the Smithsonian
+    (added 24 October at Josh's request), searched together, public-domain (CC0) works only.
   - **DeviantArt:** searched by tag (the words joined, lowercased: "ruined keep" → `ruinedkeep`; the tab says so).
 - **Results:** a grid of up to 20 thumbnails. Under each: the title, the artist (linked to their page), the licence
   (linked to its deed) and the source (linked to the work's own page). Links open in a new tab (`rel="noopener"`).

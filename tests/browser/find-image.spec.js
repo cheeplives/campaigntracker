@@ -31,7 +31,7 @@ const pick = (page, cid, id, body) => api(page, "image_import", { parent_type: "
  * doesn't route a request a redirect made, so an embed's picture is answered at the app's redirect, once it is seen to
  * point at DeviantArt. */
 async function routeImages(page) {
-  await page.route(/^https:\/\/www\.artic\.edu\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
+  await page.route(/^https:\/\/(www\.artic\.edu|ids\.si\.edu)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
   // Asked through the page's own API client, not route.fetch(), which WebKit lets follow the redirect regardless.
   await page.route(/\/api\/index\.php\?a=file&/, async route => {
     const res = await page.request.get(route.request().url(), { maxRedirects: 0 });
@@ -51,7 +51,10 @@ test.describe("Find Image API", () => {
     expect(ov.json.results[0].full).toBeUndefined();          // the full picture's address stays on the server
 
     const mu = await search(page, cid, "museums", "armour");
-    expect(mu.json.results.map(r => [r.id, r.via, r.open])).toEqual([["aic:27992", "Art Institute of Chicago", true], ["met:436535", "The Met", true]]);
+    expect(mu.json.results.map(r => [r.id, r.via, r.open])).toEqual([["aic:27992", "Art Institute of Chicago", true], ["met:436535", "The Met", true],
+      ["si:edanmdm-nmah_1", "Smithsonian", true]]);   // the Smithsonian's record with no CC0 picture is left out
+    expect(mu.json.results[2]).toMatchObject({ title: "Suit of armor", author: "Unknown armorer", license: "CC0 1.0",
+      thumb: "https://ids.si.edu/ids/deliveryService?id=NMAH-edanmdm-nmah_1&max=400", landing_url: "https://americanhistory.si.edu/collections/object/edanmdm-nmah_1" });
     expect(mu.json.results[0]).toMatchObject({ thumb: "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/400,/0/default.jpg",
       author_url: "https://www.artic.edu/artists/35", landing_url: "https://www.artic.edu/artworks/27992" });
 
@@ -109,6 +112,7 @@ test.describe("Find Image API", () => {
     expect(big.status, JSON.stringify(big.json)).toBe(200);
     expect(big.json.file.size).toBe(PNG.length);
     expect((await pick(page, cid, id, { source: "museums", id: "met:436535" })).json.file.credit).toMatchObject({ license: "CC0 1.0", source: "The Met", author: "Jacob Halder" });
+    expect((await pick(page, cid, id, { source: "museums", id: "si:edanmdm-nmah_1" })).json.file.credit).toMatchObject({ license: "CC0 1.0", source: "Smithsonian", title: "Suit of armor" });
     const mine = await pick(pp, cid, id, { source: "deviantart", id: DA_CC, is_secret: true });
     expect(mine.status, JSON.stringify(mine.json)).toBe(200);
     expect(mine.json.file).toMatchObject({ is_secret: false, credit: { license: "CC BY 3.0", source: "DeviantArt", author: "mistpainter" } });
@@ -188,7 +192,7 @@ test.describe("Find Image panel", () => {
     await box2.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel2 = box2.locator(".find-image");
     await panel2.getByRole("tab", { name: "Museums" }).click();
-    await expect(panel2.locator(".find-result")).toHaveCount(2);
+    await expect(panel2.locator(".find-result")).toHaveCount(3);
     await panel2.getByRole("searchbox").fill("nothing here");
     await panel2.getByRole("button", { name: "Search", exact: true }).click();
     await expect(panel2).toContainText('Nothing found for "nothing here".');

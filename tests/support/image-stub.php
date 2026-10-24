@@ -1,6 +1,6 @@
 <?php
 // Find Image's sources, for the browser tests only: support/config.test.php names this file as image_search.stub, so
-// api/images.php asks this function instead of Openverse, the museums and DeviantArt, and nothing leaves the machine.
+// api/images.php asks this function instead of Openverse, the museums (the Smithsonian's key is "stub") and DeviantArt, and nothing leaves the machine.
 // Searching for "broken" makes a source answer an error; "nothing" finds nothing. Thumbnails are data: pictures; the
 // full-size pictures are at https://img.test/, which only this stub serves. A DeviantArt page with "/art/Gone-" in it
 // is one oEmbed no longer knows.
@@ -56,6 +56,18 @@ return function (string $method, string $url, array $opts): array {
         if ($path === '/public/collection/v1/search') return $json(['total' => $none ? 0 : 2, 'objectIDs' => $none ? null : [436535, 1]]);
         if (preg_match('~^/public/collection/v1/objects/(\d+)$~', $path, $m)) return isset($objs[(int)$m[1]]) ? $json($objs[(int)$m[1]]) : $json(['message' => 'Not a valid object'], 404);
     }
+
+    if ($host === 'api.si.edu') {
+        if (($q['api_key'] ?? '') !== 'stub') return $json(['error' => ['code' => 'API_KEY_MISSING']], 403);
+        $rec = fn(string $id, string $access) => ['id' => $id, 'title' => $id === 'edanmdm-nmah_1' ? 'Suit of armor' : 'Locked photograph', 'unitCode' => 'NMAH',
+            'content' => ['descriptiveNonRepeating' => ['record_link' => "https://americanhistory.si.edu/collections/object/$id",
+                'online_media' => ['mediaCount' => 1, 'media' => [['idsId' => "NMAH-$id", 'thumbnail' => "https://ids.si.edu/ids/deliveryService?id=NMAH-$id", 'usage' => ['access' => $access]]]]],
+                'freetext' => ['name' => [['label' => 'Maker', 'content' => 'Unknown armorer']]]]];
+        if ($path === '/openaccess/api/v1.0/search')
+            return $json(['status' => 200, 'response' => ['rowCount' => $none ? 0 : 2, 'rows' => $none ? [] : [$rec('edanmdm-nmah_1', 'CC0'), $rec('edanmdm-nmah_2', 'Usage conditions apply')]]]);
+        if ($path === '/openaccess/api/v1.0/content/edanmdm-nmah_1') return $json(['status' => 200, 'response' => $rec('edanmdm-nmah_1', 'CC0')]);
+    }
+    if ($host === 'ids.si.edu') return ['status' => 200, 'body' => $png, 'error' => ''];
 
     $da = [
         'A1B2C3D4-0000-0000-0000-000000000001' => ['title' => 'Keep in the mist', 'user' => 'mistpainter', 'slug' => 'Keep-in-the-mist-1', 'license' => 'Creative Commons Attribution 3.0 License'],

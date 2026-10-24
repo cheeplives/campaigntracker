@@ -26,6 +26,7 @@ return [
     'stub' => __DIR__ . '/image-stub.php',
     'contact' => 'tests@example.test',
     'deviantart' => ['client_id' => 'stub', 'client_secret' => 'stub'],
+    'smithsonian' => ['api_key' => 'stub'],
   ],
   'rate_limit_enabled' => true,
   'allow_install' => false,

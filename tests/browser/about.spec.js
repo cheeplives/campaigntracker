@@ -29,6 +29,7 @@ test("About & sources: open signed out from the footer, with every travel sample
   await expect(find.getByRole("link", { name: "Openverse" })).toHaveAttribute("href", "https://openverse.org/");
   await expect(find.getByRole("link", { name: /The Met/ })).toBeVisible();
   await expect(find.getByRole("link", { name: /Art Institute of Chicago/ })).toBeVisible();
+  await expect(find.getByRole("link", { name: /Smithsonian/ })).toBeVisible();
   await expect(find.getByRole("link", { name: "DeviantArt" })).toBeVisible();
   await expect(page.locator("li", { hasText: "DeviantArt, through its API and oEmbed" })).toBeVisible();
   // Leaving the page goes back to the sign-in card.

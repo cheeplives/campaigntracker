@@ -2475,7 +2475,7 @@
   // keeps only its link, or followed to its page and its artist's to ask before copying it.
   const FIND_SOURCES = [
     ['openverse', 'Open web', 'Openly licensed pictures from Flickr, Wikimedia Commons, museums and more, through Openverse'],
-    ['museums', 'Museums', 'Public-domain paintings, armour, maps and the like from The Met and the Art Institute of Chicago'],
+    ['museums', 'Museums', 'Public-domain paintings, armour, maps and the like from The Met, the Art Institute of Chicago and the Smithsonian'],
     ['deviantart', 'DeviantArt', 'Searched by tag, so the words are joined into one: "ruined keep" looks for ruinedkeep'],
   ];
   function findImage(parentType, parentId, name, opts) {
@@ -4931,7 +4931,8 @@
           ['Find Image on an Encyclopedia entry searches, only when asked: ', extLink({ url: 'https://openverse.org/', title: 'Openverse' }),
             ' (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), the public-domain collections of ',
             extLink({ url: 'https://www.metmuseum.org/hubs/open-access', title: 'The Met (Open Access)' }), ' and the ',
-            extLink({ url: 'https://www.artic.edu/open-access/public-api', title: 'Art Institute of Chicago (public API)' }), ', and ',
+            extLink({ url: 'https://www.artic.edu/open-access/public-api', title: 'Art Institute of Chicago (public API)' }), ' and the ',
+            extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', and ',
             extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA are copied, ',
             'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',

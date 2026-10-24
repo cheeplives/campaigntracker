@@ -3,8 +3,8 @@
  * images.php — Find Image: the server side of searching for a picture for an Encyclopedia entry.
  *
  * Three sources, each searched only when its tab is opened: Openverse (openly licensed pictures from Flickr, Wikimedia
- * Commons, museums and more), two museums' open access collections (the Art Institute of Chicago and The Met, public
- * domain works only) and DeviantArt (by tag). The server asks them, so the keys in the config's image_search block never
+ * Commons, museums and more), museums' open access collections (the Art Institute of Chicago, The Met and, with a key,
+ * the Smithsonian; public domain works only) and DeviantArt (by tag). The server asks them, so the keys in the config's image_search block never
  * reach the browser, and every result comes back in one shape (image_item()). Only pictures under an open licence
  * (image_license()) can be copied into the app; a DeviantArt work that isn't can be embedded instead, which keeps only
  * its link and loads the picture from DeviantArt through its oEmbed API each time.
@@ -164,29 +164,55 @@ function met_item(array $r): ?array {
         'author_url' => $r['artistWikidata_URL'] ?? ($r['artistULAN_URL'] ?? null), 'license' => image_license('cc0'), 'via' => 'The Met',
         'landing_url' => $r['objectURL'] ?? null, 'thumb' => $r['primaryImageSmall'], 'full' => image_url($r['primaryImage'] ?? null) ?? $r['primaryImageSmall']]);
 }
-/** Both museums, taken in turn so neither crowds the other out. One that is down is skipped while the other answers. */
+const SMITHSONIAN = 'https://api.si.edu/openaccess/api/v1.0';
+function smithsonian_key(): string { return trim((string)(image_cfg()['smithsonian']['api_key'] ?? '')); }
+/** A Smithsonian record (EDAN metadata) as a result: its first picture released CC0, or null when it has none. */
+function smithsonian_item(array $r): ?array {
+    $c = (array)($r['content'] ?? []);
+    $d = (array)($c['descriptiveNonRepeating'] ?? []);
+    $pic = null;
+    foreach ((array)($d['online_media']['media'] ?? []) as $m)
+        if (is_array($m) && strtoupper((string)($m['usage']['access'] ?? '')) === 'CC0' && preg_match('/^[A-Za-z0-9_.-]{1,120}$/', (string)($m['idsId'] ?? ''))) { $pic = $m; break; }
+    $id = (string)($r['id'] ?? '');
+    if (!$pic || !preg_match('/^[A-Za-z0-9_.:-]{1,120}$/', $id)) return null;
+    $ids = 'https://ids.si.edu/ids/deliveryService?id=' . rawurlencode($pic['idsId']);
+    $name = '';
+    foreach ((array)($c['freetext']['name'] ?? []) as $n) if (is_array($n) && trim((string)($n['content'] ?? '')) !== '') { $name = $n['content']; break; }
+    return image_item('museums', "si:$id", ['title' => $r['title'] ?? ($d['title']['content'] ?? ''), 'author' => $name, 'license' => image_license('cc0'),
+        'via' => 'Smithsonian', 'landing_url' => $d['record_link'] ?? null, 'thumb' => "$ids&max=400", 'full' => "$ids&max=1600"]);
+}
+/** The museums, taken in turn so none crowds the others out: the Art Institute of Chicago and The Met, and the
+ * Smithsonian when the config has its key. One that is down is skipped while another answers. */
 function museums_search(string $q): array {
-    $aic = $met = [];
-    $down = 0;
+    $lists = [];
+    $tried = $down = 0;
+    $tried++;
     try {
         $data = image_json(ARTIC . '/api/v1/artworks/search?' . http_build_query(['q' => $q, 'limit' => IMAGE_RESULTS, 'fields' => ARTIC_FIELDS,
             'query' => ['term' => ['is_public_domain' => 'true']]]), ['headers' => artic_headers()]);
-        foreach ((array)($data['data'] ?? []) as $r) if (is_array($r) && ($i = artic_item($r, (string)($data['config']['iiif_url'] ?? '')))) $aic[] = $i;
+        $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? artic_item($r, (string)($data['config']['iiif_url'] ?? '')) : null, (array)($data['data'] ?? []))));
     } catch (ImageSourceDown) { $down++; }
+    $tried++;
     try {
         $data = image_json(MET . '/public/collection/v1/search?' . http_build_query(['hasImages' => 'true', 'q' => $q]));
-        $ids = array_slice(array_filter(array_map('intval', (array)($data['objectIDs'] ?? []))), 0, 10);
-        foreach ($ids as $id) {
+        $met = [];
+        foreach (array_slice(array_filter(array_map('intval', (array)($data['objectIDs'] ?? []))), 0, 10) as $id) {
             try { $r = image_json(MET . "/public/collection/v1/objects/$id"); } catch (ImageSourceDown) { continue; }
             if ($r && ($i = met_item($r))) $met[] = $i;
         }
+        $lists[] = $met;
     } catch (ImageSourceDown) { $down++; }
-    if ($down === 2) throw new ImageSourceDown('both museums down');
-    $out = [];
-    for ($i = 0; count($out) < IMAGE_RESULTS && ($i < count($aic) || $i < count($met)); $i++) {
-        if (isset($aic[$i])) $out[] = $aic[$i];
-        if (isset($met[$i]) && count($out) < IMAGE_RESULTS) $out[] = $met[$i];
+    if (($key = smithsonian_key()) !== '') {
+        $tried++;
+        try {
+            $data = image_json(SMITHSONIAN . '/search?' . http_build_query(['q' => "$q AND online_media_type:\"Images\"", 'rows' => IMAGE_RESULTS, 'api_key' => $key]));
+            $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? smithsonian_item($r) : null, (array)($data['response']['rows'] ?? []))));
+        } catch (ImageSourceDown) { $down++; }
     }
+    if ($down === $tried) throw new ImageSourceDown('every museum down');
+    $out = [];
+    for ($i = 0; count($out) < IMAGE_RESULTS && array_filter($lists, fn($l) => isset($l[$i])); $i++)
+        foreach ($lists as $l) if (isset($l[$i]) && count($out) < IMAGE_RESULTS) $out[] = $l[$i];
     return $out;
 }
 function museums_lookup(string $id): ?array {
@@ -197,6 +223,10 @@ function museums_lookup(string $id): ?array {
     if (preg_match('/^met:(\d+)$/', $id, $m)) {
         $r = image_json(MET . "/public/collection/v1/objects/{$m[1]}");
         return $r ? met_item($r) : null;
+    }
+    if (preg_match('/^si:([A-Za-z0-9_.:-]{1,120})$/', $id, $m) && ($key = smithsonian_key()) !== '') {
+        $data = image_json(SMITHSONIAN . '/content/' . rawurlencode($m[1]) . '?' . http_build_query(['api_key' => $key]));
+        return $data && is_array($data['response'] ?? null) ? smithsonian_item($data['response']) : null;
     }
     return null;
 }
