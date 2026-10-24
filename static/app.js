@@ -1984,9 +1984,20 @@
         btn('Restore', async () => {
           try { await post('term_restore', { term: t }, S.camp.id); S.encIgnored = S.encIgnored.filter(x => x !== t); route(); } catch (err) { toast(err.message, true); }
         }, 'link small', `Have the detector offer "${t}" again`))))) : null;
+    // The list and the entry swap widths at the press of a button, remembered in this browser.
+    let wide = encWide();
+    const page = el('div', { class: 'enc-page' + (current ? ' has-sel' : '') + (wide ? ' wide' : '') });
+    const wideBtn = btn('', () => { wide = !wide; rememberEncWide(wide); setWide(); }, 'small enc-widebtn');
+    const setWide = () => {
+      page.classList.toggle('wide', wide);
+      wideBtn.textContent = wide ? '⇤ Narrow list' : '⇥ Wide list';
+      wideBtn.setAttribute('aria-pressed', String(wide));
+      wideBtn.dataset.tip = wide ? 'Give the entry its room back and narrow the list' : 'Widen the list to see more of the Encyclopedia at once, and narrow the entry';
+    };
+    setWide();
     const left = el('section', { class: 'card enc-index' },
       el('div', { class: 'row spread' }, el('h2', {}, 'Encyclopedia', tip('The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only')),
-        el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn)),
+        el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn, wideBtn)),
       search, used.length ? tagRow : null, relRow, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
 
     // --- the entry picked
@@ -1995,7 +2006,16 @@
       el('p', { class: 'small muted' }, 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".'));
     else if (!current.id || entryBlank(current)) right.append(entryForm(current));
     else right.append(...entryView(current, ctx));
-    mount(...campaignHeader('encyclopedia'), el('div', { class: 'enc-page' + (current ? ' has-sel' : '') }, left, right));
+    page.append(left, right);
+    mount(...campaignHeader('encyclopedia'), page);
+  }
+
+  const ENC_WIDE_KEY = 'chronicle:encwide';
+  function encWide() {
+    try { return localStorage.getItem(ENC_WIDE_KEY) === '1'; } catch { return false; }
+  }
+  function rememberEncWide(on) {
+    try { on ? localStorage.setItem(ENC_WIDE_KEY, '1') : localStorage.removeItem(ENC_WIDE_KEY); } catch { /* private mode: just this page */ }
   }
 
   function entryView(e, ctx) {

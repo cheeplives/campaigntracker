@@ -427,3 +427,35 @@ test.describe("Generate Summary", () => {
     await expect(form.locator(".notepanel.public .ql-editor")).not.toContainText("Source:");
   });
 });
+
+test("the Wide list button swaps the widths of the list and the entry, and this browser remembers it", async ({ page, browser }) => {
+  const gm = person("Gwen");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Wide ${gm.id}`);
+  const id = await entry(page, cid, { name: "Altdorf", notes: "<p>The capital.</p>" });
+  for (const name of ["Bögenhafen", "Nuln", "Marienburg", "Middenheim"]) await entry(page, cid, { name, notes: "<p>A town.</p>" });
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+  const wideBtn = page.locator(".enc-widebtn");
+  const width = sel => page.locator(sel).evaluate(n => n.getBoundingClientRect().width);
+  if ((page.viewportSize()?.width || 0) <= 900) {
+    // One column already: nothing to swap, so no button.
+    await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
+    await expect(wideBtn).toBeHidden();
+    return;
+  }
+  await expect(wideBtn).toHaveAttribute("aria-pressed", "false");
+  expect(await width(".enc-index")).toBeLessThan(await width(".enc-detail"));
+  await wideBtn.click();
+  await expect(page.locator(".enc-page")).toHaveClass(/\bwide\b/);
+  await expect(wideBtn).toHaveAttribute("aria-pressed", "true");
+  expect(await width(".enc-index")).toBeGreaterThan(await width(".enc-detail"));
+  // Remembered across pages and reloads, then the button puts it back.
+  await page.reload();
+  await expect(page.locator(".enc-page")).toHaveClass(/\bwide\b/);
+  await wideBtn.click();
+  await expect(page.locator(".enc-page")).not.toHaveClass(/\bwide\b/);
+  await page.reload();
+  await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
+  await expect(page.locator(".enc-page")).not.toHaveClass(/\bwide\b/);
+});

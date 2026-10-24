@@ -81,7 +81,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   row, a symmetric kind is kept once, unticking removes, and deleting an entry takes its connections; players never get
   a GM-only connection, one touching a secret entry, or a label used only by those, can't set GM only and remove only
   their own; the notes suggest connections (a "Residents:" line suggests the label), and the list searches, filters by
-  connection chips and "Show in list"; renaming a kind changes every page.
+  connection chips and "Show in list"; renaming a kind changes every page; the Wide list button swaps the widths of the list and the
+  entry and this browser remembers it, and is hidden where the page is one column.
 - **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens
   full size with its caption, the PDF downloads; players see both, add and remove their own, but can't change or
   remove the GM's; GM-only files and every file on a secret entry are never listed or sent to players, and making a
