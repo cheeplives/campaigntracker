@@ -909,7 +909,7 @@
     };
     draw();
     const folds = legendFolds();
-    const tabs = el('nav', { class: 'tabs' }, searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
+    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
@@ -937,6 +937,27 @@
   function rememberLegendFold(g, folded) {
     const all = { ...legendFolds(), [g]: folded };
     try { localStorage.setItem(`${LEGEND_KEY}:${S.user?.id}`, JSON.stringify(all)); } catch { /* private mode: just this page */ }
+  }
+  // The whole Legend tucks away to a thin strip on the left, also remembered in this browser for each account
+  function legendHidden() {
+    try { return localStorage.getItem(`${LEGEND_KEY}:tucked:${S.user?.id}`) === '1'; } catch { return false; }
+  }
+  /** The « / » button at the top of the Legend that tucks it away to the left and brings it back. Across the top it is hidden. */
+  function legendTuck() {
+    const btn = el('button', { type: 'button', class: 'legend-tuck' });
+    const show = tucked => {
+      btn.textContent = tucked ? '»' : '«';
+      btn.setAttribute('aria-expanded', String(!tucked));
+      btn.setAttribute('aria-label', tucked ? 'Show the tabs' : 'Hide the tabs');
+      btn.dataset.tip = tucked ? 'Show the tabs down the left' : 'Tuck the tabs away to the left, to give the page more room. It stays as you leave it in this browser';
+    };
+    show(legendHidden());
+    btn.addEventListener('click', () => {
+      const tucked = btn.closest('nav').classList.toggle('tucked');
+      show(tucked);
+      try { tucked ? localStorage.setItem(`${LEGEND_KEY}:tucked:${S.user?.id}`, '1') : localStorage.removeItem(`${LEGEND_KEY}:tucked:${S.user?.id}`); } catch { /* private mode: just this page */ }
+    });
+    return btn;
   }
 
   /** The search box with the tabs: Enter opens the Search page. On a phone, where the tabs scroll sideways, it is a 🔍 tab instead. */
