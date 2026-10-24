@@ -818,15 +818,16 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 
 /* Session notes: the GM's quick notes during play (Current Day) and on a session's page */
 .snotes { display: flex; flex-direction: column; gap: 2px; max-height: 26em; overflow-y: auto; }
-.snote { display: flex; align-items: baseline; gap: 6px; padding: 2px 4px; border-radius: 4px; }
+.snote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; padding: 2px 4px; border-radius: 4px; }
 .snote:hover, .snote:focus-within { background: var(--panel-2); }
 .snote-d1 { padding-left: 1.6em; } .snote-d2 { padding-left: 3.2em; } .snote-d3 { padding-left: 4.8em; }
-.snote-text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: text; }
+.snote-text { flex: 1 1 12em; min-width: 0; overflow-wrap: break-word; cursor: text; }
 .snote.covered .snote-text { opacity: .65; }
 .snote-edit { flex: 1; min-width: 0; }
 .snote-stamp { white-space: nowrap; font-size: .8em; }
-.snote-tools { display: inline-flex; gap: 2px; align-items: center; opacity: 0; }
-.snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { opacity: 1; }
+/* the row's tools (▲ ▼ Move to… ✕) show on hover or focus, and always on a touch screen, where they wrap under the note */
+.snote-tools { display: none; gap: 2px; align-items: center; margin-left: auto; }
+.snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { display: inline-flex; }
 .snote-tools select { font-size: .8em; padding: 0 2px; min-height: 0; }
 .snote-unsaved { opacity: .7; font-style: italic; }
 .snote-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .9em; }
@@ -839,7 +840,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote-err { color: var(--bad); margin: 0; }
 .snote-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
 .snote-help dd { margin: 0; }
-@media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { opacity: 1; } }
+@media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { display: inline-flex; } }
 .sess-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .sess-fields .field { max-width: 28em; }
 .sess-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }

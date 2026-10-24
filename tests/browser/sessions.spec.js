@@ -187,6 +187,7 @@ test("the GM types notes on Current Day: Enter saves, Tab indents, marks show, a
   await type(page, "? Who is Essen");
   const rows = box(page).locator(".snote");
   await expect(rows).toHaveCount(4);
+  await expect(box(page).locator(".snotes")).not.toContainText("null");
   await expect(rows.nth(0).locator("a.enc-link")).toHaveText("Dulled Fang");
   await expect(rows.nth(1)).toHaveClass(/snote-d1/);
   await expect(rows.nth(2)).toHaveClass(/snote-d1/); // a new line keeps the last one's indent
@@ -210,6 +211,7 @@ test("the GM types notes on Current Day: Enter saves, Tab indents, marks show, a
   await edit.fill("Spotted the Dulled Fang at Iapetus Station");
   await edit.press("Enter");
   await expect(rows.nth(0)).toContainText("Iapetus Station");
+  await rows.nth(4).hover(); // a row's tools show on hover (always, on a touch screen)
   await rows.nth(4).getByRole("button", { name: "Delete note" }).click();
   await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(rows).toHaveCount(4);
@@ -418,6 +420,7 @@ test("a published session is the player's to read and export; notes move between
   const other = (await add(page, cid, "Took a quick job to Europa")).json.session.id;
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
   await page.reload(); // the page was already open there: load the new session into its Move to list
+  await page.locator(".sess-notes .snote").first().hover();
   await page.locator(".sess-notes .snote").first().getByLabel("Move to another session").selectOption(String(other));
   await expect(page.locator(".sess-notes .snote")).toHaveCount(4);
   expect((await one(page, cid, other)).json.notes.map(n => n.text)).toEqual(["Took a quick job to Europa", "Sensor set off on approach to Jupiter"]);

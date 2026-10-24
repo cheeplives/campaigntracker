@@ -1522,11 +1522,11 @@
           S.openSession = null; notes = []; draw();
         }), 'small', 'Close this session at the current day. Your next note starts a new one')] : []));
       const waiting = pendingNotes();
-      list.replaceChildren(
+      list.replaceChildren(...clean([
         !open && !waiting.length ? el('p', { class: 'muted small' }, 'No session open: your first note starts one') : null,
-        ...notes.map(n => snoteRow(n, opts)),
+        notes.map(n => snoteRow(n, opts)),
         ...waiting.map(p => el('div', { class: `snote snote-d${p.depth} snote-unsaved` }, el('span', { class: 'snote-text' }, p.text),
-          el('small', { class: 'muted' }, ' Not saved, retrying'))));
+          el('small', { class: 'muted' }, ' Not saved, retrying')))]));
       list.scrollTop = list.scrollHeight;
     }
     let flushing = false;
