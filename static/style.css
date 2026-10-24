@@ -132,6 +132,10 @@ button.on { background: var(--accent); color: var(--on-accent); }
   box-shadow: 0 1px 0 var(--line), 0 10px 24px -16px rgb(0 0 0 / .6); }
 .nowbar::after { position: absolute; left: 20px; right: 20px; bottom: -3px; height: 6px; }
 .now-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .now-title h1 { margin: 0; font-size: 1.2rem; color: var(--dim); letter-spacing: .12em; }
+.now-title .view-as { margin-left: 4px; padding: 2px 8px; font-size: .75rem; }
+/* View as player: a GM previewing the players' side, with nothing to change until they leave */
+.view-as-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 8px 0 2px; padding: 6px 10px;
+  border: 1px dashed var(--secret); border-radius: 6px; background: color-mix(in srgb, var(--secret) 10%, transparent); font-size: .9rem; }
 .now-date { font: 700 2.2rem/1 var(--disp); text-transform: uppercase; letter-spacing: .01em; color: var(--text); display: block; }
 :root[data-scheme="console"] .now-date { font-size: 1.8rem; }   /* monospace caps run wide */
 :root[data-scheme="console"] .tabs a { font-size: .9rem; letter-spacing: 0; padding-left: 10px; padding-right: 10px; }
@@ -346,12 +350,27 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .richtext h3, .rt-editor .ql-snow .ql-editor h3 { font-size: 1.1rem; }
 .richtext ul, .richtext ol { margin: 0 0 .6em; padding-left: 1.5em; }
 .richtext blockquote, .rt-editor .ql-snow .ql-editor blockquote { margin: .4em 0; padding-left: 12px; border-left: 3px solid var(--accent); color: var(--dim); }
+/* a GM-only paragraph (stored as <aside>, never sent to players): a run of them shares one band and one label */
+.richtext aside, .rt-editor .ql-snow .ql-editor aside { margin: .4em 0; padding: 3px 10px 3px 12px; border-left: 3px solid var(--secret);
+  background: color-mix(in srgb, var(--secret) 13%, transparent); }
+.richtext aside + aside, .rt-editor .ql-snow .ql-editor aside + aside { margin-top: -.4em; }
+.richtext aside::before, .rt-editor .ql-snow .ql-editor aside::before { content: '🔒 GM only'; display: block; font: 700 .66rem var(--body);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--secret); }
+.richtext aside + aside::before, .rt-editor .ql-snow .ql-editor aside + aside::before { content: none; }
+.richtext aside { position: relative; }
+.richtext aside .rt-reveal { float: right; margin: 0 0 4px 8px; padding: 1px 8px; font-size: .75rem; }
 .richtext table { border-collapse: collapse; margin: .4em 0 .8em; display: block; overflow-x: auto; max-width: 100%; }
 .richtext td, .richtext th, .rt-editor .ql-editor td { border: 1px solid var(--line); padding: 4px 8px; vertical-align: top; }
 .richtext tr:first-child td { background: var(--panel-2); font-weight: 600; }
 .richtext code, .rt-editor .ql-snow .ql-editor code { font: .9em var(--mono); background: var(--panel-2); padding: 1px 4px; border-radius: 4px; }
 .richtext pre { font: .9em var(--mono); background: var(--panel-2); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; }
 .richtext a, .rt-editor .ql-snow .ql-editor a { color: var(--accent); text-decoration: underline; }
+/* the @ list: Encyclopedia names under the cursor */
+.rt-mentions { position: absolute; z-index: 6; min-width: 220px; max-width: 320px; margin: 0; padding: 4px 0; list-style: none; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 20px -10px rgb(0 0 0 / .5); font-family: var(--body); }
+.rt-mentions li { padding: 5px 10px; cursor: pointer; }
+.rt-mentions li.on, .rt-mentions li:hover { background: var(--accent); color: var(--on-accent); }
+.rt-mentions li.on .muted, .rt-mentions li:hover .muted { color: inherit; }
 .rt-editor { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); position: relative; }
 .rt-editor.loading .rt-toolbar { visibility: hidden; }
 .rt-editor .rt-toolbar { border-bottom: 1px solid var(--line); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-family: var(--body); }

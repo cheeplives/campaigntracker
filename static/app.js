@@ -65,6 +65,7 @@
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
+    if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
     const res = await fetch('api/index.php?' + qs, opt);
     let data;
@@ -76,6 +77,13 @@
     return data;
   }
   const post = (action, body, cid) => api(action, { query: cid ? { cid } : {}, body });
+  // View as player: a GM's choice, for this tab only, to have the server answer this campaign's pages as it would a player's
+  const viewKey = cid => `chronicle-view-as-${cid}`;
+  const viewingAs = cid => { try { return sessionStorage.getItem(viewKey(cid)) === 'player'; } catch { return false; } };
+  function setViewingAs(on) {
+    try { if (on) sessionStorage.setItem(viewKey(S.camp.id), 'player'); else sessionStorage.removeItem(viewKey(S.camp.id)); } catch { /* private window: stays as it was */ }
+    loadCampaign(S.camp.id, true).then(route, err => toast(err.message, true));
+  }
 
   // ------------------------------------------------------------ change notices
   // An open campaign page asks the server every so often whether a GM has changed the campaign
@@ -208,6 +216,7 @@
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
     S.libReady = !!r.library_ready;
+    S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
     hideChangeBanner();
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
@@ -899,7 +908,11 @@
         el('div', { class: 'now-main' },
           el('div', { class: 'now-title' }, el('h1', {}, S.camp.name), el('span', { class: `role ${S.role}`, 'data-tip': isGM()
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
-            : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view')),
+            : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view'),
+            isGM() ? btn('👁 View as player', () => setViewingAs(true), 'small view-as',
+              'See this campaign exactly as your players do: no secrets, GM notes or GM-only paragraphs. Nothing can be changed until you leave') : null),
+          S.viewAs ? el('div', { class: 'view-as-banner', role: 'status' }, el('span', {}, '👁 Viewing as a player: this is what your players see. Changes are off.'),
+            btn('Leave player view', () => setViewingAs(false), 'small primary')) : null,
           el('div', { class: 'now-time' },
             el('a', { href: `#/c/${S.camp.id}/today`, class: 'now-date', 'data-tip': `The current ${word()} and date in the campaign. Click to open today` }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
@@ -1340,8 +1353,8 @@
           (row.notes || '').trim() ? linkedNote(row.notes, row.notes_format) : el('p', { class: 'muted' }, 'No notes for this day yet.')));
     }
     const locs = el('textarea', { name: 'locations', rows: 2, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
-    const pub = RichText.editor({ text: row.notes, format: row.notes_format, label: 'Public notes', placeholder: 'What happened today, for everyone to read' });
-    const sec = RichText.editor({ text: row.gm_notes, format: row.gm_notes_format, label: 'Secret notes', placeholder: 'Secrets, plans and reminders for GMs only' });
+    const pub = RichText.editor({ text: row.notes, format: row.notes_format, label: 'Public notes', placeholder: 'What happened today, for everyone to read', secret: true, mentions: encMentions() });
+    const sec = RichText.editor({ text: row.gm_notes, format: row.gm_notes_format, label: 'Secret notes', placeholder: 'Secrets, plans and reminders for GMs only', mentions: encMentions() });
     const save = btn('Save notes', null, 'primary small', 'Save the locations and both notes');
     save.addEventListener('click', busy(save, async () => {
       const p = pub.value(), g = sec.value();
@@ -1815,6 +1828,28 @@
     if (format === 'html') encLinker().tree(node); else node.replaceChildren(...linked(text));
     return node;
   }
+  /** GMs: a 🔓 Reveal button on each run of GM-only paragraphs in a shown entry or tome (kind 'entry' or 'tome'),
+   * which makes them public and can note it as an event on the current day. */
+  function revealButtons(node, kind, id) {
+    if (!isGM()) return node;
+    const all = [...node.querySelectorAll('aside')];
+    all.forEach((a, i) => {
+      if (a.previousElementSibling?.nodeName === 'ASIDE') return;  // the button goes on the first of a run
+      const run = [];
+      for (let x = a, j = i; x && x.nodeName === 'ASIDE' && all[j] === x; x = x.nextElementSibling, j++) run.push({ index: j, text: x.textContent.trim() });
+      a.prepend(btn('🔓 Reveal', async () => {
+        const v = await KIT.dialog({ title: 'Reveal to the players?', message: run.length > 1 ? `These ${run.length} paragraphs become public now.` : 'This paragraph becomes public now.',
+          buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
+        if (v !== 'log' && v !== 'quiet') return;
+        try {
+          await post('secret_reveal', { kind, id, which: run, log: v === 'log' }, S.camp.id);
+          toast(v === 'log' ? 'Revealed, and logged on today\'s events' : 'Revealed to the players');
+          route();
+        } catch (err) { toast(err.message, true); }
+      }, 'small rt-reveal', 'Make this GM-only text public: players see it from now on'));
+    });
+    return node;
+  }
   /** For text still open in an editor, where links can't go: a line of links to the entries it mentions. */
   function mentionRow(...texts) {
     const seen = new Set(), list = [];
@@ -1843,12 +1878,33 @@
     for (const x of S.holidays) h[x.name] = 'Event';
     return h;
   }
+  /** The @ list in rich text editors: the Encyclopedia names this member can see, and a new entry made on the spot. */
+  function encMentions() {
+    if (!S.encReady) return null;
+    return {
+      list: () => S.encyclopedia,
+      create: async name => {
+        try {
+          const { id } = await post('entry_save', { name }, S.camp.id);
+          S.encyclopedia = [...S.encyclopedia, { id, name, aliases: [], is_secret: false, blank: true, preview: '' }].sort((a, b) => a.name.localeCompare(b.name));
+          toast(`${name} added to the Encyclopedia`);
+          return true;
+        } catch (err) { toast(err.message, true); return false; }
+      },
+    };
+  }
   const detectorOpts = () => ({ known: S.encyclopedia.flatMap(Nouns.namesOf), ignored: [...S.encIgnored, ...encSkipped], stop: knownWords(), hints: knownKinds() });
   // Names skipped in the dialog (or left with Not now) aren't offered again until the page is reloaded; Scan campaign still lists them.
   const encSkipped = new Set();
   /** Run the detector over what was just saved and offer what it finds. sources: see Nouns.find(). */
   async function offerNouns(sources) {
     if (!S.encReady) return;
+    // a rich text note's GM-only paragraphs are read as secret, so names found only there start as GM only
+    sources = sources.flatMap(s => {
+      if (s.format !== 'html') return [s];
+      const { open, secret } = RichText.split(s.text);
+      return [{ ...s, text: open }, { ...s, text: secret, secret: true }];
+    });
     const found = Nouns.find(sources.filter(s => s.text && String(s.text).trim()), detectorOpts());
     if (found.length) await nounDialog(found.slice(0, 40));
   }
@@ -2108,6 +2164,7 @@
     // An entry's own name isn't linked in its notes.
     const others = Nouns.linker(S.encyclopedia.filter(x => x.id !== e.id), (x, text) => el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.id}`, 'data-tip': `${x.name}: open it in the Encyclopedia` }, text));
     const note = html => others.tree(RichText.view(html, 'html'));
+    const publicNote = html => revealButtons(note(html), 'entry', e.id);
     return clean([
       el('div', { class: 'row spread' },
         el('h2', {}, e.is_secret ? secretTag() : null, e.name),
@@ -2122,7 +2179,7 @@
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
       attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret }),
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
-        (e.notes || '').trim() ? note(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
+        (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
       isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
         (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
       connectionsCard(e, ctx),
@@ -2578,8 +2635,8 @@
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
-    const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there' });
-    const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only' }) : null;
+    const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
+    const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
     const f = el('form', { class: 'enc-form' },
       el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
       el('div', { class: 'grid2' },
@@ -2688,7 +2745,7 @@
           }, 'small danger', 'Delete this tome and everything written in it') : null)),
       el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
       t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
-      el('div', { class: 'lib-body' }, (t.body || '').trim() ? linkedNote(t.body, 'html') : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
+      el('div', { class: 'lib-body' }, (t.body || '').trim() ? revealButtons(linkedNote(t.body, 'html'), 'tome', t.id) : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
       tomeFiles(t),
       el('small', { class: 'muted' }, t.author ? ['Added by ', byline(t)] : 'Added', ` on ${t.created_at.slice(0, 10)}`,
         changed ? `; last changed by ${t.editor} on ${t.updated_at.slice(0, 10)}` : '')]);
@@ -2702,7 +2759,7 @@
       el('label', {}, el('input', { type: 'radio', name: 'kind', value: k, checked: t.kind === k }), el('span', {}, `${icon} ${label}`))));
     const title = el('input', { name: 'title', value: t.title || '', required: true, maxlength: 200, placeholder: 'e.g. The Codex of Vitreous Night' });
     const desc = el('textarea', { name: 'description', rows: 2, maxlength: 1000, placeholder: 'A line or two: what it is, who wrote it, where it was found' }, t.description || '');
-    const body = RichText.editor({ text: t.body || '', format: 'html', label: 'Contents', placeholder: 'Write out the tome: its chapters, entries, or the note itself' });
+    const body = RichText.editor({ text: t.body || '', format: 'html', label: 'Contents', placeholder: 'Write out the tome: its chapters, entries, or the note itself', secret: isGM(), mentions: encMentions() });
     body.node.classList.add('rt-tall');
     const f = el('form', { class: 'enc-form lib-form' },
       el('h2', {}, t.id ? `Edit ${t.title}` : 'New tome'),

@@ -10,8 +10,11 @@ declare(strict_types=1);
 const RICH_TAGS = [
     'p' => [], 'br' => [], 'strong' => [], 'em' => [], 'u' => [], 's' => [], 'code' => [], 'pre' => [],
     'h1' => [], 'h2' => [], 'h3' => [], 'blockquote' => [], 'ul' => [], 'ol' => [], 'li' => [], 'hr' => [],
-    'a' => ['href'], 'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => [], 'td' => [],
+    'a' => ['href'], 'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => [], 'td' => [], 'aside' => [],
 ];
+/** A secret paragraph: GM only. rich_open() takes them out of whatever a player is sent. Never nested (rich_copy unwraps
+ * an aside inside another), and an allowed element never carries attributes, so each one is exactly <aside>…</aside>. */
+const RICH_SECRET_RE = '#<aside>.*?</aside>#su';
 /** The editor's and the browser's spellings of the same thing. */
 const RICH_ALIAS = ['b' => 'strong', 'i' => 'em', 'strike' => 's', 'del' => 's', 'h4' => 'h3', 'h5' => 'h3', 'h6' => 'h3', 'div' => 'p'];
 /** Dropped with everything inside them, not just unwrapped. */
@@ -47,14 +50,14 @@ function rich_html_clean(string $html): string {
     return rich_html_plain($res) === '' && stripos($res, '<table') === false ? '' : $res;
 }
 
-function rich_copy(DOMNode $from, DOMNode $to, DOMDocument $out, int $depth): void {
+function rich_copy(DOMNode $from, DOMNode $to, DOMDocument $out, int $depth, bool $inSecret = false): void {
     foreach ($from->childNodes as $n) {
         if ($n instanceof DOMText) { $to->appendChild($out->createTextNode($n->nodeValue ?? '')); continue; }
         if (!$n instanceof DOMElement) continue;                  // comments, processing instructions
         $tag = strtolower($n->nodeName);
         if (in_array($tag, RICH_DROP, true)) continue;
         $tag = RICH_ALIAS[$tag] ?? $tag;
-        if (!isset(RICH_TAGS[$tag]) || $depth >= RICH_MAX_DEPTH) { rich_copy($n, $to, $out, $depth); continue; }
+        if (!isset(RICH_TAGS[$tag]) || $depth >= RICH_MAX_DEPTH || ($tag === 'aside' && $inSecret)) { rich_copy($n, $to, $out, $depth, $inSecret); continue; }
         $e = $out->createElement($tag);
         if ($tag === 'a') {
             $href = rich_href($n->getAttribute('href'));
@@ -62,18 +65,83 @@ function rich_copy(DOMNode $from, DOMNode $to, DOMDocument $out, int $depth): vo
             $e->setAttribute('href', $href);
         }
         $to->appendChild($e);
-        rich_copy($n, $e, $out, $depth + 1);
+        rich_copy($n, $e, $out, $depth + 1, $inSecret || $tag === 'aside');
     }
 }
 
 /** Plain text of stored rich text, for previews: one line per paragraph, list item or table row. */
 function rich_html_plain(string $html): string {
-    $t = preg_replace('#<br\s*/?>|</(p|h[1-6]|li|tr|pre|blockquote|div)>|<(ul|ol|table)>#i', "\n", $html);
+    $t = preg_replace('#<br\s*/?>|</(p|h[1-6]|li|tr|pre|blockquote|div|aside)>|<(ul|ol|table)>#i', "\n", $html);
     $t = preg_replace('#<li>#i', '• ', $t);
     $t = preg_replace('#</t[dh]>#i', ' | ', $t);
     $t = html_entity_decode(strip_tags($t), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $t = preg_replace('/ \| *(\n|$)/', '$1', $t);
     return trim(preg_replace("/\n{2,}/", "\n", preg_replace('/[ \t]+\n/', "\n", $t)));
+}
+
+/** Stored rich text without its secret paragraphs: what a player may be sent. */
+function rich_open(?string $html): string {
+    return trim(preg_replace(RICH_SECRET_RE, '', (string)$html) ?? '');
+}
+/** Only the secret paragraphs of stored rich text ('' when there are none). */
+function rich_secrets(?string $html): string {
+    preg_match_all(RICH_SECRET_RE, (string)$html, $m);
+    return implode('', $m[0]);
+}
+/** Rich text as $isGm may see it. */
+function rich_for(?string $html, bool $isGm): ?string {
+    return $isGm || $html === null ? $html : rich_open($html);
+}
+/** A day note as $isGm may see it: only rich text has secret paragraphs (plain text is shown as typed). */
+function note_for(?string $text, ?string $format, bool $isGm): ?string {
+    return $format === 'html' ? rich_for($text, $isGm) : $text;
+}
+
+/** A player's save of rich text they could only see without its secret paragraphs ($new, cleaned): the stored copy's
+ * ($old) secret paragraphs are put back, each run after the paragraph it followed before (matched by its text), at the
+ * start when it came first, or at the end when that paragraph is gone. Anything secret the player sent is dropped. */
+function rich_keep_secrets(?string $old, string $new): string {
+    $new = rich_open($new);
+    if (rich_secrets($old) === '') return $new;
+    $text = fn(DOMNode $n) => trim(preg_replace('/\s+/u', ' ', $n->textContent ?? '') ?? '');
+    $groups = [];                                   // [anchor text or null, html of the run of secret paragraphs]
+    $oldTop = rich_nodes((string)$old);
+    $anchor = null;
+    foreach ($oldTop['nodes'] as $n) {
+        $html = $oldTop['doc']->saveHTML($n);
+        if ($n instanceof DOMElement && strtolower($n->nodeName) === 'aside') {
+            $last = array_key_last($groups);
+            if ($last !== null && $groups[$last][2]) $groups[$last][1] .= $html;  // still the same run
+            else $groups[] = [$anchor, $html, true];
+            continue;
+        }
+        if ($groups) $groups[array_key_last($groups)][2] = false;
+        if (preg_match(RICH_SECRET_RE, $html)) $groups[] = ['', rich_secrets($html), false]; // inside a list or table: kept at the end
+        if ($text($n) !== '') $anchor = $text($n);
+    }
+    $out = '';
+    $put = function (?string $after) use (&$groups, &$out) {
+        foreach ($groups as $i => $g) if ($g[0] === $after) { $out .= $g[1]; unset($groups[$i]); }
+    };
+    $put(null);
+    $newTop = rich_nodes($new);
+    foreach ($newTop['nodes'] as $n) {
+        $out .= $newTop['doc']->saveHTML($n);
+        $t = $text($n);
+        if ($t !== '') $put($t);
+    }
+    foreach ($groups as $g) $out .= $g[1];
+    return $out;
+}
+/** The top-level nodes of stored (already clean) rich text, with the document that owns them. */
+function rich_nodes(string $html): array {
+    $doc = new DOMDocument();
+    $prev = libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?><body>' . $html . '</body>', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors();
+    libxml_use_internal_errors($prev);
+    $body = $doc->getElementsByTagName('body')->item(0);
+    return ['doc' => $doc, 'nodes' => $body ? iterator_to_array($body->childNodes) : []];
 }
 
 /** A day note as it is sent to the browser: rich text gets a plain copy for previews. */
