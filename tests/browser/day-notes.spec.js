@@ -32,7 +32,18 @@ test("the GM formats Public and Secret notes; players read only the Public ones"
   await page.locator(".notepanel.public button.ql-bold").click();
   await pub.pressSequentially(" runs the inn");
   await pub.press("Enter");
+  // tables wait behind ⋯ with the other tools used less often, so the toolbar keeps to one line
+  await expect(page.locator(".notepanel.public select.rt-table")).toBeHidden();
+  await page.locator(".notepanel.public").getByRole("button", { name: "More formatting" }).click();
   await page.locator(".notepanel.public select.rt-table").selectOption("insert");
+  await expect(page.locator(".notepanel.public .ql-editor table td")).toHaveCount(9);
+  // ⤢ gives the note the whole window and Esc brings it back, still holding what was typed
+  await page.locator(".notepanel.public").getByRole("button", { name: "Focus" }).click();
+  const focused = page.locator(".rt-editor.rt-focus");
+  await expect(focused).toBeVisible();
+  expect((await focused.boundingBox()).width).toBe(page.viewportSize().width);
+  await pub.press("Escape");
+  await expect(focused).toHaveCount(0);
   await expect(page.locator(".notepanel.public .ql-editor table td")).toHaveCount(9);
   await pub.pressSequentially("Rope");
   await sec.click();

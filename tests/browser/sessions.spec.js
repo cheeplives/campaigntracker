@@ -275,6 +275,10 @@ test("a > line jumps the notes' day and shift; Set the clock here moves the camp
   await expect(jump).toHaveCount(2);
   await expect(jump.first()).toContainText("Dawn");
   await expect(jump.first()).toContainText("4 Firstmonth");
+  // the notes are grouped by when they happened: a heading over the first run, each jump heads the run after it, and no
+  // note carries its own time (its 🕓 moves it)
+  await expect(notesCol(page).locator(".snote-when")).toHaveText(["Dawn"]);
+  await expect(notesCol(page).locator(".snote").first().getByLabel("Move in time")).toHaveAttribute("data-tip", /^Dawn\./);
   expect((await notesOf(page, cid, sid)).map(n => [n.text, n.abs_shift])).toEqual([["Arrived at Iapetus", 8], [">+1", 12], ["Flip and burn", 12], [">dusk", 14], ["Debris cloud sunward", 14]]);
   expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(8); // a jump alone leaves the clock
 
@@ -468,7 +472,8 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("saved somewhere else");
 
-  // title, date played and publishing
+  // title, date played and publishing: an untitled session shows its Title and Played on, which fold under ✎ Details once it has a title
+  await expect(page.getByLabel("Title")).toBeVisible();
   const tb = await page.getByLabel("Title").boundingBox(), pb = await page.getByLabel("Played on").boundingBox();
   if (page.viewportSize().width > 560) expect(Math.abs(tb.y - pb.y)).toBeLessThan(4); // Title and Played on share a row
   await page.getByLabel("Title").fill("A Locked Box");
@@ -476,6 +481,13 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await page.getByRole("button", { name: "Save details" }).click();
   await expect(page.locator(".sess-detail h2")).toContainText("Session 1: A Locked Box");
   expect((await one(page, cid, sid)).json.session).toMatchObject({ title: "A Locked Box", played_on: "2024-06-24", is_published: false });
+  await expect(page.getByLabel("Title")).toBeHidden(); // titled now, so the details fold under ✎ Details
+  await page.getByRole("button", { name: "✎ Details" }).click();
+  await expect(page.getByLabel("Title")).toHaveValue("A Locked Box");
+  // away from the day pages, Pass time is a button that opens its row
+  await expect(page.locator(".passtime")).toBeHidden();
+  await page.getByRole("button", { name: "⏩ Pass time" }).click();
+  await expect(page.locator(".passtime")).toBeVisible();
   expectNoErrors(errors.filter(e => !/409/.test(e)));
 });
 
@@ -513,6 +525,7 @@ test("a published session is the player's to read and export; notes move between
   expect(md).not.toContain("Hidden bonus");
 
   // the GM's export can take the notes as a list
+  await page.locator(".sess-more > summary").click(); // Include notes waits in the ⋯ menu
   await page.getByLabel("Include notes").check();
   const [gdl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Export/ }).click()]);
   const gmd = require("fs").readFileSync(await gdl.path(), "utf8");
@@ -530,11 +543,13 @@ test("a published session is the player's to read and export; notes move between
   const other = (await add(page, cid, "Took a quick job to Europa")).json.session.id;
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
   await page.reload(); // the page was already open there: load the new session into its Move to list
+  if (page.viewportSize().width <= 720) await page.getByRole("button", { name: "Notes", exact: true }).click(); // a phone opens on the summary
   await page.locator(".sess-notes .snote").first().hover();
   await page.locator(".sess-notes .snote").first().getByLabel("Move to another session").selectOption(String(other));
   await expect(page.locator(".sess-notes .snote")).toHaveCount(4);
   expect((await one(page, cid, other)).json.notes.map(n => n.text)).toEqual(["Took a quick job to Europa", "Sensor set off on approach to Jupiter"]);
   await page.goto(`index.html#/c/${cid}/sessions/${other}`);
+  await page.locator(".sess-more > summary").click();
   await page.getByRole("button", { name: "Delete session" }).click();
   await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/sessions$`));
@@ -549,6 +564,11 @@ test("on a phone a session's notes and summary are two tabs", async ({ page, bro
   await expect(page.locator(".sess-notes")).toBeVisible();
   await expect(page.locator(".sess-summary")).toBeHidden();
   await page.getByRole("button", { name: "Summary", exact: true }).click();
+  await expect(page.locator(".sess-summary")).toBeVisible();
+  await expect(page.locator(".sess-notes")).toBeHidden();
+  // once there's a summary, the page opens on it
+  await api(page, "session_summary_save", { id: sid, version: (await one(page, cid, sid)).json.session.version, summary: "<p>They docked.</p>" }, cid);
+  await page.reload();
   await expect(page.locator(".sess-summary")).toBeVisible();
   await expect(page.locator(".sess-notes")).toBeHidden();
 });
