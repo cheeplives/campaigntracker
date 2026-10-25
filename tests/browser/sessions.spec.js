@@ -227,7 +227,8 @@ test("a session's notes box: Enter makes a line, Tab indents, Add to notes saves
   await expect(rowsOf(page)).toHaveCount(7);
 
   // fix a typo, then delete a line
-  await rowsOf(page).nth(0).locator(".snote-text").click();
+  // on its first word: the middle can be the linked name once the row wraps beside its tools on a touch screen
+  await rowsOf(page).nth(0).locator(".snote-text").click({ position: { x: 4, y: 6 } });
   const edit = notesCol(page).getByRole("textbox", { name: "Change this note" });
   await edit.fill("Spotted the Dulled Fang at Iapetus Station");
   await edit.press("Enter");
