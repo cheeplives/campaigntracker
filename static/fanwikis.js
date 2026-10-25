@@ -28,6 +28,9 @@ const FanWikis = (() => {
     [/world of darkness|vampire|werewolf|mage: the/i, 'whitewolf'], [/firefly|serenity|\bthe verse\b/i, 'firefly'], [/blade ?runner/i, 'bladerunner'],
     [/bebop/i, 'cowboybebop'], [/hero academia|\bmha\b/i, 'myheroacademia'], [/conan|hyborian|cimmeria/i, 'conan'],
     [/twilight:? ?2000/i, 'twilight2000'], [/robotech|macross/i, 'robotech'],
+    [/doskvol|duskvol|blades in the dark/i, 'blades-in-the-dark'], [/deadlands|weird west|reckoners/i, 'deadlands'], [/xenomorph|weyland|nostromo|\balien(s)?\b/i, 'avp'],
+    [/rokugan|five rings|l5r|emerald empire/i, 'l5r'], [/iron kingdoms|cygnar|khador|warmachine/i, 'ironkingdoms'], [/ravenloft|barovia|domains of dread|strahd/i, 'ravenloft'],
+    [/\bdune\b|arrakis|atreides|harkonnen/i, 'dune'], [/witcher|temeria|nilfgaard|redania/i, 'witcher'], [/eclipse phase|firewall|transhuman/i, 'eclipsephaserules'],
   ];
   function guess(wikis, hint) {
     const has = k => wikis.some(w => w.key === k);

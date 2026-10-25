@@ -37,7 +37,12 @@ test.describe("Fan wikis API", () => {
     expect(by.starwars).toMatchObject({ name: "Wookieepedia", settings: ["Star Wars"], host: "Fandom", license: "CC BY-SA 3.0", open: true, site: "https://starwars.fandom.com/" });
     expect(by.tolkiengateway).toMatchObject({ license: "CC BY-SA 4.0", open: true });
     expect(by.sarna).toMatchObject({ license: "GNU FDL 1.2", open: true });
+    // settings added later: each has its own Fandom wiki, under Fandom's CC BY-SA default
+    for (const [key, setting] of [["blades-in-the-dark", "Blades in the Dark"], ["deadlands", "Deadlands"], ["avp", "Alien"], ["alienanthology", "Alien"], ["l5r", "Legend of the Five Rings"],
+      ["ironkingdoms", "Iron Kingdoms"], ["ravenloft", "Ravenloft"], ["dune", "Dune"], ["witcher", "The Witcher"]])
+      expect(by[key], key).toMatchObject({ settings: [setting], host: "Fandom", license: "CC BY-SA 3.0", open: true, site: `https://${key}.fandom.com/` });
     if (!NONOPEN) return expect(json.wikis.every(w => w.open)).toBe(true);
+    expect(by.eclipsephaserules).toMatchObject({ settings: ["Eclipse Phase"], license: "CC BY-NC-SA 4.0", open: false });
     expect(by["memory-alpha"]).toMatchObject({ license: "CC BY-NC 4.0", open: false });
     expect(by.greyhawkonline).toMatchObject({ license: null, open: false });
     expect(by.traveller.note).toMatch(/Mongoose/);
