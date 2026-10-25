@@ -121,3 +121,50 @@ test("Star Wars: the Galactic Standard Calendar's ten months, five-day weeks and
   for (const r of regions.filter(r => r.settings.climate.startsWith("koppen:"))) expect(Engine.KOPPEN[r.settings.climate.slice(7)], r.name).toBeTruthy();
   expect(regions.map(r => r.settings.climate)).toContain("ship");
 });
+
+test("Greyhawk: 28-day months and festival weeks that keep Starday, with both moons full on Richfest 4", () => {
+  const cal = calOf("greyhawk");
+  expect(Engine.yearLength(cal, 576)).toBe(364);
+  for (const m of [0, 1, 4, 8, 12, 15]) expect(cal.weekdays[Engine.weekday(cal, Engine.toAbs(cal, 577, m, 1))]).toBe("Starday");
+  const midsummer = Engine.toAbs(cal, 580, 8, 4);
+  expect(Engine.moons(cal, midsummer).map(m => m.label)).toEqual(["Full", "Full"]);
+  expect(names("greyhawk", cal, midsummer)).toEqual(["Richfest (Midsummer)"]);
+});
+
+test("Iron Kingdoms: thirteen 28-day months with a Longest Night every third year", () => {
+  const cal = calOf("ironkingdoms");
+  expect([602, 603, 604, 606].map(y => Engine.yearLength(cal, y))).toEqual([364, 365, 364, 365]);
+  expect(cal.months).toHaveLength(13);
+  expect(Engine.fmtDate(cal, Engine.toAbs(cal, 604, 12, 25))).toBe("Gorim, 25 Ashtoven, 604 AR");
+  expect(names("ironkingdoms", cal, Engine.toAbs(cal, 604, 6, 14))).toEqual(["Summer Solstice"]);
+});
+
+test("Dark Sun: 375 days of 30-day months and five-day festival weeks outside the six-day week", () => {
+  const cal = calOf("darksun");
+  expect(Engine.yearLength(cal, 5)).toBe(375);
+  expect(Engine.weekday(cal, Engine.toAbs(cal, 5, 4, 1))).toBeNull();
+  expect(cal.weekdays).toHaveLength(6);
+  expect(Engine.moons(cal, 0).map(m => m.name)).toEqual(["Ral", "Guthay"]);
+});
+
+test("Rokugan, Traveller and the Witcher keep their year lengths", () => {
+  expect(Engine.yearLength(calOf("rokugan"), 1123)).toBe(336);
+  const t = calOf("traveller");
+  expect(Engine.yearLength(t, 1105)).toBe(365);
+  expect(Engine.fmtDate(t, Engine.toAbs(t, 1105, 0, 1))).toBe("Holiday, 1105 IC");
+  expect(Engine.fmtDate(t, Engine.toAbs(t, 1105, 1, 1))).toBe("Wonday, Week 1, 1105 IC");
+  const w = calOf("witcher");
+  expect([1271, 1272, 1273].map(y => Engine.yearLength(w, y))).toEqual([365, 366, 365]);
+});
+
+test("setting drop-downs list the presets alphabetically, Custom last", () => {
+  const labels = Engine.presetOptions().map(([, l]) => l);
+  expect(labels.at(-1)).toMatch(/^Custom/);
+  const rest = labels.slice(0, -1);
+  expect(rest).toEqual([...rest].sort((a, b) => a.localeCompare(b)));
+  for (const k of ["greyhawk", "ironkingdoms", "darksun", "rokugan", "traveller", "witcher"]) {
+    const r = Engine.PRESETS[k].regions;
+    expect(r.filter(x => x.current)).toHaveLength(1);
+    for (const x of r.filter(x => x.settings.climate.startsWith("koppen:"))) expect(Engine.KOPPEN[x.settings.climate.slice(7)], x.name).toBeTruthy();
+  }
+});

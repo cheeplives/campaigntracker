@@ -1175,6 +1175,24 @@
       url: 'https://starwars.fandom.com/wiki/Category:Planets' },
     falcon: { title: 'Millennium Falcon (stock Class 1 SSP05 hyperdrive, modified to Class 0.5)', by: 'Wookieepedia (fandom)', licence: 'CC BY-SA 3.0 (wiki text); Star Wars © Lucasfilm',
       url: 'https://starwars.fandom.com/wiki/Millennium_Falcon' },
+    greyhawkCal: { title: 'Greyhawk Calendar (twelve 28-day months, the four seven-day festivals, the weekdays, Luna and Celene)', by: 'Calendars Wiki (fandom)', licence: 'CC BY-SA (wiki text, from Wikipedia); the setting © Wizards of the Coast',
+      url: 'https://calendars.fandom.com/wiki/Greyhawk_Calendar' },
+    greyhawkMonth: { title: 'Greyhawk calendar (the festivals, seasons, and the full moons of Luna and Celene on Richfest 4)', by: 'Greyhawk Online wiki', licence: 'Not openly licensed; the setting © Wizards of the Coast',
+      url: 'https://greyhawkonline.com/greyhawkwiki/Month' },
+    ikCalendar: { title: 'Calendar (thirteen 28-day months, the four named weeks, the equinoxes, solstices and holidays)', by: 'Iron Kingdoms wiki (Wikidot)', licence: 'CC BY-SA 3.0 (wiki text); the setting © Privateer Press',
+      url: 'http://iron-kingdoms.wikidot.com/calendar' },
+    ikLongestNight: { title: 'Iron Kingdoms Festival and Lunar Calendar (the Longest Night every third year, the seasons and holidays by month)', by: 'Tom Jensen, on the Privateer Press forums', licence: 'Free use and distribution; the setting © Privateer Press',
+      url: 'http://daveceaser.synthasite.com/resources/IKcalender.pdf' },
+    athasCalendar: { title: 'The Merchant’s Calendar (375-day year, 30-day months, festival weeks, six-day weeks, the Free Calendar)', by: 'Neil Clennan (Dark Sun fan page)', licence: 'Not openly licensed; the setting © Wizards of the Coast',
+      url: 'https://www.neilclennan.net/oldsite/Athas/Merchants_Calendar.html' },
+    athasMoons: { title: 'Updated Athasian Moon Calendar (Ral 33 days, Guthay 125 days)', by: 'Athas.org forum', licence: 'Not openly licensed; the setting © Wizards of the Coast',
+      url: 'https://arena.athas.org/t/updated-athasian-moon-calendar/3028' },
+    rokuganTime: { title: 'Time (the twelve months and their lengths, the seasons, how years are counted) and the Setsuban Festival', by: 'Legend of the Five Rings Wiki (fandom)', licence: 'CC BY-SA 3.0 (wiki text); the setting © Fantasy Flight Games / Asmodee',
+      url: 'https://l5r.fandom.com/wiki/Time' },
+    travellerCal: { title: 'Imperial Calendar (365 days, Holiday, 52 seven-day weeks, the weekday names) and Holiday', by: 'Traveller Wiki', licence: 'CC BY-NC 3.0 (wiki text, non-commercial use only); the setting © Mongoose Publishing',
+      url: 'https://wiki.travellerrpg.com/Imperial_Calendar/en' },
+    elvenCalendar: { title: 'Elven calendar (the eight savaeds, their dates and opening holidays, the leap day)', by: 'The Official Witcher Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © CD Projekt / Andrzej Sapkowski',
+      url: 'https://witcher-games.fandom.com/wiki/Elven_calendar' },
     // rules
     yze: { title: 'Year Zero Engine Standard Reference Document (journeys: four shifts a day, travel tasks, terrain)', by: 'Free League Publishing',
       licence: 'Year Zero Engine Free Tabletop License (royalty-free, commercial use allowed)', url: 'https://freeleaguepublishing.com/community-content/free-tabletop-licenses/' },
@@ -1537,6 +1555,9 @@
     return GLORANTHA_SEASONS.map(s => gloranthaDay(god, color, s, week, typeof weekday === 'string' ? weekday : weekday[s], s === highSeason));
   }
 
+  /** The presets as [key, label] rows for a drop-down: alphabetical by label, with Custom last. */
+  const presetOptions = () => Object.entries(PRESETS).map(([k, p]) => [k, p.label])
+    .sort((a, b) => (a[0] === 'custom') - (b[0] === 'custom') || a[1].localeCompare(b[1]));
   const PRESETS = {
     gregorian: gregorianPreset('north'),
     gregorian_south: gregorianPreset('south'),
@@ -2011,6 +2032,272 @@
       settings: { genre: 'scifi', time_unit: 'week', temp_unit: 'C' },
     },
 
+    greyhawk: {
+      label: 'Greyhawk (Common Year, Dozenmonth of Luna)',
+      calendar: {
+        // Twelve months of four seven-day weeks (28 days) with a seven-day festival before every third month: 364 days,
+        // exactly 52 weeks, so every month and every festival starts on Starday (greyhawkCal). Festivals are whole weeks,
+        // so the weekdays run through them. The sources give no leap rule and the common reckoning is CY.
+        name: 'Common Year', epochYear: 0, yearSuffix: 'CY', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Starday', 'Sunday', 'Moonday', 'Godsday', 'Waterday', 'Earthday', 'Freeday'],
+        months: [
+          { name: 'Needfest', days: 7, intercalary: true, keepWeekday: true },
+          { name: 'Fireseek', days: 28 }, { name: 'Readying', days: 28 }, { name: 'Coldeven', days: 28 },
+          { name: 'Growfest', days: 7, intercalary: true, keepWeekday: true },
+          { name: 'Planting', days: 28 }, { name: 'Flocktime', days: 28 }, { name: 'Wealsun', days: 28 },
+          { name: 'Richfest', days: 7, intercalary: true, keepWeekday: true },
+          { name: 'Reaping', days: 28 }, { name: 'Goodmonth', days: 28 }, { name: 'Harvester', days: 28 },
+          { name: 'Brewfest', days: 7, intercalary: true, keepWeekday: true },
+          { name: 'Patchwall', days: 28 }, { name: "Ready'reat", days: 28 }, { name: 'Sunsebb', days: 28 }],
+        leap: null,
+        // five seasons: winter (Fireseek, Sunsebb), spring (Readying, Coldeven), low summer (Planting to Wealsun),
+        // high summer (Reaping to Harvester) and autumn (Patchwall, Ready'reat); the festivals take the season they follow
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 2, day: 1 }, { name: 'Low Summer', type: 'summer', month: 4, day: 1 },
+          { name: 'High Summer', type: 'summer', month: 8, day: 1 }, { name: 'Autumn', type: 'autumn', month: 13, day: 1 },
+          { name: 'Winter', type: 'winter', month: 15, day: 1 }],
+        // Luna's 28-day cycle matches the months, and Celene's 91 days put it full on the fourth day of every festival;
+        // both are full on Richfest 4, Midsummer Night (greyhawkMonth). The references are the new moons that put both full on Richfest 4, 576 CY (and every year, as 364 days is 13 Lunas and 4 Celenes).
+        moons: [
+          { name: 'Luna', cycle: 28, ref: 3, brightness: 1, color: '#e8e4d8' },
+          { name: 'Celene', cycle: 91, ref: 48.5, brightness: 0.5, color: '#9fc2e8' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 576, month: 1, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: the Flanaess as medieval Europe, the Sea of Dust and the Bright Desert as hot desert.
+      regions: koppenRegions('north', [
+        ['City of Greyhawk & the Wild Coast', 'Cfb'], ['Furyondy', 'Cfb'], ['Veluna', 'Cfb'], ['Nyrond', 'Cfb'], ['Keoland', 'Cfa'],
+        ['Gran March', 'Cfb'], ['Ket', 'BSk'], ['Perrenland', 'Dfb'], ['Highfolk & the Vesve Forest', 'Dfb', -1],
+        ['Dyvers & the Nyr Dyv', 'Cfb'], ['Urnst & Verbobonc', 'Cfb'], ['Iuz & the Land of Iuz', 'Dfc'],
+        ['Bone March', 'Dfc'], ['Pomarj', 'Cfa'], ['Sheldomar Valley', 'Cfa'], ['Yeomanry & the Hool Marshes', 'Cfa', -1],
+        ['Duchy of Tenh & Ratik', 'Dfc'], ['Frost, Ice & Snow Barbarians', 'ET', 1], ['Rift Canyon & the Crystalmist Mountains', 'ET'],
+        ['Sea of Dust', 'BWh', 1], ['Bright Desert', 'BWh', 1], ['Amedio Jungle & the Hepmonaland', 'Af', -2],
+        ['Aerdy: Great Kingdom', 'Cfb'], ['Sunndi & the Vast Swamp', 'Cfa', -1], ['Tilvanot Peninsula', 'Cfb'],
+      ]),
+      holidays: [
+        { name: 'Needfest', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 7 }, description: 'The midwinter festival week, before Fireseek.' },
+        { name: 'Growfest', color: '#2e8b57', rule: { type: 'fixed', month: 4, day: 1, span: 7 }, description: 'The spring festival week, before Planting.' },
+        { name: 'Richfest (Midsummer)', color: '#d9a441', rule: { type: 'fixed', month: 8, day: 1, span: 7 }, description: 'The midsummer festival week, before Reaping. Both moons are full on its fourth day, Midsummer Night.' },
+        { name: 'Brewfest', color: '#c0632b', rule: { type: 'fixed', month: 12, day: 1, span: 7 }, description: 'The autumn festival week, before Patchwall.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    ironkingdoms: {
+      label: 'Iron Kingdoms (Western Immoren, Morrowan calendar)',
+      calendar: {
+        // Thirteen months of four named weeks of seven days: 364 days, exactly 52 weeks, so every month starts on the
+        // first day of Vendarl week. The Longest Night is an extra day at the end of Ashtoven every third year
+        // (ikCalendar, ikLongestNight). Months take their Morrowan names; the weekdays are numbered, as the sources name none.
+        name: 'Morrowan calendar', epochYear: 1, yearSuffix: 'AR', dateFormat: '{w}, {d} {M}, {Y}', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['First day', 'Second day', 'Third day', 'Fourth day', 'Fifth day', 'Sixth day', 'Seventh day'],
+        months: ['Glaceus', 'Casteus', 'Trineus', 'Tempen', 'Cinten', 'Rowen', 'Solesh', 'Octesh', 'Katesh', 'Goloven', 'Doloven', 'Khadoven', 'Ashtoven']
+          .map(name => ({ name, days: 28, weeks: ['Vendarl', 'Malleus', 'Donard', 'Gorim'] })).map(m => m.name === 'Ashtoven' ? { ...m, leapDays: 1 } : m),
+        leap: { every: 3, skip: 0, unskip: 0 },
+        // the equinoxes and solstices: Tempen 7, Solesh 14, Goloven 21 and Ashtoven 28
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 3, day: 7 }, { name: 'Summer', type: 'summer', month: 6, day: 14 },
+          { name: 'Autumn', type: 'autumn', month: 9, day: 21 }, { name: 'Winter', type: 'winter', month: 12, day: 28 }],
+        // Calder and Laris are full on Katesh 28 and Khadoven 28 (ikCalendar), but no cycle is given, so there are no moons
+        moons: [],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 604, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: Cygnar and Llael as western Europe, Khador as Russia, Ord as Spain, the Bloodstone Marches as steppe.
+      regions: koppenRegions('north', [
+        ['Caspia (Cygnar)', 'Cfb'], ['Cygnar: Corvis & the Black River', 'Cfb'], ['Cygnar: Fharin & the Gnarls', 'Cfb', -1],
+        ['Ord', 'Csa'], ['Llael (Leryn)', 'Cfb'], ['Khador: Korsk & Ohk', 'Dfb'], ['Khador: Volningrad & the Thornwood', 'Dfb', -1],
+        ['Umbrey & the Bloodstone Marches', 'BSk'], ['Cryx: Skell Islands', 'Cfb'], ['Cryx: Blackwater Bay & the Sea of Bones', 'Cfb'],
+        ['Rhul: Ghord & the Gnarls', 'Dfb'], ['Ios', 'Cfb'], ['Scharde Islands', 'Cfb'], ['Immoren Mountains (high passes)', 'ET'],
+        ['Cygnaran Highlands & Wyrmwall', 'Dfc'], ['Midlunds', 'Cfb'], ['Thornwood Forest', 'Dfb', -1], ['Skorne: Mesopotamian Plains', 'BWh', 1],
+        ['Cygnaran Marches & the Widowwood', 'Cfb', -1], ['Northern Khador (Khadoran Tundra)', 'ET', 1],
+      ]),
+      // the dates the Morrowan calendar sheet marks (ikCalendar): equinoxes and solstices, the Founding Days and the moons' full nights
+      holidays: [
+        { name: 'Founding Day (Merin)', color: '#4a90d9', rule: { type: 'fixed', month: 1, day: 2, span: 1 } },
+        { name: 'Dolethfest', color: '#8b5a2b', rule: { type: 'fixed', month: 1, day: 4, span: 1 } },
+        { name: 'Day of Accord (Sulonsphar)', color: '#b8860b', rule: { type: 'fixed', month: 1, day: 28, span: 1 } },
+        { name: 'Day of Markus', color: '#4a90d9', rule: { type: 'fixed', month: 2, day: 3, span: 1 } },
+        { name: 'Founding Day (Corvis)', color: '#4a90d9', rule: { type: 'fixed', month: 2, day: 25, span: 1 } },
+        { name: 'Vernal Equinox', color: '#2e8b57', rule: { type: 'fixed', month: 3, day: 7, span: 1 } },
+        { name: 'Tempenfest', color: '#2e8b57', rule: { type: 'fixed', month: 3, day: 8, span: 1 } },
+        { name: 'Founding Day (Caspia)', color: '#4a90d9', rule: { type: 'fixed', month: 3, day: 20, span: 1 } },
+        { name: 'Warpnight', color: '#7b4fa0', rule: { type: 'fixed', month: 3, day: 28, span: 1 } },
+        { name: 'Wurmsglare', color: '#7b4fa0', rule: { type: 'fixed', month: 4, day: 1, span: 1 } },
+        { name: 'Shroudfall', color: '#3b3b5c', rule: { type: 'fixed', month: 4, day: 7, span: 1 } },
+        { name: "Blight's Eve", color: '#3b3b5c', rule: { type: 'fixed', month: 4, day: 13, span: 1 } },
+        { name: 'Tidesebb', color: '#4a90d9', rule: { type: 'fixed', month: 5, day: 13, span: 2 } },
+        { name: 'Firelight Jubilee', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 20, span: 3 } },
+        { name: 'Summer Solstice', color: '#d9a441', rule: { type: 'fixed', month: 6, day: 14, span: 1 } },
+        { name: 'Summerfaire', color: '#d9a441', rule: { type: 'fixed', month: 6, day: 1, span: 1 }, description: 'In southern Cygnar, the first, eighth, fifteenth and twenty-second of Solesh.' },
+        { name: "Captain's Rest", color: '#4a90d9', rule: { type: 'fixed', month: 7, day: 15, span: 1 } },
+        { name: "Governor's Rest", color: '#4a90d9', rule: { type: 'fixed', month: 8, day: 15, span: 1 } },
+        { name: 'Calderfull', color: '#e8e4d8', rule: { type: 'fixed', month: 8, day: 28, span: 1 }, description: 'Calder is full.' },
+        { name: "The Dragon's Chase", color: '#8b3a3a', rule: { type: 'fixed', month: 9, day: 1, span: 1 } },
+        { name: 'Tenfest (Black Sail Day)', color: '#c0632b', rule: { type: 'fixed', month: 9, day: 14, span: 1 } },
+        { name: 'Autumnal Equinox', color: '#2e8b57', rule: { type: 'fixed', month: 9, day: 21, span: 1 } },
+        { name: 'Lorgskon Day', color: '#c0632b', rule: { type: 'fixed', month: 9, day: 28, span: 1 } },
+        { name: 'Dark Ascension', color: '#7b4fa0', rule: { type: 'fixed', month: 10, day: 14, span: 1 } },
+        { name: 'Ascension Mass', color: '#9aa7b4', rule: { type: 'fixed', month: 11, day: 21, span: 1 } },
+        { name: 'Larisfull', color: '#c8a2c8', rule: { type: 'fixed', month: 11, day: 28, span: 1 }, description: 'Laris is full.' },
+        { name: 'Founding Day (Merywyn)', color: '#4a90d9', rule: { type: 'fixed', month: 12, day: 10, span: 1 } },
+        { name: 'Winter Solstice (Giving Day, Longest Night)', color: '#4a90d9', rule: { type: 'fixed', month: 12, day: 28, span: 1 } },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    darksun: {
+      label: 'Dark Sun (Athas, Calendar of Kings)',
+      calendar: {
+        // Twelve months of five six-day weeks (30 days) with a five-day festival week closing each of the three
+        // seasons: 375 days. The year starts in the middle of the Season of High Sun, with Dominary (athasCalendar).
+        // The festival weeks sit outside the six-day week. The years are named by pairing the stages of two cycles
+        // within a 77-year King's Age; here they are counted in Free Years, from the death of King Kalak (Priest's
+        // Defiance, 190th King's Age).
+        name: 'Calendar of Kings', epochYear: 1, yearSuffix: 'FY', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Oneday', 'Twosday', 'Threesday', 'Foursday', 'Fiveday', 'Sixday'],
+        months: [
+          { name: 'Dominary', days: 30 }, { name: 'Sedulous', days: 30 }, { name: 'Fortuary', days: 30 }, { name: 'Macro', days: 30 },
+          { name: 'Dessalia', days: 5, intercalary: true },
+          { name: 'Fifthover', days: 30 }, { name: 'Hexameron', days: 30 }, { name: 'Morrow', days: 30 }, { name: 'Octavus', days: 30 },
+          { name: 'Assalia', days: 5, intercalary: true },
+          { name: 'Thaumast', days: 30 }, { name: 'Anabasis', days: 30 }, { name: 'Hoard', days: 30 }, { name: 'Flagstaad', days: 30 },
+          { name: 'Zenalia', days: 5, intercalary: true }],
+        leap: null,
+        // High Sun from Hoard to Sedulous, Sun Descending from Fortuary to Hexameron, Sun Ascending from Morrow to Anabasis;
+        // the app reads them as summer, autumn and spring since Athas has no winter
+        seasons: [
+          { name: 'Sun Descending', type: 'autumn', month: 2, day: 1 }, { name: 'Sun Ascending', type: 'spring', month: 7, day: 1 },
+          { name: 'High Sun', type: 'summer', month: 12, day: 1 }],
+        // Ral turns in 33 days and Guthay in 125 (athasMoons); the phase on the first day is the app's choice
+        moons: [
+          { name: 'Ral', cycle: 33, ref: 0, brightness: 0.4, color: '#7fbf7a' },
+          { name: 'Guthay', cycle: 125, ref: 0, brightness: 0.8, color: '#e8d27a' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1, month: 0, day: 1 },
+      // No open data exists for a fictional world. Athas is a dying desert world, so most regions take hot desert or
+      // steppe, a judgement call: the Tyr Valley and the Forest Ridge a little wetter, the Ringing Mountains cooler.
+      regions: koppenRegions('north', [
+        ['Tyr & the Tyr Valley', 'BSh'], ['Urik', 'BWh', 1], ['Balic', 'BSh'], ['Draj', 'BSh'], ['Raam', 'BWh', 1],
+        ['Gulg & the Crescent Forest', 'Aw', -1], ['Nibenay', 'BSh'], ['Altaruk & the Silver Spring', 'BWh'],
+        ['Tablelands', 'BWh', 1], ['Forest Ridge', 'Cwa', -1], ['Ringing Mountains', 'BSk'], ['Sea of Silt', 'BWh', 1],
+        ['Hinterlands', 'BSh'], ['Verdant Belt', 'Aw'], ['Dragon\'s Crown & the Pristine Tower', 'BWh', 1], ['Salt Flats', 'BWh', 1],
+      ]),
+      holidays: [
+        { name: 'Festival Week of Dessalia', color: '#d9a441', rule: { type: 'fixed', month: 4, day: 1, span: 5 }, description: 'The festival week closing the Season of Sun Descending.' },
+        { name: 'Festival Week of Assalia', color: '#2e8b57', rule: { type: 'fixed', month: 9, day: 1, span: 5 }, description: 'The festival week closing the Season of Sun Ascending.' },
+        { name: 'Festival Week of Zenalia', color: '#c0632b', rule: { type: 'fixed', month: 14, day: 1, span: 5 }, description: 'The festival week closing the Season of High Sun, just before the new year.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+    },
+
+    rokugan: {
+      label: 'Rokugan (Legend of the Five Rings, Isawa Calendar)',
+      calendar: {
+        // Twelve lunar months named for the zodiac animals, 28 days each: 336 days. The sources name no weekdays and
+        // give no leap rule. Years count from the founding of Gisei Toshi (the Isawa Calendar, IC), though the
+        // reign of the Emperor is the official count (rokuganTime).
+        name: 'Isawa Calendar', epochYear: 1, yearSuffix: 'IC', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: [],
+        months: ['Hare', 'Dragon', 'Serpent', 'Horse', 'Goat', 'Monkey', 'Rooster', 'Dog', 'Boar', 'Rat', 'Ox', 'Tiger'].map(name => ({ name, days: 28 })),
+        leap: null,
+        // by climate, not astronomy: spring Hare to Serpent, summer Horse to Monkey, autumn Rooster and Dog, winter Boar to Tiger
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 0, day: 1 }, { name: 'Summer', type: 'summer', month: 3, day: 1 },
+          { name: 'Autumn', type: 'autumn', month: 6, day: 1 }, { name: 'Winter', type: 'winter', month: 8, day: 1 }],
+        moons: [],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1123, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: Rokugan as Japan and China, the Crab lands as the cold north, the Scorpion and Unicorn as steppe.
+      regions: koppenRegions('north', [
+        ['Crane lands & Otosan Uchi', 'Cfa'], ['Lion lands', 'Cfa'], ['Phoenix lands', 'Cfa'], ['Dragon mountains', 'Dwb', -1],
+        ['Crab lands & the Kaiu Wall', 'Dwa'], ['Scorpion lands', 'Cfa'], ['Unicorn plains & the Burning Sands', 'BSk'],
+        ['Mantis islands', 'Cfa'], ['Shadowlands', 'BWk', -1], ['Spine of the World', 'ET', 1], ['Ivory Kingdoms', 'Cwa'],
+        ['Rokugani Imperial Court', 'Cfa'],
+      ]),
+      holidays: [
+        { name: 'Setsuban Festival', color: '#c0632b', rule: { type: 'fixed', month: 5, day: 8, span: 1 }, description: 'Held on the eighth day of the Month of the Monkey, a lucky day.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+    },
+
+    traveller: {
+      label: 'Traveller (Third Imperium, Imperial Calendar)',
+      calendar: {
+        // 365 days: Holiday, the Imperium's New Year (day 001, outside the weeks), then 52 seven-day weeks, so days 002
+        // to 365 run from Wonday of Week 1. The weeks stand in for months, which the sources do not have.
+        // Years count from the founding of the Imperium in year 0 (travellerCal). No leap days.
+        name: 'Imperial Calendar', epochYear: 0, yearSuffix: 'IC', dateFormat: '{W}, {M}, {Y}', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: ['Wonday', 'Tuday', 'Thirday', 'Forday', 'Fiday', 'Sixday', 'Senday'],
+        months: [{ name: 'Holiday', days: 1, intercalary: true }, ...Array.from({ length: 52 }, (_, i) => ({ name: `Week ${i + 1}`, days: 7 }))],
+        leap: null,
+        // a calendar for a whole empire: every world keeps its own seasons and moons
+        seasons: [], moons: [],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1105, month: 0, day: 1 },
+      // No open data exists for a fictional setting. The regions are kinds of world rather than named ones, since a
+      // campaign visits many; two ship regions follow for time spent in transit.
+      regions: [
+        ...koppenRegions('north', [
+          ['Garden world', 'Cfb'], ['Desert world', 'BWh', 1], ['Ice world', 'EF', 1], ['Jungle world', 'Af', -2],
+          ['Ocean world', 'Cfb'], ['Arid highlands', 'BSk'], ['Frozen tundra world', 'ET', 1],
+        ]),
+        { name: 'Starship interior (jump space)', settings: { climate: 'ship', lighting: 'artificial', light_levels: [4, 5, 4, 2], terrain_mod: 0 } },
+        { name: 'Open space / vacuum', settings: { climate: 'vacuum', lighting: 'artificial', light_levels: [1, 1, 1, 1], terrain_mod: 0 } }],
+      holidays: [
+        { name: 'Holiday (Imperial New Year)', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 }, description: 'Day 001, the day the Third Imperium was founded: the Imperial Moot holds commemorative rituals and citizens have a day of leisure.' },
+      ],
+      settings: { genre: 'scifi', time_unit: 'day', temp_unit: 'C' },
+    },
+
+    witcher: {
+      label: 'The Witcher (Elven calendar, the eight savaeds)',
+      calendar: {
+        // The elves divide the year into eight savaeds, each opening with a holiday, running from 1 November: 365
+        // days, with the extra day of a leap year added to Imbaelk (elvenCalendar). The sources give no weekdays and no era.
+        name: 'Elven calendar', epochYear: 0, yearSuffix: '', weekdayOffset: 0, lighting: 'natural', hemisphere: 'north',
+        weekdays: [],
+        months: [
+          { name: 'Saovine', days: 50 }, { name: 'Yule', days: 43 }, { name: 'Imbaelk', days: 47, leapDays: 1 }, { name: 'Birke', days: 41 },
+          { name: 'Blathe', days: 51 }, { name: 'Feainn', days: 41 }, { name: 'Lammas', days: 53 }, { name: 'Velen', days: 39 }],
+        // the year counts by the savaed it ends in: Saovine opens on 1 November of the year before. Leap years follow the Gregorian rule.
+        leap: { every: 4, skip: 100, unskip: 400 },
+        // the solstices and equinoxes the savaeds open on: Birke on 21 March, Feainn on 21 June, Velen on 23 September, Yule on 21 December
+        seasons: [
+          { name: 'Spring', type: 'spring', month: 3, day: 1 }, { name: 'Summer', type: 'summer', month: 5, day: 1 },
+          { name: 'Autumn', type: 'autumn', month: 7, day: 1 }, { name: 'Winter', type: 'winter', month: 1, day: 1 }],
+        // four of the holidays follow new moons, but the sources do not say which; a real-world synodic month, phase the app's choice
+        moons: [{ name: 'Moon', cycle: 29.530588, ref: 0, brightness: 1, color: '#e8e4d8' }],
+        shiftNames: DEFAULT_SHIFT_NAMES,
+      },
+      start: { year: 1272, month: 0, day: 1 },
+      // No open data exists for a fictional world. Each region takes the Köppen climate of what it reads like, a
+      // judgement call: the Northern Kingdoms as central and eastern Europe, Skellige as the Scottish isles, Nilfgaard as Italy and Spain.
+      regions: koppenRegions('north', [
+        ['Novigrad & Velen', 'Cfb'], ['Temeria (Vizima)', 'Cfb'], ['Redania (Oxenfurt)', 'Dfb'], ['Kaedwen', 'Dfb'], ['Aedirn', 'Dfb'],
+        ['Kovir & Poviss', 'Dfc'], ['Skellige', 'Cfb'], ['Cintra', 'Cfb'], ['Brokilon Forest', 'Dfb', -1], ['Mahakam', 'Dfc'],
+        ['Mountains of Blue (high passes)', 'ET'], ['Toussaint', 'Csb'], ['Nilfgaard (Nilfgaardian heartland)', 'Csa'], ['Cidaris', 'Csa'],
+        ['Zerrikania', 'BWh', 1], ['Ard Skellig', 'Cfb'], ['White Orchard', 'Cfb'], ['Kaer Morhen', 'Dfc'],
+      ]),
+      holidays: [
+        { name: 'Saovine', color: '#7b4fa0', rule: { type: 'fixed', month: 0, day: 1, span: 1 }, description: 'The elven New Year, 1 November, opening the savaed Saovine.' },
+        { name: 'Midinváerne (Yule)', color: '#4a90d9', rule: { type: 'fixed', month: 1, day: 1, span: 1 }, description: 'The winter solstice, 21 December, opening the savaed Yule.' },
+        { name: 'Imbaelk', color: '#4b6b8b', rule: { type: 'fixed', month: 2, day: 1, span: 1 }, description: '2 February, opening the savaed Imbaelk and heralding the end of winter.' },
+        { name: 'Birke', color: '#2e8b57', rule: { type: 'fixed', month: 3, day: 1, span: 1 }, description: 'The spring equinox, 21 March, opening the savaed Birke.' },
+        { name: 'Belleteyn', color: '#c8a2c8', rule: { type: 'fixed', month: 4, day: 1, span: 1 }, description: '1 May (May Eve), opening the savaed Blathe.' },
+        { name: 'Midaëte', color: '#d9a441', rule: { type: 'fixed', month: 5, day: 1, span: 1 }, description: 'The summer solstice, 21 June, opening the savaed Feainn.' },
+        { name: 'Lammas', color: '#c0632b', rule: { type: 'fixed', month: 6, day: 1, span: 1 }, description: '1 August, opening the savaed Lammas.' },
+        { name: 'Velen', color: '#8b5a2b', rule: { type: 'fixed', month: 7, day: 1, span: 1 }, description: 'The autumn equinox, 23 September, opening the savaed Velen.' },
+      ],
+      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+    },
+
     shipclock: {
       label: 'Starship clock (Standard Ship Time)',
       calendar: {
@@ -2052,7 +2339,7 @@
   };
 
   const Engine = {
-    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS,
+    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
     eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
