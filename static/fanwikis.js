@@ -41,15 +41,15 @@ const FanWikis = (() => {
   /** The campaign's wiki: only the one the GM saved in Settings (ctx.key). None saved, or 'none' for a game of its own: no wiki. */
   const chosen = (i, ctx) => i.wikis.find(w => w.key === ctx.key) || null;
 
-  /** Settings' Fan wiki field: a dropdown with one group per setting (a wiki covering several is in each), open wikis
-   * first, starting on ctx.key or the guess. Filled in once the list comes; removed when fan wikis are off. */
+  /** Settings' Fan wiki field: a dropdown with one group per setting (a wiki covering several is in each), both
+   * alphabetical, starting on ctx.key or the guess. Filled in once the list comes; removed when fan wikis are off. */
   function settingsSelect(ctx) {
     const { el, api } = ctx;
     const sel = el('select', { name: 'fan_wiki', 'aria-label': 'Fan wiki' }, el('option', { value: 'none' }, 'None'));
     load(api).then(i => {
       if (!on(i)) return sel.closest('.field, label')?.remove();
       const settings = [...new Set(i.wikis.flatMap(w => w.settings))].sort((a, b) => a.localeCompare(b));
-      sel.append(...settings.map(s => el('optgroup', { label: s }, i.wikis.filter(w => w.settings.includes(s)).sort((a, b) => b.open - a.open || a.name.localeCompare(b.name))
+      sel.append(...settings.map(s => el('optgroup', { label: s }, i.wikis.filter(w => w.settings.includes(s)).sort((a, b) => a.name.localeCompare(b.name))
         .map(w => el('option', { value: w.key }, w.open ? w.name : `${w.name} (not open)`)))));
       // a saved choice (None included) stands; until there is one, the guess is offered, and nothing is used until saved
       sel.value = ctx.key === 'none' ? 'none' : chosen(i, ctx)?.key || guess(i.wikis, ctx.hint || '') || 'none';

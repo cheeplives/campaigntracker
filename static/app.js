@@ -699,7 +699,7 @@
     let preset = 'gregorian';
     // the built-in presets, plus 'file' once a calendar is imported from a file
     const presets = { ...E.PRESETS };
-    const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), preset, { name: 'preset' });
+    const presetSel = select(E.presetOptions(), preset, { name: 'preset' });
     const importBtn = btn('Import calendar from file…', async () => {
       try {
         const r = await CalendarFile.pick();
@@ -4874,7 +4874,7 @@
       } catch (err) { toast(err.message, true); }
     });
 
-    const presetSel = select(Object.entries(E.PRESETS).map(([k, p]) => [k, p.label]), 'gregorian');
+    const presetSel = select(E.presetOptions(), 'gregorian');
     async function importCalendar() {
       try {
         const r = await CalendarFile.pick();
@@ -4989,6 +4989,12 @@
           ['Golarion (Absalom Reckoning): months, weekdays and Leap Day from ', cite('absalom'), '; the holidays from ', cite('golarionHolidays'), '.'],
           ['Star Wars (Galactic Standard Calendar): the ten months, the five-day week and the three festival weeks from ', cite('gsc'), ', ', cite('gscWeek'), ' and ', cite('gscYear'),
             '; the worlds given as regions from ', cite('wookPlanets'), '.'],
+          ['Greyhawk (Common Year): the months, the four festival weeks, the weekdays and Luna and Celene from ', cite('greyhawkCal'), '; the festivals\' placement and the moons\' full nights from ', cite('greyhawkMonth'), '.'],
+          ['Iron Kingdoms (Morrowan calendar): the thirteen months, the four named weeks, the equinoxes, solstices and holidays from ', cite('ikCalendar'), '; the Longest Night every third year from ', cite('ikLongestNight'), '.'],
+          ['Dark Sun (Calendar of Kings): the 375-day year, months, festival weeks, six-day week and Free Years from ', cite('athasCalendar'), '; the moons\' cycles from ', cite('athasMoons'), '.'],
+          ['Rokugan (Isawa Calendar): the twelve months, the seasons, the year count and the Setsuban Festival from ', cite('rokuganTime'), '.'],
+          ['Traveller (Imperial Calendar): the 365-day year, Holiday, the 52 seven-day weeks and the weekday names from ', cite('travellerCal'), '.'],
+          ['The Witcher (elven calendar): the eight savaeds, their lengths and opening holidays from ', cite('elvenCalendar'), '.'],
           'The Starship clock and the Custom calendar are made up for this app.',
         ])),
       section('Game rules',
@@ -5028,6 +5034,12 @@
             'The app keeps the ten-month version, 365 days, without the three holidays, whose dates no source gives. Wookieepedia numbers the months rather than naming them, so the app calls them Month 1 to Month 10. ',
             'There are no seasons or moons, since each world has its own. Region climates are judgement calls from how each world is shown (Tatooine and Jakku as hot desert, Hoth as ice cap, Endor and Kashyyyk as forest), using the Köppen classes above. ',
             'In the travel planner, hyperdrive classes other than 0.5 and 1, the route multipliers and the sample trip times are the app\'s own guide, as the films leave trip times loose.'],
+          ['Greyhawk preset (© Wizards of the Coast): the calendar follows a fan wiki, with the festivals and the moons\' full nights from the Greyhawk Online wiki, which states no licence. Sources disagree on the year (360 days in 1980 and in 2024, 364 in between); the app keeps 364. The year is counted in CY and starts in 576 CY, the app\'s choice. Region climates are judgement calls from each region\'s real-world analogue, using the Köppen classes above.'],
+          ['Iron Kingdoms preset (© Privateer Press): the calendar follows a fan wiki. The weekdays are numbered because no source names them, Calder and Laris are full on Katesh 28 and Khadoven 28 but no cycle is given, so there are no moons, and the Longest Night every third year comes from a fan\'s calendar sheet. The year starts in 604 AR, the app\'s choice. Region climates are judgement calls.'],
+          ['Dark Sun preset (© Wizards of the Coast): the calendar follows ', cite('athasCalendar'), ' and the moons ', cite('athasMoons'), ', neither openly licensed. The years are counted in Free Years, not the 77-year King\'s Age names, and the first day\'s moon phases are the app\'s choice. The three seasons are mapped to summer, autumn and spring. Region climates are judgement calls (desert and steppe).'],
+          ['Rokugan preset (© Fantasy Flight Games / Asmodee): the calendar follows a fan wiki. It names no weekdays and no moon, so there are none, and the year starts in 1123 IC, the app\'s choice. Region climates are judgement calls (Japan and China for the Empire).'],
+          ['Traveller preset (© Mongoose Publishing): the calendar follows the Traveller Wiki (CC BY-NC, non-commercial). The wiki names no months, so the 52 weeks are used as months. The year starts in 1105 IC, the usual Third Imperium year. Regions are kinds of world.'],
+          ['The Witcher preset (© CD Projekt / Andrzej Sapkowski): the wiki gives only the elves\' calendar, so that is the preset. It has no weekdays or era, and the moon\'s phase and the year 1272 are the app\'s choice. Region climates are judgement calls.'],
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
           ['DeviantArt, through its API and oEmbed, for Find Image: artists there keep their copyright unless they chose a Creative Commons licence, so the app copies only works under an open one and embeds the rest, linked to the work and its artist. ',
             'If an artist or DeviantArt asks, a work will be removed.'],
