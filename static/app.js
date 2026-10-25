@@ -61,7 +61,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '21';
+  const APP_VERSION = '22';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -920,7 +920,18 @@
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
               weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
               hol.map(holidayChip)))),
-        isGM() ? passTimeWidget() : null]));
+        isGM() ? passTime() : null]));
+    };
+    // Pass time is a row on Current Day and the calendar, where time moves; elsewhere a button opens the same row, so the
+    // bar stays one line and the page below gets the room
+    const passTime = () => {
+      const w = passTimeWidget();
+      if (active === 'today' || active === 'calendar') return w;
+      w.hidden = true;
+      const open = btn('⏩ Pass time', () => { w.hidden = !w.hidden; open.setAttribute('aria-expanded', String(!w.hidden)); if (!w.hidden) w.querySelector('input')?.focus(); },
+        'small primary now-passbtn', 'Open the Pass time row to move the campaign clock');
+      open.setAttribute('aria-expanded', 'false');
+      return [open, w];
     };
     draw();
     const folds = legendFolds();
@@ -1301,14 +1312,14 @@
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
-      dayBox('weather', 'Weather', {}, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
-      notesBox(d, row),
+      dayBox('weather', 'Weather', { summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
       dayBox('shifts', `${Word()}s`, { tip: shiftTip() }, shiftCards),
+      notesBox(d, row),
       evBox, remBox);
   }
 
-  // The day page is a column of boxes (Weather, Notes, Shifts or Hours, Events, Reminders), each of which folds
-  // to its heading. Which ones are folded is remembered in this browser, for each account.
+  // The day page is a column of boxes (Weather, Shifts or Hours, Notes, Events, Reminders), each of which folds to its
+  // heading (Weather to a line of what it holds). Which ones are folded is remembered in this browser, for each account.
   const BOXES_KEY = 'chronicle:dayboxes';
   function foldedBoxes() {
     try { return JSON.parse(localStorage.getItem(`${BOXES_KEY}:${S.user?.id}`)) || {}; } catch { return {}; }
@@ -1325,7 +1336,8 @@
     const toggle = el('button', { type: 'button', class: 'daybox-toggle', 'aria-expanded': String(!folded), 'aria-controls': inner.id,
       'data-tip': 'Fold or unfold this box. It stays as you leave it in this browser' }, el('span', { class: 'daybox-caret', 'aria-hidden': 'true' }), title);
     const box = el('section', { class: 'card daybox' + (folded ? ' folded' : ''), 'data-box': key },
-      el('div', { class: 'daybox-head' }, el('h3', {}, toggle, opts.tip ? tip(opts.tip) : null), opts.actions ? el('div', { class: 'row' }, opts.actions) : null),
+      el('div', { class: 'daybox-head' }, el('h3', {}, toggle, opts.tip ? tip(opts.tip) : null),
+        opts.summary ? el('span', { class: 'daybox-sum small' }, opts.summary) : null, opts.actions ? el('div', { class: 'row' }, opts.actions) : null),
       inner);
     toggle.addEventListener('click', () => setFold(box, !box.classList.contains('folded')));
     return box;
@@ -1354,7 +1366,7 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)),
           (row.notes || '').trim() ? linkedNote(row.notes, row.notes_format) : el('p', { class: 'muted' }, 'No notes for this day yet.')));
     }
-    const locs = el('textarea', { name: 'locations', rows: 2, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
+    const locs = el('textarea', { name: 'locations', rows: 1, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     const pub = RichText.editor({ text: row.notes, format: row.notes_format, label: 'Public notes', placeholder: 'What happened today, for everyone to read', secret: true, mentions: encMentions() });
     const sec = RichText.editor({ text: row.gm_notes, format: row.gm_notes_format, label: 'Secret notes', placeholder: 'Secrets, plans and reminders for GMs only', mentions: encMentions() });
     const save = btn('Save notes', null, 'primary small', 'Save the locations and both notes');
@@ -1482,7 +1494,17 @@
       b.setAttribute('aria-label', label);
       return b;
     };
-    const tools = el('span', { class: 'snote-tools' }, nudge(-1, 'Move up', '▲'), nudge(1, 'Move down', '▼'),
+    // a note's time shows in the heading over its group (see snoteList); this moves the one note to another day or shift
+    const when = k === '>' ? null : btn('🕓', async () => {
+      const v = await promptDialog('Move this note in time. Write it as a jump from where it is: +1, -1, dusk, +1 dawn or 12 Firstmonth', { ok: 'Move' });
+      if (v === null || !v.trim()) return;
+      const back = /^\s*-(\d+)\s*$/.exec(v);
+      const to = back ? n.abs_shift - Number(back[1]) * spd() : Sessions.parseJump(cal(), `>${v}`, n.abs_shift, nowShift());
+      if (to === null) return toast('Couldn\'t read that; try +1, dusk or 12 Firstmonth', true);
+      try { await post('snote_save', { id: n.id, abs_shift: to }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
+    }, 'link small snote-when-btn', `${snoteStamp(n.abs_shift)}. Click to move this note to another day or shift`);
+    when?.setAttribute('aria-label', 'Move in time');
+    const tools = el('span', { class: 'snote-tools' }, when, nudge(-1, 'Move up', '▲'), nudge(1, 'Move down', '▼'),
       opts.move?.length ? select([['', 'Move to…'], ...opts.move.map(s => [s.id, sessionName(s)])], '', {
         'aria-label': 'Move to another session', 'data-tip': 'Move this note to another session, at its end',
         onchange: async ev => {
@@ -1505,15 +1527,6 @@
         } }) : null,
       SNOTE_MARKS[k] ? el('span', { class: 'snote-mark', 'data-tip': SNOTE_MARKS[k][1], 'aria-label': SNOTE_MARKS[k][1] }, SNOTE_MARKS[k][0]) : null,
       textEl,
-      el('button', { type: 'button', class: 'link small muted snote-stamp', 'data-tip': 'When in the campaign this happened. Click to move it to another day or shift' ,
-        onclick: async () => {
-          const v = await promptDialog('Move this note in time. Write it as a jump from where it is: +1, -1, dusk, +1 dawn or 12 Firstmonth', { ok: 'Move' });
-          if (v === null || !v.trim()) return;
-          const back = /^\s*-(\d+)\s*$/.exec(v);
-          const to = back ? n.abs_shift - Number(back[1]) * spd() : Sessions.parseJump(cal(), `>${v}`, n.abs_shift, nowShift());
-          if (to === null) return toast('Couldn\'t read that; try +1, dusk or 12 Firstmonth', true);
-          try { await post('snote_save', { id: n.id, abs_shift: to }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
-        } }, snoteStamp(n.abs_shift)),
       tools);
     // a click on the text (not a link in it) changes it: Enter saves, Escape leaves it, Tab and Shift+Tab indent
     textEl.addEventListener('click', ev => {
@@ -1531,6 +1544,19 @@
       edit.focus();
     });
     return row;
+  }
+
+  /** A session's notes as rows, grouped by when they happened: once the notes cover more than one shift, a heading names the
+   * day and shift over each run of notes that share it (a > line is its own heading). One shift needs no heading. */
+  function snoteList(notes, opts) {
+    const heads = new Set(notes.map(n => n.abs_shift)).size > 1;
+    let at = null;
+    return notes.flatMap(n => {
+      const row = snoteRow(n, opts), was = at;
+      at = n.abs_shift;
+      if (!heads || Sessions.mark(n.text) === '>' || n.abs_shift === was) return [row];
+      return [el('div', { class: 'snote-when' }, snoteStamp(n.abs_shift)), row];
+    });
   }
 
   /** The notes box on a session's page: free text, a line per note, kept in this browser until Add to notes sends it.
@@ -2869,7 +2895,9 @@
   /** The sentences across the campaign that name entry e, each with a button that puts it into the notes, so an entry the
    * detector added starts from what was written rather than from nothing. Quotes from GM-only text go to the GM notes. */
   function foundIn(e, pub, gm) {
-    const box = el('details', { class: 'enc-found', open: true }, el('summary', {}, 'Where it was found'), el('p', { class: 'muted small' }, 'Looking…'));
+    // folded once the entry has notes of its own (open for a blank one, whose quotes are what it's written from), with a count
+    const head = el('summary', {}, 'Where it was found');
+    const box = el('details', { class: 'enc-found', open: entryBlank(e) }, head, el('p', { class: 'muted small' }, 'Looking…'));
     api('encyclopedia_sources', { query: { cid: S.camp.id } }).then(({ sources }) => {
       const names = Nouns.namesOf(e), rows = [];
       for (const s of sources) {
@@ -2883,6 +2911,7 @@
               s.secret && gm ? 'Put this sentence at the end of the GM notes' : 'Put this sentence at the end of the Public notes')));
         }
       }
+      head.append(' ', el('span', { class: 'muted small' }, `(${rows.length})`));
       box.lastChild.replaceWith(rows.length ? el('div', { class: 'enc-quotes' }, rows) : el('p', { class: 'muted small' }, 'Nowhere yet.'));
     }).catch(() => box.lastChild.replaceWith(el('p', { class: 'muted small' }, 'Could not look that up just now.')));
     return box;
@@ -2983,12 +3012,13 @@
         field('Name', name),
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
-      tags.node,
-      e.id ? foundIn(e, pub, gm) : null,
-      e.id ? wikiSummary(name, pub) : null,
+      // the notes straight under the name, where the writing is; tags, the quotes found elsewhere and Generate Summary after
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
+      tags.node,
+      e.id ? foundIn(e, pub, gm) : null,
+      e.id ? wikiSummary(name, pub) : null,
       e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save entry' : 'Add entry'),
         e.id && !entryBlank(e) ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia` }, 'Cancel')));
@@ -3193,7 +3223,7 @@
     const head = [el('h2', {}, sessionName(s)),
       el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
     if (!gm) {
-      return [...head, el('div', { class: 'row' }, exportBtn),
+      return [head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
         el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
         ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
           el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html'))))];
@@ -3226,12 +3256,21 @@
         location.hash = `#/c/${cid}/sessions`;
       } catch (err) { toast(err.message, true); }
     }, 'small danger', 'Delete this session, its notes and its summary');
-    const details = el('div', { class: 'sess-fields' },
+    // Title and Played on are set once, so they fold behind ✎ Details (open while the session has no title); the rest of
+    // what's done to a session, rather than written in it, waits in the ⋯ menu. The summary is left the room under the title.
+    const details = el('div', { class: 'sess-fields', hidden: !!s.title },
       el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')),
-      el('div', { class: 'row' }, saveDetails, openClose),
-      el('div', { class: 'row' },
-        el('label', { class: 'inline', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
-        exportBtn, el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes'), del));
+      el('div', { class: 'row' }, saveDetails));
+    const detailsBtn = btn('✎ Details', () => { details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden)); },
+      'small', 'Change the title and the date you played');
+    detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
+    const more = el('details', { class: 'sess-more' }, el('summary', { class: 'button small', 'aria-label': 'More', title: 'End or reopen, export with notes, delete' }, '⋯'),
+      el('div', { class: 'sess-more-list' }, openClose,
+        el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'), del));
+    document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
+    const bar = el('div', { class: 'row sess-bar' }, head[1],
+      el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
+      el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, more);
 
     // --- the notes, each ticked once the summary covers it
     const notesHead = el('h3', {});
@@ -3243,7 +3282,7 @@
       tip('Your notes from the game. Tick one once the summary covers it, so you can see what\'s left. Build draft ticks the ones it uses'));
     const drawNotes = () => {
       countNotes();
-      notesList.replaceChildren(...(notes.length ? notes.map(n => snoteRow(n, opts)) : [el('p', { class: 'muted small' }, 'No notes in this session.')]));
+      notesList.replaceChildren(...(notes.length ? snoteList(notes, opts) : [el('p', { class: 'muted small' }, 'No notes in this session.')]));
     };
     async function reloadNotes() {
       try { notes = (await api('session', { query: { cid, id: s.id } })).notes || []; } catch (err) { toast(err.message, true); }
@@ -3291,17 +3330,25 @@
         ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])]);
     }));
 
-    const cols = el('div', { class: 'sess-cols', 'data-show': 'notes' });
+    // the summary is the wide column, the notes beside it; a phone shows one at a time, the summary first once there is one
+    const cols = el('div', { class: 'sess-cols', 'data-show': (s.summary || '').trim() ? 'summary' : 'notes' });
     const tabBtn = (key, label) => btn(label, () => { cols.dataset.show = key; }, 'small', `Show the ${label.toLowerCase()}`);
-    cols.append(el('div', { class: 'sess-tabs row' }, tabBtn('notes', 'Notes'), tabBtn('summary', 'Summary')),
+    cols.append(el('div', { class: 'sess-tabs row' }, tabBtn('summary', 'Summary'), tabBtn('notes', 'Notes')),
       el('div', { class: 'sess-notes' }, notesHead, notesEntry(s, () => notes, () => reloadNotes()), notesList),
-      el('div', { class: 'sess-summary' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
-        editor.node, el('div', { class: 'row' }, draft),
-        hasExtras ? [el('h3', {}, 'Session Rewards', tip('What the party earned this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), rewards.node,
-          el('h3', {}, 'Loot Found', tip('The coin, items and treasure found this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), loot.node]
-          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.'),
-        el('div', { class: 'row' }, save)));
-    return [...head, details, cols];
+      el('div', { class: 'sess-summary' },
+        el('div', { class: 'row sess-sumhead' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
+          el('div', { class: 'row' }, draft, save)),
+        editor.node,
+        hasExtras ? el('div', { class: 'sess-extras' },
+          el('div', {}, el('h3', {}, 'Session Rewards', tip('What the party earned this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), rewards.node),
+          el('div', {}, el('h3', {}, 'Loot Found', tip('The coin, items and treasure found this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), loot.node))
+          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.')));
+    // the notes box starts small and grows with what's typed in it, up to half the window
+    const nbox = cols.querySelector('.snote-box');
+    const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, innerHeight / 2)}px`; };
+    for (const e of ['input', 'keyup', 'focus']) nbox?.addEventListener(e, grow);
+    if (nbox?.value) requestAnimationFrame(grow);
+    return [head[0], bar, details, cols];
   }
 
   // ------------------------------------------------------------ travel tab

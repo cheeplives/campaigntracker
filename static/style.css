@@ -127,20 +127,27 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .picker { margin-top: 8px; }
 
 /* now bar */
-/* The campaign name small, the date as the headline (it's what everyone at the table asks for), a tapered rule under it */
-.nowbar { background: var(--stock); border-radius: var(--radius); padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 10px; position: relative;
+/* One line: the campaign name small, then the date, where and the weather, so the page below gets the room. Pass time is
+ * its own row on Current Day and the calendar, and a button that opens that row everywhere else */
+.nowbar { background: var(--stock); border-radius: var(--radius); padding: 8px 16px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; position: relative;
   box-shadow: 0 1px 0 var(--line), 0 10px 24px -16px rgb(0 0 0 / .6); }
 .nowbar::after { position: absolute; left: 20px; right: 20px; bottom: -3px; height: 6px; }
-.now-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .now-title h1 { margin: 0; font-size: 1.2rem; color: var(--dim); letter-spacing: .12em; }
+.now-main { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.now-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .now-title h1 { margin: 0; font-size: .85rem; color: var(--dim); letter-spacing: .12em; }
+.now-title .role { display: none; }   /* the View as player button, and players' lack of it, already say which side you're on */
+.now-time { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.now-passbtn { margin-left: auto; }
+.nowbar .passtime { flex: 1 1 100%; }
 .now-title .view-as { margin-left: 4px; padding: 2px 8px; font-size: .75rem; }
 /* View as player: a GM previewing the players' side, with nothing to change until they leave */
 .view-as-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 8px 0 2px; padding: 6px 10px;
   border: 1px dashed var(--secret); border-radius: 6px; background: color-mix(in srgb, var(--secret) 10%, transparent); font-size: .9rem; }
-.now-date { font: 700 2.2rem/1 var(--disp); text-transform: uppercase; letter-spacing: .01em; color: var(--text); display: block; }
-:root[data-scheme="console"] .now-date { font-size: 1.8rem; }   /* monospace caps run wide */
+.now-date { font: 700 1.35rem/1.1 var(--disp); text-transform: uppercase; letter-spacing: .01em; color: var(--text); display: block; }
+:root[data-scheme="console"] .now-date { font-size: 1.15rem; }   /* monospace caps run wide */
 :root[data-scheme="console"] .tabs a { font-size: .9rem; letter-spacing: 0; padding-left: 10px; padding-right: 10px; }
-.now-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; font-size: .95rem; }
-.passtime { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+.now-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: .88rem; }
+.passtime { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 8px; border-top: 1px solid var(--line); }
+.passtime[hidden] { display: none; }
 /* Activity box with its own drop-down of shift actions (app.js actionCombo), in place of a <datalist> */
 .combo { position: relative; display: flex; min-width: 0; }
 .combo > input { flex: 1; width: 100%; min-width: 0; padding-right: 36px; }
@@ -323,6 +330,8 @@ button.dh-step:hover, button.dh-step:focus-visible { opacity: 1; background: col
 .daybox-head::after { position: absolute; left: 0; right: 0; bottom: 0; }
 .daybox.folded .daybox-head { padding-bottom: 0; } .daybox.folded .daybox-head::after { display: none; }
 .daybox-head h3 { margin: 0; display: flex; align-items: center; gap: 4px; }
+.daybox-sum { display: none; margin-right: auto; color: var(--dim); } .daybox.folded .daybox-sum { display: inline; }
+.daybox[data-box=notes] .rt-editor .ql-editor, .enc-form .rt-editor .ql-editor { min-height: 220px; }
 button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; color: var(--accent); font: 700 1.6rem var(--disp); text-transform: uppercase; letter-spacing: .04em; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; }
 .daybox-caret::before { content: '▼'; font-size: .7em; display: inline-block; width: 1em; color: var(--accent); transition: transform .15s; }
 .daybox.folded .daybox-caret::before { transform: rotate(-90deg); }
@@ -373,7 +382,25 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .rt-mentions li.on .muted, .rt-mentions li:hover .muted { color: inherit; }
 .rt-editor { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); position: relative; }
 .rt-editor.loading .rt-toolbar { visibility: hidden; }
-.rt-editor .rt-toolbar { border-bottom: 1px solid var(--line); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-family: var(--body); }
+/* the toolbar keeps the common tools on one line (⋯ shows the rest), and on a desktop stays in sight while the text scrolls */
+.rt-editor .rt-toolbar { border-bottom: 1px solid var(--line); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-family: var(--body);
+  background: var(--bg); border-radius: 6px 6px 0 0; }
+@media (min-width: 1001px) { .rt-editor .rt-toolbar { position: sticky; top: var(--topbar-h, 0px); z-index: 3; } }
+.rt-editor .rt-more { display: none !important; order: 2; }
+.rt-editor .rt-toolbar.more .rt-more { display: inline-flex !important; }
+.rt-editor .rt-tools { order: 1; margin-left: auto; display: inline-flex; gap: 2px; }
+.rt-editor .rt-toolbar .rt-tools button { color: var(--dim); font-size: 1.05rem; }
+.rt-editor .rt-toolbar .rt-morebtn[aria-expanded="true"] { background: var(--panel); color: var(--accent); }
+/* Focus: one editor takes the window, its text at reading width */
+.rt-focushead { display: none; }
+.rt-editor.rt-focus { position: fixed; inset: 0; z-index: 60; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+.rt-editor.rt-focus .rt-focushead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 10px 20px; border-bottom: 3px solid var(--accent); background: var(--stock); }
+.rt-editor.rt-focus .rt-focushead strong { font: 700 1.2rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.rt-editor.rt-focus .rt-toolbar { position: static; width: min(780px, 100%); margin: 0 auto; box-sizing: border-box; }
+.rt-editor.rt-focus .rt-area { flex: 1; overflow-y: auto; }
+.rt-editor.rt-focus .ql-container.ql-snow { font-size: 17px; }
+.rt-editor.rt-focus .ql-editor { max-width: 780px; margin: 0 auto; min-height: 100%; max-height: none; line-height: 1.65; box-sizing: border-box; }
+html.rt-focusing { overflow: hidden; }
 .rt-editor .rt-quillbar.ql-toolbar.ql-snow { display: contents; }
 .rt-editor .ql-toolbar.ql-snow .ql-formats, .rt-editor .rt-extra { margin: 0; display: inline-flex; align-items: center; gap: 2px; }
 .rt-editor .rt-toolbar button { float: none; width: 32px; height: 30px; padding: 4px 6px; border: 0; border-radius: 6px; background: none; color: var(--text); }
@@ -392,7 +419,8 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .rt-editor .ql-snow.ql-toolbar .ql-picker-label:hover, .rt-editor .ql-snow.ql-toolbar .ql-picker-label.ql-active { color: var(--accent); }
 .rt-editor select.rt-table { width: 96px; padding: 3px 6px; margin-right: 6px; font-size: .85rem; height: 30px; }
 .rt-editor .ql-container.ql-snow { border: 0; font: inherit; font-size: 15px; height: auto; }
-.rt-editor .ql-editor { min-height: 140px; max-height: 60vh; padding: 10px 12px; color: var(--text); }
+/* an editor grows with its text: the page scrolls, not a small window inside it */
+.rt-editor .ql-editor { min-height: 140px; padding: 10px 12px; color: var(--text); }
 .rt-editor .ql-editor.ql-blank::before { color: var(--dim); font-style: italic; left: 12px; right: 12px; }
 .rt-editor .ql-editor p, .rt-editor .ql-editor ol, .rt-editor .ql-editor li { margin-bottom: .3em; }
 .rt-editor .ql-snow .ql-tooltip { background: var(--panel); color: var(--text); border-color: var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.25); border-radius: 8px; z-index: 6; white-space: normal; max-width: calc(100% - 8px); }
@@ -566,7 +594,7 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .scheme-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 1px solid transparent; }
 .scheme-opt[aria-checked="true"] { border-color: var(--accent); }
 .scheme-opt small { display: block; color: var(--dim); }
-@media (max-width: 480px) { .scheme-name { display: none; } }
+@media (max-width: 1000px) { .scheme-name { display: none; } }   /* the dot alone, so the top bar keeps to one line on an iPad */
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: right; }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }
@@ -680,6 +708,8 @@ a.enc-link.secret { text-decoration-color: var(--secret); }
 .enc-detail > :first-child::after { flex-basis: 100%; margin-top: 2px; }
 .enc-detail h2 { margin: 0; overflow-wrap: anywhere; font-size: 2.8rem; line-height: 1; color: var(--accent); }
 .enc-form { display: flex; flex-direction: column; gap: 10px; }
+/* the editor fills the entry's card in place of its title row, so it takes none of that row's wrap and rule (which left a gap under Name) */
+.enc-detail > .enc-form { flex-wrap: nowrap; } .enc-detail > .enc-form::after { content: none; }
 .enc-where { margin: 0; padding-left: 18px; }
 .search-row { display: block; }
 .search-row h4 { margin: 0; }
@@ -827,9 +857,9 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .lib-body { border-top: 1px solid var(--line); padding-top: 10px; }
 .lib-form textarea { width: 100%; resize: vertical; }
 .lib-form .seg { align-self: flex-start; }
-.rt-editor.rt-tall .ql-editor { min-height: 45vh; max-height: 75vh; }
-.rt-editor.rt-small .ql-editor { min-height: 4.5em; max-height: 30vh; }
-.rt-editor.rt-medium .ql-editor { min-height: 12em; max-height: 50vh; }
+.rt-editor.rt-tall .ql-editor { min-height: 45vh; }
+.rt-editor.rt-small .ql-editor { min-height: 4.5em; }
+.rt-editor.rt-medium .ql-editor { min-height: 6em; }
 .enc-detail .richtext h1 { font-size: 1.45rem; line-height: 1.2; } /* headings inside notes, not the page's own title */
 .enc-detail .richtext h2 { font-size: 1.25rem; line-height: 1.2; }
 .enc-detail .richtext h3 { font-size: 1.1rem; line-height: 1.2; }
@@ -842,7 +872,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote-text { flex: 1 1 12em; min-width: 0; overflow-wrap: break-word; cursor: text; }
 .snote.covered .snote-text { opacity: .65; }
 .snote-edit { flex: 1; min-width: 0; }
-.snote-stamp { white-space: nowrap; font-size: .8em; }
+.snote-when { margin: 8px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .8em; font-weight: 700; color: var(--accent); }
+.snote-when:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 /* the row's tools (▲ ▼ Move to… ✕) show on hover or focus, and always on a touch screen, where they wrap under the note */
 .snote-tools { display: none; gap: 2px; align-items: center; margin-left: auto; }
 .snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { display: inline-flex; }
@@ -855,12 +886,29 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
 .snote-help dd { margin: 0; }
 @media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { display: inline-flex; } }
+/* under the title: when it was played, Published, then Details, Export and the ⋯ menu at the right */
+.sess-bar { align-items: center; gap: 6px 10px; margin-top: -4px; }
+.sess-bar > p { margin: 0; }
+.sess-bar-gap { flex: 1; }
+.sess-pub { gap: 4px; padding: 1px 8px; font-size: .85rem; cursor: pointer; border: 1px solid var(--line); border-radius: 99px; }
+.sess-pub:has(input:checked) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.sess-more { position: relative; }
+.sess-more > summary { list-style: none; cursor: pointer; } .sess-more > summary::-webkit-details-marker { display: none; }
+.sess-more-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  min-width: 200px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgb(0 0 0 / .25); }
+.sess-fields[hidden] { display: none; }
 .sess-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .sess-fields .field { max-width: 28em; }
 .sess-fields-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
 .sess-fields-row .field { flex: 1 1 14em; }
 .sess-fields-row .field:last-child { flex: 0 0 11em; }
-.sess-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+/* the summary is the wide column, first; the notes run down beside it */
+.sess-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, .8fr); gap: 16px; align-items: start; }
+.sess-cols .sess-summary { order: -1; } .sess-cols .sess-tabs { order: -2; }
+@media (max-width: 1000px) { .sess-cols { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }   /* an iPad: room for a note on one line */
+.sess-sumhead { justify-content: space-between; align-items: center; margin-bottom: 6px; } .sess-sumhead h3 { margin: 0; }
+.sess-extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+.sess-notes .snote-box { min-height: 4.5em; height: 4.5em; }   /* drag its corner for more */
 .sess-cols h3 { margin: 0 0 6px; }
 .sess-cols .snotes { max-height: 70vh; }
 .sess-tabs { display: none; grid-column: 1 / -1; }
@@ -879,5 +927,5 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .sess-page.wide { grid-template-columns: minmax(0, 1fr); }
 .sess-page.wide .lib-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .sess-page.wide .lib-list .sess-item { flex: 0 1 240px; }
-@media (min-width: 721px) { .sess-page.wide .sess-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (min-width: 721px) { .sess-page.wide .sess-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
 @media (max-width: 900px) { .sess-page.wide .lib-list { display: block; } }

@@ -164,17 +164,24 @@ const RichText = (() => {
       TABLE_ACTIONS.map(([v, t]) => el('option', { value: v }, t)));
     const undo = el('button', { type: 'button', class: 'rt-undo', 'aria-label': 'Undo', 'data-tip': 'Undo' }, '↶');
     const redo = el('button', { type: 'button', class: 'rt-redo', 'aria-label': 'Redo', 'data-tip': 'Redo' }, '↷');
-    // Quill's toolbar turns every <select> in it into its own picker, so the table menu and undo/redo sit beside it.
+    // The tools used most stay on one line; ⋯ shows the rest (strikethrough, quote, clear formatting, tables, undo and
+    // redo; Ctrl+Z still undoes) and ⤢ gives the note the whole window. Quill's toolbar turns every <select> in it into its
+    // own picker, so the table menu and undo/redo sit beside it.
     const quillBar = el('div', { class: 'rt-quillbar' },
       el('span', { class: 'ql-formats' }, heading),
-      el('span', { class: 'ql-formats' }, b('ql-bold', 'Bold'), b('ql-italic', 'Italic'), b('ql-underline', 'Underline'), b('ql-strike', 'Strikethrough')),
-      el('span', { class: 'ql-formats' }, b('ql-list', 'Numbered list', 'ordered'), b('ql-list', 'Bulleted list', 'bullet'), b('ql-blockquote', 'Quote'), b('ql-link', 'Link')),
+      el('span', { class: 'ql-formats' }, b('ql-bold', 'Bold'), b('ql-italic', 'Italic'), b('ql-underline', 'Underline')),
+      el('span', { class: 'ql-formats' }, b('ql-list', 'Numbered list', 'ordered'), b('ql-list', 'Bulleted list', 'bullet'), b('ql-link', 'Link')),
       secret ? el('span', { class: 'ql-formats' }, el('button', { type: 'button', class: 'ql-secret', 'aria-label': 'GM only paragraph',
         'data-tip': 'Make the paragraphs you have picked GM only: players never see them. Press again to make them public' }, '🔒')) : null,
-      el('span', { class: 'ql-formats' }, b('ql-clean', 'Clear formatting')));
+      el('span', { class: 'ql-formats rt-more' }, b('ql-strike', 'Strikethrough'), b('ql-blockquote', 'Quote'), b('ql-clean', 'Clear formatting')));
+    const more = el('button', { type: 'button', class: 'rt-morebtn', 'aria-label': 'More formatting', 'aria-expanded': 'false',
+      'data-tip': 'More formatting: strikethrough, quote, clear formatting, tables, undo and redo' }, '⋯');
+    const focus = el('button', { type: 'button', class: 'rt-focusbtn', 'aria-label': 'Focus', 'aria-pressed': 'false',
+      'data-tip': 'Write in the whole window, at reading width. Esc or ⤡ comes back' }, '⤢');
     const node = el('div', { class: 'rt-toolbar', role: 'toolbar', 'aria-label': `${label} formatting` },
-      quillBar, el('span', { class: 'rt-extra' }, table, undo, redo));
-    return { node, quillBar, table, undo, redo };
+      quillBar, el('span', { class: 'rt-tools' }, more, focus), el('span', { class: 'rt-extra rt-more' }, table, undo, redo));
+    more.addEventListener('click', () => { const on = node.classList.toggle('more'); more.setAttribute('aria-expanded', String(on)); });
+    return { node, quillBar, table, undo, redo, focus };
   }
 
   /** A rich text editor for one note. text/format: what is stored now ('plain' text is opened as paragraphs).
@@ -225,6 +232,18 @@ const RichText = (() => {
       if (!t.getTable()[0]) { KIT.toast('Put the cursor in a table first', true); return; }
       ({ row: () => t.insertRowBelow(), col: () => t.insertColumnRight(), delrow: () => t.deleteRow(), delcol: () => t.deleteColumn(), deltable: () => t.deleteTable() })[what]();
     });
+    // Focus: the editor takes the window, at reading width, until ⤡ or Esc; what's typed stays in it for the page's own Save
+    const head = el('div', { class: 'rt-focushead' }, el('strong', {}, label), el('span', { class: 'small muted' }, 'Esc or ⤡ to go back. Save from the page as usual'));
+    node.prepend(head);
+    const setFocus = on => {
+      node.classList.toggle('rt-focus', on);
+      document.documentElement.classList.toggle('rt-focusing', on);
+      bar.focus.textContent = on ? '⤡' : '⤢';
+      bar.focus.setAttribute('aria-pressed', String(on));
+      quill?.focus();
+    };
+    bar.focus.addEventListener('click', () => setFocus(!node.classList.contains('rt-focus')));
+    node.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !ev.defaultPrevented && node.classList.contains('rt-focus')) { ev.stopPropagation(); setFocus(false); } });
     bar.undo.addEventListener('click', () => quill?.history.undo());
     bar.redo.addEventListener('click', () => quill?.history.redo());
 
