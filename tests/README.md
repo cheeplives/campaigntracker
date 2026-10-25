@@ -34,7 +34,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   reads as its system, and anything else is refused; a campaign's Default units in Settings is the same
   Imperial / Metric choice with its own Show temperatures switch, and an older temperature unit there reads as its system.
 - **campaign**: a GM creates a campaign and every tab renders with no script
-  errors; a custom calendar is created with its own number of months, each
+  errors; Cancel (or the browser's Back) on the new campaign form goes back to the campaign list,
+  for a first campaign and with others already there; a custom calendar is created with its own number of months, each
   with its own length, and a week of its own length and day names; a custom calendar takes leap days in a month and a leap rule
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never

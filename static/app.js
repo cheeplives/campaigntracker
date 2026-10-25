@@ -664,7 +664,7 @@
     const { campaigns } = await api('campaigns');
     S.camp = null;
     const list = el('div', { class: 'card' },
-      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', viewCreate, 'primary')),
+      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary')),
       campaigns.length ? el('ul', { class: 'camplist' }, campaigns.map(c =>
         el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
           c.description ? el('p', { class: 'muted' }, c.description) : null)))
@@ -5147,6 +5147,7 @@
       if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
       if (parts[0] === 'admin') return await viewAdmin();
+      if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
         await loadCampaign(cid);

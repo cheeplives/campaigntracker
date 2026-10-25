@@ -26,6 +26,29 @@ test("a GM creates a campaign and every tab renders", async ({ page, browser }) 
   expectNoErrors(errors);
 });
 
+for (const first of [true, false]) {
+  test(`Cancel on the new campaign form goes back to the campaign list (${first ? "first campaign" : "with campaigns"})`, async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    const gm = person("Cass");
+    await signIn(page, gm);
+    await approve(browser, gm.email);
+    if (!first) await makeCampaign(page, "Already Running");
+    await page.goto("index.html#/");
+    await expect(page.getByRole("heading", { name: "Your campaigns" })).toBeVisible();
+    await page.getByRole("button", { name: "+ New campaign" }).click();
+    await expect(page.getByRole("heading", { name: "New campaign" })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("heading", { name: "Your campaigns" })).toBeVisible();
+    if (!first) await expect(page.getByRole("link", { name: /Already Running/ })).toBeVisible();
+    // the browser's Back button leaves the form too
+    await page.getByRole("button", { name: "+ New campaign" }).click();
+    await expect(page.getByRole("heading", { name: "New campaign" })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole("heading", { name: "Your campaigns" })).toBeVisible();
+    expectNoErrors(errors);
+  });
+}
+
 test("a custom calendar gets its own number of months, each with its own length", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Kit");
