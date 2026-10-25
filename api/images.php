@@ -43,7 +43,9 @@ function image_json(string $url, array $opts = [], string $method = 'GET'): ?arr
     $data = json_decode($r['body'], true);
     if ($r['status'] !== 200 || !is_array($data)) {
         if ($r['error'] !== '' || $r['status'] !== 200) error_log("image search: $url answered {$r['status']} {$r['error']}");
-        throw new ImageSourceDown('bad answer');
+        // What went wrong, without the query (which can carry a key), for the message admins see.
+        throw new ImageSourceDown(parse_url($url, PHP_URL_HOST) . parse_url($url, PHP_URL_PATH) . ' answered '
+            . ($r['error'] !== '' ? $r['error'] : ($r['status'] === 200 ? 'something that isn\'t JSON' : "HTTP {$r['status']}")));
     }
     return $data;
 }

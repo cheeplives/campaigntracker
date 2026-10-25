@@ -3,7 +3,7 @@
 // api/images.php asks this function instead of Openverse, the museums (the Smithsonian's key is "stub") and DeviantArt, and nothing leaves the machine.
 // Searching for "broken" makes a source answer an error; "nothing" finds nothing. Thumbnails are data: pictures; the
 // full-size pictures are at https://img.test/, which only this stub serves. A DeviantArt page with "/art/Gone-" in it
-// is one oEmbed no longer knows.
+// is one oEmbed no longer knows, and oEmbed is down for /offline/.
 const STUB_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC';
 
 return function (string $method, string $url, array $opts): array {
@@ -74,14 +74,17 @@ return function (string $method, string $url, array $opts): array {
         'A1B2C3D4-0000-0000-0000-000000000002' => ['title' => 'The Grey Keep', 'user' => 'greyartist', 'slug' => 'The-Grey-Keep-2', 'license' => 'No License'],
         'A1B2C3D4-0000-0000-0000-000000000003' => ['title' => 'Grown-up keep', 'user' => 'someone', 'slug' => 'Grown-up-keep-3', 'license' => 'No License', 'mature' => true],
         'A1B2C3D4-0000-0000-0000-000000000004' => ['title' => 'Keep elsewhere', 'user' => 'elsewhere', 'slug' => 'Keep-elsewhere-4', 'license' => 'No License'],
+        // Not in any search: oEmbed is down for it, and the API's own picture is on DeviantArt's hosts.
+        'A1B2C3D4-0000-0000-0000-000000000005' => ['title' => 'Keep offline', 'user' => 'offline', 'slug' => 'Keep-offline-5', 'license' => 'No License', 'hidden' => true,
+            'src' => 'https://images-wixmp-stub.wixmp.com/f/offline.png?token=api'],
     ];
     $dev = fn($id) => ['deviationid' => $id, 'url' => "https://www.deviantart.com/{$da[$id]['user']}/art/{$da[$id]['slug']}", 'title' => $da[$id]['title'],
         'author' => ['username' => $da[$id]['user']], 'is_mature' => !empty($da[$id]['mature']),
         'thumbs' => [['src' => $thumb, 'width' => 150, 'height' => 75], ['src' => $thumb, 'width' => 300, 'height' => 150]],
-        'content' => ['src' => 'https://img.test/da-' . substr($id, -1) . '.png', 'width' => 2, 'height' => 1]];
+        'content' => ['src' => $da[$id]['src'] ?? 'https://img.test/da-' . substr($id, -1) . '.png', 'width' => 2, 'height' => 1]];
     if ($host === 'www.deviantart.com') {
         if ($path === '/oauth2/token') return $json(['access_token' => 'stub-token', 'expires_in' => 3600, 'status' => 'success']);
-        if ($path === '/api/v1/oauth2/browse/tags') return $json(['has_more' => false, 'next_offset' => null, 'results' => $none ? [] : array_map($dev, array_keys($da))]);
+        if ($path === '/api/v1/oauth2/browse/tags') return $json(['has_more' => false, 'next_offset' => null, 'results' => $none ? [] : array_map($dev, array_keys(array_filter($da, fn($d) => empty($d['hidden']))))]);
         if ($path === '/api/v1/oauth2/deviation/metadata')
             return $json(['metadata' => array_map(fn($id) => ['deviationid' => $id, 'license' => $da[$id]['license'] ?? 'No License'], array_filter((array)($q['deviationids'] ?? []), fn($id) => isset($da[$id])))]);
         if (preg_match('~^/api/v1/oauth2/deviation/([0-9A-F-]{36})$~', $path, $m)) return isset($da[$m[1]]) ? $json($dev($m[1])) : $json(['error' => 'invalid_request'], 404);
@@ -89,6 +92,7 @@ return function (string $method, string $url, array $opts): array {
     if ($host === 'backend.deviantart.com' && $path === '/oembed') {
         $page = (string)($q['url'] ?? '');
         if (str_contains($page, '/art/Gone-')) return $json(['error' => 'not found'], 404);
+        if (str_contains($page, '/offline/')) return $json(['error' => 'unavailable'], 503);
         $src = str_contains($page, '/elsewhere/') ? 'https://evil.test/keep.jpg' : 'https://images-wixmp-stub.wixmp.com/f/keep.png?token=' . bin2hex(random_bytes(4));
         return $json(['version' => '1.0', 'type' => 'photo', 'url' => $src, 'width' => 2, 'height' => 1, 'title' => 'The Grey Keep',
             'author_name' => 'greyartist', 'author_url' => 'https://www.deviantart.com/greyartist', 'provider_name' => 'DeviantArt', 'safety' => 'nonadult']);

@@ -153,6 +153,11 @@ test.describe("Find Image API", () => {
     // An oEmbed picture somewhere other than DeviantArt's own hosts is refused, and only DeviantArt embeds.
     expect((await pick(page, cid, id, { source: "deviantart", id: DA_ELSEWHERE, mode: "embed" })).status).toBe(422);
     expect((await pick(page, cid, id, { source: "openverse", id: OV_OPEN, mode: "embed" })).status).toBe(400);
+
+    // When oEmbed can't be reached, the deviation's own picture from the API is shown until the next recheck.
+    const offline = await pick(page, cid, id, { source: "deviantart", id: "A1B2C3D4-0000-0000-0000-000000000005", mode: "embed" });
+    expect(offline.status, JSON.stringify(offline.json)).toBe(200);
+    expect((await pp.request.get(offline.json.file.url, { maxRedirects: 0 })).headers().location).toBe("https://images-wixmp-stub.wixmp.com/f/offline.png?token=api");
   });
 });
 
