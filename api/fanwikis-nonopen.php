@@ -22,6 +22,10 @@ return [
             'license' => ['CC BY-NC 4.0', 'https://creativecommons.org/licenses/by-nc/4.0/']],
         'memory-beta' => $fandom('memory-beta') + ['name' => 'Memory Beta', 'settings' => ['Star Trek'],
             'license' => ['CC BY-NC 3.0', 'https://creativecommons.org/licenses/by-nc/3.0/']],   // unconfirmed: the wiki's own answer wins
+        // Eclipse Phase's own text is CC BY-NC-SA 4.0 (Posthuman Studios), and this wiki sets out its rules from the books;
+        // it states no licence of its own that could be read, so it is kept with the book's (the wiki's own answer wins).
+        'eclipsephaserules' => $fandom('eclipsephaserules') + ['name' => 'Eclipse Phase Rules Wiki', 'settings' => ['Eclipse Phase'],
+            'license' => ['CC BY-NC-SA 4.0', 'https://creativecommons.org/licenses/by-nc-sa/4.0/']],
         'lexicanum-whfb' => ['name' => 'Warhammer Fantasy Lexicanum', 'settings' => ['Warhammer Fantasy'], 'host' => 'Independent',
             'site' => 'https://whfb.lexicanum.com/wiki/Main_Page', 'api' => 'https://whfb.lexicanum.com/mediawiki/api.php', 'images' => ['whfb.lexicanum.com'],
             'license' => ['CC BY-NC', 'https://creativecommons.org/licenses/by-nc/3.0/']],
