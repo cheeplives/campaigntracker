@@ -28,6 +28,8 @@ return [
     'deviantart' => ['client_id' => 'stub', 'client_secret' => 'stub'],
     'smithsonian' => ['api_key' => 'stub'],
   ],
+  // Fan wikis ask tests/support/fanwiki-stub.php instead of Wookieepedia, Memory Alpha and Greyhawk Online.
+  'fan_wikis' => ['enabled' => true, 'open_only' => false, 'stub' => __DIR__ . '/fanwiki-stub.php'],
   'rate_limit_enabled' => true,
   'allow_install' => false,
   // Turns on tests/support/login.php. Never set this in a real config.

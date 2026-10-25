@@ -149,6 +149,19 @@ return [
     'deviantart' => ['client_id' => '', 'client_secret' => ''],
   ],
 
+  // --- Fan wikis ------------------------------------------------------------
+  // An Encyclopedia entry can add a summary from the campaign's fan wiki (picked in the campaign's Settings:
+  // Wookieepedia, Memory Alpha, Tolkien Gateway…) and Find Image gets a tab for that wiki's pictures. The wikis are
+  // listed in api/fanwikis-open.php and api/fanwikis-nonopen.php. No keys are needed; the 'contact' above is sent too.
+  // enabled:   false turns fan wikis off everywhere (the buttons, the tab and the About page's list go).
+  // open_only: true keeps only openly licensed text and pictures (CC BY-SA, CC BY, CC0, GNU FDL): no non-commercial
+  //   wikis, no wikis without a licence and no "personal fair use" pictures. Set this before making the app
+  //   commercial. tools/fanwiki-kill-switch.sh --non-open removes those from the code instead.
+  'fan_wikis' => [
+    'enabled'   => true,
+    'open_only' => false,
+  ],
+
   // --- Limits ---------------------------------------------------------------
   // Per-IP throttling on sign-in and per-admin throttling on user changes (needs
   // the rate_limits table from db/schema.sql). Leave true; set false only to debug.

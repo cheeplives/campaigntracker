@@ -11,6 +11,8 @@ declare(strict_types=1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
+// Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
+if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
 // ---------- helpers ----------
 function out($data, int $code = 200): void { json_out($data, $code); }
@@ -1067,7 +1069,8 @@ require_method('GET', 'POST');
 if ($method === 'POST') require_csrf();
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search'];
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search',
+    ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 
@@ -2697,14 +2700,16 @@ try {
         $source = (string)p('source', '');
         $id = (string)str_in(p('id'), 100);
         $mode = (string)p('mode', 'copy');
-        if (!in_array($source, IMAGE_SOURCES, true) || !in_array($mode, ['copy', 'embed'], true)) fail('Unknown picture source', 400);
+        // A fan wiki's picture (api/fanwikis.php), while that module is here and switched on.
+        $fan = $source === 'fanwiki' && function_exists('fanwiki_on') && fanwiki_on();
+        if ((!$fan && !in_array($source, IMAGE_SOURCES, true)) || !in_array($mode, ['copy', 'embed'], true)) fail('Unknown picture source', 400);
         if ($mode === 'embed' && $source !== 'deviantart') fail('Only DeviantArt works can be embedded', 400);
         if ($source === 'deviantart' && !deviantart_ready()) fail('DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
         $secret = $role === 'gm' && p('is_secret') ? 1 : 0;
         // Admins are told which call failed and how, so they can tell a refused key from a source that is down.
         $down = fn(?ImageSourceDown $e = null) => fail('That picture couldn\'t be fetched just now. Try again later.'
             . ($e && me()['is_admin'] ? ' (' . $e->getMessage() . ')' : ''), 502, 'source_unavailable');
-        try { $item = image_lookup($source, $id); } catch (ImageSourceDown $e) { $down($e); }
+        try { $item = $fan ? fanwiki_image_lookup($id) : image_lookup($source, $id); } catch (ImageSourceDown $e) { $down($e); }
         if (!$item) fail('That picture isn\'t there any more', 404);
         if ($mode === 'embed') {
             // oEmbed gives the picture to show; when it can't be reached, the deviation's own picture from the API will do
@@ -2720,7 +2725,8 @@ try {
                 'width' => $o['width'] ? min(65535, $o['width']) : null, 'height' => $o['height'] ? min(65535, $o['height']) : null, 'is_secret' => $secret,
                 'embed_url' => $item['landing_url'], 'embed_src' => $o['src'], 'embed_checked_at' => date('Y-m-d H:i:s')] + credit_columns($item))]);
         }
-        if (!$item['open']) fail('That picture isn\'t openly licensed, so it can\'t be copied here', 403, 'not_open');
+        // A fan wiki's picture that isn't open comes only while fanwikis-nonopen.php allows it, credited as personal fair use.
+        if (!$item['open'] && !($fan && !empty($item['fair_use']))) fail('That picture isn\'t openly licensed, so it can\'t be copied here', 403, 'not_open');
         if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
         $max = upload_max_bytes();
         $tmp = null;
@@ -2763,6 +2769,7 @@ try {
         out(['ok' => true]);
 
     default:
+        if (function_exists('fanwiki_action')) fanwiki_action($action);   // answers its own actions, and exits
         fail('Unknown action', 404, 'unknown_action');
     }
 } catch (PDOException $e) {
