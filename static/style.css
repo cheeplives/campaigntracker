@@ -702,6 +702,17 @@ a.enc-link.secret { text-decoration-color: var(--secret); }
 .enc-item:hover { background: var(--bg); }
 .enc-item.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .enc-item .etags { display: inline-flex; flex-wrap: wrap; }
+/* the Encyclopedia's entries as small cards, close together, tags along the bottom so they line up */
+.enc-lists > section { display: flex; flex-direction: column; gap: 4px; }
+.enc-lists > section > h3 { margin-bottom: 0; }
+.enc-item.enc-card { flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; align-items: flex-start; gap: 1px; padding: 5px 10px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); }
+.enc-item.enc-card:hover { background: var(--panel-2); }
+.enc-item.enc-card.on { background: var(--accent); border-color: var(--accent); }
+.enc-card .enc-name { font-weight: 600; max-width: 100%; overflow-wrap: anywhere; }
+.enc-card .enc-alias { color: var(--dim); font-size: .76rem; }
+.enc-card.on .enc-alias { color: inherit; opacity: .8; }
+.enc-card .etags { display: flex; gap: 3px; margin: auto 0 0; padding-top: 2px; max-width: 100%; }
+.enc-card .chip { margin: 0; font-size: .72rem; }
 /* the list's filters: dropdowns of checkboxes, each with Select all and Deselect all */
 .enc-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; position: relative; }
 .enc-filters [hidden], .mpick-panel [hidden] { display: none; }
@@ -748,7 +759,7 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 .enc-ignored-word { background: var(--panel-2); border-radius: 99px; padding: 1px 4px 1px 10px; font-size: .85rem; }
 /* Wide list: the list takes the room and lays its entries out in columns, the entry narrows beside it */
 .enc-page.wide { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
-.enc-page.wide .enc-lists > section { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 8px; align-content: start; }
+.enc-page.wide .enc-lists > section { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 8px; align-content: start; }
 .enc-page.wide .enc-lists > section > :not(.enc-item) { grid-column: 1 / -1; }
 .enc-page.wide .enc-detail h2 { font-size: 1.9rem; }
 @media (max-width: 900px) {
