@@ -162,20 +162,38 @@ test.describe("Fan wikis in the app", () => {
     expectNoErrors(errors);
   });
 
-  test("until the GM picks one, the wiki is guessed from the campaign's name", async ({ page, browser }) => {
+  test("Settings suggests a wiki from the campaign's name, used only once saved, and None keeps a game of its own wiki-free", async ({ page, browser }) => {
     test.skip(!NONOPEN, "Memory Alpha is a non-open wiki");
     const gm = person("Gwen");
     await signIn(page, gm);
     await approve(browser, gm.email);
     const cid = await makeCampaign(page, `Star Trek: Lower Decks ${gm.id}`);
     const e = (await api(page, "entry_save", { name: "Stardate", notes: "" }, cid)).json;
+    // nothing saved yet: no fan wiki button, though Settings offers Memory Alpha
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
+    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.locator(".fanwiki")).toHaveCount(0);
+    await page.goto(`index.html#/c/${cid}/settings`);
+    const pickWiki = page.getByRole("combobox", { name: "Fan wiki" });
+    await expect(pickWiki).toHaveValue("memory-alpha");
+    await page.getByRole("button", { name: "Save campaign settings" }).click();
+    await expect(page.locator("#toast", { hasText: "Saved" })).toBeVisible();
     await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
     const box = page.locator(".fanwiki");
     await box.getByRole("button", { name: "🗂️ Summary from Memory Alpha" }).click();
     await box.locator(".enc-wiki-hit").first().click();
     await expect(box.locator(".fanwiki-terms")).toContainText("CC BY-NC 4.0, non-commercial use");
+    // None, for a game of its own: no button and no Find Image tab, and Settings keeps None
     await page.goto(`index.html#/c/${cid}/settings`);
-    await expect(page.getByRole("combobox", { name: "Fan wiki" })).toHaveValue("memory-alpha");
+    await pickWiki.selectOption("none");
+    await page.getByRole("button", { name: "Save campaign settings" }).click();
+    await expect(page.locator("#toast", { hasText: "Saved" })).toBeVisible();
+    expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.fan_wiki).toBe("none");
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
+    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.locator(".fanwiki")).toHaveCount(0);
+    await page.goto(`index.html#/c/${cid}/settings`);
+    await expect(pickWiki).toHaveValue("none");
   });
 
   test("the About page lists every fan wiki, the ones that aren't open under No open source", async ({ page }) => {

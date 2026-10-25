@@ -103,7 +103,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   is personal fair use); pictures list the article's first, leave out sound files, come through the server's thumbnail
   proxy (which refuses other hosts), and copy open ones with their credit and the rest as "Personal fair use"; the GM
   picks the campaign's wiki in Settings, which players get too, an entry adds the summary with its source and licence,
-  Find Image has a tab for the wiki, and until one is picked it is guessed from the campaign's name; About lists every
+  Find Image has a tab for the wiki; Settings suggests a wiki from the campaign's name but nothing is looked up until it is saved, and None keeps a game of its own wiki-free; About lists every
   wiki, the non-open ones under No open source. Checks that need api/fanwikis-nonopen.php skip once the kill switch
   has removed it.
 - **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens

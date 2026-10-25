@@ -5,8 +5,9 @@
  * server says it is switched on, so deleting this file, or switching fan wikis off in the config, leaves the rest
  * of the app as it was. The server does every request to the wikis, so the page needs no new connect-src or img-src.
  *
- * Which wiki: the one the GM picks in the campaign's Settings (settings.fan_wiki), for everyone in the campaign. Until
- * one is picked it is guessed from the campaign's name and calendar (Calendar of Harptos: the Forgotten Realms Wiki). */
+ * Which wiki: the one the GM picks in the campaign's Settings (settings.fan_wiki), for everyone in the campaign; None
+ * (or nothing saved yet) means no fan wiki, for a game of its own. Settings suggests one from the campaign's name and
+ * calendar (Calendar of Harptos: the Forgotten Realms Wiki), but nothing is looked up until the GM saves it. */
 'use strict';
 
 const FanWikis = (() => {
@@ -34,8 +35,8 @@ const FanWikis = (() => {
     const low = hint.toLowerCase();
     return (wikis.find(w => w.open && w.settings.some(s => low.includes(s.toLowerCase()))) || wikis.find(w => w.settings.some(s => low.includes(s.toLowerCase()))))?.key || '';
   }
-  /** The campaign's wiki: the one picked in Settings (ctx.key, 'none' for none), or until then the guess from its name and calendar (ctx.hint). */
-  const chosen = (i, ctx) => (ctx.key === 'none' ? null : i.wikis.find(w => w.key === (ctx.key || guess(i.wikis, ctx.hint || '')))) || null;
+  /** The campaign's wiki: only the one the GM saved in Settings (ctx.key). None saved, or 'none' for a game of its own: no wiki. */
+  const chosen = (i, ctx) => i.wikis.find(w => w.key === ctx.key) || null;
 
   /** Settings' Fan wiki field: a dropdown with one group per setting (a wiki covering several is in each), open wikis
    * first, starting on ctx.key or the guess. Filled in once the list comes; removed when fan wikis are off. */
@@ -47,7 +48,8 @@ const FanWikis = (() => {
       const settings = [...new Set(i.wikis.flatMap(w => w.settings))].sort((a, b) => a.localeCompare(b));
       sel.append(...settings.map(s => el('optgroup', { label: s }, i.wikis.filter(w => w.settings.includes(s)).sort((a, b) => b.open - a.open || a.name.localeCompare(b.name))
         .map(w => el('option', { value: w.key }, w.open ? w.name : `${w.name} (not open)`)))));
-      sel.value = chosen(i, ctx)?.key || 'none';
+      // a saved choice (None included) stands; until there is one, the guess is offered, and nothing is used until saved
+      sel.value = ctx.key === 'none' ? 'none' : chosen(i, ctx)?.key || guess(i.wikis, ctx.hint || '') || 'none';
     });
     return sel;
   }
