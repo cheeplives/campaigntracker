@@ -807,7 +807,14 @@ dialog.kit-dialog.scabard-dialog { width: min(600px, calc(100vw - 32px)); }
 .file-list a { overflow-wrap: anywhere; }
 .file-status:empty { display: none; }
 dialog.file-viewer { max-width: min(96vw, 1400px); width: auto; text-align: center; }
-.file-full { max-width: 100%; max-height: 75vh; display: block; margin: 0 auto; object-fit: contain; }
+/* Fitted, the picture sets the stage's size; zoomed, the stage takes the window and scrolls (a finger or a drag moves it). */
+.file-stage { cursor: zoom-in; }
+.file-stage.zoomed { width: min(92vw, 1360px); max-width: 100%; height: 75vh; overflow: auto; cursor: grab; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.file-stage.zoomed:active { cursor: grabbing; }
+.file-full { max-width: 100%; max-height: 75vh; display: block; margin: 0 auto; object-fit: contain; user-select: none; -webkit-user-select: none; }
+.file-stage.zoomed .file-full { max-width: none; max-height: none; height: auto; margin: 0; }
+.file-zoom { justify-content: center; gap: 6px; margin-top: 6px; }
+.file-zoom-pct { min-width: 3.5em; }
 .file-cap { margin: 8px 0 4px; overflow-wrap: anywhere; }
 .file-tools { justify-content: center; flex-wrap: wrap; }
 /* Find Image (findImage in app.js) */

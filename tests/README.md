@@ -110,6 +110,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Find Image has a tab for the wiki; Settings suggests a wiki from the campaign's name but nothing is looked up until it is saved, and None keeps a game of its own wiki-free; About lists every
   wiki, the non-open ones under No open source. Checks that need api/fanwikis-nonopen.php skip once the kill switch
   has removed it.
+- **session-pictures**: a GM adds a map to a session and changes its caption; players see it only once the session is published, never a GM-only one, can't add, change or remove pictures there, and see no Pictures box on a session without any; deleting the session deletes its pictures; the viewer zooms a 1200×800 map in with +, to 1:1, back to Fit and with a click, scrolling inside itself while zoomed.
 - **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens
   full size with its caption, the PDF downloads; players see both, add and remove their own, but can't change or
   remove the GM's; GM-only files and every file on a secret entry are never listed or sent to players, and making a

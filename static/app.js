@@ -2660,11 +2660,11 @@
 
   /** The Pictures and files box on a page. files: what the server sent for this parent; opts.uploads: { ready, max_bytes,
    * accept, problem }; opts.secret: the parent is GM only, so every file on it is too; opts.manageAny: every member may
-   * change or remove its files (otherwise whoever added one, and GMs); opts.name: an Encyclopedia entry's name, which
-   * Find Image starts from. After a change the box fetches its files again and
+   * change or remove its files (otherwise whoever added one, and GMs); opts.gmAdds: only GMs may add files (a session's);
+   * opts.empty: what the box says while it has none; opts.name: an Encyclopedia entry's name, which Find Image starts from. After a change the box fetches its files again and
    * redraws only itself, so notes being typed beside it are kept; files is updated in place. */
   function attachmentsCard(parentType, parentId, files, opts = {}) {
-    const up = opts.uploads || { ready: false };
+    const up = opts.gmAdds && !isGM() ? { ready: false } : opts.uploads || { ready: false };
     const cid = S.camp.id;
     const refresh = async () => {
       try {
@@ -2719,7 +2719,7 @@
           : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
         el('div', { class: 'row' }, gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see what you add' }, gmOnly, ' 🔒 GM only') : null, findBtn, addBtn)),
       findSlot, gallery, docList,
-      !files.length ? el('p', { class: 'muted small' }, up.ready ? 'No pictures or files yet. Add a portrait, a map or a handout.' : isGM() && up.problem ? up.problem : 'No pictures or files yet.') : null,
+      !files.length ? el('p', { class: 'muted small' }, up.ready ? opts.empty || 'No pictures or files yet. Add a portrait, a map or a handout.' : isGM() && up.problem ? up.problem : 'No pictures or files yet.') : null,
       status);
     if (up.ready) {
       box.addEventListener('dragover', ev => { if ([...ev.dataTransfer.types].includes('Files')) { ev.preventDefault(); box.classList.add('drop'); } });
@@ -2753,19 +2753,83 @@
     d.showModal();
     caption.focus();
   }
-  /** A picture at full size, with the others on the page a step away (arrow keys too). */
+  /** A picture at full size, with the others on the page a step away (arrow keys too). It opens fitted to the window;
+   * a click, + or a pinch on a trackpad zooms in where it points, so a big map can be read, and dragging (or a finger)
+   * moves around it. */
   function fileViewer(pics, start, opts) {
     hideTip();
     let i = start;
-    const img = el('img', { class: 'file-full' });
+    const img = el('img', { class: 'file-full', draggable: 'false' });
+    const stage = el('div', { class: 'file-stage' }, img);
     const cap = el('p', { class: 'file-cap' });
+    const zoomBar = el('div', { class: 'row file-zoom' });
     const tools = el('div', { class: 'row file-tools' });
+    // zoom: 0 while fitted, else the picture's scale against its own pixels; fit: its scale when fitted
+    let zoom = 0, fit = 1;
+    const fitScale = () => fit;
+    /** Zoom to scale z (0: fit), keeping the point at (cx, cy) on the screen, the stage's middle by default, still. */
+    function zoomTo(z, cx, cy) {
+      if (!img.naturalWidth) return;
+      const before = img.getBoundingClientRect(), box = stage.getBoundingClientRect();
+      cx ??= box.left + box.width / 2; cy ??= box.top + box.height / 2;
+      const rx = (cx - before.left) / before.width, ry = (cy - before.top) / before.height;
+      const max = Math.max(1, 16000 / Math.max(img.naturalWidth, img.naturalHeight));
+      zoom = z > fit * 1.01 ? Math.min(z, max) : 0;
+      stage.classList.toggle('zoomed', !!zoom);
+      img.style.width = zoom ? `${Math.round(img.naturalWidth * zoom)}px` : '';
+      if (zoom) {
+        const after = img.getBoundingClientRect();
+        stage.scrollLeft += after.left + rx * after.width - cx;
+        stage.scrollTop += after.top + ry * after.height - cy;
+      }
+      drawZoom();
+    }
+    const step = k => zoomTo((zoom || fitScale()) * k);
+    function drawZoom() {
+      if (!img.naturalWidth) return zoomBar.replaceChildren();
+      zoomBar.replaceChildren(...clean([
+        btn('−', () => step(1 / 1.5), 'small', 'Zoom out (−)'),
+        el('span', { class: 'small muted file-zoom-pct', 'aria-live': 'polite' }, `${Math.round((zoom || fitScale()) * 100)}%`),
+        btn('+', () => step(1.5), 'small', 'Zoom in (+). You can also click the picture, or pinch'),
+        zoom ? btn('Fit', () => zoomTo(0), 'small', 'Fit the whole picture in the window (0)') : null,
+        zoom || fitScale() < 1 ? btn('1:1', () => zoomTo(1), 'small', 'Show the picture at its own size, a pixel for a pixel') : null]));
+    }
+    img.addEventListener('load', () => {
+      zoom = 0; stage.classList.remove('zoomed'); img.style.width = '';
+      fit = Math.min(1, img.getBoundingClientRect().width / img.naturalWidth || 1);
+      drawZoom();
+    });
+    // a click zooms in to twice the fitted size (at least the picture's own) or back out; a drag with the mouse pans
+    let drag = null;
+    stage.addEventListener('pointerdown', ev => {
+      if (ev.pointerType !== 'mouse' || ev.button !== 0 || !zoom) return;
+      drag = { x: ev.clientX, y: ev.clientY, l: stage.scrollLeft, t: stage.scrollTop, moved: false };
+      stage.setPointerCapture(ev.pointerId);
+    });
+    stage.addEventListener('pointermove', ev => {
+      if (!drag) return;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+      stage.scrollLeft = drag.l - dx; stage.scrollTop = drag.t - dy;
+    });
+    stage.addEventListener('pointerup', () => { if (drag) setTimeout(() => { drag = null; }); });
+    // on the stage, as a drag's pointer capture sends the click there
+    stage.addEventListener('click', ev => {
+      if (drag?.moved || !zoom && ev.target !== img) return;
+      zoomTo(zoom ? 0 : Math.max(1, fitScale() * 2), ev.clientX, ev.clientY);
+    });
+    // a trackpad's pinch (and Ctrl with the wheel) zooms where it points, instead of the whole page
+    stage.addEventListener('wheel', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      zoomTo((zoom || fitScale()) * Math.exp(-ev.deltaY / 100), ev.clientX, ev.clientY);
+    }, { passive: false });
     const show = () => {
       const f = pics[i];
       img.src = f.url; img.alt = f.caption || f.name; img.referrerPolicy = f.embed ? 'no-referrer' : '';
-      cap.replaceChildren(opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, f.embed ? null : el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`),
-        f.credit ? creditLine(f) : null);
-      tools.replaceChildren(
+      cap.replaceChildren(...clean([opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, f.embed ? null : el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`),
+        f.credit ? creditLine(f) : null]));
+      tools.replaceChildren(...clean([
         pics.length > 1 ? btn('‹', () => { i = (i + pics.length - 1) % pics.length; show(); }, 'small', 'Previous picture') : null,
         pics.length > 1 ? el('span', { class: 'small muted' }, `${i + 1} / ${pics.length}`) : null,
         pics.length > 1 ? btn('›', () => { i = (i + 1) % pics.length; show(); }, 'small', 'Next picture') : null,
@@ -2773,11 +2837,15 @@
           : el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
         opts.mine(f) ? btn('✎ Caption', () => fileEdit(f, opts, () => d.close()), 'small') : null,
         opts.mine(f) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
-        btn('Close', () => d.close(), 'small primary'));
+        btn('Close', () => d.close(), 'small primary')]));
     };
-    const d = el('dialog', { class: 'kit-dialog file-viewer', 'aria-label': 'Picture' }, img, cap, tools);
+    const d = el('dialog', { class: 'kit-dialog file-viewer', 'aria-label': 'Picture' }, stage, zoomBar, cap, tools);
     d.addEventListener('keydown', ev => {
-      if (pics.length < 2 || ev.target.closest('input, textarea')) return;
+      if (ev.target.closest('input, textarea')) return;
+      if (ev.key === '+' || ev.key === '=') step(1.5);
+      if (ev.key === '-') step(1 / 1.5);
+      if (ev.key === '0') zoomTo(0);
+      if (pics.length < 2) return;
       if (ev.key === 'ArrowLeft') { i = (i + pics.length - 1) % pics.length; show(); }
       if (ev.key === 'ArrowRight') { i = (i + 1) % pics.length; show(); }
     });
@@ -3272,6 +3340,7 @@
     }
     const [{ sessions }, one] = await Promise.all([api('sessions', { query: { cid } }),
       sel ? api('session', { query: { cid, id: sel } }).catch(() => null) : null]);
+    if (one) S.sessUploads = one.uploads;
     const href = id => `#/c/${cid}/sessions${id ? `/${id}` : ''}`;
     // The page can take the whole width: the sessions run across the top and the session picked gets the room, remembered in this browser.
     let wide = sessWide();
@@ -3302,7 +3371,7 @@
     const right = el('section', { class: 'card enc-detail sess-detail' });
     if (sel && !one) right.append(el('p', { class: 'muted' }, 'That session isn\'t here any more.'));
     else if (!one) right.append(el('p', { class: 'muted' }, sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.'));
-    else right.append(...sessionPage(one.session, one.notes || [], sessions));
+    else right.append(...clean(sessionPage(one.session, one.notes || [], sessions)));
     page.append(left, right);
     mount(...campaignHeader('sessions'), page);
   }
@@ -3324,22 +3393,21 @@
       document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
     }, 'small', 'Download this session as a Markdown file to paste into Scabard or another wiki. It holds only what you can see here');
+    // maps, handouts and sketches from the night: GMs add them, players see them once the session is published
+    const pictures = gm || s.files?.length ? attachmentsCard('session', s.id, s.files || (s.files = []), { uploads: S.sessUploads, gmAdds: true,
+      empty: 'No pictures or files yet. Add a map, a handout or a sketch of the scene.' }) : null;
     const head = [el('h2', {}, sessionName(s)),
       el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
     if (!gm) {
       return [head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
         el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
         ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
-          el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html'))))];
+          el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), pictures];
     }
 
     // --- details: title, date played, publishing, open or ended
     const title = el('input', { value: s.title, maxlength: 200, placeholder: `Session ${s.number}` });
     const played = el('input', { type: 'date', value: s.played_on || '' });
-    const saveDetails = btn('Save details', busy(null, async () => {
-      await post('session_save', { id: s.id, title: title.value, played_on: played.value || null }, cid);
-      toast('Session saved'); route();
-    }), 'small', 'Save the title and the date you played');
     const pub = el('input', { type: 'checkbox', checked: s.is_published,
       onchange: async ev => {
         try {
@@ -3360,11 +3428,11 @@
         location.hash = `#/c/${cid}/sessions`;
       } catch (err) { toast(err.message, true); }
     }, 'small danger', 'Delete this session, its notes and its summary');
-    // Title and Played on are set once, so they fold behind ✎ Details (open while the session has no title); the rest of
+    // Title and Played on are set once, so they fold behind ✎ Details (open while the session has no title), and the one
+    // Save under the summary saves them with everything else; the rest of
     // what's done to a session, rather than written in it, waits in the ⋯ menu. The summary is left the room under the title.
     const details = el('div', { class: 'sess-fields', hidden: !!s.title },
-      el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')),
-      el('div', { class: 'row' }, saveDetails));
+      el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')));
     const detailsBtn = btn('✎ Details', () => { details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden)); },
       'small', 'Change the title and the date you played');
     detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
@@ -3424,14 +3492,33 @@
       }
       drawNotes();
     }, 'small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out and ? lines listed GM only at the end. Then rewrite it as you like');
-    const save = btn('Save', null, 'primary small', 'Save the summary, rewards and loot. Players read them once the session is published');
+    // what the editors held when the page opened or last saved, so Save sends the writing only when it has changed
+    const writing = () => ({ summary: editor.value().text, ...(hasExtras ? { rewards: rewards.value().text, loot: loot.value().text } : {}) });
+    let savedWriting = null;
+    RichText.load().then(() => { savedWriting ??= writing(); }).catch(() => {});   // once the editors have it, as they tidy it
+    const save = btn('Save', null, 'primary small', 'Save everything changed on this page: the title and date played, the summary, rewards and loot. Players read them once the session is published');
     save.addEventListener('click', busy(save, async () => {
-      const r = await post('session_summary_save', { id: s.id, version: s.version, summary: editor.value().text,
-        ...(hasExtras ? { rewards: rewards.value().text, loot: loot.value().text } : {}) }, cid);
-      s.version = r.session.version; s.summary = r.session.summary; s.rewards = r.session.rewards; s.loot = r.session.loot;
+      // the writing first: when it was saved elsewhere meanwhile nothing is saved, rather than half of it
+      const written = writing();
+      if (!savedWriting || JSON.stringify(written) !== JSON.stringify(savedWriting)) {
+        const r = await post('session_summary_save', { id: s.id, version: s.version, ...written }, cid);
+        s.version = r.session.version; s.summary = r.session.summary; s.rewards = r.session.rewards; s.loot = r.session.loot;
+        savedWriting = written;
+        offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` },
+          ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])]);
+      }
+      const t = title.value.trim().replace(/\s+/g, ' '), on = played.value || null;
+      if (t !== (s.title || '') || on !== (s.played_on || null)) {
+        const r = await post('session_save', { id: s.id, title: t, played_on: on }, cid);
+        Object.assign(s, { title: r.session.title, played_on: r.session.played_on });
+        // the heading, the date line and the session's name in the list, redrawn in place so nothing typed is lost
+        head[0].textContent = sessionName(s);
+        head[1].textContent = [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · ');
+        const inList = document.querySelector('.sess-item.on .enc-name');
+        if (inList?.firstChild?.nodeType === Node.TEXT_NODE) inList.firstChild.textContent = sessionName(s);
+        if (s.title) { details.hidden = true; detailsBtn.setAttribute('aria-expanded', 'false'); }
+      }
       toast('Saved');
-      offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` },
-        ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])]);
     }));
 
     // the summary is the wide column, the notes beside it; a phone shows one at a time, the summary first once there is one
@@ -3452,7 +3539,7 @@
     const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, innerHeight / 2)}px`; };
     for (const e of ['input', 'keyup', 'focus']) nbox?.addEventListener(e, grow);
     if (nbox?.value) requestAnimationFrame(grow);
-    return [head[0], bar, details, cols];
+    return [head[0], bar, details, cols, pictures];
   }
 
   // ------------------------------------------------------------ travel tab

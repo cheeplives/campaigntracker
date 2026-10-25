@@ -32,7 +32,10 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   await expect(page.getByText("Notes saved")).toBeVisible();
   await notNow(page); // the detector offers Altdorf and the Grey Lady inn for the Encyclopedia
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
+  // The re-roll saves, then redraws the page: wait for the redraw, so the next click doesn't land on a link it replaces.
+  await page.getByLabel("Locations visited").evaluate(e => { e.dataset.beforeReroll = "1"; });
   await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
+  await expect(page.locator("[data-before-reroll]")).toHaveCount(0);
   await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");
 
   // Next and previous day stay on the tab; Return to today comes back.
