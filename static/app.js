@@ -3470,7 +3470,7 @@
     const hasExtras = 'rewards' in s;
     const rewards = hasExtras ? RichText.editor({ text: s.rewards || '', format: 'html', label: 'Session Rewards', secret: true, mentions: encMentions(),
       placeholder: 'What the party earned: experience, favours, standing, story rewards' }) : null;
-    rewards?.node.classList.add('rt-small');   // rewards are a few lines; loot, a list, gets more room
+    rewards?.node.classList.add('rt-small');   // a few lines each, side by side
     const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(),
       placeholder: 'The coin, items and treasure the party found' }) : null;
     loot?.node.classList.add('rt-medium');
