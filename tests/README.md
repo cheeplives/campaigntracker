@@ -77,7 +77,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   text), Alias, Ignore or Skip (remembered until the page reloads); entries are linked where players read the names
   (aliases too, with the entry's first line on hover), a link opens the entry, Blank Entries lists the new ones, an
   entry quotes where it was found with Add to notes, players write Public notes but never get GM notes, secret entries
-  or the GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own;
+  or the GMs' ignored words; Scan campaign offers every missing name, and entries keep tags of their own; an entry's Category groups the list,
+  and the Category, Tags and Connections dropdowns filter it with Select all / Deselect all and counts; migration 018
+  turns Location, Person, Item, Group and Vehicle tags into Categories;
   Generate Summary asks (a faked) Wikipedia only when pressed, lists the matching articles with their descriptions,
   and adds the picked summary to the Public notes with a link to the article and CC BY-SA 4.0; a name with several
   meanings is labelled and lists the meanings from its disambiguation page, in its order and without See also; no

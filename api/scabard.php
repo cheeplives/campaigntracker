@@ -13,7 +13,7 @@
  */
 declare(strict_types=1);
 
-/** Scabard's kinds of page that become Encyclopedia entries, and the tag each gets. */
+/** Scabard's kinds of page that become Encyclopedia entries, and the Category (Person, Location, Group, Item) or else tag each gets. */
 const SCABARD_CONCEPTS = ['Character' => 'Person', 'Place' => 'Location', 'Group' => 'Group', 'Item' => 'Item', 'Note' => 'Note',
     'Adventure' => 'Adventure', 'Event' => 'Event'];
 /** Scabard's connections that are its own housekeeping, not facts about the world. */
@@ -223,7 +223,10 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
         }
         foreach ($keep as $a) $idx['by'][mb_strtolower($a)] ??= $id;
     }
-    if (scabard_tag($cid, $id, SCABARD_CONCEPTS[$concept], $tags)) $r['tags']++;
+    $kind = SCABARD_CONCEPTS[$concept];
+    if (in_array(mb_strtolower($kind), ENTRY_CATEGORIES, true) && has_categories()) { // an entry already in a Category keeps it
+        db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=? AND category IS NULL')->execute([mb_strtolower($kind), $id]);
+    } elseif (scabard_tag($cid, $id, $kind, $tags)) $r['tags']++;
     // Its picture, for the browser's third pass: Scabard's own pictures only; one hosted elsewhere is named in the report.
     $urls = []; $elsewhere = false;
     foreach (is_array($p['images'] ?? null) ? $p['images'] : [] as $u) {

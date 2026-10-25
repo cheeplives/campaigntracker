@@ -58,7 +58,7 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Scabard ${gm.id}`);
   // A name the Proper Noun Detector added first, with nothing written yet: the import fills it in.
-  expect((await api(page, "entries_add", { entries: [{ name: "Durendal", tags: [{ name: "Item" }] }] }, cid)).status).toBe(200);
+  expect((await api(page, "entries_add", { entries: [{ name: "Durendal", category: "item" }] }, cid)).status).toBe(200);
   // A tome's secret aside has nothing to do with it; a kept entry with notes stays as it is.
   expect((await api(page, "entry_save", { name: "Order of the Silver Flame", notes: "<p>Our own notes on the Order.</p>" }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/settings`);
@@ -92,9 +92,9 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   expect(text).toContain("Entries: 8 added, 1 filled in, 1 kept as they were.");
   expect(text).toContain("Sessions: 2 added, 0 kept.");
   // Connections: Subregion, Location, Member, Neighbor, Owner, Seeker, Related item, Steward, and Participant in Wild Storm: 9.
-  // Tags: a kind on each of the 10 entries but Durendal (Item already) = 9, plus City and NPC = 11 (NPC on a session has nowhere to go).
+  // Tags: Note, Adventure and Event (Person, Location, Group and Item are Categories), plus City and NPC = 5 (NPC on a session has nowhere to go).
   // Lines: Player, and Participants, Setting, Protagonists and Part of on the session.
-  expect(text).toMatch(/9 connections, 11 tags and 5 lines of notes added/);
+  expect(text).toMatch(/9 connections, 5 tags and 5 lines of notes added/);
   expect(text).toContain("Pictures: 1 copied, 2 not fetched (Altdorf (not on Scabard), Grey Lady inn).");
   expect(text).toContain("1 connection named a page that isn't in the file.");
   await report.getByRole("button", { name: "OK" }).click();
@@ -111,9 +111,13 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   expect(g.notes).toMatch(/<p>Player: Aosborn<\/p>$/);
   expect(g.gm_notes).toBe("<p>He is a Chaos cultist.</p>");
   expect(g.is_secret).toBe(false);
-  expect(g.tags.map(t => t.name).sort()).toEqual(["NPC", "Person"]);
+  expect(g.tags.map(t => t.name)).toEqual(["NPC"]);
+  expect(g.category).toBe("person");
   expect(byName(enc.entries, "Secret Spy").is_secret).toBe(true);
-  expect(byName(enc.entries, "Altdorf").tags.map(t => t.name).sort()).toEqual(["City", "Location"]);
+  expect(byName(enc.entries, "Altdorf").tags.map(t => t.name)).toEqual(["City"]);
+  expect(byName(enc.entries, "Altdorf").category).toBe("location");
+  expect(byName(enc.entries, "Durendal").category).toBe("item");
+  expect(byName(enc.entries, "Market days").category).toBe(null);
   expect(byName(enc.entries, "Altdorf").notes).toBe("<p>The capital</p><p>The capital of the Empire.</p>");   // the summary first, then the description
   expect(byName(enc.entries, "Secret Spy").notes).toBe("<p>Watches the party</p>");
   expect(byName(enc.entries, "Durendal").notes).toBe("<p>A sword.</p>");                    // the blank entry, filled in

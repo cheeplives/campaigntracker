@@ -217,7 +217,7 @@
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
-    S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
+    S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
     S.libReady = !!r.library_ready;
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
@@ -396,6 +396,11 @@
   const roleBadge = role => el('span', { class: `role ${role}`, 'data-tip': role === 'gm' ? 'You run this campaign' : 'You play in this campaign' }, role === 'gm' ? 'GM' : 'Player');
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
   const holidayChip = x => el('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
+  /** The Categories an Encyclopedia entry can be in (one each, or none): key, name, icon. */
+  const ENC_CATEGORIES = [['location', 'Location', '📍'], ['person', 'Person', '👤'], ['item', 'Item', '🗝️'], ['group', 'Group', '👥'], ['vehicle', 'Vehicle', '⛵']];
+  const encCat = k => ENC_CATEGORIES.find(c => c[0] === k) || null;
+  /** The Category named n (any case), for the detector's guesses: "Location" → 'location'. */
+  const encCatNamed = n => ENC_CATEGORIES.find(c => c[1].toLowerCase() === String(n || '').toLowerCase())?.[0] || null;
   const tagChip = t => el('span', { class: 'chip tag', style: { background: t.color }, 'data-tip': `Tag: ${t.name}` }, t.name);
   /** The different tags on a list of events, in order of first appearance. */
   function tagsOf(evs) {
@@ -1969,6 +1974,63 @@
     return { node, get: () => [...on].map(k => ({ name: known.get(k).name, color: known.get(k).color })) };
   }
 
+  /** A dropdown of checkboxes for filtering a list, with Select all and Deselect all. Everything starts ticked; off is the
+   * Set of keys unticked, kept by the caller so it lasts between visits and a new option starts ticked. noun names the
+   * options in the button ("tags"). update(options) redraws it: [{ key, name, color?, count }], keeping it open. */
+  function multiPick(label, noun, off, onChange) {
+    const sum = el('summary', { class: 'button small' });
+    const box = el('div', { class: 'mpick-list', role: 'group', 'aria-label': label });
+    const find = el('input', { type: 'search', placeholder: `Find ${noun}`, 'aria-label': `Find ${noun}`, class: 'mpick-find' });
+    let opts = [], shape = '';
+    const change = () => { sync(); onChange(); };
+    const all = btn('Select all', () => { off.clear(); change(); }, 'link small', `Show every ${noun.replace(/s$/, '')}`);
+    const none = btn('Deselect all', () => { for (const o of opts) off.add(o.key); change(); }, 'link small', `Untick every ${noun.replace(/s$/, '')}, then tick the ones to show`);
+    const node = el('details', { class: 'mpick' }, sum,
+      el('div', { class: 'mpick-panel' }, el('div', { class: 'row small' }, all, none), find, box));
+    const sync = () => {
+      const on = opts.filter(o => !off.has(o.key)).length;
+      sum.textContent = `${label}: ${on === opts.length ? 'All' : on ? `${on} of ${opts.length}` : 'None'} ▾`;
+      node.classList.toggle('filtered', on !== opts.length);
+      for (const cb of box.querySelectorAll('input')) cb.checked = !off.has(cb.value);
+      all.disabled = on === opts.length; none.disabled = !on;
+    };
+    const filter = () => {
+      const q = find.value.trim().toLowerCase();
+      for (const row of box.children) row.hidden = !!q && !row.dataset.name.includes(q);
+    };
+    find.addEventListener('input', filter);
+    find.hidden = true;
+    const update = list => {
+      opts = list;
+      const next = JSON.stringify(list.map(o => [o.key, o.name, o.color, o.count]));
+      if (next !== shape) { // only when the options change, so a box being ticked keeps its focus
+        shape = next;
+        box.replaceChildren(...list.map(o => {
+          const cb = el('input', { type: 'checkbox', value: o.key, onchange: () => { cb.checked ? off.delete(o.key) : off.add(o.key); change(); } });
+          const row = el('label', { class: 'mpick-opt' + (o.count ? '' : ' empty'), 'data-name': o.name.toLowerCase() }, cb,
+            o.color ? el('span', { class: 'mpick-dot', style: { background: o.color }, 'aria-hidden': 'true' }) : null,
+            el('span', { class: 'grow' }, o.name), el('small', { class: 'muted' }, String(o.count ?? '')));
+          return row;
+        }));
+        find.hidden = list.length < 10;
+        filter();
+      }
+      sync();
+    };
+    return { node, update };
+  }
+  // A click anywhere else, or Escape, closes an open multiPick.
+  document.addEventListener('pointerdown', ev => {
+    for (const d of document.querySelectorAll('details.mpick[open]')) if (!d.contains(ev.target)) d.open = false;
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape') return;
+    for (const d of document.querySelectorAll('details.mpick[open]')) {
+      ev.stopPropagation(); d.open = false;
+      if (!document.activeElement || document.activeElement === document.body || d.contains(document.activeElement)) d.querySelector('summary').focus();
+    }
+  }, true);
+
   function eventForm(d, e = {}) {
     const names = shiftNames();
     const start = Number(e.abs_day ?? d); // a new event starts on the day it is added from
@@ -2196,10 +2258,12 @@
     return new Promise(resolve => {
       hideTip();
       const cid = S.camp.id;
-      const tagOpts = [['', 'No tag'], ...S.encTags.map(t => [t.name, t.name])];
+      // a Category, or else a tag: the detector's guess is either ("Person", "Religion")
+      const tagOpts = S.encCatsReady ? [['', 'No category'], ...ENC_CATEGORIES.map(([, n, i]) => [n, `${i} ${n}`]),
+        ...S.encTags.filter(t => !encCatNamed(t.name)).map(t => [t.name, `Tag: ${t.name}`])] : [['', 'No tag'], ...S.encTags.map(t => [t.name, t.name])];
       const rows = found.map((f, i) => {
         const name = el('input', { value: f.term, maxlength: 150, 'aria-label': `Name for ${f.term}`, class: 'grow' });
-        const tag = select(tagOpts, f.tag || '', { 'aria-label': `Tag for ${f.term}` });
+        const tag = select(tagOpts, f.tag || '', { 'aria-label': S.encCatsReady ? `Category or tag for ${f.term}` : `Tag for ${f.term}` });
         const secret = isGM() ? el('input', { type: 'checkbox', checked: f.secret, 'aria-label': `${f.term} is GM only` }) : null;
         // "Hoffmann" beside an entry for Gunther Hoffmann: it may be another name for that entry rather than a new one.
         const like = Nouns.related(f.term, S.encyclopedia);
@@ -2248,7 +2312,8 @@
           if (v === 'skip' && !scan) encSkipped.add(r.f.term);
           if (v === 'alias') adds.push({ name: r.f.term, alias_of: Number(r.aliasOf.value) });
           if (v !== 'add' || !n) continue;
-          adds.push({ name: n, is_secret: !!r.secret?.checked, tags: r.tag.value ? [{ name: r.tag.value }] : [] });
+          const cat = S.encCatsReady ? encCatNamed(r.tag.value) : null;
+          adds.push({ name: n, is_secret: !!r.secret?.checked, category: cat, tags: r.tag.value && !cat ? [{ name: r.tag.value }] : [] });
           if (Nouns.keyOf(n) !== Nouns.keyOf(r.f.term)) ignores.push(r.f.term); // renamed: the word as found isn't offered again
         }
         try {
@@ -2325,58 +2390,79 @@
     for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
     S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
       pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
-    const st = vs().enc || (vs().enc = { q: '', tags: new Set() });
-    st.rels ||= new Set();
+    S.encCatsReady = !!r.categories_ready;
+    // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.
+    const st = vs().enc || (vs().enc = { q: '', tagsOff: new Set(), relsOff: new Set(), catsOff: new Set(), folded: new Set() });
     if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
     const current = sel === 'new' ? { tags: [] } : entries.find(e => e.id === Number(sel)) || null;
     const href = id => `#/c/${S.camp.id}/encyclopedia${id ? `/${id}` : ''}`;
 
     // --- the list
-    const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
+    const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), encCat(e.category)?.[1] || '', ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
       ...conns.get(e.id).flatMap(c => [c.label, c.other.name]), ...files.list.filter(f => f.parent_id === e.id).flatMap(f => [f.name, f.caption || ''])].join('\n').toLowerCase()]));
-    // The connection labels in use, as seen from either end, for the chips: "has resident" and "resident of".
+    // The connection labels in use, as seen from either end: "has resident" and "resident of".
     const relUsed = new Map();
     for (const list of conns.values()) for (const c of list) relUsed.set(c.label.toLowerCase(), { name: c.label, color: c.type.color });
-    for (const k of [...st.rels]) if (!relUsed.has(k)) st.rels.delete(k);
-    const relRow = el('div', { class: 'tagpick enc-relpick' });
-    const nearRow = el('div', { class: 'row small' });
     const used = tagsOf(entries).sort((a, b) => a.name.localeCompare(b.name));
-    for (const k of [...st.tags]) if (!used.some(t => t.name.toLowerCase() === k)) st.tags.delete(k);
+    const nearRow = el('div', { class: 'row small' });
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
-    const tagRow = el('div', { class: 'tagpick' });
     const lists = el('div', { class: 'enc-lists' });
     const ctx = { rel, conns, entries, st, files, draw: null };
     const item = e => el('a', { class: 'enc-item' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
       el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name, e.aliases?.length ? el('small', { class: 'muted' }, ` · ${e.aliases.join(', ')}`) : null),
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
-    const draw = () => {
+    // Each entry's keys for each filter; '' is "none" (no Category, no tags, no connections).
+    const keys = new Map(entries.map(e => [e, {
+      cat: [e.category || ''],
+      tag: e.tags?.length ? e.tags.map(t => t.name.toLowerCase()) : [''],
+      rel: conns.get(e.id).length ? [...new Set(conns.get(e.id).map(c => c.label.toLowerCase()))] : [''],
+    }]));
+    const offOf = { cat: st.catsOff, tag: st.tagsOff, rel: st.relsOff };
+    /** Whether e passes every filter but skip's (so each dropdown counts what ticking an option would add). */
+    const passes = (e, skip) => {
       const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
-      const shown = entries.filter(e => (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase()))) && words.every(w => hay.get(e).includes(w))
-        && (!st.rels.size || conns.get(e.id).some(c => st.rels.has(c.label.toLowerCase())))
-        && (!st.near || e.id === st.near || conns.get(e.id).some(c => c.other.id === st.near)));
+      if (!words.every(w => hay.get(e).includes(w))) return false;
+      if (st.near && e.id !== st.near && !conns.get(e.id).some(c => c.other.id === st.near)) return false;
+      return Object.entries(offOf).every(([f, off]) => f === skip || (f === 'cat' && !S.encCatsReady) || keys.get(e)[f].some(k => !off.has(k)));
+    };
+    const countBy = f => {
+      const n = new Map();
+      for (const e of entries) if (passes(e, f)) for (const k of keys.get(e)[f]) n.set(k, (n.get(k) || 0) + 1);
+      return n;
+    };
+    const catPick = multiPick('Category', 'categories', st.catsOff, () => draw());
+    const tagPick = multiPick('Tags', 'tags', st.tagsOff, () => draw());
+    const relPick = multiPick('Connections', 'connections', st.relsOff, () => draw());
+    catPick.node.classList.add('enc-catpick'); tagPick.node.classList.add('enc-tagpick'); relPick.node.classList.add('enc-relpick');
+    const clearAll = btn('Show all', () => { for (const off of Object.values(offOf)) off.clear(); st.q = search.value = ''; st.near = null; draw(); }, 'link small', 'Clear the search and every filter');
+    const filters = el('div', { class: 'enc-filters' }, S.encCatsReady ? catPick.node : null, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+    const draw = () => {
+      const shown = entries.filter(e => passes(e));
       const blank = shown.filter(entryBlank);
+      const section = (key, title, list, tipText) => {
+        const folded = st.folded.has(key);
+        const head = el('button', { type: 'button', class: 'enc-fold', 'aria-expanded': String(!folded), onclick: () => { folded ? st.folded.delete(key) : st.folded.add(key); draw(); } },
+          title);
+        return el('section', { class: key === 'blank' ? 'enc-blank' : null, 'data-cat': key }, el('h3', {}, head, tipText ? tip(tipText) : null), folded ? [] : list.map(item));
+      };
+      const of = entries.length !== shown.length ? ` of ${entries.length}` : '';
+      // Grouped by Category, in the order they are listed, then the entries with none.
+      const groups = S.encCatsReady ? [...ENC_CATEGORIES, ['', 'No category', '']].map(([k, name, icon]) => [k, `${icon ? `${icon} ` : ''}${name}`, shown.filter(e => (e.category || '') === k)]).filter(g => g[2].length) : [];
+      const onlyNone = groups.length === 1 && groups[0][0] === '';
       lists.replaceChildren(...clean([
-        blank.length ? el('section', { class: 'enc-blank' }, el('h3', {}, `Blank Entries (${blank.length})`,
-          tip('Entries with nothing written about them yet, such as names just added by the Proper Noun Detector. Open one to describe it')), blank.map(item)) : null,
-        el('section', {}, el('h3', {}, `All entries (${shown.length}${shown.length !== entries.length ? ` of ${entries.length}` : ''})`),
-          shown.length ? shown.map(item) : el('p', { class: 'muted small' }, entries.length ? 'Nothing matches. Clear the search or the tags to see more.'
-            : 'No entries yet. Add one, or scan the campaign for names that are missing.'))]));
-      tagRow.replaceChildren(...used.map(t => {
-        const k = t.name.toLowerCase(), on = st.tags.has(k);
-        const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
-          'data-tip': on ? `Showing ${t.name} entries. Click to stop filtering by it` : `Show only entries tagged ${t.name}`,
-          onclick: () => { on ? st.tags.delete(k) : st.tags.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
-        b.style.setProperty('--tag', t.color);
-        return b;
-      }));
-      relRow.replaceChildren(...(relUsed.size ? [el('span', { class: 'small muted' }, 'Connections:')] : []), ...[...relUsed].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([k, t]) => {
-        const on = st.rels.has(k);
-        const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
-          'data-tip': on ? `Showing entries that are ${t.name} something. Click to stop filtering by it` : `Show only entries with a "${t.name}" connection`,
-          onclick: () => { on ? st.rels.delete(k) : st.rels.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
-        b.style.setProperty('--tag', t.color);
-        return b;
-      }));
+        blank.length ? section('blank', `Blank Entries (${blank.length})`, blank,
+          'Entries with nothing written about them yet, such as names just added by the Proper Noun Detector. Open one to describe it') : null,
+        shown.length ? el('p', { class: 'small muted enc-count' }, `${shown.length}${of} entries`) : null,
+        shown.length && groups.length && !onlyNone ? groups.map(([k, title, list]) => section(k, `${title} (${list.length})`, list))
+          : shown.length ? section('all', `All entries (${shown.length}${of})`, shown)
+          : el('p', { class: 'muted small' }, entries.length ? 'Nothing matches. Clear the search or the filters to see more.'
+            : 'No entries yet. Add one, or scan the campaign for names that are missing.')]));
+      const cats = countBy('cat'), tags = countBy('tag'), rels = countBy('rel');
+      catPick.update([...ENC_CATEGORIES, ['', 'No category']].map(([k, name]) => ({ key: k, name, count: cats.get(k) || 0 })));
+      tagPick.update([...used.map(t => ({ key: t.name.toLowerCase(), name: t.name, color: t.color })), { key: '', name: 'No tags' }].map(o => ({ ...o, count: tags.get(o.key) || 0 })));
+      relPick.update([...[...relUsed].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([k, t]) => ({ key: k, name: t.name, color: t.color })), { key: '', name: 'No connections' }]
+        .map(o => ({ ...o, count: rels.get(o.key) || 0 })));
+      clearAll.hidden = shown.length === entries.length;
       const near = st.near && entries.find(e => e.id === st.near);
       nearRow.hidden = !near;
       nearRow.replaceChildren(...(near ? [el('span', { class: 'muted' }, 'Connected to'), el('strong', {}, near.name),
@@ -2409,7 +2495,7 @@
     const left = el('section', { class: 'card enc-index' },
       el('div', { class: 'row spread' }, el('h2', {}, 'Encyclopedia', tip('The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only')),
         el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn, wideBtn)),
-      search, used.length ? tagRow : null, relRow, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
+      search, filters, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
 
     // --- the entry picked
     const right = el('section', { class: 'card enc-detail' });
@@ -2458,7 +2544,8 @@
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
-      e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
+      encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
+        (e.tags || []).map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
       el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
         (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
@@ -3016,6 +3103,7 @@
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
+    const category = S.encCatsReady ? select([['', 'None'], ...ENC_CATEGORIES.map(([k, n, i]) => [k, `${i} ${n}`])], e.category || '', { name: 'category' }) : null;
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
@@ -3023,6 +3111,7 @@
       el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
       el('div', { class: 'grid2' },
         field('Name', name),
+        category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
         secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
       // the notes straight under the name, where the writing is; tags, the quotes found elsewhere and Generate Summary after
@@ -3040,6 +3129,7 @@
       ev.preventDefault();
       const p = pub.value(), g = gm?.value();
       const body = { id: e.id, name: name.value, aliases: aliases.value.split(',').map(x => x.trim()).filter(Boolean), notes: p.text, tags: tags.get() };
+      if (category) body.category = category.value;
       if (gm) Object.assign(body, { gm_notes: g.text, is_secret: secret.checked });
       try {
         const { id } = await post('entry_save', body, S.camp.id);
@@ -4466,11 +4556,13 @@
   /** The 📖 button on a result: adds it to the Encyclopedia with tag and notes (rich text), then becomes a link to it. */
   function genAddButton(name, tag, notes) {
     const b = el('button', { type: 'button', class: 'small gen-add', 'aria-label': `Add ${name} to the Encyclopedia`,
-      'data-tip': `Add ${name} to the Encyclopedia, tagged ${tag}${isGM() && genPrefs().secret ? ', as GM only' : ''}` }, '📖 Add');
+      'data-tip': `Add ${name} to the Encyclopedia, ${S.encCatsReady && encCatNamed(tag) ? 'as a' : 'tagged'} ${tag}${isGM() && genPrefs().secret ? ', as GM only' : ''}` }, '📖 Add');
     b.addEventListener('click', busy(b, async () => {
       if (!S.encReady) throw new Error('The Encyclopedia isn\'t set up on this server yet: install.php needs to be run');
       const secret = isGM() && !!genPrefs().secret;
-      const { id } = await post('entry_save', { name, notes: notes(), tags: [{ name: tag }], ...(isGM() ? { is_secret: secret } : {}) }, S.camp.id);
+      // Person and Location are Categories; Rumor is a tag
+      const cat = S.encCatsReady ? encCatNamed(tag) : null;
+      const { id } = await post('entry_save', { name, notes: notes(), ...(cat ? { category: cat } : { tags: [{ name: tag }] }), ...(isGM() ? { is_secret: secret } : {}) }, S.camp.id);
       S.encyclopedia = [...S.encyclopedia.filter(x => x.id !== id), { id, name, aliases: [], is_secret: secret, blank: false,
         preview: Nouns.plain(notes(), 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, x) => a.name.localeCompare(x.name));
       toast(`Added ${name} to the Encyclopedia`);
@@ -4495,7 +4587,7 @@
     return el('section', { class: `card gen-card ${cls || ''}` }, el('h2', {}, title, tip(tipText)), el('div', { class: 'gen-controls' }, controls, go), out);
   }
 
-  /** The campaign's Encyclopedia names sorted by tag, for rumors: {person, place, group, item}. Fetched once per change to the
+  /** The campaign's Encyclopedia names sorted by Category (or else by tag), for rumors: {person, place, group, item}. Fetched once per change to the
    * Encyclopedia; until it arrives this gives {} and then calls ready() so the rumors can be drawn again. */
   let genCastMemo = null;
   function genCast(ready) {
@@ -4507,7 +4599,7 @@
     api('encyclopedia', { query: { cid: S.camp.id } }).then(r => {
       const cast = { person: [], place: [], group: [], item: [] };
       for (const e of r.entries || []) {
-        const tags = (e.tags || []).map(t => t.name.toLowerCase());
+        const tags = [e.category === 'location' ? 'place' : e.category, ...(e.tags || []).map(t => t.name.toLowerCase())].filter(Boolean);
         const k = Object.keys(kinds).find(k => tags.some(t => kinds[k].test(t)));
         if (k) cast[k].push(e.name);
       }
@@ -4547,7 +4639,7 @@
       () => el('ul', { class: 'gen-list' }, Gen.many(6, () => Gen.company(g, sector.value)).map(r => genRow(r, 'Group'))));
 
     const useEnc = el('input', { type: 'checkbox', checked: pref.useEnc !== false, onchange: e => setGenPrefs({ useEnc: e.target.checked }) });
-    const rumors = genCard('Rumors', 'Talk the party overhears, and who they heard it from. With the box ticked, rumors are about the people, places, groups and items in your Encyclopedia (by their tags), with made-up names for the rest. 📖 Add puts one in the Encyclopedia, tagged Rumor',
+    const rumors = genCard('Rumors', 'Talk the party overhears, and who they heard it from. With the box ticked, rumors are about the people, places, groups and items in your Encyclopedia (by their Categories and tags), with made-up names for the rest. 📖 Add puts one in the Encyclopedia, tagged Rumor',
       [S.encReady ? el('label', { class: 'inline small gen-traits', 'data-tip': 'Use names from your Encyclopedia tagged Person, Location, Group or Item' }, useEnc, 'Use Encyclopedia names') : null].filter(Boolean),
       () => el('ul', { class: 'gen-list' }, Gen.rumors(g, 6, useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {}).map(r => el('li', { class: 'gen-item' },
         el('div', { class: 'gen-what' }, el('span', { class: 'gen-rumor' }, r.name), el('span', { class: 'small muted' }, r.note)),

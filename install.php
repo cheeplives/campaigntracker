@@ -120,6 +120,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/017_attachment_credits.sql');
             $msg .= ' Encyclopedia entries can now find pictures with Find Image, credited, or embedded from DeviantArt.';
         }
+        if ($pdo->query("SHOW TABLES LIKE 'encyclopedia_entries'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM encyclopedia_entries LIKE 'category'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/018_encyclopedia_categories.sql');
+            $msg .= ' Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.';
+        }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
         $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];

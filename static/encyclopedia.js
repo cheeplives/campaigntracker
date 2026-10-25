@@ -99,6 +99,8 @@ const Nouns = (() => {
       library kingdom empire realm province county duchy barony land lands border near outside inside reached arrived`],
     ['Item', `sword blade dagger axe hammer bow staff wand ring amulet pendant crown helm shield armour armor cloak boots
       gem jewel stone orb potion scroll tome book map key relic artifact artefact chalice idol`],
+    ['Vehicle', `ship boat barge galley galleon frigate schooner sloop skiff longship airship wagon cart carriage chariot
+      sled sleigh starship shuttle freighter cruiser`],
     ['Event', `battle siege war festival feast tournament coronation wedding funeral massacre plague fire flood eclipse
       conclave summit treaty rebellion uprising revolt`],
   ].map(([tag, words]) => [tag, new Set(words.split(/\s+/).filter(Boolean))]);
