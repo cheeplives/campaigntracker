@@ -735,6 +735,11 @@ a.enc-link.secret { text-decoration-color: var(--secret); }
 
 /* the Proper Noun Detector's dialog: one row per name found, Add / Ignore / Skip */
 dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
+/* Import from Scabard (Settings → Tools) */
+dialog.kit-dialog.scabard-dialog { width: min(600px, calc(100vw - 32px)); }
+.scabard-plan { margin: 0 0 10px; padding-left: 20px; }
+.scabard-plan li { margin: 2px 0; }
+.scabard-status { min-height: 1.4em; margin: 10px 0 6px; }
 .noun-list { display: flex; flex-direction: column; max-height: 58vh; overflow-y: auto; margin: 8px 0 14px; border-top: 1px solid var(--line); }
 .noun-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .noun-row.off .noun-what { opacity: .55; }

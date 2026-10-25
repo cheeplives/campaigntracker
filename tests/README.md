@@ -164,6 +164,16 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   as JSON; importing it into another campaign's Settings replaces the calendar and adds
   the holidays it lacks (only once), a file that isn't a calendar is refused, and the
   new-campaign form starts a campaign on the file's calendar, holidays and date.
+- **scabard-import**: Settings → Tools → Import from Scabard refuses a file that isn't JSON or isn't a Scabard export,
+  says what the export holds (entries by kind, session logs, connections, pictures, what is left out) and follows the
+  Sessions / Encyclopedia entries choice; the import makes entries with their kind and category tags, other names,
+  summary-then-description notes (`div` → `p`, `span` unwrapped, Scabard links as text), GM notes, secret pages as GM
+  only, a `Player:` line, names cut to 150 characters, fills in a blank entry and keeps one with notes; connections read
+  from the right end on the starter kinds and new ones, a former one noted, a secret one or one touching a secret entry
+  GM only; dated events become published, closed Sessions with the secrets as GM-only paragraphs and Participants,
+  Setting, Protagonists and Part of lines; the picture comes from the image stub's `www.scabard.com` with a Scabard
+  credit, while one hosted elsewhere or gone is reported; players get none of the GM's side and can't import; a second
+  run keeps everything and doubles nothing. The reader (`static/scabard.js`) splits dated names, plans and batches.
 - **reminders**: a GM's reminder, added from today's page on the next shift, pops up for
   the GM when time passes to it and on a player's open page at its next check; Dismiss stops
   it for that person only, Remind me later until the clock moves or the page reloads; moving

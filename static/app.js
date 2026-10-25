@@ -7,7 +7,7 @@
   'use strict';
   const E = window.Engine;
 
-  const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog } = KIT;
+  const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog, alertDialog } = KIT;
   const app = () => $('#app');
   const clean = kids => kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false);
   // The campaign tabs stay pinned just under the sticky top bar, whose height changes as it wraps or shows the change notice.
@@ -4890,6 +4890,101 @@
         await loadCampaign(S.camp.id, true); toast(`Imported ${name}${addHolidays ? ` and ${fresh.length} holiday${fresh.length === 1 ? '' : 's'}` : ''}`); route();
       } catch (err) { toast(err.message, true); }
     }
+    /** Import from Scabard: pick the export, say what is in it and how session logs will come in, then send it in
+     * batches (pages, then connections, then one request per picture), saying where it has got to; the counts at the end. */
+    async function importScabard() {
+      let data;
+      try {
+        const text = await Scabard.pick();
+        if (text === null) return;
+        data = Scabard.parse(text);
+      } catch (err) { toast(err.message, true); return; }
+      const cid = S.camp.id;
+      const sessionsSel = select([['sessions', 'Sessions'], ['entries', 'Encyclopedia entries']], S.sessionsReady ? 'sessions' : 'entries', { name: 'sessions', 'aria-label': 'What dated events become' });
+      const pics = el('input', { type: 'checkbox', name: 'pictures', checked: true });
+      const what = el('ul', { class: 'scabard-plan' });
+      const status = el('p', { class: 'small muted scabard-status', 'aria-live': 'polite' });
+      const draw = () => {
+        const plan = Scabard.plan(data, { sessions: sessionsSel.value === 'sessions' });
+        const n = (c, one, many) => `${c} ${c === 1 ? one : many || `${one}s`}`;
+        what.replaceChildren(...clean([
+          el('li', {}, el('strong', {}, n(plan.entries, 'Encyclopedia entry', 'Encyclopedia entries')), plan.entries ? `: ${Object.entries(plan.kinds).map(([k, c]) => `${c} ${k}`).join(', ')}` : ''),
+          plan.sessions ? el('li', {}, el('strong', {}, n(plan.sessions, 'session log')), sessionsSel.value === 'sessions' ? ', each a Session played on its date' : '') : null,
+          el('li', {}, el('strong', {}, n(plan.connections, 'connection')), ' between them'),
+          plan.pictures ? el('li', {}, el('strong', {}, n(plan.pictures, 'picture')), ' on Scabard') : null,
+          Object.keys(plan.skipped).length ? el('li', { class: 'muted' }, 'Left out: ', Object.entries(plan.skipped).map(([k, c]) => `${c} ${k}`).join(', '), ' (Scabard\'s own structure)') : null]));
+      };
+      sessionsSel.addEventListener('change', draw);
+      draw();
+      const go = el('button', { type: 'button', class: 'primary' }, 'Import');
+      const cancel = el('button', { value: 'cancel', type: 'submit' }, 'Cancel');
+      const d = el('dialog', { class: 'kit-dialog scabard-dialog', 'aria-label': 'Import from Scabard' },
+        el('form', { method: 'dialog' },
+          el('h3', {}, '⬆ Import from Scabard'),
+          el('p', { class: 'small muted' }, 'The export holds:'), what,
+          el('div', { class: 'row small' }, el('label', {}, 'Dated events (2025-10-05: Final Preparations) become ', sessionsSel)),
+          S.encUploads?.ready !== false ? el('label', { class: 'row small' }, pics, ' Copy each page\'s picture from Scabard') : null,
+          el('p', { class: 'small muted' }, 'Everything comes in by name: an entry that already has a name in the file is kept as it is (one with nothing written in it yet is filled in), and tags and connections are added only where missing, so the import can be run again after Scabard changes. Nothing is deleted.'),
+          status,
+          el('div', { class: 'kit-dialog-actions' }, go, cancel)));
+      d.addEventListener('cancel', e => { if (go.disabled) e.preventDefault(); else d.returnValue = 'cancel'; });
+      d.addEventListener('close', () => d.remove());
+      let total;
+      const add = r => {
+        for (const k of ['added', 'filled', 'kept']) total.entries[k] += r.entries[k];
+        for (const k of ['added', 'kept']) total.sessions[k] += r.sessions[k];
+        for (const k of ['tags', 'connections', 'lines']) total[k] += r[k];
+        for (const k of ['pages', 'connections', 'unresolved']) total.skipped[k] += r.skipped[k];
+        total.pictures.push(...r.pictures); total.elsewhere.push(...r.elsewhere);
+      };
+      go.addEventListener('click', busy(go, async () => {
+        cancel.disabled = sessionsSel.disabled = pics.disabled = true;
+        total = { entries: { added: 0, filled: 0, kept: 0 }, sessions: { added: 0, kept: 0 }, tags: 0, connections: 0, lines: 0, skipped: { pages: 0, connections: 0, unresolved: 0 }, pictures: [], elsewhere: [] };
+        try {
+          const options = { sessions: sessionsSel.value };
+          const pages = Scabard.order(data.pages, options.sessions === 'sessions');
+          let done = 0;
+          for (const batch of Scabard.batches(pages, Scabard.PAGES_MAX)) {
+            status.textContent = `Importing pages ${done + 1}–${done + batch.length} of ${pages.length}…`;
+            add(await post('scabard_import', { pages: batch, options }, cid));
+            done += batch.length;
+          }
+          done = 0;
+          for (const batch of Scabard.batches(data.conns, Scabard.CONNS_MAX)) {
+            status.textContent = `Connecting ${done + 1}–${done + batch.length} of ${data.conns.length}…`;
+            add(await post('scabard_import', { conns: batch, options }, cid));
+            done += batch.length;
+          }
+          const copied = [], had = [], missed = [...total.elsewhere.map(n => `${n} (not on Scabard)`)];
+          if (pics.checked) for (const [i, p] of total.pictures.entries()) {
+            status.textContent = `Copying picture ${i + 1} of ${total.pictures.length}: ${p.name}…`;
+            try {
+              const r = await post('scabard_picture', p, cid);
+              if (r.copied) copied.push(p.name); else if (r.skipped === 'has_picture') had.push(p.name); else missed.push(p.name);
+            } catch (err) {
+              missed.push(`${p.name} (${err.message})`);
+              if (err.status === 409) { missed.push(...total.pictures.slice(i + 1).map(x => x.name)); break; } // uploads aren't set up here: no use trying the rest
+            }
+          }
+          d.returnValue = 'done'; d.close();
+          const e = total.entries, s = total.sessions, lines = [];
+          lines.push(`Entries: ${e.added} added, ${e.filled} filled in, ${e.kept} kept as they were.`);
+          if (s.added || s.kept) lines.push(`Sessions: ${s.added} added, ${s.kept} kept.`);
+          lines.push(`${total.connections} connection${total.connections === 1 ? '' : 's'}, ${total.tags} tag${total.tags === 1 ? '' : 's'} and ${total.lines} line${total.lines === 1 ? '' : 's'} of notes added.`);
+          if (pics.checked) lines.push(`Pictures: ${copied.length} copied${had.length ? `, ${had.length} already there` : ''}${missed.length ? `, ${missed.length} not fetched (${missed.slice(0, 8).join(', ')}${missed.length > 8 ? '…' : ''})` : ''}.`);
+          if (total.skipped.unresolved) lines.push(`${total.skipped.unresolved} connection${total.skipped.unresolved === 1 ? '' : 's'} named a page that isn't in the file.`);
+          await alertDialog(lines.join('\n'), { title: 'Imported from Scabard' });
+          await loadCampaign(cid, true);
+          route();
+        } catch (err) {
+          status.textContent = `Stopped: ${err.message}. Import again carries on from here (nothing is added twice).`;
+          cancel.disabled = false;
+          throw err;
+        }
+      }));
+      document.body.append(d);
+      d.showModal();
+    }
     const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
       el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
         if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
@@ -4901,6 +4996,8 @@
           'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
         btn('Import calendar…', importCalendar, 'small',
           'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
+      el('div', { class: 'row' }, btn('⬆ Import from Scabard…', importScabard, 'small',
+        'Bring a campaign over from Scabard: its Export campaign .json file becomes Encyclopedia entries with their tags, other names, notes, GM secrets, connections and pictures, and its dated session logs become Sessions. Safe to run again: nothing is added twice or deleted')),
       el('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
         if (typed !== 'DELETE') return;
