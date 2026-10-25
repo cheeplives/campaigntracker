@@ -2701,11 +2701,18 @@ try {
         if ($mode === 'embed' && $source !== 'deviantart') fail('Only DeviantArt works can be embedded', 400);
         if ($source === 'deviantart' && !deviantart_ready()) fail('DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
         $secret = $role === 'gm' && p('is_secret') ? 1 : 0;
-        $down = fn() => fail('That picture couldn\'t be fetched just now. Try again later.', 502, 'source_unavailable');
-        try { $item = image_lookup($source, $id); } catch (ImageSourceDown) { $down(); }
+        // Admins are told which call failed and how, so they can tell a refused key from a source that is down.
+        $down = fn(?ImageSourceDown $e = null) => fail('That picture couldn\'t be fetched just now. Try again later.'
+            . ($e && me()['is_admin'] ? ' (' . $e->getMessage() . ')' : ''), 502, 'source_unavailable');
+        try { $item = image_lookup($source, $id); } catch (ImageSourceDown $e) { $down($e); }
         if (!$item) fail('That picture isn\'t there any more', 404);
         if ($mode === 'embed') {
-            try { $o = deviantart_oembed((string)$item['landing_url']); } catch (ImageSourceDown) { $down(); }
+            // oEmbed gives the picture to show; when it can't be reached, the deviation's own picture from the API will do
+            // until the next recheck asks oEmbed again.
+            try { $o = deviantart_oembed((string)$item['landing_url']); } catch (ImageSourceDown $e) {
+                $src = embed_src_ok($item['full'] ?? null) ?? $down($e);
+                $o = ['src' => $src, 'width' => null, 'height' => null];
+            }
             if (!$o) fail('DeviantArt won\'t let that work be embedded', 422, 'not_embeddable');
             attachment_room($cid, $type, $pid, 0);
             out(['ok' => true, 'file' => attachment_store($cid, null, ['parent_type' => $type, 'parent_id' => $pid,
@@ -2718,10 +2725,11 @@ try {
         $max = upload_max_bytes();
         $tmp = null;
         // The full picture, or the thumbnail when that is too big or won't come.
+        $err = null;
         foreach (array_unique(array_filter([$item['full'], $item['thumb']])) as $url) {
-            try { $tmp = image_download($url, $max); break; } catch (ImageSourceDown | LengthException) {}
+            try { $tmp = image_download($url, $max); break; } catch (ImageSourceDown $e) { $err = $e; } catch (LengthException) {}
         }
-        if (!$tmp) $down();
+        if (!$tmp) $down($err);
         register_shutdown_function(fn() => is_file($tmp) && @unlink($tmp));   // when it is refused below; a kept one has moved
         $size = (int)filesize($tmp);
         attachment_room($cid, $type, $pid, $size);
