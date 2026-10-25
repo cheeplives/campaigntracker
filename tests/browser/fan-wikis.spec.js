@@ -121,6 +121,10 @@ test.describe("Fan wikis in the app", () => {
     const pickWiki = page.getByRole("combobox", { name: "Fan wiki" });
     if (NONOPEN) await expect(pickWiki.locator("optgroup[label='Star Trek'] option")).toHaveText(["Memory Alpha (not open)", "Memory Beta (not open)"]);
     await expect(pickWiki).toHaveValue("none");          // nothing in the name or calendar to guess from
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.locator(".fanwiki")).toHaveCount(0);   // no fan wiki yet: no button
+    await page.goto(`index.html#/c/${cid}/settings`);
     await pickWiki.selectOption("starwars");
     await page.getByRole("button", { name: "Save campaign settings" }).click();
     await expect(page.locator("#toast", { hasText: "Saved" })).toBeVisible();
@@ -176,7 +180,7 @@ test.describe("Fan wikis in the app", () => {
 
   test("the About page lists every fan wiki, the ones that aren't open under No open source", async ({ page }) => {
     await page.goto("index.html#/about");
-    const used = page.locator("li", { hasText: "Fan Wiki Summary and Find Image" });
+    const used = page.locator("li", { hasText: "Summary from a fan wiki and Find Image" });
     await expect(used.getByRole("link", { name: "Wookieepedia" })).toHaveAttribute("href", "https://starwars.fandom.com/");
     await expect(used.getByRole("link", { name: "Tolkien Gateway" })).toBeVisible();
     await expect(used.getByRole("link", { name: "Memory Alpha" })).toHaveCount(0);

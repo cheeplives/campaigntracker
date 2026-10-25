@@ -4781,7 +4781,7 @@
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
         field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see'),
         Fan ? field('Fan wiki', Fan.settingsSelect(fanCtx()), 'Where Encyclopedia entries look names up for a summary or a picture',
-          'The setting\'s fan wiki, for everyone in the campaign: Fan Wiki Summary and the wiki\'s tab in Find Image use it. Until you pick one, it is guessed from the campaign\'s name and calendar') : null),
+          'The setting\'s fan wiki, for everyone in the campaign: an entry\'s Summary from the wiki and the wiki\'s tab in Find Image use it. Until you pick one, it is guessed from the campaign\'s name and calendar') : null),
       field('Description', el('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
       el('button', { class: 'primary' }, 'Save campaign settings'));
     general.addEventListener('submit', async e => {

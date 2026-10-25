@@ -1,4 +1,4 @@
-/* fanwikis.js — the browser side of fan wikis (api/fanwikis.php): Fan Wiki Summary on an Encyclopedia entry, Find
+/* fanwikis.js — the browser side of fan wikis (api/fanwikis.php): Summary from <wiki> on an Encyclopedia entry, Find
  * Image's Fan wikis tab and the About page's list of the wikis.
  *
  * Plain script, no build step. A module of its own: app.js uses it only when it is loaded (window.FanWikis) and the
@@ -36,7 +36,6 @@ const FanWikis = (() => {
   }
   /** The campaign's wiki: the one picked in Settings (ctx.key, 'none' for none), or until then the guess from its name and calendar (ctx.hint). */
   const chosen = (i, ctx) => (ctx.key === 'none' ? null : i.wikis.find(w => w.key === (ctx.key || guess(i.wikis, ctx.hint || '')))) || null;
-  const noWiki = ctx => ctx.gm ? 'Pick this campaign\'s fan wiki in Settings first.' : 'The GM hasn\'t picked a fan wiki for this campaign yet.';
 
   /** Settings' Fan wiki field: a dropdown with one group per setting (a wiki covering several is in each), open wikis
    * first, starting on ctx.key or the guess. Filled in once the list comes; removed when fan wikis are off. */
@@ -53,18 +52,17 @@ const FanWikis = (() => {
     return sel;
   }
 
-  /** Fan Wiki Summary, under Generate Summary: ctx { el, btn, api, cid, name (the Name input), pub (the Public notes editor), hint }. */
+  /** Summary from <wiki>, under Generate Summary: ctx { el, btn, api, cid, name (the Name input), pub (the Public notes editor), hint }. */
   function summary(ctx) {
     const { el, btn, api, cid, name, pub } = ctx;
-    const box = el('div', { class: 'enc-wiki fanwiki' });
+    const box = el('div', { class: 'fanwiki' });
     load(api).then(i => {
-      if (!on(i)) return box.remove();
-      const w0 = chosen(i, ctx);
+      const w0 = on(i) && chosen(i, ctx);
+      if (!w0) return box.remove();                    // no wiki for this campaign: nothing to show until Settings has one
       const out = el('div', { class: 'enc-wiki-out', 'aria-live': 'polite' });
       const say = (...t) => out.replaceChildren(el('p', { class: 'muted small' }, ...t));
       async function search() {
         const q = name.value.trim(), w = w0;
-        if (!w) return say(noWiki(ctx));
         if (!q) return say('Give the entry a name first.');
         say('Looking…');
         try {
@@ -93,8 +91,8 @@ const FanWikis = (() => {
               btn('Back', search, 'link small'))));
         } catch (err) { out.replaceChildren(el('p', { class: 'muted small' }, err.message), btn('Back', search, 'link small')); }
       }
-      box.append(btn(w0 ? `🗂️ Summary from ${w0.name}` : '🗂️ Fan Wiki Summary', search, 'small',
-        w0 ? `Look this name up on ${w0.name}, this campaign's fan wiki, and add a short summary of the article to the Public notes, credited` : noWiki(ctx)), out);
+      box.append(btn(`🗂️ Summary from ${w0.name}`, search, 'small',
+        `Look this name up on ${w0.name}, this campaign's fan wiki (set in Settings), and add a short summary of the article to the Public notes, credited`), out);
     });
     return box;
   }
@@ -122,7 +120,7 @@ const FanWikis = (() => {
     load(api).then(i => {
       if (!on(i)) { used.closest('li')?.remove(); nonOpen.closest('li')?.remove(); return; }
       const open = i.wikis.filter(w => w.open), closed = i.wikis.filter(w => !w.open);
-      used.append('Fan Wiki Summary and Find Image\'s fan wiki tab on an Encyclopedia entry look the name up on the campaign\'s fan wiki (picked in Settings), only when pressed and through this server. ',
+      used.append('Summary from a fan wiki and Find Image\'s fan wiki tab on an Encyclopedia entry look the name up on the campaign\'s fan wiki (picked in Settings), only when pressed and through this server. ',
         'Openly licensed: ', ...join(open), '. Fandom wikis\' text is CC BY-SA 3.0 unless the wiki says otherwise; each wiki is asked for its own licence when it is used. ',
         'Text added to notes links to its article and names the wiki and licence; a picture keeps its title, artist, licence and source.');
       if (!closed.length && i.open_only) return nonOpen.closest('li')?.remove();
