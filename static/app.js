@@ -2408,8 +2408,10 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
     const lists = el('div', { class: 'enc-lists' });
     const ctx = { rel, conns, entries, st, files, draw: null };
-    const item = e => el('a', { class: 'enc-item' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
-      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name, e.aliases?.length ? el('small', { class: 'muted' }, ` · ${e.aliases.join(', ')}`) : null),
+    // Each entry is a small card: its name, its other names under it, and its tags along the bottom.
+    const item = e => el('a', { class: 'enc-item enc-card' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
+      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name),
+      e.aliases?.length ? el('small', { class: 'enc-alias' }, `also ${e.aliases.join(', ')}`) : null,
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
     // Each entry's keys for each filter; '' is "none" (no Category, no tags, no connections).
     const keys = new Map(entries.map(e => [e, {

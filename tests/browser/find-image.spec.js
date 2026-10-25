@@ -33,8 +33,10 @@ const pick = (page, cid, id, body) => api(page, "image_import", { parent_type: "
 async function routeImages(page) {
   await page.route(/^https:\/\/(www\.artic\.edu|ids\.si\.edu)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
   // Asked through the page's own API client, not route.fetch(), which WebKit lets follow the redirect regardless.
+  // A picture can still be loading as the test ends and closes the page: that request is let go, not a failure.
   await page.route(/\/api\/index\.php\?a=file&/, async route => {
-    const res = await page.request.get(route.request().url(), { maxRedirects: 0 });
+    let res;
+    try { res = await page.request.get(route.request().url(), { maxRedirects: 0 }); } catch (err) { if (page.isClosed()) return; throw err; }
     if (res.status() === 302 && /^https:\/\/[a-z0-9-]+\.wixmp\.com\//.test(res.headers().location)) return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
     return route.fulfill({ response: res });
   });
