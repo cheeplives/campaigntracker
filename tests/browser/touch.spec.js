@@ -159,7 +159,11 @@ test("the Legend has no heading and tucks away to the left, and stays as left", 
   await page.reload();
   await expect(tuck).toHaveAttribute("aria-expanded", "false");
   await expect(page.locator("nav.tabs a.on")).toBeHidden();
-  await tuck.click();
+  // tucked, it's a rail down the window, and the whole rail is the button, so a click low down on it brings the Legend back
+  const rail = await nav.boundingBox(), btn = await tuck.boundingBox();
+  expect(rail.height).toBeGreaterThan(viewport.height * 0.7);
+  expect(btn.height).toBeGreaterThan(rail.height - 20);
+  await tuck.click({ position: { x: btn.width / 2, y: btn.height - 30 } });
   await expect(page.locator("nav.tabs a.on")).toBeVisible();
   await page.reload();
   await expect(page.locator("nav.tabs a.on")).toBeVisible();
