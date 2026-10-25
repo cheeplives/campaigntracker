@@ -209,9 +209,13 @@ button.on { background: var(--accent); color: var(--on-accent); }
   main > nav.tabs .legend-tuck { display: block; position: absolute; top: 10px; right: 8px; width: 30px; height: 30px; padding: 0; line-height: 1;
     font-size: 1.2rem; color: var(--dim); background: none; border: 1px solid transparent; }
   main > nav.tabs .legend-tuck:hover { color: var(--text); border-color: var(--line); }
-  /* tucked away, the Legend is a thin strip with just the » button, and the page takes the room */
+  /* tucked away, the Legend is a thin rail down the whole window (like Reddit's) with the » at its top, and the page takes the
+   * room. The whole rail is the » button, so a click anywhere on it brings the Legend back */
   main:has(> nav.tabs.tucked) { grid-template-columns: 46px minmax(0, 1fr); }
-  main > nav.tabs.tucked { padding-bottom: 0; min-height: 50px; }
+  main > nav.tabs.tucked { padding: 0; height: calc(100vh - var(--topbar-h, 0px) - 28px); overflow: hidden; }
+  main > nav.tabs.tucked .legend-tuck { inset: 0; width: auto; height: auto; padding-top: 10px; display: flex; justify-content: center;
+    align-items: flex-start; border-radius: 0; }
+  main > nav.tabs.tucked .legend-tuck:hover { background: color-mix(in srgb, var(--text) 6%, transparent); border-color: transparent; }
   main > nav.tabs.tucked > :not(.legend-tuck) { display: none !important; }
   main > nav.tabs .tab-group { display: block; width: auto; margin: 0; padding: 12px 14px 3px; background: none; overflow: visible;
     font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .12em; color: var(--dim); }
@@ -854,7 +858,12 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .lib-list h3 { font-size: 1.05rem; letter-spacing: .08em; color: var(--accent); margin: 10px 0 4px; }
 .lib-kind { color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
 .lib-blurb { margin: 0; font-style: italic; color: var(--dim); font-size: 1.05rem; overflow-wrap: anywhere; }
-.lib-body { border-top: 1px solid var(--line); padding-top: 10px; }
+/* Text being read (a tome, a session's summary, an entry's notes, a day's notes for players) sits on its own page, the
+ * same ground as the editors write on, so it stands apart from the labels and buttons around it */
+.lib-body, .notepanel > .richtext, .notepanel > .pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin: 0; }
+.lib-body > .richtext > :first-child, .notepanel > .richtext > :first-child { margin-top: 0; }
+.lib-body > .richtext > :last-child, .notepanel > .richtext > :last-child { margin-bottom: 0; }
+.notepanel.secret > .richtext { border-color: color-mix(in srgb, var(--secret) 45%, var(--line)); }
 .lib-form textarea { width: 100%; resize: vertical; }
 .lib-form .seg { align-self: flex-start; }
 .rt-editor.rt-tall .ql-editor { min-height: 45vh; }
