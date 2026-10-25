@@ -19,6 +19,8 @@ return function (string $method, string $url, array $opts): array {
     $none = str_contains($words, 'nothing');
 
     if (str_starts_with($url, 'data:image/png;base64,')) return ['status' => 200, 'body' => base64_decode(substr($url, 22)), 'error' => ''];
+    // Import from Scabard copies pictures from scabard.com: every path there is a picture, except /gone/ ones.
+    if ($host === 'www.scabard.com') return str_contains($path, '/gone/') ? ['status' => 404, 'body' => '', 'error' => ''] : ['status' => 200, 'body' => $png, 'error' => ''];
     if ($host === 'img.test') {
         // big.png is past the tests' 2 MB limit, so the thumbnail is kept instead.
         if ($path === '/big.png') return ['status' => 200, 'body' => $png . str_repeat("\0", 3 << 20), 'error' => ''];

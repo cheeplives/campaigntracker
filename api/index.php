@@ -11,6 +11,7 @@ declare(strict_types=1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
+require __DIR__ . '/scabard.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
@@ -1082,7 +1083,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
     'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
-    'session_save', 'session_end', 'session_delete'];
+    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -2767,6 +2768,16 @@ try {
         db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$a['id']]);
         if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', $a['stored_name'])) @unlink("$dir/{$a['stored_name']}");
         out(['ok' => true]);
+
+    case 'scabard_import': // GMs: pages and/or connections from a Scabard JSON export, in batches (api/scabard.php)
+        $cid = cid();
+        need_gm($cid);
+        out(scabard_import($cid, body()));
+
+    case 'scabard_picture': // GMs: one imported entry's picture, fetched from scabard.com
+        $cid = cid();
+        need_gm($cid);
+        out(scabard_picture($cid, body()));
 
     default:
         if (function_exists('fanwiki_action')) fanwiki_action($action);   // answers its own actions, and exits
