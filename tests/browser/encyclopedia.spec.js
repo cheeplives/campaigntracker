@@ -103,8 +103,9 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   const byName = Object.fromEntries(json.entries.map(e => [e.name, e]));
   expect(Object.keys(byName).sort()).toEqual(["Altdorf", "Black Hand", "Gunther"]);
   expect(byName["Black Hand"].is_secret).toBe(true);
-  expect(byName.Gunther.tags.map(t => t.name)).toEqual(["Person"]);
-  expect(byName.Altdorf.tags.map(t => t.name)).toEqual(["Location"]);
+  // the dialog's Location and Person are Categories, not tags
+  expect([byName.Gunther.category, byName.Altdorf.category, byName["Black Hand"].category]).toEqual(["person", "location", null]);
+  expect(byName.Gunther.tags).toEqual([]);
   expect(json.ignored).toEqual(["Grey Lady inn"]);
   // the GM's notes are still open in their editors, so the entries they name are listed below them
   await expect(page.locator("[data-box=notes] .enc-mentions a")).toHaveText(["Altdorf", "Gunther", "Black Hand"]);
@@ -203,7 +204,8 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   await expect(page.locator(".enc-blank .enc-item")).toHaveText([/Captain Rolf/]); // GM notes alone fill it, for the GM
   await expect(page.locator(".enc-detail .enc-where a")).toHaveText([/event "Ambush"/]);
   const tags = (await api(page, "encyclopedia", undefined, cid)).json.tags.map(t => t.name);
-  for (const t of ["Location", "Item", "Person", "Group", "Event", "Religion", "Port"]) expect(tags).toContain(t);
+  for (const t of ["Event", "Religion", "Port"]) expect(tags).toContain(t);
+  for (const t of ["Location", "Person"]) expect(tags).not.toContain(t); // Categories now
   expect((await api(page, "campaign", undefined, cid)).json.tags.map(t => t.name)).not.toContain("Port"); // apart from the events' tags
 
   // The event's text now links Marienburg, on its day and in the Events list.
@@ -333,9 +335,19 @@ test("the notes suggest connections, and the list searches and filters by them",
   await expect(list).toHaveCount(3);
   await page.getByLabel("Search the Encyclopedia").fill("");
   await expect(list).toHaveCount(4);
-  await page.locator(".enc-relpick button.tagopt", { hasText: "Residents" }).click();
+  // the Connections dropdown: Deselect all, then tick the one to see; Select all shows everything again
+  const rels = page.locator("details.enc-relpick");
+  await expect(rels.locator("summary")).toHaveText(/Connections: All/);
+  await rels.locator("summary").click();
+  await rels.getByRole("button", { name: "Deselect all", exact: true }).click();
+  await expect(page.locator(".enc-lists")).toContainText("Nothing matches");
+  await rels.locator(".mpick-opt", { hasText: "Residents" }).locator("input").check();
   await expect(list).toHaveCount(3);
-  await page.locator(".enc-relpick button.tagopt", { hasText: "Residents" }).click();
+  await expect(rels.locator("summary")).toHaveText(/Connections: 1 of \d+/);
+  await rels.getByRole("button", { name: "Select all", exact: true }).click();
+  await expect(list).toHaveCount(4);
+  await page.keyboard.press("Escape");
+  await expect(rels).not.toHaveAttribute("open", "");
   await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf}`);
   // Only a hash change, so Hans's page (and its own Show in list) is still up until Altdorf's draws.
   await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
@@ -521,4 +533,103 @@ test("the Wide list button swaps the widths of the list and the entry, and this 
   await page.reload();
   await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
   await expect(page.locator(".enc-page")).not.toHaveClass(/\bwide\b/);
+});
+
+test("entries have a Category: the list is grouped by it, and the Category and Tags dropdowns filter it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Gwen");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Categories ${gm.id}`);
+  const notes = "<p>Written up.</p>";
+  const mk = (name, category, tags = []) => entry(page, cid, { name, category, notes, tags: tags.map(name => ({ name })) });
+  await mk("Altdorf", "location", ["City"]);
+  await mk("Nuln", "Location", ["City"]); // any case
+  await mk("Grey Lady", "location", ["Inn"]);
+  const gunther = await mk("Gunther", "person", ["Innkeeper"]);
+  await mk("Sea Hawk", "vehicle");
+  await mk("Market days", "");
+  expect((await api(page, "entry_save", { name: "Odd", category: "planet" }, cid)).status).toBe(400);
+  const json = (await api(page, "encyclopedia", undefined, cid)).json;
+  expect(Object.fromEntries(json.entries.map(e => [e.name, e.category]))).toEqual({ Altdorf: "location", "Grey Lady": "location", Gunther: "person",
+    "Market days": null, Nuln: "location", "Sea Hawk": "vehicle" });
+
+  await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  const heads = page.locator(".enc-lists h3");
+  const items = page.locator(".enc-lists .enc-item");
+  await expect(heads).toHaveText(["📍 Location (3)", "👤 Person (1)", "⛵ Vehicle (1)", "No category (1)"]);
+  await expect(page.locator(".enc-lists section[data-cat=location] .enc-item")).toHaveText([/Altdorf/, /Grey Lady/, /Nuln/]);
+
+  // Category: Deselect all, then tick Location
+  const cats = page.locator("details.enc-catpick"), tags = page.locator("details.enc-tagpick");
+  await cats.locator("summary").click();
+  await cats.getByRole("button", { name: "Deselect all", exact: true }).click();
+  await expect(items).toHaveCount(0);
+  await cats.locator(".mpick-opt", { hasText: "Location" }).locator("input").check();
+  await expect(items).toHaveCount(3);
+  await expect(cats.locator("summary")).toHaveText(/Category: 1 of 6/);
+  await expect(cats.locator(".mpick-opt", { hasText: "Person" })).toContainText("1"); // what ticking it would add
+
+  // Tags, within the Locations: the counts follow the Category picked
+  await tags.locator("summary").click(); // opening one closes the other
+  await expect(cats).not.toHaveAttribute("open", "");
+  await expect(tags.locator(".mpick-opt", { hasText: "City" })).toContainText("2");
+  await expect(tags.locator(".mpick-opt", { hasText: "Innkeeper" })).toHaveClass(/empty/);
+  await tags.getByRole("button", { name: "Deselect all", exact: true }).click();
+  await tags.locator(".mpick-opt", { hasText: "City" }).locator("input").check();
+  await expect(items).toHaveText([/Altdorf/, /Nuln/]);
+  await expect(tags.locator("summary")).toHaveText(/Tags: 1 of 4/); // City, Inn, Innkeeper and No tags
+  await page.locator(".enc-index h2").click(); // a click elsewhere closes it
+  await expect(tags).not.toHaveAttribute("open", "");
+  await page.getByRole("button", { name: "Show all" }).click();
+  await expect(items).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "Show all" })).toBeHidden();
+
+  // a Category folds away, and opens again
+  await page.getByRole("button", { name: "📍 Location (3)" }).click();
+  await expect(items).toHaveCount(3);
+  await page.getByRole("button", { name: "📍 Location (3)" }).click();
+  await expect(items).toHaveCount(6);
+
+  // the entry shows its Category, and the editor changes it
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${gunther}`);
+  await expect(page.locator(".enc-detail .chip.enc-cat")).toHaveText("👤 Person");
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.locator(".enc-form select[name=category]")).toHaveValue("person");
+  await page.locator(".enc-form select[name=category]").selectOption("group");
+  await page.getByRole("button", { name: "Save entry" }).click();
+  await expect(page.locator(".enc-detail .chip.enc-cat")).toHaveText("👥 Group");
+  // a save that leaves Category out keeps it
+  expect((await api(page, "entry_save", { id: gunther, name: "Gunther", notes }, cid)).status).toBe(200);
+  expect((await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.id === gunther).category).toBe("group");
+  expectNoErrors(errors);
+});
+
+test("migration 018 turns Location, Person, Item, Group and Vehicle tags into Categories", async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "the database is the same for every browser");
+  const { execFileSync } = require("child_process");
+  const fs = require("fs"), path = require("path");
+  const args = ["-h", process.env.DB_HOST || "127.0.0.1", "-P", process.env.DB_PORT || "3306", "-u", process.env.DB_USER || "root"];
+  if (process.env.DB_PASSWORD) args.push(`-p${process.env.DB_PASSWORD}`);
+  const db = "chronicle_migration_018";
+  const run = (sql, on) => String(execFileSync("mysql", on ? [...args, "-N", "-B", on] : args, { input: sql }));
+  run(`DROP DATABASE IF EXISTS ${db}; CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+  try {
+    run(fs.readFileSync(path.join(__dirname, "..", "..", "db", "schema.sql"), "utf8"), db);
+    // an install from before the change
+    run(`ALTER TABLE encyclopedia_entries DROP COLUMN category;
+      SET FOREIGN_KEY_CHECKS=0;
+      INSERT INTO encyclopedia_entries (id, campaign_id, name) VALUES (1, 1, 'Altdorf'), (2, 1, 'Gunther'), (3, 1, 'Black Hand'), (4, 1, 'Durendal'), (5, 1, 'Market days'), (6, 1, 'Sea Hawk');
+      INSERT INTO encyclopedia_tag_names (id, campaign_id, name) VALUES (1, 1, 'Location'), (2, 1, 'person'), (3, 1, 'Group'), (4, 1, 'Item'), (5, 1, 'City'), (6, 1, 'Vehicle'), (7, 1, 'Event');
+      INSERT INTO encyclopedia_tags (entry_id, tag_id) VALUES (1, 1), (1, 5), (2, 2), (2, 3), (3, 3), (4, 4), (6, 6), (5, 7);`, db);
+    run(fs.readFileSync(path.join(__dirname, "..", "..", "db", "migrations", "018_encyclopedia_categories.sql"), "utf8"), db);
+    expect(run("SELECT name, COALESCE(category, '-') FROM encyclopedia_entries ORDER BY id", db).trim().split("\n")).toEqual([
+      "Altdorf\tlocation", "Gunther\tperson", "Black Hand\tgroup", "Durendal\titem", "Market days\t-", "Sea Hawk\tvehicle"]);
+    // the tag that became the Category is gone; Gunther keeps Group, as he is a Person first
+    expect(run("SELECT e.name, t.name FROM encyclopedia_tags et JOIN encyclopedia_entries e ON e.id=et.entry_id JOIN encyclopedia_tag_names t ON t.id=et.tag_id ORDER BY e.id, t.name", db)
+      .trim().split("\n")).toEqual(["Altdorf\tCity", "Gunther\tGroup", "Market days\tEvent"]);
+    expect(run("SELECT name FROM encyclopedia_tag_names ORDER BY name", db).trim().split("\n")).toEqual(["City", "Event", "Group"]);
+  } finally {
+    run(`DROP DATABASE IF EXISTS ${db};`);
+  }
 });

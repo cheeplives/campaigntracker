@@ -356,10 +356,11 @@ function campaign_tags(int $cid): array {
  * Events and holdings each keep their own list of tags. */
 const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => ['holding_tags', 'holding_id', 'holding_tag_names'],
     'entry' => ['encyclopedia_tags', 'entry_id', 'encyclopedia_tag_names']];
-/** Tags every campaign's Encyclopedia is offered before anyone makes their own: name => colour. */
-const ENTRY_STARTER_TAGS = [
-    'Location' => '#16a34a', 'Item' => '#d97706', 'Person' => '#2563eb', 'Group' => '#9333ea', 'Event' => '#e11d48', 'Religion' => '#0891b2',
-];
+/** Tags every campaign's Encyclopedia is offered before anyone makes their own: name => colour. Location, Person and
+ * the like are Categories (ENTRY_CATEGORIES), not tags. */
+const ENTRY_STARTER_TAGS = ['Event' => '#e11d48', 'Religion' => '#0891b2'];
+/** The Categories an Encyclopedia entry can be in, one each (or none). */
+const ENTRY_CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle'];
 /** Starter tags of what carries tags, by $of: the events' and the Encyclopedia's (holdings have none). */
 function starter_tags(string $of): array { return ['event' => STARTER_TAGS, 'entry' => ENTRY_STARTER_TAGS][$of] ?? []; }
 /** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
@@ -526,6 +527,18 @@ function has_encyclopedia(): bool {
 function need_encyclopedia(): void {
     if (!has_encyclopedia()) fail('The Encyclopedia needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
 }
+/** Whether migration 018 has been run, so entries have a Category. */
+function has_categories(): bool {
+    static $has = null;
+    return $has ??= has_encyclopedia() && (bool)db()->query("SHOW COLUMNS FROM encyclopedia_entries LIKE 'category'")->fetchColumn();
+}
+/** A Category as sent: one of ENTRY_CATEGORIES, or null for none. */
+function category_in($v): ?string {
+    $c = mb_strtolower(trim((string)$v));
+    if ($c === '') return null;
+    if (!in_array($c, ENTRY_CATEGORIES, true)) fail('Pick a Category: ' . implode(', ', ENTRY_CATEGORIES));
+    return $c;
+}
 /** The Encyclopedia's tags plus any starter tag the campaign hasn't used yet (id null), by name. */
 function entry_tags(int $cid): array {
     if (!has_encyclopedia()) return [];
@@ -541,11 +554,11 @@ function entry_tags(int $cid): array {
 /** Every entry this member may see, short: what the browser needs to link names and to know which are new. */
 function entry_index(int $cid, bool $isGm): array {
     if (!has_encyclopedia()) return [];
-    $st = db()->prepare("SELECT id, name, aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
+    $st = db()->prepare("SELECT id, name, " . (has_categories() ? 'category' : 'NULL AS category') . ", aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
     $pics = entry_pics($cid, $isGm);
-    return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
+    return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'category' => $e['category'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
         'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm)),
         'pic' => $pics[(int)$e['id']] ?? null], $st->fetchAll());
 }
@@ -1197,7 +1210,7 @@ try {
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'library_ready' => has_library(), 'sessions_ready' => has_sessions(),
+            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'sessions_ready' => has_sessions(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -1965,7 +1978,7 @@ try {
         $role = role($cid);
         $isGm = $role === 'gm';
         need_encyclopedia();
-        $st = db()->prepare('SELECT e.id, e.name, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.name, ' . (has_categories() ? 'e.category' : 'NULL AS category') . ', e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
@@ -1981,7 +1994,7 @@ try {
         attach_tags($entries, 'entry');
         out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role),
             'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
-            'files' => entry_files($cid, $isGm), 'uploads' => upload_info()]);
+            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories()]);
 
     case 'encyclopedia_sources':
         // Everything written in the campaign that this member may read, for the detector's full scan and for an
@@ -2115,6 +2128,7 @@ try {
         if (!$isGm && array_key_exists('notes', body())) $notes = rich_keep_secrets($old['notes'] ?? null, (string)$notes) ?: null;
         $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
         $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
+        $category = array_key_exists('category', body()) ? category_in(p('category')) : ($old['category'] ?? null);
         db()->beginTransaction();
         if ($old) {
             db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=? WHERE id=?')->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
@@ -2123,6 +2137,7 @@ try {
                 ->execute([$cid, $name, $aliases, $notes, $gmNotes, $secret, me()['id']]);
             $id = (int)db()->lastInsertId();
         }
+        if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
         db()->commit();
         out(['ok' => true, 'id' => $id]);
@@ -2168,7 +2183,7 @@ try {
         out(['ok' => true, 'event_id' => $event]);
 
     case 'entries_add':
-        // The detector's approved names: [{name, is_secret, tags: [{name, color?}]}], or {name, alias_of: entry id} to add
+        // The detector's approved names: [{name, is_secret, category?, tags: [{name, color?}]}], or {name, alias_of: entry id} to add
         // the name to an entry that exists as another name for it. A name that is already a name of an entry is left as
         // it is. A player who sends the name of a secret entry is told nothing; the word joins the players' turned-down
         // list so they aren't asked about it again.
@@ -2181,6 +2196,7 @@ try {
         $added = []; $aliased = [];
         $ins = db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, is_secret, created_by) VALUES (?,?,?,?)');
         $upd = db()->prepare('UPDATE encyclopedia_entries SET aliases_json=? WHERE id=?');
+        $cat = db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?');
         $ign = db()->prepare('INSERT IGNORE INTO encyclopedia_ignored (campaign_id, scope, term) VALUES (?,?,?)');
         db()->beginTransaction();
         foreach ($list as $x) {
@@ -2202,7 +2218,8 @@ try {
             $ins->execute([$cid, $name, $isGm && !empty($x['is_secret']) ? 1 : 0, me()['id']]);
             $id = (int)db()->lastInsertId();
             if (isset($x['tags'])) save_event_tags($cid, $id, $x['tags'], 'entry');
-            $added[] = ['id' => $id, 'name' => $name];
+            if (has_categories() && !empty($x['category'])) $cat->execute([category_in($x['category']), $id]);
+            $added[] = ['id' => $id, 'name' => $name, 'category' => has_categories() && !empty($x['category']) ? category_in($x['category']) : null];
         }
         db()->commit();
         out(['ok' => true, 'added' => $added, 'aliased' => $aliased]);

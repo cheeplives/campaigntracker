@@ -99,9 +99,9 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   const { json } = await api(page, "encyclopedia", undefined, cid);
   const byName = Object.fromEntries(json.entries.map(e => [e.name, e]));
   expect(byName[townName].is_secret).toBe(true);
-  expect(byName[townName].tags.map(t => t.name)).toEqual(["Location"]);
+  expect([byName[townName].category, byName[townName].tags]).toEqual(["location", []]);
   expect(byName[townName].notes).toContain("<h3>Trouble</h3>");
-  expect(byName[personName].tags.map(t => t.name)).toEqual(["Person"]);
+  expect([byName[personName].category, byName[personName].tags]).toEqual(["person", []]);
   expect(byName[personName].notes).toContain(`in ${townName}.`);
 
   // Unticking GM only adds the next one for everyone.
@@ -132,7 +132,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expectNoErrors(perrors);
   await pctx.close();
 
-  // Rumors name the campaign's own entries (the town and its person are tagged Location and Person); one goes in as a Rumor.
+  // Rumors name the campaign's own entries (the town and its person are in the Location and Person Categories); one goes in as a Rumor.
   await page.goto(`index.html#/c/${cid}/generators`);
   const rumors = cards.filter({ has: page.getByRole("heading", { name: /^Rumors/ }) });
   await expect(rumors.getByRole("checkbox", { name: "Use Encyclopedia names" })).toBeChecked();
