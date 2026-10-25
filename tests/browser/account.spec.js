@@ -84,3 +84,48 @@ test("one units choice sets temperatures, distances and speeds, and None follows
   expect((await api(page, "prefs_save", { units: "kelvin" })).status).toBe(400);
   expectNoErrors(errors);
 });
+
+test("the campaign's default units are one Imperial or Metric choice, and an older temperature unit reads as its system", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Ines");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page);
+
+  await page.goto(`index.html#/c/${cid}/settings`);
+  const def = page.getByRole("combobox", { name: "Default units" });
+  // waits for the campaign to reload after the save, since an earlier "Saved" toast can still be showing
+  const saveSettings = () => {
+    let updated = false;
+    const reloaded = page.waitForResponse(r => (updated ||= r.url().includes("a=campaign_update")) && r.url().includes("a=campaign&"));
+    return Promise.all([reloaded, page.getByRole("button", { name: "Save campaign settings" }).click()]);
+  };
+  await expect(def).toHaveValue("metric");
+  await expect(def.locator("option")).toHaveText([/^Imperial/, /^Metric/]);
+  await def.selectOption("imperial");
+  await saveSettings();
+  const settings = async () => (await api(page, "campaign", undefined, cid)).json.campaign.settings;
+  expect(await settings()).toMatchObject({ units: "imperial", hide_temps: false });
+  await page.goto(`index.html#/c/${cid}/travel`);
+  await expect(page.locator(".travel-units").getByLabel("Imperial")).toBeChecked();
+  await expect(page.locator(".wx").first()).toContainText("°F");
+
+  // Hiding temperatures is its own switch now, and keeps them hidden whatever the units.
+  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.getByLabel("Show temperatures").uncheck();
+  await saveSettings();
+  await page.goto(`index.html#/c/${cid}/travel`);
+  await expect(page.locator(".wx").first()).not.toContainText("°");
+
+  // A campaign saved with the old temperature-only setting: Rankine counts as Imperial, and saving drops it.
+  sql(`UPDATE campaigns SET settings_json='{"temp_unit":"R"}' WHERE id=${cid}`);
+  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.reload();
+  await expect(def).toHaveValue("imperial");
+  await expect(page.getByLabel("Show temperatures")).toBeChecked();
+  await saveSettings();
+  const s = await settings();
+  expect(s.units).toBe("imperial");
+  expect(s.temp_unit).toBeUndefined();
+  expectNoErrors(errors);
+});

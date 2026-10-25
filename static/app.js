@@ -190,8 +190,15 @@
   const settings = () => S.camp.settings || (S.camp.settings = {});
   const regionById = id => S.regions.find(r => r.id === Number(id)) || null;
   const currentRegion = () => regionById(settings().current_region) || S.regions[0] || null;
-  /** Campaign default (set by the GM) for anyone who hasn't picked their own units. */
-  const campTempUnit = () => (S.camp && settings().temp_unit) || 'C';
+  /** Campaign default (set by the GM) for anyone who hasn't picked their own units: 'metric' or 'imperial'. A campaign
+   * saved before this choice had a temperature unit instead, and °F or °R stood for Imperial. */
+  const campUnits = () => {
+    const st = S.camp ? settings() : {};
+    if (st.units) return st.units;
+    return E.isImperial(st.temp_unit) ? 'imperial' : 'metric';
+  };
+  /** Whether the GM has hidden temperatures in this campaign (once the old 'Hide temperatures' unit). */
+  const campHidesTemps = () => !!S.camp && (settings().hide_temps ?? settings().temp_unit === 'none');
   /** The user's own units, 'metric' or 'imperial', or '' to show each campaign's as its GM set them. An older
    * temperature-only choice still counts until they save a new one. */
   const myUnits = () => {
@@ -199,15 +206,11 @@
     if (p.units) return p.units;
     return !p.temp_unit || p.temp_unit === 'none' ? '' : E.isImperial(p.temp_unit) ? 'imperial' : 'metric';
   };
-  /** Metric or Imperial for every length and speed: the user's own choice, else the campaign's temperature unit's (°F and °R are Imperial). */
-  const unitSystem = () => myUnits() || (E.isImperial(campTempUnit()) ? 'imperial' : 'metric');
-  /** The temperature unit to show: °C for Metric, °F for Imperial, else the campaign's. A campaign set to hide temperatures keeps them hidden. */
-  const tempUnit = () => {
-    const mine = myUnits(), camp = campTempUnit();
-    return !mine || camp === 'none' ? camp : mine === 'imperial' ? 'F' : 'C';
-  };
+  /** Metric or Imperial for every temperature, length, depth and speed: the user's own choice, else the campaign's. */
+  const unitSystem = () => myUnits() || campUnits();
+  /** The temperature unit to show: °C for Metric, °F for Imperial, or 'none' when the campaign hides temperatures. */
+  const tempUnit = () => (campHidesTemps() ? 'none' : unitSystem() === 'imperial' ? 'F' : 'C');
   const tempSym = unit => E.TEMP_UNITS[unit]?.sym.trim() || '°C';
-  const TEMP_OPTIONS = [...Object.entries(E.TEMP_UNITS).map(([k, u]) => [k, `${u.label} (${u.sym.trim()})`]), ['none', 'Hide temperatures']];
   const shiftNames = () => E.shiftNames(cal());
 
   async function loadCampaign(cid, force) {
@@ -4775,8 +4778,10 @@
         field('Time tracking', select(Object.entries(E.TIME_MODES), E.timeMode(c), { name: 'time_mode' }), 'Also used by the travel planner',
           'How each day is split. Four shifts: Dawn, Midday, Dusk and Overnight, about six hours each. Two shifts: Day and Night. Hours: every hour of the day from midnight, like a normal calendar.\nChanging it moves the clock, shift activities, notes and timed events to the matching time of day. Going to fewer, longer steps joins the activities that land together.'),
         field('Time scale', select([['day', 'Day by day (detailed shifts)'], ['week', 'Week by week'], ['month', 'Month by month']], st.time_unit || 'day', { name: 'time_unit' }), 'Sets the default calendar view and pass-time step'),
-        field('Default units', select(TEMP_OPTIONS, st.temp_unit || 'C', { name: 'temp_unit' }), 'Anyone can pick Metric or Imperial for themselves on their account page',
-          'Used for anyone who hasn\'t chosen their own units. Fahrenheit and Rankine show distances, depths and speeds in Imperial (miles, inches, mph); the rest in Metric'),
+        field('Default units', select(UNIT_OPTIONS.slice(1), campUnits(), { name: 'units' }), 'Anyone can pick Metric or Imperial for themselves on their account page',
+          'Used for anyone who hasn\'t chosen their own units. Covers every temperature, distance, depth and speed the app works out'),
+        field('Show temperatures', el('input', { type: 'checkbox', name: 'show_temps', checked: !campHidesTemps() }), null,
+          'Off: weather shows no temperatures for anyone, whatever units they use'),
         field('Players see future weather', el('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
         field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see'),
@@ -4787,9 +4792,10 @@
     general.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(general);
-      const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, genre: v.genre, time_unit: v.time_unit, temp_unit: v.temp_unit,
+      const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, genre: v.genre, time_unit: v.time_unit, units: v.units, hide_temps: !v.show_temps,
         players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events, fan_wiki: v.fan_wiki || st.fan_wiki };
       if (!s.fan_wiki) delete s.fan_wiki;
+      delete s.temp_unit;
       const body = { name: v.name, description: v.description, settings: s };
       if (v.time_mode !== E.timeMode(c)) {
         if (!await confirmDialog(`Switch to ${E.TIME_MODES[v.time_mode].toLowerCase()}? The clock, shift activities, notes and timed events move to the matching time of day.`)) return;

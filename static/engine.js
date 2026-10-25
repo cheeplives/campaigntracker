@@ -1518,7 +1518,7 @@
         { name: 'Thanksgiving (US)', color: '#c0632b', rule: { type: 'nth_weekday', month: 10, weekday: 4, n: 4, span: 1 } },
         { name: 'Christmas Eve & Day', color: '#2e8b57', rule: { type: 'fixed', month: 11, day: 24, span: 2 } },
       ],
-      settings: { genre: 'modern', time_unit: 'day', temp_unit: north ? 'F' : 'C' },
+      settings: { genre: 'modern', time_unit: 'day', units: north ? 'imperial' : 'metric' },
     };
   }
 
@@ -1614,7 +1614,7 @@
         { name: 'Keg End', color: '#8b5a2b', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'Dwarf Gods.' },
         { name: 'Hexensnacht (Witching Night)', color: '#7b4fa0', rule: { type: 'fixed', month: 17, day: 33, span: 1 }, description: 'The night before Hexenstag; both moons are said to be full.' },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'metric' },
     },
 
     middleearth: {
@@ -1669,7 +1669,7 @@
         { name: 'Overlithe', color: '#d9a441', rule: { type: 'fixed', month: 9, day: 1, span: 1 }, description: 'The leap day, a special holiday added after Mid-year\'s Day.' },
         { name: 'Birthday of Bilbo and Frodo', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 22, span: 1 } },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'metric' },
     },
 
     glorantha: {
@@ -1733,7 +1733,7 @@
         gloranthaDay('Babeester Gor', '#a0522d', 'Dark', 'Disorder', 'Wildday'), gloranthaDay('Babeester Gor', '#a0522d', 'Earth', 'Death', 'Freezeday', true),
         { ...gloranthaDay('Argan Argar', '#3b3b5c', 'Dark', 'Harmony', 'Waterday', true), rule: { type: 'fixed', month: 3, day: 9, span: 2 }, description: 'High holy days: Waterday and Clayday of Harmony Week in Dark Season.' },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'C' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'metric' },
     },
 
     harptos: {
@@ -1788,7 +1788,7 @@
         { name: 'Highharvestide', color: '#c0632b', rule: { type: 'fixed', month: 13, day: 1, span: 1 }, description: 'The harvest festival between Eleint and Marpenoth.' },
         { name: 'Feast of the Moon', color: '#7b4fa0', rule: { type: 'fixed', month: 16, day: 1, span: 1 }, description: 'The festival between Uktar and Nightal, when the dead are remembered.' },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'imperial' },
     },
 
     eberron: {
@@ -1840,7 +1840,7 @@
         { name: 'Thronehold', color: '#4a90d9', rule: { type: 'fixed', month: 10, day: 11, span: 1 }, description: 'The Treaty of Thronehold that ended the Last War, 996 YK.' },
         { name: 'Long Shadows', color: '#3b3b5c', rule: { type: 'fixed', month: 11, day: 26, span: 3 }, description: 'The Shadow\'s nights at the year\'s end.' },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'imperial' },
     },
 
     exandria: {
@@ -1901,7 +1901,7 @@
         { name: 'Day of Heart and Hearth', color: '#c0632b', rule: { type: 'fixed', month: 10, day: 16, span: 1 } },
         { name: 'Winter\'s Crest', color: '#4a90d9', rule: { type: 'fixed', month: 10, day: 20, span: 1 } },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'imperial' },
     },
 
     golarion: {
@@ -1956,7 +1956,7 @@
         { name: 'Crystalhue', color: '#c8a2c8', rule: { type: 'fixed', month: 11, day: 21, span: 1 }, description: 'Shelyn, at the winter solstice: art and courtship.' },
         { name: 'Night of the Pale', color: '#3b3b5c', rule: { type: 'fixed', month: 11, day: 31, span: 1 }, description: 'The year\'s last night, when the ghosts of the year\'s dead pass by.' },
       ],
-      settings: { genre: 'fantasy', time_unit: 'day', temp_unit: 'F' },
+      settings: { genre: 'fantasy', time_unit: 'day', units: 'imperial' },
     },
 
     galactic: {
@@ -2008,7 +2008,7 @@
         { name: 'Festival of Life', color: '#2e8b57', rule: { type: 'fixed', month: 7, day: 1, span: 5 }, description: 'The festival week between the sixth and seventh months.' },
         { name: 'Festival of Stars', color: '#7b4fa0', rule: { type: 'fixed', month: 11, day: 1, span: 5 }, description: 'The festival week between the ninth and tenth months.' },
       ],
-      settings: { genre: 'scifi', time_unit: 'week', temp_unit: 'C' },
+      settings: { genre: 'scifi', time_unit: 'week', units: 'metric' },
     },
 
     shipclock: {
@@ -2028,7 +2028,7 @@
       holidays: [
         { name: 'Launch Day', color: '#4a90d9', rule: { type: 'fixed', month: 0, day: 1, span: 1 } },
         { name: 'Shore leave rotation', color: '#2e8b57', rule: { type: 'every_n', start: 30, interval: 60, span: 3 } }],
-      settings: { genre: 'scifi', time_unit: 'week', temp_unit: 'C' },
+      settings: { genre: 'scifi', time_unit: 'week', units: 'metric' },
     },
 
     custom: {
@@ -2047,7 +2047,7 @@
       start: { year: 1, month: 0, day: 1 },
       regions: [{ name: 'Home region', current: true, settings: { climate: 'temperate', hemisphere: 'north', lighting: 'natural', terrain_mod: 0 } }],
       holidays: [],
-      settings: { time_unit: 'day', temp_unit: 'C' },
+      settings: { time_unit: 'day', units: 'metric' },
     },
   };
 
