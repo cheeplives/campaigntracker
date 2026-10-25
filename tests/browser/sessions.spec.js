@@ -473,14 +473,19 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("saved somewhere else");
 
-  // title, date played and publishing: an untitled session shows its Title and Played on, which fold under ✎ Details once it has a title
+  // title, date played and publishing: an untitled session shows its Title and Played on, which fold under ✎ Details once it has a title.
+  // The one Save saves them too.
+  await page.reload();
   await expect(page.getByLabel("Title")).toBeVisible();
   const tb = await page.getByLabel("Title").boundingBox(), pb = await page.getByLabel("Played on").boundingBox();
   if (page.viewportSize().width > 560) expect(Math.abs(tb.y - pb.y)).toBeLessThan(4); // Title and Played on share a row
   await page.getByLabel("Title").fill("A Locked Box");
   await page.getByLabel("Played on").fill("2024-06-24");
-  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByRole("button", { name: "Save details" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".sess-detail h2")).toContainText("Session 1: A Locked Box");
+  await expect(page.locator(".sess-item.on")).toContainText("Session 1: A Locked Box");
+  await expect(page.locator(".sess-bar")).toContainText("Played 2024-06-24");
   expect((await one(page, cid, sid)).json.session).toMatchObject({ title: "A Locked Box", played_on: "2024-06-24", is_published: false });
   await expect(page.getByLabel("Title")).toBeHidden(); // titled now, so the details fold under ✎ Details
   await page.getByRole("button", { name: "✎ Details" }).click();

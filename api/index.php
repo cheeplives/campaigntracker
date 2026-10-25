@@ -767,7 +767,7 @@ function relation_mine(array $r, bool $isGm): bool {
 // 'file' action below with headers that stop the browser running or sniffing them.
 
 /** What a file can hang off. Add a kind here and a case to attachment_parent(). */
-const ATTACHMENT_PARENTS = ['encyclopedia', 'library'];
+const ATTACHMENT_PARENTS = ['encyclopedia', 'library', 'session'];
 /** The types allowed, by the type the contents show: [extensions, 'image' (shown on the page) or 'file' (downloaded)].
  * No SVG or HTML: both can carry scripts. Text files are checked to be text and always downloaded. */
 const UPLOAD_TYPES = [
@@ -786,7 +786,7 @@ function need_attachments(): void {
 }
 /** The thing a file hangs off, checked: this member must be able to see it (or it fails as not found). secret: only
  * GMs may see it, so its files are GM only too; manage_any: every member may change or remove its files, not only
- * whoever uploaded them and the GMs. */
+ * whoever uploaded them and the GMs; gm_adds: only GMs may add files to it. */
 function attachment_parent(int $cid, string $type, int $id, string $role): array {
     switch ($type) {
         case 'encyclopedia':
@@ -797,6 +797,10 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
             need_library();
             tome_row($cid, $id);
             return ['secret' => false, 'manage_any' => true];
+        case 'session':                                   // a map or handout from a game night: GMs add, players see a published one's
+            need_sessions();
+            session_row($cid, $id, $role === 'gm');
+            return ['secret' => false, 'manage_any' => false, 'gm_adds' => true];
     }
     fail('Files can\'t be attached to that', 400);
 }
@@ -2440,12 +2444,18 @@ try {
         $st->execute([$cid]);
         out(['sessions' => array_map(fn($x) => session_out($x, false, $isGm), $st->fetchAll())]);
 
-    case 'session': // one session with its summary; GMs get its notes too
+    case 'session': // one session with its summary and pictures; GMs get its notes too
         $cid = cid();
         $isGm = role($cid) === 'gm';
         need_sessions();
         $s = session_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
-        out(['session' => session_out($s, true, $isGm)] + ($isGm ? ['notes' => snotes((int)$s['id'])] : []));
+        $files = [];
+        if (has_attachments()) {
+            $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='session' AND parent_id=?" . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY id');
+            $st->execute([$cid, (int)$s['id']]);
+            $files = array_map('attachment_out', $st->fetchAll());
+        }
+        out(['session' => session_out($s, true, $isGm) + ['files' => $files], 'uploads' => upload_info()] + ($isGm ? ['notes' => snotes((int)$s['id'])] : []));
 
     case 'session_save': // GMs: a new session, or a change to one's title, dates or publishing; reopen makes it the open one
         $cid = cid();
@@ -2508,6 +2518,7 @@ try {
         need_sessions();
         $s = session_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM play_sessions WHERE id=?')->execute([$s['id']]);
+        attachments_purge($cid, 'session', (int)$s['id']);   // files have no foreign key to cascade
         out(['ok' => true]);
 
     case 'snote_add': // GMs: a quick note, at the end of the session named, else the open one, else a new one
@@ -2676,6 +2687,7 @@ try {
         $type = (string)($_POST['parent_type'] ?? '');
         $pid = int_in($_POST['parent_id'] ?? null, 1);
         $parent = attachment_parent($cid, $type, $pid, $role);
+        if (!empty($parent['gm_adds']) && $role !== 'gm') fail('Only a GM can add files here', 403);
         $f = $_FILES['file'] ?? null;
         if (!is_array($f) || is_array($f['error'] ?? null)) fail('Pick a file to upload');
         if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) fail("That file is too big: files can be $limit at most", 413);
@@ -2714,7 +2726,7 @@ try {
         if (!has_credits()) fail('Saving found pictures needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
         $type = (string)p('parent_type', '');
         $pid = int_in(p('parent_id'), 1);
-        attachment_parent($cid, $type, $pid, $role);
+        if (!empty(attachment_parent($cid, $type, $pid, $role)['gm_adds']) && $role !== 'gm') fail('Only a GM can add files here', 403);
         $source = (string)p('source', '');
         $id = (string)str_in(p('id'), 100);
         $mode = (string)p('mode', 'copy');
