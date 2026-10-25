@@ -96,6 +96,16 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   DeviantArt's picture, asks oEmbed again after 6 hours, says the work is gone once oEmbed does, and refuses a picture
   on another host; the panel opens with the entry's name, shows credit links, adds a picture with its credit line,
   and a closed DeviantArt work links to the work and the artist in new tabs and embeds.
+- **fan-wikis**: the fan wikis answered by `tests/support/fanwiki-stub.php` (named as `fan_wikis.stub` in the test
+  config): anyone gets the list with each wiki's licence; members search a wiki and get an article's opening paragraphs
+  without its infobox, footnote marks or tables, credited with the licence the wiki states (Fandom's "CC-BY-SA" keeps
+  the list's 3.0; CC BY-NC is named non-commercial; a wiki with no licence, whose api.php is found from its main page,
+  is personal fair use); pictures list the article's first, leave out sound files, come through the server's thumbnail
+  proxy (which refuses other hosts), and copy open ones with their credit and the rest as "Personal fair use"; the GM
+  picks the campaign's wiki in Settings, which players get too, an entry adds the summary with its source and licence,
+  Find Image has a tab for the wiki, and until one is picked it is guessed from the campaign's name; About lists every
+  wiki, the non-open ones under No open source. Checks that need api/fanwikis-nonopen.php skip once the kill switch
+  has removed it.
 - **attachments**: a GM adds a picture and a PDF to an Encyclopedia entry from the page; the picture shows and opens
   full size with its caption, the PDF downloads; players see both, add and remove their own, but can't change or
   remove the GM's; GM-only files and every file on a secret entry are never listed or sent to players, and making a

@@ -61,7 +61,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '23';
+  const APP_VERSION = '24';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -2516,16 +2516,19 @@
     const gmOnly = opts.gmOnly;                       // the Pictures and files box's own GM only box
     const out = el('div', { class: 'find-results', 'aria-live': 'polite' });
     const say = t => out.replaceChildren(el('p', { class: 'muted small' }, t));
-    const tabs = el('div', { class: 'seg find-tabs', role: 'tablist', 'aria-label': 'Where to search' }, FIND_SOURCES.map(([k, label, t]) =>
-      el('button', { type: 'button', role: 'tab', class: 'small' + (k === source ? ' on' : ''), 'aria-selected': String(k === source), 'data-source': k, 'data-tip': t,
-        onclick: () => { source = k; for (const b of tabs.children) { const on = b.dataset.source === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); } run(); } }, label)));
+    const tab = (k, label, t) => el('button', { type: 'button', role: 'tab', class: 'small' + (k === source ? ' on' : ''), 'aria-selected': String(k === source), 'data-source': k, 'data-tip': t,
+      onclick: () => { source = k; for (const b of tabs.children) { const on = b.dataset.source === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); } run(); } }, label);
+    const tabs = el('div', { class: 'seg find-tabs', role: 'tablist', 'aria-label': 'Where to search' }, FIND_SOURCES.map(([k, label, t]) => tab(k, label, t)));
+    // the campaign's fan wiki, when there is one, as a tab of its own
+    let fan = null;
+    Fan?.findTab(fanCtx()).then(t => { if (t) tabs.append(tab(t.key, t.label, (fan = t).tip)); });
     const link = (href, text, cls) => href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', class: cls }, text) : text;
     async function run() {
       const words = q.value.trim(), mine = ++seq;
       if (!words) return say('Type something to search for.');
       say('Looking…');
       try {
-        const r = await api('image_search', { query: { cid, source, q: words } });
+        const r = source === 'fanwiki' && fan ? { results: await fan.search(words) } : await api('image_search', { query: { cid, source, q: words } });
         if (mine !== seq) return;
         if (!r.results.length) return say(`Nothing found for "${words}".`);
         out.replaceChildren(el('div', { class: 'find-grid' }, r.results.map(result)));
@@ -2550,6 +2553,9 @@
           it.author ? el('span', {}, 'by ', link(it.author_url, it.author)) : null,
           el('span', {}, link(it.license_url, it.license), ' · ', link(it.landing_url, it.via || 'Source'))),
         it.open ? btn('Use this picture', ev => pick('copy', ev), 'small primary', 'Copy this picture to the entry, with its credit')
+          : it.fair_use ? el('div', { class: 'find-closed' },
+            el('p', { class: 'small muted' }, 'Not openly licensed: it can be kept on this entry for your campaign\'s own use, credited to the wiki.'),
+            btn('Keep as personal fair use', ev => pick('copy', ev), 'small', 'Copy this picture to the entry, credited to the wiki and marked "Personal fair use". If its owner asks, remove it'))
           : el('div', { class: 'find-closed' },
             el('p', { class: 'small muted' }, da ? 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.' : 'Not openly licensed, so it can\'t be copied here.'),
             da ? el('div', { class: 'row' }, link(it.landing_url, 'View on DeviantArt', 'button small'), link(it.author_url, 'Artist\'s page', 'button small'),
@@ -2922,6 +2928,10 @@
    * summary goes at the end of the Public notes with a link to the article and its licence, CC BY-SA 4.0, which asks for
    * both. The browser asks Wikipedia itself, so index.html's connect-src lets the page reach en.wikipedia.org. */
   const WIKI = 'https://en.wikipedia.org';
+  /** Fan wikis (static/fanwikis.js and api/fanwikis.php): a module of its own, used only while it is here. */
+  const Fan = typeof FanWikis === 'undefined' ? null : FanWikis;
+  const fanCtx = extra => ({ el, btn, api, extLink, cid: S.camp?.id, key: S.camp ? settings().fan_wiki : null, gm: isGM(),
+    hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -3019,6 +3029,7 @@
       tags.node,
       e.id ? foundIn(e, pub, gm) : null,
       e.id ? wikiSummary(name, pub) : null,
+      e.id && Fan ? Fan.summary(fanCtx({ name, pub })) : null,
       e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save entry' : 'Add entry'),
         e.id && !entryBlank(e) ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia` }, 'Cancel')));
@@ -4768,14 +4779,17 @@
           'Used for anyone who hasn\'t chosen their own units. Fahrenheit and Rankine show distances, depths and speeds in Imperial (miles, inches, mph); the rest in Metric'),
         field('Players see future weather', el('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
           'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
-        field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see')),
+        field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see'),
+        Fan ? field('Fan wiki', Fan.settingsSelect(fanCtx()), 'Where Encyclopedia entries look names up for a summary or a picture',
+          'The setting\'s fan wiki, for everyone in the campaign: Fan Wiki Summary and the wiki\'s tab in Find Image use it. Until you pick one, it is guessed from the campaign\'s name and calendar') : null),
       field('Description', el('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
       el('button', { class: 'primary' }, 'Save campaign settings'));
     general.addEventListener('submit', async e => {
       e.preventDefault();
       const v = formData(general);
       const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, genre: v.genre, time_unit: v.time_unit, temp_unit: v.temp_unit,
-        players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events };
+        players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events, fan_wiki: v.fan_wiki || st.fan_wiki };
+      if (!s.fan_wiki) delete s.fan_wiki;
       const body = { name: v.name, description: v.description, settings: s };
       if (v.time_mode !== E.timeMode(c)) {
         if (!await confirmDialog(`Switch to ${E.TIME_MODES[v.time_mode].toLowerCase()}? The clock, shift activities, notes and timed events move to the matching time of day.`)) return;
@@ -4911,8 +4925,9 @@
       return [code, k.label, el('span', {}, extLink(wiki(page), place), note ? el('small', { class: 'muted', style: { display: 'block' } }, note) : null), period, agency];
     });
     const section = (title, ...kids) => el('section', { class: 'card about' }, el('h2', {}, title), ...kids);
+    const fanAbout = Fan ? Fan.about(fanCtx()) : null;
     const p = (...t) => el('p', {}, ...t);
-    const list = items => el('ul', {}, items.map(i => el('li', {}, ...[i].flat())));
+    const list = items => el('ul', {}, items.filter(Boolean).map(i => el('li', {}, ...[i].flat())));
     mount(
       el('div', { class: 'card about' },
         el('h1', {}, 'About Campaign Chronicle'),
@@ -4987,6 +5002,7 @@
             extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', and ',
             extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA are copied, ',
             'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
+          fanAbout ? [fanAbout.used] : null,
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       section('No open source',
@@ -5009,6 +5025,7 @@
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
           ['DeviantArt, through its API and oEmbed, for Find Image: artists there keep their copyright unless they chose a Creative Commons licence, so the app copies only works under an open one and embeds the rest, linked to the work and its artist. ',
             'If an artist or DeviantArt asks, a work will be removed.'],
+          fanAbout ? [fanAbout.nonOpen] : null,
           'Storm, fog and dust frequencies, the weather mixes of the simple climates, the ground conditions model and the visibility rules (see above).',
           ['Fan sites and pages used above that are not openly licensed, each credited where it is used: the Warhammer Fantasy Lexicanum (CC BY-NC, non-commercial use only), ',
             cite('balazar'), ', ', cite('runequestCults'), ', ', cite('gloranthaWeather'), ', ', cite('galifarHolidays'), ' and ', cite('imaginarymaps'), '. ',
