@@ -6,8 +6,9 @@
  * A name is offered when it is
  *   - capitalized: a run of capitalized words ("Bank of Altdorf", "Order of the Silver Flame"), leaving out common
  *     words and the calendar's own names (months, weekdays, shifts, moons). A lone capitalized word that opens a
- *     sentence or sits in a title is offered only when it isn't an everyday English word and is never written in
- *     lower case ("Walking", "Today" and "Ambush on the road" stay out; "Beastmen" and "Marienburg" come through);
+ *     sentence or sits in a title is offered only when the same word is also written capitalized mid-sentence (or the
+ *     campaign knows it as a region or holiday) and never in lower case: "Walking", "Today", "Players" and "Ambush on the
+ *     road" stay out, while "Beastmen struck. We fought the Beastmen." offers Beastmen;
  *   - emphasized by formatting: bold, italic or underlined in rich text notes;
  *   - set apart by typography: between *asterisks*, _underscores_ or quote marks;
  *   - an item of a day's Locations visited list.
@@ -151,6 +152,12 @@ const Nouns = (() => {
   function capitalRuns(text, extra, titleLike) {
     const out = [];
     for (const line of String(text).split(/\n+/)) {
+      // a title only capitalizes its words when it is written in Title Case: in "A letter from Nuln", Nuln is a name
+      if (titleLike) {
+        // (judged on the words after the first, which is capitalized anyway; a line too short to tell reads as a sentence)
+        const words = (line.match(WORD) || []).slice(1).filter(w => w.length > 3 && !JOIN.has(lower(w)));
+        titleLike = words.length > 1 && words.filter(w => CAP.test(w)).length / words.length >= 0.6;
+      }
       let run = [], start = true, prevEnd = 0;
       const flush = () => {
         while (run.length && (run[run.length - 1].join || isStop(run[run.length - 1].w, extra))) run.pop();
@@ -207,7 +214,8 @@ const Nouns = (() => {
 
   /**
    * The names in sources that aren't in the Encyclopedia yet.
-   * sources: [{ text, format: 'plain'|'html', kind, secret, label, title: true for a title line }]
+   * sources: [{ text, format: 'plain'|'html', kind, secret, label, title: true for a title line, short: true for name fields
+ *            (a line each: a holding's name and where it is) }]
    * opts: { known: names and aliases already entries, ignored: words turned down, stop: more words never to offer,
    *         hints: { 'name': 'Tag' } for names the campaign knows the kind of (regions are Locations, holidays Events) }
    * Returns [{ term, count, secret (found only in GM-only text), tag (a guess, or null), where: [labels] }],
@@ -267,7 +275,13 @@ const Nouns = (() => {
     for (const [p, all] of runsOf) {
       for (const r of all.flat()) {
         const w = lower(r.word);
-        if (r.lone && (seenLower.has(w) || /(ing|ed|ly)$/i.test(r.word) || (COMMON.has(w) && !seenMidCap.has(w)))) continue;
+        // A lone capitalized word that opens a sentence (or sits in a title) is capitalized for that reason alone, so it is
+        // offered only when it is also written capitalized mid-sentence somewhere in what was saved, or the campaign
+        // knows it (a region or holiday). "Gunther left." offers nothing; "We met Gunther. Gunther left." offers Gunther.
+        // A short field (a holding's name, an item, where something is kept) is a name on each line, not a sentence, so
+        // there a lone word only has to be no everyday word.
+        if (r.lone && (seenLower.has(w) || /(ing|ed|ly)$/i.test(r.word))) continue;
+        if (r.lone && (p.s.short ? COMMON.has(w) && !seenMidCap.has(w) : !seenMidCap.has(w) && !hint.has(keyOf(r.term)))) continue;
         offer(r.term, p.s, null, around(r.line, r.at, r.term.length));
       }
     }

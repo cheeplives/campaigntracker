@@ -4644,7 +4644,7 @@
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
       route();
-      offerNouns([{ text: `${name.value}\n${loc.value}`, title: true, label: `holding "${name.value.trim()}"` }, { text: desc.value, label: `holding "${name.value.trim()}"` }]);
+      offerNouns([{ text: `${name.value}\n${loc.value}`, title: true, short: true, label: `holding "${name.value.trim()}"` }, { text: desc.value, label: `holding "${name.value.trim()}"` }]);
     }));
     document.body.append(d);
     d.showModal();
