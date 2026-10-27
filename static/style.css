@@ -494,6 +494,39 @@ h4 > .nowpick { all: unset; cursor: pointer; display: inline-flex; align-items: 
 .evrow.secret { border-left: 4px solid var(--secret); padding-left: 8px; }
 .evnow { color: var(--accent); font-weight: 600; }
 .evrow mark { background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 0 1px; }
+.evhead { justify-content: space-between; margin-top: 0; }
+.evhead h2 { margin: 0; }
+/* the events timeline: an SVG drawn by eventTimeline() in app.js; colours come from the theme's tokens */
+.tl-tools { margin: 0 0 8px; }
+.tl-tools select { width: auto; }
+.tl-bands { display: inline-flex; gap: 10px; flex-wrap: wrap; }
+.tl-band-opt { display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
+.tl-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+svg.tl { display: block; width: 100%; height: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab;
+  font: 12px var(--body); outline-offset: -2px; }
+svg.tl.dragging { cursor: grabbing; }
+.tl text { fill: var(--text); }
+.tl .tl-major { font-weight: 700; fill: var(--label); }
+.tl .tl-minor { fill: var(--dim); font-size: 11px; }
+.tl .tl-tick { stroke: var(--line); stroke-width: 1; opacity: .5; }
+.tl .tl-tick.major { opacity: 1; }
+.tl .tl-lane-line { stroke: var(--line); }
+.tl .tl-lane-name, .tl .tl-band-label, .tl .tl-label { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+.tl .tl-lane-name { font-weight: 700; fill: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.tl .tl-band-label { font-size: 11px; }
+.tl .tl-band-label.muted { fill: var(--dim); }
+.tl .tl-session rect { fill: var(--accent); fill-opacity: .3; stroke: var(--accent); }
+.tl .tl-season { fill-opacity: .28; }
+.tl .tl-holiday { fill-opacity: .55; }
+.tl .tl-ev, .tl .tl-session { cursor: pointer; }
+.tl .tl-dot { stroke: var(--panel); stroke-width: 1.5; }
+.tl .tl-bar { fill-opacity: .35; stroke-width: 1.5; }
+.tl .tl-ev.secret .tl-dot, .tl .tl-ev.secret .tl-bar { stroke: var(--secret); stroke-width: 2; stroke-dasharray: 4 2; }
+.tl .tl-ev.past { opacity: .7; }
+.tl .tl-ev:hover .tl-label, .tl .tl-ev:focus .tl-label { font-weight: 700; }
+.tl .tl-now line { stroke: var(--bad); stroke-width: 2; }
+.tl .tl-now-hit, .tl .tl-hit { fill: transparent; }
+.tl-help { margin: 6px 0 0; }
 @media (max-width: 560px) {
   .evrow { flex-wrap: wrap; gap: 2px; }
   .evrow .evwhen { flex: 1 1 100%; }
