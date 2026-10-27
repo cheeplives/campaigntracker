@@ -5458,7 +5458,16 @@
   }
 
   // ------------------------------------------------------------ router
+  // Pages load out of order when the address changes again before one has drawn (Back while a day is still
+  // loading): an older page that draws after a newer one has drawn over it, so the current page is drawn again.
+  let routeSeq = 0, drawnSeq = 0;
   async function route() {
+    const seq = ++routeSeq;
+    await routeTo();
+    if (seq < drawnSeq) return route();
+    drawnSeq = Math.max(drawnSeq, seq);
+  }
+  async function routeTo() {
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
     const parts = (path || '').split('/');
     if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too

@@ -89,3 +89,22 @@ test("the Events tab searches every event and filters by tag", async ({ page, br
   expect((await api(op, "events", undefined, cid)).status).toBe(403);
   await octx.close();
 });
+
+test("going Back while a day is still loading leaves the Events tab drawn", async ({ page, browser }) => {
+  const gm = person("Wren");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Events back ${gm.id}`);
+  await api(page, "event_save", { abs_day: 0, title: "Ambush on the road" }, cid);
+  await page.goto(`index.html#/c/${cid}/events`);
+  const titles = page.locator(".evrow h4");
+  await expect(titles).toHaveText(["Ambush on the road"]);
+  // a slow day page that finishes after Back must not draw over the Events tab
+  await page.route(/[?&]a=day(&|$)/, async r => { await new Promise(res => setTimeout(res, 1500)); await r.continue(); });
+  await page.getByRole("link", { name: "Ambush on the road" }).click();
+  await expect(page).toHaveURL(/#\/c\/\d+\/day\/0$/);
+  await page.goBack();
+  await expect(titles).toHaveText(["Ambush on the road"]);
+  await page.waitForTimeout(2000);
+  await expect(titles).toHaveText(["Ambush on the road"]);
+});
