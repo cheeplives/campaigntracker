@@ -2376,6 +2376,8 @@
             : s('rect', { x: it.mx0, y: cy - 7, width: it.mx1 - it.mx0, height: 14, rx: 3, class: 'tl-bar', style: `fill:${color};stroke:${color}` });
           const lx = it.inside ? Math.max(it.mx0, 0) + 5 : it.mx1 + 4;
           g.append(s('g', { class: 'tl-ev' + (Number(it.e.is_secret) ? ' secret' : '') + (it.sp.end <= now ? ' past' : ''), 'data-day': a, 'data-id': it.e.id, 'data-tip': tipText, 'aria-label': `${it.title}, ${when}` },
+            // an invisible box over the mark and its label, so a tap between the letters still lands on the event
+            s('rect', { x: it.x0, y: cy - ROW / 2 + 1, width: Math.max(1, it.x1 - it.x0), height: ROW - 2, class: 'tl-hit' }),
             mark, text(lx, cy + 4, it.inside ? it.title : cut(it.title, 32), 'tl-label')));
         });
         y += Math.max(1, count) * ROW + 6;

@@ -157,7 +157,7 @@ test("the Events tab switches to a timeline of the same events, remembered, and 
   // clicking an event (tapping it twice on a touch screen) opens its day
   const fair = tl.locator(".tl-ev", { hasText: "Harvest fair" });
   // headless Firefox reports no hover, so go by whether the page has touch, not by the media query
-  if (hasTouch) { await fair.locator(".tl-label").tap(); await fair.locator(".tl-label").tap(); } else await fair.locator(".tl-label").click();
+  if (hasTouch) { await fair.tap(); await fair.tap(); } else await fair.click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/day/2$`));
   expectNoErrors(errors);
 

@@ -525,7 +525,7 @@ svg.tl.dragging { cursor: grabbing; }
 .tl .tl-ev.past { opacity: .7; }
 .tl .tl-ev:hover .tl-label, .tl .tl-ev:focus .tl-label { font-weight: 700; }
 .tl .tl-now line { stroke: var(--bad); stroke-width: 2; }
-.tl .tl-now-hit { fill: transparent; }
+.tl .tl-now-hit, .tl .tl-hit { fill: transparent; }
 .tl-help { margin: 6px 0 0; }
 @media (max-width: 560px) {
   .evrow { flex-wrap: wrap; gap: 2px; }
