@@ -3465,15 +3465,17 @@
     drawNotes();
 
     // --- the summary
+    let namedTimer = 0;
+    const namedSoon = () => { clearTimeout(namedTimer); namedTimer = setTimeout(() => showNamed(), 400); };
     const editor = RichText.editor({ text: s.summary || '', format: 'html', label: 'Summary', placeholder: 'What happened this session, for the players to read',
-      secret: true, mentions: encMentions() });
+      secret: true, mentions: encMentions(), onChange: namedSoon });
     editor.node.classList.add('rt-tall');
     // Session Rewards and Loot Found, under the summary (their columns come with install.php's upgrade)
     const hasExtras = 'rewards' in s;
-    const rewards = hasExtras ? RichText.editor({ text: s.rewards || '', format: 'html', label: 'Session Rewards', secret: true, mentions: encMentions(),
+    const rewards = hasExtras ? RichText.editor({ text: s.rewards || '', format: 'html', label: 'Session Rewards', secret: true, mentions: encMentions(), onChange: namedSoon,
       placeholder: 'What the party earned: experience, favours, standing, story rewards' }) : null;
     rewards?.node.classList.add('rt-small');   // a few lines each, side by side
-    const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(),
+    const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(), onChange: namedSoon,
       placeholder: 'The coin, items and treasure the party found' }) : null;
     loot?.node.classList.add('rt-medium');
     const draft = btn('Build draft', async () => {
@@ -3494,6 +3496,10 @@
       }
       drawNotes();
     }, 'small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out and ? lines listed GM only at the end. Then rewrite it as you like');
+    // the Encyclopedia entries the writing names, as links under it, kept up to date as it is typed (links can't go in an editor)
+    const named = el('div', { class: 'sess-named' });
+    const showNamed = () => named.replaceChildren(mentionRow(...[editor, rewards, loot].filter(Boolean).map(x => [x.value().text, 'html'])) || '');
+    showNamed();
     // what the editors held when the page opened or last saved, so Save sends the writing only when it has changed
     const writing = () => ({ summary: editor.value().text, ...(hasExtras ? { rewards: rewards.value().text, loot: loot.value().text } : {}) });
     let savedWriting = null;
@@ -3506,8 +3512,10 @@
         const r = await post('session_summary_save', { id: s.id, version: s.version, ...written }, cid);
         s.version = r.session.version; s.summary = r.session.summary; s.rewards = r.session.rewards; s.loot = r.session.loot;
         savedWriting = written;
+        // names added from the detector's dialog join the links under the writing and in the notes
         offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` },
-          ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])]);
+          ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])])
+          .then(() => { showNamed(); drawNotes(); });
       }
       const t = title.value.trim().replace(/\s+/g, ' '), on = played.value || null;
       if (t !== (s.title || '') || on !== (s.played_on || null)) {
@@ -3535,7 +3543,8 @@
         hasExtras ? el('div', { class: 'sess-extras' },
           el('div', {}, el('h3', {}, 'Session Rewards', tip('What the party earned this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), rewards.node),
           el('div', {}, el('h3', {}, 'Loot Found', tip('The coin, items and treasure found this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), loot.node))
-          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.')));
+          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.'),
+        named));
     // the notes box starts small and grows with what's typed in it, up to half the window
     const nbox = cols.querySelector('.snote-box');
     const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, innerHeight / 2)}px`; };

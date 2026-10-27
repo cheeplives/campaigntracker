@@ -968,6 +968,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 /* Session Rewards and Loot Found side by side end level: each editor fills its column's height */
 .sess-extras > div { display: flex; flex-direction: column; }
 .sess-extras > div > .rt-editor { flex: 1; }
+.sess-named:not(:empty) { margin-top: 10px; }
 .sess-notes .snote-box { min-height: 4.5em; height: 4.5em; }   /* drag its corner for more */
 .sess-cols h3 { margin: 0 0 6px; }
 .sess-cols .snotes { max-height: 70vh; }

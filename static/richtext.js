@@ -187,8 +187,9 @@ const RichText = (() => {
   /** A rich text editor for one note. text/format: what is stored now ('plain' text is opened as paragraphs).
    * secret: offer the 🔒 button that makes paragraphs GM only (for GMs, in notes players can read).
    * mentions: { list, create } for the @ list of Encyclopedia names (see mentionPicker).
+   * onChange: called whenever the writing changes, typed or put in by the page.
    * Returns { node, value() }, where value() gives { text, format: 'html' } to save ('' for an empty note). */
-  function editor({ text = '', format = 'plain', label = 'Notes', placeholder = '', secret = false, mentions = null } = {}) {
+  function editor({ text = '', format = 'plain', label = 'Notes', placeholder = '', secret = false, mentions = null, onChange = null } = {}) {
     const bar = toolbar(label, secret);
     const area = el('div', { class: 'rt-area' });
     const node = el('div', { class: 'rt-editor loading' }, bar.node, area);
@@ -209,6 +210,7 @@ const RichText = (() => {
       quill.root.setAttribute('aria-multiline', 'true');
       quill.root.setAttribute('role', 'textbox');
       if (mentions) mentionPicker(quill, node, mentions);
+      if (onChange) quill.on('text-change', () => onChange());
       node.classList.remove('loading');
     }).catch(err => { node.classList.remove('loading'); area.textContent = err.message; });
 

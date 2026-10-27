@@ -509,6 +509,14 @@ test("a published session is the player's to read and export; notes move between
   await pp.goto(`index.html#/c/${cid}/sessions`);
   await expect(pp.locator(".sess-item")).toHaveCount(0);
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  // The GM writes in editors, so the entries the writing names are linked under it, and follow what's typed.
+  const named = page.locator(".sess-summary .sess-named a.enc-link");
+  await expect(named).toHaveText(["Tevari"]);
+  await expect(named).toHaveAttribute("href", /\/encyclopedia\/\d+$/);
+  await api(page, "entry_save", { name: "Dulled Fang" }, cid);
+  await page.reload();
+  await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed ledger from the Dulled Fang");
+  await expect(named).toHaveText(["Tevari", "Dulled Fang"]);
   await page.getByLabel("Published", { exact: true }).check();
   await expect(page.getByText("Published for players")).toBeVisible();
 
