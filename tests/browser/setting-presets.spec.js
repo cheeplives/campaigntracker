@@ -168,3 +168,42 @@ test("setting drop-downs list the presets alphabetically, Custom last", () => {
     for (const x of r.filter(x => x.settings.climate.startsWith("koppen:"))) expect(Engine.KOPPEN[x.settings.climate.slice(7)], x.name).toBeTruthy();
   }
 });
+
+test("a Glorantha campaign shows the Red Moon red and black, and each region sees the phase of its own land", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Argrath");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  await page.goto("index.html");
+  await page.getByRole("button", { name: "+ New campaign" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Dragon Pass");
+  await page.getByLabel("Calendar preset").selectOption("glorantha");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("heading", { name: "Dragon Pass" })).toBeVisible();
+  const cid = page.url().match(/#\/c\/(\d+)/)[1];
+  const { json } = await api(page, "campaign", undefined, cid);
+  expect(json.campaign.calendar.moons[0].kind).toBe("red_moon");
+  // The year starts on Freezeday, when Dragon Pass sees the Red Moon Crescent-Going; Glamour sees it Full.
+  const day = Math.floor(json.campaign.current_shift / 4);
+  await page.goto(`index.html#/c/${cid}/day/${day}`);
+  const moons = page.locator(".kv div", { has: page.locator(".lbl", { hasText: "Moons" }) });
+  await expect(moons).toContainText("Red Moon: Crescent-Going");
+  await expect(moons.locator(".moon-glyph svg path")).toHaveAttribute("fill", "#c8513a");
+  await expect(moons.locator(".moon-glyph svg circle")).toHaveAttribute("fill", "#111");
+  // A region's form picks the land it sees the Red Moon from.
+  const glamour = json.regions.find(r => r.name.startsWith("Peloria"));
+  expect(glamour.settings.moon_shift).toBe("full");
+  await page.goto(`index.html#/c/${cid}/regions`);
+  await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByLabel("Red Moon seen as from")).toHaveValue("1");
+  await page.getByLabel("Red Moon seen as from").selectOption("full");
+  await page.getByRole("button", { name: "Save region" }).click();
+  await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.regions.find(r => r.name === "Ralios").settings.moon_shift).toBe("full");
+  await expect(page.getByLabel("Red Moon seen as from")).toHaveCount(0); // the list has been drawn again
+  await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Party is here" }).click();
+  await expect(page.locator("#toast")).toContainText("Party moved to Ralios");
+  // a day not yet recorded is where the party is now (a recorded day keeps the region it was in)
+  await page.goto(`index.html#/c/${cid}/day/${day + 7}`);
+  await expect(moons).toContainText("Red Moon: Full (100%)");
+  expectNoErrors(errors);
+});

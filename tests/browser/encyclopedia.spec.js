@@ -30,15 +30,28 @@ test("the detector finds names, emphasis and set-apart words, and leaves out com
     { text: '<p>We found <strong>warpstone</strong> and a <em>Black Hand</em> token.</p><p>Gunther said "Old Hans" was gone. GM note: check HP.</p>', format: "html" },
     { text: "Altdorf, the Grey Lady inn; crossroads", kind: "locations" },
   ], { known: ["Nuln"], ignored: ["silver flame"], stop: ["Firstmonth"] }).map(f => f.term));
-  for (const name of ["Gunther", "Altdorf", "Order of the Silver Flame", "warpstone", "Black Hand", "Old Hans", "Grey Lady inn"]) expect(found).toContain(name);
-  for (const word of ["The", "Walking", "Today", "I", "Firstmonth", "GM", "HP", "crossroads", "We"]) expect(found).not.toContain(word);
+  for (const name of ["Altdorf", "Order of the Silver Flame", "warpstone", "Black Hand", "Old Hans", "Grey Lady inn"]) expect(found).toContain(name);
+  for (const word of ["The", "Walking", "Today", "I", "Firstmonth", "GM", "HP", "crossroads", "We", "Gunther"]) expect(found).not.toContain(word);
+  // A lone word opening a sentence is a name only once it is also written capitalized mid-sentence (or is a region or
+  // holiday); a run of capitalized words is a name wherever it stands, joined by "of", "the" and the like.
+  const starts = await page.evaluate(() => [
+    Nouns.find([{ text: "Players argued. Combat started. Gunther left. Marienburg burned." }], {}).map(f => f.term),
+    Nouns.find([{ text: "Gunther left. Later we met Gunther again." }], {}).map(f => f.term),
+    Nouns.find([{ text: "Marienburg burned." }], { hints: { Marienburg: "Location" } }).map(f => f.term),
+    Nouns.find([{ text: "Anne of Green Gables sat by the fire. Green Gables is a farm. Dulled Fang docked." }], {}).map(f => f.term),
+  ]);
+  expect(starts[0]).toEqual([]);
+  expect(starts[1]).toEqual(["Gunther"]);
+  expect(starts[2]).toEqual(["Marienburg"]);
+  expect(starts[3]).toEqual(expect.arrayContaining(["Anne of Green Gables", "Green Gables", "Dulled Fang"]));
+  expect(starts[3]).not.toContain("Anne");
   // Title case and sentence starts: an everyday word there is not a name, unless it is also written capitalized mid-sentence.
   const titles = await page.evaluate(() => Nouns.find([
     { text: "Ambush on the road\nBeastmen struck the coach near Weissbruck. Rest came late.", title: true },
     { text: "Battle at the Bridge\nWe held the Bridge until dawn.", title: true },
   ], {}).map(f => f.term));
-  expect(titles).toEqual(expect.arrayContaining(["Beastmen", "Weissbruck", "Bridge"]));
-  for (const word of ["Ambush", "Rest", "Battle", "We"]) expect(titles).not.toContain(word);
+  expect(titles).toEqual(expect.arrayContaining(["Weissbruck", "Bridge"]));
+  for (const word of ["Ambush", "Rest", "Battle", "We", "Beastmen"]) expect(titles).not.toContain(word);
   // Known names are never offered, and the campaign's own names hint at a tag.
   const known = await page.evaluate(() => Nouns.find([{ text: "Pip met Gunther Hoffmann in Reikland." }],
     { known: ["Gunther Hoffmann"], stop: ["Pip"], hints: { Reikland: "Location" } }));

@@ -122,7 +122,7 @@ test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector
   await pp.locator(".lib-form input[name=title]").fill("A letter from Nuln");
   await pp.locator(".lib-form textarea[name=description]").fill("Found in the satchel.");
   await pp.locator(".lib-form .ql-editor").click();
-  await pp.keyboard.type("Magda wrote that the Countess of Averheim is watching us.");
+  await pp.keyboard.type("Our friend Magda wrote that the Countess of Averheim is watching us.");
   await pp.getByRole("button", { name: "Add tome" }).click();
   const dlg = pp.locator("dialog.noun-dialog");
   await expect(dlg).toBeVisible();

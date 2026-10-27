@@ -46,6 +46,12 @@
     { name: 'Tend wounds', group: 'other', icon: '🩹', desc: 'Treat the injured, stop bleeding and nurse the sick.' },
     { name: 'Socialise / trade', group: 'other', icon: '🗣', desc: 'Spend time with locals or fellow travellers: bargain, buy supplies, gather rumours or carouse.' },
   ];
+  /** Whether a shift's activity text names one of the "On the move" actions (Travel, Navigate, ...),
+   * as the action picker writes them: separated by semicolons, commas or new lines. */
+  function isOnTheMove(text) {
+    const moving = new Set(SHIFT_ACTIONS.filter(a => a.group === 'travel').map(a => a.name.toLowerCase()));
+    return String(text || '').split(/[;,\n]/).some(x => moving.has(x.trim().toLowerCase()));
+  }
   /** Add an action's name to a shift's activity text, after anything already written there. */
   function addShiftAction(text, name) {
     const t = String(text || '').replace(/[\s;,]+$/, '');
@@ -392,7 +398,31 @@
   }
 
   // ---------------------------------------------------------------- moons
-  function moonPhase(moon, d) {
+  // Glorantha's Red Moon hangs still over Glamour and turns once a week, so its phase follows the weekday: Black on
+  // Clayday and Full on Wildday as seen from Dragon Pass. The phases sweep clockwise round it as bands hundreds of miles
+  // wide, so at the same moment other lands see other phases, and Glamour, under it, always sees it Full (redMoonForum).
+  // Each phase is placed in an ordinary moon's cycle (0 black, 0.5 full) for the light it gives and its icon.
+  const RED_MOON_PHASES = [['Black', 0], ['Crescent-Coming', 0.125], ['Empty Half', 0.25], ['Full', 0.5], ['Full Half', 0.75],
+    ['Crescent-Going', 0.875], ['Dying', 0.92]];
+  /** Where a region sees the Red Moon from: days ahead of Dragon Pass's phase, or 'full' under it. In the order the
+   * bands sweep, from the moment Dragon Pass sees it Full (redMoonForum). */
+  const RED_MOON_BANDS = [[0, 'Dragon Pass, Kethalia & Prax'], [1, 'Ralios'], [2, 'Fronela'], [3, 'Carmania'], [4, 'Eol & the White Sea'],
+    [5, 'Blue Moon Plateau & Pent'], [6, 'Kralorela & the Wastelands'], ['full', 'Glamour (always Full)']];
+  const RED_MOON_CLAYDAY = 2;
+  /** Whether a moon is Glorantha's Red Moon: marked so, or (in campaigns made before it was) the preset's weekly Red Moon. */
+  const isRedMoon = moon => moon.kind === 'red_moon' || (moon.kind === undefined && moon.name === 'Red Moon' && Number(moon.cycle) === 7);
+  /** A moon on day d. cal and region are needed for the Red Moon, whose phase follows the weekday and the region. */
+  function moonPhase(moon, d, cal, region) {
+    if (cal && isRedMoon(moon)) {
+      const band = region?.settings?.moon_shift ?? 0;
+      const wd = weekday(cal, d);
+      // a festival day outside the week keeps counting from the days around it
+      const day = wd ?? mod(d - RED_MOON_CLAYDAY, 7);
+      const idx = band === 'full' ? 3 : mod(day - RED_MOON_CLAYDAY + (Number(band) || 0), 7);
+      const [label, ph] = RED_MOON_PHASES[idx];
+      const illum = Math.round((1 - Math.cos(2 * Math.PI * ph)) / 2 * 1e9) / 1e9;
+      return { name: moon.name, phase: ph, illum, label, icon: MOON_PHASES[mod(Math.round(ph * 8), 8)][1], color: moon.color, redMoon: true };
+    }
     const cycle = Number(moon.cycle) || 28;
     const t = d + 0.5 - Number(moon.ref || 0);
     let ph = t / cycle;
@@ -403,7 +433,7 @@
     const idx = mod(Math.round(ph * 8), 8);
     return { name: moon.name, phase: ph, illum, label: MOON_PHASES[idx][0], icon: MOON_PHASES[idx][1], color: moon.color };
   }
-  function moons(cal, d) { return (cal.moons || []).map(m => moonPhase(m, d)); }
+  function moons(cal, d, region) { return (cal.moons || []).map(m => moonPhase(m, d, cal, region)); }
 
   // ---------------------------------------------------------------- holidays
   /** n counts from the start (1 = first); a negative n counts from the end (-1 = last, -2 = second to last). */
@@ -417,17 +447,17 @@
     return (n < 0 ? hits[hits.length + n] : hits[n - 1]) ?? null;
   }
   /** Circular distance from a moon's noon phase on day d to a target phase (0..1). */
-  function phaseGap(moon, d, target) {
-    const g = mod(moonPhase(moon, d).phase - target, 1);
+  function phaseGap(moon, d, target, cal) {
+    const g = mod(moonPhase(moon, d, cal).phase - target, 1);
     return Math.min(g, 1 - g);
   }
   /**
    * Whether day d is the day a moon reaches a phase (0 new … 4 full … 7 waning crescent): the day whose
    * noon phase is nearest the exact phase, once per cycle. An erratic moon can't wobble a near miss into a hit.
    */
-  function moonPhaseDay(moon, d, phase) {
-    const target = mod(Number(phase) || 0, 8) / 8, g = phaseGap(moon, d, target);
-    return g <= Math.max(1 / 16, 0.5 / (Number(moon.cycle) || 28)) && g <= phaseGap(moon, d - 1, target) && g < phaseGap(moon, d + 1, target);
+  function moonPhaseDay(moon, d, phase, cal) {
+    const target = mod(Number(phase) || 0, 8) / 8, g = phaseGap(moon, d, target, cal);
+    return g <= Math.max(1 / 16, 0.5 / (Number(moon.cycle) || 28)) && g <= phaseGap(moon, d - 1, target, cal) && g < phaseGap(moon, d + 1, target, cal);
   }
   function holidayStartsForYear(cal, rule, y) {
     const m = Number(rule.month);
@@ -473,7 +503,7 @@
       if (!moon) return false;
       for (let k = 0; k < span; k++) {
         const s = d - k;
-        if (!moonPhaseDay(moon, s, r.phase)) continue;
+        if (!moonPhaseDay(moon, s, r.phase, cal)) continue;
         const p = fromAbs(cal, s);
         if ((m === null || m < 0 || p.month === m) && holidayYearOk(cal, r, p.year, 0)) return true;
       }
@@ -1061,7 +1091,7 @@
 
     const def = weather ? (WEATHER[weather.type] || {}) : null;
     if (lighting === 'natural' && moonCap) {
-      const ms = moons(cal, d);
+      const ms = moons(cal, d, region);
       let light = ms.reduce((s, m, i) => s + m.illum * Number((cal.moons[i].brightness ?? 1)), 0);
       if (def) light *= def.moon ?? 1;
       const bonus = Math.min(moonCap, Math.round(light * 2));
@@ -1145,6 +1175,8 @@
       licence: 'Not openly licensed; setting © Chaosium', url: 'https://journeyoftheheroes.wikidot.com/gods' },
     gloranthaWeather: { title: 'Weather in Glorantha', by: 'Well of Daliath (Chaosium)', licence: 'Not openly licensed; © Chaosium',
       url: 'https://wellofdaliath.chaosium.com/weather-in-glorantha/' },
+    redMoonForum: { title: 'Phases of the Red Moon (which phase each land sees, and the weekday table from the Guide to Glorantha)', by: 'BRP Central forum thread (Chaosium community)',
+      licence: 'Not openly licensed; setting © Chaosium', url: 'https://basicroleplaying.org/topic/5571-phases-of-the-red-moon/' },
     gloranthaGeo: { title: 'Geography of Glorantha', by: 'Glorantha Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Moon Design Publications / Chaosium',
       url: 'https://glorantha.fandom.com/wiki/Geography' },
     harptos: { title: 'Calendar of Harptos (months, festivals, Shieldmeet, tendays)', by: 'Forgotten Realms Wiki (fandom)', licence: 'CC BY-SA (wiki text); the setting © Wizards of the Coast',
@@ -1478,6 +1510,8 @@
     name, ...(i ? {} : { current: true }),
     settings: { climate: `koppen:${code}`, hemisphere, lighting: 'natural', terrain_mod: terrain },
   }));
+  /** Regions with the Red Moon band (RED_MOON_BANDS) each named one sees it from. */
+  const redMoonBands = (regions, bands) => regions.map(r => (r.name in bands ? { ...r, settings: { ...r.settings, moon_shift: bands[r.name] } } : r));
   // Real-world regions for the Gregorian presets, each listed under the hemisphere it lies in. Regions that
   // straddle the equator (the Amazon and Congo basins, the East African highlands) sit with the south, where most of them lie.
   const EARTH_REGIONS = {
@@ -1709,8 +1743,9 @@
           { name: 'Sea Season', type: 'spring', month: 0, day: 1 }, { name: 'Fire Season', type: 'summer', month: 1, day: 1 },
           { name: 'Earth Season', type: 'autumn', month: 2, day: 1 }, { name: 'Dark Season', type: 'winter', month: 3, day: 1 },
           { name: 'Storm Season', type: 'winter', month: 4, day: 1 }, { name: 'Sacred Time', type: 'winter', month: 5, day: 1 }],
-        // the Red Moon turns through its phases once a week, Black on Waterday and Full on Wildday
-        moons: [{ name: 'Red Moon', cycle: 7, ref: 1.75, brightness: 0.5, color: '#c8513a' }],
+        // the Red Moon turns through its phases once a week, Black on Clayday and Full on Wildday from Dragon Pass,
+        // and other lands see other phases (moonPhase)
+        moons: [{ name: 'Red Moon', cycle: 7, ref: 0, brightness: 0.5, color: '#c8513a', kind: 'red_moon' }],
         shiftNames: DEFAULT_SHIFT_NAMES,
       },
       start: { year: 1625, month: 0, day: 1 },
@@ -1718,7 +1753,8 @@
       // every region sits in the north; it runs cold toward Valind's Glacier and hot toward Pamaltela (gloranthaGeo).
       // Each region takes the Köppen climate of what it reads like, a judgement call: Sartar and Dragon Pass as
       // snowy uplands, Prax and Pent as cold steppe, Peloria warmed by the Glowline, Kralorela as China, Teshnos as India.
-      regions: koppenRegions('north', [
+      // Where the Red Moon thread places a land, its region sees that band's phase (RED_MOON_BANDS); the rest see Dragon Pass's.
+      regions: redMoonBands(koppenRegions('north', [
         ['Sartar (Jonstown, Boldhome, the Colymar lands)', 'Dfb'], ['Old Woods & the Stinking Forest', 'Dfb', -1],
         ['Grazelands & Beast Valley', 'BSk'], ['Tarsh & Dragon Pass lowlands', 'Dfb'],
         ['Storm Mountains & Kero Fin', 'ET'], ['Dagori Inkarth & the Shadows Dance', 'Dfc'],
@@ -1729,7 +1765,7 @@
         ['Ralios', 'Cfb'], ['Seshnela', 'Cfb'], ['Maniria', 'Cfa', -1],
         ['Kralorela', 'Cwa'], ['Teshnos', 'Am'], ['East Isles', 'Af'],
         ['Fonrit', 'Aw'], ['Errinoru Jungle & the Maslo Coast', 'Af', -2], ['Pamaltelan plains (Agimori)', 'BSh'],
-      ]),
+      ]), { 'The Wastelands': 6, 'Peloria: the Lunar heartland & Glamour': 'full', 'Pent': 5, 'Fronela': 2, 'Ralios': 1, 'Kralorela': 6 }),
       // the cults' holy days (runequestCults): a weekday of a named week in every season, and a high holy day once a year
       holidays: [
         { name: 'Sacred Time', color: '#7b4fa0', rule: { type: 'fixed', month: 5, day: 1, span: 14 }, description: 'The two weeks between the years, when the gods are near and the coming year\'s fortunes are set in the great rites.' },
@@ -2339,9 +2375,9 @@
   };
 
   const Engine = {
-    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
+    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, isOnTheMove, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
+    eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, RED_MOON_BANDS, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
