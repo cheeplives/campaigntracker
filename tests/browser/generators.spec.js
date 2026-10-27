@@ -158,7 +158,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(tav.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
   const pj = (await api(pp, "encyclopedia", undefined, cid)).json;
   expect(pj.entries.map(e => e.name).sort()).toEqual([coName, tavName].sort());
-  expect(JSON.stringify(pj)).not.toContain(townName);
+  // nothing else names the GM-only town (a company named after it, like "Badwater Gulch Herbalists", is fine)
+  expect(JSON.stringify(pj).replaceAll(coName, "").replaceAll(tavName, "")).not.toContain(townName);
   expectNoErrors(perrors);
   await pctx.close();
 
