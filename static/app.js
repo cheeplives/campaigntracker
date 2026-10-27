@@ -269,7 +269,7 @@
   async function passShifts(n, activity, travelRegionId, arrivalRegionId) {
     const from = nowShift(), to = from + n;
     if (n === 0) return;
-    if (activity && n > 0) await post('shifts_fill', { from_shift: from + 1, to_shift: to, activity }, S.camp.id);
+    if (activity && n > 0) await post('shifts_fill', { from_shift: from + 1, to_shift: to, activity, transit: E.isOnTheMove(activity) }, S.camp.id);
     const d0 = Math.floor(from / spd()), d1 = Math.floor(to / spd());
     if (n > 0) {
       // transit days use the travel region (or wherever the party was), arrival day uses the new region
@@ -1821,7 +1821,7 @@
     const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
     const save = btn('Save', null, 'small primary', `Save this ${word()}'s activity, notes and visibility`);
     save.addEventListener('click', busy(save, async () => {
-      await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value }, S.camp.id);
+      await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value, transit: E.isOnTheMove(act.value) }, S.camp.id);
       toast(`${names[i]} saved`); route();
       offerNouns([{ text: act.value, label: `${names[i]} activity` }, { text: gmn.value, secret: true, label: `${names[i]} GM notes` }]);
     }));
@@ -2212,7 +2212,7 @@
     return [...(c.months || []).map(m => m.name), ...(c.weekdays || []), ...shiftNames(), ...(c.moons || []).map(m => m.name),
       ...(c.seasons || []).map(s => s.name), ...(c.eras || []).flatMap(e => [e?.name, e?.abbr]),
       ...people, ...people.flatMap(n => n.split(/\s+/)), ...S.tags.map(t => t.name), ...S.encTags.map(t => t.name),
-      ...Object.values(DOWNTIME_KINDS).map(k => k.label)].filter(Boolean);
+      ...Object.values(DOWNTIME_KINDS).map(k => k.label), ...E.SHIFT_ACTIONS.map(a => a.name)].filter(Boolean);
   }
   /** Names the campaign knows the kind of: its regions are Locations and its holidays Events. */
   function knownKinds() {
@@ -3744,7 +3744,7 @@
         await addLocations(today(), [toName.value]);
         vs().anchor = today();
         await post('event_save', { abs_day: startDay, end_day: today() > startDay ? today() : null, shift: null,
-          title: `${label}`, body: result.lines.join('\n'), is_secret: false }, S.camp.id);
+          title: `${label}`, body: result.lines.join('\n'), is_secret: false, tags: [{ name: 'Transit' }] }, S.camp.id);
         toast(`Arrived: ${E.fmtShift(cal(), nowShift())}`);
         location.hash = `#/c/${S.camp.id}/calendar`;
       }));

@@ -156,7 +156,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   trip's Class 1 time by the hyperdrive class and route; the campaign's genre
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions; a trip's From and To join
-  the first and last days' Locations visited.
+  the first and last days' Locations visited; the trip's event is tagged Transit, and so is any event running in a shift
+  given an On the move action (on the day page or in Pass time), keeping its other tags.
 - **time-modes**: four shifts, two shifts (Day and Night) and hours each have
   their slot names, weather quarters and travel maths; switching a campaign's mode
   moves the clock, shift activities, shift notes and timed events to the same time

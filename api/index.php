@@ -339,6 +339,7 @@ const STARTER_TAGS = [
     'Holiday' => '#b8860b', 'Battle' => '#b91c1c', 'Party' => '#db2777', 'Banquet' => '#c2410c',
     'Service' => '#4b5563', 'Ritual' => '#7c3aed', 'Festival' => '#d97706', 'Fair' => '#65a30d',
     'Coronation' => '#a16207', 'Wedding' => '#be185d', 'Birth' => '#0d9488', 'Catastrophe' => '#7f1d1d',
+    'Transit' => '#0369a1',
 ];
 const TAG_COLOR = '/^#[0-9a-fA-F]{6}$/';
 /** The campaign's tags plus any starter tag it hasn't used yet (id null), by name. */
@@ -402,6 +403,30 @@ function save_event_tags(int $cid, int $eid, $list, string $of = 'event'): void 
     db()->prepare("DELETE FROM $table WHERE $col=?")->execute([$eid]);
     $link = db()->prepare("INSERT INTO $table ($col, tag_id) VALUES (?,?)");
     foreach (array_keys($ids) as $id) $link->execute([$eid, $id]);
+}
+
+/** Add the Transit tag (made if the campaign hasn't used it yet) to every event running during any shift from
+ * $from to $to (absolute shift numbers, inclusive), keeping the tags they already have. */
+function tag_transit_events(int $cid, int $from, int $to): void {
+    $spd = camp_spd(campaign_row($cid));
+    $st = db()->prepare('SELECT id, abs_day, end_day, shift, shift_end FROM events WHERE campaign_id=? AND abs_day<=? AND COALESCE(end_day, abs_day)>=?');
+    $st->execute([$cid, floordiv($to, $spd), floordiv($from, $spd)]);
+    $ids = [];
+    foreach ($st->fetchAll() as $e) {
+        $start = (int)$e['abs_day'] * $spd + ($e['shift'] === null ? 0 : (int)$e['shift']);
+        $end = (int)($e['end_day'] ?? $e['abs_day']) * $spd + ($e['shift'] === null ? $spd - 1 : (int)$e['shift_end']);
+        if ($start <= $to && $end >= $from) $ids[] = (int)$e['id'];
+    }
+    if (!$ids) return;
+    $find = db()->prepare('SELECT id FROM tags WHERE campaign_id=? AND name=?');
+    $find->execute([$cid, 'Transit']);
+    $tag = $find->fetchColumn();
+    if ($tag === false) {
+        db()->prepare('INSERT INTO tags (campaign_id, name, color) VALUES (?,?,?)')->execute([$cid, 'Transit', STARTER_TAGS['Transit']]);
+        $tag = db()->lastInsertId();
+    }
+    $link = db()->prepare('INSERT IGNORE INTO event_tags (event_id, tag_id) VALUES (?,?)');
+    foreach ($ids as $id) $link->execute([$id, (int)$tag]);
 }
 
 // ---------- downtime (the Downtime tab) ----------
@@ -1556,7 +1581,9 @@ try {
         $vo = ($vo === null || $vo === '') ? null : int_in($vo, 0, 5);
         db()->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, activity, gm_notes, visibility_override) VALUES (?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE activity=VALUES(activity), gm_notes=VALUES(gm_notes), visibility_override=VALUES(visibility_override)')
-            ->execute([$cid, int_in(p('abs_day')), int_in(p('shift'), 0, $maxSlot), str_in(p('activity'), 5000), str_in(p('gm_notes'), 5000), $vo]);
+            ->execute([$cid, $day = int_in(p('abs_day')), $slot = int_in(p('shift'), 0, $maxSlot), str_in(p('activity'), 5000), str_in(p('gm_notes'), 5000), $vo]);
+        // an "On the move" action in the activity tags the events running then as Transit
+        if (p('transit')) tag_transit_events($cid, $day * ($maxSlot + 1) + $slot, $day * ($maxSlot + 1) + $slot);
         out(['ok' => true]);
 
     case 'shifts_fill': // GM: label a span of shifts (e.g. "Travelling to Altdorf") without overwriting existing activity
@@ -1570,6 +1597,7 @@ try {
         db()->beginTransaction();
         $spd = camp_spd(campaign_row($cid));
         for ($s = $from; $s <= $to; $s++) $st->execute([$cid, floordiv($s, $spd), $s - $spd * floordiv($s, $spd), $act]);
+        if (p('transit')) tag_transit_events($cid, $from, $to);
         db()->commit();
         out(['ok' => true]);
 

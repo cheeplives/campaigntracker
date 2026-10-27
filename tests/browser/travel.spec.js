@@ -181,8 +181,52 @@ test("a custom region typed on the day page or the travel planner is added to th
     expect(await locs(startDay)).toBe("Old Mill, Riverford");
     expect(await locs(endDay)).toBe("Old Mill");
   }
+  // The trip's event carries the Transit tag.
+  const trip = (await api(page, "events", undefined, cid)).json.events.find(e => e.title === "In transit: Riverford → Old Mill");
+  expect(trip.tags.map(t => t.name)).toEqual(["Transit"]);
   const town = json.regions.find(r => r.name === "Harbour Town");
   expect(town, JSON.stringify(json.regions)).toBeTruthy();
   expect(json.campaign.settings.current_region).toBe(town.id);
+  expectNoErrors(errors);
+});
+
+test("an On the move action on a shift, or in Pass time, tags the events running then as Transit", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Tova");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Transit ${gm.id}`);
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift, day = Math.floor(now / 4);
+  const save = async (title, body) => (await api(page, "event_save", { title, is_secret: false, tags: [{ name: "Battle" }], ...body }, cid)).json.id;
+  const allDay = await save("Caravan", { abs_day: day + 1 });
+  const morning = await save("Ambush", { abs_day: day + 1, shift: 0 });
+  const evening = await save("Feast", { abs_day: day + 1, shift: 2, shift_end: 3 });
+  const tags = async id => (await api(page, "events", undefined, cid)).json.events.find(e => e.id === id).tags.map(t => t.name);
+
+  // Picking Navigate on the second shift tags the all-day event, not the ones in other shifts, and keeps their tags.
+  await page.goto(`index.html#/c/${cid}/day/${day + 1}`);
+  const card = page.locator(".shiftcard").nth(1);
+  await card.locator("select.actpick").selectOption("Navigate");
+  await card.getByRole("button", { name: "Save" }).click();
+  await expect(page.locator("#toast")).toContainText("saved");
+  await expect.poll(() => tags(allDay)).toEqual(["Battle", "Transit"]);
+  expect(await tags(morning)).toEqual(["Battle"]);
+  expect(await tags(evening)).toEqual(["Battle"]);
+  // A camp action doesn't.
+  await page.goto(`index.html#/c/${cid}/day/${day + 1}`);
+  const late = page.locator(".shiftcard").nth(2);
+  await late.locator("select.actpick").selectOption("Make camp");
+  await late.getByRole("button", { name: "Save" }).click();
+  await expect(page.locator("#toast")).toContainText("saved");
+  expect(await tags(evening)).toEqual(["Battle"]);
+
+  // Passing time with Travel tags what runs in the passed shifts.
+  await page.goto(`index.html#/c/${cid}/calendar`);
+  await page.locator(".passtime input[type=number]").fill(String(4 * (day + 2) - now));
+  await page.locator(".passtime").getByLabel("Activity").fill("Travel");
+  await page.getByRole("button", { name: "Pass time ▶" }).click();
+  await expect(page.locator("#toast")).toContainText("Now:");
+  await expect.poll(() => tags(evening)).toEqual(["Battle", "Transit"]);
+  expect(await tags(morning)).toEqual(["Battle", "Transit"]);
   expectNoErrors(errors);
 });

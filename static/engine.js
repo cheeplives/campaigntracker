@@ -46,6 +46,12 @@
     { name: 'Tend wounds', group: 'other', icon: '🩹', desc: 'Treat the injured, stop bleeding and nurse the sick.' },
     { name: 'Socialise / trade', group: 'other', icon: '🗣', desc: 'Spend time with locals or fellow travellers: bargain, buy supplies, gather rumours or carouse.' },
   ];
+  /** Whether a shift's activity text names one of the "On the move" actions (Travel, Navigate, ...),
+   * as the action picker writes them: separated by semicolons, commas or new lines. */
+  function isOnTheMove(text) {
+    const moving = new Set(SHIFT_ACTIONS.filter(a => a.group === 'travel').map(a => a.name.toLowerCase()));
+    return String(text || '').split(/[;,\n]/).some(x => moving.has(x.trim().toLowerCase()));
+  }
   /** Add an action's name to a shift's activity text, after anything already written there. */
   function addShiftAction(text, name) {
     const t = String(text || '').replace(/[\s;,]+$/, '');
@@ -2339,7 +2345,7 @@
   };
 
   const Engine = {
-    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
+    SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, isOnTheMove, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
     eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
