@@ -4718,6 +4718,13 @@
         return genRow({ name: r.name, note: `${t.look}. ${t.quirk}.` }, 'Person');
       })));
 
+    const aliasKind = keep('alias', select([['', 'Any'], ...Gen.ALIAS_KINDS], pref.alias || '', { 'aria-label': 'Kind of handle' }));
+    const kindName = Object.fromEntries(Gen.ALIAS_KINDS);
+    const handles = genCard('Street names & handles', 'What someone goes by: a street name, a cyberpunk handle, or the tag a netrunner signs in cyberspace, with the real name behind it. Any genre can use them. 📖 Add puts one in the Encyclopedia as a Person, with the real name as notes',
+      [field('Kind', aliasKind)],
+      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.alias(aliasKind.value, g)).map(r =>
+        genRow({ name: r.name, note: aliasKind.value ? r.note : `${kindName[r.kind]}. ${r.note}` }, 'Person'))));
+
     const taverns = genCard(g === 'western' ? 'Saloons & inns' : g === 'scifi' || g === 'cyberpunk' ? 'Bars & clubs' : 'Taverns, inns & pubs',
       'Places to eat, drink and sleep, each with what it\'s known for and who runs it. 📖 Add puts one in the Encyclopedia as a Location', [],
       () => el('ul', { class: 'gen-list' }, Gen.many(6, () => Gen.tavern(g)).map(r => genRow(r, 'Location'))));
@@ -4743,9 +4750,9 @@
       el('input', { type: 'checkbox', checked: pref.secret !== false, onchange: e => setGenPrefs({ secret: e.target.checked }) }), 'Add to the Encyclopedia as GM only') : null;
     mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
       el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Generators', tip('Random names, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
+        el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
         el('div', { class: 'row' }, field('Genre', genre), secret))),
-      names, taverns, companies, rumors, towns));
+      names, handles, taverns, companies, rumors, towns));
   }
 
   /** A generated town as a stat block, with 📖 Add for the town and for each place and person in it. */

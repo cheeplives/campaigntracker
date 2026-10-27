@@ -7,6 +7,7 @@
  *
  * Genres: fantasy, scifi, cyberpunk, modern, western. Each generator returns plain objects:
  *   name()    -> { name, people }, and traits() -> { look, quirk } to go with one
+ *   alias()   -> { name, kind, note }: a street name, cyberpunk handle or cyberspace handle, and the real name behind it
  *   tavern()  -> { name, note }
  *   company() -> { name, note }
  *   town()    -> { name, kind, population, facts: [[label, text]], places: [{ name, note }], people: [{ name, note }], hooks: [] } */
@@ -551,6 +552,41 @@ const Gen = (() => {
     });
   }
 
+  // ------------------------------------------------------------ street names and handles
+  // What people call someone on the street, the alias a cyberpunk goes by, and the tag a netrunner signs in cyberspace.
+  // Any genre can use them: a fence in a fantasy city has a street name too.
+  const ALIAS = {
+    title: w('Little Big Mama Papa Lady Uncle Auntie Sister Brother Old Young Lucky Crazy Slick Sweet Saint Doc Kid Baby Mister Miss Queen King Fast Quiet Smiling One-Eye Two-Tone Dead Easy Mad Cool Dirty Pretty Sleepy Honest Three-Finger Ol\''),
+    word: w('Knuckles Switch Lighter Bones Ratchet Cash Noodles Tick Spider Brass Velvet Juice Smiles Needles Gravel Pinball Boots Chance Sugar Tinker Sparrow Mouse Dice Pockets Rooster Hammer Candy Grease Blue Penny Wheels Biscuit Mongoose Cricket Tooth Smoke Ash Ink Pigeon Socks Peaches Torch Moxie Gizmo Lucky Jinx Rook Patch Crow Rat Hound Viper Magpie Mule Fuse Slate Shiv Grin Bullet Pipe Snake Whisper Echo Cinder Trouble Sixes Lockjaw Shades Static Gumbo Rivets Doughnut Scratch'),
+    suf: w('girl boy jack runner king queen ghost face hand eye heart tooth wire chrome kid man woman lord'),
+    deck: w('null void root sys dark zero proxy ghost daemon kernel stack packet cache shell vector cipher hex byte bit loop node glitch phreak cyber neuro data'),
+    tail: ['exe', 'sys', 'dll', 'bin', 'net', 'io', 'zip', 'bat', 'dat', 'log'],
+    num: ['0', '1', '7', '13', '23', '42', '47', '69', '99', '101', '256', '303', '404', '451', '666', '777', '808', '1337', '2077', '0x0', '0xFF', '0xDEAD'],
+  };
+  const ALIAS_KINDS = [['street', 'Street name'], ['cyber', 'Cyberpunk handle'], ['net', 'Cyberspace handle']];
+  /** Swap some letters for look-alike digits: gh0st, w1re, n3on. */
+  const leet = x => x.replace(/[aeiost]/g, c => chance(0.45) ? { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7' }[c] : c);
+  /** One street name, handle or cyberspace tag. kind: 'street', 'cyber', 'net' or '' for any. Returns { name, kind, note },
+   * with the real name behind it (made for genre) as the note. */
+  function alias(kind = '', genre = 'cyberpunk') {
+    const k = ALIAS_KINDS.some(([x]) => x === kind) ? kind : pick(ALIAS_KINDS)[0];
+    const H = CYBER.handle, A = ALIAS;
+    let n;
+    if (k === 'street') {
+      n = pick([() => `${pick(A.title)} ${pick(A.word)}`, () => pick(A.word), () => `${pick(A.word)} ${pick([...SPACER.m, ...SPACER.f])}`,
+        () => `${pick(A.title)} ${pick(H)}`, () => `${pick(A.word)} ${pick(['Jr.', 'the Second', 'Two', 'Prime'])}`])();
+    } else if (k === 'cyber') {
+      n = pick([() => `${pick(H)}${pick(CYBER.tail)}`, () => `${pick(H)}${pick(A.suf)}`, () => take(H, 2).join(' '),
+        () => `${cap(pick(A.deck))}${pick(A.suf)}`, () => `The ${pick(H)}`])();
+      n = n.replace(/(\w)\1\1+/g, '$1$1');
+    } else {
+      const core = pick([() => pick(H), () => `${pick(A.deck)}${pick(['_', '.', '-', '', '//'])}${pick(H)}`, () => `${pick(H)}${pick(CYBER.tail)}`]).call().toLowerCase();
+      n = pick([() => leet(core), () => `${leet(core)}${pick(['_', '', '.'])}${pick(A.num)}`, () => `${core}.${pick(A.tail)}`, () => `xX_${leet(core)}_Xx`,
+        () => `~${core}~`, () => `${pick(A.deck)}::${core}`, () => `[${core}]`, () => `@${leet(core)}`, () => core.toUpperCase().replace(/[AEIOU]/g, '')])();
+    }
+    return { name: n, kind: k, note: `Real name: ${firstFor(genre)} ${surnameFor(genre)}` };
+  }
+
   let sharedWords = null;
   /** Words that join names rather than make them ("of", "Inn", "Holdings"), so a batch from many() may repeat them. */
   const shared = () => sharedWords ??= new Set(['the', 'of', 'and', '&', '+', 'son', 'daughter', 'child', 'ibn', 'bint', 'al', 'clutch', 'brothers', 'brothers\'',
@@ -561,6 +597,6 @@ const Gen = (() => {
 
   return {
     GENRES, PEOPLES, GENDERS, SECTORS, SIZE_KEYS, sizeLabel, seed, many,
-    name, traits, tavern, company, town, townName, rumors,
+    name, traits, tavern, company, town, townName, rumors, alias, ALIAS_KINDS,
   };
 })();

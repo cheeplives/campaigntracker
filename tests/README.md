@@ -145,9 +145,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   downtime, holdings and Gear and Loot (but not the Long Rest label a rest writes), with an entry quoting the tome it was found in; the 🔍 Scan button on a tome or an entry offers only the names in that one, an entry's GM notes included, and says when none are missing; a player adds a picture to the GM's tome and the GM sees it on the page
   and in the editor, anyone can take a tome's files off, and deleting the tome deletes its files.
 - **generators**: every generator gives real text for every genre, people, line of business
-  and size, and a seed repeats it; rumors use the names they're given; modern names follow each culture's order and forms (Japanese family name first, Russian
+  and size, and a seed repeats it; street names, cyberpunk handles and cyberspace handles come in every genre with a real name each; rumors use the names they're given; modern names follow each culture's order and forms (Japanese family name first, Russian
   feminine surnames) and gender-neutral names come from their own lists; a GM switches genre (remembered), re-rolls, sees just the names with no family name twice, turns on looks and quirks, and adds a town and one of its people
-  to the Encyclopedia as GM only, then a company for everyone; rumors name the campaign's own tagged entries and one is added as a Rumor; a player has no GM only switch and never sees the GM's.
+  to the Encyclopedia as GM only, adds a cyberspace handle with its real name as notes, then a company for everyone; rumors name the campaign's own tagged entries and one is added as a Rumor; a player has no GM only switch and never sees the GM's.
 - **travel**: overland, sea and air each list only their own sample speeds, and
   picking one fills the planner; one Metric/Imperial switch converts every
   distance and speed box; a trip is planned in shifts a day, each a quarter of the calendar's day;

@@ -46,6 +46,23 @@ test("every generator gives real text in every genre, and a seed repeats it", as
   expect(rum.some(b => b.includes("Ada Quill") && b.includes("Gallows Rock"))).toBe(true);
   expect(rum.every(b => (b.match(/Ada Quill/g) || []).length <= 2)).toBe(true); // once a batch, though a rumor may name them twice
   expect(rum.some(b => /\bthe Iron Combine\b/.test(b))).toBe(true);
+  // Street names, cyberpunk handles and cyberspace handles, in any genre, each with the real name behind it.
+  const aliases = await page.evaluate(() => {
+    Gen.seed(11);
+    const out = {};
+    for (const [k] of Gen.ALIAS_KINDS) out[k] = Gen.GENRES.flatMap(([g]) => Array.from({ length: 40 }, () => Gen.alias(k, g)));
+    out.any = Array.from({ length: 60 }, () => Gen.alias("", "fantasy").kind);
+    return out;
+  });
+  for (const k of ["street", "cyber", "net"]) for (const r of aliases[k]) {
+    expect(r.kind).toBe(k);
+    expect(r.name).not.toMatch(/undefined|NaN|\{|\}/); // "null" is a netrunner word here
+    expect(r.name.length).toBeGreaterThan(1);
+    expect(r.note).toMatch(/^Real name: \S+ \S+/);
+  }
+  expect(aliases.street.every(r => /^[A-Z]/.test(r.name))).toBe(true); // street names are written like names
+  expect(aliases.net.some(r => /[0-9_.~@:[]/.test(r.name))).toBe(true); // cyberspace handles look like screen names
+  expect(new Set(aliases.any).size).toBe(3);
   const t = await page.evaluate(() => [Gen.traits("fantasy", "dwarf"), Gen.traits("scifi", "insectoid")]);
   for (const x of t) { expect(x.look.length).toBeGreaterThan(10); expect(x.quirk).toMatch(/^[A-Z]/); }
   expect(modern.en.some(n => /^(Alex|Avery|Casey|Charlie|Jordan|Morgan|Quinn|Riley|Robin|Sam|Taylor) /.test(n))).toBe(true);
@@ -61,9 +78,22 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await page.goto(`index.html#/c/${cid}/generators`);
   await expect(page.locator(".tabs a.on")).toHaveText("Generators");
   const cards = page.locator(".gen-card");
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   const names = cards.filter({ has: page.getByRole("heading", { name: /^Names/ }) });
   await expect(names.locator(".gen-item")).toHaveCount(10);
+
+  // Street names and handles: pick a kind, and the real name goes in as the entry's notes.
+  const handles = cards.filter({ has: page.getByRole("heading", { name: /^Street names & handles/ }) });
+  await expect(handles.locator(".gen-item")).toHaveCount(10);
+  await expect(handles.locator(".gen-item .muted").first()).toHaveText(/^(Street name|Cyberpunk handle|Cyberspace handle)\. Real name: /);
+  await handles.getByLabel("Kind of handle").selectOption("net");
+  await expect(handles.locator(".gen-item .muted").first()).toHaveText(/^Real name: /);
+  const handle = await handles.locator(".gen-name").first().textContent();
+  await handles.locator(".gen-add").first().click();
+  await expect(handles.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  const hj = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.name === handle);
+  expect(hj.category).toBe("person");
+  expect(hj.notes).toContain("Real name: ");
 
   // A new genre redraws every card with its own peoples; the choice is remembered.
   await page.getByLabel("Genre", { exact: true }).selectOption("western");
@@ -106,7 +136,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
 
   // Unticking GM only adds the next one for everyone.
   await page.getByLabel("Add to the Encyclopedia as GM only").uncheck();
-  const company = cards.nth(2);
+  const company = cards.nth(3);
   const coName = await company.locator(".gen-name").first().textContent();
   await company.locator(".gen-add").first().click();
   await expect(company.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
@@ -122,7 +152,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}/generators`);
   await expect(pp.getByLabel("Add to the Encyclopedia as GM only")).toHaveCount(0);
-  const tav = pp.locator(".gen-card").nth(1);
+  const tav = pp.locator(".gen-card").nth(2);
   const tavName = await tav.locator(".gen-name").first().textContent();
   await tav.locator(".gen-add").first().click();
   await expect(tav.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
