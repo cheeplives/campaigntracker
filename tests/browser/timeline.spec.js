@@ -185,16 +185,19 @@ test("the timeline zooms with the wheel and moves when dragged", async ({ page, 
   await api(page, "event_save", { abs_day: 2, title: "Market day" }, cid);
   await page.goto(`index.html#/c/${cid}/events`);
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
-  const tl = page.locator("svg.tl"), mark = tl.locator(".tl-ev circle, .tl-ev rect").first();
+  const tl = page.locator("svg.tl"), mark = tl.locator(".tl-ev .tl-dot, .tl-ev .tl-bar").first();
+  // each move redraws the timeline, so the mark can be replaced between finding it and measuring it
+  const markX = async () => (await mark.boundingBox().catch(() => null))?.x ?? -Infinity;
   await expect(mark).toBeVisible();
   const box = await tl.boundingBox();
-  const x0 = (await mark.boundingBox()).x;
+  await expect.poll(markX).toBeGreaterThan(-Infinity);
+  const x0 = await markX();
   // drag right: the event moves right with it
   await page.mouse.move(box.x + 300, box.y + 10);
   await page.mouse.down();
   await page.mouse.move(box.x + 360, box.y + 10, { steps: 5 });
   await page.mouse.up();
-  await expect.poll(async () => (await mark.boundingBox()).x).toBeGreaterThan(x0 + 40);
+  await expect.poll(markX).toBeGreaterThan(x0 + 40);
   // the wheel zooms out: the zoom button lit moves from Week toward Era
   const lit = () => page.locator(".tl-tools .seg button.on").textContent();
   const before = await lit();
