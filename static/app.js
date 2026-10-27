@@ -5458,14 +5458,12 @@
   }
 
   // ------------------------------------------------------------ router
-  // Pages load out of order when the address changes again before one has drawn (Back while a day is still
-  // loading): an older page that draws after a newer one has drawn over it, so the current page is drawn again.
-  let routeSeq = 0, drawnSeq = 0;
-  async function route() {
+  // Pages draw one at a time, in order, so a page still loading when the address changes again (Back while a day loads)
+  // can't draw over the newer one, or over what has been typed in it. One that a newer address replaced before it began is skipped.
+  let routeSeq = 0, routeRun = Promise.resolve();
+  function route() {
     const seq = ++routeSeq;
-    await routeTo();
-    if (seq < drawnSeq) return route();
-    drawnSeq = Math.max(drawnSeq, seq);
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)));
   }
   async function routeTo() {
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
