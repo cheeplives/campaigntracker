@@ -7,7 +7,7 @@
  *
  * Genres: fantasy, scifi, cyberpunk, modern, western. Each generator returns plain objects:
  *   name()    -> { name, people }, and traits() -> { look, quirk } to go with one
- *   alias()   -> { name, kind, note }: a street name, cyberpunk handle or cyberspace handle, and the real name behind it
+ *   alias()   -> { name, kind, note, people }: a street name, cyberpunk handle or cyberspace handle, and the real name behind it
  *   tavern()  -> { name, note }
  *   company() -> { name, note }
  *   town()    -> { name, kind, population, facts: [[label, text]], places: [{ name, note }], people: [{ name, note }], hooks: [] } */
@@ -219,7 +219,8 @@ const Gen = (() => {
     : genre === 'scifi' ? pick(['spacer', 'spacer', 'spacer', 'synthetic', 'reptilian']) : genre === 'western' ? 'settler' : chance(0.4) ? 'english' : pick(MODERN_KEYS)).name;
   const surnameFor = genre => ({ fantasy: () => chance(0.5) ? pick(SYL.human.trades) : compound(SYL.human), scifi: () => pick(SPACER.s), cyberpunk: () => pick(SPACER.s),
     modern: () => pick(MODERN.english.s), western: () => pick(WEST.s) }[genre] || (() => pick(WEST.s)))();
-  const firstFor = genre => ({ fantasy: () => sylName(SYL.human, sex()), western: () => pick(WEST[sex()]), modern: () => pick(MODERN.english[sex()]) }[genre] || (() => pick(SPACER[sex()])))();
+  const firstFor = (genre, gender) => ({ fantasy: () => sylName(SYL.human, sex(gender)), western: () => pick(WEST[sex(gender)]), modern: () => pick(MODERN.english[sex(gender)]) }[genre]
+    || (() => pick(SPACER[sex(gender)])))();
 
   // ------------------------------------------------------------ quirks and looks
   // A look is an age, a build and one or two things you'd notice; a quirk is a habit or manner, written to follow a name.
@@ -566,9 +567,11 @@ const Gen = (() => {
   const ALIAS_KINDS = [['street', 'Street name'], ['cyber', 'Cyberpunk handle'], ['net', 'Cyberspace handle']];
   /** Swap some letters for look-alike digits: gh0st, w1re, n3on. */
   const leet = x => x.replace(/[aeiost]/g, c => chance(0.45) ? { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7' }[c] : c);
-  /** One street name, handle or cyberspace tag. kind: 'street', 'cyber', 'net' or '' for any. Returns { name, kind, note },
-   * with the real name behind it (made for genre) as the note. */
-  function alias(kind = '', genre = 'cyberpunk') {
+  // Peoples whose names are already street names or handles, so they can't be the real name behind one.
+  const ALIASED = new Set(['street', 'handle', 'ai']);
+  /** One street name, handle or cyberspace tag. kind: 'street', 'cyber', 'net' or '' for any. Returns { name, kind, note, people },
+   * with the real name behind it as the note: made for genre, and for people and gender (as in name()) when they're given. */
+  function alias(kind = '', genre = 'cyberpunk', people = '', gender = '') {
     const k = ALIAS_KINDS.some(([x]) => x === kind) ? kind : pick(ALIAS_KINDS)[0];
     const H = CYBER.handle, A = ALIAS;
     let n;
@@ -584,7 +587,8 @@ const Gen = (() => {
       n = pick([() => leet(core), () => `${leet(core)}${pick(['_', '', '.'])}${pick(A.num)}`, () => `${core}.${pick(A.tail)}`, () => `xX_${leet(core)}_Xx`,
         () => `~${core}~`, () => `${pick(A.deck)}::${core}`, () => `[${core}]`, () => `@${leet(core)}`, () => core.toUpperCase().replace(/[AEIOU]/g, '')])();
     }
-    return { name: n, kind: k, note: `Real name: ${firstFor(genre)} ${surnameFor(genre)}` };
+    const real = people && !ALIASED.has(people) ? name(genre, people, gender) : { name: `${firstFor(genre, gender)} ${surnameFor(genre)}`, people: '' };
+    return { name: n, kind: k, note: `Real name: ${real.name}`, people: real.people };
   }
 
   let sharedWords = null;

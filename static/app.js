@@ -5099,21 +5099,18 @@
     const people = keep('people_' + g, select([['', 'Any'], ...peoples], pref['people_' + g] || peoples[0][0], { 'aria-label': 'Race or people' }));
     const gender = keep('gender', select(Gen.GENDERS, pref.gender || '', { 'aria-label': 'Gender' }));
     const traits = el('input', { type: 'checkbox', checked: !!pref.traits, onchange: e => setGenPrefs({ traits: e.target.checked }) });
-    const names = genCard('Names', 'Character names for this genre. Each people or culture has its own sounds; pick Any to mix them. Gender-neutral gives names used for anyone. 📖 Add puts a name in the Encyclopedia as a Person, with its look and quirk as notes',
-      [field('Race or people', people), field('Gender', gender),
-        el('label', { class: 'inline small gen-traits', 'data-tip': 'Give each name how they look and a habit or manner, for an NPC on the spot' }, traits, 'Add a look and a quirk')],
-      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.name(g, people.value, gender.value)).map(r => {
-        if (!traits.checked) return genRow({ name: r.name }, 'Person');
-        const t = Gen.traits(g, r.people);
-        return genRow({ name: r.name, note: `${t.look}. ${t.quirk}.` }, 'Person');
-      })));
-
-    const aliasKind = keep('alias', select([['', 'Any'], ...Gen.ALIAS_KINDS], pref.alias || '', { 'aria-label': 'Kind of handle' }));
+    // Kind: a real name, or what someone goes by (a street name or handle, 'alias' for any of them) with the real name behind it.
+    const nameKind = keep('nameKind', select([['', 'Real name'], ...Gen.ALIAS_KINDS, ['alias', 'Any street name or handle']], pref.nameKind || '', { 'aria-label': 'Kind of name' }));
     const kindName = Object.fromEntries(Gen.ALIAS_KINDS);
-    const handles = genCard('Street names & handles', 'What someone goes by: a street name, a cyberpunk handle, or the tag a netrunner signs in cyberspace, with the real name behind it. Any genre can use them. 📖 Add puts one in the Encyclopedia as a Person, with the real name as notes',
-      [field('Kind', aliasKind)],
-      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => Gen.alias(aliasKind.value, g)).map(r =>
-        genRow({ name: r.name, note: aliasKind.value ? r.note : `${kindName[r.kind]}. ${r.note}` }, 'Person'))));
+    const names = genCard('Names', 'Character names for this genre. Each people or culture has its own sounds; pick Any to mix them. Gender-neutral gives names used for anyone. Kind gives a street name, a cyberpunk handle or the tag a netrunner signs in cyberspace instead, with the real name behind it; any genre can use them. 📖 Add puts a name in the Encyclopedia as a Person, with its real name, look and quirk as notes',
+      [field('Kind', nameKind), field('Race or people', people), field('Gender', gender),
+        el('label', { class: 'inline small gen-traits', 'data-tip': 'Give each name how they look and a habit or manner, for an NPC on the spot' }, traits, 'Add a look and a quirk')],
+      () => el('ul', { class: 'gen-list' }, Gen.many(10, () => nameKind.value
+        ? Gen.alias(nameKind.value === 'alias' ? '' : nameKind.value, g, people.value, gender.value) : Gen.name(g, people.value, gender.value)).map(r => {
+        const t = traits.checked ? Gen.traits(g, r.people) : null;
+        const note = [r.kind && nameKind.value === 'alias' ? `${kindName[r.kind]}.` : '', r.note ? `${r.note}.` : '', t ? `${t.look}. ${t.quirk}.` : ''].filter(Boolean).join(' ');
+        return genRow({ name: r.name, note }, 'Person');
+      })));
 
     const taverns = genCard(g === 'western' ? 'Saloons & inns' : g === 'scifi' || g === 'cyberpunk' ? 'Bars & clubs' : 'Taverns, inns & pubs',
       'Places to eat, drink and sleep, each with what it\'s known for and who runs it. 📖 Add puts one in the Encyclopedia as a Location', [],
@@ -5142,7 +5139,7 @@
       el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
         el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
         el('div', { class: 'row' }, field('Genre', genre), secret))),
-      names, handles, taverns, companies, rumors, towns));
+      names, taverns, companies, rumors, towns));
   }
 
   /** A generated town as a stat block, with 📖 Add for the town and for each place and person in it. */
