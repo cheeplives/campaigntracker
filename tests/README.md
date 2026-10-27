@@ -49,7 +49,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   the Galactic Standard Calendar's 365-day year of five-day weeks that always
   starts on Primeday, BBY/ABY years and festival weeks;
   every setting region has a Köppen climate; a GM starts a Forgotten Realms
-  campaign with its holidays and regions, and About & sources cites all four.
+  campaign with its holidays and regions, and About & sources cites all four; Glorantha's Red Moon goes through its seven
+  named phases every week (Black on Clayday, Full on Wildday from Dragon Pass), each region sees the phase of its own land
+  (Glamour always Full, chosen in the region's form), a campaign made before keeps it, and it is drawn red and black.
 - **holidays**: the last and Nth-from-last weekday of a month, every Nth year,
   moon-phase holidays and limited runs (between two years, or N times) fall on
   the right days; a GM builds them in the holiday form, which shows only the

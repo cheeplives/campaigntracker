@@ -82,12 +82,30 @@ test("Glorantha: seasons of named weeks, Sacred Time, the Red Moon and holy days
   const last = Engine.toAbs(cal, 1625, 5, 14);
   expect(Engine.fmtDate(cal, last)).toBe("Godsday, Second Week, Sacred Time, 1625 ST");
   expect(Engine.holidaysOn(cal, p.holidays, last).map(h => h.name)).toEqual(expect.arrayContaining(["Sacred Time", "Lhankor Mhy High Holy Day"]));
-  // the Red Moon is Black on Waterday and Full on Wildday, every week
-  for (let d = 0; d < 14; d++) {
-    const wd = cal.weekdays[Engine.weekday(cal, d)], label = Engine.moons(cal, d)[0].label;
-    if (wd === "Waterday") expect(label).toBe("New");
-    if (wd === "Wildday") expect(label).toBe("Full");
+  // From Dragon Pass the Red Moon goes through its seven phases every week, Black on Clayday and Full on Wildday
+  const week = ["Crescent-Going", "Dying", "Black", "Crescent-Coming", "Empty Half", "Full", "Full Half"];
+  const region = name => p.regions.find(r => r.name.startsWith(name));
+  for (let d = 0; d < 21; d++) {
+    const wd = Engine.weekday(cal, d), m = Engine.moons(cal, d, region("Sartar"))[0];
+    expect(m.label).toBe(week[wd]);
+    expect(m.redMoon).toBe(true);
+    expect(Engine.moons(cal, d)[0].label).toBe(week[wd]); // no region: as from Dragon Pass
+    // other lands see the phases a band or more ahead, and Glamour always sees it Full
+    expect(Engine.moons(cal, d, region("Ralios"))[0].label).toBe(week[(wd + 1) % 7]);
+    expect(Engine.moons(cal, d, region("Fronela"))[0].label).toBe(week[(wd + 2) % 7]);
+    expect(Engine.moons(cal, d, region("Pent"))[0].label).toBe(week[(wd + 5) % 7]);
+    expect(Engine.moons(cal, d, region("Kralorela"))[0].label).toBe(week[(wd + 6) % 7]);
+    expect(Engine.moons(cal, d, region("Peloria"))[0].label).toBe("Full");
   }
+  const full = Engine.toAbs(cal, 1625, 0, 6), black = Engine.toAbs(cal, 1625, 0, 3);
+  expect([Engine.moons(cal, full)[0].illum, Engine.moons(cal, black)[0].illum]).toEqual([1, 0]);
+  // a campaign made from the preset before the Red Moon was marked still gets it, by its name and weekly cycle
+  const old = { ...cal, moons: [{ name: "Red Moon", cycle: 7, ref: 1.75, brightness: 0.5, color: "#c8513a" }] };
+  expect(Engine.moons(old, full)[0].label).toBe("Full");
+  expect(Engine.moons(old, black)[0].label).toBe("Black");
+  // a moon phase holiday on the full moon falls on Wildday
+  expect(Engine.holidaysOn(cal, [{ name: "Full", rule: { type: "moon_phase", moon: 0, phase: 4 } }], full)).toHaveLength(1);
+  expect(Engine.holidaysOn(cal, [{ name: "Full", rule: { type: "moon_phase", moon: 0, phase: 4 } }], full + 1)).toHaveLength(0);
   expect(p.regions.filter(r => r.current)).toHaveLength(1);
   for (const r of p.regions) expect(Engine.KOPPEN[r.settings.climate.slice(7)]).toBeTruthy();
   // a calendar without week names leaves {w} out cleanly

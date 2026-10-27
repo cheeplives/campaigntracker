@@ -415,9 +415,28 @@
     const a = Number(e.shift), b = e.shift_end === null || e.shift_end === undefined ? a : Number(e.shift_end);
     return a === b && (e.end_day === null || e.end_day === undefined) ? names[a] : `${names[a]} → ${names[b]}`;
   }
-  function moonBadges(d) {
-    return E.moons(cal(), d).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit). Moonlight brightens the dusk and overnight shifts under sun & moons lighting.` },
-      el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon)));
+  function moonBadges(d, region = currentRegion()) {
+    return E.moons(cal(), d, region).map(m => el('span', { class: 'moon', 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}% lit)${m.redMoon && region ? `, as seen from ${region.name}` : ''}. Moonlight brightens the dusk and overnight shifts under sun & moons lighting.` },
+      moonGlyph(m)));
+  }
+  /** A moon's phase as an icon: the emoji, or for the Red Moon a drawing of it, red where lit and black where not. */
+  function moonGlyph(m) {
+    if (!m.redMoon) return el('span', { style: m.color && cal().moons.length > 1 ? { filter: `drop-shadow(0 0 2px ${m.color})` } : {} }, m.icon);
+    const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', 'moon-svg'); svg.setAttribute('aria-hidden', 'true');
+    const disc = document.createElementNS(ns, 'circle');
+    disc.setAttribute('cx', 12); disc.setAttribute('cy', 12); disc.setAttribute('r', 10); disc.setAttribute('fill', '#111');
+    disc.setAttribute('stroke', m.color || '#c8513a'); disc.setAttribute('stroke-width', 0.75);
+    svg.append(disc);
+    if (m.illum > 0.001) {
+      // the lit side: a half disc, then back along the terminator, an ellipse as wide as cos(phase) of the radius
+      const ph = m.phase, waxing = ph <= 0.5, rx = Math.abs(Math.cos(2 * Math.PI * ph)) * 10, gibbous = ph > 0.25 && ph < 0.75;
+      const lit = document.createElementNS(ns, 'path');
+      lit.setAttribute('d', `M12 2 A10 10 0 0 ${waxing ? 1 : 0} 12 22 A${rx.toFixed(3)} 10 0 0 ${waxing === gibbous ? 1 : 0} 12 2 Z`);
+      lit.setAttribute('fill', m.color || '#c8513a');
+      svg.append(lit);
+    }
+    return el('span', { class: 'moon-glyph' }, svg);
   }
   const FORECAST_TIP = 'The day\'s forecast: the worst weather it brings, its daytime high and its strongest wind. Each shift varies within it, cooler at night and often easing off away from the worst of it.';
   const SO_FAR_TIP = 'The weather this shift. The rest of today\'s weather shows up as each shift comes round.';
@@ -926,7 +945,7 @@
           el('div', { class: 'now-time' },
             el('a', { href: `#/c/${S.camp.id}/today`, class: 'now-date', 'data-tip': `The current ${word()} and date in the campaign. Click to open today` }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
-              weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d),
+              weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d, region),
               hol.map(holidayChip)))),
         isGM() ? passTime() : null]));
     };
@@ -1118,13 +1137,15 @@
 
   /** Moons reaching new / first quarter / full / last quarter on day d (the day the phase is closest). */
   function keyMoonPhases(d) {
-    const before = E.moons(cal(), d - 1), now = E.moons(cal(), d), after = E.moons(cal(), d + 1);
+    const reg = currentRegion();
+    const before = E.moons(cal(), d - 1, reg), now = E.moons(cal(), d, reg), after = E.moons(cal(), d + 1, reg);
     const dist = (ph, t) => Math.min(Math.abs(ph - t), 1 - Math.abs(ph - t));
     const out = [];
     now.forEach((m, i) => {
       for (const [t, label, icon] of [[0, 'New', '🌑'], [0.25, 'First quarter', '🌓'], [0.5, 'Full', '🌕'], [0.75, 'Last quarter', '🌗']]) {
         const x = dist(m.phase, t);
-        if (x < 0.06 && x <= dist(before[i].phase, t) && x < dist(after[i].phase, t)) out.push({ name: m.name, label, icon });
+        // the Red Moon goes by its own phase names (Black, Empty Half, Full, Full Half) and is drawn red and black
+        if (x < 0.06 && x <= dist(before[i].phase, t) && x < dist(after[i].phase, t)) out.push(m.redMoon ? { ...m, glyph: moonGlyph(m) } : { name: m.name, label, icon });
       }
     });
     return out;
@@ -1155,7 +1176,7 @@
     return el('a', { class: cls.join(' '), href: `#/c/${S.camp.id}/day/${d}` },
       el('div', { class: 'dc-top' }, el('span', { class: 'dnum' }, p.intercalary && E.monthLength(c, p.year, p.month) === 1 ? c.months[p.month].name : p.day),
         el('span', { class: 'dc-icons' }, def ? el('span', { 'data-tip': E.weatherLabel(w, tempUnit()) + wxTip(w) }, def.icon) : null,
-          compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.icon)),
+          compact ? null : keyMoonPhases(d).map(m => el('span', { 'data-tip': `${m.name}: ${m.label} moon` }, m.glyph || m.icon)),
           rems.length ? el('span', { class: 'dc-bell', 'data-tip': reminderTip(rems) }, '🔔') : null)),
       hol.map(x => el('div', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name)),
       evs.slice(0, 3).map(evLine),
@@ -1232,7 +1253,7 @@
       const shiftNotesOf = i => np?.items.filter(n => n.kind === 'shift' && n.shift === i) || [];
       const hidden = np ? np.count - np.items.length : 0;
       rows.push(el('a', { class: 'weekrow' + (d === today() ? ' today' : ''), href: `#/c/${S.camp.id}/day/${d}` },
-        el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d)),
+        el('div', { class: 'wr-date' }, el('strong', {}, E.fmtDate(c, d)), el('div', { class: 'small' }, weatherText(w), ' ', moonBadges(d, reg)),
           hol.map(holidayChip), tagsOf(evs).map(tagChip), evs.map(evLine),
           dayReminders(d).map(x => el('div', { class: 'evline reminder', 'data-tip': reminderTip([x]) }, '🔔 ', x.title)),
           dayNotes.map(n => el('div', { 'data-tip': `${noteWho(n)}: ${n.text}` }, notePreview(n, 'wr-note'))),
@@ -1295,7 +1316,7 @@
           tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
         sun ? el('div', { class: 'sun' }, el('span', { class: 'lbl' }, 'Sun', tip('Sunrise and sunset, blended between the times set on the seasons in Settings, and taken from half a year away for regions in the other hemisphere. Natural light at dawn and dusk follows them')),
           `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
-        el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d).map(m => el('div', {}, `${m.icon} ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
+        el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d, region).map(m => el('div', {}, m.redMoon ? moonGlyph(m) : m.icon, ` ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
         // The Current Day tab's banner already shows the shift the clock is on.
         d === today() && !current ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
@@ -3958,7 +3979,9 @@
         field('Light source', lightSel, null, 'Where the light comes from, which sets the starting visibility of each shift.\nSun & moons: 3 at dawn, 5 at midday, 1 at dusk (plus up to +1 for moonlight), 0 overnight (plus up to +2 for moonlight).\nArtificial: the levels you set below, the same every day.\nNone: always 0, pitch black, unless the party brings light.'),
         field('Terrain visibility modifier', select([[-2, '−2 (dense jungle, deep canyon)'], [-1, '−1 (forest, narrow streets)'], [0, '0 (open)'], [1, '+1 (snowfield, desert glare, open sea)']], s.terrain_mod || 0, { name: 'terrain_mod' }), null,
           'Added to every shift\'s visibility here, after light and weather. It has no effect when the light source is None'),
-        field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP)),
+        field('Artificial light per shift (0–5)', lightLv, 'Used when Light source is Artificial', LIGHT_TIP),
+        (cal().moons || []).some(E.isRedMoon) ? field('Red Moon seen as from', select(E.RED_MOON_BANDS.map(([k, l]) => [k, l]), s.moon_shift ?? 0, { name: 'moon_shift' }), null,
+          'The Red Moon shows a different phase to each land at the same moment, the phases sweeping round it. Pick the land this region is in, or nearest to') : null),
       customWrap, builder, baselineWrap,
       field('Description', el('textarea', { name: 'description', rows: 2, value: r.description || '' })),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
@@ -3966,7 +3989,8 @@
       e.preventDefault();
       const v = formData(f);
       const settingsOut = { climate: v.climate, hemisphere: v.hemisphere, lighting: v.lighting, terrain_mod: Number(v.terrain_mod),
-        light_levels: [0, 1, 2, 3].map(i => Math.max(0, Math.min(5, Number(v[`lv${i}`]) || 0))) };
+        light_levels: [0, 1, 2, 3].map(i => Math.max(0, Math.min(5, Number(v[`lv${i}`]) || 0))),
+        ...(v.moon_shift !== undefined ? { moon_shift: v.moon_shift === 'full' ? 'full' : Number(v.moon_shift) || 0 } : {}) };
       if (v.climate === 'custom') {
         try { settingsOut.custom_climate = JSON.parse(v.custom_climate); } catch { return toast('Custom climate is not valid JSON', true); }
       }
@@ -4920,7 +4944,7 @@
     return {
       weekdays: (c.weekdays || []).join(', '),
       months: c.months.map(m => [m.name, m.days, m.leapDays || 0, m.intercalary ? (m.keepWeekday ? 'festival weekday' : 'festival') : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
-      moons: (c.moons || []).map(m => [m.name, m.cycle, m.ref || 0, m.brightness ?? 1, m.color || '#e8e4d8', m.erratic ? 'erratic' : ''].filter((x, i) => i < 5 || x).join(', ')).join('\n'),
+      moons: (c.moons || []).map(m => [m.name, m.cycle, m.ref || 0, m.brightness ?? 1, m.color || '#e8e4d8', m.erratic ? 'erratic' : '', m.kind === 'red_moon' ? 'red moon' : ''].filter((x, i) => i < 5 || x).join(', ')).join('\n'),
       shiftNames: E.quarterNames({ ...c, timeMode: 'shifts4' }).join(', '),
       eras: (c.eras || []).map(e => [e.name, e.abbr || '', e.start || 0, e.restart ? 'restart' : e.before ? 'before' : ''].filter((x, i) => i < 3 || x).join(', ')).join('\n'),
     };
@@ -4947,7 +4971,9 @@
     const every = Number(v.leap_every);
     c.leap = every > 0 ? { every, skip: Number(v.leap_skip) || 0, unskip: Number(v.leap_unskip) || 0 } : null;
     c.hemisphere = v.cal_hemisphere; c.seasons = seasons;
-    c.moons = lines(v.moons).map(([name, cycle, ref, bright, color, erratic]) => ({ name, cycle: Number(cycle) || 28, ref: Number(ref) || 0, brightness: bright === undefined ? 1 : Number(bright), color: color || '#e8e4d8', erratic: /err/i.test(erratic || '') }));
+    // after the color, "erratic" wobbles the cycle and "red moon" makes it Glorantha's Red Moon (phases by weekday and region)
+    c.moons = lines(v.moons).map(([name, cycle, ref, bright, color, ...flags]) => ({ name, cycle: Number(cycle) || 28, ref: Number(ref) || 0, brightness: bright === undefined ? 1 : Number(bright), color: color || '#e8e4d8',
+      erratic: flags.some(f => /err/i.test(f)), ...(flags.some(f => /red\s*moon/i.test(f)) ? { kind: 'red_moon' } : {}) }));
     c.shiftNames = v.shiftNames.split(',').map(x => x.trim()).slice(0, 4);
     c.eras = lines(v.eras).map(([name, abbr, start, kind]) => {
       if (!Number.isFinite(Number(start)) || start === undefined || start === '') throw new Error(`Era "${name}" needs a first year`);
@@ -5051,7 +5077,7 @@
         'Regions in the other hemisphere get the opposite season'),
       seasons,
       el('small', { class: 'muted' }, 'Start months use the saved month list; save month changes first, then adjust seasons.'),
-      field('Moons — one per line: Name, cycle days, reference day, brightness 0–1, color[, erratic]', ta('moons', t.moons, 3), 'Reference day = an absolute day number when the moon is new. Today is absolute day ' + today() + '.'),
+      field('Moons — one per line: Name, cycle days, reference day, brightness 0–1, color[, erratic][, red moon]', ta('moons', t.moons, 3), 'Reference day = an absolute day number when the moon is new. Today is absolute day ' + today() + '. "red moon" makes it Glorantha\'s Red Moon: its phase follows the weekday (Black on the third, Full on the sixth) and the land each region sees it from.'),
       el('details', {}, el('summary', {}, 'Advanced: raw calendar JSON'), ta('raw', JSON.stringify(c, null, 1), 12),
         el('small', { class: 'muted' }, 'If you edit this box, it is saved instead of the fields above.')),
       el('button', { class: 'primary' }, 'Save calendar'));
@@ -5319,7 +5345,8 @@
           ['Middle-earth preset (© the Tolkien Estate): the calendar follows the books. Region climates were first taken from ', cite('imaginarymaps'),
             ' and fit Tolkien\'s own latitude anchors: ', cite('letter294'), '.'],
           ['Glorantha preset (© Chaosium): the calendar and holy days follow the official setting via fan sources. Glorantha is flat and its seasons are the same everywhere; region climates are judgement calls from ', cite('gloranthaGeo'),
-            ' (cold toward the Glacier in the north, hot toward Pamaltela in the south) and ', cite('gloranthaWeather'), ', using the Köppen classes above. The Red Moon\'s weekly phases, Full on Wildday, are a reading of the setting.'],
+            ' (cold toward the Glacier in the north, hot toward Pamaltela in the south) and ', cite('gloranthaWeather'), ', using the Köppen classes above. The Red Moon\'s weekly phases (Black on Clayday, Full on Wildday from Dragon Pass) and the phase each land sees at once come from ', cite('redMoonForum'),
+            '; which band each preset region falls in is a judgement call, and a region the thread doesn\'t place sees it as Dragon Pass does.'],
           'Forgotten Realms preset (© Wizards of the Coast): the calendar and Selûne follow the official setting via a fan wiki. Region climates are judgement calls from each region\'s real-world analogue (the Sword Coast as Atlantic Europe, Amn and Tethyr as Spain, Calimshan as North Africa), using the Köppen classes above.',
           'Eberron preset (© Wizards of the Coast): the calendar follows the official setting via a fan wiki, and the holidays via a fan world page. The setting gives the twelve moons no cycles, so the app makes Zarantyr full every 28 days and each farther moon a week slower. Region climates are judgement calls (the Five Nations as temperate Europe, Q\'barra and Xen\'drik as jungle); the Mournland\'s weather is magical, so it keeps Cyre\'s old climate.',
           'Exandria preset (© Critical Role): the calendar follows the official setting via a fan wiki. Which weekday the year starts on is not given, and Catha\'s 33-day and Ruidus\'s 164-day cycles are the app\'s choice within what the wiki says. Region climates are judgement calls (Tal\'Dorei and the Dwendalian Empire as temperate Europe, Marquet as North Africa).',
@@ -5340,7 +5367,7 @@
           fanAbout ? [fanAbout.nonOpen] : null,
           'Storm, fog and dust frequencies, the weather mixes of the simple climates, the ground conditions model and the visibility rules (see above).',
           ['Fan sites and pages used above that are not openly licensed, each credited where it is used: the Warhammer Fantasy Lexicanum (CC BY-NC, non-commercial use only), ',
-            cite('balazar'), ', ', cite('runequestCults'), ', ', cite('gloranthaWeather'), ', ', cite('galifarHolidays'), ' and ', cite('imaginarymaps'), '. ',
+            cite('balazar'), ', ', cite('runequestCults'), ', ', cite('gloranthaWeather'), ', ', cite('redMoonForum'), ', ', cite('galifarHolidays'), ' and ', cite('imaginarymaps'), '. ',
             'Each was used only for facts (dates, names, cycles and climate zones), not copied text. If an owner asks, the figures taken from their page will be replaced or removed.'],
         ])));
   }

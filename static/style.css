@@ -990,3 +990,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .sess-page.wide .lib-list .sess-item { flex: 0 1 240px; }
 @media (min-width: 721px) { .sess-page.wide .sess-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
 @media (max-width: 900px) { .sess-page.wide .lib-list { display: block; } }
+
+/* the Red Moon, drawn red where lit and black where not */
+.moon-glyph { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
+.moon-svg { width: 100%; height: 100%; display: block; }
