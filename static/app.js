@@ -2104,9 +2104,10 @@
   }
 
   // ------------------------------------------------------------ events tab
-  /** Every event the member can see in one list, newest or oldest first, narrowed by a search and by tags. */
+  /** Every event the member can see in one list, newest or oldest first, or on a timeline, narrowed by a search and by tags. */
   async function viewEvents() {
-    const { events } = await api('events', { query: { cid: S.camp.id } });
+    const [{ events }, { sessions }] = await Promise.all([api('events', { query: { cid: S.camp.id } }),
+      S.sessionsReady ? api('sessions', { query: { cid: S.camp.id } }).catch(() => ({ sessions: [] })) : { sessions: [] }]);
     const st = vs().events || (vs().events = { q: '', tags: new Set(), when: 'all', order: 'asc' });
     const c = cal(), d0 = today();
     const end = e => Number(e.end_day ?? e.abs_day);
@@ -2122,6 +2123,8 @@
     const tagRow = el('div', { class: 'tagpick' });
     const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
     const list = el('div', { class: 'evlist' });
+    let asTimeline = evTimelineOn();
+    const timeline = eventTimeline(st, sessions);
 
     const marked = markWords;
     const clip = t => (t.length > 220 ? `${t.slice(0, 219).trimEnd()}…` : t);
@@ -2145,10 +2148,17 @@
       let shown = events.filter(e => (st.when === 'all' || (st.when === 'upcoming' ? end(e) >= d0 : end(e) < d0))
         && (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase())))
         && words.every(w => hay.get(e).includes(w)));
-      if (st.order === 'desc') shown = shown.slice().reverse();
       count.textContent = shown.length === events.length ? `${events.length} event${events.length === 1 ? '' : 's'}` : `${shown.length} of ${events.length} events`;
-      list.replaceChildren(...(shown.length ? shown.map(e => row(e, words))
-        : [el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.')]));
+      const none = el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.');
+      timeline.node.hidden = !asTimeline || !shown.length;
+      order.hidden = asTimeline;
+      if (asTimeline) {
+        list.replaceChildren(...(shown.length ? [] : [none]));
+        timeline.draw(shown);
+      } else {
+        if (st.order === 'desc') shown = shown.slice().reverse();
+        list.replaceChildren(...(shown.length ? shown.map(e => row(e, words)) : [none]));
+      }
       tagRow.replaceChildren(...used.map(t => {
         const k = t.name.toLowerCase(), on = st.tags.has(k);
         const b = el('button', { type: 'button', class: 'tagopt' + (on ? ' on' : ''), 'aria-pressed': String(on),
@@ -2161,12 +2171,336 @@
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     when.addEventListener('change', () => { st.when = when.value; draw(); });
     order.addEventListener('change', () => { st.order = order.value; draw(); });
-    draw();
+    const asList = btn('List', () => setView(false), 'small', 'Every event as a list, oldest or newest first');
+    const asTl = btn('Timeline', () => setView(true), 'small', 'The events along the calendar, in lanes by tag: zoom from an era down to a day and drag to move along');
+    const setView = on => {
+      asTimeline = on;
+      rememberEvTimeline(on);
+      asList.classList.toggle('on', !on); asList.setAttribute('aria-pressed', String(!on));
+      asTl.classList.toggle('on', on); asTl.setAttribute('aria-pressed', String(on));
+      draw();
+    };
     mount(...campaignHeader('events'), el('div', { class: 'card' },
-      el('h2', {}, 'Events'),
+      el('div', { class: 'row evhead' }, el('h2', {}, 'Events'), el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl)),
       el('div', { class: 'row evfilters' }, search, when, order),
       used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
-      count, list));
+      count, list, timeline.node));
+    setView(asTimeline); // drawn once it's on the page, so the timeline knows how wide it is
+  }
+  const EV_VIEW_KEY = 'chronicle:evtimeline';
+  function evTimelineOn() {
+    try { return localStorage.getItem(EV_VIEW_KEY) === '1'; } catch { return false; }
+  }
+  function rememberEvTimeline(on) {
+    try { on ? localStorage.setItem(EV_VIEW_KEY, '1') : localStorage.removeItem(EV_VIEW_KEY); } catch { /* private mode: just this page */ }
+  }
+
+  // ------------------------------------------------------------ events timeline
+  /** The Events tab's Timeline: the events the filters leave, drawn along the campaign's own calendar with time running
+   * left to right, in lanes by tag (or by the Encyclopedia entries they name, or all in one). The mouse wheel, a pinch,
+   * the zoom buttons or + and − zoom from an era down to a day; dragging or the arrow keys move along. A one-day event
+   * is a dot, a longer one a bar, and close up an event with shifts covers just those. Hover or tap an event to read it,
+   * click it or tap it again to open its day. Bands over the lanes can show the sessions, seasons and holidays, and a
+   * red line marks now. Secret events have a dashed purple edge; players never receive them. The view (zoom, place,
+   * lanes, bands) is kept in st.tl while you move around the campaign. Returns { node, draw(events) }. */
+  function eventTimeline(st, sessions) {
+    const c = cal(), slots = spd(), cid = S.camp.id;
+    const now = nowShift() / slots;
+    const narrow = matchMedia('(max-width: 600px)').matches;
+    const tl = st.tl || (st.tl = { lanes: narrow ? 'one' : 'tags', bands: { sessions: true, seasons: true, holidays: false }, ppd: null, center: null });
+    const NS = 'http://www.w3.org/2000/svg';
+    const s = (tag, attrs, ...kids) => {
+      const n = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs || {})) if (v !== null && v !== undefined && v !== false) n.setAttribute(k, v);
+      for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) n.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+      return n;
+    };
+    const canHover = matchMedia('(hover: hover)').matches;
+    const fmt = d => E.fmtDate(c, d, { noWeekday: true });
+    const svg = s('svg', { class: 'tl', tabindex: 0, role: 'group', 'aria-label': 'Timeline of events. Left and right arrows move along it, plus and minus zoom, Home goes to now' });
+    const box = el('div', { class: 'tl-box' }, svg);
+    let shown = [], W = 0, from = 0, to = 0;
+
+    const minPpd = () => W / (3000 * E.yearLength(c, c.epochYear)), maxPpd = () => W / 1.5;
+    const clampPpd = v => Math.min(maxPpd(), Math.max(minPpd(), v));
+    /** Zoom to ppd keeping the day under x (pixels from the left) where it is. */
+    const zoomAt = (ppd, x = W / 2) => {
+      tl.zoom = null;
+      const d = tl.center + (x - W / 2) / tl.ppd;
+      tl.ppd = clampPpd(ppd);
+      tl.center = d - (x - W / 2) / tl.ppd;
+      render();
+    };
+    /** Show every event that's shown, and now, with a little room either side. */
+    const fit = () => {
+      const spans = shown.map(e => Timeline.span(e, slots));
+      if (!spans.length || narrow) { tl.ppd = clampPpd(Timeline.zoomPx(c, 'month', W)); tl.center = now; return; }
+      const lo = Math.min(now, ...spans.map(x => x.start)), hi = Math.max(now, ...spans.map(x => x.end));
+      tl.ppd = clampPpd(Math.min((W * 0.9) / Math.max(hi - lo, 1), Timeline.zoomPx(c, 'week', W)));
+      tl.center = (lo + hi) / 2;
+    };
+
+    // ---- the controls over it
+    const zoomBtns = Timeline.ZOOMS.map(([key, label]) => {
+      const b = btn(label, () => { zoomAt(Timeline.zoomPx(c, key, W)); tl.zoom = key; markZoom(); }, 'small', `Zoom to about ${{ era: 'a hundred years', year: 'a year and a half', month: 'three months', week: 'three weeks', day: 'four days' }[key]} across`);
+      b.dataset.zoom = key;
+      return b;
+    });
+    const laneOpts = [['tags', 'Lanes by tag'], ...(S.encReady && S.encyclopedia.length ? [['entries', 'Lanes by Encyclopedia entry']] : []), ['one', 'One lane']];
+    if (!laneOpts.some(o => o[0] === tl.lanes)) tl.lanes = 'tags';
+    const laneSel = select(laneOpts, tl.lanes, { 'aria-label': 'Lanes', 'data-tip': 'One lane per tag (an event with two tags is in both), one per Encyclopedia entry the events name, or every event in one lane' });
+    laneSel.addEventListener('change', () => { tl.lanes = laneSel.value; render(); });
+    const bandBox = (key, label, tipText) => {
+      const cb = el('input', { type: 'checkbox', checked: !!tl.bands[key] });
+      cb.addEventListener('change', () => { tl.bands[key] = cb.checked; render(); });
+      return el('label', { class: 'tl-band-opt small', 'data-tip': tipText }, cb, ` ${label}`);
+    };
+    const bands = [
+      S.sessionsReady && sessions.length ? bandBox('sessions', 'Sessions', 'A band showing the days each session covered') : null,
+      (c.seasons || []).length ? bandBox('seasons', 'Seasons', 'A band showing the calendar\'s seasons') : null,
+      S.holidays.length ? bandBox('holidays', 'Holidays', 'A band showing the holidays (when zoomed in to a few years or less)') : null,
+    ].filter(Boolean);
+    const bar = el('div', { class: 'row tl-tools' },
+      el('span', { class: 'seg', role: 'group', 'aria-label': 'Zoom' }, zoomBtns),
+      btn('−', () => zoomAt(tl.ppd / 1.6), 'small', 'Zoom out (or the mouse wheel, or pinch)'),
+      btn('+', () => zoomAt(tl.ppd * 1.6), 'small', 'Zoom in (or the mouse wheel, or pinch)'),
+      btn('Now', () => { tl.center = now; render(); }, 'small', 'Move to the current day'),
+      btn('Fit', () => { tl.zoom = null; fit(); render(); }, 'small', 'Show every event listed at once'),
+      laneSel, bands.length ? el('span', { class: 'tl-bands' }, bands) : null,
+      btn('⬇ PNG', () => exportPng().catch(err => toast(err.message || 'Could not make the picture', true)), 'small', 'Download the timeline as it looks now, as a picture for the session recap'));
+    const node = el('div', { class: 'tl-panel' }, bar, box,
+      el('p', { class: 'small muted tl-help' }, canHover ? 'Scroll to zoom, drag to move along. Hover an event to read it, click it to open its day.'
+        : 'Pinch to zoom, drag to move along. Tap an event to read it, tap it again to open its day.'));
+
+    /** Light the zoom button pressed last, or else the one nearest the zoom (a short calendar can have two the same). */
+    function markZoom() {
+      const zk = tl.zoom || Timeline.zoomOf(c, tl.ppd, W);
+      for (const b of zoomBtns) { const on = b.dataset.zoom === zk; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
+    }
+
+    // ---- drawing
+    const SEASON_FILL = { spring: '#6fb37a', summer: '#e0b341', autumn: '#c8743a', winter: '#6f9fd0', none: '#8a8a8a' };
+    const text = (x, y, str, cls, extra) => s('text', { x, y, class: cls, ...extra }, str);
+    const approxW = str => str.length * 6.6 + 4;
+    const cut = (str, n) => (str.length > n ? `${str.slice(0, n - 1).trimEnd()}…` : str);
+    function render() {
+      if (!box.isConnected) return;
+      W = Math.max(280, Math.round(box.clientWidth || 0));
+      if (!tl.ppd) fit();
+      tl.ppd = clampPpd(tl.ppd);
+      from = tl.center - W / 2 / tl.ppd; to = tl.center + W / 2 / tl.ppd;
+      const X = d => (d - from) * tl.ppd;
+      markZoom();
+
+      const grid = s('g', { class: 'tl-grid' }), top = s('g'), body = s('g');
+      let y = 0;
+      // the axis: years or months along the top, the finer ticks under them
+      const ax = Timeline.axis(c, from, to, tl.ppd);
+      let lastEnd = -Infinity;
+      const majorX = ax.major.map(t => X(t.day));
+      if (!majorX.some(x => x < approxW(ax.lead) + 8)) { top.append(text(4, 14, ax.lead, 'tl-major')); lastEnd = approxW(ax.lead) + 4; }
+      for (const t of ax.major) {
+        const x = X(t.day);
+        if (x >= lastEnd + 6) { top.append(text(x + 3, 14, t.label, 'tl-major')); lastEnd = x + 3 + approxW(t.label); }
+      }
+      lastEnd = -Infinity;
+      const minorLabels = s('g');
+      for (const t of ax.minor) {
+        const x = X(t.day);
+        if (x >= lastEnd + 4) { minorLabels.append(text(x + 3, 32, t.label, 'tl-minor')); lastEnd = x + 3 + approxW(t.label); }
+      }
+      top.append(minorLabels);
+      y = 40;
+      const bandRow = (label, items) => {
+        const g = s('g', { class: 'tl-bandrow' });
+        g.append(...items(y));
+        g.append(text(4, y + 13, label, 'tl-lane-name'));
+        top.append(g);
+        y += 20;
+      };
+      if (tl.bands.sessions && S.sessionsReady && sessions.length) {
+        bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null).map(x => {
+          const a = Number(x.first_day), b = (x.last_day === null ? today() : Number(x.last_day)) + 1;
+          if (X(b) < 0 || X(a) > W) return null;
+          const label = `Session ${x.number}${x.title ? `: ${x.title}` : ''}`;
+          const w = Math.max(3, X(b) - X(a));
+          // the label clears the band's name when the bar reaches past it, else starts on the bar
+          const lx = X(a) < 70 && X(b) > 150 ? 70 : X(a);
+          return s('g', { class: 'tl-session', 'data-session': x.id, 'data-tip': `${label}\n${fmt(a)}${b - 1 !== a ? ` → ${fmt(b - 1)}` : ''}${x.is_published ? '' : '\nNot published: only GMs see it'}` },
+            s('rect', { x: X(a), y: y0 + 2, width: w, height: 16, rx: 3 }),
+            w > 40 ? text(lx + 4, y0 + 14, cut(label, Math.max(3, Math.floor((Math.min(X(b), W) - lx - 8) / 6.6))), 'tl-band-label') : null);
+        }));
+      }
+      if (tl.bands.seasons && (c.seasons || []).length) {
+        const list = Timeline.seasonBands(c, from, to);
+        if (list.length) bandRow('Seasons', y0 => list.map(b => s('g', { 'data-tip': `${b.name}: ${fmt(Math.ceil(b.from))} → ${fmt(Math.ceil(b.to) - 1)}` },
+          s('rect', { x: X(b.from), y: y0 + 2, width: Math.max(1, X(b.to) - X(b.from)), height: 16, class: 'tl-season', style: `fill:${SEASON_FILL[b.type] || SEASON_FILL.none}` }),
+          X(b.to) - Math.max(X(b.from), 70) > approxW(b.name) ? text(Math.max(X(b.from), 70) + 4, y0 + 14, b.name, 'tl-band-label') : null)));
+      }
+      if (tl.bands.holidays && S.holidays.length) {
+        const list = Timeline.holidayBands(c, S.holidays, from, to);
+        bandRow('Holidays', y0 => (list === null ? [text(74, y0 + 14, 'Zoom in to see the holidays', 'tl-band-label muted')]
+          : list.map(h => s('g', { 'data-tip': `${h.name}: ${fmt(h.from)}${h.to - 1 !== h.from ? ` → ${fmt(h.to - 1)}` : ''}${h.description ? `\n${h.description}` : ''}` },
+            s('rect', { x: X(h.from), y: y0 + 2, width: Math.max(3, X(h.to) - X(h.from)), height: 16, rx: 2, class: 'tl-holiday', style: `fill:${h.color || 'var(--accent)'}` }),
+            X(h.to) - X(h.from) > approxW(h.name) + 6 ? text(X(h.from) + 4, y0 + 14, h.name, 'tl-band-label') : null))));
+      }
+
+      // the lanes
+      const tagsUsed = tagsOf(shown).sort((a, b) => a.name.localeCompare(b.name));
+      const laneList = Timeline.lanes(shown, tl.lanes, { tags: tagsUsed, mentions: e => encLinker().mentions([e.title, e.body, ...(e.notes || [])].filter(Boolean).join('\n')) });
+      const ROW = 22;
+      for (const lane of laneList) {
+        const top0 = y;
+        const items = lane.events.map(e => {
+          const sp = Timeline.span(e, slots), x0 = X(sp.start), x1 = X(sp.end);
+          const dot = sp.days === 1 && x1 - x0 < 14;
+          const title = (Number(e.is_secret) ? '🔒 ' : '') + e.title;
+          const mx0 = dot ? (x0 + x1) / 2 - 5 : x0, mx1 = dot ? (x0 + x1) / 2 + 5 : Math.max(x1, x0 + 4);
+          // a label goes inside a bar it fits in, otherwise just after the mark
+          const inside = !dot && Math.min(mx1, W) - Math.max(mx0, 0) > approxW(title) + 8;
+          return { e, sp, dot, title, x0: mx0, x1: inside ? mx1 : mx1 + 4 + approxW(cut(title, 32)), mx0, mx1, inside };
+        }).filter(it => it.x1 >= 0 && it.x0 <= W).sort((a, b) => a.x0 - b.x0);
+        const { rows, count } = Timeline.pack(items, 6, 10);
+        const g = s('g', { class: 'tl-lane' });
+        g.append(s('line', { x1: 0, x2: W, y1: y + 0.5, y2: y + 0.5, class: 'tl-lane-line' }));
+        y += 18;
+        items.forEach((it, i) => {
+          const cy = y + rows[i] * ROW + ROW / 2;
+          const color = lane.color || it.e.tags?.[0]?.color || 'var(--accent)';
+          const a = Number(it.e.abs_day), b = Number(it.e.end_day ?? it.e.abs_day);
+          const when = fmt(a) + (b !== a ? ` → ${fmt(b)}` : '') + (it.e.shift !== null && it.e.shift !== undefined ? ` · ${shiftRange(it.e)}` : '');
+          const tags = (it.e.tags || []).map(t => t.name).join(', ');
+          const tipText = [`${it.title}`, when, tags ? `Tags: ${tags}` : null, it.e.body ? cut(it.e.body, 200) : null, canHover ? 'Click to open the day' : 'Tap again to open the day'].filter(Boolean).join('\n');
+          const mark = it.dot
+            ? s('circle', { cx: (it.mx0 + it.mx1) / 2, cy, r: 5, class: 'tl-dot', style: `fill:${color}` })
+            : s('rect', { x: it.mx0, y: cy - 7, width: it.mx1 - it.mx0, height: 14, rx: 3, class: 'tl-bar', style: `fill:${color};stroke:${color}` });
+          const lx = it.inside ? Math.max(it.mx0, 0) + 5 : it.mx1 + 4;
+          g.append(s('g', { class: 'tl-ev' + (Number(it.e.is_secret) ? ' secret' : '') + (it.sp.end <= now ? ' past' : ''), 'data-day': a, 'data-id': it.e.id, 'data-tip': tipText, 'aria-label': `${it.title}, ${when}` },
+            mark, text(lx, cy + 4, it.inside ? it.title : cut(it.title, 32), 'tl-label')));
+        });
+        y += Math.max(1, count) * ROW + 6;
+        g.append(text(4, top0 + 13, `${lane.name} (${lane.events.length})`, 'tl-lane-name'));
+        if (lane.color) g.lastChild.prepend(s('tspan', { style: `fill:${lane.color}` }, '● '));
+        body.append(g);
+      }
+      const H = y + 4;
+      // grid lines behind everything, the minor ones faint
+      for (const t of ax.minor) grid.append(s('line', { x1: X(t.day), x2: X(t.day), y1: 20, y2: H, class: 'tl-tick' }));
+      for (const t of ax.major) grid.append(s('line', { x1: X(t.day), x2: X(t.day), y1: 2, y2: H, class: 'tl-tick major' }));
+      const nowX = X(now);
+      const nowLine = nowX >= 0 && nowX <= W ? s('g', { class: 'tl-now', 'data-tip': `Now: ${E.fmtShift(c, nowShift())}` },
+        s('line', { x1: nowX, x2: nowX, y1: 20, y2: H }), s('rect', { x: nowX - 1.5, y: 20, width: 3, height: H - 20, class: 'tl-now-hit' })) : null;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.setAttribute('width', W); svg.setAttribute('height', H);
+      svg.replaceChildren(grid, top, body, nowLine);
+    }
+
+    // ---- moving about: wheel, drag, pinch and keys
+    const pointers = new Map();
+    let drag = null, pinch = null, downOn = null, moved = false, lastTap = null;
+    const localX = clientX => clientX - svg.getBoundingClientRect().left;
+    let frame = 0;
+    const later = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; render(); }); };
+    svg.addEventListener('wheel', e => {
+      e.preventDefault();
+      hideTip();
+      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? W : 1;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) { tl.center += ((e.shiftKey ? e.deltaY : e.deltaX) * k) / tl.ppd; later(); return; }
+      const x = localX(e.clientX), d = tl.center + (x - W / 2) / tl.ppd;
+      tl.zoom = null;
+      tl.ppd = clampPpd(tl.ppd * Math.exp(-e.deltaY * k * 0.0015));
+      tl.center = d - (x - W / 2) / tl.ppd;
+      later();
+    }, { passive: false });
+    svg.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      pointers.set(e.pointerId, e.clientX);
+      downOn = e.target instanceof Element ? e.target.closest('.tl-ev, .tl-session') : null;
+      if (pointers.size === 1) { drag = { x: e.clientX, center: tl.center }; moved = false; }
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinch = { gap: Math.max(10, Math.abs(a - b)), ppd: tl.ppd, mid: localX((a + b) / 2) };
+        pinch.day = tl.center + (pinch.mid - W / 2) / tl.ppd;
+        moved = true;
+      }
+    });
+    svg.addEventListener('pointermove', e => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, e.clientX);
+      if (pinch && pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        tl.zoom = null;
+        tl.ppd = clampPpd(pinch.ppd * Math.max(10, Math.abs(a - b)) / pinch.gap);
+        tl.center = pinch.day - (localX((a + b) / 2) - W / 2) / tl.ppd;
+        later();
+      } else if (drag) {
+        const dx = e.clientX - drag.x;
+        if (!moved && Math.abs(dx) > 5) { moved = true; hideTip(); try { svg.setPointerCapture(e.pointerId); } catch { /* already gone */ } svg.classList.add('dragging'); }
+        if (moved) { tl.center = drag.center - dx / tl.ppd; later(); }
+      }
+    });
+    const up = e => {
+      if (!pointers.delete(e.pointerId)) return;
+      svg.classList.remove('dragging');
+      if (pointers.size < 2) pinch = null;
+      if (pointers.size) { const [x] = pointers.values(); drag = { x, center: tl.center }; return; }
+      drag = null;
+      if (e.type !== 'pointerup' || moved || !downOn) return;
+      const hit = downOn;
+      downOn = null;
+      const key = hit.dataset.day ?? `s${hit.dataset.session}`;
+      // a mouse opens it at once; a touch shows its card first (KIT's tooltip) and opens it on a second tap
+      if (e.pointerType !== 'mouse' && lastTap !== key) { lastTap = key; return; }
+      lastTap = null;
+      location.hash = hit.dataset.session ? `#/c/${cid}/sessions/${hit.dataset.session}` : `#/c/${cid}/day/${hit.dataset.day}`;
+    };
+    svg.addEventListener('pointerup', up);
+    svg.addEventListener('pointercancel', up);
+    svg.addEventListener('keydown', e => {
+      const step = W / 6 / tl.ppd;
+      if (e.key === 'ArrowLeft') tl.center -= step;
+      else if (e.key === 'ArrowRight') tl.center += step;
+      else if (e.key === '+' || e.key === '=') zoomAt(tl.ppd * 1.6);
+      else if (e.key === '-' || e.key === '_') zoomAt(tl.ppd / 1.6);
+      else if (e.key === 'Home') tl.center = now;
+      else return;
+      e.preventDefault();
+      render();
+    });
+    // redrawn to the new width when the window changes size, until the tab is left
+    const onResize = () => { if (!box.isConnected) window.removeEventListener('resize', onResize); else later(); };
+    window.addEventListener('resize', onResize);
+
+    // ---- a picture of it: the drawing with its colours written in, on the card's background, at twice the size
+    async function exportPng() {
+      const clone = svg.cloneNode(true);
+      const src = [svg, ...svg.querySelectorAll('*')], dst = [clone, ...clone.querySelectorAll('*')];
+      const PROPS = ['fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-opacity', 'opacity', 'font-family', 'font-size', 'font-weight', 'paint-order', 'display'];
+      src.forEach((n, i) => {
+        const cs = getComputedStyle(n);
+        dst[i].setAttribute('style', PROPS.map(p => `${p}:${cs.getPropertyValue(p)}`).join(';'));
+        dst[i].removeAttribute('class'); dst[i].removeAttribute('data-tip');
+      });
+      clone.setAttribute('xmlns', NS);
+      const w = Number(svg.getAttribute('width')), h = Number(svg.getAttribute('height'));
+      const xml = new XMLSerializer().serializeToString(clone);
+      const img = new Image();
+      await new Promise((ok, bad) => { img.onload = ok; img.onerror = () => bad(new Error('Could not draw the picture')); img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`; });
+      const canvas = document.createElement('canvas');
+      canvas.width = w * 2; canvas.height = h * 2;
+      const g = canvas.getContext('2d');
+      g.scale(2, 2);
+      g.fillStyle = getComputedStyle(box).backgroundColor;
+      g.fillRect(0, 0, w, h);
+      g.drawImage(img, 0, 0, w, h);
+      const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+      if (!blob) throw new Error('Could not make the picture');
+      const a = el('a', { href: URL.createObjectURL(blob), download: `${S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign'} timeline.png` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    return { node, draw(events) { shown = events; render(); } };
   }
 
   // ------------------------------------------------------------ encyclopedia
