@@ -82,7 +82,7 @@ test("season and holiday bands cover their days, cut at the view's edges", () =>
   expect(T.holidayBands(c, [fest], 0, 100000)).toBeNull(); // too wide to work out day by day
 });
 
-test("the Events tab switches to a timeline of the same events, remembered, and players never get the secret one", async ({ page, browser }) => {
+test("the Events tab switches to a timeline of the same events, remembered, and players never get the secret one", async ({ page, browser, hasTouch }) => {
   const errors = watchErrors(page);
   const gm = person("Mara"), player = person("Tobin");
   await signIn(page, gm);
@@ -156,8 +156,8 @@ test("the Events tab switches to a timeline of the same events, remembered, and 
 
   // clicking an event (tapping it twice on a touch screen) opens its day
   const fair = tl.locator(".tl-ev", { hasText: "Harvest fair" });
-  const touch = await page.evaluate(() => !matchMedia("(hover: hover)").matches);
-  if (touch) { await fair.locator(".tl-label").tap(); await fair.locator(".tl-label").tap(); } else await fair.locator(".tl-label").click();
+  // headless Firefox reports no hover, so go by whether the page has touch, not by the media query
+  if (hasTouch) { await fair.locator(".tl-label").tap(); await fair.locator(".tl-label").tap(); } else await fair.locator(".tl-label").click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/day/2$`));
   expectNoErrors(errors);
 
