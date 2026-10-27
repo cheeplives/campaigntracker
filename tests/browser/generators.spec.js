@@ -143,7 +143,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
 
   // Unticking GM only adds the next one for everyone.
   await page.getByLabel("Add to the Encyclopedia as GM only").uncheck();
-  const company = cards.nth(3);
+  const company = cards.nth(2);
   const coName = await company.locator(".gen-name").first().textContent();
   await company.locator(".gen-add").first().click();
   await expect(company.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
@@ -159,7 +159,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}/generators`);
   await expect(pp.getByLabel("Add to the Encyclopedia as GM only")).toHaveCount(0);
-  const tav = pp.locator(".gen-card").nth(2);
+  const tav = pp.locator(".gen-card").nth(1);
   const tavName = await tav.locator(".gen-name").first().textContent();
   await tav.locator(".gen-add").first().click();
   await expect(tav.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
