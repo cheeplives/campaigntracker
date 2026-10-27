@@ -199,6 +199,7 @@ test("a Glorantha campaign shows the Red Moon red and black, and each region see
   await page.getByLabel("Red Moon seen as from").selectOption("full");
   await page.getByRole("button", { name: "Save region" }).click();
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.regions.find(r => r.name === "Ralios").settings.moon_shift).toBe("full");
+  await expect(page.getByLabel("Red Moon seen as from")).toHaveCount(0); // the list has been drawn again
   await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Party is here" }).click();
   await expect(page.locator("#toast")).toContainText("Party moved to Ralios");
   // a day not yet recorded is where the party is now (a recorded day keeps the region it was in)
