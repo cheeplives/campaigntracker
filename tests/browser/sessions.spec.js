@@ -462,6 +462,10 @@ test("a session's page: notes beside the summary, Build draft ticks what it used
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
   await notNow(page); // the summary names Jupiter and Tevari: the Proper Noun Detector offers them
+  // saved, the summary reads as players see it, and ✎ Edit opens the editors again
+  await expect(summary).toBeHidden();
+  await expect(page.locator(".sess-summary .sess-read")).toContainText("Hera handled the rest.");
+  await page.getByRole("button", { name: "✎ Edit" }).click();
   const saved = (await one(page, cid, sid)).json.session.summary;
   expect(saved).toContain("Hera handled the rest.");
   expect(saved).toContain("<aside>Loose ends: Who is Essen</aside>");
@@ -509,14 +513,24 @@ test("a published session is the player's to read and export; notes move between
   await pp.goto(`index.html#/c/${cid}/sessions`);
   await expect(pp.locator(".sess-item")).toHaveCount(0);
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
-  // The GM writes in editors, so the entries the writing names are linked under it, and follow what's typed.
-  const named = page.locator(".sess-summary .sess-named a.enc-link");
+  // The GM reads a written session as players do, with the Encyclopedia's names linked and GM-only paragraphs marked;
+  // Edit opens the editors, and Save goes back to reading with the new names linked.
+  const named = page.locator(".sess-summary .sess-read a.enc-link");
   await expect(named).toHaveText(["Tevari"]);
   await expect(named).toHaveAttribute("href", /\/encyclopedia\/\d+$/);
+  await expect(page.locator(".sess-summary .sess-read aside")).toContainText(["Loose ends", "Hidden bonus"]);
+  await expect(page.locator(".sess-summary .sess-editing")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeHidden();
   await api(page, "entry_save", { name: "Dulled Fang" }, cid);
   await page.reload();
+  await page.getByRole("button", { name: "✎ Edit" }).click();
+  await expect(page.locator(".sess-summary .sess-read")).toBeHidden();
   await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed ledger from the Dulled Fang");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+  await notNow(page); // the Proper Noun Detector offers the summary's other names
   await expect(named).toHaveText(["Tevari", "Dulled Fang"]);
+  await expect(page.getByRole("button", { name: "✎ Edit" })).toBeVisible();
   await page.getByLabel("Published", { exact: true }).check();
   await expect(page.getByText("Published for players")).toBeVisible();
 

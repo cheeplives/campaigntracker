@@ -3456,7 +3456,10 @@
     // what's done to a session, rather than written in it, waits in the ⋯ menu. The summary is left the room under the title.
     const details = el('div', { class: 'sess-fields', hidden: !!s.title },
       el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')));
-    const detailsBtn = btn('✎ Details', () => { details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden)); },
+    const detailsBtn = btn('✎ Details', () => {
+      details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
+      showSave();
+    },
       'small', 'Change the title and the date you played');
     detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
     const more = el('details', { class: 'sess-more' }, el('summary', { class: 'button small', 'aria-label': 'More', title: 'End or reopen, export with notes, delete' }, '⋯'),
@@ -3486,17 +3489,15 @@
     drawNotes();
 
     // --- the summary
-    let namedTimer = 0;
-    const namedSoon = () => { clearTimeout(namedTimer); namedTimer = setTimeout(() => showNamed(), 400); };
     const editor = RichText.editor({ text: s.summary || '', format: 'html', label: 'Summary', placeholder: 'What happened this session, for the players to read',
-      secret: true, mentions: encMentions(), onChange: namedSoon });
+      secret: true, mentions: encMentions() });
     editor.node.classList.add('rt-tall');
     // Session Rewards and Loot Found, under the summary (their columns come with install.php's upgrade)
     const hasExtras = 'rewards' in s;
-    const rewards = hasExtras ? RichText.editor({ text: s.rewards || '', format: 'html', label: 'Session Rewards', secret: true, mentions: encMentions(), onChange: namedSoon,
+    const rewards = hasExtras ? RichText.editor({ text: s.rewards || '', format: 'html', label: 'Session Rewards', secret: true, mentions: encMentions(),
       placeholder: 'What the party earned: experience, favours, standing, story rewards' }) : null;
     rewards?.node.classList.add('rt-small');   // a few lines each, side by side
-    const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(), onChange: namedSoon,
+    const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(),
       placeholder: 'The coin, items and treasure the party found' }) : null;
     loot?.node.classList.add('rt-medium');
     const draft = btn('Build draft', async () => {
@@ -3517,10 +3518,27 @@
       }
       drawNotes();
     }, 'small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out and ? lines listed GM only at the end. Then rewrite it as you like');
-    // the Encyclopedia entries the writing names, as links under it, kept up to date as it is typed (links can't go in an editor)
-    const named = el('div', { class: 'sess-named' });
-    const showNamed = () => named.replaceChildren(mentionRow(...[editor, rewards, loot].filter(Boolean).map(x => [x.value().text, 'html'])) || '');
-    showNamed();
+    // The GM reads the session as players do, with the Encyclopedia's names linked (and the GM-only paragraphs marked),
+    // and Edit opens the editors. A session with nothing written yet opens in them.
+    const reading = el('div', { class: 'sess-read' });
+    const drawReading = () => reading.replaceChildren(
+      el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
+      ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
+        el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))));
+    const editing = el('div', { class: 'sess-editing' });
+    const edit = btn('✎ Edit', () => setEditing(true), 'small', 'Open the summary, rewards and loot in editors to change them');
+    const cancel = btn('Cancel', () => {
+      editor.setHtml(s.summary || ''); rewards?.setHtml(s.rewards || ''); loot?.setHtml(s.loot || '');
+      setEditing(false);
+    }, 'small', 'Close the editors without saving what was changed in them');
+    function setEditing(on) {
+      editing.hidden = !on; reading.hidden = on;
+      edit.hidden = on; draft.hidden = cancel.hidden = !on;
+      showSave();
+      if (!on) drawReading();
+    }
+    // the one Save is there while the editors or the title and date played are open
+    const showSave = () => { save.hidden = editing.hidden && details.hidden; };
     // what the editors held when the page opened or last saved, so Save sends the writing only when it has changed
     const writing = () => ({ summary: editor.value().text, ...(hasExtras ? { rewards: rewards.value().text, loot: loot.value().text } : {}) });
     let savedWriting = null;
@@ -3533,10 +3551,10 @@
         const r = await post('session_summary_save', { id: s.id, version: s.version, ...written }, cid);
         s.version = r.session.version; s.summary = r.session.summary; s.rewards = r.session.rewards; s.loot = r.session.loot;
         savedWriting = written;
-        // names added from the detector's dialog join the links under the writing and in the notes
+        // names added from the detector's dialog are linked in the summary as read, and in the notes
         offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` },
           ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])])
-          .then(() => { showNamed(); drawNotes(); });
+          .then(() => { drawReading(); drawNotes(); });
       }
       const t = title.value.trim().replace(/\s+/g, ' '), on = played.value || null;
       if (t !== (s.title || '') || on !== (s.played_on || null)) {
@@ -3549,6 +3567,7 @@
         if (inList?.firstChild?.nodeType === Node.TEXT_NODE) inList.firstChild.textContent = sessionName(s);
         if (s.title) { details.hidden = true; detailsBtn.setAttribute('aria-expanded', 'false'); }
       }
+      setEditing(false);
       toast('Saved');
     }));
 
@@ -3559,13 +3578,15 @@
       el('div', { class: 'sess-notes' }, notesHead, notesEntry(s, () => notes, () => reloadNotes()), notesList),
       el('div', { class: 'sess-summary' },
         el('div', { class: 'row sess-sumhead' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
-          el('div', { class: 'row' }, draft, save)),
-        editor.node,
+          el('div', { class: 'row' }, edit, draft, cancel, save)),
+        reading,
+        editing));
+    editing.append(editor.node,
         hasExtras ? el('div', { class: 'sess-extras' },
           el('div', {}, el('h3', {}, 'Session Rewards', tip('What the party earned this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), rewards.node),
           el('div', {}, el('h3', {}, 'Loot Found', tip('The coin, items and treasure found this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), loot.node))
-          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.'),
-        named));
+          : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.'));
+    setEditing(![s.summary, s.rewards, s.loot].some(t => (t || '').trim()));
     // the notes box starts small and grows with what's typed in it, up to half the window
     const nbox = cols.querySelector('.snote-box');
     const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, innerHeight / 2)}px`; };
