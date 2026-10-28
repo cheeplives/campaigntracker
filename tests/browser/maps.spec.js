@@ -172,3 +172,166 @@ test("Maps: a new grid size alone wraps the stored offsets to fit", async ({ pag
   expect(r.json.map).toMatchObject({ grid_px: 20, grid_offset_x: 10, grid_offset_y: null });
   expect((await api(page, "map_save", { id, grid_px: 10, grid_offset_x: 15 }, cid)).status).toBe(400);   // one the request itself supplies
 });
+
+// ---- pins and routes ----
+/** A public 300x200 map with a picture; returns its id. */
+async function mapWithPicture(page, cid, extra = {}) {
+  const id = (await api(page, "map_save", { name: "Sartar", ...extra }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", id);
+  expect((await api(page, "map_save", { id, image_id: up.json.file.id }, cid)).status).toBe(200);
+  return id;
+}
+
+test("Maps: a player adds a public pin; only they and the GM can change it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps pin");
+  const mapId = await mapWithPicture(page, cid);
+  const made = await api(pp, "pin_save", { map_id: mapId, x: 10, y: 10, label: "Our camp", is_secret: true, kind: "event" }, cid);
+  expect(made.status, JSON.stringify(made.json)).toBe(200);
+  expect(made.json.pin).toMatchObject({ map_id: mapId, x: 10, y: 10, kind: "note", label: "Our camp", is_secret: false, entry: null, event: null });
+  const id = made.json.pin.id;
+  expect((await api(pp, "pin_save", { map_id: mapId, x: 5, y: 5, label: "" }, cid)).json.message).toBe("Give the pin a label");
+
+  const pip2 = person("Quill");
+  const pctx = await browser.newContext();
+  const p2 = await pctx.newPage();
+  await signIn(p2, pip2);
+  await approve(browser, pip2.email);
+  expect((await api(page, "member_add", { email: pip2.email, role: "player" }, cid)).status).toBe(200);
+  const other = await api(p2, "pin_save", { id, label: "x" }, cid);
+  expect(other.status).toBe(403);
+  expect(other.json.message).toBe("You can only change your own pins");
+  expect((await api(p2, "pin_delete", { id }, cid)).status).toBe(403);
+
+  const own = await api(pp, "pin_save", { id, label: "Our camp!", x: 20 }, cid);
+  expect(own.status, JSON.stringify(own.json)).toBe(200);
+  expect(own.json.pin).toMatchObject({ label: "Our camp!", x: 20, y: 10 });
+  const gmEdit = await api(page, "pin_save", { id, label: "Camp" }, cid);
+  expect(gmEdit.status, JSON.stringify(gmEdit.json)).toBe(200);
+  const seen = await getMap(page, cid, mapId);
+  expect(seen.json.pins).toHaveLength(1);
+  expect(seen.json.pins[0].label).toBe("Camp");
+  expect(typeof seen.json.pins[0].author).toBe("string");
+  expect(seen.json.pins[0].author).not.toBe("");
+  expect((await api(pp, "pin_delete", { id }, cid)).status).toBe(200);
+  expect((await getMap(page, cid, mapId)).json.pins).toEqual([]);
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM pins an entry and an event; secret ones never reach players", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps secret pins");
+  const mapId = await mapWithPicture(page, cid);
+  const entryId = (await api(page, "entry_save", { name: "Greywater Keep", notes: "<p>A <b>cold</b> keep on the water.</p>" }, cid)).json.id;
+  const eventId = (await api(page, "event_save", { abs_day: 3, title: "The ambush" }, cid)).json.id;
+  const ep = await api(page, "pin_save", { map_id: mapId, x: 50, y: 60, kind: "entry", entry_id: entryId }, cid);
+  expect(ep.status, JSON.stringify(ep.json)).toBe(200);
+  expect(ep.json.pin.entry).toMatchObject({ id: entryId, name: "Greywater Keep", first_line: "A cold keep on the water." });
+  const vp = await api(page, "pin_save", { map_id: mapId, x: 70, y: 80, kind: "event", event_id: eventId }, cid);
+  expect(vp.status, JSON.stringify(vp.json)).toBe(200);
+  expect(vp.json.pin.event).toMatchObject({ id: eventId, abs_day: 3, title: "The ambush" });
+  expect((await api(page, "pin_save", { map_id: mapId, x: 1, y: 1, kind: "entry" }, cid)).status).toBe(400);
+  expect((await api(page, "pin_save", { map_id: mapId, x: 1, y: 1, kind: "entry", entry_id: 99999999 }, cid)).status).toBe(404);
+
+  const seen = await getMap(pp, cid, mapId);
+  expect(seen.json.pins.map(p => p.entry?.name ?? p.event?.title).sort()).toEqual(["Greywater Keep", "The ambush"]);
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0].pins).toBe(2);
+  const idx = (await api(pp, "campaign", undefined, cid)).json.maps_index;
+  expect(idx.map(i => [i.map_id, i.map_name, i.entry_id, i.event_id])).toEqual([[mapId, "Sartar", entryId, null], [mapId, "Sartar", null, eventId]]);
+
+  expect((await api(page, "entry_save", { id: entryId, name: "Greywater Keep", is_secret: true }, cid)).status).toBe(200);
+  expect((await getMap(pp, cid, mapId)).json.pins.map(p => p.entry)).toEqual([null]);
+  expect((await api(pp, "campaign", undefined, cid)).json.maps_index.map(i => i.entry_id)).toEqual([null]);
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0].pins).toBe(1);
+  expect((await api(page, "maps", undefined, cid)).json.maps[0].pins).toBe(2);
+
+  // a secret event is just as hidden
+  expect((await api(page, "event_save", { id: eventId, abs_day: 3, title: "The ambush", is_secret: true }, cid)).status).toBe(200);
+  expect((await getMap(pp, cid, mapId)).json.pins).toEqual([]);
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0].pins).toBe(0);
+  expect((await api(page, "event_save", { id: eventId, abs_day: 3, title: "The ambush", is_secret: false }, cid)).status).toBe(200);
+  expect((await api(page, "entry_save", { id: entryId, name: "Greywater Keep", is_secret: false }, cid)).status).toBe(200);
+
+  const hidden = await api(page, "pin_save", { map_id: mapId, x: 5, y: 5, kind: "note", label: "Trap", is_secret: true }, cid);
+  expect(hidden.json.pin.is_secret).toBe(true);
+  expect((await getMap(pp, cid, mapId)).json.pins.map(p => p.label)).not.toContain("Trap");
+  expect((await getMap(page, cid, mapId)).json.pins.map(p => p.label)).toContain("Trap");
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0].pins).toBe(2);
+  expect((await api(pp, "campaign", undefined, cid)).json.maps_index).toHaveLength(2);
+});
+
+test("Maps: a GM turns a player's pin into an Encyclopedia entry", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps to entry");
+  const mapId = await mapWithPicture(page, cid);
+  const pin = (await api(pp, "pin_save", { map_id: mapId, x: 30, y: 40, label: "Old Mill", note: "Burnt <down> & gone" }, cid)).json.pin;
+  const r = await api(page, "pin_to_entry", { id: pin.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json).toMatchObject({ ok: true, created: true });
+  expect(r.json.pin).toMatchObject({ kind: "entry", entry_id: r.json.entry_id, label: "", created_by: pin.created_by });
+  const enc = (await api(page, "campaign", undefined, cid)).json.encyclopedia.find(e => e.name === "Old Mill");
+  expect(enc).toMatchObject({ id: r.json.entry_id, category: "location" });
+  const notes = sql(`SELECT notes FROM encyclopedia_entries WHERE id=${r.json.entry_id}`);
+  expect(notes).toContain("<p>Burnt &lt;down&gt; &amp; gone</p>");
+  expect(enc.preview).toContain("Burnt <down>");
+  expect((await api(pp, "pin_save", { id: pin.id, label: "x" }, cid)).status).toBe(403);
+
+  const again = (await api(pp, "pin_save", { map_id: mapId, x: 1, y: 1, label: "the old mill" }, cid)).json.pin;
+  const r2 = await api(page, "pin_to_entry", { id: again.id }, cid);
+  expect(r2.status, JSON.stringify(r2.json)).toBe(200);
+  expect(r2.json).toMatchObject({ created: false, entry_id: r.json.entry_id });
+  expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE campaign_id=${cid} AND name LIKE '%mill%'`).trim()).toBe("1");
+
+  const third = (await api(pp, "pin_save", { map_id: mapId, x: 2, y: 2, label: "Anything" }, cid)).json.pin;
+  expect((await api(pp, "pin_to_entry", { id: third.id }, cid)).status).toBe(403);
+  expect((await api(page, "pin_to_entry", { id: pin.id }, cid)).status).toBe(400);   // already an entry pin
+  const other = (await api(page, "entry_save", { name: "Tower" }, cid)).json.id;
+  const r3 = await api(page, "pin_to_entry", { id: third.id, entry_id: other }, cid);
+  expect(r3.json).toMatchObject({ created: false, entry_id: other });
+});
+
+test("Maps: deleting a pinned entry or event deletes its pin", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Maps pin delete");
+  const mapId = await mapWithPicture(page, cid);
+  const entryId = (await api(page, "entry_save", { name: "Keep" }, cid)).json.id;
+  const eventId = (await api(page, "event_save", { abs_day: 1, title: "Fight" }, cid)).json.id;
+  expect((await api(page, "pin_save", { map_id: mapId, x: 1, y: 1, kind: "entry", entry_id: entryId }, cid)).status).toBe(200);
+  expect((await api(page, "pin_save", { map_id: mapId, x: 2, y: 2, kind: "event", event_id: eventId }, cid)).status).toBe(200);
+  const n = () => sql(`SELECT COUNT(*) FROM map_pins WHERE map_id=${mapId}`).trim();
+  expect(n()).toBe("2");
+  expect((await api(page, "entry_delete", { id: entryId }, cid)).status).toBe(200);
+  expect(sql(`SELECT COUNT(*) FROM map_pins WHERE entry_id=${entryId}`).trim()).toBe("0");
+  expect((await api(page, "event_delete", { id: eventId }, cid)).status).toBe(200);
+  expect(sql(`SELECT COUNT(*) FROM map_pins WHERE event_id=${eventId}`).trim()).toBe("0");
+  expect(n()).toBe("0");
+});
+
+test("Maps: pins and routes stay on the map", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps bounds");
+  const mapId = await mapWithPicture(page, cid);
+  const off = await api(page, "pin_save", { map_id: mapId, x: 301, y: 10, kind: "note", label: "Far" }, cid);
+  expect(off.status).toBe(400);
+  expect(off.json.message).toBe("That's off the map");
+  expect((await api(page, "pin_save", { map_id: mapId, x: 300, y: 200, kind: "note", label: "Corner" }, cid)).status).toBe(200);
+  expect((await api(page, "pin_save", { map_id: mapId, x: -1, y: 0, kind: "note", label: "Neg" }, cid)).status).toBe(400);
+  const blank = (await api(page, "map_save", { name: "Blank" }, cid)).json.map.id;
+  expect((await api(page, "pin_save", { map_id: blank, x: 1, y: 1, kind: "note", label: "No picture" }, cid)).status).toBe(400);
+
+  expect((await api(page, "route_save", { map_id: mapId, name: "Road", points: [[1, 1]] }, cid)).status).toBe(400);
+  const many = Array.from({ length: 501 }, (_, i) => [i % 300, 5]);
+  expect((await api(page, "route_save", { map_id: mapId, name: "Road", points: many }, cid)).status).toBe(400);
+  expect((await api(page, "route_save", { map_id: mapId, name: "Road", points: [[1, 1], [301, 5]] }, cid)).status).toBe(400);
+  expect((await api(page, "route_save", { map_id: mapId, name: " ", points: [[1, 1], [5, 5]] }, cid)).status).toBe(400);
+  expect((await api(pp, "route_save", { map_id: mapId, name: "Road", points: [[1, 1], [5, 5]] }, cid)).status).toBe(403);
+
+  const ok = await api(page, "route_save", { map_id: mapId, name: "King's Road", points: [[1, 1], [150.5, 99], [300, 200]], is_secret: false }, cid);
+  expect(ok.status, JSON.stringify(ok.json)).toBe(200);
+  expect(ok.json.route).toMatchObject({ map_id: mapId, name: "King's Road", points: [[1, 1], [150.5, 99], [300, 200]], is_secret: false });
+  const rid = ok.json.route.id;
+  expect((await api(page, "route_save", { id: rid, map_id: mapId, name: "Hidden", points: [[0, 0], [9, 9]], is_secret: true }, cid)).json.route.name).toBe("Hidden");
+  expect((await getMap(pp, cid, mapId)).json.routes).toEqual([]);
+  expect((await getMap(page, cid, mapId)).json.routes.map(r => r.name)).toEqual(["Hidden"]);
+  expect((await api(page, "route_save", { id: rid, map_id: mapId, name: "Road", points: [[0, 0], [9, 9]], is_secret: false }, cid)).status).toBe(200);
+  expect((await getMap(pp, cid, mapId)).json.routes.map(r => r.name)).toEqual(["Road"]);
+  expect((await api(pp, "route_delete", { id: rid }, cid)).status).toBe(403);
+  expect((await api(page, "route_delete", { id: rid }, cid)).status).toBe(200);
+  expect((await getMap(page, cid, mapId)).json.routes).toEqual([]);
+});

@@ -1434,7 +1434,7 @@ try {
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'sessions_ready' => has_sessions(),
+            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -3041,11 +3041,12 @@ try {
         need_maps();
         out(['maps' => maps_list($cid, $isGm)]);
 
-    case 'map': // one map with its pins, routes and party groups (the last three come with the tools that make them)
+    case 'map': // one map with its pins, routes and party groups (groups come with the tool that makes them)
         $cid = cid();
         $isGm = role($cid) === 'gm';
         need_maps();
-        out(['map' => map_out(map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm)), 'pins' => [], 'routes' => [], 'groups' => []]);
+        $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
+        out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm), 'groups' => []]);
 
     case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y
         $cid = cid();
@@ -3060,6 +3061,45 @@ try {
         $m = map_row($cid, int_in(p('id'), 1), true);
         db()->prepare('DELETE FROM maps WHERE id=?')->execute([$m['id']]);
         attachments_purge($cid, 'map', (int)$m['id']);   // files have no foreign key to cascade
+        touch_campaign($cid);
+        out(['ok' => true]);
+
+    case 'pin_save': // members: id (to change one), map_id, x, y, label, note; GMs also kind (note|entry|event), entry_id, event_id, is_secret
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['ok' => true, 'pin' => pin_save($cid, $isGm)]);
+
+    case 'pin_delete': // a player's own note pin, or any pin for a GM
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        $pin = pin_row($cid, int_in(p('id'), 1), $isGm);
+        if (!$isGm && ((int)$pin['created_by'] !== me()['id'] || $pin['kind'] !== 'note')) fail('You can only change your own pins', 403);
+        db()->prepare('DELETE FROM map_pins WHERE id=?')->execute([$pin['id']]);
+        touch_campaign($cid);
+        out(['ok' => true]);
+
+    case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        [$pin, $entryId, $created] = pin_to_entry($cid, int_in(p('id'), 1), p('entry_id') ? int_in(p('entry_id'), 1) : null);
+        out(['ok' => true, 'pin' => $pin, 'entry_id' => $entryId, 'created' => $created]);
+
+    case 'route_save': // GMs: id (to change one), map_id, name, points [[x, y], ...], is_secret
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['ok' => true, 'route' => route_save($cid)]);
+
+    case 'route_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        $st = db()->prepare('DELETE FROM map_routes WHERE id=? AND campaign_id=?');
+        $st->execute([int_in(p('id'), 1), $cid]);
+        if (!$st->rowCount()) fail('Route not found', 404);
         touch_campaign($cid);
         out(['ok' => true]);
 
