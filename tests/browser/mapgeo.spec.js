@@ -31,6 +31,7 @@ test("gridHint reads squares or pixels from a file name", () => {
   expect(MapGeo.gridHint("cave_70px.jpg", 1, 1)).toEqual({ grid_px: 70, from: "pixels" });
   expect(MapGeo.gridHint("cave 70 px.jpg", 1, 1)).toEqual({ grid_px: 70, from: "pixels" });
   expect(MapGeo.gridHint("map.png", 10, 10)).toBeNull();
+  expect(MapGeo.gridHint("1920x1080.png", 1920, 1080)).toBeNull(); // a resolution, not squares
 });
 
 test("pathPx and toMetres", () => {
@@ -54,6 +55,10 @@ test("fmtDistance on space maps", () => {
   expect(MapGeo.fmtDistance(5.2 * AU, "imperial", true)).toBe("5.2 AU");
   expect(MapGeo.fmtDistance(999 * AU, "metric", true)).toBe("999 AU");
   expect(MapGeo.fmtDistance(1000 * AU, "metric", true)).toBe("0.016 ly");
+  expect(MapGeo.fmtDistance(0.5 * AU, "metric", true)).toBe("0.5 AU");
+  expect(MapGeo.fmtDistance(0.05 * AU, "metric", true)).toBe("0.05 AU");
+  expect(MapGeo.fmtDistance(0.01 * AU, "metric", true)).toBe("0.01 AU");
+  expect(MapGeo.fmtDistance(0.0099 * AU, "metric", true)).toBe("1,481,019 km");
   expect(MapGeo.fmtDistance(384400e3, "metric", true)).toBe("384,400 km");
   expect(MapGeo.fmtDistance(384400e3, "imperial", true)).toBe("238,855 mi");
 });

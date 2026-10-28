@@ -25,7 +25,8 @@
     const sq = /(?:^|[\s_\[(])(\d+)\s*[x×]\s*(\d+)(?=$|[\s_\])\.])/i.exec(fileName);
     if (sq) {
       const across = +sq[1], down = +sq[2];
-      if (across > 0 && down > 0 && Math.abs(width / across - height / down) <= 1) return { grid_px: width / across, from: 'squares' };
+      // Under 8 px a square is no grid (a "1920x1080" resolution gives 1), so that name says nothing.
+      if (across > 0 && down > 0 && Math.abs(width / across - height / down) <= 1 && width / across >= 8) return { grid_px: width / across, from: 'squares' };
     }
     const px = /(?:^|[\s_\[(-])(\d+)\s*px(?=$|[\s_\])\.-])/i.exec(fileName);
     if (px && +px[1] > 0) return { grid_px: +px[1], from: 'pixels' };
@@ -56,7 +57,10 @@
         const ly = metres / UNIT_M.ly;
         return (ly < 1 ? String(+ly.toPrecision(2)) : num(ly)) + ' ly';
       }
-      if (metres >= UNIT_M.au) return num(metres / UNIT_M.au) + ' AU';
+      if (metres >= 0.01 * UNIT_M.au) {
+        const au = metres / UNIT_M.au;
+        return (au < 1 ? String(+au.toPrecision(2)) : num(au)) + ' AU';
+      }
     }
     if (imperial) return metres < UNIT_M.mi ? num(metres / UNIT_M.ft) + ' ft' : num(metres / UNIT_M.mi) + ' mi';
     return metres < 1000 ? num(metres) + ' m' : num(metres / 1000) + ' km';
