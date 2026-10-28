@@ -86,9 +86,9 @@ the routes that aren't GM only.
 - The Travel tab starts with a *Where the party is* card listing the groups: name, members, region and map. GMs get
   *Split the party…* (a name, the members who go, and a region, which starts as the group's they leave), *Rename*,
   *Make main group* and *Merge into…* (its members join the group picked, and it is gone).
-- Each group can have a **marker** on one map: a flag with its name, or the group's **token** when the GM has given it
-  a picture (*Token picture…* on its row in the Travel card: upload or Find Image, shown round, with the name under
-  it). GMs drag it, or use *Party is here* on a pin's
+- Each group can have a **marker** on one map: a flag with its name, or the group's **token** (shown round, with the
+  name under it) when one from the Tokens tab is assigned to it, there or with *Token* on its row in the Travel
+  card. GMs drag it, or use *Party is here* on a pin's
   card (asking which group when there is more than one). Players see the markers and can't move them.
 - **Depart** on the Travel tab asks *Who is travelling* when there is more than one group (the main group first). On
   arrival:
@@ -99,6 +99,24 @@ the routes that aren't GM only.
     ("In transit (Scouts): Bree → Weathertop"). Only the main group's trip labels the passed shifts and rolls the
     travel region's weather.
 - *Party is here* on Regions moves the main group, so the two never disagree.
+
+### The Tokens tab
+
+- **Where:** Setup → *Tokens*, after Members, for GMs only (players don't see the tab). `#/c/<cid>/tokens`.
+- **The library:** every token the GM has loaded, as round pictures in a grid with their names, filtered by kind
+  (Party, Character, Creature, Object) and a name search. Each says what it is assigned to.
+- **Add tokens:** *Upload tokens…* takes many pictures at once (JPEG, PNG, WebP or GIF, the usual upload checks and
+  the campaign's space); each becomes a token named after its file (`Goblin_archer.png` → "Goblin archer"), kind
+  Creature, size 1. *Find Image…* adds one from the picture search.
+- **Each token** has a name, a kind, a size in squares (1 for Tiny to Medium, 2 Large, 3 Huge, 4 Gargantuan; used
+  on battlemats later), GM only, and what it is **assigned** to, any of:
+  - a **party group**: it becomes that group's marker on the map (phase 1 uses this);
+  - a **member's character**: shown beside the name on the Members tab; one token per character;
+  - an **Encyclopedia entry** (a person, group, vehicle…): shown beside the entry's name.
+  Assignments are what a battlemat will use later to place "Pip's token" or "a Goblin archer" in one click.
+- **Delete** asks first, removes the picture and clears its assignments (a group falls back to the flag).
+- A GM-only token's picture never reaches players, even where it is assigned; a token assigned to a GM-only entry is
+  shown to players only once the entry isn't GM only.
 
 ## Rules
 
@@ -120,7 +138,8 @@ same tables in `db/schema.sql`:
 | `maps` | id, campaign_id, name, image_id (attachments.id, NULL until a picture is added), width, height (pixels), scale_per_px DOUBLE NULL, scale_unit ('ft', 'm', 'mi', 'km') NULL, grid_px DOUBLE NULL, grid_offset_x, grid_offset_y DOUBLE NULL (where the first grid line falls; for tokens and the grid overlay later), is_secret, created_by, created_at |
 | `map_pins` | id, map_id, campaign_id, x, y (DOUBLE), kind ('note', 'entry', 'event'), entry_id NULL, event_id NULL, label, note, is_secret, created_by, created_at |
 | `map_routes` | id, map_id, campaign_id, name, points_json, is_secret, created_by, created_at |
-| `party_groups` | id, campaign_id, name, members_json (user ids), region_id NULL, map_id NULL, x, y NULL, token_id NULL (attachments.id, parent_type 'party'), is_main, created_at |
+| `party_groups` | id, campaign_id, name, members_json (user ids), region_id NULL, map_id NULL, x, y NULL, token_id NULL (tokens.id), is_main, created_at |
+| `tokens` | id, campaign_id, name, image_id (attachments.id, parent_type 'token'), kind ('party', 'character', 'creature', 'object'), size_squares, member_id NULL, entry_id NULL, is_secret, created_by, created_at |
 
 The map's picture is an attachments row with `parent_type` 'map', so it is checked, stored, counted and purged as every
 other file is.
@@ -135,10 +154,10 @@ moving them live while several people watch. Phase 1 is shaped so that phase onl
   reuse it; nothing is redrawn differently.
 - **The grid is stored now.** `grid_px` and the grid offset are kept from the scale dialog, so tokens can snap to
   squares and be sized in squares (1 for Medium, 2 for Large) without a migration to `maps`.
-- **Pictures are attachments.** A party token is an attachment, as a token will be, so uploads, Find Image, quotas
-  and GM-only rules already apply.
-- **What the tokens phase adds:** a `map_tokens` table (map, x, y, size in squares, picture, label, the member who
-  controls it, an optional Encyclopedia entry, GM only, a layer order), players dragging their own token, snap to
+- **The token library comes now.** The Tokens tab already holds the pictures, names, sizes and who each belongs to,
+  so the battlemat phase only places them.
+- **What the tokens phase adds:** a `map_tokens` table (a token from the library placed on a map: x, y, a label of its
+  own such as "Goblin 3", GM only, a layer order), players dragging their own token, snap to
   grid, and a faster refresh on an open map (a `map_changed` poll every couple of seconds, or server-sent events)
   so moves show up for everyone. That last one is the real work, and it's better done once tokens are built.
 
