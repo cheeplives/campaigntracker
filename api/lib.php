@@ -286,7 +286,21 @@ function require_method(string ...$allowed): void {
 }
 
 // --- auth guards -----------------------------------------------------------
-/** Current user row (or null). Cached per request. */
+/** Whether migration 020 has been run: Chronicle keeps its own approvals in chronicle_access. Until it has, the shared
+ * users.status (Sinless's) still decides, as before. */
+function has_access_table(): bool {
+  static $has = null;
+  return $has ??= (bool) db()->query("SHOW TABLES LIKE 'chronicle_access'")->fetchColumn();
+}
+/** A user's standing in Chronicle: 'approved', 'revoked', or 'pending' (also for someone who never asked). */
+function chronicle_status(array $user): string {
+  if (!has_access_table()) return (string) $user['status'];
+  $st = db()->prepare('SELECT status FROM chronicle_access WHERE user_id = ?');
+  $st->execute([$user['id']]);
+  return (string) ($st->fetchColumn() ?: 'pending');
+}
+
+/** Current user row (or null), its status being their standing in Chronicle. Cached per request. */
 function current_user(): ?array {
   static $u = false;
   if ($u !== false) return $u;
@@ -294,6 +308,7 @@ function current_user(): ?array {
   $st = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
   $st->execute([$_SESSION['user_id']]);
   $row = $st->fetch();
+  if ($row) $row['status'] = chronicle_status($row);
   return $u = ($row ?: null);
 }
 
@@ -383,18 +398,20 @@ function rate_limit(string $bucket, string $id, int $max, int $windowSec): void 
  */
 function sign_in_identity(string $provider, array $identity): int {
   $pdo = db();
+  $admins = array_map('strtolower', (array) cfg('admin_identities', []));
+  $isAdmin = in_array(strtolower($identity['email']), $admins, true)
+          || in_array(strtolower($provider . ':' . $identity['provider_user_id']), $admins, true);
+
   $sel = $pdo->prepare('SELECT * FROM users WHERE provider = ? AND provider_user_id = ? LIMIT 1');
   $sel->execute([$provider, $identity['provider_user_id']]);
   $user = $sel->fetch();
   if ($user) {
     $pdo->prepare('UPDATE users SET email = ?, display_name = ?, avatar_url = ?, last_login_at = NOW() WHERE id = ?')
         ->execute([$identity['email'], $identity['name'], $identity['avatar'], $user['id']]);
+    // Someone with an account from Sinless asks for Chronicle the first time they sign in here.
+    chronicle_access_request((int) $user['id'], $isAdmin || (int) $user['is_admin'], $provider, $identity);
     return (int) $user['id'];
   }
-
-  $admins = array_map('strtolower', (array) cfg('admin_identities', []));
-  $isAdmin = in_array(strtolower($identity['email']), $admins, true)
-          || in_array(strtolower($provider . ':' . $identity['provider_user_id']), $admins, true);
 
   $legacy = $pdo->prepare("SELECT id FROM users WHERE provider = 'legacy' AND email <> '' AND LOWER(email) = LOWER(?) ORDER BY id LIMIT 1");
   $legacy->execute([$identity['email']]);
@@ -404,6 +421,10 @@ function sign_in_identity(string $provider, array $identity): int {
         display_name = IF(? <> \'\', ?, display_name), avatar_url = ?, last_login_at = NOW()' . ($isAdmin ? ', is_admin = 1, status = \'approved\'' : '') . ' WHERE id = ?')
         ->execute([$provider, $identity['provider_user_id'], $identity['email'],
                    $identity['name'], $identity['name'], $identity['avatar'], $legacyId]);
+    // An account from before Google/GitHub sign-in was always a Chronicle account: it keeps the access it had.
+    if (has_access_table())
+      $pdo->prepare("INSERT IGNORE INTO chronicle_access (user_id, status, approved_at) SELECT id, status, approved_at FROM users WHERE id = ?")->execute([$legacyId]);
+    chronicle_access_request((int) $legacyId, $isAdmin, $provider, $identity);
     return (int) $legacyId;
   }
 
@@ -414,12 +435,33 @@ function sign_in_identity(string $provider, array $identity): int {
       ->execute([$provider, $identity['provider_user_id'], $identity['email'],
                  $identity['name'], $identity['avatar'], $status, $isAdmin ? 1 : 0]);
   $userId = (int) $pdo->lastInsertId();
-  if (!$isAdmin) {
+  chronicle_access_request($userId, $isAdmin, $provider, $identity, !has_access_table());
+  return $userId;
+}
+
+/**
+ * Make sure user $userId has a say in Chronicle: an admin is approved; anyone else with no chronicle_access row gets a
+ * 'pending' one, and the signup alert goes out, naming Campaign Chronicle, so it can't be mistaken for a Sinless
+ * request. Someone already approved, waiting or revoked here is left as they are. $alert forces the alert (a brand
+ * new account before migration 020, when there is no table to tell by).
+ */
+function chronicle_access_request(int $userId, bool $isAdmin, string $provider, array $identity, bool $alert = false): void {
+  $pdo = db();
+  if (has_access_table()) {
+    if ($isAdmin) {
+      $pdo->prepare("INSERT INTO chronicle_access (user_id, status, approved_at) VALUES (?, 'approved', NOW())
+                     ON DUPLICATE KEY UPDATE status = 'approved', approved_at = COALESCE(approved_at, NOW())")->execute([$userId]);
+      return;
+    }
+    $ins = $pdo->prepare("INSERT IGNORE INTO chronicle_access (user_id, status) VALUES (?, 'pending')");
+    $ins->execute([$userId]);
+    $alert = $ins->rowCount() > 0;
+  }
+  if ($alert && !$isAdmin) {
     post_signup_webhook(sprintf(
-      "🆕 Campaign Chronicle access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Users in the app.",
+      "🆕 Campaign Chronicle access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Users in Campaign Chronicle (not Sinless).",
       $identity['name'] !== '' ? $identity['name'] : '(none)', $identity['email'], $provider));
   }
-  return $userId;
 }
 
 /** Sign-in buttons to show: providers with a client id configured. */

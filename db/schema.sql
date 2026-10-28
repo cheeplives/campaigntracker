@@ -3,8 +3,9 @@
 -- Existing install: run the files in db/migrations/ you have not run yet, in order.
 
 -- users: one row per OAuth provider identity, identical to the Sinless app's
--- users table. Point both apps at one database and they share accounts and the
--- approval queue. Keyed on the provider's stable user id, never on email.
+-- users table. Point both apps at one database and they share accounts (one sign-in
+-- for both); each app keeps its own approvals (Chronicle's are in chronicle_access, and
+-- users.status is Sinless's). Keyed on the provider's stable user id, never on email.
 -- New sign-ups land as 'pending' until an admin approves them.
 -- provider 'legacy' marks an account from before OAuth sign-in (see
 -- db/migrations/001_oauth_signin.sql); it is claimed by the first sign-in whose
@@ -24,6 +25,19 @@ CREATE TABLE IF NOT EXISTS users (
   PRIMARY KEY (id),
   UNIQUE KEY uq_provider_identity (provider, provider_user_id),
   KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- chronicle_access: who may use Campaign Chronicle, apart from users.status, which is Sinless's. A sign-in with no row
+-- here asks for access (a 'pending' row); site admins (users.is_admin) are approved on sign-in. Removing someone from
+-- Chronicle deletes their row, never the shared users row. See db/migrations/020_chronicle_access.sql.
+CREATE TABLE IF NOT EXISTS chronicle_access (
+  user_id       BIGINT UNSIGNED NOT NULL,
+  status        ENUM('pending','approved','revoked') NOT NULL DEFAULT 'pending',
+  requested_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  approved_at   DATETIME NULL DEFAULT NULL,
+  PRIMARY KEY (user_id),
+  KEY idx_status (status),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Fixed-window counters for lib.php rate_limit(), also identical to Sinless's.

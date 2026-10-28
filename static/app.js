@@ -671,16 +671,18 @@
           }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
           !self && u.status !== 'approved' ? act('Approve', () => post('user_status', { id: u.id, status: 'approved' }), 'primary', 'Let them in. A GM can then add them to a campaign by email') : null,
           !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
-          !self ? act('Delete', async () => {
-            if (!await confirmDialog(`Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`, { ok: 'Delete', danger: true })) return false;
+          !self ? act(legacy ? 'Delete' : 'Remove', async () => {
+            if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
+              : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
+              { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
             await post('user_delete', { id: u.id });
-          }, 'danger', 'Delete this account. Their campaign memberships go with it') : null)));
+          }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null)));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'New people appear here after their first sign-in. Approve them, then a GM picks them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
 
   // ------------------------------------------------------------ campaign list / create

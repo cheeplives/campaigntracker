@@ -10,7 +10,8 @@ the server pulls from GitHub, and secrets live above the web root.
 - HTTPS on the domain.
 - PHP 8 with `pdo_mysql` and `curl`: `php -m | grep -Ei 'pdo_mysql|curl'`.
 - A MySQL database. Either a new one, or **Sinless's database** if you want one
-  account list and one approval queue for both apps. The `users` and
+  account list (one sign-in) for both apps. Each app still approves its own users:
+  Chronicle's approvals are in `chronicle_access`, apart from Sinless's. The `users` and
   `rate_limits` tables are identical in the two apps, and no other table names
   overlap. Only share it on a **fresh** Chronicle install; an existing install
   keeps its own database (see Upgrading below).

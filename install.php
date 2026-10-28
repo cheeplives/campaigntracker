@@ -45,6 +45,9 @@ if (!cfg('allow_install')) {
         $pdo = db();
         $hasUsers = (bool)$pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn();
         $oldUsers = $hasUsers && (bool)$pdo->query("SHOW COLUMNS FROM users LIKE 'password_hash'")->fetchColumn();
+        // Asked before schema.sql runs, since it creates chronicle_access empty: an install with accounts already needs 020
+        // to carry their access over.
+        $needAccess = $hasUsers && !$pdo->query("SHOW TABLES LIKE 'chronicle_access'")->fetchColumn();
         if ($oldUsers) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/001_oauth_signin.sql');
             $msg = 'Upgraded to Google/GitHub sign-in. Existing accounts kept their campaigns. '
@@ -123,6 +126,10 @@ if (!cfg('allow_install')) {
         if ($pdo->query("SHOW TABLES LIKE 'encyclopedia_entries'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM encyclopedia_entries LIKE 'category'")->fetchColumn()) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/018_encyclopedia_categories.sql');
             $msg .= ' Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.';
+        }
+        if ($needAccess) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/020_chronicle_access.sql');
+            $msg .= ' Campaign Chronicle now approves its own users, apart from Sinless; everyone kept the access they had.';
         }
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
