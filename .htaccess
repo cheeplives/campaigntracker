@@ -17,6 +17,12 @@
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # The app uses no camera, microphone, location or payments, so no page (or anything injected into one) may ask.
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+  # Another site's window can't keep a handle on ours (sign-in is a full-page redirect, never a popup).
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  # Don't advertise the PHP version.
+  Header always unset X-Powered-By
   # CSP: everything from same origin, the same policy as Sinless. No
   # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
   # STYLE attributes produced by el() need 'unsafe-inline' in style-src. Fonts
@@ -43,7 +49,13 @@
 </IfModule>
 
 # --- Don't serve secrets / SQL / docs / tooling / dotfiles -----------------
-<FilesMatch "^config\.php$">
+# The config under either of its names, and any copy of it (config.php.bak, config.php.save from nano, config.php~ ...).
+<FilesMatch "^(chronicle-)?config\.php">
+  Require all denied
+</FilesMatch>
+# Editor and hand-made backups, archives and logs anywhere in the site: a copy of a .php file is served as plain text,
+# secrets and all, so none of them is ever served.
+<FilesMatch "(~|\.(bak|backup|old|orig|save|swp|swo|tmp|dist|log|ini|inc|zip|tar|gz|tgz|7z|rar))$">
   Require all denied
 </FilesMatch>
 <FilesMatch "\.(sql|md|py|sh)$">

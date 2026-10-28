@@ -93,6 +93,8 @@ function role(int $cid): string {
         $r = $st->fetchColumn();
         if (!$r) fail('You are not a member of this campaign', 403);
     }
+    // Only once access is settled, so nobody outside the campaign sets its one-time upgrade off.
+    dawn_first($cid);
     // View as player: a GM's page sends X-View-As: player, and is answered exactly as a player would be, through the
     // same filtering. Nothing can be changed meanwhile, so a preview never saves anything by accident.
     if ($r === 'gm' && ($_SERVER['HTTP_X_VIEW_AS'] ?? '') === 'player') {
@@ -106,9 +108,7 @@ function need_gm(int $cid): void { if (role($cid) !== 'gm') fail('Only the GM ca
 function cid(): int {
     $c = $_GET['cid'] ?? p('cid');
     if ($c === null) fail('Missing campaign id');
-    $cid = int_in($c, 1);
-    dawn_first($cid);
-    return $cid;
+    return int_in($c, 1);
 }
 
 /** Mark a calendar as storing its shifts Dawn first (see dawn_first()). */
@@ -939,6 +939,11 @@ function attachment_room(int $cid, string $type, int $pid, int $size): void {
     $st = db()->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=?');
     $st->execute([$cid]);
     if ((int)$st->fetchColumn() + $size > $quota) fail('This campaign\'s files are using all of its ' . ($quota >> 20) . ' MB. Remove some first', 413);
+    // And per person, across every campaign, since anyone can start as many campaigns as they like.
+    $mine = max(1, (int)(cfg('uploads', [])['user_mb'] ?? 1000)) << 20;
+    $st = db()->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE created_by=?');
+    $st->execute([me()['id']]);
+    if ((int)$st->fetchColumn() + $size > $mine) fail('Your files are using all of your ' . ($mine >> 20) . ' MB across your campaigns. Remove some first', 413);
 }
 /** Keep the file at $tmp (already checked) under a new random name and add its row; $row holds the columns besides
  * campaign_id, stored_name and created_by. $tmp null: a row with no file (an embed). Returns the row as the browser gets it. */
@@ -1109,7 +1114,13 @@ function date_in($v): ?string {
 }
 
 require_method('GET', 'POST');
+// Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
+// runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
+const PUBLIC_ACTIONS = ['fanwiki_wikis'];   // the fan wiki list, public like the About page that shows it
+if (!in_array($action, PUBLIC_ACTIONS, true)) me();
 if ($method === 'POST') require_csrf();
+// Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
+if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search',
@@ -1319,10 +1330,12 @@ try {
     case 'member_candidates':
         // Approved accounts not yet in this campaign, for the GM's member picker. GMs only: it lists emails.
         $cid = cid(); need_gm($cid);
-        // Only a site admin sees their emails: any approved user can start a campaign and be its GM, so the
-        // rest get names, and add someone without a name by typing their sign-in email.
-        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE status='approved' AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?) ORDER BY display_name = '', display_name, email");
-        $st->execute([$cid]);
+        // Only a site admin sees their emails: any approved user can start a campaign and be its GM, so the rest get names.
+        // The accounts table is shared with Sinless, so a GM who isn't a site admin is offered only people they already
+        // play with in another campaign; anyone else they add by typing their sign-in email.
+        $mine = me()['is_admin'] ? '' : ' AND id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';
+        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE status='approved' AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine ORDER BY display_name = '', display_name, email");
+        $st->execute(me()['is_admin'] ? [$cid] : [$cid, me()['id']]);
         $users = $st->fetchAll();
         if (!me()['is_admin']) $users = array_values(array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']],
             array_filter($users, fn($x) => trim((string)$x['display_name']) !== '')));
@@ -2764,6 +2777,7 @@ try {
         if ($mode === 'embed' && $source !== 'deviantart') fail('Only DeviantArt works can be embedded', 400);
         if ($source === 'deviantart' && !deviantart_ready()) fail('DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
         $secret = $role === 'gm' && p('is_secret') ? 1 : 0;
+        rate_limit('image_import', (string)me()['id'], 30, 60);   // each one downloads a picture from outside
         // Admins are told which call failed and how, so they can tell a refused key from a source that is down.
         $down = fn(?ImageSourceDown $e = null) => fail('That picture couldn\'t be fetched just now. Try again later.'
             . ($e && me()['is_admin'] ? ' (' . $e->getMessage() . ')' : ''), 502, 'source_unavailable');
@@ -2834,6 +2848,7 @@ try {
     case 'scabard_picture': // GMs: one imported entry's picture, fetched from scabard.com
         $cid = cid();
         need_gm($cid);
+        rate_limit('scabard_picture', (string)me()['id'], 120, 60);   // each one downloads a picture from scabard.com
         out(scabard_picture($cid, body()));
 
     default:

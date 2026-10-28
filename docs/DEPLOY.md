@@ -109,12 +109,25 @@ curl -s https://www.discreteinfinity.com/chronicle/api/auth/me.php
 #   → {"error":"not_authenticated","providers":["google","github"]}
 curl -sI https://www.discreteinfinity.com/chronicle/tests/support/login.php   # → 404
 curl -sI https://www.discreteinfinity.com/chronicle/api/config.php            # → 403/404
+curl -sI https://www.discreteinfinity.com/chronicle/api/lib.php               # → 403 (only index.php and api/auth/ run)
 curl -sI https://www.discreteinfinity.com/chronicle/manifest.webmanifest      # → 200, application/manifest+json
 ```
 
 Then sign in with your `admin_identities` account, have a second account sign
 in (it should wait for approval), approve it under **Users**, and add it to a
-campaign by picking it from the list on the **Members** tab.
+campaign by typing its sign-in email on the **Members** tab (the list there offers a
+GM only people they already play with; a site admin sees everyone).
+
+Then run the security check, which deploy.sh also runs after every pull:
+
+```sh
+php tools/security-check.php
+```
+
+It reads the same config as the app and names anything that must not be left
+that way on a live site: `debug` or `allow_install` on, test-only settings, a
+config file other accounts can read or that sits inside the site's folder, and
+stray copies of the config (`config.php.bak`, `config.php.save`…). It changes nothing.
 
 ## Upgrading an install from before Google/GitHub sign-in
 
@@ -133,7 +146,7 @@ over the old account. Your own old account can be linked the same way, or delete
 
 ```sh
 cd ~/public_html/chronicle
-./deploy.sh        # git pull --ff-only + php -l
+./deploy.sh        # git pull --ff-only, php -l, then tools/security-check.php
 ```
 
 If an update adds a file under `db/migrations/`, run it once after the pull.

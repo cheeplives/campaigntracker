@@ -191,6 +191,13 @@ test("uploads are checked by their contents, size and type, and served so the br
   const chunk = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(1900000, 32)]);
   for (let i = 0; i < 3; i++) expect((await upload(page, cid, id, `part${i}.pdf`, chunk, "application/pdf")).status).toBe(200);
   await refused("part3.pdf", chunk, "application/pdf", 413, /using all of its 6 MB/);
+  // And over the uploader's own total across all their campaigns (10 MB), so a new campaign doesn't buy more room.
+  const cid2 = await makeCampaign(page, `More room ${cid}`);
+  const id2 = await entry(page, cid2, "Altdorf");
+  for (let i = 0; i < 2; i++) expect((await upload(page, cid2, id2, `more${i}.pdf`, chunk, "application/pdf")).status).toBe(200);
+  const over = await upload(page, cid2, id2, "more2.pdf", chunk, "application/pdf");
+  expect(over.status, JSON.stringify(over.json)).toBe(413);
+  expect(over.json.message).toMatch(/your 10 MB across your campaigns/);
   // A file's name is kept for the download, without folders or characters a file name can't have.
   const txt = await upload(page, cid, id, "../../etc/pass:wd.txt", Buffer.from("Hello Nuln"), "text/plain");
   expect(txt.status, JSON.stringify(txt.json)).toBe(200);

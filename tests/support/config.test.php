@@ -20,7 +20,7 @@ return [
   'admin_identities' => ['gm@example.test'],
   'approval_webhook_url' => '',
   'session' => ['name' => 'chronicle_sid', 'cookie_secure' => false, 'save_path' => sys_get_temp_dir()],
-  'uploads' => ['path' => sys_get_temp_dir() . '/chronicle-test-uploads', 'max_mb' => 2, 'campaign_mb' => 6],
+  'uploads' => ['path' => sys_get_temp_dir() . '/chronicle-test-uploads', 'max_mb' => 2, 'campaign_mb' => 6, 'user_mb' => 10],
   // Find Image asks tests/support/image-stub.php instead of Openverse, the museums and DeviantArt.
   'image_search' => [
     'stub' => __DIR__ . '/image-stub.php',
