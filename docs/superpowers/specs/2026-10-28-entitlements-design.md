@@ -26,6 +26,23 @@ The pieces, each with its own spec, in order:
    for uploads if needed.
 5. **Legal:** terms, privacy policy, takedown process for user-shared content. Can run alongside the others.
 
+### Direct access to pages (for piece 4)
+
+Knowing the URLs doesn't get anyone data today. `index.html` and `static/` are public, as every web app's are, but
+they hold no campaign data. Every data request goes through `api/index.php`. It checks the sign-in and the account's
+approval (`me()`), membership of the campaign (`role()`), and GM-only actions (`need_gm()`). The other PHP files in
+`api/` only define functions, so opening one directly returns an empty page. Piece 4 tightens this further:
+
+- **A `public/` web root.** Only `index.html`, `static/`, `api/index.php` and `api/auth/` sit under it. The library
+  files, `content/`, `db/` and `install.php` move outside it, so the web server can't serve them at all, whatever
+  `.htaccess` says.
+- **Until then, an `.htaccess` rule** denies every `api/*.php` except `index.php` and `auth/*.php`.
+- **An access test for every action.** For each action in `api/index.php`, a CI test asks as a signed-out visitor,
+  as a member of another campaign, and as a player for a GM-only action. Each must be refused. It catches a new
+  action that forgets its check.
+- **Rate limits beyond sign-in**, per account, on the search and import actions that call outside services.
+- **The installer off for good** on the commercial site: migrations run from the deploy script, not a web page.
+
 ## Goals
 
 - One server-side function decides every "may they?" question. No permission logic is copied into the endpoints.
