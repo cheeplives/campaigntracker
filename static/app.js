@@ -59,7 +59,7 @@
 
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
-    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
+    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '24';
   async function api(action, { query = {}, body = null } = {}) {
@@ -218,7 +218,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
-    S.libReady = !!r.library_ready;
+    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready;
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);

@@ -127,6 +127,10 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/018_encyclopedia_categories.sql');
             $msg .= ' Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.';
         }
+        if (!$pdo->query("SHOW TABLES LIKE 'maps'")->fetchColumn()) {
+            run_sql_file($pdo, __DIR__ . '/db/migrations/019_maps.sql');
+            $msg .= ' Maps are ready.';
+        }
         if ($needAccess) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/020_chronicle_access.sql');
             $msg .= ' Campaign Chronicle now approves its own users, apart from Sinless; everyone kept the access they had.';
