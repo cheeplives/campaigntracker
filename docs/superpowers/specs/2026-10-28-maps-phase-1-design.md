@@ -86,7 +86,9 @@ the routes that aren't GM only.
 - The Travel tab starts with a *Where the party is* card listing the groups: name, members, region and map. GMs get
   *Split the party…* (a name, the members who go, and a region, which starts as the group's they leave), *Rename*,
   *Make main group* and *Merge into…* (its members join the group picked, and it is gone).
-- Each group can have a **marker** on one map, a flag with its name. GMs drag it, or use *Party is here* on a pin's
+- Each group can have a **marker** on one map: a flag with its name, or the group's **token** when the GM has given it
+  a picture (*Token picture…* on its row in the Travel card: upload or Find Image, shown round, with the name under
+  it). GMs drag it, or use *Party is here* on a pin's
   card (asking which group when there is more than one). Players see the markers and can't move them.
 - **Depart** on the Travel tab asks *Who is travelling* when there is more than one group (the main group first). On
   arrival:
@@ -115,15 +117,32 @@ same tables in `db/schema.sql`:
 
 | Table | Columns |
 |---|---|
-| `maps` | id, campaign_id, name, image_id (attachments.id, NULL until a picture is added), width, height (pixels), scale_per_px DOUBLE NULL, scale_unit ('ft', 'm', 'mi', 'km') NULL, grid_px DOUBLE NULL, is_secret, created_by, created_at |
+| `maps` | id, campaign_id, name, image_id (attachments.id, NULL until a picture is added), width, height (pixels), scale_per_px DOUBLE NULL, scale_unit ('ft', 'm', 'mi', 'km') NULL, grid_px DOUBLE NULL, grid_offset_x, grid_offset_y DOUBLE NULL (where the first grid line falls; for tokens and the grid overlay later), is_secret, created_by, created_at |
 | `map_pins` | id, map_id, campaign_id, x, y (DOUBLE), kind ('note', 'entry', 'event'), entry_id NULL, event_id NULL, label, note, is_secret, created_by, created_at |
 | `map_routes` | id, map_id, campaign_id, name, points_json, is_secret, created_by, created_at |
-| `party_groups` | id, campaign_id, name, members_json (user ids), region_id NULL, map_id NULL, x, y NULL, is_main, created_at |
+| `party_groups` | id, campaign_id, name, members_json (user ids), region_id NULL, map_id NULL, x, y NULL, token_id NULL (attachments.id, parent_type 'party'), is_main, created_at |
 
 The map's picture is an attachments row with `parent_type` 'map', so it is checked, stored, counted and purged as every
 other file is.
 
+## Tokens later: what phase 1 keeps ready
+
+Character and monster tokens on a battlemat are their own later phase, because the hard part isn't drawing them but
+moving them live while several people watch. Phase 1 is shaped so that phase only adds, and changes nothing here:
+
+- **One marker layer.** Pins, party markers and tokens are all drawn by one `marker()` function in maps.js (a
+  position in picture pixels, a picture or an icon, a label, a size, who may drag it, what a drag saves). Tokens
+  reuse it; nothing is redrawn differently.
+- **The grid is stored now.** `grid_px` and the grid offset are kept from the scale dialog, so tokens can snap to
+  squares and be sized in squares (1 for Medium, 2 for Large) without a migration to `maps`.
+- **Pictures are attachments.** A party token is an attachment, as a token will be, so uploads, Find Image, quotas
+  and GM-only rules already apply.
+- **What the tokens phase adds:** a `map_tokens` table (map, x, y, size in squares, picture, label, the member who
+  controls it, an optional Encyclopedia entry, GM only, a layer order), players dragging their own token, snap to
+  grid, and a faster refresh on an open map (a `map_changed` poll every couple of seconds, or server-sent events)
+  so moves show up for everyone. That last one is the real work, and it's better done once tokens are built.
+
 ## Not in phase 1
 
 Tiling very large pictures, VTT files, the grid overlay, *Plan this trip*, grid detection, maps inside maps, fog of
-war, search results for pins, and thumbnails on the day page.
+war, search results for pins, thumbnails on the day page, and character or monster tokens (above).
