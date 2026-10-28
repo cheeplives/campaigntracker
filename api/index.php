@@ -797,7 +797,7 @@ function relation_mine(array $r, bool $isGm): bool {
 // 'file' action below with headers that stop the browser running or sniffing them.
 
 /** What a file can hang off. Add a kind here and a case to attachment_parent(). */
-const ATTACHMENT_PARENTS = ['encyclopedia', 'library', 'session'];
+const ATTACHMENT_PARENTS = ['encyclopedia', 'library', 'session', 'map'];
 /** The types allowed, by the type the contents show: [extensions, 'image' (shown on the page) or 'file' (downloaded)].
  * No SVG or HTML: both can carry scripts. Text files are checked to be text and always downloaded. */
 const UPLOAD_TYPES = [
@@ -831,6 +831,10 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
             need_sessions();
             session_row($cid, $id, $role === 'gm');
             return ['secret' => false, 'manage_any' => false, 'gm_adds' => true];
+        case 'map':                                       // a map's picture: GMs add, and a GM-only map's is theirs alone
+            need_maps();
+            $m = map_row($cid, $id, $role === 'gm');
+            return ['secret' => (bool)(int)$m['is_secret'], 'manage_any' => false, 'gm_adds' => true];
     }
     fail('Files can\'t be attached to that', 400);
 }
@@ -1276,7 +1280,7 @@ if ($method === 'POST') require_csrf();
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search',
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
@@ -3018,6 +3022,35 @@ try {
         if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
         db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$a['id']]);
         if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', $a['stored_name'])) @unlink("$dir/{$a['stored_name']}");
+        out(['ok' => true]);
+
+    // ===== maps =====
+    case 'maps':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['maps' => maps_list($cid, $isGm)]);
+
+    case 'map': // one map with its pins, routes and party groups (the last three come with the tools that make them)
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['map' => map_out(map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm)), 'pins' => [], 'routes' => [], 'groups' => []]);
+
+    case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['ok' => true, 'map' => map_save($cid)]);
+
+    case 'map_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        $m = map_row($cid, int_in(p('id'), 1), true);
+        db()->prepare('DELETE FROM maps WHERE id=?')->execute([$m['id']]);
+        attachments_purge($cid, 'map', (int)$m['id']);   // files have no foreign key to cascade
+        touch_campaign($cid);
         out(['ok' => true]);
 
     case 'scabard_import': // GMs: pages and/or connections from a Scabard JSON export, in batches (api/scabard.php)
