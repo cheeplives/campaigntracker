@@ -140,3 +140,35 @@ test("Maps: deleting a map removes its picture", async ({ page, browser }) => {
   expect(sql(`SELECT COUNT(*) FROM maps WHERE id=${id}`).trim()).toBe("0");
   expect((await getMap(page, cid, id)).status).toBe(404);
 });
+
+test("Maps: a replaced or removed picture is deleted, not left behind", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Maps orphan");
+  const id = (await api(page, "map_save", { name: "Sartar" }, cid)).json.map.id;
+  const count = () => sql(`SELECT COUNT(*) FROM attachments WHERE parent_type='map' AND parent_id=${id}`).trim();
+  const a = await upload(page, cid, "map", id), b = await upload(page, cid, "map", id);
+  expect((await api(page, "map_save", { id, image_id: a.json.file.id }, cid)).status).toBe(200);
+  expect((await api(page, "map_save", { id, image_id: b.json.file.id }, cid)).status).toBe(200);
+  expect(count()).toBe("1");                                  // the first picture went when the second replaced it
+  expect(await get(page, a.json.file.url)).toBe(404);
+  expect((await api(page, "map_save", { id, image_id: null }, cid)).json.map).toMatchObject({ image_url: null, width: null });
+  expect(count()).toBe("0");
+  // Removing the picture as a file puts the map back to having none.
+  const c = await upload(page, cid, "map", id);
+  expect((await api(page, "map_save", { id, image_id: c.json.file.id }, cid)).status).toBe(200);
+  expect((await api(page, "file_delete", { id: c.json.file.id }, cid)).status).toBe(200);
+  expect((await getMap(page, cid, id)).json.map).toMatchObject({ image_url: null, width: null, height: null });
+  // A GM-only picture can't be a map's picture.
+  const d = await upload(page, cid, "map", id);
+  expect((await api(page, "file_update", { id: d.json.file.id, is_secret: true }, cid)).status).toBe(200);
+  expect((await api(page, "map_save", { id, image_id: d.json.file.id }, cid)).status).toBe(400);
+});
+
+test("Maps: a new grid size alone wraps the stored offsets to fit", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Maps grid");
+  const id = (await api(page, "map_save", { name: "Sartar" }, cid)).json.map.id;
+  expect((await api(page, "map_save", { id, grid_px: 40, grid_offset_x: 30 }, cid)).status).toBe(200);
+  const r = await api(page, "map_save", { id, grid_px: 20 }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.map).toMatchObject({ grid_px: 20, grid_offset_x: 10, grid_offset_y: null });
+  expect((await api(page, "map_save", { id, grid_px: 10, grid_offset_x: 15 }, cid)).status).toBe(400);   // one the request itself supplies
+});

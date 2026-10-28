@@ -894,6 +894,15 @@ function attachments_purge(int $cid, ?string $type = null, ?int $id = null): voi
     $dir = upload_dir()['dir'];
     if ($dir) foreach ($names as $n) if (preg_match('/^[0-9a-f]{32}$/', $n)) @unlink("$dir/$n");
 }
+/** Delete one file of campaign $cid, its row and then its stored file. */
+function attachment_remove(int $cid, int $id): void {
+    $st = db()->prepare('SELECT stored_name FROM attachments WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    $name = $st->fetchColumn();
+    if ($name === false) return;
+    db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$id]);
+    if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', (string)$name)) @unlink("$dir/$name");
+}
 /** An uploaded file's name, safe to keep and to send back: no folders, no control characters, 200 characters at most. */
 function upload_name(string $name): string {
     $name = preg_replace('/[\x00-\x1F\x7F"\\\\\/:*?<>|]+/u', '_', basename(str_replace('\\', '/', $name))) ?? '';
@@ -3020,8 +3029,9 @@ try {
         need_attachments();
         $a = attachment_row($cid, int_in(p('id'), 1), $role);
         if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
-        db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$a['id']]);
-        if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', $a['stored_name'])) @unlink("$dir/{$a['stored_name']}");
+        attachment_remove($cid, (int)$a['id']);
+        if ($a['parent_type'] === 'map' && has_maps())   // a map whose picture this was goes back to having none
+            db()->prepare('UPDATE maps SET image_id=NULL, width=NULL, height=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
         out(['ok' => true]);
 
     // ===== maps =====

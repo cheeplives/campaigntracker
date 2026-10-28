@@ -73,14 +73,14 @@ function map_save(int $cid): array {
     if ($has('grid_px')) $m['grid_px'] = map_num($body['grid_px'], 'The grid size', 0.0, 100000.0, true);
     foreach (['grid_offset_x', 'grid_offset_y'] as $k)
         if ($has($k)) $m[$k] = map_num($body[$k], 'The grid offset', 0.0, $m['grid_px'] ?? 100000.0);
-    if ($has('grid_px') && $m['grid_px'] !== null)   // a smaller grid must still hold the offsets already stored
-        foreach (['grid_offset_x', 'grid_offset_y'] as $k) if ($m[$k] !== null && (float)$m[$k] > $m['grid_px']) fail('The grid offset must fit inside one grid square');
+    if ($has('grid_px') && $m['grid_px'] !== null)   // a new grid size alone keeps the offsets already stored, wrapped to fit it
+        foreach (['grid_offset_x', 'grid_offset_y'] as $k) if (!$has($k) && $m[$k] !== null) $m[$k] = fmod((float)$m[$k], $m['grid_px']);
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') { $m['image_id'] = $m['width'] = $m['height'] = null; }
         else {
             need_attachments();
             if (!$old) fail('Save the map first, then add its picture');
-            $st = db()->prepare("SELECT id, width, height FROM attachments WHERE id=? AND campaign_id=? AND parent_type='map' AND parent_id=? AND kind='image'");
+            $st = db()->prepare("SELECT id, width, height FROM attachments WHERE id=? AND campaign_id=? AND parent_type='map' AND parent_id=? AND kind='image' AND is_secret=0");
             $st->execute([int_in($body['image_id'], 1), $cid, $old['id']]);
             $a = $st->fetch();
             if (!$a) fail("That picture isn't one of this map's pictures", 400);
@@ -94,6 +94,7 @@ function map_save(int $cid): array {
         db()->prepare('UPDATE maps SET name=?, image_id=?, width=?, height=?, scale_per_px=?, scale_unit=?, grid_px=?, grid_offset_x=?, grid_offset_y=?, is_secret=? WHERE id=?')
             ->execute([...$cols, $old['id']]);
         $id = (int)$old['id'];
+        if ($old['image_id'] !== null && (int)$old['image_id'] !== $m['image_id']) attachment_remove($cid, (int)$old['image_id']);   // the old picture is no longer wanted
     } else {
         db()->prepare('INSERT INTO maps (name, image_id, width, height, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
             ->execute([...$cols, $cid, $m['created_by']]);
