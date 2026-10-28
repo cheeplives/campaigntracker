@@ -76,6 +76,10 @@ function user_prefs(int $uid): array {
 const UNIT_SYSTEMS = ['metric', 'imperial'];
 /** Colour themes (data-scheme blocks in static/style.css, SCHEMES in static/app.js). */
 const SCHEMES = ['parchment', 'nightsky', 'console', 'arctic', 'wildwood'];
+/** SQL condition, on users column $col, for accounts approved for Chronicle (users.status until migration 020 is run). */
+function approved_sql(string $col = 'id'): string {
+    return has_access_table() ? "$col IN (SELECT user_id FROM chronicle_access WHERE status='approved')" : "status='approved'";
+}
 function need_admin(): array { $u = me(); if (!$u['is_admin']) fail('Admins only', 403, 'not_admin'); return $u; }
 
 /** Returns 'gm' | 'player' for the current user in campaign $cid, or fails. Site admins are GMs everywhere. */
@@ -1173,11 +1177,16 @@ try {
         out(['prefs' => (object)$prefs]);
 
     // ===== user admin =====
-    // Same queue as Sinless: new sign-ins wait as 'pending' until approved here.
+    // Chronicle's own queue (chronicle_access), apart from Sinless's: everyone who has signed in here, and accounts from
+    // before Google/GitHub sign-in. Someone who only uses Sinless isn't listed. New sign-ins wait as 'pending'.
     // Admin rights come only from admin_identities in the config (or a migrated account).
     case 'users':
         need_admin();
-        out(['users' => db()->query("SELECT id, provider, email, display_name, status, is_admin, created_at, last_login_at FROM users ORDER BY status = 'pending' DESC, display_name")->fetchAll()]);
+        out(['users' => db()->query(has_access_table()
+            ? "SELECT u.id, u.provider, u.email, u.display_name, COALESCE(a.status, u.status) AS status, u.is_admin, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
+               FROM users u LEFT JOIN chronicle_access a ON a.user_id=u.id WHERE a.user_id IS NOT NULL OR u.provider='legacy'
+               ORDER BY COALESCE(a.status, u.status) = 'pending' DESC, u.display_name"
+            : "SELECT id, provider, email, display_name, status, is_admin, created_at, last_login_at FROM users ORDER BY status = 'pending' DESC, display_name")->fetchAll()]);
 
     case 'user_status':
         $admin = need_admin();
@@ -1186,13 +1195,16 @@ try {
         $status = p('status');
         if (!in_array($status, ['approved', 'revoked'], true)) fail('Status must be approved or revoked');
         if ($id === $admin['id']) fail("You can't change your own access");
-        $st = db()->prepare('SELECT email, display_name, status, is_admin FROM users WHERE id=?');
+        $st = db()->prepare('SELECT id, email, display_name, status, is_admin FROM users WHERE id=?');
         $st->execute([$id]);
         $t = $st->fetch();
         if (!$t) fail('User not found', 404);
         if ($status === 'revoked' && (int)$t['is_admin']) fail("Admins can't be revoked here. Remove them from admin_identities first.");
-        if ($t['status'] === $status) out(['ok' => true]);
-        db()->prepare('UPDATE users SET status=?, approved_at=IF(?=\'approved\', NOW(), approved_at) WHERE id=?')->execute([$status, $status, $id]);
+        if (chronicle_status($t) === $status) out(['ok' => true]);
+        // Only their access to Chronicle: users.status is Sinless's.
+        if (has_access_table()) db()->prepare('INSERT INTO chronicle_access (user_id, status, approved_at) VALUES (?, ?, IF(?=\'approved\', NOW(), NULL))
+            ON DUPLICATE KEY UPDATE status=VALUES(status), approved_at=IF(VALUES(status)=\'approved\', NOW(), approved_at)')->execute([$id, $status, $status]);
+        else db()->prepare('UPDATE users SET status=?, approved_at=IF(?=\'approved\', NOW(), approved_at) WHERE id=?')->execute([$status, $status, $id]);
         send_account_email($status, (string)$t['email'], (string)$t['display_name']);
         out(['ok' => true]);
 
@@ -1211,7 +1223,17 @@ try {
         $admin = need_admin();
         $id = int_in(p('id'), 1);
         if ($id === $admin['id']) fail("You can't delete yourself");
-        db()->prepare('DELETE FROM users WHERE id=?')->execute([$id]);
+        $st = db()->prepare('SELECT provider FROM users WHERE id=?');
+        $st->execute([$id]);
+        // The account is shared with Sinless, so it stays: they leave Chronicle (its list and their campaigns) only. An
+        // account from before Google/GitHub sign-in was only ever Chronicle's, and goes.
+        if ($st->fetchColumn() === 'legacy' || !has_access_table()) db()->prepare('DELETE FROM users WHERE id=?')->execute([$id]);
+        else {
+            db()->beginTransaction();
+            db()->prepare('DELETE FROM campaign_members WHERE user_id=?')->execute([$id]);
+            db()->prepare('DELETE FROM chronicle_access WHERE user_id=?')->execute([$id]);
+            db()->commit();
+        }
         out(['ok' => true]);
 
     // ===== campaigns =====
@@ -1334,7 +1356,7 @@ try {
         // The accounts table is shared with Sinless, so a GM who isn't a site admin is offered only people they already
         // play with in another campaign; anyone else they add by typing their sign-in email.
         $mine = me()['is_admin'] ? '' : ' AND id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';
-        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE status='approved' AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine ORDER BY display_name = '', display_name, email");
+        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE " . approved_sql() . " AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine ORDER BY display_name = '', display_name, email");
         $st->execute(me()['is_admin'] ? [$cid] : [$cid, me()['id']]);
         $users = $st->fetchAll();
         if (!me()['is_admin']) $users = array_values(array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']],
@@ -1345,12 +1367,12 @@ try {
         $cid = cid(); need_gm($cid);
         if (p('user_id') !== null) {
             // Picked from the list of registered users.
-            $st = db()->prepare("SELECT id FROM users WHERE id=? AND status='approved'");
+            $st = db()->prepare('SELECT id FROM users WHERE id=? AND ' . approved_sql());
             $st->execute([int_in(p('user_id'), 1)]);
             $uid = $st->fetchColumn();
             if (!$uid) fail('That account is not approved (or no longer exists).', 404);
         } else {
-            $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND status='approved'");
+            $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND " . approved_sql());
             $st->execute([trim((string)str_in(p('email'), 191, false))]);
             $uid = $st->fetchColumn();
             if (!$uid) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);

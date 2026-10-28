@@ -24,7 +24,7 @@ return [
   'db' => [
     'host'     => '127.0.0.1',
     'port'     => 3306,
-    // To share accounts and the approval queue with Sinless, use Sinless's
+    // To share accounts (one sign-in for both apps) with Sinless, use Sinless's
     // database here: the users and rate_limits tables are identical. Do this
     // only on a fresh install (an existing install keeps its own database).
     'name'     => 'chronicle',
