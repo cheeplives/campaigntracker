@@ -65,6 +65,12 @@ the routes that aren't GM only.
 - A pin linked to a GM-only entry or a secret event is never sent to players, whatever its own flag says. Deleting
   the entry or event deletes its pins.
 - Clicking a pin opens its card. Pins are drawn as small labelled markers that keep their size as the map zooms.
+- **Add to Encyclopedia** (GMs, on a note pin's card, a player's or their own): adds an Encyclopedia entry named
+  after the pin's label, Category Location, with the pin's note as its Public notes, and turns the pin into that
+  entry's pin in the same place. When an entry of that name (or other name) already exists, the card offers *Link to
+  <entry>* instead, so no duplicate is made. The pin still says "Added by <character name>", and from then on it is
+  the GM's to move or change, like every entry pin; the player can still edit the entry's Public notes, as with any
+  entry. The new entry goes through the Proper Noun Detector's usual check of the note's text.
 
 ### Links back
 
