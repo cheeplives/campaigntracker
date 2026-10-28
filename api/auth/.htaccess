@@ -1,0 +1,4 @@
+# api/auth/.htaccess — the sign-in pages are entry points. api/.htaccess refuses every other .php under api/.
+<FilesMatch "^(login|callback|logout|me)\.php$">
+  Require all granted
+</FilesMatch>

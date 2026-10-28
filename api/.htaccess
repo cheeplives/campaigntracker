@@ -1,8 +1,13 @@
-# api/.htaccess — belt-and-suspenders: never serve the secrets file, even if the
-# root rule is missed or PHP execution is disabled for some reason.
-<FilesMatch "^config(\.example)?\.php$">
+# api/.htaccess — only the entry points run from the web. index.php answers every data request; the sign-in pages
+# have their own folder (api/auth/.htaccess lets them through). Every other .php here only defines functions for
+# index.php (lib.php, images.php, richtext.php, scabard.php, fanwikis*.php) or holds secrets (config.php), so it is
+# refused, and so is any new one, until it is listed here on purpose.
+<FilesMatch "\.php">
   Require all denied
 </FilesMatch>
-# config.php should ideally live ABOVE the web root entirely; this only guards
-# the in-tree location.
+<Files "index.php">
+  Require all granted
+</Files>
+# config.php should ideally live ABOVE the web root entirely (see config.example.php); this only guards the in-tree
+# location, and the root .htaccess refuses it and any copy of it as well.
 Options -Indexes

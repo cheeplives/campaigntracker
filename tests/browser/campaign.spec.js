@@ -161,7 +161,7 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   expectNoErrors(errors);
 });
 
-test("a GM picks a registered player from the list; only approved non-members are offered, and only to GMs", async ({ page, browser }) => {
+test("a GM picks a player they already play with from the list; only approved non-members are offered, and only to GMs", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Kit"), player = person("Lark"), waiting = person("Moss");
   // the picker shows a GM names only (just a site admin sees emails), so give each a name no other test uses
@@ -177,6 +177,11 @@ test("a GM picks a registered player from the list; only approved non-members ar
   const wctx = await browser.newContext();
   await signIn(await wctx.newPage(), waiting);
 
+  // Accounts are shared with Sinless, so a stranger's name isn't offered to a GM who isn't a site admin...
+  expect((await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.display_name)).not.toContain(player.name);
+  // ...only someone they already play with, here in another of their campaigns
+  const other = await makeCampaign(page, `Picker other ${gm.id}`);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, other)).status).toBe(200);
   const offered = (await api(page, "member_candidates", undefined, cid)).json.users;
   const names = offered.map(u => u.display_name);
   expect(names).toContain(player.name);

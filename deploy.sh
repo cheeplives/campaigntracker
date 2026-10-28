@@ -12,5 +12,8 @@ git pull --ff-only
 echo "==> php -l (syntax check every endpoint)"
 find api install.php -name '*.php' -print -exec php -l {} \;
 
+echo "==> security check (settings that must not be left on, stray copies of the config)"
+php tools/security-check.php || echo "    Fix the lines above; the site is updated either way."
+
 echo "==> done"
 echo "    If this update added a file under db/migrations/, run it once now."

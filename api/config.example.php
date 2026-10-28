@@ -122,11 +122,13 @@ return [
   // max_mb is the largest single file. PHP's own upload_max_filesize and
   // post_max_size (php.ini, or .user.ini on DreamHost-style hosts) must be at
   // least this big, or they win: e.g. upload_max_filesize = 10M, post_max_size = 12M.
-  // campaign_mb caps the total of each campaign's files.
+  // campaign_mb caps the total of each campaign's files, and user_mb the total of each person's files across all their
+  // campaigns (anyone can start a campaign, so without it a new campaign would always bring more room).
   'uploads' => [
     'path'        => '',
     'max_mb'      => 10,
     'campaign_mb' => 500,
+    'user_mb'     => 1000,
   ],
 
   // --- Find Image ------------------------------------------------------------
@@ -166,6 +168,11 @@ return [
   // Per-IP throttling on sign-in and per-admin throttling on user changes (needs
   // the rate_limits table from db/schema.sql). Leave true; set false only to debug.
   'rate_limit_enabled' => true,
+  // Changes (saves, uploads, deletions) one account may make a minute, far above what anyone clicking does, so a stuck
+  // page or a script can't flood the database. Picture fetches from outside sites have their own, lower limits.
+  'limits' => [
+    'writes_per_minute' => 600,
+  ],
 
   // Set true only while debugging locally — leaks errors to the client. Keep
   // false in production (errors go to the PHP error log instead).

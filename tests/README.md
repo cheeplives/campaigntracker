@@ -22,6 +22,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 
 ## What's covered
 
+- **access**: every API action (read from api/index.php and api/fanwikis.php, so a new one fails until it is
+  given a group) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
+  GMs' actions; only site admins manage accounts.
 - **signin**: the signed-out screen shows the Google and GitHub buttons and
   keeps the page you were going to; the API refuses anyone signed out; a new
   account waits for approval and gets in once approved; a revoked account is
@@ -39,7 +42,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   with its own length, and a week of its own length and day names; a custom calendar takes leap days in a month and a leap rule
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
-  receive secret events; a GM picks people from the approved accounts not yet in
+  receive secret events; a GM picks people they already play with from the approved accounts not yet in
   the campaign, which only GMs can list.
 - **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,
   festival days outside them, Shieldmeet every fourth year and Selûne's known
