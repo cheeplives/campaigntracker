@@ -228,7 +228,7 @@ Piece 3 may tighten this, for example a grace period followed by read-only, once
 
 ## Data
 
-Migration `db/migrations/019_entitlements.sql`, also folded into `db/schema.sql` and `install.php`. It doesn't touch
+Migration `db/migrations/NNN_entitlements.sql` (the next free number when it is built: 019 is taken by the Maps plan, so probably 020), also folded into `db/schema.sql` and `install.php`. It doesn't touch
 `users`, which is still shared with Sinless until piece 2:
 
 ```sql
@@ -274,7 +274,7 @@ Storage used is worked out from the `attachments` table, which already records e
 campaigns an account owns. The existing per-campaign `uploads.campaign_mb` config is replaced by the plan's
 `storage_mb`.
 
-**Deploy step for Josh:** run `019_entitlements.sql` (or *Install or upgrade* in `install.php`) and add `plans` and
+**Deploy step for Josh:** run `NNN_entitlements.sql` (or *Install or upgrade* in `install.php`) and add `plans` and
 `default_plan` to the config. With `default_plan => 'unlimited'` and his admin grant, nothing changes for anyone.
 
 ## Admin
