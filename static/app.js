@@ -692,10 +692,55 @@
     const list = el('div', { class: 'card' },
       el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary')),
       campaigns.length ? el('ul', { class: 'camplist' }, campaigns.map(c =>
-        el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
-          c.description ? el('p', { class: 'muted' }, c.description) : null)))
+        el('li', { class: 'camp-row' },
+          el('div', { class: 'camp-main' }, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
+            c.description ? el('p', { class: 'muted' }, c.description) : null),
+          // Only a GM can copy (a copy holds the secrets) or delete one.
+          c.role === 'gm' ? el('div', { class: 'camp-actions' },
+            btn('Copy', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
+            btn('Delete', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')) : null)))
         : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.'));
     mount(list);
+  }
+  async function deleteCampaign(c) {
+    const typed = await promptDialog(`Type DELETE to permanently delete "${c.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
+    if (typed === null) return;
+    if (typed.trim() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
+    try { await post('campaign_delete', { confirm: 'DELETE' }, c.id); toast(`Deleted ${c.name}`); viewCampaigns(); } catch (err) { toast(err.message, true); }
+  }
+  /** Copy a campaign into a new one the copier GMs: a name, and everything in it or only its setup. */
+  function copyCampaign(c) {
+    const name = el('input', { name: 'name', value: `${c.name} (copy)`.slice(0, 150), maxlength: 150, required: true });
+    const what = select([['all', 'Everything in it'], ['setup', 'Only its setup']], 'all', { name: 'what' });
+    const status = el('p', { class: 'muted small' });
+    const ok = el('button', { class: 'primary', type: 'submit' }, 'Copy');
+    const cancel = el('button', { type: 'button', onclick: () => d.close() }, 'Cancel');
+    const form = el('form', {}, el('h3', {}, `Copy ${c.name}`),
+      field('Name of the copy', name),
+      field('What to copy', what, 'Everything: days, events, notes, the Encyclopedia, Library, sessions, holdings, reminders and files. '
+        + 'Only its setup: the calendar and date, settings, regions, holidays and the tag and relationship lists, to start a new campaign in the same world.'),
+      el('p', { class: 'muted small' }, 'You are the copy\'s GM. Nobody else is added: invite players from its Members tab.'),
+      status, el('div', { class: 'kit-dialog-actions' }, ok, cancel));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': `Copy ${c.name}` }, form);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      ok.disabled = cancel.disabled = true;
+      status.textContent = 'Copying…';
+      try {
+        await post('campaign_copy', { name: name.value, setup: what.value === 'setup' }, c.id);
+        d.close();
+        toast(`Copied to ${name.value.trim()}`);
+        viewCampaigns();
+      } catch (err) {
+        status.textContent = '';
+        ok.disabled = cancel.disabled = false;
+        toast(err.message, true);
+      }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+    name.select();
   }
 
   /** Seasons moved from one month list to another, each starting at the same share of the year. */

@@ -120,6 +120,9 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .camplist { list-style: none; padding: 0; margin: 0; }
 .camplist li { padding: 10px 0; border-bottom: 1px solid var(--line); }
 .camplist a { display: flex; gap: 10px; align-items: center; font-size: 1.1rem; }
+.camp-row { display: flex; gap: 12px; align-items: flex-start; }
+.camp-main { flex: 1; min-width: 0; }
+.camp-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .role { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--line); color: var(--dim); margin-left: 8px; }
 .role.gm { color: var(--accent); border-color: var(--accent); }
 .listrow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
