@@ -364,3 +364,166 @@ test("Maps: pins on GM-only maps and other campaigns' things are not found", asy
   expect(moved.status).toBe(400);
   expect(moved.json.message).toBe("That's off the map");
 });
+
+// ---------------------------------------------------------------------------------------------- the Maps tab (the page)
+
+/** Click the map's picture at a fraction of the way across and down (Playwright scrolls to it first). */
+async function clickMap(page, fx, fy) {
+  const box = await page.locator(".map-view .leaflet-container").boundingBox();
+  await page.locator(".map-view .leaflet-container").click({ position: { x: box.width * fx, y: box.height * fy } });
+}
+/** Add a map through the page: + New map, a name, the picture; the scale panel is then open. */
+async function newMap(page, name, fileName = "map.png", buffer = MAP_PNG) {
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Map name").fill(name);
+  await page.getByLabel("Map picture").setInputFiles({ name: fileName, mimeType: "image/png", buffer });
+  await page.getByRole("button", { name: "Create map" }).click();
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+}
+
+test("Maps: the tab sits after Generators and lists maps", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps tab");
+  await page.goto(`#/c/${cid}/generators`);
+  await expect(page.locator("nav.tabs a", { hasText: "Maps" })).toBeVisible();
+  const tabs = await page.locator("nav.tabs a[data-group]").allTextContents();
+  expect(tabs[tabs.indexOf("Generators") + 1]).toBe("Maps");
+  await page.goto(`#/c/${cid}/maps`);
+  await expect(page.getByText("No maps yet. Add one with + New map.")).toBeVisible();
+  await pp.goto(`#/c/${cid}/maps`);
+  await expect(pp.getByText("No maps yet.", { exact: true })).toBeVisible();
+  await expect(pp.getByRole("button", { name: "+ New map" })).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM adds a map and scales it by two points, then measures", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps scale");
+  const camp = (await api(page, "campaign", undefined, cid)).json.campaign;
+  expect((await api(page, "campaign_update", { settings: { ...camp.settings, units: "imperial" } }, cid)).status).toBe(200);
+  await page.goto(`#/c/${cid}/maps`);
+  await newMap(page, "Sartar");
+  await expect(page.locator(".map-scale")).toBeHidden();
+  await page.getByRole("button", { name: "Two points" }).click();
+  await clickMap(page, 0.2, 0.5);
+  await clickMap(page, 0.6, 0.5);
+  await page.getByRole("spinbutton", { name: "Distance" }).fill("40");
+  await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("mi");
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  await expect(page.locator(".map-scale")).toContainText(/\d/);
+  const saved = (await api(page, "maps", undefined, cid)).json.maps[0];
+  expect(saved).toMatchObject({ scale_unit: "mi", grid_px: null });
+  expect(saved.scale_per_px).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Measure" }).click();
+  await clickMap(page, 0.2, 0.3);
+  await clickMap(page, 0.6, 0.3);
+  await expect(page.locator(".map-measure-total")).toHaveText(/\d+(\.\d)? mi/);
+  // forty miles between the two points used for the scale, so the same span measures forty
+  await expect(page.locator(".map-measure-total")).toContainText("40 mi");
+  await page.getByRole("button", { name: "Undo point" }).click();
+  await expect(page.locator(".map-measure-total")).toHaveText("");
+  await clickMap(page, 0.9, 0.3);
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(page.locator(".map-measure-total")).toHaveText("");
+  expectNoErrors(errors);
+});
+
+test("Maps: a file name with 30x20 fills in the square size", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps grid");
+  await page.goto(`#/c/${cid}/maps`);
+  await newMap(page, "Keep", "Keep_30x20.png");
+  await page.getByRole("button", { name: "Grid squares" }).click();
+  await expect(page.getByLabel("Pixels per square")).toHaveValue("10");
+  await page.getByRole("button", { name: "Roll20 (70 px = 5 ft)" }).click();
+  await expect(page.getByLabel("Pixels per square")).toHaveValue("70");
+  await expect(page.getByLabel("Distance per square")).toHaveValue("5");
+  await expect(page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit")).toHaveValue("ft");
+  // the first click on the grid gives its offset, which is the click's position within a square
+  await clickMap(page, 0.5, 0.5);
+  await clickMap(page, 0.9, 0.5);
+  await page.getByLabel("How many squares").fill("2");
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  const saved = (await api(page, "maps", undefined, cid)).json.maps[0];
+  expect(saved.scale_unit).toBe("ft");
+  expect(saved.grid_px).toBeGreaterThan(0);
+  expect(saved.grid_offset_x).toBeGreaterThanOrEqual(0);
+  expect(saved.grid_offset_x).toBeLessThanOrEqual(saved.grid_px);
+  expectNoErrors(errors);
+});
+
+test("Maps: an unscaled map says so when measuring", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps unscaled");
+  const id = (await api(page, "map_save", { name: "Bare" }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", id);
+  await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await page.getByRole("button", { name: "Measure" }).click();
+  await expect(page.getByText("Set the scale to measure")).toBeVisible();
+  await pp.goto(`#/c/${cid}/maps/${id}`);
+  await pp.getByRole("button", { name: "Measure" }).click();
+  await expect(pp.getByText("The GM hasn't set this map's scale yet")).toBeVisible();
+  await expect(pp.getByRole("button", { name: "Scale" })).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: a large picture opens", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps large");
+  const id = (await api(page, "map_save", { name: "Huge" }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", id, makePng(6000, 4000));
+  expect(up.status, JSON.stringify(up.json)).toBe(200);
+  await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await expect.poll(() => page.locator(".map-view img.leaflet-image-layer").evaluate(i => i.naturalWidth)).toBe(6000);
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps manage");
+  const id = (await api(page, "map_save", { name: "Old name" }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", id);
+  await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await page.getByRole("button", { name: "Rename" }).click();
+  await page.getByLabel("New name").fill("Fresh name");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.goto(`#/c/${cid}/maps`);
+  await expect(page.locator(".map-card", { hasText: "Fresh name" })).toBeVisible();
+  await pp.goto(`#/c/${cid}/maps`);
+  await expect(pp.locator(".map-card", { hasText: "Fresh name" })).toBeVisible();
+  await page.locator(".map-card", { hasText: "Fresh name" }).click();
+  await page.getByRole("button", { name: "GM only" }).click();
+  await expect(page.getByRole("button", { name: "GM only" })).toHaveAttribute("aria-pressed", "true");
+  await pp.reload();
+  await expect(pp.getByText("No maps yet.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Delete map" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/maps$`));
+  await expect(page.getByText("No maps yet. Add one with + New map.")).toBeVisible();
+  expect((await api(page, "maps", undefined, cid)).json.maps).toHaveLength(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: marker() draws a labelled marker and the coordinates map to the picture's pixels", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps marker");
+  await page.goto(`#/c/${cid}/maps`);
+  const out = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.cssText = "width:300px;height:200px";
+    document.body.append(host);
+    const map = L.map(host, { crs: L.CRS.Simple, minZoom: -5, attributionControl: false });
+    map.setView(MapsTab.toLatLng(150, 100), 0);
+    const layer = L.layerGroup().addTo(map);
+    const m = MapsTab.marker(layer, { x: 150, y: 100, icon: "📍", label: "Inn", className: "test-pin", draggable: false, onOpen: () => document.createTextNode("Hello") });
+    return { ll: MapsTab.toLatLng(10, 20), xy: MapsTab.toXY({ lat: -20, lng: 10 }), isMarker: m instanceof L.Marker,
+      label: host.querySelector(".map-marker.test-pin .map-marker-label")?.textContent, icon: host.querySelector(".map-marker-icon")?.textContent };
+  });
+  expect(out).toMatchObject({ ll: [-20, 10], xy: { x: 10, y: 20 }, isMarker: true, label: "Inn", icon: "📍" });
+  expectNoErrors(errors);
+});

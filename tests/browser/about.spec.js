@@ -21,6 +21,7 @@ test("About & sources: open signed out from the footer, with every travel sample
   // Wind speeds, the bundled editor and the fonts are credited too.
   await expect(page.getByRole("link", { name: "Beaufort scale" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Quill 2 rich text editor/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Leaflet map viewer/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Inter typeface" })).toBeVisible();
   // and Wikipedia, for the summaries Generate Summary adds to Encyclopedia entries
   await expect(page.getByText(/Generate Summary on an Encyclopedia entry/)).toContainText("CC BY-SA 4.0");
