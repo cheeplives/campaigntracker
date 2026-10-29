@@ -88,9 +88,11 @@ test.describe("Find Image API", () => {
     await signIn(outsider, o);
     await approve(browser, o.email);
     expect((await search(outsider, cid, "openverse", "keep")).status).toBe(403);
-    let last;
-    for (let i = 0; i < 31; i++) last = await search(page, cid, "openverse", "keep");
+    // the limit counts per clock minute, so a run that crosses into the next minute starts again: of 61 searches, one minute sees more than 30
+    let ok = 0, last;
+    while (ok < 61 && (last = await search(page, cid, "openverse", "keep")).status === 200) ok++;
     expect(last.status).toBe(429);
+    expect(ok).toBeGreaterThanOrEqual(30);
   });
 
   test("Use this picture copies an open picture with its credit; a closed one is refused", async ({ page, browser }) => {
