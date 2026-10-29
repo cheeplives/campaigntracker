@@ -1623,12 +1623,13 @@ try {
         // with an active character, the name is its entry's name: renaming one renames the other
         $active = null;
         if (has_sheets()) {
-            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN characters c ON c.id=m.active_character_id WHERE m.campaign_id=? AND m.user_id=?');
+            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
+                JOIN encyclopedia_entries e ON e.id=c.entry_id AND e.is_secret=0 WHERE m.campaign_id=? AND m.user_id=?');
             $st->execute([$cid, $uid]);
             $active = $st->fetchColumn() ?: null;
         }
         if ($active && $name !== '') {
-            $name = character_name_in($cid, $name, (int)$active);
+            $name = character_name_in($cid, $name, role($cid) === 'gm', (int)$active);
             db()->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $active]);
             character_names_sync((int)$active);
         }
@@ -2431,6 +2432,13 @@ try {
         $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
         $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
         $category = array_key_exists('category', body()) ? category_in(p('category')) : ($old['category'] ?? null);
+        if ($old && !$isGm && $name !== $old['name'] && has_sheets()) {
+            // a character's name is its player's to change
+            $owner = db()->prepare('SELECT owner_id FROM characters WHERE entry_id=?');
+            $owner->execute([$id]);
+            $o = $owner->fetch();
+            if ($o && (int)$o['owner_id'] !== me()['id']) fail('Only its player or a GM can rename this character', 403);
+        }
         db()->beginTransaction();
         if ($old) {
             db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=? WHERE id=?')->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);

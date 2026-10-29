@@ -259,15 +259,19 @@ function sheet_visible(array $layout, array $values, array $hidden, bool $full):
 
 /** A character of campaign $cid with its entry's name and secrecy and its template; 404 when this member can't see it. */
 function character_row(int $cid, int $id, bool $isGm): array {
+    $c = character_rows($cid, $isGm, $id)[0] ?? null;
+    if (!$c) fail('Character not found', 404);
+    return $c;
+}
+/** The characters of campaign $cid this member can see (players don't see those of GM-only entries), or just $id. */
+function character_rows(int $cid, bool $isGm, ?int $id = null): array {
     $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
             u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign
         FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
-        WHERE c.id=? AND c.campaign_id=?');
-    $st->execute([$id, $cid]);
-    $c = $st->fetch();
-    if (!$c || (!$isGm && (int)$c['entry_secret'])) fail('Character not found', 404);
-    return $c;
+        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
+    $st->execute($id !== null ? [$cid, $id] : [$cid]);
+    return $st->fetchAll();
 }
 /** Whether this member sees the whole sheet (its owner or a GM) and may change it. */
 function character_full(array $c, bool $isGm): bool {
@@ -309,13 +313,13 @@ function characters_by_entry(int $cid, bool $isGm): array {
 function character_names_sync(int $entryId): void {
     if (!has_sheets()) return;
     db()->prepare('UPDATE campaign_members m JOIN characters c ON c.id=m.active_character_id JOIN encyclopedia_entries e ON e.id=c.entry_id
-        SET m.character_name=e.name WHERE c.entry_id=?')->execute([$entryId]);
+        SET m.character_name=e.name WHERE c.entry_id=? AND c.owner_id=m.user_id AND e.is_secret=0')->execute([$entryId]);
 }
 /** A name for a character's entry that no other entry of the campaign has (but $exceptEntry). */
-function character_name_in(int $cid, $v, ?int $exceptEntry = null): string {
+function character_name_in(int $cid, $v, bool $isGm, ?int $exceptEntry = null): string {
     $name = entry_name($v);
     $e = entry_by_name($cid, $name);
-    if ($e && (int)$e['id'] !== $exceptEntry) fail('An entry is already called that. Pick another name, or add a sheet to that entry', 409, 'name_taken');
+    if ($e && (int)$e['id'] !== $exceptEntry) fail($isGm || !(int)$e['is_secret'] ? 'An entry is already called that. Pick another name, or add a sheet to that entry' : 'Pick another name', 409, 'name_taken');
     return $name;
 }
 function member_role(int $cid, int $uid): ?string {
@@ -333,15 +337,8 @@ function characters_action(string $action, int $cid): void {
     $me = me();
     switch ($action) {
         case 'characters':
-            $st = db()->prepare('SELECT id FROM characters WHERE campaign_id=? ORDER BY id');
-            $st->execute([$cid]);
             $pics = entry_pics($cid, $isGm);
-            $out = [];
-            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
-                try { $c = character_row($cid, (int)$id, $isGm); } catch (Throwable $e) { continue; }
-                $out[] = character_card($c, $isGm, $pics);
-            }
-            out(['characters' => $out]);
+            out(['characters' => array_map(fn($c) => character_card($c, $isGm, $pics), character_rows($cid, $isGm))]);
 
         case 'character':
             $c = character_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
@@ -365,7 +362,7 @@ function characters_action(string $action, int $cid): void {
                 if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$e['id']]);
                 $entry = (int)$e['id'];
             } else {
-                $name = character_name_in($cid, p('name'));
+                $name = character_name_in($cid, p('name'), $isGm);
                 $pdo->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, created_by) VALUES (?,?,?)')->execute([$cid, $name, $me['id']]);
                 $entry = (int)$pdo->lastInsertId();
                 if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
@@ -391,6 +388,13 @@ function characters_action(string $action, int $cid): void {
             [$ok, $value] = sheet_value($fields[$key][0], p('value'));
             if (!$ok) fail("That doesn't fit the field " . $fields[$key][0]['label']);
             $path = '$."' . $key . '"';
+            // a value kept from before a template change, which no longer fits this field, stays among the old fields
+            $stored = json_decode($c['field_values'], true) ?: [];
+            if (array_key_exists($key, $stored) && !sheet_value($fields[$key][0], $stored[$key])[0]) {
+                for ($n = 1, $keep = "$key~old"; array_key_exists($keep, $stored); $keep = "$key~old" . ++$n);
+                db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
+                    ->execute(['$."' . $keep . '"', $path, $c['id']]);
+            }
             db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
                 ->execute([$path, json_encode($value, JSON_UNESCAPED_UNICODE), $path, $me['id'], (int)floor(microtime(true) * 1000), $c['id']]);
             out(['ok' => true, 'value' => $value]);
@@ -401,8 +405,9 @@ function characters_action(string $action, int $cid): void {
             $set = [];
             $args = [];
             $renamed = false;
+            $handed = null;
             if (p('name') !== null) {
-                $name = character_name_in($cid, p('name'), (int)$c['entry_id']);
+                $name = character_name_in($cid, p('name'), $isGm, (int)$c['entry_id']);
                 $renamed = $name !== $c['name'];
             }
             $kind = p('kind', $c['kind']);
@@ -421,8 +426,10 @@ function characters_action(string $action, int $cid): void {
                 if (!$isGm && $to !== 'gm' && $owner !== $me['id']) fail('You can hand your sheet to a GM; only a GM can give it to another player', 403);
                 $set[] = 'owner_id=?';
                 $args[] = $owner;
+                $handed = $owner;
             }
             if (p('hidden') !== null) {
+                if ($c['owner_id'] !== null && (int)$c['owner_id'] !== $me['id']) fail('Only its player can hide or show parts of their sheet', 403);
                 $h = p('hidden');
                 if (!is_array($h) || !array_is_list($h) || count($h) > 1100) fail('Send the hidden fields as a list');
                 $known = [];
@@ -435,6 +442,7 @@ function characters_action(string $action, int $cid): void {
             $st = $pdo->prepare('UPDATE characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
             $st->execute(array_merge($args, [$c['id'], int_in(p('version'), 1)]));
             if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
+            if ($handed !== null) $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
             if ($renamed) {
                 $pdo->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $c['entry_id']]);
                 character_names_sync((int)$c['entry_id']);

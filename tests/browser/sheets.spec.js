@@ -263,6 +263,11 @@ test("Characters: a template change moves a value that no longer fits to old fie
   expect(s.character.old).toEqual([{ key: "str", value: 12 }]);
   expect(s.character.values).toEqual({});
   expect((await sheet(p1, cid, c.id)).json.template_changed).toBe(false); // seen now
+  // filling in the field again keeps the old value among the old fields
+  expect((await api(p1, "character_field", { id: c.id, key: "str", value: { cur: 3, max: 5 } }, cid)).status).toBe(200);
+  const again = (await sheet(p1, cid, c.id)).json.character;
+  expect(again.values).toEqual({ str: { cur: 3, max: 5 } });
+  expect(again.old.map(o => o.value)).toEqual([12]);
 });
 
 test("Characters: a removed member's sheets stay, for the GM to edit and hand on", async ({ page, browser }) => {
@@ -300,4 +305,42 @@ test("Characters: who else is on a sheet, and the GM's Edit button", async ({ pa
   // Someone not seen for over 40 seconds isn't listed.
   sql(`UPDATE sheet_presence SET seen_at = NOW() - INTERVAL 41 SECOND WHERE character_id=${c.id}`);
   expect((await api(p1, "character_presence", { id: c.id, editing: false, since: null }, cid)).json.viewers).toEqual([]);
+});
+
+test("Characters: a secret NPC stays secret, and only its player renames or hides parts of a PC", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl, ids } = await party(page, browser);
+  // a GM-only entry with a sheet leaves the players' list working, without it
+  const lich = await make(gm, cid, { template_id: tpl.id, name: "Wren", kind: "npc" });
+  const pc = await make(p1, cid, { template_id: tpl.id, name: "Brannoc" });
+  expect((await api(gm, "entry_save", { id: lich.entry_id, name: "The Countess", is_secret: true }, cid)).status).toBe(200);
+  const list = await get(p2, "characters", {}, cid);
+  expect(list.status).toBe(200);
+  expect(list.json.characters.map(c => c.id)).toEqual([pc.id]);
+  // the name of a secret entry isn't confirmed to players
+  const taken = await api(p2, "character_create", { template_id: tpl.id, name: "The Countess" }, cid);
+  expect(taken.status).toBe(409);
+  expect(taken.json.message).toBe("Pick another name");
+  // a sheet handed to the GM is no longer its old player's active character, so a secret rename doesn't reach them
+  expect((await api(p1, "member_active_character", { character_id: pc.id }, cid)).status).toBe(200);
+  let v = (await sheet(p1, cid, pc.id)).json.character.version;
+  expect((await api(p1, "character_save", { id: pc.id, version: v, owner_id: ids.gm }, cid)).status).toBe(200);
+  expect(sql(`SELECT COALESCE(active_character_id, 'none') FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe("none");
+  expect((await api(gm, "entry_save", { id: pc.entry_id, name: "The Lich Wren", is_secret: true }, cid)).status).toBe(200);
+  expect(sql(`SELECT character_name FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe("Brannoc");
+  expect((await api(p1, "member_character", { character_name: "Bran" }, cid)).status).toBe(200);
+  expect(sql(`SELECT name FROM encyclopedia_entries WHERE id=${pc.entry_id}`).trim()).toBe("The Lich Wren");
+
+  // another player can't rename a PC through its Encyclopedia entry; its player can
+  const mine = await make(p1, cid, { template_id: tpl.id, name: "Ash" });
+  const other = await api(p2, "entry_save", { id: mine.entry_id, name: "Ashy" }, cid);
+  expect(other.status).toBe(403);
+  expect((await api(p1, "entry_save", { id: mine.entry_id, name: "Ashe" }, cid)).status).toBe(200);
+  // only its player hides parts of a PC; a GM, even editing, can't show them
+  v = (await sheet(p1, cid, mine.id)).json.character.version;
+  expect((await api(p1, "character_save", { id: mine.id, version: v, hidden: ["background"] }, cid)).status).toBe(200);
+  expect((await api(gm, "character_field", { id: mine.id, key: "str", value: 5 }, cid)).json.error).toBe("not_editing");
+  await gmEdit(gm, cid, mine.id);
+  const unhide = await api(gm, "character_save", { id: mine.id, version: v + 1, hidden: [] }, cid);
+  expect(unhide.status).toBe(403);
+  expect(unhide.json.message).toBe("Only its player can hide or show parts of their sheet");
 });
