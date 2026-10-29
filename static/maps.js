@@ -441,8 +441,10 @@ const MapsTab = (() => {
     function drawRoutes() {
       routeLayer.clearLayers(); routeLines.clear();
       for (const r of routes) {
-        const line = L.polyline(r.points.map(([x, y]) => toLatLng(x, y)), { weight: 3, dashArray: '8 6', className: 'map-route-line' + (r.is_secret ? ' secret' : '') }).addTo(routeLayer);
-        line.bindTooltip(el('span', {}, r.name), { sticky: true, className: 'map-tip' });
+        const at = r.points.map(([x, y]) => toLatLng(x, y));
+        const line = L.polyline(at, { weight: 3, dashArray: '8 6', interactive: false, className: 'map-route-line' + (r.is_secret ? ' secret' : '') }).addTo(routeLayer);
+        // a thin dashed line is hard to hit with a finger (and a tap between dashes misses it), so an unseen wide one takes the taps
+        L.polyline(at, { weight: 18, opacity: 0, className: 'map-route-hit' }).bindTooltip(el('span', {}, r.name), { sticky: true, className: 'map-tip' }).addTo(routeLayer);
         routeLines.set(r.id, line);
       }
     }

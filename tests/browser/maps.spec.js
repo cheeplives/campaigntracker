@@ -426,6 +426,7 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   await expect(page.getByLabel("Distance per square")).toHaveValue("5");
   await expect(page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit")).toHaveValue("ft");
   // the first click on the grid gives its offset, which is the click's position within a square
+  await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();   // so the boxes below are where the clicks land
   const img = await page.locator(".map-view img.leaflet-image-layer").boundingBox();
   const box = await page.locator(".map-view .leaflet-container").boundingBox();
   const at = fx => ({ x: ((box.x + box.width * fx - img.x) / img.width) * 300, y: ((box.y + box.height * 0.5 - img.y) / img.height) * 200 });
@@ -439,9 +440,10 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   expect(saved.scale_unit).toBe("ft");
   expect(saved.grid_px).toBeGreaterThan(0);
   const grid = Math.hypot(b.x - a.x, b.y - a.y) / 2;
-  expect(Math.abs(saved.grid_px - grid)).toBeLessThan(1);
-  expect(Math.abs(saved.grid_offset_x - (a.x % saved.grid_px))).toBeLessThan(1);
-  expect(Math.abs(saved.grid_offset_y - (a.y % saved.grid_px))).toBeLessThan(1);
+  const near = 1 + 300 / img.width;   // a click lands on a whole screen pixel, which on a narrow phone is more than one map pixel
+  expect(Math.abs(saved.grid_px - grid)).toBeLessThan(near);
+  expect(Math.abs(saved.grid_offset_x - (a.x % saved.grid_px))).toBeLessThan(near);
+  expect(Math.abs(saved.grid_offset_y - (a.y % saved.grid_px))).toBeLessThan(near);
   expectNoErrors(errors);
 });
 
@@ -710,6 +712,7 @@ test("Maps: a GM drags a pin and it stays there; ?pin= opens its card", async ({
   await page.locator(".leaflet-popup-close-button").click();
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);
   const m = page.locator(".leaflet-marker-draggable").first();
+  await m.scrollIntoViewIfNeeded();   // a raw drag doesn't scroll, and on a short phone screen the map is below the fold
   const box = await settledBox(m);   // opening the card panned the map
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -740,7 +743,8 @@ test("Maps: a route's name is shown as text in its tooltip, never as markup", as
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   const line = page.locator(".map-route-line");
   await expect(line).toHaveCount(1);
-  const box = await line.boundingBox();
+  await line.scrollIntoViewIfNeeded();   // a raw tap or hover doesn't scroll, and on a short phone screen the map is below the fold
+  const box = await settledBox(line);
   const mid = [box.x + box.width / 2, box.y + box.height / 2];
   if (test.info().project.use.hasTouch) await page.touchscreen.tap(...mid);   // a touch screen opens it on tap
   else await page.mouse.move(...mid);                                      // a pointer on hover

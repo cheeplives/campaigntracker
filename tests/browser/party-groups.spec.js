@@ -291,6 +291,7 @@ test("Party: a GM drags a group's marker and it stays there", async ({ page, bro
   await api(page, "group_move", { id: main.id, map_id: mapId, x: 100, y: 100 }, cid);
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   const m = page.locator(".leaflet-marker-draggable").filter({ has: page.locator(".map-party") });
+  await m.scrollIntoViewIfNeeded();   // a raw drag doesn't scroll, and on a short phone screen the map is below the fold
   const box = await settledBox(m);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

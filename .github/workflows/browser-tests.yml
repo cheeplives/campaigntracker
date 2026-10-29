@@ -65,9 +65,7 @@ jobs:
             php8.3-cli php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml mysql-client-core-8.0
       - run: find ../api ../install.php ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: npm ci
-      - run: |   # TEMPORARY (PR #129): log memory every 20s to find what fills it before the WebKit runners are killed
-          (while sleep 20; do echo "MEM $(date +%T) $(free -m | awk 'NR==2{print "used="$3"MB avail="$7"MB"}') web=$(pgrep -c WebProcess) top: $(ps -eo rss=,comm= --sort=-rss | head -4 | awk '{printf "%s=%dMB ", $2, $1/1024}')"; done) &
-          npx playwright test --project=${{ matrix.project }}
+      - run: npx playwright test --project=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
