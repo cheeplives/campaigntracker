@@ -134,6 +134,20 @@ pips and clocks, condition toggles, current/max shown as a bar.
 Each field has a permanent **key** made when the field is created. Labels and positions can change freely; values
 are stored by key.
 
+### VTT mapping (optional)
+
+Any field may carry a **VTT mapping**: where the same value lives in a virtual tabletop's character data, for each
+VTT the template knows about. For example, a D&D 5e template's Hit Points field can carry
+`"vtt": { "foundry": { "system": "dnd5e", "path": "system.attributes.hp.value" } }`.
+
+- The VTT name is lower-case letters, digits and `_` (up to 20; `foundry` for Foundry VTT), at most 8 per field.
+  `system` is the VTT's game system id (up to 60 of letters, digits, `_ . -`); `path` is the dotted path to the
+  value in that VTT's actor data (up to 200 of letters, digits, `_ . - [ ]`). Anything else on a mapping is dropped.
+- It is part of the layout, so it is copied by forks and kept through edits. The editor leaves mappings it doesn't
+  show as they are; starter templates may ship with them.
+- Nothing reads it in this version. It is the slot for later work: importing a Foundry character export into a
+  sheet, and syncing a few Play fields (HP, conditions) through the planned Foundry module.
+
 ## Rules
 
 - Only a template's author and site admins can change it. Anyone can use or fork it.
@@ -208,6 +222,7 @@ The 2,595-field Monster of the Week file bundles ten playbooks and splits into t
 - Dice rolling, derived values and formulas (e.g. modifiers from scores).
 - Sheet values feeding other parts of the app.
 - Field-level secrets beyond the owner's hide toggle.
+- Importing from or syncing with a VTT. Fields can already carry VTT mappings for that work.
 
 ## Testing
 

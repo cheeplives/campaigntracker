@@ -94,7 +94,15 @@ test("Templates: bad layouts are refused, naming the problem", async ({ page }) 
   expect(r.json.message).toMatch(/dice/);
   const many = { sections: [{ key: "s", title: "S", fields: Array.from({ length: 1001 }, (_, i) => ({ key: `f${i}`, label: `F${i}`, type: "text" })) }] };
   expect((await api(page, "template_save", { name: "Big", game: "X", layout: many })).status).toBe(400);
-  expect((await api(page, "template_save", { name: "", game: "X", layout: LAYOUT() })).status).toBe(400);
+  expect((await api(page, "template_save", { name: "", game: "X", layout: LAYOUT() })).status).toBe(400);  // a field may carry a mapping to a VTT's data, kept as sent; a bad one is refused
+  const mapped = LAYOUT(); mapped.sections[0].fields[1].vtt = { foundry: { system: "dnd5e", path: "system.attributes.hp.value", junk: 1 } };
+  const saved = await api(page, "template_save", { name: "Mapped", game: "X", layout: mapped });
+  expect(saved.status).toBe(200);
+  expect(saved.json.template.layout.sections[0].fields[1].vtt).toEqual({ foundry: { system: "dnd5e", path: "system.attributes.hp.value" } });
+  const wrong = LAYOUT(); wrong.sections[0].fields[1].vtt = { foundry: { system: "dnd5e", path: "a b;" } };
+  const r2 = await api(page, "template_save", { name: "Wrong", game: "X", layout: wrong });
+  expect(r2.status).toBe(400);
+  expect(r2.json.message).toMatch(/VTT/);
 });
 
 test("Templates: a save from an older copy is refused", async ({ page }) => {

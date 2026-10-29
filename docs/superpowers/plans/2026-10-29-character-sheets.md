@@ -21,6 +21,11 @@ Playwright.
 
 ## Global Constraints
 
+- Fields take an optional `vtt` mapping, `{ <vtt>: { system, path } }`. VTT names match `/^[a-z][a-z0-9_]{0,19}$/`
+  (at most 8), `system` matches `/^[A-Za-z0-9_.-]{1,60}$/` and `path` matches `/^[A-Za-z0-9_.\[\]-]{1,200}$/`.
+  Both `sheet_layout_in` and `SheetLayout.validate` check it, and the server keeps only `system` and `path`. The
+  editor (Task 6) and the starter files (Task 9) carry it through unchanged. Nothing reads it yet. Added after
+  Task 5 at Josh's request, for the VTT companion's Foundry import and sync.
 - Migration `db/migrations/NNN_character_sheets.sql`, where `NNN` is the next number free on main **and** in open
   PRs when building starts (021 is taken by maps phase 2, PR #132, and the VTT companion plan adds another; check
   both, and rebase this branch on main first). The same tables in `db/schema.sql`. The step goes in

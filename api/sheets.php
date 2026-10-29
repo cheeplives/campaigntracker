@@ -23,6 +23,11 @@ const SHEET_TYPES = ['text', 'longtext', 'number', 'counter', 'pips', 'checkbox'
 const SHEET_LIMITS = ['sections' => 50, 'fields' => 1000, 'label' => 100, 'option' => 60, 'options' => 50, 'columns' => 10,
     'pips' => 30, 'rows' => 200, 'text' => 500, 'longtext' => 20000];
 const SHEET_KEY = '/^[a-z][a-z0-9_]{0,39}$/';
+// A field's optional mapping to a VTT's character data, for importing and syncing later: VTT name => {system, path}.
+const SHEET_VTT_NAME = '/^[a-z][a-z0-9_]{0,19}$/';
+const SHEET_VTT_SYSTEM = '/^[A-Za-z0-9_.-]{1,60}$/';
+const SHEET_VTT_PATH = '/^[A-Za-z0-9_.\[\]-]{1,200}$/';
+const SHEET_VTT_MAX = 8;
 
 /** A layout as sent, checked and with only the properties it may have; fails with the first problem. */
 function sheet_layout_in($layout): array {
@@ -78,6 +83,16 @@ function sheet_layout_in($layout): array {
                         fail("$name has a column without a proper key");
                     $ck[$col['key']] = true;
                     $field['columns'][] = ['key' => $col['key'], 'label' => $label($col['label'] ?? null, 'Column labels')];
+                }
+            }
+            if (isset($f['vtt'])) {
+                $v = $f['vtt'];
+                if (!is_array($v) || array_is_list($v) || count($v) > SHEET_VTT_MAX) fail("$name: a VTT mapping names each VTT (" . SHEET_VTT_MAX . ' at most) with its system and path');
+                foreach ($v as $vtt => $m) {
+                    if (!preg_match(SHEET_VTT_NAME, (string)$vtt) || !is_array($m) || !is_string($m['system'] ?? null) || !is_string($m['path'] ?? null)
+                        || !preg_match(SHEET_VTT_SYSTEM, $m['system']) || !preg_match(SHEET_VTT_PATH, $m['path']))
+                        fail("$name: each VTT mapping needs a lower-case VTT name, a system and a data path (letters, digits, _ . - [ ])");
+                    $field['vtt'][(string)$vtt] = ['system' => $m['system'], 'path' => $m['path']];
                 }
             }
             $sec['fields'][] = $field;

@@ -103,3 +103,13 @@ test("draftFromText turns a flat sheet's labels into fields, with large text as 
   expect(L.validate(layout)).toEqual([]);
   expect(layout.sections.map(s => [s.title, s.fields.map(f => f.label)])).toEqual([["Page 1", ["Name"]], ["Abilities", ["Strength", "Dexterity"]]]);
 });
+
+test("validate takes an optional VTT mapping on a field: a system and a path for each VTT", () => {
+  const ok = sample(); ok.sections[0].fields[1].vtt = { foundry: { system: "dnd5e", path: "system.attributes.hp.value" } };
+  expect(L.validate(ok)).toEqual([]);
+  for (const vtt of [{ foundry: { system: "dnd5e" } }, { Foundry: { system: "dnd5e", path: "a.b" } }, { foundry: { system: "dnd5e", path: "a b;" } },
+    { foundry: "system.hp" }, [], { foundry: { system: "x".repeat(61), path: "a" } }]) {
+    const bad = sample(); bad.sections[0].fields[1].vtt = vtt;
+    expect(L.validate(bad).join(" "), JSON.stringify(vtt)).toMatch(/VTT/);
+  }
+});

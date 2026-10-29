@@ -17,6 +17,13 @@
   const okLabel = s => typeof s === 'string' && s.trim().length >= 1 && s.length <= LIMITS.label;
 
   /** What is wrong with a layout, in plain words; [] when nothing is. */
+  /** A field's optional mapping to a VTT's character data: { foundry: { system: 'dnd5e', path: 'system.attributes.hp.value' } }. */
+  function okVtt(v) {
+    if (!isObj(v) || Array.isArray(v) || Object.keys(v).length > 8) return false;
+    return Object.entries(v).every(([name, m]) => /^[a-z][a-z0-9_]{0,19}$/.test(name) && isObj(m)
+      && typeof m.system === 'string' && /^[A-Za-z0-9_.-]{1,60}$/.test(m.system) && typeof m.path === 'string' && /^[A-Za-z0-9_.[\]-]{1,200}$/.test(m.path));
+  }
+
   function validate(layout) {
     if (!isObj(layout) || !Array.isArray(layout.sections)) return ['A template needs a list of sections'];
     const out = [], keys = new Set();
@@ -53,6 +60,7 @@
           }
         }
         for (const b of ['min', 'max']) if (f[b] !== undefined && f[b] !== null && !Number.isFinite(f[b])) out.push(`${name}: ${b} must be a number`);
+        if (f.vtt !== undefined && !okVtt(f.vtt)) out.push(`${name}: each VTT mapping needs a lower-case VTT name, a system and a data path (letters, digits, _ . - [ ])`);
       }
     }
     if (n > LIMITS.fields) out.push(`A template can have ${LIMITS.fields} fields at most`);
