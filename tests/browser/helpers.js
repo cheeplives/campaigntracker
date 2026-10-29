@@ -116,7 +116,7 @@ async function mapWithPicture(page, cid, extra = {}) {
 // Every extra browser a test opens (a player's, a second GM's) is closed after the test: left open, each keeps
 // a page process alive for the rest of the worker, and WebKit's runs out of memory before the suite ends.
 const openContexts = [];
-async function newContext(browser) { const ctx = await browser.newContext(); openContexts.push(ctx); return ctx; }
+async function newContext(browser, options = {}) { const ctx = await browser.newContext(options); openContexts.push(ctx); return ctx; }
 async function closeContexts() { await Promise.all(openContexts.splice(0).map(c => c.close())); }
 /** A locator's box once it has stopped moving (a map that is still panning or fitting moves its markers). */
 async function settledBox(locator) {

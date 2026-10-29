@@ -19,8 +19,9 @@ async function party(page, browser) {
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Characters ${gm.id}`);
   const pages = {};
+  // The service worker would see the players' requests first, and in WebKit page.route() then never fakes them.
   for (const [k, who] of [["p1", p1], ["p2", p2]]) {
-    pages[k] = await (await newContext(browser)).newPage();
+    pages[k] = await (await newContext(browser, { serviceWorkers: "block" })).newPage();
     await signIn(pages[k], who);
     await approve(browser, who.email);
     expect((await api(page, "member_add", { email: who.email, role: "player" }, cid)).status).toBe(200);
