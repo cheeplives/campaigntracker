@@ -706,9 +706,16 @@ test("Maps: a GM drags a pin and it stays there; ?pin= opens its card", async ({
   const pin = (await api(page, "pin_save", { map_id: mapId, x: 100, y: 100, label: "Drag me" }, cid)).json.pin;
   await page.goto(`#/c/${cid}/maps/${mapId}?pin=${pin.id}`);
   await expect(page.locator(".leaflet-popup")).toContainText("Drag me");   // ?pin= opens the card
-  await page.keyboard.press("Escape");
+  await page.locator(".leaflet-popup-close-button").click();
+  await expect(page.locator(".leaflet-popup")).toHaveCount(0);
   const m = page.locator(".leaflet-marker-draggable").first();
-  const box = await m.boundingBox();
+  // Opening the card pans the map; read the marker's box once it has stopped moving.
+  let box = null;
+  await expect.poll(async () => {
+    const b = await m.boundingBox(), same = box && b && Math.abs(b.x - box.x) < 0.5 && Math.abs(b.y - box.y) < 0.5;
+    box = b;
+    return same;
+  }).toBe(true);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 30, { steps: 6 });
