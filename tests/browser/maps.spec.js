@@ -357,6 +357,13 @@ async function clickMap(page, fx, fy) {
   const box = await page.locator(".map-view .leaflet-container").boundingBox();
   await page.locator(".map-view .leaflet-container").click({ position: { x: box.width * fx, y: box.height * fy } });
 }
+/** Click a point of the map's picture itself, a fraction of the way across and down it, wherever the view has put it. */
+async function clickPicture(page, fx, fy) {
+  const stage = page.locator(".map-view .leaflet-container");
+  await stage.scrollIntoViewIfNeeded();
+  const img = await settledBox(page.locator(".map-view img.leaflet-image-layer")), box = await stage.boundingBox();
+  await stage.click({ position: { x: img.x - box.x + img.width * fx, y: img.y - box.y + img.height * fy } });
+}
 /** Add a map through the page: + New map, a name, the picture; the scale panel is then open. */
 async function newMap(page, name, fileName = "map.png", buffer = MAP_PNG) {
   await page.getByRole("button", { name: "+ New map" }).click();
@@ -390,8 +397,8 @@ test("Maps: a GM adds a map and scales it by two points, then measures", async (
   await newMap(page, "Sartar");
   await expect(page.locator(".map-scale")).toBeHidden();
   await page.getByRole("button", { name: "Two points" }).click();
-  await clickMap(page, 0.2, 0.5);
-  await clickMap(page, 0.6, 0.5);
+  await clickPicture(page, 0.2, 0.5);
+  await clickPicture(page, 0.6, 0.5);
   await page.getByRole("spinbutton", { name: "Distance" }).fill("40");
   await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("mi");
   await page.getByRole("button", { name: "Save scale" }).click();
@@ -401,8 +408,8 @@ test("Maps: a GM adds a map and scales it by two points, then measures", async (
   expect(saved).toMatchObject({ scale_unit: "mi", grid_px: null });
   expect(saved.scale_per_px).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Measure" }).click();
-  await clickMap(page, 0.2, 0.3);
-  await clickMap(page, 0.6, 0.3);
+  await clickPicture(page, 0.2, 0.3);
+  await clickPicture(page, 0.6, 0.3);
   await expect(page.locator(".map-measure-total")).toHaveText(/\d+(\.\d)? mi/);
   // forty miles between the two points used for the scale, so the same span measures forty
   await expect(page.locator(".map-measure-total")).toContainText("40 mi");
