@@ -532,6 +532,8 @@ CREATE TABLE IF NOT EXISTS maps (
   grid_px DOUBLE NULL,
   grid_offset_x DOUBLE NULL,
   grid_offset_y DOUBLE NULL,
+  grid_type VARCHAR(12) NOT NULL DEFAULT 'square',   -- 'square', 'hex_flat' or 'hex_pointy'
+  grid_shown TINYINT(1) NOT NULL DEFAULT 0,         -- the grid is drawn over the map to start with
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

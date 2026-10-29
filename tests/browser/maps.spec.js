@@ -158,6 +158,23 @@ test("Maps: a new grid size alone wraps the stored offsets to fit", async ({ pag
   expect((await api(page, "map_save", { id, grid_px: 10, grid_offset_x: 15 }, cid)).status).toBe(400);   // one the request itself supplies
 });
 
+test("Maps: a map's grid can be squares or hexes and shown to everyone; anything else is refused", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps grid shape");
+  const fresh = (await api(page, "map_save", { name: "Hexland" }, cid)).json.map;
+  expect(fresh).toMatchObject({ grid_type: "square", grid_shown: false });
+  const r = await api(page, "map_save", { id: fresh.id, grid_px: 50, grid_type: "hex_flat", grid_shown: true }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.map).toMatchObject({ grid_px: 50, grid_type: "hex_flat", grid_shown: true });
+  expect((await api(page, "map_save", { id: fresh.id, name: "Hexland 2" }, cid)).json.map).toMatchObject({ grid_type: "hex_flat", grid_shown: true });   // kept when not named
+  const bad = await api(page, "map_save", { id: fresh.id, grid_type: "triangle" }, cid);
+  expect(bad.status).toBe(400);
+  expect(bad.json.message).toBe("Pick squares, flat-topped hexes or pointy-topped hexes");
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0]).toMatchObject({ grid_type: "hex_flat", grid_shown: true });
+  expect((await api(pp, "map_save", { id: fresh.id, grid_type: "square" }, cid)).status).toBe(403);
+  const made = (await api(page, "map_save", { name: "Pointy", grid_type: "hex_pointy" }, cid)).json.map;
+  expect(made.grid_type).toBe("hex_pointy");
+});
+
 // ---- pins and routes ----
 /** A public 300x200 map with a picture; returns its id. */
 async function mapWithPicture(page, cid, extra = {}) {

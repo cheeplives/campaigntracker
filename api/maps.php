@@ -13,6 +13,14 @@ function need_maps(): void {
     if (!has_maps()) fail('Maps need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
 }
 
+/** Whether migration 021 has been run: before it, a map's grid is squares and never drawn. */
+function has_map_grid(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW COLUMNS FROM maps LIKE 'grid_type'")->fetchColumn();
+}
+/** The shapes a map's grid can be, as MapGeo draws them. */
+const MAP_GRID_TYPES = ['square', 'hex_flat', 'hex_pointy'];
+
 /** The units a map's scale can be in, as MapGeo keeps them (static/mapgeo.js). */
 const MAP_UNITS = ['ft', 'm', 'mi', 'km', 'au', 'ly'];
 
@@ -33,7 +41,8 @@ function map_out(array $m): array {
     return ['id' => (int)$m['id'], 'name' => $m['name'], 'is_secret' => (bool)(int)$m['is_secret'],
         'width' => $m['width'] !== null ? (int)$m['width'] : null, 'height' => $m['height'] !== null ? (int)$m['height'] : null,
         'scale_per_px' => $num('scale_per_px'), 'scale_unit' => $m['scale_unit'], 'grid_px' => $num('grid_px'),
-        'grid_offset_x' => $num('grid_offset_x'), 'grid_offset_y' => $num('grid_offset_y'), 'image_url' => $url,
+        'grid_offset_x' => $num('grid_offset_x'), 'grid_offset_y' => $num('grid_offset_y'),
+        'grid_type' => $m['grid_type'] ?? 'square', 'grid_shown' => (bool)(int)($m['grid_shown'] ?? 0), 'image_url' => $url,
         'created_by' => $m['created_by'] !== null ? (int)$m['created_by'] : null];
 }
 /** SQL conditions (aliases p = map_pins, e = its entry, ev = its event, both LEFT JOINed) for the pins this member may see:
@@ -81,6 +90,14 @@ function map_save(int $cid): array {
         if ($has($k)) $m[$k] = map_num($body[$k], 'The grid offset', 0.0, $m['grid_px'] ?? 100000.0);
     if ($has('grid_px') && $m['grid_px'] !== null)   // a new grid size alone keeps the offsets already stored, wrapped to fit it
         foreach (['grid_offset_x', 'grid_offset_y'] as $k) if (!$has($k) && $m[$k] !== null) $m[$k] = fmod((float)$m[$k], $m['grid_px']);
+    if (has_map_grid()) {
+        $m += ['grid_type' => 'square', 'grid_shown' => 0];
+        if ($has('grid_type')) {
+            if (!in_array($body['grid_type'], MAP_GRID_TYPES, true)) fail('Pick squares, flat-topped hexes or pointy-topped hexes');
+            $m['grid_type'] = $body['grid_type'];
+        }
+        if ($has('grid_shown')) $m['grid_shown'] = !empty($body['grid_shown']) ? 1 : 0;
+    }
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') { $m['image_id'] = $m['width'] = $m['height'] = null; }
         else {
@@ -100,11 +117,13 @@ function map_save(int $cid): array {
         db()->prepare('UPDATE maps SET name=?, image_id=?, width=?, height=?, scale_per_px=?, scale_unit=?, grid_px=?, grid_offset_x=?, grid_offset_y=?, is_secret=? WHERE id=?')
             ->execute([...$cols, $old['id']]);
         $id = (int)$old['id'];
+        if (has_map_grid()) db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
         if ($old['image_id'] !== null && (int)$old['image_id'] !== $m['image_id']) attachment_remove($cid, (int)$old['image_id']);   // the old picture is no longer wanted
     } else {
         db()->prepare('INSERT INTO maps (name, image_id, width, height, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
             ->execute([...$cols, $cid, $m['created_by']]);
         $id = (int)db()->lastInsertId();
+        if (has_map_grid()) db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
     }
     touch_campaign($cid);
     return map_out(map_row($cid, $id, true));
@@ -680,6 +699,14 @@ function token_save(int $cid): array {
             if (!$st->fetchColumn()) fail('That entry isn\'t one of this campaign\'s', 400);
             $t['entry_id'] = (int)$body['entry_id'];
         }
+    }
+    if (has_map_grid()) {
+        $m += ['grid_type' => 'square', 'grid_shown' => 0];
+        if ($has('grid_type')) {
+            if (!in_array($body['grid_type'], MAP_GRID_TYPES, true)) fail('Pick squares, flat-topped hexes or pointy-topped hexes');
+            $m['grid_type'] = $body['grid_type'];
+        }
+        if ($has('grid_shown')) $m['grid_shown'] = !empty($body['grid_shown']) ? 1 : 0;
     }
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') $t['image_id'] = null;
