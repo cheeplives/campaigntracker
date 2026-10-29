@@ -6,7 +6,7 @@
 never stored), characters in each campaign built from them with a Play view for the table, every character tied to an
 Encyclopedia entry as a PC or NPC, and a starter library of about 40 games.
 
-**Architecture:** Two new tables and one new column (migration 021). Their actions live in a new `api/sheets.php`,
+**Architecture:** Two new tables and one new column (one new migration, numbered `NNN` below). Their actions live in a new `api/sheets.php`,
 called from `api/index.php`'s switch the way `api/scabard.php` is. The browser gets `static/sheetlayout.js` (layout
 rules, value coercion and PDF drafting as pure functions; runs under Node in the tests, like `sessions.js`),
 `static/pdfimport.js` (pdf.js wrapper: reads form fields, text and page pictures in the browser), and
@@ -21,7 +21,10 @@ Playwright.
 
 ## Global Constraints
 
-- Migration `db/migrations/021_character_sheets.sql`; the same in `db/schema.sql`; install.php runs 021 when
+- Migration `db/migrations/NNN_character_sheets.sql`, where `NNN` is the next number free on main **and** in open
+  PRs when building starts (021 is taken by maps phase 2, PR #132, and the VTT companion plan adds another; check
+  both, and rebase this branch on main first). The same tables in `db/schema.sql`. The step goes in
+  `api/upgrade.php` (which `tools/migrate.php`, run by deploy.sh, and install.php both use) and runs when
   `SHOW TABLES LIKE 'characters'` is empty. Before then every sheet action fails with `needs_upgrade` (409), "Character
   sheets need a database upgrade: open install.php and press Install or upgrade", and the tab says so, as the Library
   does.
@@ -49,9 +52,9 @@ Playwright.
 - About page: `E.SOURCES.pdfjs = { title: 'pdf.js 3.11.174 (static/vendor/pdfjs)', by: 'Mozilla and the pdf.js
   contributors', licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' }`, under Software and fonts as
   "Reading PDFs when you import a character sheet: <cite>." Plus a "Starter templates" section (Task 9).
-- Database change notice for the PR and the thread: "Database change: `db/migrations/021_character_sheets.sql` adds
-  `sheet_templates`, `characters` and `campaign_members.active_character_id`. After deploying, open install.php and
-  press Install or upgrade."
+- Database change notice for the PR and the thread: "Database change: `db/migrations/NNN_character_sheets.sql` adds
+  `sheet_templates`, `characters` and `campaign_members.active_character_id`. deploy.sh runs it automatically
+  (`php tools/migrate.php`); if that fails, run it by hand, or open install.php and press Install or upgrade."
 
 ## Review Focus
 
@@ -72,8 +75,9 @@ Playwright.
 ### Task 1: Tables, install step and the upgrade guard
 
 **Files:**
-- Create: `db/migrations/021_character_sheets.sql`, `api/sheets.php` (`has_sheets()`, `need_sheets()` only for now)
-- Modify: `db/schema.sql`, `install.php` (after the 018 step: "Added character sheets and the template library."),
+- Create: `db/migrations/NNN_character_sheets.sql`, `api/sheets.php` (`has_sheets()`, `need_sheets()` only for now)
+- Modify: `db/schema.sql`, `api/upgrade.php` (a step after the last one: "Added character sheets and the template
+  library."),
   `api/index.php` (require `sheets.php`; `'sheets_ready' => has_sheets()` in the `campaign` payload; `CAMPAIGN_COPY`
   entry), `static/app.js` (`S.sheetsReady`, set where `S.libReady` is)
 - Test: `tests/browser/sheets.spec.js`, `tests/browser/campaign-copy.spec.js` (its every-table check now covers
@@ -104,7 +108,7 @@ Tables (InnoDB utf8mb4 as the others):
 - [ ] **Step 2: Run** `cd tests && npx playwright test sheets.spec.js --project=chromium` → FAIL.
 - [ ] **Step 3: Implement** the migration, schema, install step, guard and copy entry.
 - [ ] **Step 4: Run** → PASS; `php -l` on every changed PHP file.
-- [ ] **Step 5: Commit** `git commit -m "Character sheets: tables, install step and upgrade guard (migration 021)"`
+- [ ] **Step 5: Commit** `git commit -m "Character sheets: tables, upgrade step and guard (migration NNN)"`
 
 ### Task 2: `static/sheetlayout.js`, the rules
 

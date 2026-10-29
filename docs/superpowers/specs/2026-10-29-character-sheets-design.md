@@ -139,8 +139,9 @@ are stored by key.
 
 ## Database
 
-This is a database change: one new migration (the next free number in `db/migrations/`, mirrored in
-`db/schema.sql`). The deploy reply must name it and the step Josh runs, per the project instructions.
+This is a database change: one new migration (the next number free on main and in open PRs when building starts,
+mirrored in `db/schema.sql`). deploy.sh runs it automatically through `tools/migrate.php`; install.php is the manual
+fallback. The PR's thread reply must name it, per the project instructions.
 
 - **`sheet_templates`**: id, name, game, edition, `author_id` (users), `forked_from_id` (sheet_templates, NULL),
   `layout` (JSON: sections and fields), `version`, `is_listed`, `starter_key` (the starter file's name, NULL for
