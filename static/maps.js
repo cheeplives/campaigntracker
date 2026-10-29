@@ -177,8 +177,48 @@ const MapsTab = (() => {
       });
       total.textContent = pts.length > 1 ? dist() : '';
     };
-    const dist = () => G.fmtDistance(G.toMetres(G.pathPx(pts), map), system(), G.isSpace(map));
+    const dist = () => {
+      const d = G.fmtDistance(G.toMetres(G.pathPx(pts), map), system(), G.isSpace(map));
+      const n = map.grid_px > 0 ? G.squaresAlong(G.pathPx(pts), map.grid_px) : null;
+      const hex = map.grid_type === 'hex_flat' || map.grid_type === 'hex_pointy';
+      return n === null ? d : `${d} · ${n} ${hex ? (n === 1 ? 'hex' : 'hexes') : (n === 1 ? 'square' : 'squares')}`;
+    };
     const hasScale = () => G.toMetres(1, map) !== null;
+
+    // ---- the grid overlay: one SVG pattern over the picture, in its pixels, drawn for whoever has it shown
+    let gridLayer = null, gridLines = [];
+    const gridKey = `chronicle-map-grid-${cid}-${id}`;
+    const gridWanted = () => {
+      try { const v = localStorage.getItem(gridKey); if (v !== null) return v === '1'; } catch { /* storage may be off */ }
+      return !!map.grid_shown;
+    };
+    const gridWidth = () => {   // lines one screen pixel wide (with a light edge) at every zoom
+      const k = lf ? 1 / lf.map.getZoomScale(lf.map.getZoom(), 0) : 1;
+      gridLines.forEach((l, i) => l.setAttribute('stroke-width', String((i ? 1 : 3) * k)));
+    };
+    function drawGrid() {
+      gridLayer?.remove(); gridLayer = null; gridLines = [];
+      const has = map.grid_px > 0;
+      gridBtn.hidden = !has || !map.image_url;
+      gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
+      if (!lf || !has || !gridWanted()) return;
+      const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+      const t = G.gridTile(map.grid_type, map.grid_px), pid = `map-grid-${id}`;
+      const root = svg('svg', { viewBox: `0 0 ${map.width} ${map.height}`, preserveAspectRatio: 'none' });
+      const pattern = svg('pattern', { id: pid, patternUnits: 'userSpaceOnUse', x: map.grid_offset_x || 0, y: map.grid_offset_y || 0, width: t.w, height: t.h });
+      gridLines = [svg('path', { d: t.d, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.45 }), svg('path', { d: t.d, fill: 'none', stroke: '#000', 'stroke-opacity': 0.55 })];
+      pattern.append(...gridLines);
+      root.append(svg('defs', {}), svg('rect', { width: map.width, height: map.height, fill: `url(#${pid})` }));
+      root.firstChild.append(pattern);
+      gridWidth();
+      gridLayer = L.svgOverlay(root, bounds(), { pane: 'mapGrid', interactive: false, className: 'map-grid' }).addTo(lf.map);
+    }
+    const gridBtn = btn('Grid', () => {
+      const on = !gridWanted();
+      try { localStorage.setItem(gridKey, on ? '1' : '0'); } catch { /* shown or hidden for this visit only */ }
+      drawGrid();
+    }, '', 'Show or hide the map\'s grid (just for you)');
+    gridBtn.hidden = true;
 
     // ---- the scale panel
     let picks = [], pickLayer = null, panel = null;
@@ -201,6 +241,9 @@ const MapsTab = (() => {
       const perUnit = select(UNITS, hasGrid && map.scale_unit ? map.scale_unit : G.ROLL20.unit, { 'aria-label': 'Unit' });
       const px = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Pixels per square', value: hasGrid ? String(map.grid_px) : hint ? String(hint.grid_px) : '' });
       const count = el('input', { type: 'number', min: 1, step: 'any', 'aria-label': 'How many squares', value: '' });
+      const graded = 'grid_type' in map;   // the shape and default need the database upgrade (migration 021)
+      const shape = select([['square', 'Squares'], ['hex_flat', 'Hexes (flat top)'], ['hex_pointy', 'Hexes (pointy top)']], map.grid_type || 'square', { 'aria-label': 'Shape' });
+      const shown = el('input', { type: 'checkbox', checked: !!map.grid_shown });
       const way1 = btn('Two points', () => show('points'), '', 'Click two places you know the distance between');
       const way2 = btn('Grid squares', () => show('grid'), '', 'Say how big one square of the map\'s grid is');
       const body = el('div', { class: 'map-panel-body' });
@@ -216,11 +259,13 @@ const MapsTab = (() => {
           el('p', { class: 'small' }, 'Click two places you know the distance between.'),
           el('div', { class: 'row' }, field('How far apart are they?', apart), field('Unit', unit))
         ] : [
+          graded ? el('div', { class: 'row' }, field('Shape', shape, null, 'A hex\'s size is from its centre to the next one\'s, flat side to flat side'),
+            el('label', { class: 'check' }, shown, ' Show the grid to everyone')) : null,
           el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''),
             btn(`Roll20 (${G.ROLL20.grid_px} px = ${G.ROLL20.per_square} ft)`, () => { px.value = String(G.ROLL20.grid_px); per.value = String(G.ROLL20.per_square); perUnit.value = G.ROLL20.unit; }, 'small')),
           el('p', { class: 'small' }, 'Or click the corners of a run of squares, then say how many squares that is.'),
           el('div', { class: 'row' }, field('How many squares is that?', count))
-        ]));
+        ].filter(Boolean)));
       }
       const save = async () => {
         let patch;
@@ -233,11 +278,12 @@ const MapsTab = (() => {
             if (!(+px.value > 0)) throw new Error('Type how many pixels one square is');
             if (!(+per.value > 0)) throw new Error('Type how far one square is');
             patch = G.scaleFromGrid(+px.value, +per.value, perUnit.value);
+            if (graded) Object.assign(patch, { grid_type: shape.value, grid_shown: shown.checked });
             if (picks.length) { offset = { x: ((picks[0].x % patch.grid_px) + patch.grid_px) % patch.grid_px, y: ((picks[0].y % patch.grid_px) + patch.grid_px) % patch.grid_px }; patch.grid_offset_x = offset.x; patch.grid_offset_y = offset.y; }
           }
           map = (await post('map_save', { id: map.id, ...patch }, cid)).map;
         } catch (err) { return toast(err.message, true); }
-        toast('Scale saved'); closePanel(); lf.scale.update(); ctx.reloadCampaign().catch(() => {});
+        toast('Scale saved'); closePanel(); lf.scale.update(); drawGrid(); ctx.reloadCampaign().catch(() => {});
       };
       panel = el('div', { class: 'map-panel card', role: 'dialog', 'aria-label': 'Set the scale' },
         el('div', { class: 'row' }, el('strong', {}, 'Set the scale'), way1, way2), body,
@@ -568,7 +614,7 @@ const MapsTab = (() => {
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
     tools.append(saveRouteBtn);
-    toolbar.append(addPinBtn, measureBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, gm ? btn('Rename', rename) : null, secretBtn, del);
+    toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, gm ? btn('Rename', rename) : null, secretBtn, del);
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
@@ -581,7 +627,10 @@ const MapsTab = (() => {
       return;
     }
     const lmap = L.map(host, { crs: L.CRS.Simple, minZoom: -5, maxZoom: 4, zoomSnap: 0.25, attributionControl: false });
-    L.imageOverlay(map.image_url, bounds()).addTo(lmap);
+    // the picture, then the grid over it, both under the routes and pins (overlayPane is 400, markers above)
+    lmap.createPane('mapPicture').style.zIndex = 300;
+    lmap.createPane('mapGrid').style.zIndex = 350;
+    L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
     lmap.fitBounds(bounds());
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);
@@ -592,6 +641,8 @@ const MapsTab = (() => {
     lf = { map: lmap, scale: bar };
     syncTools();
     lmap.on('click', onClick);
+    lmap.on('zoom', gridWidth);
+    drawGrid();
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
     const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };

@@ -471,6 +471,50 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   expectNoErrors(errors);
 });
 
+test("Maps: the grid is drawn over the map, each person can hide it, and Measure counts squares", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps overlay");
+  const id = await mapWithPicture(page, cid);
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await expect(page.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Grid", exact: true })).toBeHidden();   // no grid yet
+  // the GM sets 20 px squares of 5 ft, shown to everyone, through the scale dialog
+  await page.getByRole("button", { name: "Scale" }).click();
+  await page.getByRole("button", { name: "Grid squares" }).click();
+  await expect(page.getByLabel("Shape")).toHaveValue("square");
+  await page.getByLabel("Pixels per square").fill("20");
+  await page.getByLabel("Distance per square").fill("5");
+  await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("ft");
+  await page.getByLabel("Show the grid to everyone").check();
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  expect((await api(page, "maps", undefined, cid)).json.maps[0]).toMatchObject({ grid_px: 20, grid_type: "square", grid_shown: true });
+  await expect(page.locator("svg.map-grid pattern path")).toHaveCount(2);
+  await expect(page.locator("svg.map-grid pattern")).toHaveAttribute("width", "20");
+  // a player sees it too, and hiding it is theirs alone
+  await pp.goto(`#/c/${cid}/maps/${id}`);
+  await expect(pp.locator("svg.map-grid")).toHaveCount(1);
+  await pp.getByRole("button", { name: "Grid", exact: true }).click();
+  await expect(pp.locator("svg.map-grid")).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "Grid", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await pp.reload();
+  await expect(pp.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(pp.getByRole("button", { name: "Grid", exact: true })).toHaveAttribute("aria-pressed", "false");   // remembered
+  await expect(pp.locator("svg.map-grid")).toHaveCount(0);
+  await expect(page.locator("svg.map-grid")).toHaveCount(1);
+  // measuring says how many squares
+  await page.getByRole("button", { name: "Measure" }).click();
+  await clickPicture(page, 0.1, 0.5);
+  await clickPicture(page, 0.9, 0.5);
+  await expect(page.locator(".map-measure-total")).toHaveText(/ · 12 squares$/);   // 240 px across 20 px squares
+  // hexes draw a hex tile
+  expect((await api(page, "map_save", { id, grid_type: "hex_pointy" }, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator("svg.map-grid pattern")).toHaveAttribute("width", "20");
+  await expect(page.locator("svg.map-grid pattern path").first()).toHaveAttribute("d", /Z/);
+  expectNoErrors(errors);
+});
+
 test("Maps: an unscaled map says so when measuring", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Maps unscaled");

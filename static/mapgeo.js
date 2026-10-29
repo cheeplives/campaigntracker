@@ -74,7 +74,29 @@
     return pins.find(p => nameKey(p.label) === k || (entryName(p) != null && nameKey(entryName(p)) === k)) || null;
   }
 
-  const MapGeo = { UNIT_M, ROLL20, isSpace, scaleFromPoints, scaleFromGrid, gridHint, pathPx, toMetres, fmtDistance, nameKey, pinFor };
+  const GRID_TYPES = ['square', 'hex_flat', 'hex_pointy'];
+
+  // One tile of a grid's SVG pattern, in picture pixels: { w, h, d } (d is the path of its lines). size is the square's
+  // side, or for hexes the distance from one hex's centre to the next across a flat side. A hex tile holds one whole
+  // hex and the line that joins it to the next column (or row), so tiles side by side draw the whole grid.
+  function gridTile(type, size) {
+    const n = v => +v.toFixed(3);
+    if (type !== 'hex_flat' && type !== 'hex_pointy') return { w: n(size), h: n(size), d: `M0 0H${n(size)}M0 0V${n(size)}` };
+    const r = size / Math.sqrt(3), h = size;   // a corner's distance from the centre, and the flat-to-flat height
+    const pts = [[0, h / 2], [r / 2, 0], [1.5 * r, 0], [2 * r, h / 2], [1.5 * r, h], [r / 2, h]];
+    const join = [[2 * r, h / 2], [3 * r, h / 2]];
+    const flip = type === 'hex_pointy';   // pointy-topped is the flat-topped tile turned on its side
+    const xy = ([x, y]) => (flip ? `${n(y)} ${n(x)}` : `${n(x)} ${n(y)}`);
+    const d = `M${pts.map(xy).join('L')}ZM${join.map(xy).join('L')}`;
+    return flip ? { w: n(h), h: n(3 * r), d } : { w: n(3 * r), h: n(h), d };
+  }
+
+  // How many squares (or hexes) a straight length of px picture pixels crosses, to the nearest whole one.
+  function squaresAlong(px, size) {
+    return size > 0 ? Math.round(px / size) : null;
+  }
+
+  const MapGeo = { UNIT_M, ROLL20, GRID_TYPES, isSpace, scaleFromPoints, scaleFromGrid, gridHint, pathPx, toMetres, fmtDistance, nameKey, pinFor, gridTile, squaresAlong };
   if (typeof module !== 'undefined' && module.exports) module.exports = MapGeo;
   else root.MapGeo = MapGeo;
 })(typeof window !== 'undefined' ? window : globalThis);
