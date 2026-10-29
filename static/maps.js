@@ -632,6 +632,39 @@ const MapsTab = (() => {
       d.addEventListener('close', () => d.remove());
       d.append(form); document.body.append(d); d.showModal();
     };
+    /** Export…: the picture as uploaded, or the map as a Universal VTT file for another tabletop (it needs the grid). */
+    const exportMap = () => {
+      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the map' });
+      const fileName = ext => `${map.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'map'}.${ext}`;
+      const save = (blob, nameOf) => {
+        const a = el('a', { href: URL.createObjectURL(blob), download: nameOf });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      };
+      const picture = async () => {
+        const res = await fetch(map.image_url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(`The picture could not be fetched (${res.status})`);
+        return new Uint8Array(await res.arrayBuffer());
+      };
+      const asPicture = btn('Picture', async () => {
+        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[VTT.pictureType(bytes)] || 'img')); d.close(); }
+        catch (err) { toast(err.message, true); }
+      }, '', 'The map\'s picture, as it was uploaded');
+      const hasGrid = map.grid_px > 0;
+      const asUvtt = btn('Universal VTT (.dd2vtt)', async () => {
+        try { save(new Blob([VTT.toUvtt(map, await picture())], { type: 'application/json' }), fileName('dd2vtt')); d.close(); }
+        catch (err) { toast(err.message, true); }
+      }, '', 'The picture with its grid, for Foundry, Roll20, Owlbear Rodeo, MapTool or Fantasy Grounds. Pins and routes stay here');
+      asUvtt.disabled = !hasGrid;
+      d.append(el('h3', {}, `Export ${map.name}`),
+        el('div', { class: 'row' }, asPicture, asUvtt),
+        hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
+          : el('p', { class: 'small' }, 'Set grid squares first (Scale → Grid squares) to export a Universal VTT file.'),
+        el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
+      d.addEventListener('close', () => d.remove());
+      document.body.append(d); d.showModal();
+    };
+    const exportBtn = gm && map.image_url ? btn('Export…', exportMap, '', 'Download the picture, or the map for another virtual tabletop') : null;
     const secretBtn = gm ? btn('GM only', async () => {
       try {
         map = (await post('map_save', { id: map.id, is_secret: !map.is_secret }, cid)).map;
@@ -652,7 +685,7 @@ const MapsTab = (() => {
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
     tools.append(saveRouteBtn);
-    toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, gm ? btn('Rename', rename) : null, secretBtn, del);
+    toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, exportBtn, gm ? btn('Rename', rename) : null, secretBtn, del);
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
