@@ -129,18 +129,23 @@ function panel_link_revoke(int $cid, bool $isGm): void {
 /**
  * The Owlbear Rodeo extension: its manifest, added in Owlbear under Extensions → Add custom extension. The panel opens
  * as the extension's popover. Owlbear reads the manifest from its own page, so it is open to any origin; it holds
- * nothing private. The addresses are whole URLs from base_url, as Owlbear doesn't say how it resolves a relative one.
- * The icon travels inside the manifest as a data: URL: Owlbear draws the toolbar button with the icon as a CSS mask,
- * which the browser fetches in CORS mode, and a base_url that redirects (example.com to www.example.com, say) loses
- * the CORS header on the way, leaving the button blank.
+ * nothing private. Its addresses are whole URLs, as Owlbear doesn't say how it resolves a relative one, and Owlbear
+ * won't take a data: URL for the icon.
+ *
+ * They are built from the address the manifest was asked for, not base_url: Owlbear draws the toolbar button with the
+ * icon as a CSS mask, which the browser fetches in CORS mode, and a base_url the host redirects (example.com to
+ * www.example.com, say) loses the CORS header on the way, leaving the button blank. The host asked for is used only
+ * when it is base_url's own, with or without www; anything else falls back to base_url.
  */
 function owlbear_manifest(): void {
+    $here = (string)($_SERVER['HTTP_HOST'] ?? '');
+    $https = ($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $path = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php')), '/\\');
     $base = rtrim((string)cfg('base_url', ''), '/');
-    if ($base === '') {
-        $https = ($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off';
-        $base = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php')), '/');
-    }
-    $icon = 'data:image/svg+xml;base64,' . base64_encode((string)file_get_contents(__DIR__ . '/../static/icons/owlbear.svg'));
+    $bare = fn(string $h) => preg_replace('/^www\./i', '', strtolower($h));
+    $cfgHost = (string)(parse_url($base, PHP_URL_HOST) ?? '') . (parse_url($base, PHP_URL_PORT) ? ':' . parse_url($base, PHP_URL_PORT) : '');
+    if ($base === '' || ($here !== '' && $bare($here) === $bare($cfgHost))) $base = ($https ? 'https' : 'http') . '://' . ($here ?: 'localhost') . $path;
+    $icon = "$base/static/icons/owlbear.svg";
     header('Access-Control-Allow-Origin: *');
     out(['name' => 'Campaign Chronicle', 'version' => '1.0.0', 'manifest_version' => 1,
         'description' => 'The campaign right now: date, weather, moons, where the party is, notes and lore.',
