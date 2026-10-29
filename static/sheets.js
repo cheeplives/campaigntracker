@@ -65,13 +65,18 @@ const Sheets = (() => {
       x.slot.replaceChildren(control(x.f, v, nv => change(key, nv), off, live));
     };
     /** Someone else changed a field this person is typing in: let them pick. */
-    form.conflict = (key, v, by, onKeep) => {
+    form.conflict = (key, v, by, send) => {
       const x = slots.get(key);
       if (!x) return;
       x.note.hidden = false;
+      // theirs is sent too, as leaving the box to press this button sends what was typed
       x.note.replaceChildren(el('span', { class: 'small' }, `Changed by ${by}`),
-        button('Use theirs', () => form.setValue(key, v), 'small'),
-        button('Keep mine', () => { x.note.hidden = true; onKeep?.(key, values[key]); }, 'small'));
+        button('Use theirs', () => { form.setValue(key, v); send(v); }, 'small'),
+        button('Keep mine', () => {
+          x.note.hidden = true;
+          const box = x.slot.querySelector('input, textarea, select');
+          if (box) box.dispatchEvent(new Event('change')); else send(values[key]);
+        }, 'small'));
     };
     /** Whether someone is typing in this field now. */
     form.typing = key => !!slots.get(key)?.slot.contains(document.activeElement);
@@ -512,11 +517,20 @@ const Sheets = (() => {
           try {
             await ctx.post('character_field', { id, key, value: v }, cid());
             sent.set(key, JSON.stringify(v));
-          } catch (err) { onError(err); }
+          } catch (err) {
+            // nothing more goes; the page is drawn again from what the server has
+            waiting.clear();
+            onError(err);
+          }
         }
       } finally { busy.delete(key); }
     }
-    return { send(key, v) { waiting.set(key, v); pump(key); }, known(key, v) { sent.set(key, JSON.stringify(v)); } };
+    return {
+      send(key, v) { waiting.set(key, v); pump(key); },
+      known(key, v) { sent.set(key, JSON.stringify(v)); },
+      /** Whether a value of this field is waiting or on its way: what the server says now is about to be replaced. */
+      pending: key => waiting.has(key) || busy.has(key),
+    };
   }
 
   // who else is on the sheet: asked at once, then every 15 seconds, while the sheet or its Play view is open
@@ -697,7 +711,12 @@ const Sheets = (() => {
     let editing = false;
     const values = ch.values ? { ...ch.values } : {};
     let hidden = ch.hidden || [];
-    const sender = fieldSender(ch.id, err => { toast(err.message, true); if (err.status === 409) { editing = false; draw(); } });
+    // a refused or failed save: say why, and draw the sheet again from the server (a GM whose Edit ran out is back to reading)
+    const sender = fieldSender(ch.id, err => {
+      toast(err.message, true);
+      if (presence) presence.editing = false;
+      if (location.hash.startsWith(`#/c/${cid()}/characters/${ch.id}`)) ctx.route();
+    });
     for (const [k, v] of Object.entries(values)) sender.known(k, v);
     const bar = viewersBar();
     const body = el('div');
@@ -749,15 +768,17 @@ const Sheets = (() => {
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, body));
+    if (!location.hash.startsWith(href)) return;   // left while it loaded
     startPresence(ch, {
       editing,
       onViewers: bar.show,
       onChanges: changes => {
         let redraw = false;
         for (const [k, { value, by }] of Object.entries(changes)) {
+          if (sender.pending(k)) continue;   // this page's own newer value is on its way
           sender.known(k, value);
           if (form && !play && form.typing(k)) {
-            if (JSON.stringify(values[k]) !== JSON.stringify(value)) form.conflict(k, value, by, (key, mineV) => sender.send(key, mineV));
+            if (JSON.stringify(values[k]) !== JSON.stringify(value)) form.conflict(k, value, by, v => sender.send(k, v));
           } else if (form && !play) form.setValue(k, value);
           else { values[k] = value; redraw = true; }
         }

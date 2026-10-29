@@ -1184,10 +1184,11 @@ path.map-route-line.secret { stroke: var(--dim); }
 .play-value { font: 700 1.6rem var(--disp); text-align: center; flex: 1; }
 .play-toggle { min-height: 48px; touch-action: manipulation; }
 .play-toggle.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.play-page .sheet-pip { width: 36px; height: 36px; }
+.play-page .sheet-pip { width: 48px; height: 48px; }
 .enc-character { display: flex; gap: 12px; align-items: center; color: inherit; text-decoration: none; margin: 8px 0; padding: 10px; border-left: 4px solid var(--accent); }
 .enc-character:hover { outline: 1px solid var(--accent); }
 .chip.kind-pc { background: var(--ok); }
 .chip.kind-npc { background: var(--secret); }
 .enc-sheet { cursor: pointer; }
 .enc-kinds { margin-right: 6px; }
+.sheet-old dd { overflow-wrap: anywhere; margin: 0; }

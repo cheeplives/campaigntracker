@@ -33,6 +33,8 @@ async function party(page, browser) {
 const make = async (p, cid, body) => (await api(p, "character_create", body, cid)).json.character;
 const stored = (id, key) => JSON.parse(sql(`SELECT JSON_EXTRACT(field_values, '$.${key}') FROM characters WHERE id=${id}`).trim() || "null");
 const presenceChecked = p => p.waitForResponse(r => r.url().includes("a=character_presence"));
+/** The GM has pressed Edit on character id (through the API). */
+const gmEditing = (gm, cid, id) => api(gm, "character_presence", { id, editing: true, since: null }, cid);
 
 test("Characters: a player makes one, fills it in, finds it again, and hides a section", async ({ page, browser }) => {
   const { cid, p1, p2, tpl } = await party(page, browser);
@@ -145,4 +147,83 @@ test("Characters: the player and the GM on one sheet see each other, and the GM 
 
   await gm.getByRole("button", { name: "Done", exact: true }).click();
   await expect(gm.getByLabel("Strength", { exact: true })).toBeDisabled();
+});
+
+test("Characters: a save that fails puts the sheet back as the server has it", async ({ page, browser }) => {
+  const { cid, p1, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Unlucky" });
+  await api(p1, "character_field", { id: c.id, key: "hp", value: { cur: 10, max: 20 } }, cid);
+  await p1.route("**/api/index.php?a=character_field*", route => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "server", message: "Database error" }) }));
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}/play`);
+  await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("10 / 20");
+  await p1.getByRole("button", { name: "HP up one" }).click();
+  await expect(p1.locator("#toast")).toContainText("Database error");
+  await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("10 / 20");
+});
+
+test("Characters: someone else's change doesn't overwrite a tap still being saved", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Slow" });
+  await api(p1, "character_field", { id: c.id, key: "hp", value: { cur: 10, max: 20 } }, cid);
+  await p1.clock.install();
+  const first = presenceChecked(p1);
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}/play`);
+  await first;
+  await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("10 / 20");
+  await gmEditing(gm, cid, c.id);
+  expect((await api(gm, "character_field", { id: c.id, key: "hp", value: { cur: 5, max: 20 } }, cid)).status).toBe(200);
+  let release;
+  const held = new Promise(r => (release = r));
+  await p1.route("**/api/index.php?a=character_field*", async route => { await held; await route.continue(); });
+  await p1.getByRole("button", { name: "HP up one" }).click();   // 11, on its way
+  const checked = presenceChecked(p1);
+  await p1.clock.fastForward(16000);
+  await checked;
+  await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("11 / 20");
+  release();
+  await expect.poll(() => stored(c.id, "hp")).toEqual({ cur: 11, max: 20 });
+  await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("11 / 20");
+});
+
+test("Characters: Use theirs keeps the other person's value, on screen and saved", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Torn" });
+  await p1.clock.install();
+  const first = presenceChecked(p1);
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await first;
+  const str = p1.getByLabel("Strength", { exact: true });
+  await expect(str).toBeEnabled();
+  // they type 12 and pause (it saves), still in the box, when the GM changes it to 9
+  await str.fill("12");
+  await p1.clock.runFor(500);
+  await expect.poll(() => stored(c.id, "str")).toBe(12);
+  await gmEditing(gm, cid, c.id);
+  expect((await api(gm, "character_field", { id: c.id, key: "str", value: 9 }, cid)).status).toBe(200);
+  await expect(str).toBeFocused();
+  const checked = presenceChecked(p1);
+  await p1.clock.runFor(16000);
+  await checked;
+  await expect(p1.getByText("Changed by Gail")).toBeVisible();
+  await p1.getByRole("button", { name: "Use theirs" }).click();
+  await expect(str).toHaveValue("9");
+  await p1.clock.runFor(1000);
+  await p1.waitForTimeout(500);
+  expect(stored(c.id, "str")).toBe(9);
+});
+
+test("Characters: a GM whose Edit ran out is put back to reading, and stops showing as editing", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl, ids } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Lapsed" });
+  await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await gm.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(gm.getByLabel("Strength", { exact: true })).toBeEnabled();
+  await expect.poll(() => sql(`SELECT editing FROM sheet_presence WHERE character_id=${c.id} AND user_id=${ids.gm}`).trim()).toBe("1");
+  sql(`DELETE FROM sheet_presence WHERE character_id=${c.id}`);   // as if the page slept past the 40 seconds
+  await gm.getByLabel("Strength", { exact: true }).fill("3");
+  await gm.getByLabel("Strength", { exact: true }).press("Tab");
+  await expect(gm.locator("#toast")).toContainText("Press Edit first");
+  await expect(gm.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(gm.getByLabel("Strength", { exact: true })).toBeDisabled();
+  await expect.poll(() => sql(`SELECT editing FROM sheet_presence WHERE character_id=${c.id} AND user_id=${ids.gm}`).trim()).toBe("0");
 });
