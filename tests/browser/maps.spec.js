@@ -731,3 +731,16 @@ test("Maps: a GM drags a pin and it stays there; ?pin= opens its card", async ({
   await expect.poll(async () => (await getMap(page, cid, mapId)).json.pins[0].x).toBeGreaterThan(100);
   expectNoErrors(errors);
 });
+
+test("Maps: a ?pin= link to a pin the reader can't see says so", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps hidden pin");
+  const mapId = await mapWithPicture(page, cid);
+  const pin = (await api(page, "pin_save", { map_id: mapId, x: 30, y: 40, label: "Secret", kind: "note", is_secret: true }, cid)).json.pin;
+  await pp.goto(`#/c/${cid}/maps/${mapId}?pin=${pin.id}`);
+  await expect(pp.locator(".map-note")).toHaveText("That pin is not on this map");
+  await expect(pp.locator(".leaflet-popup")).toHaveCount(0);
+  await page.goto(`#/c/${cid}/maps/${mapId}?pin=999999`);
+  await expect(page.locator(".map-note")).toHaveText("That pin is not on this map");
+  expectNoErrors(errors);
+});

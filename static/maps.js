@@ -355,20 +355,32 @@ const MapsTab = (() => {
           if (hidden) warn(...hidden);
         } catch (err) { toast(err.message, true); } finally { working = false; }
       };
+      let creating = false;   // a double click must not make two entries or events
       const newEntry = async () => {
         const name = qEntry.value.trim();
         if (!name) return toast('Type the new entry\'s name first', true);
-        const found = entryNamed(name);   // no second entry of a name that is already one
+        if (creating || working) return;
+        creating = true;
         try {
-          entry = found || { id: (await post('entry_save', { name, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id, name };
-        } catch (err) { return toast(err.message, true); }
-        await save();
+          let found = entryNamed(name);   // no second entry of a name that is already one, nor on a retry after a failed pin
+          if (!found) {
+            const id = (await post('entry_save', { name, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+            found = { id, name, aliases: [], is_secret: false, blank: true, preview: '' };
+            S.encyclopedia = [...S.encyclopedia, found];
+          }
+          entry = found;
+          await save();
+        } catch (err) { toast(err.message, true); } finally { creating = false; }
       };
       const newEvent = async () => {
         const t = qEvent.value.trim();
         if (!t) return toast('Type the new event\'s title first', true);
-        try { event = { id: (await post('event_save', { abs_day: ctx.today(), title: t, shift: null }, cid)).id, title: t }; } catch (err) { return toast(err.message, true); }
-        await save();
+        if (creating || working) return;
+        creating = true;
+        try {
+          if (!event || event.title !== t) event = { id: (await post('event_save', { abs_day: ctx.today(), title: t, shift: null }, cid)).id, title: t };   // kept for a retry
+          await save();
+        } catch (err) { toast(err.message, true); } finally { creating = false; }
       };
       function show() {
         kinds.forEach(([k], i) => kindBtns[i].setAttribute('aria-pressed', String(k === kind)));
@@ -558,6 +570,7 @@ const MapsTab = (() => {
       const want = pinMarkers.get(Number(params.get('pin')));   // a link back from an entry or event: centre on that pin and open its card
       const at = pins.find(q => q.id === Number(params.get('pin')));
       if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0); want.openPopup(); }
+      else if (params.get('pin')) note.textContent = 'That pin is not on this map';
     });
     syncTools();
 
