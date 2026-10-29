@@ -6,7 +6,7 @@
 never stored), characters in each campaign built from them with a Play view for the table, every character tied to an
 Encyclopedia entry as a PC or NPC, and a starter library of about 40 games.
 
-**Architecture:** Two new tables and one new column (one new migration, numbered `NNN` below). Their actions live in a new `api/sheets.php`,
+**Architecture:** Three new tables and one new column (one new migration, numbered `NNN` below). Their actions live in a new `api/sheets.php`,
 called from `api/index.php`'s switch the way `api/scabard.php` is. The browser gets `static/sheetlayout.js` (layout
 rules, value coercion and PDF drafting as pure functions; runs under Node in the tests, like `sessions.js`),
 `static/pdfimport.js` (pdf.js wrapper: reads form fields, text and page pictures in the browser), and
@@ -53,7 +53,7 @@ Playwright.
   contributors', licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' }`, under Software and fonts as
   "Reading PDFs when you import a character sheet: <cite>." Plus a "Starter templates" section (Task 9).
 - Database change notice for the PR and the thread: "Database change: `db/migrations/NNN_character_sheets.sql` adds
-  `sheet_templates`, `characters` and `campaign_members.active_character_id`. deploy.sh runs it automatically
+  `sheet_templates`, `characters`, `sheet_presence` and `campaign_members.active_character_id`. deploy.sh runs it automatically
   (`php tools/migrate.php`); if that fails, run it by hand, or open install.php and press Install or upgrade."
 
 ## Review Focus
@@ -95,8 +95,12 @@ Tables (InnoDB utf8mb4 as the others):
 - `characters`: `id INT UNSIGNED AI PK, campaign_id (FK campaigns CASCADE), owner_id BIGINT UNSIGNED NULL (FK users
   SET NULL), template_id INT UNSIGNED NOT NULL (FK sheet_templates RESTRICT), entry_id INT UNSIGNED NOT NULL UNIQUE (FK
   encyclopedia_entries RESTRICT), kind ENUM('pc','npc') NOT NULL DEFAULT 'pc', sheet_public TINYINT(1) NOT NULL
-  DEFAULT 1, template_version INT UNSIGNED NOT NULL, field_values MEDIUMTEXT NOT NULL, hidden TEXT NOT NULL, version INT
+  DEFAULT 1, template_version INT UNSIGNED NOT NULL, field_values MEDIUMTEXT NOT NULL, field_stamps MEDIUMTEXT NOT NULL,
+  hidden TEXT NOT NULL, version INT
   UNSIGNED NOT NULL DEFAULT 1, created_at, updated_at`.
+- `sheet_presence`: `character_id INT UNSIGNED (FK characters CASCADE), user_id BIGINT UNSIGNED (FK users CASCADE),
+  seen_at DATETIME NOT NULL, editing TINYINT(1) NOT NULL DEFAULT 0, PRIMARY KEY (character_id, user_id)`. Not copied
+  with a campaign.
 - `campaign_members.active_character_id INT UNSIGNED NULL` (FK characters SET NULL).
 - `CAMPAIGN_COPY`: `['characters', 'maps' => ['entry_id' => 'encyclopedia']]`, after `encyclopedia_relations`;
   `owner_id` becomes the copier, `active_character_id` is not copied.
@@ -214,6 +218,13 @@ Tables (InnoDB utf8mb4 as the others):
     owner or GM; only a GM sets `owner_id` to someone else (the owner may set it to a GM: "hand to the GM"); renaming
     renames the entry (and `character_name` of any member whose active character it is); 409 `stale` on version.
   - `character_delete` POST `{ id }` → `{ ok }`: owner or GM; the entry stays.
+  - `character_presence` POST `{ id, editing: bool, since: string|null }` → `{ viewers: [{ name, role, editing }],
+    changes: { [key]: { value, by } }, stamp }`: records me as viewing (editing only allowed for owner and GMs),
+    returns others seen in the last 40 s and the field values others changed after `since` (filtered by
+    visibility). Needs a `field_changes` record: add `changed_by` and `changed_at` per key inside `field_values`'
+    sibling JSON column `field_stamps` (`{ key: [user_id, unix_ms] }`), written by `character_field`.
+  - `character_field` from a GM who doesn't own the sheet is refused (409 `not_editing`, "Press Edit first") unless
+    their presence row has `editing = 1`.
   - `member_active_character` POST `{ character_id|null }` → `{ ok }`: your own active character, one you own; sets
     `character_name` to its name.
   - `encyclopedia` payload gains `characters: { [entry_id]: { id, kind, sheet_visible } }`.
@@ -242,6 +253,10 @@ Tables (InnoDB utf8mb4 as the others):
     counter → P's `character` shows `old: [{key:'str', value: 12}]`.
   - `"Characters: a removed member's sheets stay with the GM"`: GM `member_remove` P → P's `character` → 403; GM edits
     it and `character_save {owner_id: P2}`; card shows the new owner.
+  - `"Characters: presence and the GM's Edit button"`: P and GM both call `character_presence` → each sees the other;
+    GM's `character_field` without editing → 409 `not_editing`; after `character_presence {editing:true}` it works and
+    P's next presence shows the GM `editing: true` and the changed field in `changes`; P's `editing` flag on another
+    player's sheet is ignored. Rows older than 40 s aren't listed.
   - Un-`fixme` Task 1's copy test and Task 3's delete test.
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS (sheets, access, campaign-copy,
   encyclopedia, account). **Step 5: Commit** `git commit -m "Character sheets: characters API, PC/NPC, entries and active character"`
@@ -318,13 +333,18 @@ Tab: cards per Global Constraints' `character_card`, PC/NPC filter, *New charact
 `character_field` on change (debounced 400 ms for typing, at once for taps); eye icons for the owner and GMs; a
 settings strip (name, PC/NPC, owner for GMs, *Show sheet to players* for NPCs, *Make this my active character*);
 "Old fields" at the bottom when `old` isn't empty; a notice when `template_changed`; an *Encyclopedia entry* link.
-Play view: only `play` fields, counters with 48 px + and − buttons, tappable pips, checkboxes as toggles. Each tap sends
+Presence: while a sheet or Play view is open, call `character_presence` every 15 s (and at once on open and on
+Edit/Done); show the viewers bar; apply `changes` to fields not being typed in, and for a field being typed in show
+"Changed by <name>" with *Use theirs* / *Keep mine*. GMs on a sheet they don't own get it read-only with **Edit** /
+**Done**. Play view: only `play` fields, counters with 48 px + and − buttons, tappable pips, checkboxes as toggles. Each tap sends
 the new absolute value; the newest tap's value stays on screen even if an older reply arrives later.
 
 - [ ] **Step 1: Write the failing tests**: a player makes a character, fills fields, reloads and sees them; hides a
   section and the other player doesn't see it on screen; Play view on `mobile-safari`: tapping + five times quickly
   on HP 10/20 ends at 15 on screen and in the database (with responses slowed by `page.route` so they arrive out of
-  order); an NPC card shows no stats to a player; the GM hands a sheet to another player.
+  order); an NPC card shows no stats to a player; the GM hands a sheet to another player; with the player and the GM
+  on one sheet in two browser contexts, each sees the other's name in the bar, the GM's fields are read-only until
+  Edit, and a GM change shows up on the player's open sheet within one check.
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** on all six projects → PASS. **Step 5: Commit**
   `git commit -m "Character sheets: Characters tab, sheet and Play view"`
 

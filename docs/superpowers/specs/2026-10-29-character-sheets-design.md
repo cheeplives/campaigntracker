@@ -48,6 +48,18 @@ tried on it (`rpg-sheets\form_field_survey.md` and `rpg-sheets\_prototype\REPORT
 - Fields the template no longer has but that still hold a value appear under **Old fields** at the bottom, so a
   template change never loses data.
 
+### Who else is on this sheet
+
+- While a sheet or its Play view is open, the page checks in every 15 seconds. A bar at the top names everyone else
+  who has had it open in the last 40 seconds: "Gail (GM) is also looking at this sheet", or "…is editing this
+  sheet" while they are in edit mode. It goes away when they leave.
+- The same check brings in field changes made by others since the page loaded, so an open sheet stays current
+  without reloading. A field you are typing in is never overwritten under you; it shows "Changed by Gail" with *Use
+  theirs* and *Keep mine*.
+- **GMs press Edit first.** A GM opening a sheet they don't own sees it read-only, with an **Edit** button (and
+  *Done* to leave edit mode). The owner always edits their own sheet directly. This applies to the sheet and to the
+  Play view alike.
+
 ### Play view
 
 Only the fields the template flags *Play*, built for a phone at the table: big + and − buttons on counters, tappable
@@ -153,6 +165,8 @@ fallback. The PR's thread reply must name it, per the project instructions.
   see the sheet), `template_version` (the version last shown), `field_values` (JSON keyed by field key), `hidden`
   (JSON list of hidden field and section keys), `version`, created_at, updated_at. Deleted with its campaign; deleting
   the entry is refused while a character uses it.
+- **`sheet_presence`**: `character_id`, `user_id`, `seen_at`, `editing`; one row per person per sheet, rows older
+  than a minute ignored and cleared as they're found.
 - **`campaign_members.active_character_id`** (characters, NULL, set NULL when the character is deleted).
   The active character's name is written into `character_name` whenever it is set or the character is renamed, so
   `AUTHOR_SQL` and every query using it stay as they are. Typing a character name for a member who has an active
