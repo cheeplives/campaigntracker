@@ -22,7 +22,7 @@ const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb"];
 /** Site admins only. */
 const ADMIN_ONLY = ["users", "user_status", "user_email", "user_delete"];
 /** A campaign's GMs only, refused to its players before anything else is looked at. */
-const GM_ONLY = ["campaign_update", "campaign_delete", "set_time", "member_candidates", "member_add", "member_remove",
+const GM_ONLY = ["campaign_update", "campaign_delete", "campaign_copy", "set_time", "member_candidates", "member_add", "member_remove",
   "region_save", "region_delete", "holiday_save", "holiday_delete", "days_save", "day_update", "shift_save", "shifts_fill",
   "downtime_delete", "secret_reveal", "relation_type_save", "relation_type_delete", "session_save", "session_summary_save",
   "session_end", "session_delete", "snote_add", "snote_bulk", "snote_save", "snote_move", "snote_delete",

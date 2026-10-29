@@ -1117,6 +1117,154 @@ function date_in($v): ?string {
     return $v;
 }
 
+/** What campaign_copy carries over, in order, so every id a row points at has been copied before it. key: the map its own
+ * old => new ids go into; maps: columns holding another copied row's id, and the map that turns it into the new one
+ * (a row pointing at one that wasn't copied is left out); via: for a table without campaign_id, the column and map of
+ * the row it hangs off; later: columns filled in once everything is copied (a map's picture is an attachment of the
+ * map); setup: copied even when only the setup is asked for. Tables an older install hasn't got yet are skipped, as are
+ * columns it hasn't got. The members (but whoever copies it) and who has dismissed which reminder are not copied. */
+const CAMPAIGN_COPY = [
+    ['regions', 'key' => 'regions', 'setup' => true],
+    ['holidays', 'setup' => true],
+    ['tags', 'key' => 'tags', 'setup' => true],
+    ['holding_tag_names', 'key' => 'holding_tags', 'setup' => true],
+    ['encyclopedia_tag_names', 'key' => 'entry_tags', 'setup' => true],
+    ['encyclopedia_relation_types', 'key' => 'relation_types', 'setup' => true],
+    ['days', 'maps' => ['region_id' => 'regions']],
+    ['shifts'],
+    ['shift_notes'],
+    ['events', 'key' => 'events'],
+    ['event_tags', 'via' => ['event_id', 'events'], 'maps' => ['tag_id' => 'tags']],
+    ['event_notes', 'via' => ['event_id', 'events']],
+    ['downtimes'],
+    ['party_gear'],
+    ['holdings', 'key' => 'holdings'],
+    ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
+    ['holding_storage', 'via' => ['holding_id', 'holdings']],
+    ['reminders'],
+    ['party_funds'],
+    ['encyclopedia_entries', 'key' => 'encyclopedia'],
+    ['encyclopedia_tags', 'via' => ['entry_id', 'encyclopedia'], 'maps' => ['tag_id' => 'entry_tags']],
+    ['encyclopedia_ignored'],
+    ['encyclopedia_relations', 'maps' => ['from_id' => 'encyclopedia', 'to_id' => 'encyclopedia', 'type_id' => 'relation_types']],
+    ['library_tomes', 'key' => 'library'],
+    ['play_sessions', 'key' => 'session'],
+    ['session_notes', 'maps' => ['session_id' => 'session']],
+    // Maps (db/migrations/019_maps.sql)
+    ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
+    ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
+    ['map_pins', 'maps' => ['map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
+    ['map_routes', 'maps' => ['map_id' => 'map']],
+    ['party_groups', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
+    ['map_tokens', 'maps' => ['map_id' => 'map', 'token_id' => 'token']],
+    // Files last: each hangs off an entry, tome, session, map or token copied above, and gets its own copy on disk.
+    ['attachments', 'key' => 'attachments'],
+];
+/** attachments.parent_type => the CAMPAIGN_COPY map its parent_id is in. */
+const COPY_PARENTS = ['encyclopedia' => 'encyclopedia', 'library' => 'library', 'session' => 'session', 'map' => 'map', 'token' => 'token'];
+
+/** Copy campaign $cid into a new one named $name, GM'd by whoever copies it: everything in it, or with $setupOnly its
+ * calendar, settings, regions, holidays and tag and relationship lists. Returns [new id, tables copied]. */
+function campaign_copy(int $cid, string $name, bool $setupOnly): array {
+    $pdo = db();
+    $me = me();
+    $c = campaign_row($cid);
+    $has = fn(string $t) => (bool)$pdo->query('SHOW TABLES LIKE ' . $pdo->quote($t))->fetchColumn();
+    $ids = [];
+    $later = [];
+    $files = [];                                          // stored names written, removed again if the copy fails
+    $copied = [];
+    $dir = upload_dir()['dir'];
+    // The copied files are the copier's, so they count towards their own room for files, as an upload would.
+    if (!$setupOnly && has_attachments()) {
+        $st = $pdo->prepare("SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=? AND kind<>'embed'");
+        $st->execute([$cid]);
+        $size = (int)$st->fetchColumn();
+        $mine = max(1, (int)(cfg('uploads', [])['user_mb'] ?? 1000)) << 20;
+        $st = $pdo->prepare('SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE created_by=?');
+        $st->execute([$me['id']]);
+        if ($size && (int)$st->fetchColumn() + $size > $mine) fail('Its files would take you past your ' . ($mine >> 20) . ' MB of files across your campaigns. Remove some first, or copy only its setup', 413);
+    }
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('INSERT INTO campaigns (name, description, calendar_json, settings_json, current_shift, seed, created_by) VALUES (?,?,?,?,?,?,?)')
+            ->execute([$name, $c['description'], $c['calendar_json'], $c['settings_json'], $c['current_shift'], $c['seed'], $me['id']]);
+        $new = (int)$pdo->lastInsertId();
+        $st = $pdo->prepare('SELECT character_name FROM campaign_members WHERE campaign_id=? AND user_id=?');
+        $st->execute([$cid, $me['id']]);
+        $pdo->prepare("INSERT INTO campaign_members (campaign_id, user_id, role, character_name) VALUES (?,?,'gm',?)")
+            ->execute([$new, $me['id'], (string)($st->fetchColumn() ?: '')]);
+        foreach (CAMPAIGN_COPY as $spec) {
+            $t = $spec[0];
+            if (($setupOnly && empty($spec['setup'])) || !$has($t)) continue;
+            $cols = array_column($pdo->query("SHOW COLUMNS FROM `$t`")->fetchAll(), 'Field');
+            if (isset($spec['via'])) {
+                [$vc, $vm] = $spec['via'];
+                if (empty($ids[$vm])) { $copied[] = $t; continue; }
+                $st = $pdo->prepare("SELECT * FROM `$t` WHERE `$vc` IN (" . implode(',', array_map('intval', array_keys($ids[$vm]))) . ')');
+                $st->execute();
+            } else {
+                $st = $pdo->prepare("SELECT * FROM `$t` WHERE campaign_id=?" . (in_array('id', $cols, true) ? ' ORDER BY id' : ''));
+                $st->execute([$cid]);
+            }
+            $maps = ($spec['maps'] ?? []) + (isset($spec['via']) ? [$spec['via'][0] => $spec['via'][1]] : []);
+            $ins = null;
+            foreach ($st->fetchAll() as $r) {
+                $old = isset($r['id']) ? (int)$r['id'] : null;
+                if (array_key_exists('campaign_id', $r)) $r['campaign_id'] = $new;
+                foreach ($maps as $col => $m) {
+                    if (!array_key_exists($col, $r) || $r[$col] === null) continue;
+                    if (!isset($ids[$m][(int)$r[$col]])) continue 2;
+                    $r[$col] = $ids[$m][(int)$r[$col]];
+                }
+                foreach (array_keys($spec['later'] ?? []) as $col) if (array_key_exists($col, $r)) $r[$col] = null;
+                if ($t === 'attachments') {
+                    $m = COPY_PARENTS[$r['parent_type']] ?? null;
+                    if ($m === null || !isset($ids[$m][(int)$r['parent_id']])) continue;
+                    $r['parent_id'] = $ids[$m][(int)$r['parent_id']];
+                    $stored = bin2hex(random_bytes(16));
+                    if ($r['kind'] !== 'embed') {
+                        // A file that is missing on disk is left out, rather than copied as a broken picture.
+                        if (!$dir || !preg_match('/^[0-9a-f]{32}$/', $r['stored_name']) || !is_file("$dir/{$r['stored_name']}")) continue;
+                        if (!@copy("$dir/{$r['stored_name']}", "$dir/$stored")) throw new RuntimeException("couldn't copy file {$r['stored_name']}");
+                        @chmod("$dir/$stored", 0600);
+                        $files[] = $stored;
+                    }
+                    $r['stored_name'] = $stored;
+                    $r['created_by'] = $me['id'];
+                }
+                unset($r['id']);
+                $ins ??= $pdo->prepare("INSERT INTO `$t` (`" . implode('`, `', array_keys($r)) . '`) VALUES (' . implode(',', array_fill(0, count($r), '?')) . ')');
+                $ins->execute(array_values($r));
+                if ($old !== null && isset($spec['key'])) $ids[$spec['key']][$old] = (int)$pdo->lastInsertId();
+                if ($old !== null && !empty($spec['later'])) $later[] = [$t, $spec['later'], $old, $ids[$spec['key']][$old]];
+            }
+            $copied[] = $t;
+        }
+        // Columns that point at rows copied after their own: a map's or token's picture.
+        foreach ($later as [$t, $cols, $old, $nid]) {
+            $st = $pdo->prepare("SELECT * FROM `$t` WHERE id=?");
+            $st->execute([$old]);
+            $r = $st->fetch();
+            foreach ($cols as $col => $m) {
+                if (($r[$col] ?? null) !== null && isset($ids[$m][(int)$r[$col]])) $pdo->prepare("UPDATE `$t` SET `$col`=? WHERE id=?")->execute([$ids[$m][(int)$r[$col]], $nid]);
+            }
+        }
+        // The settings name the current region by its id.
+        $s = dec($c['settings_json']) ?: [];
+        if (isset($s['current_region'])) {
+            $s['current_region'] = $ids['regions'][(int)$s['current_region']] ?? null;
+            $pdo->prepare('UPDATE campaigns SET settings_json=? WHERE id=?')->execute([json_in($s), $new]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        foreach ($files as $f) @unlink("$dir/$f");
+        throw $e;
+    }
+    return [$new, $copied];
+}
+
 require_method('GET', 'POST');
 // Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
 // runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
@@ -1341,6 +1489,15 @@ try {
         attachments_purge($cid);
         db()->prepare('DELETE FROM campaigns WHERE id=?')->execute([$cid]);
         out(['ok' => true]);
+
+    case 'campaign_copy': // GMs: a new campaign of their own with everything in this one (or setup: true, its setup only)
+        $cid = cid(); need_gm($cid);
+        rate_limit('campaign_copy', (string)me()['id'], 10, 60);   // each one copies every row and file of a campaign
+        $name = trim((string)str_in(p('name'), 150, false));
+        if ($name === '') fail('Name required');
+        @set_time_limit(300);
+        [$new, $tables] = campaign_copy($cid, $name, !empty(p('setup')));
+        out(['ok' => true, 'id' => $new, 'tables' => $tables]);
 
     case 'set_time':
         $cid = cid(); need_gm($cid);

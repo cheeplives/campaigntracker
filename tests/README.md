@@ -34,6 +34,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   locked out; the admin identity is approved as admin; an account from before
   Google/GitHub sign-in is taken over by the email an admin linked to it;
   sign-in starts are rate-limited per IP.
+- **campaign-copy**: a GM copies a campaign from the campaign list into a new one they GM alone: everything in it (every
+  table, the ids inside pointing at the copy's own rows, and its files copied on disk so they outlive the original), or
+  only its setup (calendar, date, settings, regions, holidays, tag and relationship lists); every table with a
+  campaign_id must be in the copy, so a new one fails here until it is added; a GM deletes a campaign from the list
+  only after typing DELETE; players get neither button, and the API refuses them both.
 - **account**: the account page lists only the campaigns you belong to, each with your role, and a
   character name typed there is the one the Members tab shows; the None / Imperial / Metric units choice
   sets the travel planner and temperatures, None follows the campaign, an older temperature-only choice
