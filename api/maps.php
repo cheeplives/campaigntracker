@@ -320,45 +320,79 @@ function party_sync_main_region(int $cid): void {
 /** Take user $uid out of every group of campaign $cid (they have left the campaign). */
 function party_remove_member(int $cid, int $uid): void {
     if (!has_maps()) return;
-    $st = db()->prepare('SELECT id, members_json FROM party_groups WHERE campaign_id=?');
-    $st->execute([$cid]);
-    foreach ($st->fetchAll() as $g) {
-        $m = dec($g['members_json']) ?: [];
-        $left = array_values(array_filter($m, fn($x) => (int)$x !== $uid));
-        if (count($left) !== count($m)) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($left), $g['id']]);
+    db()->beginTransaction();
+    try {
+        party_lock($cid);
+        $st = db()->prepare('SELECT id, members_json FROM party_groups WHERE campaign_id=?');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $g) {
+            $m = dec($g['members_json']) ?: [];
+            $left = array_values(array_filter($m, fn($x) => (int)$x !== $uid));
+            if (count($left) !== count($m)) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($left), $g['id']]);
+        }
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
     }
+}
+/** Inside a transaction: lock campaign $cid's groups against other writers (the campaign row is the lock, as in party_rows). */
+function party_lock(int $cid): void {
+    db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);
+}
+/** Inside a transaction, after party_lock: group $id of campaign $cid as it is now, or fail as not found. */
+function party_reread(int $cid, $id): array {
+    $st = db()->prepare('SELECT * FROM party_groups WHERE id=? AND campaign_id=?');
+    $st->execute([(int)$id, $cid]);
+    $g = $st->fetch();
+    if (!$g) fail('Group not found', 404);
+    return $g;
+}
+/** The user ids of campaign $cid's players. */
+function party_players(int $cid): array {
+    $st = db()->prepare("SELECT user_id FROM campaign_members WHERE campaign_id=? AND role='player' ORDER BY user_id");
+    $st->execute([$cid]);
+    return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
 }
 function party_members(array $g): array {
     return array_values(array_map('intval', dec($g['members_json']) ?: []));
 }
-/** Campaign $cid's groups, main first, as rows. Makes the main group when there is none and puts any player who is in no
- * group into it (players can join late). That is housekeeping, not a campaign change, so it doesn't touch the campaign. */
+/** Campaign $cid's groups, main first, as rows. Makes the main group when there is none, puts any player who is in no
+ * group into it (players can join late) and drops anyone who is no longer a player from every group (removed, deleted or
+ * made a GM). That is housekeeping, not a campaign change, so it doesn't touch the campaign, and it writes only when
+ * something needs fixing. */
 function party_rows(int $cid): array {
     $load = function () use ($cid) {
         $st = db()->prepare('SELECT * FROM party_groups WHERE campaign_id=? ORDER BY is_main DESC, id');
         $st->execute([$cid]);
         return $st->fetchAll();
     };
-    $st = db()->prepare("SELECT user_id FROM campaign_members WHERE campaign_id=? AND role='player' ORDER BY user_id");
-    $st->execute([$cid]);
-    $players = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $players = party_players($cid);
+    $tidy = function (array $rows) use ($players) {   // [stale members somewhere, players in no group]
+        $placed = [];
+        $stale = false;
+        foreach ($rows as $g) foreach (party_members($g) as $u) { $placed[$u] = true; if (!in_array($u, $players, true)) $stale = true; }
+        return [$stale, array_values(array_filter($players, fn($u) => !isset($placed[$u])))];
+    };
     $rows = $load();
-    $placed = [];
-    foreach ($rows as $g) foreach (party_members($g) as $u) $placed[$u] = true;
-    $loose = array_values(array_filter($players, fn($u) => !isset($placed[$u])));
-    if ($rows && $rows[0]['is_main'] && !$loose) return $rows;
+    [$stale, $loose] = $tidy($rows);
+    if ($rows && $rows[0]['is_main'] && !$loose && !$stale) return $rows;
     db()->beginTransaction();
     try {
-        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);   // two readers at once make one main group
+        party_lock($cid);   // two readers at once make one main group
         $rows = $load();
-        $placed = [];
-        foreach ($rows as $g) foreach (party_members($g) as $u) $placed[$u] = true;
-        $loose = array_values(array_filter($players, fn($u) => !isset($placed[$u])));
         if (!$rows) {
             db()->prepare('INSERT INTO party_groups (campaign_id, name, members_json, region_id, is_main) VALUES (?,?,?,?,1)')
                 ->execute([$cid, 'The party', json_encode($players), party_current_region($cid)]);
         } else {
             if (!$rows[0]['is_main']) db()->prepare('UPDATE party_groups SET is_main=1 WHERE id=?')->execute([$rows[0]['id']]);
+            foreach ($rows as $i => $g) {
+                $m = party_members($g);
+                $keep = array_values(array_filter($m, fn($u) => in_array($u, $players, true)));
+                $rows[$i]['members_json'] = json_encode($keep);
+                if (count($keep) !== count($m)) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($keep), $g['id']]);
+            }
+            [, $loose] = $tidy($rows);
             if ($loose) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
                 ->execute([json_encode([...party_members($rows[0]), ...$loose]), $rows[0]['id']]);
         }
@@ -413,17 +447,21 @@ function party_make_main(int $cid, int $id): void {
 /** GM: split the members the request names off group from_id into a new group. */
 function group_split(int $cid): void {
     $body = body();
-    $from = group_row($cid, $body['from_id'] ?? null);
+    group_row($cid, $body['from_id'] ?? null);   // 404s a group that isn't here, and tidies the groups first
     $name = trim((string)str_in($body['name'] ?? null, 100));
     if ($name === '') fail('Give the group a name');
     $pick = $body['members'] ?? null;
     if (!is_array($pick) || !$pick) fail('Pick who goes from that group');
     $pick = array_values(array_unique(array_map(fn($u) => is_numeric($u) ? (int)$u : 0, $pick)));
-    $have = party_members($from);
-    if (array_diff($pick, $have)) fail('Pick who goes from that group');
-    $region = array_key_exists('region_id', $body) ? party_region_in($body['region_id'], $cid) : ($from['region_id'] !== null ? (int)$from['region_id'] : null);
+    if (array_diff($pick, party_players($cid))) fail('Pick who goes from that group');
+    $newRegion = array_key_exists('region_id', $body) ? [party_region_in($body['region_id'], $cid)] : null;
     db()->beginTransaction();
     try {
+        party_lock($cid);
+        $from = party_reread($cid, $body['from_id']);   // as it is now, with the lock held
+        $have = party_members($from);
+        if (array_diff($pick, $have)) fail('Pick who goes from that group');
+        $region = $newRegion ? $newRegion[0] : ($from['region_id'] !== null ? (int)$from['region_id'] : null);
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode(array_values(array_diff($have, $pick))), $from['id']]);
         db()->prepare('INSERT INTO party_groups (campaign_id, name, members_json, region_id, map_id, x, y, is_main) VALUES (?,?,?,?,?,?,?,0)')
             ->execute([$cid, $name, json_encode($pick), $region, $from['map_id'], $from['x'], $from['y']]);   // they start where the group was
@@ -493,6 +531,9 @@ function group_merge(int $cid): void {
     if ($g['id'] === $into['id']) fail('Pick a different group to merge into');
     db()->beginTransaction();
     try {
+        party_lock($cid);
+        $g = party_reread($cid, $g['id']);
+        $into = party_reread($cid, $into['id']);
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
             ->execute([json_encode(array_values(array_unique([...party_members($into), ...party_members($g)]))), $into['id']]);
         db()->prepare('DELETE FROM party_groups WHERE id=?')->execute([$g['id']]);

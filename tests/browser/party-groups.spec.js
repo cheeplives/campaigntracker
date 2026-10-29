@@ -203,3 +203,17 @@ test("Party: groups on maps, bounds, tokens and GM-only maps", async ({ page, br
   expect((await api(page, "group_save", { id: scouts.id, token_id: null }, cid)).json.groups[1]).toMatchObject({ token_id: null, token_url: null });
   expectNoErrors(errors);
 });
+
+test("Party: a member made a GM drops out of every group on the next read", async ({ page, browser }) => {
+  const { cid, ids } = await setup(page, browser, "Party role", 3);
+  const main = (await groups(page, cid))[0];
+  await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[0], ids[1]] }, cid);
+  const email = (await api(page, "campaign", undefined, cid)).json.members.find(m => m.id === ids[0]).email;
+  expect((await api(page, "member_add", { email, role: "gm" }, cid)).status).toBe(200);
+  const g = await groups(page, cid);
+  expect(g.flatMap(x => x.members)).not.toContain(ids[0]);
+  expect(sorted(g.flatMap(x => x.members))).toEqual(sorted([ids[1], ids[2]]));
+  // a GM can't be split off either
+  const r = await api(page, "group_split", { from_id: g[0].id, name: "X", members: [ids[0]] }, cid);
+  expect(r.status).toBe(400);
+});

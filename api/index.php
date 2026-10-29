@@ -1495,7 +1495,8 @@ try {
             $pdo->rollBack();
             throw $e;
         }
-        party_sync_main_region($cid);   // the main group's region follows current_region
+        try { party_sync_main_region($cid); }   // the main group's region follows current_region; the settings are saved either way
+        catch (Throwable $e) { error_log('campaign-chronicle: party_sync_main_region: ' . $e->getMessage()); }
         out(['ok' => true]);
 
     case 'campaign_delete':
