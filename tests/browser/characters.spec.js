@@ -32,7 +32,11 @@ async function party(page, browser) {
   return { cid, gm: page, p1: pages.p1, p2: pages.p2, tpl, ids };
 }
 const make = async (p, cid, body) => (await api(p, "character_create", body, cid)).json.character;
-const stored = (id, key) => JSON.parse(sql(`SELECT JSON_EXTRACT(field_values, '$.${key}') FROM characters WHERE id=${id}`).trim() || "null");
+/** A field's saved value, or null while it has none (mysql prints a missing one as NULL). */
+const stored = (id, key) => {
+  const out = sql(`SELECT JSON_EXTRACT(field_values, '$.${key}') FROM characters WHERE id=${id}`).trim();
+  return out === "" || out === "NULL" ? null : JSON.parse(out);
+};
 const presenceChecked = p => p.waitForResponse(r => r.url().includes("a=character_presence"));
 /** The GM has pressed Edit on character id (through the API). */
 const gmEditing = (gm, cid, id) => api(gm, "character_presence", { id, editing: true, since: null }, cid);
