@@ -1,6 +1,10 @@
 // Party groups: the main group (every player, its region the campaign's current one) and the groups split from it.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload } = require("./helpers");
+// Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
+const contexts = [];
+const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
+test.afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
 
 /** A GM with a campaign, `n` players in it (each with a page) and a second and third region. */
 async function setup(page, browser, label, n = 3) {
@@ -11,7 +15,7 @@ async function setup(page, browser, label, n = 3) {
   const players = [];
   for (let i = 0; i < n; i++) {
     const who = person(`Pat${i}`);
-    const ctx = await browser.newContext();
+    const ctx = await opened(browser.newContext());
     const pp = await ctx.newPage();
     await signIn(pp, who);
     await approve(browser, who.email);
@@ -46,7 +50,7 @@ test("Party: a player who joins later is in the main group", async ({ page, brow
   const { cid, ids } = await setup(page, browser, "Party late", 2);
   await groups(page, cid);   // the groups now exist
   const late = person("Late");
-  const ctx = await browser.newContext();
+  const ctx = await opened(browser.newContext());
   const lp = await ctx.newPage();
   await signIn(lp, late);
   await approve(browser, late.email);
@@ -163,7 +167,7 @@ test("Party: groups on maps, bounds, tokens and GM-only maps", async ({ page, br
   const open = (await api(page, "map_save", { name: "Open" }, cid)).json.map.id;
   const secret = (await api(page, "map_save", { name: "Hidden", is_secret: true }, cid)).json.map.id;
   for (const id of [open, secret]) {   // a picture gives a map its size
-    const att = sql(`INSERT INTO attachments (campaign_id, parent_type, parent_id, kind, original_name, stored_name, mime, size_bytes, width, height) VALUES (${cid}, 'map', ${id}, 'image', 'm.png', '${"a".repeat(31)}${id % 10}', 'image/png', 1, 300, 200); SELECT LAST_INSERT_ID();`).trim();
+    const att = sql(`INSERT INTO attachments (campaign_id, parent_type, parent_id, kind, original_name, stored_name, mime, size_bytes, width, height) VALUES (${cid}, 'map', ${id}, 'image', 'm.png', '${require("crypto").randomBytes(16).toString("hex")}', 'image/png', 1, 300, 200); SELECT LAST_INSERT_ID();`).trim();
     sql(`UPDATE maps SET image_id=${att}, width=300, height=200 WHERE id=${id}`);
   }
   const bad = await api(page, "group_move", { id: scouts.id, map_id: open, x: 301, y: 10 }, cid);

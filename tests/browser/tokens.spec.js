@@ -2,6 +2,10 @@
 const { test, expect } = require("@playwright/test");
 const zlib = require("zlib");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+// Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
+const contexts = [];
+const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
+test.afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
 
 // A w x h PNG, all one colour (the same encoder as maps.spec.js).
 function makePng(w, h) {
@@ -26,7 +30,7 @@ async function setup(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await opened(browser.newContext());
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
