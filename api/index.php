@@ -12,6 +12,7 @@ require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
+require __DIR__ . '/sheets.php';
 require __DIR__ . '/maps.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
@@ -1184,6 +1185,8 @@ const CAMPAIGN_COPY = [
     ['library_tomes', 'key' => 'library'],
     ['play_sessions', 'key' => 'session'],
     ['session_notes', 'maps' => ['session_id' => 'session']],
+    // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
+    ['characters', 'maps' => ['entry_id' => 'encyclopedia']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -1252,6 +1255,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
                     $r[$col] = $ids[$m][(int)$r[$col]];
                 }
                 foreach (array_keys($spec['later'] ?? []) as $col) if (array_key_exists($col, $r)) $r[$col] = null;
+                if ($t === 'characters') $r['owner_id'] = $me['id'];
                 if ($t === 'attachments') {
                     $m = COPY_PARENTS[$r['parent_type']] ?? null;
                     if ($m === null || !isset($ids[$m][(int)$r['parent_id']])) continue;
@@ -1458,7 +1462,7 @@ try {
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(),
+            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(), 'sheets_ready' => has_sheets(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 

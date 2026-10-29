@@ -218,7 +218,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
-    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.mapIndex = r.maps_index || [];
+    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.sheetsReady = !!r.sheets_ready; S.mapIndex = r.maps_index || [];
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
