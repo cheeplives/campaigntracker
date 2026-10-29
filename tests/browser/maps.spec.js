@@ -515,6 +515,52 @@ test("Maps: the grid is drawn over the map, each person can hide it, and Measure
   expectNoErrors(errors);
 });
 
+test("Maps: a GM imports a Universal VTT file, and a Foundry scene whose notes become GM-only pins", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps import");
+  await page.goto(`#/c/${cid}/maps`);
+  // Universal VTT: the picture is inside; it says nothing of distance, so 5 ft a square and the scale dialog to check it
+  const uvtt = { format: 0.3, resolution: { map_origin: { x: 0, y: 0 }, map_size: { x: 6, y: 4 }, pixels_per_grid: 50 }, lights: [{}], image: MAP_PNG.toString("base64") };
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Import a VTT file").setInputFiles({ name: "Goblin_Cave.dd2vtt", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(uvtt)) });
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+  await expect(page.locator("#toast")).toContainText("Walls and lights aren't kept.");
+  await expect(page.getByLabel("Pixels per square")).toHaveValue("50");
+  await expect(page.getByLabel("Distance per square")).toHaveValue("5");
+  await expect(page.locator(".map-head h2")).toHaveText("Goblin Cave");
+  let maps = (await api(page, "maps", undefined, cid)).json.maps;
+  expect(maps[0]).toMatchObject({ name: "Goblin Cave", width: 300, height: 200, grid_px: 50, grid_type: "square", grid_shown: true, scale_unit: "ft" });
+  expect(maps[0].scale_per_px).toBeCloseTo(0.1, 6);
+  await expect(page.locator("svg.map-grid")).toHaveCount(1);
+
+  // a Foundry scene's JSON and its picture, picked together; the name typed wins over the scene's
+  const scene = { name: "Bree", width: 300, height: 200, padding: 0, grid: { type: 1, size: 25, distance: 10, units: "m" }, notes: [{ x: 100, y: 60, text: "Prancing Pony" }] };
+  await page.goto(`#/c/${cid}/maps`);
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Map name").fill("Bree-land");
+  await page.getByLabel("Import a VTT file").setInputFiles([
+    { name: "fvtt-Scene-bree.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scene)) },
+    { name: "bree.png", mimeType: "image/png", buffer: MAP_PNG }]);
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+  await expect(page.locator("#toast")).toContainText("1 note became a GM-only pin.");
+  maps = (await api(page, "maps", undefined, cid)).json.maps;
+  const bree = maps.find(m => m.name === "Bree-land");
+  expect(bree).toMatchObject({ grid_px: 25, scale_unit: "m" });
+  expect(bree.scale_per_px).toBeCloseTo(0.4, 6);
+  const pins = (await getMap(page, cid, bree.id)).json.pins;
+  expect(pins).toHaveLength(1);
+  expect(pins[0]).toMatchObject({ x: 100, y: 60, label: "Prancing Pony", kind: "note", is_secret: true });
+  expect((await getMap(pp, cid, bree.id)).json.pins).toHaveLength(0);
+
+  // a file that is none of these says so and makes nothing
+  await page.goto(`#/c/${cid}/maps`);
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Import a VTT file").setInputFiles({ name: "notes.json", mimeType: "application/json", buffer: Buffer.from("{\"a\":1}") });
+  await expect(page.locator("#toast")).toContainText("That isn't a Universal VTT, Foundry, MapTool or Fantasy Grounds file");
+  expect((await api(page, "maps", undefined, cid)).json.maps).toHaveLength(2);
+  expectNoErrors(errors);
+});
+
 test("Maps: an unscaled map says so when measuring", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Maps unscaled");
