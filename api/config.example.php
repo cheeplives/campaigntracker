@@ -131,6 +131,10 @@ return [
     'user_mb'     => 1000,
   ],
 
+  // Where tools/migrate.php (run by deploy.sh) saves a copy of the database before an upgrade. Empty means
+  // ~/chronicle-backups. Must be outside the web root; the last 5 copies are kept.
+  'backups' => ['path' => ''],
+
   // --- Find Image ------------------------------------------------------------
   // The Encyclopedia's Find Image button searches Openverse, The Met and the Art
   // Institute of Chicago (no keys needed), the Smithsonian and DeviantArt (keys needed). The server
@@ -178,8 +182,9 @@ return [
   // false in production (errors go to the PHP error log instead).
   'debug' => false,
 
-  // Lets install.php create tables and run migrations. Turn it on for an
-  // install or upgrade, then set it back to false. Once a site admin has signed
+  // Lets install.php create tables and run migrations from the browser. Not needed
+  // when you can run commands on the server: deploy.sh upgrades the database with
+  // tools/migrate.php. If you do turn it on, set it back to false afterwards. Once a site admin has signed
   // in, install.php also needs you signed in as a site admin.
   'allow_install' => false,
 ];
