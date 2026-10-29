@@ -3077,7 +3077,7 @@ try {
         $pin = pin_row($cid, int_in(p('id'), 1), $isGm);
         if (!$isGm && ((int)$pin['created_by'] !== me()['id'] || $pin['kind'] !== 'note')) fail('You can only change your own pins', 403);
         db()->prepare('DELETE FROM map_pins WHERE id=?')->execute([$pin['id']]);
-        touch_campaign($cid);
+        if ($isGm) touch_campaign($cid);   // a player's pin is like their notes: not a campaign change
         out(['ok' => true]);
 
     case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)

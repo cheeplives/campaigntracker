@@ -137,9 +137,9 @@ function map_pins_select(int $cid, string $where, array $args): array {
 function map_pins_visible(int $cid, int $mapId, bool $isGm): array {
     return array_map('pin_out', map_pins_select($cid, 'p.map_id=?' . map_pin_visible_sql($isGm), [$mapId]));
 }
-/** Pin $id as this member may see it, or fail as not found. */
+/** Pin $id as this member may see it (a player: not on a GM-only map either), or fail as not found. */
 function pin_row(int $cid, int $id, bool $isGm): array {
-    $rows = map_pins_select($cid, 'p.id=?' . map_pin_visible_sql($isGm), [$id]);
+    $rows = map_pins_select($cid, 'p.id=?' . map_pin_visible_sql($isGm) . ($isGm ? '' : ' AND (SELECT is_secret FROM maps WHERE id=p.map_id)=0'), [$id]);
     if (!$rows) fail('Pin not found', 404);
     return $rows[0];
 }
@@ -167,8 +167,8 @@ function pin_save(int $cid, bool $isGm): array {
     if ($old && !$isGm && ((int)$old['created_by'] !== $u || $old['kind'] !== 'note')) fail('You can only change your own pins', 403);
     $map = map_row($cid, $has('map_id') || !$old ? int_in($body['map_id'] ?? null, 1) : (int)$old['map_id'], $isGm);
     if ($map['width'] === null || $map['height'] === null) fail('Give the map a picture before pinning it');
-    $x = $has('x') || !$old ? map_coord($body['x'] ?? null, $map['width']) : (float)$old['x'];
-    $y = $has('y') || !$old ? map_coord($body['y'] ?? null, $map['height']) : (float)$old['y'];
+    $x = map_coord($has('x') || !$old ? $body['x'] ?? null : $old['x'], $map['width']);   // kept coordinates are checked against the map it is on now
+    $y = map_coord($has('y') || !$old ? $body['y'] ?? null : $old['y'], $map['height']);
     $kind = $isGm && $has('kind') ? $body['kind'] : ($old['kind'] ?? 'note');
     if (!in_array($kind, ['note', 'entry', 'event'], true)) fail('Pick a note, an entry or an event');
     $label = $has('label') ? trim((string)str_in($body['label'], 150)) : ($old['label'] ?? '');
@@ -193,7 +193,7 @@ function pin_save(int $cid, bool $isGm): array {
             ->execute([...$cols, $cid, $u]);
         $id = (int)db()->lastInsertId();
     }
-    touch_campaign($cid);
+    if ($isGm) touch_campaign($cid);   // players' pins are like their notes: they don't count as a campaign change
     return pin_out(pin_row($cid, $id, true));
 }
 /** A name as entry names are matched: any case, no leading "The". */
@@ -209,23 +209,28 @@ function pin_to_entry(int $cid, int $id, ?int $entryId): array {
     $created = false;
     if ($entryId !== null) entry_row($cid, $entryId, 'gm');
     db()->beginTransaction();
-    if ($entryId === null) {
-        $key = pin_name_key($pin['label']);
-        $st = db()->prepare('SELECT id, name, aliases_json FROM encyclopedia_entries WHERE campaign_id=? ORDER BY id');
-        $st->execute([$cid]);
-        foreach ($st->fetchAll() as $e)
-            foreach ([$e['name'], ...entry_aliases($e)] as $n) if (pin_name_key($n) === $key) { $entryId = (int)$e['id']; break 2; }
+    try {
         if ($entryId === null) {
-            $notes = trim((string)$pin['note']) !== '' ? '<p>' . htmlspecialchars(trim($pin['note']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>' : null;
-            db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, notes, is_secret, created_by) VALUES (?,?,?,0,?)')
-                ->execute([$cid, entry_name($pin['label']), $notes, me()['id']]);
-            $entryId = (int)db()->lastInsertId();
-            if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
-            $created = true;
+            $key = pin_name_key($pin['label']);
+            $st = db()->prepare('SELECT id, name, aliases_json FROM encyclopedia_entries WHERE campaign_id=? ORDER BY id');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $e)
+                foreach ([$e['name'], ...entry_aliases($e)] as $n) if (pin_name_key($n) === $key) { $entryId = (int)$e['id']; break 2; }
+            if ($entryId === null) {
+                $notes = trim((string)$pin['note']) !== '' ? '<p>' . htmlspecialchars(trim($pin['note']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>' : null;
+                db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, notes, is_secret, created_by) VALUES (?,?,?,0,?)')
+                    ->execute([$cid, entry_name($pin['label']), $notes, me()['id']]);
+                $entryId = (int)db()->lastInsertId();
+                if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
+                $created = true;
+            }
         }
+        db()->prepare("UPDATE map_pins SET kind='entry', entry_id=?, label='' WHERE id=?")->execute([$entryId, $id]);
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
     }
-    db()->prepare("UPDATE map_pins SET kind='entry', entry_id=?, label='' WHERE id=?")->execute([$entryId, $id]);
-    db()->commit();
     touch_campaign($cid);
     return [pin_out(pin_row($cid, $id, true)), $entryId, $created];
 }

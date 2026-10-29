@@ -335,3 +335,32 @@ test("Maps: pins and routes stay on the map", async ({ page, browser }) => {
   expect((await api(page, "route_delete", { id: rid }, cid)).status).toBe(200);
   expect((await getMap(page, cid, mapId)).json.routes).toEqual([]);
 });
+
+test("Maps: pins on GM-only maps and other campaigns' things are not found", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps hidden pins");
+  const secretMap = await mapWithPicture(page, cid, { is_secret: true });
+  const pin = (await api(page, "pin_save", { map_id: secretMap, x: 5, y: 5, kind: "note", label: "Cache" }, cid)).json.pin;
+  expect((await api(pp, "pin_save", { id: pin.id, label: "x" }, cid)).status).toBe(404);
+  expect((await api(pp, "pin_delete", { id: pin.id }, cid)).status).toBe(404);
+  expect((await api(pp, "pin_save", { map_id: secretMap, x: 5, y: 5, label: "Mine" }, cid)).status).toBe(404);
+  expect(sql(`SELECT COUNT(*) FROM map_pins WHERE map_id=${secretMap}`).trim()).toBe("1");
+
+  // things of another campaign
+  const cid2 = await makeCampaign(page, `Maps other ${Date.now()}`);
+  const map2 = await mapWithPicture(page, cid2);
+  const entry2 = (await api(page, "entry_save", { name: "Elsewhere Keep" }, cid2)).json.id;
+  const event2 = (await api(page, "event_save", { abs_day: 1, title: "Elsewhere" }, cid2)).json.id;
+  const here = await mapWithPicture(page, cid);
+  expect((await api(page, "pin_save", { map_id: here, x: 1, y: 1, kind: "entry", entry_id: entry2 }, cid)).status).toBe(404);
+  expect((await api(page, "pin_save", { map_id: here, x: 1, y: 1, kind: "event", event_id: event2 }, cid)).status).toBe(404);
+  expect((await api(page, "pin_save", { map_id: map2, x: 1, y: 1, kind: "note", label: "Wrong" }, cid)).status).toBe(404);
+
+  // a kept position is checked against the map the pin moves to
+  const small = (await api(page, "map_save", { name: "Small" }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", small, makePng(50, 50));
+  expect((await api(page, "map_save", { id: small, image_id: up.json.file.id }, cid)).status).toBe(200);
+  const far = (await api(page, "pin_save", { map_id: here, x: 200, y: 150, kind: "note", label: "Far" }, cid)).json.pin;
+  const moved = await api(page, "pin_save", { id: far.id, map_id: small }, cid);
+  expect(moved.status).toBe(400);
+  expect(moved.json.message).toBe("That's off the map");
+});
