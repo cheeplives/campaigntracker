@@ -207,6 +207,7 @@ const MapsTab = (() => {
     const drawMeasure = () => {
       measureLayer.clearLayers();
       saveRouteBtn.hidden = !(gm && mode === 'measure' && pts.length > 1);
+      planBtn.hidden = !(gm && mode === 'measure' && pts.length > 1 && hasScale());
       if (!pts.length) { total.textContent = ''; return; }
       L.polyline(pts.map(p => toLatLng(p.x, p.y)), { color: 'var(--accent)', weight: 3, className: 'map-line' }).addTo(measureLayer);
       pts.forEach((p, i) => {
@@ -562,6 +563,7 @@ const MapsTab = (() => {
         el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)) }, r.is_secret ? '🔒 ' : '', r.name),
         el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
         gm ? el('div', { class: 'row' },
+          hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
           btn('Rename', async () => {
             const got = await routeDialog('Rename the route', r.name, null, 'Save');
             if (!got) return;
@@ -605,6 +607,11 @@ const MapsTab = (() => {
     addPinBtn.hidden = !map.image_url;
     const saveRouteBtn = btn('Save route…', () => saveRoute(), '', 'Keep the path you measured as a named route on this map');
     saveRouteBtn.hidden = true;
+    // Plan this trip: the Travel tab, with the path's length and the pins at its ends filled in
+    const tripLink = query => `#/c/${cid}/travel?map=${map.id}&${query}`;
+    const planBtn = btn('Plan this trip', () => { location.hash = tripLink('path=' + pts.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')); }, '',
+      'Work out the travel time along this path on the Travel tab; Depart then moves the party\'s marker to its end');
+    planBtn.hidden = true;
     const undoBtn = btn('Undo point', () => { pts.pop(); drawMeasure(); }, 'small');
     const clearBtn = btn('Clear', () => { pts = []; drawMeasure(); }, 'small');
     function syncTools() {
@@ -612,6 +619,7 @@ const MapsTab = (() => {
       measureBtn.setAttribute('aria-pressed', String(m));
       addPinBtn.setAttribute('aria-pressed', String(mode === 'pin'));
       saveRouteBtn.hidden = !(gm && m && pts.length > 1);
+      planBtn.hidden = !(gm && m && pts.length > 1 && hasScale());
       undoBtn.hidden = clearBtn.hidden = !m;
       total.hidden = !m;
       if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
@@ -684,7 +692,7 @@ const MapsTab = (() => {
         try { file = await ctx.uploadFile('map', map.id, f); await post('map_save', { id: map.id, image_id: file.id }, cid); toast('Picture changed'); location.hash = `${base}?scale=1&file=${encodeURIComponent(f.name)}`; }
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
-    tools.append(saveRouteBtn);
+    tools.append(saveRouteBtn, planBtn);
     toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, exportBtn, gm ? btn('Rename', rename) : null, secretBtn, del);
     const title = el('h2', {}, map.name);
 

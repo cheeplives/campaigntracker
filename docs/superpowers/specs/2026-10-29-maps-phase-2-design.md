@@ -93,8 +93,8 @@ GM exports a screenshot.
 - It opens the Travel tab with:
   - the **distance** filled in, in the planner's units (km or miles; for a space map, AU or light-years and the
     Constant thrust mode);
-  - **From** and **To** filled in with the names of the pins nearest the path's start and end, when a pin is within
-    a short distance on screen (else left empty);
+  - **From** and **To** filled in with the names of the pins nearest the path's start and end, when a pin is close
+    (within 3% of the map's longer side, plus 10 pixels; else left empty);
   - a line under the planner, "Planning the trip along <route name> on <map name>" (or "a measured path"), with
     *Reverse* to swap the ends.
 - On **Depart**, the travelling group's marker moves to the route's end on that map (the start when reversed), which

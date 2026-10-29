@@ -74,6 +74,18 @@
     return pins.find(p => nameKey(p.label) === k || (entryName(p) != null && nameKey(entryName(p)) === k)) || null;
   }
 
+  // The pin nearest a point, if one is within maxPx picture pixels, and the name a pin goes by (its entry's or event's,
+  // else its label), for Plan this trip's From and To.
+  function nearestPin(pins, pt, maxPx) {
+    let best = null, bestD = Infinity;
+    for (const p of pins || []) {
+      const d = Math.hypot(p.x - pt.x, p.y - pt.y);
+      if (d <= maxPx && d < bestD) { best = p; bestD = d; }
+    }
+    return best;
+  }
+  const pinName = p => (p.kind === 'entry' && p.entry && p.entry.name) || (p.kind === 'event' && p.event && p.event.title) || p.label || '';
+
   const GRID_TYPES = ['square', 'hex_flat', 'hex_pointy'];
 
   // One tile of a grid's SVG pattern, in picture pixels: { w, h, d } (d is the path of its lines). size is the square's
@@ -96,7 +108,7 @@
     return size > 0 ? Math.round(px / size) : null;
   }
 
-  const MapGeo = { UNIT_M, ROLL20, GRID_TYPES, isSpace, scaleFromPoints, scaleFromGrid, gridHint, pathPx, toMetres, fmtDistance, nameKey, pinFor, gridTile, squaresAlong };
+  const MapGeo = { UNIT_M, ROLL20, GRID_TYPES, isSpace, scaleFromPoints, scaleFromGrid, gridHint, pathPx, toMetres, fmtDistance, nameKey, pinFor, gridTile, squaresAlong, nearestPin, pinName };
   if (typeof module !== 'undefined' && module.exports) module.exports = MapGeo;
   else root.MapGeo = MapGeo;
 })(typeof window !== 'undefined' ? window : globalThis);

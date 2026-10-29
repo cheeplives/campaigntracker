@@ -262,3 +262,54 @@ test("Travel: Depart moves the party's marker to the pin named in To", async ({ 
   expect(Math.abs(flag.y + flag.height / 2 - (pin.y + pin.height / 2))).toBeLessThan(3);
   expectNoErrors(errors);
 });
+
+test("Travel: Plan this trip brings a map route's length and ends to the planner, and Depart moves the marker to its end", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Mara");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Plan trip ${gm.id}`);
+  const mapId = await mapWithPicture(page, cid);
+  expect((await api(page, "map_save", { id: mapId, scale_per_px: 0.1, scale_unit: "mi" }, cid)).status).toBe(200);
+  await api(page, "pin_save", { map_id: mapId, x: 50, y: 60, label: "Bree" }, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 250, y: 60, label: "Weathertop" }, cid);
+  const route = (await api(page, "route_save", { map_id: mapId, name: "East Road", points: [[52, 60], [150, 60], [248, 61]] }, cid)).json.route;
+  const main = (await api(page, "groups", undefined, cid)).json.groups[0];
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 50, y: 60 }, cid);
+
+  await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  await page.locator(".map-route").getByRole("button", { name: "Plan this trip" }).click();
+  await expect(page).toHaveURL(new RegExp(`/travel\\?map=${mapId}&route=${route.id}$`));
+  await expect(page.locator(".travel-trip")).toContainText("Planning the trip along East Road on Sartar.");
+  await expect(page.locator("select.travel-mode")).toHaveValue("overland");
+  await expect(page.locator("input[name=distance]")).toHaveValue("31.5");   // 196 px at 0.1 mi a pixel is 19.6 mi
+  const depart = page.locator(".depart");
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await expect(depart.getByLabel("From", { exact: true })).toHaveValue("Bree");
+  await expect(depart.getByLabel("To", { exact: true })).toHaveValue("Weathertop");
+  // Reverse swaps the ends
+  await page.getByRole("button", { name: "Reverse" }).click();
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await expect(depart.getByLabel("From", { exact: true })).toHaveValue("Weathertop");
+  await page.getByRole("button", { name: "Reverse" }).click();
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await expect(depart.getByLabel("To", { exact: true })).toHaveValue("Weathertop");
+  await page.getByRole("button", { name: /Depart/ }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  expect((await api(page, "groups", undefined, cid)).json.groups[0]).toMatchObject({ map_id: mapId, x: 248, y: 61 });   // the route's end, not the pin
+
+  // a measured path travels in the address, and the Maps tab offers it while measuring
+  await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  await page.getByRole("button", { name: "Measure" }).click();
+  const stage = page.locator(".map-view .leaflet-container");
+  await stage.scrollIntoViewIfNeeded();
+  const box = await stage.boundingBox();
+  await stage.click({ position: { x: box.width * 0.3, y: box.height * 0.5 } });
+  const plan = page.locator(".map-toolbar").getByRole("button", { name: "Plan this trip" });
+  await expect(plan).toBeHidden();   // one point is no trip
+  await stage.click({ position: { x: box.width * 0.7, y: box.height * 0.5 } });
+  await plan.click();
+  await expect(page).toHaveURL(new RegExp(`/travel\\?map=${mapId}&path=\\d+,\\d+;\\d+,\\d+$`));
+  await expect(page.locator(".travel-trip")).toContainText("Planning the trip along a measured path on Sartar.");
+  expectNoErrors(errors);
+});

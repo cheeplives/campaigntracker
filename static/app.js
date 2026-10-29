@@ -4016,6 +4016,18 @@
       } catch { /* the card is only a convenience; the planner still works */ }
     };
     await loadParty();
+    // Plan this trip: a saved route (route=) or a measured path (path=x,y;x,y…) on a map, sent from the Maps tab
+    let trip = null;   // { map, pins, points, name }
+    const tq = new URLSearchParams(location.hash.split('?')[1] || '');
+    if (S.mapsReady && tq.get('map')) {
+      try {
+        const d = await api('map', { query: { cid: S.camp.id, id: tq.get('map') } });
+        const r = tq.get('route') ? (d.routes || []).find(x => x.id === Number(tq.get('route'))) : null;
+        const points = r ? r.points.map(([x, y]) => ({ x, y }))
+          : (tq.get('path') || '').split(';').map(p => p.split(',').map(Number)).filter(a => a.length === 2 && a.every(Number.isFinite)).map(([x, y]) => ({ x, y }));
+        if (points.length > 1 && MapGeo.toMetres(1, d.map) !== null) trip = { map: d.map, pins: d.pins || [], points, name: r ? r.name : null };
+      } catch { /* a map that can't be read plans nothing */ }
+    }
     const partyCard = el('div', { class: 'card party-card' });
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
     const reloadParty = async () => { await loadParty(); drawParty(); result = null; out.replaceChildren(); };   // Depart is offered again with the new groups
@@ -4228,6 +4240,24 @@
     });
 
     const fromName = el('input', { placeholder: 'Origin (e.g. Earth)' }), toName = el('input', { placeholder: 'Destination (e.g. Mars)' });
+    const tripNote = el('p', { class: 'small travel-trip' });
+    /** Fill the planner from the trip: its length (a space map's in AU or light-years, by Constant thrust when the genre
+     * has it), and From and To from the pins at its ends. */
+    const fillTrip = () => {
+      if (!trip) return;
+      const m = MapGeo.toMetres(MapGeo.pathPx(trip.points), trip.map), space = MapGeo.isSpace(trip.map);
+      const want = space ? 'brachistochrone' : E.SPEED_MODES.includes(modeSel.value) ? modeSel.value : 'overland';
+      if (modes.some(([k]) => k === want) && modeSel.value !== want) { modeSel.value = want; drawFields(); }
+      const dist = fieldsWrap.querySelector('[name=distance]'), unit = fieldsWrap.querySelector('[name=unit]');
+      if (dist && unit && space) { const ly = m >= MapGeo.UNIT_M.ly; unit.value = ly ? 'LY' : 'AU'; dist.value = num(m / (ly ? MapGeo.UNIT_M.ly : MapGeo.UNIT_M.au)); }
+      else if (dist && unit) { unit.value = imp() ? 'mi' : 'km'; dist.value = num(m / (imp() ? 1609.344 : 1000)); }
+      else if (dist) dist.value = num(m / (imp() ? 1609.344 : 1000));
+      const reach = Math.max(trip.map.width || 0, trip.map.height || 0) * 0.03 + 10;   // a pin this close to an end is where it starts or stops
+      const at = pt => { const p = MapGeo.nearestPin(trip.pins, pt, reach); return p ? MapGeo.pinName(p) : ''; };
+      fromName.value = at(trip.points[0]); toName.value = at(trip.points[trip.points.length - 1]);
+      tripNote.replaceChildren(`Planning the trip along ${trip.name || 'a measured path'} on ${trip.map.name}. `,
+        btn('Reverse', () => { trip.points.reverse(); fillTrip(); out.replaceChildren(); }, 'small', 'Travel the other way: From and To swap, and Depart moves the marker to the other end'));
+    };
     const f = el('form', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Travel planner'), units),
       field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive. Hyperspace: a Star Wars trip time, scaled by the hyperdrive's class and the route.`),
       fieldsWrap,
@@ -4300,7 +4330,11 @@
           try { await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id); }
           catch (err) { toast(`${g.name}'s region did not change: ${err.message}`, true); }
         }
-        if (g && g.map_id && toName.value.trim()) {
+        if (g && trip) {   // a planned trip ends where its route does
+          const end = trip.points[trip.points.length - 1];
+          try { await post('group_move', { id: g.id, map_id: trip.map.id, x: end.x, y: end.y }, S.camp.id); }
+          catch (err) { toast(`The marker did not move: ${err.message}`, true); }
+        } else if (g && g.map_id && toName.value.trim()) {
           try {
             const pin = MapGeo.pinFor(await pinsOf(g.map_id), toName.value);
             if (pin) await post('group_move', { id: g.id, map_id: g.map_id, x: pin.x, y: pin.y }, S.camp.id);
@@ -4323,6 +4357,7 @@
         toList, info, el('div', { class: 'row' }, go),
         el('small', { class: 'muted' }, `Labels every passed ${word()} with the trip (without overwriting existing activity), logs a multi-day travel event, and adds From to the first day's Locations visited and To to the last day's.`));
     };
+    if (trip) { f.firstChild.after(tripNote); fillTrip(); }
     mount(...campaignHeader('travel'), partyCard, f);
   }
 
