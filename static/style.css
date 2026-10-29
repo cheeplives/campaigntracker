@@ -1029,3 +1029,20 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 /* the Red Moon, drawn red where lit and black where not */
 .moon-glyph { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
 .moon-svg { width: 100%; height: 100%; display: block; }
+
+/* tokens: the round marker (also the party's on a map), and the Tokens tab's cards */
+.token-face { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; vertical-align: middle;
+  border: 3px solid var(--accent); background: var(--panel-2); color: var(--text); font: 700 1.1rem var(--disp); }
+.token-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.listrow.member > .who > .token-face, .enc-detail h2 > .token-face { width: 32px; height: 32px; margin-right: 8px; }
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+.token-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.token-card .token-face { width: 72px; height: 72px; font-size: 1.8rem; }
+.token-card.secret { border-style: dashed; }
+.token-name { overflow-wrap: anywhere; }
+.token-uses { overflow-wrap: anywhere; }
+dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
+.token-edit-face { margin-bottom: 8px; }
+.token-edit-face .token-face { width: 64px; height: 64px; }
+.token-uses-box { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 8px; padding: 4px 10px 8px; }
+.token-uses-box label { display: block; margin-top: 4px; }

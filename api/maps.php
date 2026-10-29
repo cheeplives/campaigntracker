@@ -404,12 +404,12 @@ function party_rows(int $cid): array {
     return $load();
 }
 /** Campaign $cid's party groups, main first, as the browser gets them. A player gets no position on a GM-only map and
- * no GM-only token's picture. */
+ * no picture of a token that is GM only or sits on a GM-only entry. */
 function party_groups(int $cid, bool $isGm = true): array {
     $rows = party_rows($cid);
     $ids = array_map(fn($g) => (int)$g['id'], $rows);
-    $st = db()->prepare('SELECT g.id, m.is_secret AS map_secret, t.id AS tid, t.image_id AS timg, t.is_secret AS tsecret
-        FROM party_groups g LEFT JOIN maps m ON m.id=g.map_id LEFT JOIN tokens t ON t.id=g.token_id WHERE g.campaign_id=?');
+    $st = db()->prepare('SELECT g.id, m.is_secret AS map_secret, t.id AS tid, t.image_id AS timg, (t.is_secret OR COALESCE(te.is_secret, 0)) AS tsecret
+        FROM party_groups g LEFT JOIN maps m ON m.id=g.map_id LEFT JOIN tokens t ON t.id=g.token_id LEFT JOIN encyclopedia_entries te ON te.id=t.entry_id WHERE g.campaign_id=?');
     $st->execute([$cid]);
     $extra = [];
     foreach ($st->fetchAll() as $e) $extra[(int)$e['id']] = $e;
@@ -544,4 +544,173 @@ function group_merge(int $cid): void {
         throw $e;
     }
     touch_campaign($cid);
+}
+
+// ---------- tokens ----------
+// A token is a picture on a round marker: a party group's, a character's, an entry's, or a creature's. GMs keep the
+// library; a player is only sent the picture of a token that is assigned to a character or an entry they can see.
+
+const TOKEN_KINDS = ['party', 'character', 'creature', 'object'];
+
+/** Whether a player may not see token row $t (from token_row): it is GM only, or it sits on a GM-only entry. */
+function token_hidden(array $t): bool {
+    return (bool)(int)$t['is_secret'] || (bool)(int)($t['entry_secret'] ?? 0);
+}
+const TOKEN_SELECT = 'SELECT t.*, e.is_secret AS entry_secret, (SELECT GROUP_CONCAT(g.id ORDER BY g.id) FROM party_groups g WHERE g.token_id=t.id) AS group_ids
+    FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id WHERE t.campaign_id=?';
+/** A token of campaign $cid, or fail as not found. */
+function token_row(int $cid, int $id): array {
+    $st = db()->prepare(TOKEN_SELECT . ' AND t.id=?');
+    $st->execute([$cid, $id]);
+    $t = $st->fetch();
+    if (!$t) fail('Token not found', 404);
+    return $t;
+}
+/** A token as the browser gets it; image_url is the picture's address, null until it has one (or when a player may not see it). */
+function token_out(array $t, bool $isGm): array {
+    $url = null;
+    if ($t['image_id'] !== null && has_attachments() && ($isGm || !token_hidden($t)))
+        $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$t['campaign_id'], 'id' => (int)$t['image_id']]);
+    return ['id' => (int)$t['id'], 'name' => $t['name'], 'kind' => $t['kind'], 'size_squares' => (int)$t['size_squares'],
+        'member_id' => $t['member_id'] !== null ? (int)$t['member_id'] : null, 'entry_id' => $t['entry_id'] !== null ? (int)$t['entry_id'] : null,
+        'is_secret' => (bool)(int)$t['is_secret'], 'image_url' => $url,
+        'groups' => $t['group_ids'] !== null ? array_map('intval', explode(',', $t['group_ids'])) : []];
+}
+/** Every token of campaign $cid, by name. */
+function tokens_list(int $cid): array {
+    $st = db()->prepare(TOKEN_SELECT . ' ORDER BY t.name, t.id');
+    $st->execute([$cid]);
+    return array_map(fn($t) => token_out($t, true), $st->fetchAll());
+}
+/** The picture addresses of the tokens this member may see, as ['member' => user id => url, 'entry' => entry id => url]. */
+function token_urls(int $cid, bool $isGm): array {
+    $out = ['member' => [], 'entry' => []];
+    if (!has_maps() || !has_attachments()) return $out;
+    $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
+        WHERE t.campaign_id=? AND t.image_id IS NOT NULL AND (t.member_id IS NOT NULL OR t.entry_id IS NOT NULL)'
+        . ($isGm ? '' : ' AND t.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)') . ' ORDER BY t.id DESC');
+    $st->execute([$cid]);
+    foreach ($st->fetchAll() as $r) {
+        $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['image_id']]);
+        if ($r['member_id'] !== null) $out['member'][(int)$r['member_id']] = $url;
+        if ($r['entry_id'] !== null) $out['entry'][(int)$r['entry_id']] = $url;
+    }
+    return $out;
+}
+/** A token's name from its file's: no extension, _ and - as spaces, a capital first letter ("pip-the-bold.png": "Pip the bold"). */
+function token_name_from_file(string $file): string {
+    $base = pathinfo($file, PATHINFO_FILENAME);
+    $base = trim(preg_replace('/[\s_-]+/u', ' ', $base) ?? '');
+    if ($base === '') return 'Token';
+    return mb_strtoupper(mb_substr($base, 0, 1)) . mb_substr($base, 1, 99);
+}
+/** Add a token (GM) from one uploaded picture, in one go. Returns the token as the browser gets it. */
+function token_upload(int $cid): array {
+    [$f, $size] = upload_received();
+    $file = upload_name((string)($f['name'] ?? ''));
+    [$mime, $kind, $w, $h] = upload_type($f['tmp_name'], $file);
+    if ($kind !== 'image') fail('A token needs a picture: JPEG, PNG, GIF or WebP', 415, 'unsupported_type');
+    $name = trim((string)($_POST['name'] ?? '')) !== '' ? trim((string)str_in($_POST['name'], 100)) : token_name_from_file($file);
+    attachment_room($cid, 'token', 0, $size);   // the campaign's and the account's room; the token itself starts with no files
+    db()->beginTransaction();
+    try {
+        db()->prepare('INSERT INTO tokens (campaign_id, name, created_by) VALUES (?,?,?)')->execute([$cid, mb_substr($name, 0, 100), me()['id']]);
+        $id = (int)db()->lastInsertId();
+        $pic = attachment_store($cid, $f['tmp_name'], ['parent_type' => 'token', 'parent_id' => $id, 'original_name' => $file, 'mime' => $mime,
+            'kind' => 'image', 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'is_secret' => 0], true);
+        db()->prepare('UPDATE tokens SET image_id=? WHERE id=?')->execute([$pic['id'], $id]);
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+    return token_out(token_row($cid, $id), true);
+}
+/** Add a token (GM), or change the fields of token $id that the request names. group_ids: the party groups that use it
+ * (the others that did let go). Returns the token as the browser gets it. */
+function token_save(int $cid): array {
+    $body = body();
+    $has = fn($k) => array_key_exists($k, $body);
+    $old = isset($body['id']) ? token_row($cid, int_in($body['id'], 1)) : null;
+    $t = $old ?? ['id' => null, 'name' => '', 'image_id' => null, 'kind' => 'creature', 'size_squares' => 1, 'member_id' => null, 'entry_id' => null, 'is_secret' => 0];
+    if ($has('name') || !$old) {
+        $t['name'] = trim((string)str_in($body['name'] ?? null, 100));
+        if ($t['name'] === '') fail('Give the token a name');
+    }
+    if ($has('kind')) {
+        if (!in_array($body['kind'], TOKEN_KINDS, true)) fail('Pick party, character, creature or object');
+        $t['kind'] = $body['kind'];
+    }
+    if ($has('size_squares')) {
+        if (!is_numeric($body['size_squares']) || (float)$body['size_squares'] != (int)$body['size_squares']) fail('The size must be a whole number of squares');
+        $t['size_squares'] = int_in($body['size_squares'], 1, 4);
+    }
+    if ($has('is_secret')) $t['is_secret'] = !empty($body['is_secret']) ? 1 : 0;
+    if ($has('member_id')) {
+        if ($body['member_id'] === null || $body['member_id'] === '') $t['member_id'] = null;
+        else {
+            $st = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
+            $st->execute([$cid, int_in($body['member_id'], 1)]);
+            if (!$st->fetchColumn()) fail('That person isn\'t in this campaign', 400);
+            $t['member_id'] = (int)$body['member_id'];
+        }
+    }
+    if ($has('entry_id')) {
+        if ($body['entry_id'] === null || $body['entry_id'] === '') $t['entry_id'] = null;
+        else {
+            if (!has_encyclopedia()) fail('That entry isn\'t one of this campaign\'s', 400);
+            $st = db()->prepare('SELECT 1 FROM encyclopedia_entries WHERE id=? AND campaign_id=?');
+            $st->execute([int_in($body['entry_id'], 1), $cid]);
+            if (!$st->fetchColumn()) fail('That entry isn\'t one of this campaign\'s', 400);
+            $t['entry_id'] = (int)$body['entry_id'];
+        }
+    }
+    if ($has('image_id')) {
+        if ($body['image_id'] === null || $body['image_id'] === '') $t['image_id'] = null;
+        else {
+            need_attachments();
+            if (!$old) fail('Save the token first, then add its picture');
+            $st = db()->prepare("SELECT id FROM attachments WHERE id=? AND campaign_id=? AND parent_type='token' AND parent_id=? AND kind='image' AND is_secret=0");
+            $st->execute([int_in($body['image_id'], 1), $cid, $old['id']]);
+            if (!$st->fetchColumn()) fail("That picture isn't one of this token's pictures", 400);
+            $t['image_id'] = (int)$body['image_id'];
+        }
+    }
+    $groups = null;
+    if ($has('group_ids')) {
+        if (!is_array($body['group_ids'])) fail('Expected a list of groups');
+        party_rows($cid);
+        $groups = array_values(array_unique(array_map(fn($g) => int_in($g, 1), $body['group_ids'])));
+        if ($groups) {
+            $st = db()->prepare('SELECT COUNT(*) FROM party_groups WHERE campaign_id=? AND id IN (' . implode(',', array_fill(0, count($groups), '?')) . ')');
+            $st->execute([$cid, ...$groups]);
+            if ((int)$st->fetchColumn() !== count($groups)) fail('That group isn\'t one of this campaign\'s', 400);
+        }
+    }
+    db()->beginTransaction();
+    try {
+        if ($t['member_id'] !== null)   // a character has one token: the old one lets go
+            db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=? AND id<>?')->execute([$cid, $t['member_id'], $old['id'] ?? 0]);
+        $cols = [$t['name'], $t['image_id'], $t['kind'], $t['size_squares'], $t['member_id'], $t['entry_id'], $t['is_secret']];
+        if ($old) {
+            db()->prepare('UPDATE tokens SET name=?, image_id=?, kind=?, size_squares=?, member_id=?, entry_id=?, is_secret=? WHERE id=?')->execute([...$cols, $old['id']]);
+            $id = (int)$old['id'];
+        } else {
+            db()->prepare('INSERT INTO tokens (name, image_id, kind, size_squares, member_id, entry_id, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?)')
+                ->execute([...$cols, $cid, me()['id']]);
+            $id = (int)db()->lastInsertId();
+        }
+        if ($groups !== null) {
+            db()->prepare('UPDATE party_groups SET token_id=NULL WHERE campaign_id=? AND token_id=?')->execute([$cid, $id]);
+            if ($groups) db()->prepare('UPDATE party_groups SET token_id=? WHERE campaign_id=? AND id IN (' . implode(',', array_fill(0, count($groups), '?')) . ')')->execute([$id, $cid, ...$groups]);
+        }
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    if ($old && $old['image_id'] !== null && (int)$old['image_id'] !== $t['image_id']) attachment_remove($cid, (int)$old['image_id']);   // the old picture is no longer wanted
+    touch_campaign($cid);
+    return token_out(token_row($cid, $id), true);
 }

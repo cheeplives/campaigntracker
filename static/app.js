@@ -952,7 +952,7 @@
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
     ['Party', 'What the party does and owns: journeys, rests and holdings', [['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators']]],
-    ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']]],
+    ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
@@ -968,6 +968,7 @@
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
+    tokens: 'Round pictures for the party\'s groups, characters and entries (GM only)',
     settings: 'Campaign options and the calendar itself (GM only)',
   };
   function campaignHeader(active) {
@@ -1013,7 +1014,7 @@
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) =>
+      const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
         el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
@@ -2942,7 +2943,7 @@
     const publicNote = html => revealButtons(note(html), 'entry', e.id);
     return clean([
       el('div', { class: 'row spread' },
-        el('h2', {}, e.is_secret ? secretTag() : null, e.name),
+        el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), 'small primary', 'Change this entry'),
           scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
@@ -3035,9 +3036,9 @@
         const b = ev.currentTarget;
         b.disabled = true;
         try {
-          await post('image_import', { parent_type: parentType, parent_id: parentId, source: it.source, id: it.id, mode, is_secret: !!gmOnly?.checked }, cid);
+          const r = await post('image_import', { parent_type: parentType, parent_id: parentId, source: it.source, id: it.id, mode, is_secret: !!gmOnly?.checked }, cid);
           toast('Picture added');
-          opts.onAdded();
+          opts.onAdded(r.file);
         } catch (err) { b.disabled = false; toast(err.message, true); }
       };
       const da = it.source === 'deviantart';
@@ -3496,6 +3497,9 @@
   const Fan = typeof FanWikis === 'undefined' ? null : FanWikis;
   const fanCtx = extra => ({ el, btn, api, extLink, cid: S.camp?.id, key: S.camp ? settings().fan_wiki : null, gm: isGM(),
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
+  /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
+  const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
+    uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -3609,7 +3613,7 @@
         const { id } = await post('entry_save', body, S.camp.id);
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
-        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null,
+        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null, token_url: S.encyclopedia.find(x => x.id === id)?.token_url || null,
           preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
@@ -5217,7 +5221,7 @@
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
         return el('div', { class: 'listrow member' },
-          el('div', { class: 'who' }, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
             el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
@@ -5888,6 +5892,7 @@
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
+        else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
