@@ -70,6 +70,8 @@ function upgrade_steps(): array {
         ['019_maps.sql', fn(PDO $p) => !db_has_table($p, 'party_groups'), 'Maps are ready.'],
         ['021_map_grid.sql', fn(PDO $p) => db_has_table($p, 'maps') && !db_has_column($p, 'maps', 'grid_type'),
             'Maps can now show a square or hex grid.'],
+        ['022_panel_links.sql', fn(PDO $p) => !db_has_table($p, 'connection_keys'),
+            'Added panel links, for showing At the Table inside a virtual tabletop or on a stream.'],
     ];
 }
 
