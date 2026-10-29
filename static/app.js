@@ -702,7 +702,17 @@
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'),
+      typeof Sheets !== 'undefined' ? el('div', { class: 'card' }, el('h2', {}, 'Sheet templates'),
+        el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
+        (() => {
+          const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
+          b.addEventListener('click', busy(b, async () => {
+            const r = await post('starter_templates_load', {});
+            toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
+          }));
+          return b;
+        })()) : null);
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -5856,6 +5866,20 @@
   };
   const aboutTable = (head, rows) => el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl about-tbl' },
     el('tr', {}, head.map(h => el('th', {}, h))), rows.map(r => el('tr', {}, r.map(c => el('td', {}, c))))));
+  /** The starter templates' section: each game and the sheet it was built from, filled in once the list comes. */
+  function starterAbout(section) {
+    const body = el('div', {}, el('p', { class: 'muted small' }, 'Loading…'));
+    fetch('api/index.php?a=starter_sources', { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(r => r.json()).then(({ starters }) => {
+      if (!starters?.length) return body.closest('section')?.remove();
+      body.replaceChildren(
+        el('p', {}, 'Each starter template in the sheet template library is this app\'s own list of field labels and sections, made from the character sheet named beside its game. No artwork, logos or rules text are copied. ',
+          'Not affiliated with or endorsed by the publishers.'),
+        aboutTable(['Game', 'Built from'], starters.map(st => [[st.game, st.edition ? ` (${st.edition})` : ''].join(''),
+          el('span', {}, st.source.url ? extLink({ url: st.source.url, title: st.source.title || st.source.url }) : st.source.title,
+            el('span', { class: 'muted' }, ` · ${st.source.owner}${st.source.licence ? ` (${st.source.licence})` : ''}`))])));
+    }).catch(() => body.closest('section')?.remove());
+    return section('Starter templates', body);
+  }
   function viewAbout() {
     const MODE = { overland: 'Overland', sea: 'Sea and river', air: 'Air' };
     const speedRows = Object.entries(E.SPEEDS).flatMap(([m, groups]) => groups.flatMap(g => g.items.map(([label, kmh, , src]) => [MODE[m], label, `${kmh}`, cite(src)])));
@@ -5957,6 +5981,7 @@
           fanAbout ? [fanAbout.used] : null,
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
+      starterAbout(section),
       section('No open source',
         p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),
         list([

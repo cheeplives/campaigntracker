@@ -543,3 +543,59 @@ function character_out(array $c, bool $isGm, bool $seen = false): array {
     if ($full) $out['hidden'] = $hidden;
     return ['character' => $out, 'template_changed' => $full && $changed];
 }
+
+// ---------- The starter library: db/starter-templates/<starter_key>.json, loaded by a site admin ----------
+
+const STARTER_DIR = __DIR__ . '/../db/starter-templates';
+/** Every starter file, as starter_key => its decoded contents, in file-name order. */
+function starter_files(): array {
+    $out = [];
+    foreach (glob(STARTER_DIR . '/*.json') ?: [] as $f) {
+        $key = basename($f, '.json');
+        if (!preg_match('/^[a-z0-9][a-z0-9-]{0,74}$/', $key)) continue;
+        $t = json_decode((string)file_get_contents($f), true);
+        if (is_array($t)) $out[$key] = $t;
+    }
+    ksort($out);
+    return $out;
+}
+/** Admins: add the starter files that aren't in the library yet and update the ones that changed. */
+function starter_templates_load(): void {
+    need_admin();
+    need_sheets();
+    $added = $updated = $unchanged = 0;
+    $pdo = db();
+    $pdo->beginTransaction();
+    foreach (starter_files() as $key => $t) {
+        $name = trim((string)($t['name'] ?? ''));
+        $game = trim((string)($t['game'] ?? ''));
+        if ($name === '' || $game === '') { $pdo->rollBack(); fail("The starter file $key.json needs a name and a game"); }
+        $edition = mb_substr(trim((string)($t['edition'] ?? '')), 0, 60);
+        $layout = json_encode(sheet_layout_in($t['layout'] ?? null), JSON_UNESCAPED_UNICODE);
+        $st = $pdo->prepare('SELECT id, name, game, edition, layout FROM sheet_templates WHERE starter_key=?');
+        $st->execute([$key]);
+        $row = $st->fetch();
+        if (!$row) {
+            $pdo->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, layout, is_listed, starter_key) VALUES (?,?,?,NULL,?,1,?)')
+                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $layout, $key]);
+            $added++;
+        } elseif ([$row['name'], $row['game'], (string)$row['edition']] !== [$name, $game, $edition] || json_decode($row['layout'], true) !== json_decode($layout, true)) {
+            $pdo->prepare('UPDATE sheet_templates SET name=?, game=?, edition=?, layout=?, version=version+1 WHERE id=?')
+                ->execute([mb_substr($name, 0, 150), mb_substr($game, 0, 100), $edition, $layout, $row['id']]);
+            $updated++;
+        } else $unchanged++;
+    }
+    $pdo->commit();
+    out(['ok' => true, 'added' => $added, 'updated' => $updated, 'unchanged' => $unchanged]);
+}
+/** For the About page, signed in or not: each starter template's game and the sheet it was built from. */
+function starter_sources(): void {
+    $out = [];
+    foreach (starter_files() as $t) {
+        $s = is_array($t['source'] ?? null) ? $t['source'] : [];
+        $out[] = ['game' => (string)($t['game'] ?? ''), 'edition' => (string)($t['edition'] ?? ''),
+            'source' => ['title' => (string)($s['title'] ?? ''), 'owner' => (string)($s['owner'] ?? ''), 'url' => (string)($s['url'] ?? ''),
+                'licence' => isset($s['licence']) && is_string($s['licence']) ? $s['licence'] : null]];
+    }
+    out(['starters' => $out]);
+}

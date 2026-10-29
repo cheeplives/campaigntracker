@@ -1306,13 +1306,13 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
 require_method('GET', 'POST');
 // Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
 // runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
-const PUBLIC_ACTIONS = ['fanwiki_wikis'];   // the fan wiki list, public like the About page that shows it
+const PUBLIC_ACTIONS = ['fanwiki_wikis', 'starter_sources'];   // the fan wiki list and the starter templates' sources, public like the About page that shows them
 if (!in_array($action, PUBLIC_ACTIONS, true)) me();
 if ($method === 'POST') require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
-$readActions = ['campaigns', 'campaign', 'templates', 'template', 'characters', 'character', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+$readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
@@ -1431,6 +1431,12 @@ try {
     case 'template_fork':
     case 'template_delete':
         templates_action($action);
+
+    case 'starter_templates_load':
+        starter_templates_load();
+
+    case 'starter_sources':
+        starter_sources();
 
     case 'characters':
     case 'character':
