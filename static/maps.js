@@ -634,7 +634,7 @@ const MapsTab = (() => {
     /** Export…: the picture as uploaded, or the map as a Universal VTT file for another tabletop (it needs the grid). */
     const exportMap = () => {
       const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the map' });
-      const fileName = ext => `${map.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'map'}.${ext}`;
+      const fileName = ext => `${map.name.replace(/[\\/:*?"<>|\s]+/g, ' ').trim() || 'map'}.${ext}`;
       const save = (blob, nameOf) => {
         const a = el('a', { href: URL.createObjectURL(blob), download: nameOf });
         document.body.append(a); a.click(); a.remove();

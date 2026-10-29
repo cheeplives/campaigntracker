@@ -570,14 +570,14 @@ test("Maps: a GM exports the picture, and a gridded map as Universal VTT that re
   await expect(page.getByRole("button", { name: "Universal VTT (.dd2vtt)" })).toBeDisabled();   // no grid yet
   await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("Set grid squares first (Scale → Grid squares)");
   const [pic] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Export the map" }).getByRole("button", { name: "Picture", exact: true }).click()]);
-  expect(pic.suggestedFilename()).toBe("Keep  Upper Lower.png");
+  expect(pic.suggestedFilename()).toBe("Keep Upper Lower.png");
   expect(Buffer.compare(require("fs").readFileSync(await pic.path()), MAP_PNG)).toBe(0);
 
   expect((await api(page, "map_save", { id, grid_px: 50, grid_offset_x: 10, grid_offset_y: 0, scale_per_px: 0.1, scale_unit: "ft" }, cid)).status).toBe(200);
   await page.reload();
   await page.getByRole("button", { name: "Export…" }).click();
   const [uv] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Universal VTT (.dd2vtt)" }).click()]);
-  expect(uv.suggestedFilename()).toBe("Keep  Upper Lower.dd2vtt");
+  expect(uv.suggestedFilename()).toBe("Keep Upper Lower.dd2vtt");
   const json = JSON.parse(require("fs").readFileSync(await uv.path(), "utf8"));
   expect(json.resolution).toEqual({ map_origin: { x: -0.2, y: 0 }, map_size: { x: 6, y: 4 }, pixels_per_grid: 50 });
   expect(Buffer.compare(Buffer.from(json.image, "base64"), MAP_PNG)).toBe(0);
