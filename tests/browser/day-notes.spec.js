@@ -2,7 +2,8 @@
 // server cleans to an allow-list and the browser rebuilds from the same list; players read the Public notes only.
 // Every box on the page folds, and stays folded in that browser for that account.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const dayRow = async (page, cid, d = 2) => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=${d}`)).json()).day;
 
@@ -11,7 +12,7 @@ async function gmAndPlayer(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

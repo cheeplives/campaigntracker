@@ -2,7 +2,8 @@
 // sign-in for both): users.status is Sinless's, chronicle_access is Chronicle's. See db/migrations/020_chronicle_access.sql.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
-const { person, ADMIN, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { person, ADMIN, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "chromium", "the server answers the same whatever the browser"));
 
@@ -18,13 +19,13 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   const who = person("Ines");
   const id = sinlessOnly(who);
   const gm = person("Hale");
-  const gp = await (await browser.newContext()).newPage();
+  const gp = await (await newContext(browser)).newPage();
   await signIn(gp, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(gp, `Shared ${gm.id}`);
   // Before they ask, Chronicle doesn't know them: a GM can't add them, the admin doesn't list them.
   expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).status).toBe(404);
-  const ap = await (await browser.newContext()).newPage();
+  const ap = await (await newContext(browser)).newPage();
   await signIn(ap, ADMIN);
   expect((await api(ap, "users")).json.users.map(u => u.email)).not.toContain(who.email);
 
@@ -61,13 +62,13 @@ test("removing someone from Chronicle keeps their shared account, and they can a
   await signIn(page, who);
   await approve(browser, who.email);
   const id = Number((await (await page.request.get("api/auth/me.php")).json()).id);
-  const gp = await (await browser.newContext()).newPage();
+  const gp = await (await newContext(browser)).newPage();
   await signIn(gp, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(gp, `Leaving ${gm.id}`);
   await api(gp, "member_add", { email: who.email, role: "player" }, cid);
 
-  const ap = await (await browser.newContext()).newPage();
+  const ap = await (await newContext(browser)).newPage();
   await signIn(ap, ADMIN);
   expect((await api(ap, "user_delete", { id })).status).toBe(200);
   expect(sql(`SELECT COUNT(*) FROM users WHERE id = ${id}`).trim()).toBe("1");

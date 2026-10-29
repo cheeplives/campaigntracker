@@ -1,7 +1,8 @@
 // The shared UI kit: in-page dialogs instead of confirm()/prompt(), and the
 // light/dark toggle and colour themes, which are remembered like Sinless's.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("deleting asks in an in-page dialog, and Cancel keeps the item", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -53,7 +54,7 @@ test("a colour theme is picked from the top bar, remembered, and follows the acc
 
   // A fresh device (no local storage) picks it up from the account once signed in.
   await expect.poll(async () => (await (await page.request.get("api/auth/me.php")).json()).prefs.scheme).toBe("console");
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const other = await ctx.newPage();
   await signIn(other, who);
   await other.goto("index.html");

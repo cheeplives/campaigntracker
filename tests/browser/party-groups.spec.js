@@ -1,10 +1,7 @@
 // Party groups: the main group (every player, its region the campaign's current one) and the groups split from it.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload, settledBox } = require("./helpers");
-// Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
-const contexts = [];
-const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
-test.afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 /** A GM with a campaign, `n` players in it (each with a page) and a second and third region. */
 async function setup(page, browser, label, n = 3) {
@@ -15,7 +12,7 @@ async function setup(page, browser, label, n = 3) {
   const players = [];
   for (let i = 0; i < n; i++) {
     const who = person(`Pat${i}`);
-    const ctx = await opened(browser.newContext());
+    const ctx = await newContext(browser);
     const pp = await ctx.newPage();
     await signIn(pp, who);
     await approve(browser, who.email);
@@ -50,7 +47,7 @@ test("Party: a player who joins later is in the main group", async ({ page, brow
   const { cid, ids } = await setup(page, browser, "Party late", 2);
   await groups(page, cid);   // the groups now exist
   const late = person("Late");
-  const ctx = await opened(browser.newContext());
+  const ctx = await newContext(browser);
   const lp = await ctx.newPage();
   await signIn(lp, late);
   await approve(browser, late.email);

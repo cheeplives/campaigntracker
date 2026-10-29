@@ -2,14 +2,15 @@
 // A secret paragraph is stored as <aside> and the server takes it out of everything a player is sent; when a player
 // saves an entry or a tome they could only see without it, the server keeps it where it was.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

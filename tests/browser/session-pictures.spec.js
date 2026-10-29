@@ -2,7 +2,8 @@
 // them once the session is published (never a GM-only one), and every picture opens in the viewer, which zooms so a big
 // map can be read.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 // A 2×1 PNG, and a 1200×800 one for zooming, made in the browser so the test needs no image files.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
@@ -23,7 +24,7 @@ async function gmAndPlayer(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

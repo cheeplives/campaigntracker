@@ -4,7 +4,8 @@
 // groups below, which is the moment to decide who may use it.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
-const { person, signIn, approve, makeCampaign, api } = require("./helpers");
+const { person, signIn, approve, makeCampaign, api, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const root = path.join(__dirname, "..", "..");
 const index = fs.readFileSync(path.join(root, "api", "index.php"), "utf8");
@@ -76,7 +77,7 @@ test.describe("who may use each API action", () => {
     await approve(browser, owner.email);
     const cid = await makeCampaign(page, `Fenced ${owner.id}`);
 
-    const octx = await browser.newContext();
+    const octx = await newContext(browser);
     const op = await octx.newPage();
     await signIn(op, outsider);
     await approve(browser, outsider.email);
@@ -98,7 +99,7 @@ test.describe("who may use each API action", () => {
     await signIn(page, gm);
     await approve(browser, gm.email);
     const cid = await makeCampaign(page, `Table ${gm.id}`);
-    const pctx = await browser.newContext();
+    const pctx = await newContext(browser);
     const pp = await pctx.newPage();
     await signIn(pp, player);
     await approve(browser, player.email);

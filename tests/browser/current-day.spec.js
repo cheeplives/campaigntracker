@@ -1,7 +1,8 @@
 // The Current Day tab opens first, and players only get today's weather up to
 // the current shift: the server holds back later shifts and the day's forecast.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign , notNow } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign , notNow, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const shift = (type, temp) => ({ type, temp, wind: 1 });
 const STORMY = { type: "storm", temp: 20, wind: 2, shift_order: "dawn", shifts: [shift("overcast", 12), shift("rain", 15), shift("storm", 20), shift("rain", 16)] };
@@ -58,7 +59,7 @@ test("players see today's weather only up to the current shift", async ({ page, 
   const cid = await makeCampaign(page, `Shift weather ${gm.id}`); // now = day 2, Dawn
   expect((await api(page, "days_save", { days: [1, 2, 3].map(d => ({ abs_day: d, weather: STORMY })) }, cid)).status).toBe(200);
 
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

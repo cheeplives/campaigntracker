@@ -2,14 +2,15 @@
 // Sessions tab with the summary written from them, Build draft, publishing to players and the Markdown export.
 // Players never get the notes, an unpublished session, or the summary's GM-only paragraphs.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, notNow } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, notNow, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -147,7 +148,7 @@ test("players get only published sessions, never the notes or the summary's GM-o
   expect(gs.find(s => s.kind === "session_note")).toMatchObject({ id: sid, text: "The Fang is in port", secret: true });
 
   // someone outside the campaign gets nothing
-  const octx = await browser.newContext(), op = await octx.newPage();
+  const octx = await newContext(browser), op = await octx.newPage();
   const outsider = person("Ozzy");
   await signIn(op, outsider);
   await approve(browser, outsider.email);

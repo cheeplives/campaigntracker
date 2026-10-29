@@ -1,7 +1,8 @@
 // Ground conditions: snow lying after a cold snap and mud after days of rain, worked out from the weather of the
 // days before, shown with the day's weather; players get nothing for days they may not see the weather of yet.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const days = (from, to, weather) => Array.from({ length: to - from + 1 }, (_, i) => ({ abs_day: from + i, weather }));
 
@@ -26,7 +27,7 @@ test("the day page shows snow cover after a cold snap and mud after days of rain
   await expect(page.locator(".kv .ground")).toHaveAttribute("data-tip", /Rain or snowmelt on 7 of the last 7 days/);
 
   // A player without future weather gets the ground only as far as the clock has come.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

@@ -1,7 +1,8 @@
 // An open campaign page notices when a GM changes the campaign and offers a Refresh,
 // without reloading on its own (so nothing a player is typing is lost).
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("a player's open page offers a Refresh after the GM changes the calendar", async ({ page, browser }) => {
   const gm = person("Gus"), player = person("Hana");
@@ -9,7 +10,7 @@ test("a player's open page offers a Refresh after the GM changes the calendar", 
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Changes ${gm.id}`);
 
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const errors = watchErrors(pp);
   await pp.clock.install();

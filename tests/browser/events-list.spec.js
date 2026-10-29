@@ -2,7 +2,8 @@
 // notes and tags, filterable by tag and by past or upcoming, and never shows
 // players a secret event.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("the Events tab searches every event and filters by tag", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -66,7 +67,7 @@ test("the Events tab searches every event and filters by tag", async ({ page, br
   expectNoErrors(errors);
 
   // A player never receives the secret event, from the page or the API.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -81,7 +82,7 @@ test("the Events tab searches every event and filters by tag", async ({ page, br
   await pctx.close();
 
   // Someone outside the campaign gets nothing.
-  const octx = await browser.newContext();
+  const octx = await newContext(browser);
   const op = await octx.newPage();
   const outsider = person("Nob");
   await signIn(op, outsider);

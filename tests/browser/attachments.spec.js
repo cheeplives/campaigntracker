@@ -2,7 +2,8 @@
 // entry's page and open full size; other files download. Uploads are checked by their contents, and a file is only
 // ever sent to someone who may see its entry: never a GM-only file, or any file on a secret entry, to a player.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 // A 2×1 PNG and a 1×1 GIF, inline so the test needs no image files.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
@@ -14,7 +15,7 @@ async function gmAndPlayer(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -141,13 +142,13 @@ test("GM-only files, and every file on a secret entry, never reach players or an
   expect((await pp.request.get(map.json.file.url)).status()).toBe(404);
 
   // Someone outside the campaign, or signed out, gets nothing.
-  const octx = await browser.newContext();
+  const octx = await newContext(browser);
   const op = await octx.newPage();
   const other = person("Olaf");
   await signIn(op, other);
   await approve(browser, other.email);
   expect((await op.request.get(map.json.file.url)).status()).toBe(403);
-  const sctx = await browser.newContext();
+  const sctx = await newContext(browser);
   expect((await (await sctx.newPage()).request.get(map.json.file.url)).status()).toBe(401);
   // A file of one campaign can't be fetched through another campaign's id.
   const cid2 = await makeCampaign(page, `Other ${Date.now()}`);

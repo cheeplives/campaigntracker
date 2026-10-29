@@ -2,7 +2,8 @@
 // tests/support/image-stub.php answers for them), copies only openly licensed pictures, credited, and embeds other
 // DeviantArt works without copying them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
 const OV_OPEN = "11111111-1111-1111-1111-111111111111", OV_NC = "22222222-2222-2222-2222-222222222222", OV_BIG = "33333333-3333-3333-3333-333333333333";
@@ -13,7 +14,7 @@ async function setup(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -82,7 +83,7 @@ test.describe("Find Image API", () => {
 
   test("only members search, and each may make 30 searches a minute", async ({ page, browser }) => {
     const { cid } = await setup(page, browser, "Limit");
-    const outsider = await (await browser.newContext()).newPage();
+    const outsider = await (await newContext(browser)).newPage();
     const o = person("Olaf");
     await signIn(outsider, o);
     await approve(browser, o.email);

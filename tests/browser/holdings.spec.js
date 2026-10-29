@@ -2,14 +2,15 @@
 // and a card per holding on the right, added from a dialog whose fields follow the type.
 // GM and players alike can add, change and remove both.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, notNow } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, notNow, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 async function campaignWithPlayer(page, browser, tag) {
   const gm = person("Gwen"), player = person("Pip");
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${tag} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

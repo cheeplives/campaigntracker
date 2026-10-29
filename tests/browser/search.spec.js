@@ -1,7 +1,8 @@
 // The Search page looks through the whole campaign: Encyclopedia entries (names, aliases, tags and notes), events and
 // their tags, day notes, the Library and Party Holdings, grouped by kind, and never finds a player anything secret.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("search finds names, notes, events and tomes, and a player never finds a secret", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -57,7 +58,7 @@ test("search finds names, notes, events and tomes, and a player never finds a se
   expectNoErrors(errors);
 
   // A player finds none of it.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

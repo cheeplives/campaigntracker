@@ -1,7 +1,8 @@
 // The account page: the campaigns you belong to, with your role and your character in each, and one
 // None / Imperial / Metric choice that sets every temperature, distance, depth and speed you see.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("the account page lists your campaigns with your role, and sets your character in each", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -9,7 +10,7 @@ test("the account page lists your campaigns with your role, and sets your charac
   await signIn(page, gm);
   await approve(browser, gm.email);
   const mine = await makeCampaign(page, "Rowan's Table");
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const pp = await ctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

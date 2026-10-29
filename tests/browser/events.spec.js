@@ -1,7 +1,8 @@
 // Events run from a Shift Start to a Shift End (or all day), carry colour-coded
 // tags that show in week view, and events saved before either still work.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("an event gets a shift range and tags, shown in day and week view", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -64,7 +65,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
 test("a player who may add events can tag them", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Mara"), player = person("Nils");
-  const gctx = await browser.newContext();
+  const gctx = await newContext(browser);
   const gp = await gctx.newPage();
   await signIn(gp, gm);
   await approve(browser, gm.email);

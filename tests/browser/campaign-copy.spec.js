@@ -1,7 +1,8 @@
 // Copy and Delete on the campaign list: a GM copies a campaign into a new one of their own (everything in it, or only
 // its setup) and deletes one after typing DELETE (any case); players get neither.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 // A 1x1 PNG.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -57,7 +58,7 @@ test("a GM copies a campaign from the list, with everything in it, into a new on
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, "Enemy Within");
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const pp = await ctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -141,7 +142,7 @@ test("a GM deletes a campaign from the list after typing DELETE (any case); play
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, "Doomed Run");
   await makeCampaign(page, "Keeper");
-  const ctx = await browser.newContext();
+  const ctx = await newContext(browser);
   const pp = await ctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

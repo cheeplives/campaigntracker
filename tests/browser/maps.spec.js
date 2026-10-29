@@ -1,10 +1,7 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox } = require("./helpers");
-// Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
-const contexts = [];
-const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
-test.afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -30,7 +27,7 @@ async function setup(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await opened(browser.newContext());
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -181,7 +178,7 @@ test("Maps: a player adds a public pin; only they and the GM can change it", asy
   expect((await api(pp, "pin_save", { map_id: mapId, x: 5, y: 5, label: "" }, cid)).json.message).toBe("Give the pin a label");
 
   const pip2 = person("Quill");
-  const pctx = await opened(browser.newContext());
+  const pctx = await newContext(browser);
   const p2 = await pctx.newPage();
   await signIn(p2, pip2);
   await approve(browser, pip2.email);
