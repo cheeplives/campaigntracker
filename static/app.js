@@ -3995,8 +3995,86 @@
   }
 
   // ------------------------------------------------------------ travel tab
-  function viewTravel() {
+  async function viewTravel() {
     const out = el('div', { class: 'travel-out' });
+    // The party's groups (main first), the maps' names and, for Depart, the pins of the map a group is on.
+    let groups = [], mapNames = new Map(), result = null;
+    const pinCache = new Map();
+    const loadParty = async () => {
+      if (!S.mapsReady) return;
+      try {
+        groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+        mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
+      } catch { /* the card is only a convenience; the planner still works */ }
+    };
+    await loadParty();
+    const partyCard = el('div', { class: 'card party-card' });
+    const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    const reloadParty = async () => { await loadParty(); drawParty(); result = null; out.replaceChildren(); };   // Depart is offered again with the new groups
+    /** A small modal form: run() does the work, and the card is redrawn after. */
+    const partyDialog = (title, kids, ok, run) => {
+      const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
+      const go = el('button', { class: 'primary', type: 'submit' }, ok);
+      const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault(); go.disabled = true;
+        try { await run(); d.close(); await reloadParty(); } catch (err) { toast(err.message, true); go.disabled = false; }
+      });
+      d.addEventListener('close', () => d.remove());
+      d.append(form); document.body.append(d); d.showModal();
+    };
+    const splitParty = () => {
+      const name = el('input', { maxlength: 100, required: true, autocomplete: 'off', placeholder: 'e.g. Scouts' });
+      const from = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id) : null;
+      const region = select([['', '— none —'], ...S.regions.map(r => [r.id, r.name])], groups[0].region_id ?? '');
+      const pick = el('div', { class: 'party-pick' });
+      const fromGroup = () => groups.find(g => g.id === Number(from ? from.value : groups[0].id));
+      const drawPick = () => {
+        region.value = fromGroup().region_id ?? '';
+        pick.replaceChildren(...fromGroup().members.map(u => el('label', {}, el('input', { type: 'checkbox', value: u }), memberName(u))));
+        if (!pick.children.length) pick.append(el('small', { class: 'muted' }, 'No one is in that group'));
+      };
+      from?.addEventListener('change', drawPick); drawPick();
+      partyDialog('Split the party', [from ? field('From', from) : null, field('Group name', name), field('Who goes', pick), field('Region', region, 'Where they are now')], 'Split', async () => {
+        const members = [...pick.querySelectorAll('input:checked')].map(i => Number(i.value));
+        await post('group_split', { from_id: fromGroup().id, name: name.value, members, ...(region.value ? { region_id: Number(region.value) } : {}) }, S.camp.id);
+      });
+    };
+    const mergeParty = g => {
+      const into = select(groups.filter(x => x.id !== g.id).map(x => [x.id, x.name]), '');
+      partyDialog(`Merge ${g.name}`, [field('Merge into', into, `${g.name}'s members join that group, and ${g.name} is gone`)], 'Merge',
+        () => post('group_merge', { id: g.id, into_id: Number(into.value) }, S.camp.id));
+    };
+    const tokenParty = async g => {
+      let tokens;
+      try { tokens = (await api('tokens', { query: { cid: S.camp.id } })).tokens; } catch (err) { return toast(err.message, true); }
+      const sel = select([['', 'None (a flag)'], ...tokens.map(t => [t.id, t.name])], g.token_id ?? '');
+      partyDialog(`Token for ${g.name}`, [field('Token', sel, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
+        () => post('group_save', { id: g.id, token_id: sel.value ? Number(sel.value) : null }, S.camp.id));
+    };
+    const drawParty = () => {
+      partyCard.hidden = !groups.length;
+      partyCard.replaceChildren(el('div', { class: 'row spread' }, el('h2', {}, 'Where the party is'),
+        isGM() ? btn('Split the party…', splitParty, 'small', 'Send some of the party off as a group of their own') : null),
+        ...groups.map(g => el('div', { class: 'party-row' },
+          el('div', { class: 'party-info' },
+            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
+            el('small', { class: 'party-members muted' }, g.members.map(memberName).join(', ') || 'No one yet'),
+            el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
+              ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
+          isGM() ? el('div', { class: 'actions' },
+            btn('Rename', async () => {
+              const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
+              if (!name || !name.trim()) return;
+              try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
+            }, 'small'),
+            g.is_main ? null : btn('Make main group', async () => {
+              try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reloadParty(); } catch (err) { toast(err.message, true); }
+            }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
+            groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null,
+            btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps')) : null)));
+    };
+    drawParty();
     const genre = E.genreOf(settings());
     const modes = [
       ['overland', 'Overland (on foot, mounted, by road or rail)'],
@@ -4147,7 +4225,6 @@
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
-    let result = null;
     f.addEventListener('submit', e => {
       e.preventDefault();
       try {
@@ -4176,6 +4253,26 @@
       const useWorld = el('input', { type: 'checkbox' });
       const shiftsFor = () => E.hoursToShifts(cal(), useWorld.checked && result.worldHours ? result.worldHours : result.hours);
       const info = el('small', { class: 'muted' });
+      // with more than one group, who is travelling; the main group is first
+      const who = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id, { 'aria-label': 'Who is travelling' }) : null;
+      const travelling = () => who ? groups.find(g => g.id === Number(who.value)) : groups.find(g => g.is_main) || null;
+      const toList = el('datalist', { id: 'travel-to-list' });
+      toName.setAttribute('list', 'travel-to-list');
+      const pinsOf = async mapId => {
+        if (!pinCache.has(mapId)) pinCache.set(mapId, (await api('map', { query: { cid: S.camp.id, id: mapId } })).pins || []);
+        return pinCache.get(mapId);
+      };
+      // the To box suggests the pins of the travelling group's map: their labels and their entries' names
+      const suggest = async () => {
+        const g = travelling();
+        const pins = g && g.map_id ? await pinsOf(g.map_id).catch(() => []) : [];
+        const names = [...new Set(pins.flatMap(p => [p.label, p.entry && p.entry.name]).filter(Boolean))];
+        toList.replaceChildren(...names.map(n => el('option', { value: n })));
+      };
+      const travelField = field('Region while travelling', travelReg.node, 'e.g. "Ship interior" so transit days get shipboard conditions');
+      const sideTrip = () => { const g = travelling(); return !!g && !g.is_main; };
+      who?.addEventListener('change', () => { suggest(); travelField.style.display = sideTrip() ? 'none' : ''; });
+      suggest();
       const upd = () => {
         const n = shiftsFor();
         info.textContent = `${n} ${word()}s (${(n / spd()).toFixed(1)} days). Arrive: ${E.fmtShift(cal(), nowShift() + n)}`;
@@ -4185,10 +4282,19 @@
       go.addEventListener('click', busy(go, async () => {
         const n = shiftsFor();
         if (n <= 0) throw new Error(`Trip is shorter than one ${word()}`);
-        const label = `In transit${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
+        const g = travelling(), side = sideTrip();
+        const label = `In transit${side ? ` (${g.name})` : ''}${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
         const startDay = today();
-        const travelId = await travelReg.resolve(), arriveId = await arriveReg.resolve();
-        await passShifts(n, label, travelId || null, arriveId || null);
+        const travelId = side ? '' : await travelReg.resolve(), arriveId = await arriveReg.resolve();
+        // a side group's trip only moves the clock: the shifts are the main party's, and so is the weather's region
+        await passShifts(n, side ? null : label, travelId || null, side ? null : arriveId || null);
+        if (side && arriveId) await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id);
+        if (g && g.map_id && toName.value.trim()) {
+          try {
+            const pin = MapGeo.pinFor(await pinsOf(g.map_id), toName.value);
+            if (pin) await post('group_move', { id: g.id, map_id: g.map_id, x: pin.x, y: pin.y }, S.camp.id);
+          } catch (err) { toast(`The marker did not move: ${err.message}`, true); }
+        }
         // From joins the departure day's Locations visited and To the arrival day's (one day's list for a same-day trip).
         await addLocations(startDay, [fromName.value]);
         await addLocations(today(), [toName.value]);
@@ -4199,14 +4305,14 @@
         location.hash = `#/c/${S.camp.id}/calendar`;
       }));
       return el('div', { class: 'depart' }, el('h3', {}, 'Make the trip'),
-        el('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
-          field('Region while travelling', travelReg.node, 'e.g. "Ship interior" so transit days get shipboard conditions'),
+        el('div', { class: 'grid2' }, who ? field('Who is travelling', who, 'The clock moves for everyone') : null, field('From', fromName), field('To', toName),
+          travelField,
           field('Region on arrival', arriveReg.node, null, 'The party is moved here when the trip ends'),
           result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
-        info, el('div', { class: 'row' }, go),
+        toList, info, el('div', { class: 'row' }, go),
         el('small', { class: 'muted' }, `Labels every passed ${word()} with the trip (without overwriting existing activity), logs a multi-day travel event, and adds From to the first day's Locations visited and To to the last day's.`));
     };
-    mount(...campaignHeader('travel'), f);
+    mount(...campaignHeader('travel'), partyCard, f);
   }
 
   // ------------------------------------------------------------ regions tab

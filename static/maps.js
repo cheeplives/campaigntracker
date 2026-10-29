@@ -144,10 +144,13 @@ const MapsTab = (() => {
     try { data = await api('map', { query: { cid, id } }); } catch {
       return ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' }, el('p', {}, 'That map is not here.'), el('a', { href: `#/c/${cid}/maps` }, 'Back to the maps')));
     }
-    let map = data.map, pins = data.pins || [], routes = data.routes || [];
+    let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
+    let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
+    const loadGroups = async () => { if (gm) groups = (await api('groups', { query: { cid } })).groups; };
     const gm = ctx.isGM();
     const system = () => ctx.unitSystem();
     const base = `#/c/${cid}/maps/${id}`;
+    await loadGroups().catch(() => {});
 
     const host = el('div', { class: 'map-stage' });
     const note = el('p', { class: 'small map-note', role: 'status' });
@@ -259,9 +262,34 @@ const MapsTab = (() => {
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
-      map = d.map; pins = d.pins || []; routes = d.routes || [];
+      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || [];
+      await loadGroups().catch(() => {});
       if (gone) return;
-      drawPins(); drawRoutes(); renderRoutes();
+      drawPins(); drawRoutes(); renderRoutes(); drawGroups();
+    }
+    // ---- the party's groups: a flag, or the group's token, with its name
+    let groupLayer = null;
+    const drawGroups = () => {
+      groupLayer.clearLayers();
+      for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
+        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28,
+          draggable: gm, onMove: async xy => { Object.assign(g, { x: xy.x, y: xy.y }); await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); },
+          onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
+            el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet')) });
+      }
+    };
+    const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    /** GMs: move a group to this pin. With more than one group, a small select asks which. */
+    function partyHere(p) {
+      if (!gm || !groups.length) return null;
+      const which = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id, { 'aria-label': 'Which group' }) : null;
+      return el('div', { class: 'row' }, which, btn('Party is here', async () => {
+        const g = groups.find(q => q.id === Number(which ? which.value : groups[0].id));
+        try {
+          await post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid);
+          lmap_close(); await refresh(); toast(`${g.name} is at ${pinTitle(p)}`);
+        } catch (err) { toast(err.message, true); }
+      }, 'small', 'Put a group of the party here, with its marker'));
     }
     async function toEntry(p, entryId) {
       try {
@@ -286,6 +314,7 @@ const MapsTab = (() => {
         p.kind === 'note' && p.note ? el('p', { class: 'small pre' }, p.note) : null,
         p.is_secret ? el('small', { class: 'muted' }, 'GM only') : null,
         p.author ? el('small', { class: 'muted' }, `Added by ${p.author}`) : null,
+        partyHere(p),
         gm && p.kind === 'note' ? el('div', { class: 'row' }, match
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), 'small', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), 'small', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
@@ -553,6 +582,7 @@ const MapsTab = (() => {
     pickLayer = L.layerGroup().addTo(lmap);
     routeLayer = L.layerGroup().addTo(lmap);
     pinLayer = L.layerGroup().addTo(lmap);
+    groupLayer = L.layerGroup().addTo(lmap);
     const bar = scaleControl(() => map, system).addTo(lmap);
     lf = { map: lmap, scale: bar };
     lmap.on('click', onClick);
@@ -563,7 +593,7 @@ const MapsTab = (() => {
     const ro = new ResizeObserver(fit);
     window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
     ro.observe(host);
-    drawRoutes(); renderRoutes(); drawPins();
+    drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
       lmap.invalidateSize(); lmap.fitBounds(bounds());

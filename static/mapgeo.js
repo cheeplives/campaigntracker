@@ -70,7 +70,8 @@
 
   function pinFor(pins, name) {
     const k = nameKey(name);
-    return pins.find(p => nameKey(p.label) === k || (p.entry_name != null && nameKey(p.entry_name) === k)) || null;
+    const entryName = p => p.entry && p.entry.name != null ? p.entry.name : p.entry_name;   // pin_out has entry: {id, name}
+    return pins.find(p => nameKey(p.label) === k || (entryName(p) != null && nameKey(entryName(p)) === k)) || null;
   }
 
   const MapGeo = { UNIT_M, ROLL20, isSpace, scaleFromPoints, scaleFromGrid, gridHint, pathPx, toMetres, fmtDistance, nameKey, pinFor };

@@ -69,4 +69,8 @@ test("nameKey and pinFor match a pin to an entry name", () => {
   expect(MapGeo.pinFor(pins, "prancing pony")).toBe(pins[1]);
   expect(MapGeo.pinFor(pins, "BREE")).toBe(pins[0]);
   expect(MapGeo.pinFor(pins, "Rivendell")).toBeNull();
+  // the server's pin_out carries the linked entry as entry: {id, name}
+  const served = [{ label: "", entry: { id: 4, name: "The Prancing Pony" } }, { label: "Bree", entry: null }];
+  expect(MapGeo.pinFor(served, "prancing pony")).toBe(served[0]);
+  expect(MapGeo.pinFor(served, "bree")).toBe(served[1]);
 });
