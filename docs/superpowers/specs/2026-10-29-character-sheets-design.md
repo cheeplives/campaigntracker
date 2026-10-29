@@ -73,6 +73,11 @@ pips and clocks, condition toggles, current/max shown as a bar.
   for PCs, the game, the template's *Summary* fields (class, level, ancestry and the like, flagged in the template
   editor the way *Play* fields are) and an **Open sheet** link. Hidden fields never show on the card to anyone the
   sheet hides them from.
+- **Opening the sheet straight away:** an entry with a character has an **Open sheet** button in its header,
+  beside the name, so it is one tap from the entry (and visible without scrolling on a phone). The whole character
+  card is also a link to the sheet. In the Encyclopedia list, such entries show a sheet icon that opens the sheet
+  directly. The sheet has a matching **Encyclopedia entry** link back. Members the sheet is hidden from (players, for
+  an NPC sheet not shown to them) don't get the button.
 - **The Encyclopedia list** gets a PCs / NPCs filter alongside the category filter.
 - **NPC sheets start hidden from players** (the whole sheet: GMs rarely want stats shown), with a *Show sheet to
   players* switch. The entry itself follows its own GM-only setting as entries do today, so a secret NPC stays
