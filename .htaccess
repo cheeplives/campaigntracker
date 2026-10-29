@@ -41,6 +41,12 @@
     Header always unset X-Frame-Options
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors *; form-action 'self'"
   </Files>
+  # Owlbear Rodeo's toolbar icon is drawn on owlbear.rodeo's own page, which only shows another site's picture when
+  # that site says it may (CORS, and Cross-Origin-Resource-Policy for a page that is cross-origin isolated).
+  <Files "owlbear.svg">
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Cross-Origin-Resource-Policy "cross-origin"
+  </Files>
 </IfModule>
 
 # --- Make browsers check for a new app after each deploy -------------------

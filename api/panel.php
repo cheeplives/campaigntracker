@@ -140,6 +140,6 @@ function owlbear_manifest(): void {
     header('Access-Control-Allow-Origin: *');
     out(['name' => 'Campaign Chronicle', 'version' => '1.0.0', 'manifest_version' => 1,
         'description' => 'The campaign right now: date, weather, moons, where the party is, notes and lore.',
-        'author' => 'Campaign Chronicle', 'homepage_url' => "$base/", 'icon' => "$base/static/icons/favicon.svg",
-        'action' => ['title' => 'Campaign Chronicle', 'icon' => "$base/static/icons/favicon.svg", 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
+        'author' => 'Campaign Chronicle', 'homepage_url' => "$base/", 'icon' => "$base/static/icons/owlbear.svg",
+        'action' => ['title' => 'Campaign Chronicle', 'icon' => "$base/static/icons/owlbear.svg", 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
 }
