@@ -189,7 +189,7 @@ test("Party: groups on maps, bounds, tokens and GM-only maps", async ({ page, br
   expect((await api(page, "group_move", { id: scouts.id, map_id: null }, cid)).json.groups[1]).toMatchObject({ map_id: null, x: null, y: null });
   // a token's picture: a token of this campaign only, and a GM-only token's is hidden from players
   expect((await api(page, "group_save", { id: scouts.id, token_id: 999999 }, cid)).status).toBe(400);
-  const pic = sql(`INSERT INTO attachments (campaign_id, parent_type, parent_id, kind, original_name, stored_name, mime, size_bytes) VALUES (${cid}, 'token', 0, 'image', 't.png', '${"b".repeat(32)}', 'image/png', 1); SELECT LAST_INSERT_ID();`).trim();
+  const pic = sql(`INSERT INTO attachments (campaign_id, parent_type, parent_id, kind, original_name, stored_name, mime, size_bytes) VALUES (${cid}, 'token', 0, 'image', 't.png', '${require("crypto").randomBytes(16).toString("hex")}', 'image/png', 1); SELECT LAST_INSERT_ID();`).trim();
   const tok = sql(`INSERT INTO tokens (campaign_id, name, image_id, kind) VALUES (${cid}, 'Banner', ${pic}, 'party'); SELECT LAST_INSERT_ID();`).trim();
   const withTok = await api(page, "group_save", { id: scouts.id, token_id: Number(tok) }, cid);
   expect(withTok.status, JSON.stringify(withTok.json)).toBe(200);

@@ -738,7 +738,9 @@ test("Maps: a route's name is shown as text in its tooltip, never as markup", as
   const line = page.locator(".map-route-line");
   await expect(line).toHaveCount(1);
   const box = await line.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const mid = [box.x + box.width / 2, box.y + box.height / 2];
+  if (test.info().project.use.hasTouch) await page.touchscreen.tap(...mid);   // a touch screen opens it on tap
+  else await page.mouse.move(...mid);                                      // a pointer on hover
   const tip = page.locator(".leaflet-tooltip.map-tip");
   await expect(tip).toHaveText("A <b>bold</b> & B");
   await expect(tip.locator("b")).toHaveCount(0);
