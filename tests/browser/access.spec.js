@@ -26,7 +26,8 @@ const GM_ONLY = ["campaign_update", "campaign_delete", "campaign_copy", "set_tim
   "region_save", "region_delete", "holiday_save", "holiday_delete", "days_save", "day_update", "shift_save", "shifts_fill",
   "downtime_delete", "secret_reveal", "relation_type_save", "relation_type_delete", "session_save", "session_summary_save",
   "session_end", "session_delete", "snote_add", "snote_bulk", "snote_save", "snote_move", "snote_delete",
-  "scabard_import", "scabard_picture", "map_save", "map_delete", "route_save", "route_delete", "pin_to_entry"];
+  "scabard_import", "scabard_picture", "map_save", "map_delete", "route_save", "route_delete", "pin_to_entry",
+  "group_split", "group_save", "group_move", "group_merge"];
 /** Everything else works on one campaign and needs its members: players and GMs, each action checking the rest. */
 const MEMBER = ACTIONS.filter(a => ![...PUBLIC, ...ACCOUNT, ...ADMIN_ONLY, ...GM_ONLY].includes(a));
 const CAMPAIGN = [...MEMBER, ...GM_ONLY];

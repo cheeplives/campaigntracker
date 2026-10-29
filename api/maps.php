@@ -282,3 +282,225 @@ function route_save(int $cid): array {
     $st->execute([$id]);
     return route_out($st->fetch());
 }
+
+// ---------- party groups ----------
+// The party is one main group, "The party", holding every player character until a GM splits some off. A user is in
+// one group only. The main group's region is the campaign's current region (settings current_region), kept in step both ways.
+
+/** The id of region $rid if it is one of campaign $cid's, else null. */
+function party_region(int $cid, $rid): ?int {
+    if ($rid === null || $rid === '' || !is_numeric($rid)) return null;
+    $st = db()->prepare('SELECT id FROM regions WHERE id=? AND campaign_id=?');
+    $st->execute([(int)$rid, $cid]);
+    $id = $st->fetchColumn();
+    return $id === false ? null : (int)$id;
+}
+/** A region_id from a request: one of this campaign's regions, or null for none. */
+function party_region_in($v, int $cid): ?int {
+    if ($v === null || $v === '') return null;
+    $id = party_region($cid, $v);
+    if ($id === null) fail('Pick one of this campaign\'s regions');
+    return $id;
+}
+/** Campaign $cid's current region, if it still exists. */
+function party_current_region(int $cid): ?int {
+    return party_region($cid, (dec(campaign_row($cid)['settings_json']) ?: [])['current_region'] ?? null);
+}
+/** Make settings current_region $rid (null for none), leaving the rest of the settings alone. */
+function party_set_current_region(int $cid, ?int $rid): void {
+    $s = dec(campaign_row($cid)['settings_json']) ?: [];
+    $s['current_region'] = $rid;
+    db()->prepare('UPDATE campaigns SET settings_json=? WHERE id=?')->execute([json_in($s), $cid]);
+}
+/** The main group's region := the campaign's current region (after the settings change). */
+function party_sync_main_region(int $cid): void {
+    if (!has_maps()) return;
+    db()->prepare('UPDATE party_groups SET region_id=? WHERE campaign_id=? AND is_main=1')->execute([party_current_region($cid), $cid]);
+}
+/** Take user $uid out of every group of campaign $cid (they have left the campaign). */
+function party_remove_member(int $cid, int $uid): void {
+    if (!has_maps()) return;
+    $st = db()->prepare('SELECT id, members_json FROM party_groups WHERE campaign_id=?');
+    $st->execute([$cid]);
+    foreach ($st->fetchAll() as $g) {
+        $m = dec($g['members_json']) ?: [];
+        $left = array_values(array_filter($m, fn($x) => (int)$x !== $uid));
+        if (count($left) !== count($m)) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($left), $g['id']]);
+    }
+}
+function party_members(array $g): array {
+    return array_values(array_map('intval', dec($g['members_json']) ?: []));
+}
+/** Campaign $cid's groups, main first, as rows. Makes the main group when there is none and puts any player who is in no
+ * group into it (players can join late). That is housekeeping, not a campaign change, so it doesn't touch the campaign. */
+function party_rows(int $cid): array {
+    $load = function () use ($cid) {
+        $st = db()->prepare('SELECT * FROM party_groups WHERE campaign_id=? ORDER BY is_main DESC, id');
+        $st->execute([$cid]);
+        return $st->fetchAll();
+    };
+    $st = db()->prepare("SELECT user_id FROM campaign_members WHERE campaign_id=? AND role='player' ORDER BY user_id");
+    $st->execute([$cid]);
+    $players = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $rows = $load();
+    $placed = [];
+    foreach ($rows as $g) foreach (party_members($g) as $u) $placed[$u] = true;
+    $loose = array_values(array_filter($players, fn($u) => !isset($placed[$u])));
+    if ($rows && $rows[0]['is_main'] && !$loose) return $rows;
+    db()->beginTransaction();
+    try {
+        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);   // two readers at once make one main group
+        $rows = $load();
+        $placed = [];
+        foreach ($rows as $g) foreach (party_members($g) as $u) $placed[$u] = true;
+        $loose = array_values(array_filter($players, fn($u) => !isset($placed[$u])));
+        if (!$rows) {
+            db()->prepare('INSERT INTO party_groups (campaign_id, name, members_json, region_id, is_main) VALUES (?,?,?,?,1)')
+                ->execute([$cid, 'The party', json_encode($players), party_current_region($cid)]);
+        } else {
+            if (!$rows[0]['is_main']) db()->prepare('UPDATE party_groups SET is_main=1 WHERE id=?')->execute([$rows[0]['id']]);
+            if ($loose) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
+                ->execute([json_encode([...party_members($rows[0]), ...$loose]), $rows[0]['id']]);
+        }
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    return $load();
+}
+/** Campaign $cid's party groups, main first, as the browser gets them. A player gets no position on a GM-only map and
+ * no GM-only token's picture. */
+function party_groups(int $cid, bool $isGm = true): array {
+    $rows = party_rows($cid);
+    $ids = array_map(fn($g) => (int)$g['id'], $rows);
+    $st = db()->prepare('SELECT g.id, m.is_secret AS map_secret, t.id AS tid, t.image_id AS timg, t.is_secret AS tsecret
+        FROM party_groups g LEFT JOIN maps m ON m.id=g.map_id LEFT JOIN tokens t ON t.id=g.token_id WHERE g.campaign_id=?');
+    $st->execute([$cid]);
+    $extra = [];
+    foreach ($st->fetchAll() as $e) $extra[(int)$e['id']] = $e;
+    return array_map(function ($g) use ($cid, $isGm, $extra) {
+        $e = $extra[(int)$g['id']] ?? [];
+        $hideMap = !$isGm && !empty($e['map_secret']);
+        $hideTok = !$isGm && !empty($e['tsecret']);
+        $url = null;
+        if (!$hideTok && ($e['timg'] ?? null) !== null && has_attachments())
+            $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$e['timg']]);
+        $num = fn($k) => $g[$k] !== null && !$hideMap ? (float)$g[$k] : null;
+        return ['id' => (int)$g['id'], 'name' => $g['name'], 'members' => party_members($g),
+            'region_id' => $g['region_id'] !== null ? (int)$g['region_id'] : null,
+            'map_id' => $g['map_id'] !== null && !$hideMap ? (int)$g['map_id'] : null, 'x' => $num('x'), 'y' => $num('y'),
+            'token_id' => $g['token_id'] !== null && !$hideTok ? (int)$g['token_id'] : null, 'token_url' => $url, 'is_main' => (bool)(int)$g['is_main']];
+    }, $rows);
+}
+/** Group $id of campaign $cid as a row, or fail as not found. */
+function group_row(int $cid, $id): array {
+    party_rows($cid);
+    $st = db()->prepare('SELECT * FROM party_groups WHERE id=? AND campaign_id=?');
+    $st->execute([int_in($id, 1), $cid]);
+    $g = $st->fetch();
+    if (!$g) fail('Group not found', 404);
+    return $g;
+}
+/** Make group $g the only main one, and the campaign's current region its region. */
+function party_make_main(int $cid, int $id): void {
+    db()->prepare('UPDATE party_groups SET is_main=(id=?) WHERE campaign_id=?')->execute([$id, $cid]);
+    $st = db()->prepare('SELECT region_id FROM party_groups WHERE id=?');
+    $st->execute([$id]);
+    $r = $st->fetchColumn();
+    party_set_current_region($cid, $r !== null && $r !== false ? (int)$r : null);
+}
+/** GM: split the members the request names off group from_id into a new group. */
+function group_split(int $cid): void {
+    $body = body();
+    $from = group_row($cid, $body['from_id'] ?? null);
+    $name = trim((string)str_in($body['name'] ?? null, 100));
+    if ($name === '') fail('Give the group a name');
+    $pick = $body['members'] ?? null;
+    if (!is_array($pick) || !$pick) fail('Pick who goes from that group');
+    $pick = array_values(array_unique(array_map(fn($u) => is_numeric($u) ? (int)$u : 0, $pick)));
+    $have = party_members($from);
+    if (array_diff($pick, $have)) fail('Pick who goes from that group');
+    $region = array_key_exists('region_id', $body) ? party_region_in($body['region_id'], $cid) : ($from['region_id'] !== null ? (int)$from['region_id'] : null);
+    db()->beginTransaction();
+    try {
+        db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode(array_values(array_diff($have, $pick))), $from['id']]);
+        db()->prepare('INSERT INTO party_groups (campaign_id, name, members_json, region_id, map_id, x, y, is_main) VALUES (?,?,?,?,?,?,?,0)')
+            ->execute([$cid, $name, json_encode($pick), $region, $from['map_id'], $from['x'], $from['y']]);   // they start where the group was
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+}
+/** GM: change the fields of group id that the request names. */
+function group_save(int $cid): void {
+    $body = body();
+    $has = fn($k) => array_key_exists($k, $body);
+    $g = group_row($cid, $body['id'] ?? null);
+    $name = $g['name'];
+    if ($has('name')) {
+        $name = trim((string)str_in($body['name'], 100));
+        if ($name === '') fail('Give the group a name');
+    }
+    $region = $g['region_id'] !== null ? (int)$g['region_id'] : null;
+    if ($has('region_id')) $region = party_region_in($body['region_id'], $cid);
+    $token = $g['token_id'] !== null ? (int)$g['token_id'] : null;
+    if ($has('token_id')) {
+        if ($body['token_id'] === null || $body['token_id'] === '') $token = null;
+        else {
+            $st = db()->prepare('SELECT id FROM tokens WHERE id=? AND campaign_id=?');
+            $st->execute([int_in($body['token_id'], 1), $cid]);
+            if (!$st->fetchColumn()) fail('That token isn\'t one of this campaign\'s', 400);
+            $token = (int)$body['token_id'];
+        }
+    }
+    if ($has('is_main') && !$body['is_main'] && $g['is_main']) fail('Make another group the main one instead');
+    db()->beginTransaction();
+    try {
+        db()->prepare('UPDATE party_groups SET name=?, region_id=?, token_id=? WHERE id=?')->execute([$name, $region, $token, $g['id']]);
+        if (!empty($body['is_main']) && !$g['is_main']) party_make_main($cid, (int)$g['id']);
+        elseif ($g['is_main'] && $has('region_id')) party_set_current_region($cid, $region);
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+}
+/** GM: put group id on a map at x, y, or (map_id null) off the maps. */
+function group_move(int $cid): void {
+    $body = body();
+    $g = group_row($cid, $body['id'] ?? null);
+    if (($body['map_id'] ?? null) === null || $body['map_id'] === '') {
+        db()->prepare('UPDATE party_groups SET map_id=NULL, x=NULL, y=NULL WHERE id=?')->execute([$g['id']]);
+    } else {
+        $map = map_row($cid, int_in($body['map_id'], 1), true);
+        if ($map['width'] === null || $map['height'] === null) fail('Give the map a picture before putting the party on it');
+        $same = $g['map_id'] !== null && (int)$g['map_id'] === (int)$map['id'];
+        $x = map_coord(array_key_exists('x', $body) ? $body['x'] : ($same ? $g['x'] : $map['width'] / 2), $map['width']);   // no x or y: where it was, else the middle
+        $y = map_coord(array_key_exists('y', $body) ? $body['y'] : ($same ? $g['y'] : $map['height'] / 2), $map['height']);
+        db()->prepare('UPDATE party_groups SET map_id=?, x=?, y=? WHERE id=?')->execute([$map['id'], $x, $y, $g['id']]);
+    }
+    touch_campaign($cid);
+}
+/** GM: fold group id into into_id. Merging the main group makes into_id the main one. */
+function group_merge(int $cid): void {
+    $body = body();
+    $g = group_row($cid, $body['id'] ?? null);
+    $into = group_row($cid, $body['into_id'] ?? null);
+    if ($g['id'] === $into['id']) fail('Pick a different group to merge into');
+    db()->beginTransaction();
+    try {
+        db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
+            ->execute([json_encode(array_values(array_unique([...party_members($into), ...party_members($g)]))), $into['id']]);
+        db()->prepare('DELETE FROM party_groups WHERE id=?')->execute([$g['id']]);
+        if ($g['is_main']) party_make_main($cid, (int)$into['id']);
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+}

@@ -1289,7 +1289,7 @@ if ($method === 'POST') require_csrf();
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map',
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
@@ -1495,6 +1495,7 @@ try {
             $pdo->rollBack();
             throw $e;
         }
+        party_sync_main_region($cid);   // the main group's region follows current_region
         out(['ok' => true]);
 
     case 'campaign_delete':
@@ -1561,6 +1562,7 @@ try {
         $isGmTarget->execute([$cid, $uid]);
         if ($isGmTarget->fetchColumn() === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
+        party_remove_member($cid, $uid);
         out(['ok' => true]);
 
     case 'member_character': // a player names their own character; a GM can name anyone's
@@ -3041,12 +3043,47 @@ try {
         need_maps();
         out(['maps' => maps_list($cid, $isGm)]);
 
-    case 'map': // one map with its pins, routes and party groups (groups come with the tool that makes them)
+    case 'map': // one map with its pins, routes and party groups
         $cid = cid();
         $isGm = role($cid) === 'gm';
         need_maps();
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
-        out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm), 'groups' => []]);
+        out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
+            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id']))]);
+
+    case 'groups': // every member: the party's groups, main first
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['groups' => party_groups($cid, $isGm)]);
+
+    case 'group_split': // GMs: from_id, name, members [user ids from that group], region_id (default: the group's)
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_split($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_save': // GMs: id, then name, region_id, is_main, token_id
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_save($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_move': // GMs: id, map_id (null to take it off the maps), x, y
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_move($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_merge': // GMs: id, into_id
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_merge($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
 
     case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y
         $cid = cid();
