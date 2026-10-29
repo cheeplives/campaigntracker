@@ -1192,3 +1192,41 @@ path.map-route-line.secret { stroke: var(--dim); }
 .enc-sheet { cursor: pointer; }
 .enc-kinds { margin-right: 6px; }
 .sheet-old dd { overflow-wrap: anywhere; margin: 0; }
+/* ---------- At the Table: the campaign right now, in big type (app.js viewTable), and the panel (panel.html) */
+.table-view { max-width: 720px; margin: 0 auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.tv-head { display: flex; flex-direction: column; gap: 2px; }
+.tv-camp { font: 600 13px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
+.tv-date { font: 700 clamp(22px, 6vw, 34px)/1.15 var(--disp); }
+.tv-shift { color: var(--dim); font-size: 16px; }
+.tv-head .chip { align-self: flex-start; margin-top: 4px; }
+.tv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tv-card { background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+.tv-card > b, .tv-sec > b { display: block; font: 600 12px/1.2 var(--disp); letter-spacing: .06em; text-transform: uppercase; color: var(--label); margin-bottom: 4px; }
+.tv-card .big { font-size: 18px; }
+.tv-moons { display: flex; flex-direction: column; gap: 2px; }
+.tv-gm { gap: 8px; flex-wrap: wrap; }
+.tv-sec { display: flex; flex-direction: column; gap: 6px; }
+.tv-today { list-style: none; margin: 0; padding: 0; }
+.tv-today li { padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.tv-entry { background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.tv-entry.secret { border-color: var(--secret); }
+.tv-entry h3 { margin: 0 0 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.tv-notes { max-height: 16em; overflow: auto; }
+.tv-seg { display: flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.tv-seg button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 6px 8px; }
+.tv-seg button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.tv-note textarea, .tv-sec input[type=search], .tv-entry-pick input { width: 100%; box-sizing: border-box; }
+.tv-links .tv-link { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tv-links code { word-break: break-all; }
+/* the panel: no top bar or footer, and room to breathe in a narrow popover */
+.panel-page .table-view { padding-top: 10px; }
+.panel-foot { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.panel-ask { max-width: 460px; margin: 24px auto; }
+.panel-ask input { width: 100%; box-sizing: border-box; }
+/* overlay (OBS browser source): see-through, larger, and only the date, weather, light and moons */
+.panel-overlay, .panel-overlay body { background: transparent !important; }
+.panel-overlay .table-view { max-width: 460px; margin: 0; font-size: 18px; background: color-mix(in srgb, var(--bg) 78%, transparent); border-radius: 12px; }
+.panel-overlay .tv-gm, .panel-overlay .tv-sec, .panel-overlay .panel-foot, .panel-overlay .tv-card:nth-child(4) { display: none; }
+.panel-overlay .tv-card { background: transparent; }
+.panel-page .topbar { display: none; }
+.tv-entry h3 .chip { background: var(--panel-2); color: var(--text); font-size: 12px; }

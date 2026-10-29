@@ -675,3 +675,24 @@ CREATE TABLE IF NOT EXISTS sheet_presence (
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Panel links (022): a code that lets the At the Table panel, shown inside a VTT or a stream, act as the member who
+-- made it (scope panel) or as any player, read-only (public_panel, no user). Only the code's SHA-256 is kept.
+CREATE TABLE IF NOT EXISTS connection_keys (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  scope VARCHAR(16) NOT NULL,
+  label VARCHAR(80) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  options_json TEXT NULL,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at DATETIME NULL,
+  revoked_at DATETIME NULL,
+  UNIQUE KEY uq_token (token_hash),
+  KEY idx_campaign (campaign_id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

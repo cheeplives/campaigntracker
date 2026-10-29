@@ -110,7 +110,8 @@ test("every table of a campaign is copied, so a new one can't be left behind", a
   const r = await api(page, "campaign_copy", { name: "Tables 2" }, cid);
   expect(r.status, JSON.stringify(r.json)).toBe(200);
   const withCampaign = sql("SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema=DATABASE() AND column_name='campaign_id'")
-    .trim().split("\n").filter(t => t !== "campaign_members");
+    // panel links belong to the people who made them, and a copy mustn't open the original's panels
+    .trim().split("\n").filter(t => t !== "campaign_members" && t !== "connection_keys");
   for (const t of withCampaign) expect(r.json.tables, `${t} is not in CAMPAIGN_COPY (api/index.php)`).toContain(t);
 });
 

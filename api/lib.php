@@ -304,6 +304,8 @@ function chronicle_status(array $user): string {
 function current_user(): ?array {
   static $u = false;
   if ($u !== false) return $u;
+  // A panel link (api/panel.php) signs the request in as its member instead of the session.
+  if (isset($GLOBALS['panel_user'])) return $u = $GLOBALS['panel_user'];
   if (empty($_SESSION['user_id'])) return $u = null;
   $st = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
   $st->execute([$_SESSION['user_id']]);

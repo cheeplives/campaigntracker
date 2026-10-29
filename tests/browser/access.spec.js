@@ -17,7 +17,7 @@ const ACTIONS = [
 ];
 
 /** Open to anyone, signed in or not. */
-const PUBLIC = ["fanwiki_wikis", "starter_sources"];
+const PUBLIC = ["fanwiki_wikis", "starter_sources", "owlbear_manifest"];
 /** Need an approved account, and no campaign. */
 const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb", "templates", "template", "template_save", "template_fork", "template_delete"];
 /** Site admins only. */

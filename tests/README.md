@@ -78,6 +78,18 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
+- **table**: At the Table sits first under Party and shows the date, shift, weather, light, moons and the party's
+  region; Pass a shift moves the clock; an Encyclopedia lookup finds names (never a secret entry for a player); a note
+  goes on the current shift or, escaped, at the end of an entry's Public notes (a GM's GM-only one in its GM notes, a
+  player never on a secret entry). Panel links: members make and revoke their own, only GMs make public ones and revoke
+  anyone's, and only the code's hash is stored; a link reaches only its own campaign (the cid asked for is ignored) and
+  its short list of actions, needs no CSRF token, acts as its maker (a player's can't pass time), and stops when its
+  member leaves; a public link gets no secret event, entry, GM note, GM reminder or weather seed, changes nothing, and
+  stops when its GM stops being one; the Owlbear Rodeo manifest is public with CORS and opens panel.html; only
+  panel.html may be framed (.htaccess). panel.html opens with only a link and no cookie in a frame on another origin,
+  catches up when the GM passes time, takes the code out of the address, and asks for a new link once revoked; a
+  public overlay link is see-through with only the date, weather, light and moons; the GM makes a link from At the
+  Table, sees it once, and revokes it.
 - **current-day**: a campaign opens on the Current Day tab and the GM's browser
   saves today's shift weather; players get today's weather only up to the current
   shift (never the forecast), nothing for later days, and everything once allowed;

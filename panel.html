@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-panel>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chronicle · At the Table</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <link rel="icon" href="static/icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="static/icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#16140f">
+  <link rel="stylesheet" href="static/fonts.css">
+  <link rel="stylesheet" href="static/style.css">
+  <script src="static/theme-init.js"></script>
+</head>
+<!-- At the Table on its own, for a virtual tabletop's frame (Owlbear Rodeo, Foundry), OBS or a shared screen. The same app
+     as index.html, signed in with a panel link instead of the session (static/app.js PANEL, api/panel.php). This is the
+     one page another site may frame (.htaccess). -->
+<body class="panel-page">
+  <header class="topbar" hidden><nav id="topnav"></nav></header>
+  <main id="app"><p class="muted pad">Loading…</p></main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="static/kit.js"></script>
+  <script src="static/engine.js"></script>
+  <script src="static/sessions.js"></script>
+  <script src="static/mapgeo.js"></script>
+  <script src="static/vtt.js"></script>
+  <script src="static/vendor/leaflet/leaflet.js"></script>
+  <script src="static/tokens.js"></script>
+  <script src="static/maps.js"></script>
+  <script src="static/timeline.js"></script>
+  <script src="static/richtext.js"></script>
+  <script src="static/encyclopedia.js"></script>
+  <script src="static/generators.js"></script>
+  <script src="static/day-export.js"></script>
+  <script src="static/calendar-file.js"></script>
+  <script src="static/scabard.js"></script>
+  <script src="static/fanwikis.js"></script>
+  <script src="static/app.js"></script>
+</body>
+</html>

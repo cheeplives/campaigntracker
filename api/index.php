@@ -14,6 +14,7 @@ require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
 require __DIR__ . '/sheets.php';
 require __DIR__ . '/maps.php';
+require __DIR__ . '/panel.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
@@ -92,7 +93,8 @@ function role(int $cid): string {
     $st = db()->prepare('SELECT id FROM campaigns WHERE id=?');
     $st->execute([$cid]);
     if (!$st->fetch()) fail('Campaign not found', 404);
-    if ($u['is_admin']) $r = 'gm';
+    if (panel_public()) $r = 'player';                    // a public panel link: any player, with no account of its own
+    elseif ($u['is_admin']) $r = 'gm';
     else {
         $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $st->execute([$cid, $u['id']]);
@@ -1306,13 +1308,18 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
 require_method('GET', 'POST');
 // Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
 // runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
-const PUBLIC_ACTIONS = ['fanwiki_wikis', 'starter_sources'];   // the fan wiki list and the starter templates' sources, public like the About page that shows them
+// The fan wiki list and the starter templates' sources, public like the About page that shows them; the Owlbear
+// Rodeo extension's manifest (api/panel.php).
+const PUBLIC_ACTIONS = ['fanwiki_wikis', 'starter_sources', 'owlbear_manifest'];
+// The At the Table panel signs in with a panel link's code instead of the session, for a short list of actions
+// (api/panel.php); a header no other site can send needs no CSRF token.
+if (panel_request()) panel_gate($action);
 if (!in_array($action, PUBLIC_ACTIONS, true)) me();
-if ($method === 'POST') require_csrf();
+if ($method === 'POST' && !panel_request()) require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
-$readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+$readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'panel_whoami', 'panel_links', 'owlbear_manifest', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
@@ -1326,7 +1333,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
     'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
-    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'character_create', 'character_save', 'character_delete'];
+    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'entry_note_add', 'character_create', 'character_save', 'character_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1496,6 +1503,34 @@ try {
         $st = db()->prepare('SELECT updated_at FROM campaigns WHERE id=?');
         $st->execute([$cid]);
         out(['changed' => (string)$st->fetchColumn()]);
+
+    case 'owlbear_manifest': // anyone: Owlbear Rodeo reads it from its own page when a GM or player adds the extension
+        owlbear_manifest();
+
+    case 'panel_whoami': // At the Table: who this page is signed in as, and through which panel link
+        $cid = cid();
+        $role = role($cid);
+        $k = panel_link();
+        out(['campaign_id' => $cid, 'role' => $role, 'name' => $k && $k['scope'] === 'public_panel' ? null : (string)me()['display_name'],
+            'link' => $k ? panel_link_out($k) : null]);
+
+    case 'panel_links': // your panel links in this campaign (a GM: everyone's)
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        out(['ready' => has_panel_links(), 'links' => has_panel_links() ? panel_links_list($cid, $isGm) : []]);
+
+    case 'panel_link_create':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_panel_links();
+        out(['ok' => true, 'link' => panel_link_create($cid, $isGm)]);
+
+    case 'panel_link_revoke':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_panel_links();
+        panel_link_revoke($cid, $isGm);
+        out(['ok' => true]);
 
     case 'campaign_create':
         $u = me();
@@ -2541,6 +2576,20 @@ try {
         }
         db()->commit();
         out(['ok' => true, 'added' => $added, 'aliased' => $aliased]);
+
+    case 'entry_note_add':
+        // A line added to the end of an entry's notes, from At the Table: anyone to its Public notes (not on a secret
+        // entry), and a GM to its GM notes with gm_only.
+        $cid = cid();
+        $role = role($cid);
+        need_encyclopedia();
+        $e = entry_row($cid, int_in(p('id'), 1), $role);
+        $text = trim((string)str_in(p('body'), 5000, false));
+        if ($text === '') fail('Note is empty');
+        $para = '<p>' . nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'), false) . '</p>';
+        $col = $role === 'gm' && p('gm_only') ? 'gm_notes' : 'notes';
+        db()->prepare("UPDATE encyclopedia_entries SET $col=? WHERE id=?")->execute([rich_html_clean((string)$e[$col] . $para), $e['id']]);
+        out(['ok' => true, 'id' => (int)$e['id']]);
 
     case 'entry_delete':
         $cid = cid();
