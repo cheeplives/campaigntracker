@@ -60,6 +60,26 @@ pips and clocks, condition toggles, current/max shown as a bar.
 - A member with no active character keeps today's plain-text `character_name`, so nothing changes for anyone until
   they make a sheet.
 
+### PCs, NPCs and the Encyclopedia
+
+- **Every character has an Encyclopedia entry**, category Person. Making a character makes its entry; a GM can
+  also add a sheet to an existing Person entry ("Add character sheet"), turning a known NPC into one with stats. The
+  entry holds the story side (public notes, GM notes, aliases, connections, mentions); the sheet holds the numbers.
+- **Name:** renaming the character or the entry renames both.
+- **PC or NPC:** every character is marked one or the other and can be switched back and forth at any time by its
+  owner or a GM. Kind is separate from who owns the sheet: switching a PC to NPC (say, the player left) offers to
+  hand the sheet to the GM, and switching an NPC to PC offers to hand it to a player.
+- **What the entry shows:** a character card at the top with the portrait, a PC or NPC badge, "Played by <member>"
+  for PCs, the game, the template's *Summary* fields (class, level, ancestry and the like, flagged in the template
+  editor the way *Play* fields are) and an **Open sheet** link. Hidden fields never show on the card to anyone the
+  sheet hides them from.
+- **The Encyclopedia list** gets a PCs / NPCs filter alongside the category filter.
+- **NPC sheets start hidden from players** (the whole sheet: GMs rarely want stats shown), with a *Show sheet to
+  players* switch. The entry itself follows its own GM-only setting as entries do today, so a secret NPC stays
+  secret.
+- **Deleting a character** deletes the sheet and keeps the entry, so the story isn't lost; the entry's card just goes
+  away.
+
 ### Template library
 
 - Site-wide, not per campaign, with nothing hidden: every template can be found by every user.
@@ -72,7 +92,7 @@ pips and clocks, condition toggles, current/max shown as a bar.
 
 ### Template editor
 
-- Sections and fields in a list, dragged to reorder. Each field has a label, a type and a *Play* flag. A live preview
+- Sections and fields in a list, dragged to reorder. Each field has a label, a type, a *Play* flag and a *Summary* flag (shown on the character's Encyclopedia card). A live preview
   of the sheet sits beside the list (below it on a phone).
 - **Import from PDF:** pick a PDF, and the browser drafts a template from it with pdf.js: from its form fields when
   it has them, otherwise from the text on the page. The draft opens in the editor for tidying.
@@ -118,9 +138,11 @@ This is a database change: one new migration (the next free number in `db/migrat
 - **`sheet_templates`**: id, name, game, edition, `author_id` (users), `forked_from_id` (sheet_templates, NULL),
   `layout` (JSON: sections and fields), `version`, `is_listed`, `is_starter`, created_at, updated_at. Fork and use
   counts are counted on demand, not stored.
-- **`characters`**: id, `campaign_id`, `owner_id` (users), `template_id`, name, `template_version` (the version last
-  shown), `field_values` (JSON keyed by field key), `hidden` (JSON list of hidden field and section keys), `version`,
-  created_at, updated_at. Deleted with its campaign.
+- **`characters`**: id, `campaign_id`, `owner_id` (users), `template_id`, `entry_id` (encyclopedia_entries, unique;
+  the character's entry, which supplies the name), `kind` ('pc' or 'npc'), `sheet_public` (NPCs: whether players
+  see the sheet), `template_version` (the version last shown), `field_values` (JSON keyed by field key), `hidden`
+  (JSON list of hidden field and section keys), `version`, created_at, updated_at. Deleted with its campaign; deleting
+  the entry is refused while a character uses it.
 - **`campaign_members.active_character_id`** (characters, NULL, set NULL when the character is deleted).
   `AUTHOR_SQL` becomes: active character's name, else `character_name`, else display name.
 
