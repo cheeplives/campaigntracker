@@ -273,7 +273,7 @@ const MapsTab = (() => {
       groupLayer.clearLayers();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
         MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28,
-          draggable: gm, onMove: async xy => { Object.assign(g, { x: xy.x, y: xy.y }); await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); },
+          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet')) });
       }

@@ -4288,7 +4288,10 @@
         const travelId = side ? '' : await travelReg.resolve(), arriveId = await arriveReg.resolve();
         // a side group's trip only moves the clock: the shifts are the main party's, and so is the weather's region
         await passShifts(n, side ? null : label, travelId || null, side ? null : arriveId || null);
-        if (side && arriveId) await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id);
+        if (side && arriveId) {
+          try { await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id); }
+          catch (err) { toast(`${g.name}'s region did not change: ${err.message}`, true); }
+        }
         if (g && g.map_id && toName.value.trim()) {
           try {
             const pin = MapGeo.pinFor(await pinsOf(g.map_id), toName.value);

@@ -378,7 +378,7 @@ test("Party: a side group's trip leaves the main party's region and shifts alone
   await page.locator(".depart").getByLabel("Who is travelling").selectOption({ label: "Scouts" });
   await page.locator(".depart").getByLabel("From", { exact: true }).fill("Bree");
   await page.locator(".depart").getByLabel("To", { exact: true }).fill("Weathertop");
-  await page.locator(".depart select").last().selectOption({ label: "Gamma" });
+  await page.locator(".depart").getByLabel("Region on arrival").selectOption({ label: "Gamma" });
   await page.getByRole("button", { name: /Depart/ }).click();
   await expect(page).toHaveURL(/\/calendar$/);
   const camp = (await api(page, "campaign", undefined, cid)).json.campaign;
