@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Campaign Chronicle's crescent and star in white on nothing, for Owlbear Rodeo's toolbar (which is dark and
+       draws its own button), served to Owlbear's page by .htaccess. -->
+  <defs>
+    <mask id="c">
+      <rect width="24" height="24" fill="#fff"/>
+      <circle cx="14.5" cy="9.5" r="6.5" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="10.5" cy="13" r="8.5" fill="#fff" mask="url(#c)"/>
+  <path d="M17.5 2.5l1.1 3 3 1.1-3 1.1-1.1 3-1.1-3-3-1.1 3-1.1z" fill="#fff"/>
+</svg>
