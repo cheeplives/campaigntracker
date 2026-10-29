@@ -1,12 +1,10 @@
 // Virtual tabletop map files, read and written in the browser (and under Node for the tests): Universal VTT
-// (.uvtt, .dd2vtt, .df2vtt), a Foundry scene's JSON with its picture, MapTool's .rpmap and Fantasy Grounds' .mod.
-// Each is turned into the same shape: the map's picture, its grid and, where the file says, the distance a square is.
-// The zips are read here with the browser's own DecompressionStream, so the server never unpacks one.
+// (.uvtt, .dd2vtt, .df2vtt) and a Foundry scene's JSON with its picture. Each is turned into the same shape: the map's
+// picture, its grid and, where the file says, the distance a square is. Foundry, Roll20, Owlbear Rodeo, MapTool and Fantasy
+// Grounds all read Universal VTT, so it is also what a map is exported as.
 (function (root) {
-  const MAX_ENTRY = 300 * 1024 * 1024;   // no picture in a map file is this big; a larger entry is refused, not read
-
   const fail = msg => { throw new Error(msg); };
-  const NOT_VTT = "That isn't a Universal VTT, Foundry, MapTool or Fantasy Grounds file";
+  const NOT_VTT = "That isn't a Universal VTT file or a Foundry scene";
 
   // ---------------------------------------------------------------- bytes
 
@@ -34,82 +32,6 @@
     return null;
   }
   const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
-
-  // ---------------------------------------------------------------- zip
-
-  /** The entries of a zip: [{ name, size, read() → Promise<Uint8Array> }]. Stored and deflated entries only. */
-  function readZip(bytes) {
-    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    let end = -1;
-    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 0xffff); i--) {
-      if (v.getUint32(i, true) === 0x06054b50) { end = i; break; }
-    }
-    if (end < 0) fail(NOT_VTT);
-    const count = v.getUint16(end + 10, true);
-    let at = v.getUint32(end + 16, true);
-    if (count === 0xffff || at === 0xffffffff) fail('That file is too big to read here');
-    const out = [];
-    for (let n = 0; n < count; n++) {
-      if (at + 46 > bytes.length || v.getUint32(at, true) !== 0x02014b50) fail(NOT_VTT);
-      const method = v.getUint16(at + 10, true), csize = v.getUint32(at + 20, true), size = v.getUint32(at + 24, true);
-      const nameLen = v.getUint16(at + 28, true), extraLen = v.getUint16(at + 30, true), noteLen = v.getUint16(at + 32, true);
-      const local = v.getUint32(at + 42, true);
-      const name = text(bytes.subarray(at + 46, at + 46 + nameLen)).replace(/\\/g, '/');
-      at += 46 + nameLen + extraLen + noteLen;
-      if (name.endsWith('/')) continue;
-      out.push({ name, size, read: async () => {
-        if (size > MAX_ENTRY) fail('A picture in that file is too big');
-        if (v.getUint32(local, true) !== 0x04034b50) fail(NOT_VTT);
-        const start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
-        const raw = bytes.subarray(start, start + csize);
-        if (method === 0) return raw;
-        if (method !== 8) fail('That file is packed in a way this page can\'t read');
-        const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-        const parts = [];
-        let total = 0;
-        for (const reader = stream.getReader(); ;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          total += value.length;
-          if (total > MAX_ENTRY) { reader.cancel(); fail('A picture in that file is too big'); }
-          parts.push(value);
-        }
-        const all = new Uint8Array(total);
-        let k = 0;
-        for (const p of parts) { all.set(p, k); k += p.length; }
-        return all;
-      } });
-    }
-    return out;
-  }
-
-  // ---------------------------------------------------------------- a little XML
-
-  const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
-  const unescape = s => s.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1)) : ENT[e] ?? m);
-
-  /** XML as a tree of { tag, attrs, children, text }: enough for MapTool's and Fantasy Grounds' files. */
-  function parseXml(src) {
-    const top = { tag: '#root', attrs: {}, children: [], text: '' }, stack = [top];
-    const re = /<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>|<\?[\s\S]*?\?>|<!DOCTYPE[^>]*>|<\/([^\s>]+)\s*>|<([^\s/>]+)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g;
-    let m;
-    while ((m = re.exec(src))) {
-      const cur = stack[stack.length - 1];
-      if (m[1] !== undefined) cur.text += m[1];
-      else if (m[2]) { if (stack.length > 1 && cur.tag === m[2]) stack.pop(); }
-      else if (m[3]) {
-        const attrs = {};
-        for (const a of m[4].matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) attrs[a[1]] = unescape(a[2] ?? a[3]);
-        const node = { tag: m[3], attrs, children: [], text: '', parent: cur };
-        cur.children.push(node);
-        if (!m[5]) stack.push(node);
-      } else if (m[6] !== undefined) cur.text += unescape(m[6]);
-    }
-    return top;
-  }
-  const all = (node, tag, out = []) => { for (const c of node.children) { if (c.tag === tag) out.push(c); all(c, tag, out); } return out; };
-  const first = (node, tag) => all(node, tag)[0] || null;
-  const childText = (node, tag) => { const c = node && node.children.find(x => x.tag === tag); return c ? c.text.trim() : null; };
 
   // ---------------------------------------------------------------- the formats
 
@@ -155,83 +77,19 @@
       notes, dropped: { walls: (json.walls || []).length, lights: (json.lights || []).length } };
   }
 
-  /** MapTool's .rpmap: the zone's grid in content.xml, its pictures under assets/. */
-  async function fromMapTool(entries, fileName) {
-    const content = entries.find(e => e.name === 'content.xml');
-    if (!content) fail(NOT_VTT);
-    const doc = parseXml(text(await content.read()));
-    const zone = first(doc, 'zone') || doc;
-    const g = zone.children.find(c => c.tag === 'grid');
-    const cls = (g && g.attrs.class) || '';
-    // MapTool's vertical hex grid stands in columns (flat-topped hexes), its horizontal one in rows (pointy-topped)
-    const type = /HexGridVertical/i.test(cls) ? 'hex_flat' : /HexGridHorizontal/i.test(cls) ? 'hex_pointy' : 'square';
-    const size = +childText(g, 'size') || 0;
-    const per = +childText(zone, 'unitsPerCell') || 0;
-    // the zone's map picture when it names one, else the largest picture in the file
-    const want = childText(first(zone, 'mapAsset') || { children: [] }, 'id') || childText(first(first(zone, 'backgroundPaint') || { children: [] }, 'assetId') || { children: [] }, 'id');
-    const pics = entries.filter(e => e.name.startsWith('assets/') && e.size > 0);
-    let pick = want && pics.find(e => e.name.replace(/^assets\//, '').replace(/\.[^.]+$/, '') === want && /\.\w+$/.test(e.name));
-    let bytes = pick ? await pick.read() : null;
-    if (!pictureType(bytes)) {
-      bytes = null;
-      for (const e of pics.sort((a, b) => b.size - a.size)) { const b = await e.read(); if (pictureType(b)) { bytes = b; pick = e; break; } }
-    }
-    if (!bytes) fail('No map picture in that file');
-    const name = childText(zone, 'name') || childText(zone, 'playerAlias') || baseName(fileName);
-    return { format: 'MapTool map', name, picture: picture(bytes, name), grid: grid(type, size, childText(g, 'offsetX'), childText(g, 'offsetY')),
-      scale: size > 0 && per > 0 ? { per_square: per, unit: 'ft' } : null, notes: [], dropped: { walls: 0, lights: 0 } };
-  }
-
-  /** A Fantasy Grounds module's image records (db.xml, or client.xml/common.xml), each with its picture in the zip. */
-  async function fromFantasyGrounds(entries, fileName) {
-    const db = ['db.xml', 'client.xml', 'common.xml'].map(n => entries.find(e => e.name.toLowerCase() === n)).find(Boolean);
-    if (!db) fail(NOT_VTT);
-    const doc = parseXml(text(await db.read()));
-    const byName = new Map(entries.map(e => [e.name.toLowerCase(), e]));
-    const maps = [];
-    for (const img of all(doc, 'image').filter(n => n.attrs.type === 'image')) {
-      const bmp = first(img, 'bitmap');
-      const path = bmp && bmp.text.trim().replace(/\\/g, '/').replace(/@.*$/, '').replace(/^\//, '');
-      const entry = path && byName.get(path.toLowerCase());
-      if (!entry) continue;
-      const record = img.parent;
-      const label = childText(record, 'name') || baseName(path);
-      const [gx, gy] = (childText(img, 'gridsize') || '').split(',').map(Number);
-      const [ox, oy] = (childText(img, 'gridoffset') || '').split(',').map(Number);
-      const gt = (childText(img, 'gridtype') || '').toLowerCase();
-      const type = gt === 'hexrow' ? 'hex_pointy' : gt === 'hexcolumn' ? 'hex_flat' : 'square';
-      const off = childText(img, 'grid') === 'off';
-      const size = gx > 0 ? gx : gy > 0 ? gy : 0;
-      maps.push({ label, read: async () => ({ format: 'Fantasy Grounds module', name: label, picture: picture(await entry.read(), label),
-        grid: off ? null : grid(type, size, ox, oy), scale: !off && size > 0 ? { per_square: 5, unit: 'ft', guessed: true } : null,
-        notes: [], dropped: { walls: 0, lights: 0 } }) });
-    }
-    if (!maps.length) fail('No map picture in that file');
-    return maps;
-  }
-
-  /**
-   * Read the files a GM picked ([{ name, bytes }]): one VTT file, or a Foundry scene's JSON with its picture. Resolves
-   * to a list of maps found ({ label, read() }): one for most files, one per picture for a Fantasy Grounds module.
-   */
+  /** The map in the files a GM picked ([{ name, bytes }]): one Universal VTT file, or a Foundry scene's JSON with its
+   * picture. */
   async function readVtt(files) {
     if (!files || !files.length) fail('Choose a file');
     const json = files.find(f => /\.(uvtt|dd2vtt|df2vtt|json)$/i.test(f.name));
     if (json) {
       let data;
       try { data = JSON.parse(text(json.bytes)); } catch { fail(NOT_VTT); }
-      if (data && data.resolution && 'image' in data) return [{ label: baseName(json.name), read: async () => fromUvtt(data, json.name) }];
-      if (data && ('grid' in data || 'gridType' in data) && ('width' in data || 'img' in data || 'background' in data)) {
-        const pic = files.find(f => f !== json && pictureType(f.bytes));
-        return [{ label: String(data.name || baseName(json.name)), read: async () => fromFoundry(data, pic) }];
-      }
-      fail(NOT_VTT);
+      if (data && data.resolution && 'image' in data) return fromUvtt(data, json.name);
+      if (data && ('grid' in data || 'gridType' in data) && ('width' in data || 'img' in data || 'background' in data))
+        return fromFoundry(data, files.find(f => f !== json && pictureType(f.bytes)));
     }
-    const f = files[0];
-    if (!/\.(rpmap|mod|zip)$/i.test(f.name)) fail(NOT_VTT);
-    const entries = readZip(f.bytes);
-    if (entries.some(e => e.name === 'content.xml')) return [{ label: baseName(f.name), read: () => fromMapTool(entries, f.name) }];
-    return fromFantasyGrounds(entries, f.name);
+    fail(NOT_VTT);
   }
 
   /** A map as a Universal VTT file (the .dd2vtt JSON), with its picture's bytes; it needs the map's grid. */
@@ -248,7 +106,7 @@
     });
   }
 
-  const VTT = { readVtt, readZip, parseXml, toUvtt, pictureType, toBase64, fromBase64, NOT_VTT };
+  const VTT = { readVtt, toUvtt, pictureType, toBase64, fromBase64, NOT_VTT };
   if (typeof module !== 'undefined' && module.exports) module.exports = VTT;
   else root.VTT = VTT;
 })(typeof window !== 'undefined' ? window : globalThis);

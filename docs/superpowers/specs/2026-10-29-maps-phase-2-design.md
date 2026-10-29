@@ -3,13 +3,16 @@
 GitHub issue #112. Phase 1 (#129) built the Maps tab: maps, scale and measuring, pins, routes, party groups and the
 Tokens tab. Phase 2 adds what the brainstorm put next:
 
-1. **VTT files:** import a map, with its grid, from the virtual tabletops Josh named (Foundry, Roll20, Owlbear Rodeo,
-   Alchemy, TaleSpire, MapTool, Fantasy Grounds) and from the map makers that feed them, and export a map back out.
+1. **VTT files:** import a map, with its grid, as a Universal VTT file or a Foundry scene, and export a map back out as
+   Universal VTT, which every virtual tabletop Josh named can read.
 2. **A grid overlay:** squares or hexes drawn over the map, lined up with the grid the scale dialog stores.
 3. **Plan this trip:** send a measured path or a saved route to the Travel tab, and have Depart move the party's
    marker to where the route ends.
 
-Phase 3 (grid detection on plain pictures, maps inside maps) and the battlemat tokens phase stay out of scope.
+Phase 3 (grid detection on plain pictures, maps inside maps) stays out of scope. Trimmed on 2026-10-29 in the VTT
+companion brainstorm (`vtt-companion/2026-10-29-vtt-companion-design.md`): Chronicle is a companion to a VTT, not one,
+so the MapTool and Fantasy Grounds importers were dropped (Universal VTT already reaches both), and so were battlemat
+tokens, walls, doors, lights and fog, for good.
 
 ## VTT files
 
@@ -24,8 +27,7 @@ and Fantasy Grounds (uvtt2fgu) read it.
 |---|---|---|
 | Dungeondraft, Dungeon Alchemist, DungeonFog, Dungeon Scrawl | Universal VTT | the `.uvtt` / `.dd2vtt` / `.df2vtt` file |
 | Foundry VTT | a scene's JSON (*Export Data*), with the picture kept separately | the scene JSON together with its picture |
-| MapTool | `.rpmap` (a zip of the map's XML and its pictures) | the `.rpmap` file |
-| Fantasy Grounds | a module `.mod` (a zip of `db.xml` and its pictures) | a map picked from the `.mod` file |
+| MapTool, Fantasy Grounds | their own files (`.rpmap`, `.mod`) | not read: export the map's picture from them, or use Universal VTT |
 | Roll20, Owlbear Rodeo, Alchemy, TaleSpire | no map file: a map there is a picture plus grid settings | the plain picture, as now, with the Roll20 70 px button |
 
 TaleSpire builds maps from 3D tiles rather than pictures, so it has nothing to import; it is covered only as far as a
@@ -35,11 +37,9 @@ GM exports a screenshot.
 
 - *+ New map* gets a second way in: **Import a VTT file…**. It takes one file (or, for Foundry, the scene JSON and
   its picture together) and works out the format from the name and contents.
-- The file is read **in the browser**: JSON with `JSON.parse`, the zips (`.rpmap`, `.mod`) with a small zip reader
-  in `static/vtt.js` using the browser's own `DecompressionStream('deflate-raw')`. The server never unpacks a zip, so
-  there is no new PHP extension and no zip bomb to guard against. The picture found inside is then uploaded through
-  the same upload code as any map picture (checked by its contents, counted against the campaign's space), and the
-  map is saved with its grid.
+- The file is read **in the browser** (`static/vtt.js`), so the server needs nothing new. The picture found is then
+  uploaded through the same upload code as any map picture (checked by its contents, counted against the campaign's
+  space), and the map is saved with its grid.
 - What is kept from each:
   - **Universal VTT:** the picture; `pixels_per_grid` as the grid size; `map_origin` as the grid offset. Universal
     VTT has no distance per square, so the scale is set to 5 ft a square and the scale dialog opens for the GM to
@@ -48,17 +48,11 @@ GM exports a screenshot.
     `grid.units` (or `gridDistance`, `gridUnits`) as the grid and scale; `grid.type` square or hex; `shiftX`/`shiftY`
     as the offset. Scene *Notes* become note pins (label = the note's text, or "Note"), moved back by the scene's
     padding so they land on the picture.
-  - **MapTool `.rpmap`:** the zone's grid class (square, or hex either way up), `size`, `offsetX`/`offsetY`, and
-    `unitsPerCell` (feet unless the file says otherwise); the picture is the zone's background or, failing that, the
-    largest picture in the file.
-  - **Fantasy Grounds `.mod`:** every `<image>` record with a picture; when there is more than one, the GM picks which
-    (by name). `gridsize` and `gridoffset` give the grid; Fantasy Grounds stores no distance, so 5 ft a square, as for
-    Universal VTT.
 - Walls, doors and lights in a Universal VTT file are not kept: Chronicle has no use for them. The import says so
   ("Walls and lights aren't kept") when the file had any.
 - Anything the file doesn't say is left for the scale dialog, which opens after every import with the grid filled in.
-- A file that isn't one of these, or has no picture, says so plainly ("That isn't a Universal VTT, Foundry,
-  MapTool or Fantasy Grounds file", "No map picture in that file") and nothing is saved.
+- A file that isn't one of these, or has no picture, says so plainly ("That isn't a Universal VTT file or a Foundry
+  scene", "No map picture in that file") and nothing is saved.
 
 ### Export
 
@@ -109,8 +103,7 @@ GM exports a screenshot.
 - Imported pins are GM only to start with, as the GM hasn't seen them yet; the import says how many it added.
 - A GM-only map's route can't be planned by a player (they can't see either).
 - Data sources: none. VTT files are the GM's own; reading a file format to move your own maps between programs needs
-  no licence, so nothing goes in SOURCES-TO-LICENSE.md. The zip reader is the app's own, using the browser's built-in
-  decompression; no new library.
+  no licence, so nothing goes in SOURCES-TO-LICENSE.md. No new library.
 
 ## Database
 
@@ -126,5 +119,6 @@ Until the upgrade runs, maps work as in phase 1 and the Shape and *Show the grid
 
 ## Not in phase 2
 
-Grid detection on plain pictures and maps inside maps (phase 3); battlemat tokens; walls, doors, lights and fog of
-war; exporting pins as Foundry Notes; tiling very large pictures; terrain per leg of a route.
+Grid detection on plain pictures and maps inside maps (phase 3); exporting pins as Foundry Notes; tiling very large
+pictures; terrain per leg of a route. Dropped for good: MapTool and Fantasy Grounds importers, battlemat tokens, walls,
+doors, lights and fog of war.

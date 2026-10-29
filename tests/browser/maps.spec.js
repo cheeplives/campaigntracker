@@ -556,7 +556,7 @@ test("Maps: a GM imports a Universal VTT file, and a Foundry scene whose notes b
   await page.goto(`#/c/${cid}/maps`);
   await page.getByRole("button", { name: "+ New map" }).click();
   await page.getByLabel("Import a VTT file").setInputFiles({ name: "notes.json", mimeType: "application/json", buffer: Buffer.from("{\"a\":1}") });
-  await expect(page.locator("#toast")).toContainText("That isn't a Universal VTT, Foundry, MapTool or Fantasy Grounds file");
+  await expect(page.locator("#toast")).toContainText("That isn't a Universal VTT file or a Foundry scene");
   expect((await api(page, "maps", undefined, cid)).json.maps).toHaveLength(2);
   expectNoErrors(errors);
 });

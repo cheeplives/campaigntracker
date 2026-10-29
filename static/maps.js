@@ -10,7 +10,7 @@ const MapsTab = (() => {
   const G = MapGeo, { el } = KIT;
   const UNITS = [['ft', 'Feet'], ['m', 'Metres'], ['mi', 'Miles'], ['km', 'Kilometres'], ['au', 'Astronomical units'], ['ly', 'Light-years']];
   const PICTURES = 'image/png,image/jpeg,image/gif,image/webp';
-  const VTT_FILES = '.uvtt,.dd2vtt,.df2vtt,.json,.rpmap,.mod,' + PICTURES;
+  const VTT_FILES = '.uvtt,.dd2vtt,.df2vtt,.json,' + PICTURES;
 
   /** A map's pixel position <-> Leaflet's. */
   const toLatLng = (x, y) => [-y, x];
@@ -105,24 +105,15 @@ const MapsTab = (() => {
             }
           } }), el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
         }, '', 'Search open picture libraries for the map\'s picture'),
-        el('label', { class: 'button file-add', 'data-tip': 'A Universal VTT file (Dungeondraft, Dungeon Alchemist…), a Foundry scene\'s JSON with its picture, a MapTool .rpmap or a Fantasy Grounds .mod' },
+        el('label', { class: 'button file-add', 'data-tip': 'A Universal VTT file (from Dungeondraft, Dungeon Alchemist, DungeonFog…), or a Foundry scene\'s JSON picked together with its picture' },
           el('input', { type: 'file', multiple: true, accept: VTT_FILES, class: 'file-input', 'aria-label': 'Import a VTT file', onchange: ev => importVtt([...ev.target.files]) }), 'Import a VTT file…'),
         btn('Cancel', () => d.close())));
     // a VTT file: read here, then the map is made with its picture, grid and scale, and its notes become GM-only pins
     async function importVtt(files) {
       if (!files.length) return;
-      let found;
-      try { found = await VTT.readVtt(await Promise.all(files.map(async f => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) })))); }
-      catch (err) { return toast(err.message, true); }
-      if (found.length === 1) return make(found[0]);
-      const which = ctx.select(found.map((f, i) => [i, f.label]), 0, { 'aria-label': 'Which map' });
-      d.replaceChildren(el('h3', {}, 'Which map?'), el('p', { class: 'small' }, `That file has ${found.length} maps. Pick one to import.`), field('Map', which),
-        el('div', { class: 'kit-dialog-actions' }, btn('Import', () => make(found[+which.value]), 'primary'), btn('Cancel', () => d.close())));
-    }
-    async function make(one) {
       let vtt, file = null;
       try {
-        vtt = await one.read();
+        vtt = await VTT.readVtt(await Promise.all(files.map(async f => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
         made = made || (await post('map_save', { name: name.value.trim() || vtt.name || 'Imported map' }, cid)).map;
         file = await ctx.uploadFile('map', made.id, new File([vtt.picture.bytes], vtt.picture.name, { type: vtt.picture.type }));
         const g = vtt.grid, sc = vtt.scale;
