@@ -2,7 +2,7 @@
 // shifts (a quarter of the calendar's day), and the campaign's genre limits the
 // modes and samples on offer.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture, settledBox } = require("./helpers");
 
 test("samples fill the planner, trips count shifts, and the genre limits the modes", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -222,6 +222,7 @@ test("an On the move action on a shift, or in Pass time, tags the events running
 
   // Passing time with Travel tags what runs in the passed shifts.
   await page.goto(`index.html#/c/${cid}/calendar`);
+  await expect(page.locator("a.daycell").first()).toBeVisible();   // the day page, still redrawing after its save, is gone
   await page.locator(".passtime input[type=number]").fill(String(4 * (day + 2) - now));
   await page.locator(".passtime").getByLabel("Activity").fill("Travel");
   await page.getByRole("button", { name: "Pass time ▶" }).click();
@@ -256,7 +257,7 @@ test("Travel: Depart moves the party's marker to the pin named in To", async ({ 
   expect(after).toMatchObject({ map_id: mapId, x: 200, y: 120 });
 
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  const flag = await page.locator(".map-party").boundingBox(), pin = await page.locator(".map-pin", { hasText: "Weathertop" }).boundingBox();
+  const flag = await settledBox(page.locator(".map-party")), pin = await settledBox(page.locator(".map-pin", { hasText: "Weathertop" }));
   expect(Math.abs(flag.x + flag.width / 2 - (pin.x + pin.width / 2))).toBeLessThan(3);
   expect(Math.abs(flag.y + flag.height / 2 - (pin.y + pin.height / 2))).toBeLessThan(3);
   expectNoErrors(errors);
