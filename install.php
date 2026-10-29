@@ -127,7 +127,7 @@ if (!cfg('allow_install')) {
             run_sql_file($pdo, __DIR__ . '/db/migrations/018_encyclopedia_categories.sql');
             $msg .= ' Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.';
         }
-        if (!$pdo->query("SHOW TABLES LIKE 'maps'")->fetchColumn()) {
+        if (!$pdo->query("SHOW TABLES LIKE 'party_groups'")->fetchColumn()) {   // its last table: a run that stopped part way is made good (every statement is IF NOT EXISTS)
             run_sql_file($pdo, __DIR__ . '/db/migrations/019_maps.sql');
             $msg .= ' Maps are ready.';
         }

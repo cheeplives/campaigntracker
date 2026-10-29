@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload } = require("./helpers");
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -19,22 +19,6 @@ test("Maps: a fresh install has the tables, and the campaign says maps are ready
   expectNoErrors(errors);
 });
 
-// A w x h PNG, all one colour: the zlib stream of a few hundred identical bytes is tiny.
-const zlib = require("zlib");
-function makePng(w, h) {
-  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
-  const crc = buf => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  const chunk = (type, data) => {
-    const t = Buffer.concat([Buffer.from(type), data]);
-    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
-    const sum = Buffer.alloc(4); sum.writeUInt32BE(crc(t));
-    return Buffer.concat([len, t, sum]);
-  };
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;   // 8-bit RGB
-  const raw = Buffer.alloc((w * 3 + 1) * h, 0x7f);
-  for (let y = 0; y < h; y++) raw[y * (w * 3 + 1)] = 0;                                                          // filter: none
-  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
-}
 const MAP_PNG = makePng(300, 200);
 
 async function setup(page, browser, label) {
@@ -742,5 +726,71 @@ test("Maps: a ?pin= link to a pin the reader can't see says so", async ({ page, 
   await expect(pp.locator(".leaflet-popup")).toHaveCount(0);
   await page.goto(`#/c/${cid}/maps/${mapId}?pin=999999`);
   await expect(page.locator(".map-note")).toHaveText("That pin is not on this map");
+  expectNoErrors(errors);
+});
+
+test("Maps: a route's name is shown as text in its tooltip, never as markup", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps route tip");
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "route_save", { map_id: mapId, name: "A <b>bold</b> & B", points: [[10, 100], [290, 100]] }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  const line = page.locator(".map-route-line");
+  await expect(line).toHaveCount(1);
+  const box = await line.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const tip = page.locator(".leaflet-tooltip.map-tip");
+  await expect(tip).toHaveText("A <b>bold</b> & B");
+  await expect(tip.locator("b")).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: pinning a note labelled with an accented name reuses the entry of the unaccented one", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Maps accents");
+  const mapId = await mapWithPicture(page, cid);
+  const cafe = (await api(page, "entry_save", { name: "Cafe" }, cid)).json.id;
+  const pin = (await api(page, "pin_save", { map_id: mapId, x: 5, y: 5, label: "Caf\u00e9" }, cid)).json.pin;
+  const r = await api(page, "pin_to_entry", { id: pin.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json).toMatchObject({ created: false, entry_id: cafe });
+  expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE campaign_id=${cid}`).trim()).toBe("1");
+});
+
+test("Maps: a player opening a GM-only map's address sees Map not found", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps not found");
+  const id = await mapWithPicture(page, cid, { is_secret: true });
+  await pp.goto(`#/c/${cid}/maps/${id}`);
+  await expect(pp.locator(".card p").first()).toHaveText("Map not found");
+  await pp.goto(`#/c/${cid}/maps/999999`);
+  await expect(pp.locator(".card p").first()).toHaveText("Map not found");
+  expectNoErrors(errors);
+});
+
+test("Maps: a picture a map or token shows can't be made GM only by itself", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Maps picture secret");
+  const mapId = await mapWithPicture(page, cid);
+  const imageId = Number(sql(`SELECT image_id FROM maps WHERE id=${mapId}`).trim());
+  const r = await api(page, "file_update", { id: imageId, is_secret: true }, cid);
+  expect(r.status).toBe(400);
+  expect(r.json.message).toBe("This picture is in use; hide the map or token instead");
+  const token = await tokenUpload(page, cid, "Pip");
+  const tid = Number(sql(`SELECT image_id FROM tokens WHERE id=${token.id}`).trim());
+  expect((await api(page, "file_update", { id: tid, is_secret: true }, cid)).status).toBe(400);
+  expect((await api(page, "file_update", { id: imageId, caption: "ok" }, cid)).status).toBe(200);
+});
+
+test("Maps: before the upgrade the Maps and Tokens tabs say what to do", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps not ready");
+  await page.route("**/api/index.php?*a=campaign&*", async route => {
+    const res = await route.fetch();
+    const json = await res.json();
+    await route.fulfill({ response: res, json: { ...json, maps_ready: false } });
+  });
+  await page.goto(`#/c/${cid}/maps`);
+  await expect(page.getByText("Maps need the database upgrade: open install.php on the server and press Install or upgrade.")).toBeVisible();
+  await page.goto(`#/c/${cid}/tokens`);
+  await expect(page.getByText("Maps need the database upgrade")).toBeVisible();
   expectNoErrors(errors);
 });

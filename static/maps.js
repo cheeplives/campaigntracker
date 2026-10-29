@@ -142,7 +142,7 @@ const MapsTab = (() => {
     const params = new URLSearchParams(query || '');
     let data;
     try { data = await api('map', { query: { cid, id } }); } catch {
-      return ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' }, el('p', {}, 'That map is not here.'), el('a', { href: `#/c/${cid}/maps` }, 'Back to the maps')));
+      return ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' }, el('p', {}, 'Map not found'), el('a', { href: `#/c/${cid}/maps` }, 'Back to the maps')));
     }
     let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
     let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
@@ -251,7 +251,7 @@ const MapsTab = (() => {
     let pinLayer = null, routeLayer = null;
     const pinMarkers = new Map();
     const mine = p => gm || (p.kind === 'note' && p.created_by === S.user.id);
-    const entryNamed = name => S.encyclopedia.find(e => [e.name, ...(e.aliases || [])].some(n => G.nameKey(n) === G.nameKey(name))) || null;
+    const entryNamed = name => S.encyclopedia.find(e => [e.name, ...(e.aliases || [])].some(n => G.nameKey(n) === G.nameKey(name))) || null;   // nameKey ignores case, accents and a leading "The"
     const pinTitle = p => (p.kind === 'entry' && p.entry ? p.entry.name : p.kind === 'event' && p.event ? p.event.title : p.label) || 'Pin';
     const pinIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
     function drawPins() {
@@ -441,7 +441,7 @@ const MapsTab = (() => {
       routeLayer.clearLayers(); routeLines.clear();
       for (const r of routes) {
         const line = L.polyline(r.points.map(([x, y]) => toLatLng(x, y)), { weight: 3, dashArray: '8 6', className: 'map-route-line' + (r.is_secret ? ' secret' : '') }).addTo(routeLayer);
-        line.bindTooltip(r.name, { sticky: true, className: 'map-tip' });
+        line.bindTooltip(el('span', {}, r.name), { sticky: true, className: 'map-tip' });
         routeLines.set(r.id, line);
       }
     }

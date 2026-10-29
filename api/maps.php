@@ -196,8 +196,9 @@ function pin_save(int $cid, bool $isGm): array {
     if ($isGm) touch_campaign($cid);   // players' pins are like their notes: they don't count as a campaign change
     return pin_out(pin_row($cid, $id, true));
 }
-/** A name as entry names are matched: any case, no leading "The". */
+/** A name as entry names are matched (as MapGeo.nameKey does): any case, no accents, no leading "The". */
 function pin_name_key(string $n): string {
+    if (class_exists('Normalizer')) $n = preg_replace('/\p{Mn}+/u', '', Normalizer::normalize($n, Normalizer::FORM_D) ?: $n);
     return preg_replace('/^the\s+/u', '', mb_strtolower(trim(preg_replace('/\s+/u', ' ', $n))));
 }
 /** GM: make note pin $id an entry pin. $entryId names the entry to use; else one whose name or other name matches the label
@@ -216,13 +217,27 @@ function pin_to_entry(int $cid, int $id, ?int $entryId): array {
             $st->execute([$cid]);
             foreach ($st->fetchAll() as $e)
                 foreach ([$e['name'], ...entry_aliases($e)] as $n) if (pin_name_key($n) === $key) { $entryId = (int)$e['id']; break 2; }
+            if ($entryId === null) {   // the column's collation also equates accents ("Café" and "Cafe"), which mb_strtolower does not
+                $st = db()->prepare('SELECT id FROM encyclopedia_entries WHERE campaign_id=? AND name=?');
+                $st->execute([$cid, entry_name($pin['label'])]);
+                $same = $st->fetchColumn();
+                if ($same !== false) $entryId = (int)$same;
+            }
             if ($entryId === null) {
                 $notes = trim((string)$pin['note']) !== '' ? '<p>' . htmlspecialchars(trim($pin['note']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>' : null;
-                db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, notes, is_secret, created_by) VALUES (?,?,?,0,?)')
-                    ->execute([$cid, entry_name($pin['label']), $notes, me()['id']]);
-                $entryId = (int)db()->lastInsertId();
-                if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
-                $created = true;
+                try {
+                    db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, notes, is_secret, created_by) VALUES (?,?,?,0,?)')
+                        ->execute([$cid, entry_name($pin['label']), $notes, me()['id']]);
+                    $entryId = (int)db()->lastInsertId();
+                    if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
+                    $created = true;
+                } catch (PDOException $e) {   // 1062: an entry of this name appeared since the look above
+                    if (($e->errorInfo[1] ?? 0) != 1062) throw $e;
+                    $st = db()->prepare('SELECT id FROM encyclopedia_entries WHERE campaign_id=? AND name=?');
+                    $st->execute([$cid, entry_name($pin['label'])]);
+                    $entryId = (int)$st->fetchColumn();
+                    if (!$entryId) throw $e;
+                }
             }
         }
         db()->prepare("UPDATE map_pins SET kind='entry', entry_id=?, label='' WHERE id=?")->execute([$entryId, $id]);
@@ -588,12 +603,12 @@ function token_urls(int $cid, bool $isGm): array {
     if (!has_maps() || !has_attachments()) return $out;
     $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
         WHERE t.campaign_id=? AND t.image_id IS NOT NULL AND (t.member_id IS NOT NULL OR t.entry_id IS NOT NULL)'
-        . ($isGm ? '' : ' AND t.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)') . ' ORDER BY t.id DESC');
+        . ($isGm ? '' : ' AND t.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)') . ' ORDER BY t.id ASC');   // the first-assigned (lowest id) token wins a member or entry
     $st->execute([$cid]);
     foreach ($st->fetchAll() as $r) {
         $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['image_id']]);
-        if ($r['member_id'] !== null) $out['member'][(int)$r['member_id']] = $url;
-        if ($r['entry_id'] !== null) $out['entry'][(int)$r['entry_id']] = $url;
+        if ($r['member_id'] !== null) $out['member'][(int)$r['member_id']] ??= $url;
+        if ($r['entry_id'] !== null) $out['entry'][(int)$r['entry_id']] ??= $url;
     }
     return $out;
 }

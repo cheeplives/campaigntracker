@@ -3994,6 +3994,14 @@
     return [head[0], bar, details, cols, pictures];
   }
 
+  /** The Maps and Tokens tabs before the database upgrade: what to do, in the campaign's header (as the Library and Sessions do). */
+  function mapsNotReady(tab) {
+    const title = tab === 'tokens' ? 'Tokens' : 'Maps';
+    mount(...campaignHeader(tab), el('div', { class: 'card' }, el('h2', {}, title),
+      el('p', {}, isGM() ? 'Maps need the database upgrade: open install.php on the server and press Install or upgrade.'
+        : 'Maps aren\'t set up on this server yet. Ask whoever runs it to open install.php.')));
+  }
+
   // ------------------------------------------------------------ travel tab
   async function viewTravel() {
     const out = el('div', { class: 'travel-out' });
@@ -4037,7 +4045,7 @@
       from?.addEventListener('change', drawPick); drawPick();
       partyDialog('Split the party', [from ? field('From', from) : null, field('Group name', name), field('Who goes', pick), field('Region', region, 'Where they are now')], 'Split', async () => {
         const members = [...pick.querySelectorAll('input:checked')].map(i => Number(i.value));
-        await post('group_split', { from_id: fromGroup().id, name: name.value, members, ...(region.value ? { region_id: Number(region.value) } : {}) }, S.camp.id);
+        await post('group_split', { from_id: fromGroup().id, name: name.value, members, region_id: region.value ? Number(region.value) : null }, S.camp.id);
       });
     };
     const mergeParty = g => {
@@ -6014,6 +6022,7 @@
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
+        else if ((tab === 'maps' || tab === 'tokens') && !S.mapsReady) mapsNotReady(tab);
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');

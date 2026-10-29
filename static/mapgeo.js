@@ -66,7 +66,7 @@
     return metres < 1000 ? num(metres) + ' m' : num(metres / 1000) + ' km';
   }
 
-  const nameKey = s => String(s == null ? '' : s).toLowerCase().trim().replace(/\s+/g, ' ').replace(/^the /, '');
+  const nameKey = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/^the /, '');
 
   function pinFor(pins, name) {
     const k = nameKey(name);

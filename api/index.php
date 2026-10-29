@@ -1405,6 +1405,8 @@ try {
         $admin = need_admin();
         $id = int_in(p('id'), 1);
         if ($id === $admin['id']) fail("You can't delete yourself");
+        // Their token (in any campaign) is free for another, as when a member is removed; party_rows drops them from the groups.
+        if (has_maps()) db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
         $st = db()->prepare('SELECT provider FROM users WHERE id=?');
         $st->execute([$id]);
         // The account is shared with Sinless, so it stays: they leave Chronicle (its list and their campaigns) only. An
@@ -3038,6 +3040,11 @@ try {
         if (!attachment_mine($a, $role)) fail('Only a GM can change a file someone else added', 403);
         $caption = array_key_exists('caption', body()) ? (trim((string)str_in(p('caption'), 200)) ?: null) : $a['caption'];
         $secret = $role === 'gm' && array_key_exists('is_secret', body()) ? (p('is_secret') ? 1 : 0) : (int)$a['is_secret'];
+        if ($secret && !(int)$a['is_secret'] && has_maps()) {   // a picture a map or token shows is hidden by hiding the map or token
+            $st = db()->prepare('SELECT (SELECT COUNT(*) FROM maps WHERE image_id=?) + (SELECT COUNT(*) FROM tokens WHERE image_id=?)');
+            $st->execute([$a['id'], $a['id']]);
+            if ((int)$st->fetchColumn() > 0) fail('This picture is in use; hide the map or token instead');
+        }
         db()->prepare('UPDATE attachments SET caption=?, is_secret=? WHERE id=?')->execute([$caption, $secret, $a['id']]);
         $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
         $st->execute([$a['id']]);
