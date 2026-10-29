@@ -705,7 +705,7 @@
   async function deleteCampaign(c) {
     const typed = await promptDialog(`Type DELETE to permanently delete "${c.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
     if (typed === null) return;
-    if (typed.trim() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
+    if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
     try { await post('campaign_delete', { confirm: 'DELETE' }, c.id); toast(`Deleted ${c.name}`); viewCampaigns(); } catch (err) { toast(err.message, true); }
   }
   /** Copy a campaign into a new one the copier GMs: a name, and everything in it or only its setup. */
@@ -5624,8 +5624,9 @@
         'Bring a campaign over from Scabard: its Export campaign .json file becomes Encyclopedia entries with their tags, other names, notes, GM secrets, connections and pictures, and its dated session logs become Sessions. Safe to run again: nothing is added twice or deleted')),
       el('div', { class: 'row' }, btn('Delete this campaign', async () => {
         const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
-        if (typed !== 'DELETE') return;
-        await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/';
+        if (typed === null) return;
+        if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
+        try { await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/'; } catch (err) { toast(err.message, true); }
       }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
     mount(...campaignHeader('settings'), general, calForm, danger);
   }
