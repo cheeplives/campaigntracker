@@ -1158,3 +1158,30 @@ path.map-route-line.secret { stroke: var(--dim); }
 .sheet-ed-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sheet-ed-main > .row { margin-top: 0; }
 .sheet-ed-main select[aria-label="Field type"] { max-width: 12em; }
+.character-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.character-card { display: flex; flex-direction: column; gap: 6px; }
+.character-card[data-kind="npc"] { border-left: 4px solid var(--secret); }
+.character-name { font: 700 1.2rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.character-pic { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+.card-stats { display: flex; flex-direction: column; gap: 3px; }
+.card-cond { background: var(--accent); color: var(--on-accent); }
+.stat-bar { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.stat-bar > span { display: block; height: 100%; background: var(--ok); }
+.stat-bar.big { height: 10px; margin-top: 6px; }
+.sheet-viewers { margin: 8px 0; padding: 6px 10px; border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 18%, var(--panel)); font-size: .9rem; }
+.sheet-settings { align-items: flex-end; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+.sheet-settings .field { margin: 0; }
+.sheet-conflict { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--bad); }
+.sheet-conflict[hidden] { display: none; }
+.sheet-old dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+.sheet-old dt { font-weight: 600; }
+.notice { border-left: 3px solid var(--accent); padding-left: 8px; }
+.play-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.play-counter, .play-other { background: var(--panel); border-radius: var(--radius); padding: 10px; }
+.play-label { font: 700 1rem var(--disp); text-transform: uppercase; letter-spacing: .05em; color: var(--label); }
+.play-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.play-btn { min-width: 48px; min-height: 48px; font-size: 1.6rem; line-height: 1; touch-action: manipulation; }
+.play-value { font: 700 1.6rem var(--disp); text-align: center; flex: 1; }
+.play-toggle { min-height: 48px; touch-action: manipulation; }
+.play-toggle.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.play-page .sheet-pip { width: 36px; height: 36px; }

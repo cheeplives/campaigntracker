@@ -13,12 +13,14 @@ const Sheets = (() => {
   const { el, toast, confirmDialog } = KIT;
   const L = SheetLayout;
   let ctx = null;
-  /** app.js's helpers: { S, api, post, mount, field }. */
+  /** app.js's helpers: { S, api, post, mount, field, campaignHeader, isGM, route }. */
   function mount(c) { ctx = c; }
 
   const TYPE_NAMES = { text: 'Text', longtext: 'Long text', number: 'Number', counter: 'Counter (current / max)', pips: 'Pips (dots or boxes)',
     checkbox: 'Checkbox', choice: 'Choice from a list', list: 'List (rows and columns)' };
   const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  /** replaceChildren, leaving out the null and false kids (which it would print as text). */
+  const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
   const button = (label, onclick, cls, attrs = {}) => el('button', { type: 'button', class: cls || '', onclick, ...attrs }, label);
 
   // ------------------------------------------------------------ the PDF open in the editor
@@ -35,41 +37,70 @@ const Sheets = (() => {
    * hidden from the party, canHide, onChange(key, value), onHide(key, hidden) }. 'view' can't be changed; 'preview'
    * can be tried out but saves nothing. */
   function renderSheetForm(layout, values = {}, opts = {}) {
-    const mode = opts.mode || 'preview', off = mode === 'view';
+    const mode = opts.mode || 'preview', off = mode === 'view', live = mode === 'edit';
     const hidden = new Set(opts.hidden || []);
     const change = (k, v) => { values[k] = v; opts.onChange?.(k, v); };
     const eye = (key, what) => opts.canHide ? button(hidden.has(key) ? '🙈' : '👁', () => opts.onHide?.(key, !hidden.has(key)), 'icon-btn sheet-eye',
       { 'aria-pressed': String(hidden.has(key)), 'aria-label': hidden.has(key) ? `Show ${what} to the party` : `Hide ${what} from the party`,
         'data-tip': hidden.has(key) ? 'Hidden from the rest of the party. Tap to show it' : 'Seen by the party. Tap to hide it' }) : null;
+    const slots = new Map();
     const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : ''), 'data-key': s.key },
       el('div', { class: 'sheet-sec-head' }, el('h3', {}, s.title || ''), eye(s.key, `the ${s.title} section`)),
       el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
         if (!TYPE_NAMES[f.type]) return null;
         const wide = f.type === 'longtext' || f.type === 'list';
+        const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live));
+        const note = el('div', { class: 'sheet-conflict', hidden: true });
+        slots.set(f.key, { f, slot, note });
         return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : '') + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
-          el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)),
-          control(f, values[f.key], v => change(f.key, v), off));
+          el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
       }))));
-    return el('div', { class: `sheet-form sheet-${mode}` }, sections);
+    const form = el('div', { class: `sheet-form sheet-${mode}` }, sections);
+    /** Show a value someone else saved, in place of what the field shows. */
+    form.setValue = (key, v) => {
+      const x = slots.get(key);
+      if (!x) return;
+      values[key] = v;
+      x.note.hidden = true;
+      x.slot.replaceChildren(control(x.f, v, nv => change(key, nv), off, live));
+    };
+    /** Someone else changed a field this person is typing in: let them pick. */
+    form.conflict = (key, v, by, onKeep) => {
+      const x = slots.get(key);
+      if (!x) return;
+      x.note.hidden = false;
+      x.note.replaceChildren(el('span', { class: 'small' }, `Changed by ${by}`),
+        button('Use theirs', () => form.setValue(key, v), 'small'),
+        button('Keep mine', () => { x.note.hidden = true; onKeep?.(key, values[key]); }, 'small'));
+    };
+    /** Whether someone is typing in this field now. */
+    form.typing = key => !!slots.get(key)?.slot.contains(document.activeElement);
+    return form;
   }
   const numOrNull = s => (String(s).trim() === '' ? null : Number(s));
   /** The input for one field, sending the new value to set(v) as it changes. */
-  function control(f, value, set, off) {
+  function control(f, value, set, off, live) {
     const label = f.label;
+    // while typing, the value is sent 400 ms after the last key, as well as on leaving the box
+    const typed = (node, read) => {
+      let t = 0;
+      node.addEventListener('change', () => { clearTimeout(t); set(read()); });
+      if (live) node.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => set(read()), 400); });
+    };
     if (f.type === 'text') {
       const i = el('input', { value: value ?? '', maxlength: L.LIMITS.text, 'aria-label': label, disabled: off });
-      i.addEventListener('change', () => set(i.value === '' ? null : i.value));
+      typed(i, () => (i.value === '' ? null : i.value));
       return i;
     }
     if (f.type === 'longtext') {
       const t = el('textarea', { rows: 4, maxlength: L.LIMITS.longtext, 'aria-label': label, disabled: off });
       t.value = value ?? '';
-      t.addEventListener('change', () => set(t.value === '' ? null : t.value));
+      typed(t, () => (t.value === '' ? null : t.value));
       return t;
     }
     if (f.type === 'number') {
       const i = el('input', { type: 'number', inputmode: 'decimal', step: 'any', value: value ?? '', min: f.min ?? null, max: f.max ?? null, 'aria-label': label, disabled: off });
-      i.addEventListener('change', () => set(numOrNull(i.value)));
+      typed(i, () => numOrNull(i.value));
       return i;
     }
     if (f.type === 'counter') {
@@ -107,7 +138,7 @@ const Sheets = (() => {
     let rows = Array.isArray(value) ? value.map(r => ({ ...r })) : [];
     const table = el('div', { class: 'sheet-list' });
     const send = () => set(rows.filter(r => cols.some(c => String(r[c.key] ?? '').trim() !== '')));
-    const draw = () => table.replaceChildren(
+    const draw = () => fill(table, 
       el('table', { class: 'tbl' }, el('tr', {}, cols.map(c => el('th', {}, c.label)), off ? null : el('th', {})),
         rows.map((r, ri) => el('tr', {}, cols.map(c => {
           const i = el('input', { value: r[c.key] ?? '', maxlength: L.LIMITS.text, 'aria-label': `${label} row ${ri + 1} ${c.label}`, disabled: off });
@@ -460,6 +491,300 @@ const Sheets = (() => {
     draw();
   }
 
+  // ------------------------------------------------------------ characters in a campaign
+  const cid = () => ctx.S.camp.id;
+  const me = () => ctx.S.user.id;
+  const memberName = m => m.character_name || m.display_name;
+  const kindName = k => (k === 'npc' ? 'NPC' : 'PC');
+
+  /** Values sent one at a time for each field, the newest last: a field's next value waits for the answer to the one
+   * before, and only the newest waiting value goes, so the server ends on the last tap even on a slow connection. */
+  function fieldSender(id, onError) {
+    const waiting = new Map(), busy = new Set(), sent = new Map();
+    async function pump(key) {
+      if (busy.has(key)) return;
+      busy.add(key);
+      try {
+        while (waiting.has(key)) {
+          const v = waiting.get(key);
+          waiting.delete(key);
+          if (sent.has(key) && sent.get(key) === JSON.stringify(v)) continue;
+          try {
+            await ctx.post('character_field', { id, key, value: v }, cid());
+            sent.set(key, JSON.stringify(v));
+          } catch (err) { onError(err); }
+        }
+      } finally { busy.delete(key); }
+    }
+    return { send(key, v) { waiting.set(key, v); pump(key); }, known(key, v) { sent.set(key, JSON.stringify(v)); } };
+  }
+
+  // who else is on the sheet: asked at once, then every 15 seconds, while the sheet or its Play view is open
+  const POLL_MS = 15000;
+  let presence = null;
+  function stopPresence() {
+    if (presence) clearTimeout(presence.timer);
+    presence = null;
+  }
+  window.addEventListener('hashchange', () => { if (presence && !location.hash.startsWith(presence.hash)) stopPresence(); });
+  /** Start checking in on character ch: onViewers(list) and onChanges(changes) get what each check brings. */
+  function startPresence(ch, { editing, onViewers, onChanges }) {
+    stopPresence();
+    const p = presence = { hash: `#/c/${cid()}/characters/${ch.id}`, timer: 0, stamp: null, editing: !!editing };
+    const tick = async () => {
+      clearTimeout(p.timer);
+      if (presence !== p) return;
+      try {
+        const r = await ctx.post('character_presence', { id: ch.id, editing: p.editing, since: p.stamp }, cid());
+        if (presence !== p) return;
+        if (p.stamp !== null) onChanges(r.changes || {});
+        p.stamp = r.stamp;
+        onViewers(r.viewers || []);
+      } catch { /* the next check tries again */ }
+      if (presence === p) p.timer = setTimeout(tick, POLL_MS);
+    };
+    p.check = tick;
+    tick();
+    return p;
+  }
+  function viewersBar() {
+    const bar = el('div', { class: 'sheet-viewers', role: 'status', 'aria-live': 'polite', hidden: true });
+    bar.show = viewers => {
+      bar.hidden = !viewers.length;
+      bar.replaceChildren(...viewers.map(v => el('div', {}, `${v.name}${v.role === 'gm' ? ' (GM)' : ''} is ${v.editing ? 'editing' : 'also looking at'} this sheet`)));
+    };
+    return bar;
+  }
+
+  /** A character's Play fields, small, for its card. */
+  function cardStats(c) {
+    if (!c.sheet_visible) return el('p', { class: 'small muted' }, 'Sheet hidden by the GM');
+    const bits = c.play.map(f => {
+      if (f.type === 'counter') {
+        const v = f.value || {}, pct = v.max ? Math.max(0, Math.min(100, (v.cur / v.max) * 100)) : 0;
+        return el('div', { class: 'card-stat' }, el('span', { class: 'small' }, `${f.label} ${v.cur ?? '–'}${v.max != null ? ` / ${v.max}` : ''}`),
+          v.max ? el('div', { class: 'stat-bar' }, el('span', { style: { width: `${pct}%` } })) : null);
+      }
+      if (f.type === 'pips') return el('div', { class: 'card-stat small' }, `${f.label} `, '●'.repeat(Number(f.value) || 0) + '○'.repeat(Math.max(0, (f.count || 0) - (Number(f.value) || 0))));
+      if (f.type === 'checkbox') return f.value ? el('span', { class: 'chip card-cond' }, f.label) : null;
+      if (f.value === null || f.value === undefined || f.value === '') return null;
+      return el('div', { class: 'card-stat small' }, `${f.label}: ${typeof f.value === 'object' ? JSON.stringify(f.value) : f.value}`);
+    });
+    const sum = c.summary.filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small muted' }, `${f.label}: ${f.value}`));
+    return el('div', { class: 'card-stats' }, bits, sum);
+  }
+  function characterCard(c) {
+    const href = `#/c/${cid()}/characters/${c.id}`;
+    return el('div', { class: 'card character-card', 'data-kind': c.kind },
+      el('div', { class: 'row' }, c.pic ? el('img', { src: c.pic, alt: '', class: 'character-pic', loading: 'lazy' }) : null,
+        el('div', {}, el('a', { href, class: 'character-name' }, c.name),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name, c.template.game].filter(Boolean).join(' · ')))),
+      cardStats(c),
+      el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
+  }
+  const FILTER_KEY = 'chronicle:characters-filter';
+  async function renderCharacters() {
+    stopPresence();
+    const { characters } = await ctx.api('characters', { query: { cid: cid() } });
+    let filter = 'all';
+    try { filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch { /* private window */ }
+    const list = el('div', { class: 'character-grid' });
+    const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Show' });
+    const draw = () => {
+      seg.replaceChildren(...[['all', 'All'], ['pc', 'PCs'], ['npc', 'NPCs']].map(([k, l]) =>
+        button(l, () => { filter = k; try { localStorage.setItem(FILTER_KEY, k); } catch { /* private window */ } draw(); }, filter === k ? 'on' : '', { 'aria-pressed': String(filter === k) })));
+      const shown = characters.filter(c => filter === 'all' || c.kind === filter);
+      list.replaceChildren(...(shown.length ? shown.map(characterCard) : [el('p', { class: 'muted' }, characters.length ? 'None of those.' : 'No characters yet. Make one with New character.')]));
+    };
+    draw();
+    ctx.mount(...ctx.campaignHeader('characters'),
+      el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Characters'),
+        el('div', { class: 'row' }, el('a', { href: '#/templates', class: 'small', 'data-tip': 'Every template, to use, fork or change' }, 'Sheet templates'),
+          button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary'))), seg),
+      list);
+  }
+  /** Pick a template and a name; GMs also pick PC or NPC. */
+  async function newCharacter() {
+    const { templates } = await ctx.api('templates');
+    if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
+    const search = el('input', { type: 'search', placeholder: 'Name or game', 'aria-label': 'Search templates' });
+    const pick = el('select', { 'aria-label': 'Template', size: Math.min(8, templates.length + 1), required: true });
+    const fill = () => {
+      const q = search.value.trim().toLowerCase();
+      const keep = pick.value;
+      pick.replaceChildren(...templates.filter(t => !q || `${t.name} ${t.game}`.toLowerCase().includes(q))
+        .map(t => el('option', { value: t.id, selected: String(t.id) === keep }, `${t.name} — ${metaLine(t)}`)));
+    };
+    search.addEventListener('input', fill);
+    fill();
+    const name = el('input', { maxlength: 150, 'aria-label': 'Character name', required: true, placeholder: 'Their name' });
+    const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc' }, 'PC (a player character)'), el('option', { value: 'npc' }, 'NPC (GM only until shown)'));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New character' },
+      el('form', { method: 'dialog' }, el('h3', {}, 'New character'),
+        search, ctx.field('Template', pick), ctx.field('Name', name), ctx.isGM() ? ctx.field('Kind', kind) : null,
+        el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Make character'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
+    d.addEventListener('close', async () => {
+      d.remove();
+      if (d.returnValue !== 'ok') return;
+      try {
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), name: name.value, kind: kind.value }, cid());
+        location.hash = `#/c/${cid()}/characters/${r.character.id}`;
+      } catch (err) { toast(err.message, true); }
+    });
+    document.body.append(d);
+    d.showModal();
+    name.focus();
+  }
+
+  /** The settings strip: name, PC or NPC, whose sheet, shown to players, the active character. */
+  function settingsStrip(ch, mine, save) {
+    const S = ctx.S, gm = ctx.isGM();
+    const name = el('input', { value: ch.name, maxlength: 150, 'aria-label': 'Character name' });
+    name.addEventListener('change', () => save({ name: name.value }));
+    const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc', selected: ch.kind === 'pc' }, 'PC'), el('option', { value: 'npc', selected: ch.kind === 'npc' }, 'NPC'));
+    kind.addEventListener('change', () => save({ kind: kind.value }));
+    const people = S.members.filter(m => gm || m.role === 'gm' || Number(m.id) === me());
+    if (ch.owner && !people.some(m => Number(m.id) === ch.owner.id)) people.push({ id: ch.owner.id, display_name: `${ch.owner.name} (left the campaign)`, role: 'player' });
+    const owner = el('select', { 'aria-label': 'Whose sheet' }, people.map(m =>
+      el('option', { value: m.id, selected: Number(m.id) === ch.owner?.id }, `${memberName(m)}${m.role === 'gm' ? ' (GM)' : ''}`)));
+    owner.addEventListener('change', () => save({ owner_id: Number(owner.value) }));
+    const shown = el('input', { type: 'checkbox', checked: ch.sheet_public });
+    shown.addEventListener('change', () => save({ sheet_public: shown.checked }));
+    const active = S.members.find(m => Number(m.id) === me())?.active_character_id;
+    return el('div', { class: 'row sheet-settings' },
+      ctx.field('Name', name), ctx.field('Kind', kind), ctx.field('Player', owner),
+      ch.kind === 'npc' ? el('label', { class: 'small check', 'data-tip': 'NPC sheets are for GMs only until this is on' }, shown, ' Show sheet to players') : null,
+      mine ? (Number(active) === ch.id ? el('span', { class: 'small muted' }, 'Your active character')
+        : button('Make this my active character', async () => {
+          try {
+            await ctx.post('member_active_character', { character_id: ch.id }, cid());
+            const m = S.members.find(x => Number(x.id) === me());
+            if (m) { m.active_character_id = ch.id; m.character_name = ch.name; }
+            toast(`${ch.name} is now the name shown for you here`);
+            ctx.route();
+          } catch (err) { toast(err.message, true); }
+        }, 'small', { 'data-tip': 'Events, notes and the member list show this character\'s name for you' })) : null);
+  }
+
+  /** A character's sheet, or (play) its Play view. */
+  async function renderCharacter(id, play = false) {
+    stopPresence();
+    const r = await ctx.api('character', { query: { cid: cid(), id } });
+    const ch = r.character;
+    const mine = ch.owner?.id === me();
+    const gmOnOthers = ch.can_edit && !mine;   // a GM on a sheet that isn't theirs presses Edit first
+    let editing = false;
+    const values = ch.values ? { ...ch.values } : {};
+    let hidden = ch.hidden || [];
+    const sender = fieldSender(ch.id, err => { toast(err.message, true); if (err.status === 409) { editing = false; draw(); } });
+    for (const [k, v] of Object.entries(values)) sender.known(k, v);
+    const bar = viewersBar();
+    const body = el('div');
+    const href = `#/c/${cid()}/characters/${ch.id}`;
+    const editBtn = gmOnOthers ? button('Edit', async () => {
+      editing = !editing;
+      if (presence) { presence.editing = editing; await presence.check(); }
+      draw();
+    }, 'small') : null;
+    let form = null;
+
+    async function save(changes) {
+      try {
+        const res = await ctx.post('character_save', { id: ch.id, version: ch.version, ...changes }, cid());
+        Object.assign(ch, res.character);
+        if ('hidden' in changes) hidden = changes.hidden;
+        if ('name' in changes || 'kind' in changes || 'owner_id' in changes) return ctx.route();
+        draw();
+      } catch (err) {
+        toast(err.message, true);
+        if (err.status === 409) ctx.route();
+      }
+    }
+    const canChange = () => mine || (gmOnOthers && editing);
+    function draw() {
+      if (editBtn) { editBtn.textContent = editing ? 'Done' : 'Edit'; editBtn.className = editing ? 'small primary' : 'small'; }
+      if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
+      if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v)));
+      form = renderSheetForm(ch.layout, values, {
+        mode: canChange() ? 'edit' : 'view', hidden, canHide: mine,
+        onChange: (k, v) => sender.send(k, v),
+        onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
+      });
+      fill(body,
+        ch.can_edit ? settingsStrip(ch, mine, save) : null,
+        form,
+        ch.old?.length ? el('div', { class: 'card sheet-old' }, el('h3', {}, 'Old fields'),
+          el('p', { class: 'small muted' }, 'Values the template no longer has a place for. They are kept, so nothing is lost.'),
+          el('dl', {}, ch.old.map(o => [el('dt', {}, o.key.replace(/~old\d*$/, ' (before)')), el('dd', {}, typeof o.value === 'object' ? JSON.stringify(o.value) : String(o.value))]))) : null);
+    }
+    draw();
+    const links = el('div', { class: 'row' },
+      el('a', { href: `#/c/${cid()}/characters`, class: 'small' }, '← Characters'),
+      play ? el('a', { href, class: 'small' }, 'Full sheet') : (ch.sheet_visible ? el('a', { href: `${href}/play`, class: 'small' }, 'Play view') : null),
+      el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
+    ctx.mount(...ctx.campaignHeader('characters'),
+      el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), editBtn),
+        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
+        bar, body));
+    startPresence(ch, {
+      editing,
+      onViewers: bar.show,
+      onChanges: changes => {
+        let redraw = false;
+        for (const [k, { value, by }] of Object.entries(changes)) {
+          sender.known(k, value);
+          if (form && !play && form.typing(k)) {
+            if (JSON.stringify(values[k]) !== JSON.stringify(value)) form.conflict(k, value, by, (key, mineV) => sender.send(key, mineV));
+          } else if (form && !play) form.setValue(k, value);
+          else { values[k] = value; redraw = true; }
+        }
+        if (redraw) draw();
+      },
+    });
+  }
+
+  /** Only the Play fields, for a phone at the table: big + and − on counters, tappable pips, toggles. Each tap shows
+   * and sends the new value at once. */
+  function playView(ch, values, can, send) {
+    const fields = L.fields(ch.layout);
+    const playFields = [...fields.values()].map(x => x.field).filter(f => f.play);
+    if (!playFields.length) return el('p', { class: 'muted' }, 'This template has no Play fields. Its author can mark fields Play in the template editor.');
+    const set = (k, v) => { values[k] = v; send(k, v); };
+    return el('div', { class: 'play-grid' }, playFields.map(f => {
+      if (f.type === 'counter') {
+        const box = el('div', { class: 'play-counter' });
+        const draw = () => {
+          const v = values[f.key] || {}, cur = Number(v.cur) || 0, max = v.max ?? null;
+          const pct = max ? Math.max(0, Math.min(100, (cur / max) * 100)) : 0;
+          const step = by => { set(f.key, { cur: cur + by, max }); draw(); };
+          fill(box, el('div', { class: 'play-label' }, f.label),
+            el('div', { class: 'play-row' },
+              button('−', () => step(-1), 'play-btn', { 'aria-label': `${f.label} down one`, disabled: !can }),
+              el('div', { class: 'play-value' }, `${cur}${max !== null ? ` / ${max}` : ''}`),
+              button('+', () => step(1), 'play-btn', { 'aria-label': `${f.label} up one`, disabled: !can })),
+            max ? el('div', { class: 'stat-bar big' }, el('span', { style: { width: `${pct}%` } })) : null);
+        };
+        draw();
+        return box;
+      }
+      if (f.type === 'checkbox') {
+        const t = button(f.label, () => { set(f.key, !values[f.key]); t.setAttribute('aria-pressed', String(!!values[f.key])); t.classList.toggle('on', !!values[f.key]); },
+          'play-toggle' + (values[f.key] ? ' on' : ''), { 'aria-pressed': String(!!values[f.key]), disabled: !can });
+        return t;
+      }
+      return el('div', { class: 'play-other' }, el('div', { class: 'play-label' }, f.label), control(f, values[f.key], v => set(f.key, v), !can, true));
+    }));
+  }
+
+  /** #/c/<cid>/characters[/<id>[/play]] */
+  async function campaignRoute(parts) {
+    const [id, sub] = parts;
+    if (id && /^\d+$/.test(id)) return renderCharacter(Number(id), sub === 'play');
+    return renderCharacters();
+  }
+
   /** #/templates[/new | /<id> | /<id>/edit] */
   async function route(parts) {
     const [a, b] = parts;
@@ -470,5 +795,5 @@ const Sheets = (() => {
     return renderLibrary();
   }
 
-  return { mount, route, renderLibrary, renderTemplate, renderEditor, renderSheetForm, closePdf };
+  return { mount, route, campaignRoute, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, closePdf, stopPresence };
 })();

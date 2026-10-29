@@ -1471,10 +1471,11 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name' . (has_sheets() ? ', m.active_character_id' : '') . ' FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
-        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
+        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name'],
+            'active_character_id' => $m['active_character_id'] ?? null], $members);
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),

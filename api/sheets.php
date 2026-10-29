@@ -531,6 +531,12 @@ function character_out(array $c, bool $isGm, bool $seen = false): array {
     $card = character_card($c, $isGm);
     $changed = (int)$c['template_version'] !== (int)$c['tversion'];
     if ($seen && $full && $changed) db()->prepare('UPDATE characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
+    // the rest of the party isn't told which fields and sections are hidden, or that they exist
+    if (!$full) foreach ($layout['sections'] as $i => $sec) {
+        if (in_array($sec['key'], $hidden, true)) { unset($layout['sections'][$i]); continue; }
+        $layout['sections'][$i]['fields'] = array_values(array_filter($sec['fields'], fn($f) => !in_array($f['key'], $hidden, true)));
+    }
+    $layout['sections'] = array_values($layout['sections']);
     $out = $card + ['layout' => $layout, 'values' => $card['sheet_visible'] ? (object)sheet_visible($layout, $values, $hidden, $full) : null,
         'old' => $full ? $old : []];
     if ($full) $out['hidden'] = $hidden;

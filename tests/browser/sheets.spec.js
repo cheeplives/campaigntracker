@@ -169,14 +169,14 @@ test("Characters: an NPC sheet is GM-only until shown to players", async ({ page
   const { cid, gm, p1, tpl } = await party(page, browser);
   const n = await make(gm, cid, { template_id: tpl.id, name: "The Countess", kind: "npc" });
   expect(n).toMatchObject({ kind: "npc", sheet_public: false });
-  expect((await api(gm, "character_field", { id: n.id, key: "str", value: 18 }, cid)).status).toBe(200);
+  expect((await api(gm, "character_field", { id: n.id, key: "str", value: 7731 }, cid)).status).toBe(200);
   const card = (await get(p1, "characters", {}, cid)).json.characters.find(x => x.id === n.id);
   expect(card).toMatchObject({ sheet_visible: false, play: [], summary: [] });
   const s = await sheet(p1, cid, n.id);
   expect(s.json.character.values).toBeNull();
-  expect(JSON.stringify(s.json)).not.toContain("18");
+  expect(JSON.stringify(s.json)).not.toContain("7731");
   expect((await api(gm, "character_save", { id: n.id, version: n.version, sheet_public: true }, cid)).status).toBe(200);
-  expect((await sheet(p1, cid, n.id)).json.character.values).toEqual({ str: 18 });
+  expect((await sheet(p1, cid, n.id)).json.character.values).toEqual({ str: 7731 });
   // A player can't make an NPC, or a character for someone else.
   expect((await api(p1, "character_create", { template_id: tpl.id, name: "Henchman", kind: "npc" }, cid)).status).toBe(403);
 });

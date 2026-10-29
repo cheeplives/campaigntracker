@@ -951,7 +951,7 @@
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
-    ['Party', 'What the party does and owns: journeys, rests and holdings', [['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
+    ['Party', 'What the party does and owns: journeys, rests and holdings', [['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
@@ -960,6 +960,7 @@
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list: search it and filter it by tag',
     sessions: 'Each game night\'s quick notes and the summary written from them',
+    characters: 'Everyone\'s characters and their sheets',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -1016,7 +1017,7 @@
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
+      const links = ts.filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || (S.sheetsReady && typeof Sheets !== 'undefined'))).map(([k, l]) =>
         el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
@@ -6063,6 +6064,7 @@
         else if ((tab === 'maps' || tab === 'tokens') && !S.mapsReady) mapsNotReady(tab);
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
+        else if (tab === 'characters' && S.sheetsReady && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
@@ -6102,7 +6104,7 @@
   }
 
   // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
-  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field });
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route });
 
   // Signed out, leaving the About page goes back through the gate.
   window.addEventListener('hashchange', () => (S.user ? route() : boot()));
