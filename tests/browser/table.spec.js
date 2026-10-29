@@ -192,11 +192,12 @@ test.describe("panel links", () => {
     expect(m.name.length).toBeLessThanOrEqual(45);
     expect(m.description.length).toBeLessThanOrEqual(128);
     expect(m.action.popover).toMatch(/^https?:\/\/.+\/panel\.html$/);
-    // its toolbar icon is a picture Owlbear's page may show: served as SVG, and allowed cross-origin by .htaccess
-    expect(m.action.icon).toMatch(/\/static\/icons\/owlbear\.svg$/);
-    const icon = await request.get(new URL(m.action.icon).pathname.replace(/^\//, ""));
-    expect(icon.status()).toBe(200);
-    expect(icon.headers()["content-type"]).toContain("image/svg+xml");
+    // its toolbar icon travels in the manifest as a data: URL, as Owlbear draws it as a CSS mask, fetched in CORS mode
+    const svg = fs.readFileSync(path.join(__dirname, "..", "..", "static", "icons", "owlbear.svg"), "utf8");
+    for (const icon of [m.icon, m.action.icon]) {
+      expect(icon).toMatch(/^data:image\/svg\+xml;base64,/);
+      expect(Buffer.from(icon.split(",")[1], "base64").toString("utf8")).toBe(svg);
+    }
     const ht = fs.readFileSync(path.join(__dirname, "..", "..", ".htaccess"), "utf8");
     expect(ht.match(/<Files "owlbear\.svg">([\s\S]*?)<\/Files>/)?.[1]).toContain('Cross-Origin-Resource-Policy "cross-origin"');
   });
