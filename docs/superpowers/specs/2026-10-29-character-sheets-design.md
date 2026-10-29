@@ -34,7 +34,7 @@ tried on it (`rpg-sheets\form_field_survey.md` and `rpg-sheets\_prototype\REPORT
 
 - **Where:** a *Characters* tab in each campaign. `#/c/<cid>/characters` lists them; `#/c/<cid>/characters/<id>`
   opens a sheet; `#/c/<cid>/characters/<id>/play` opens its Play view.
-- **The list:** a card per character with its name, player, portrait (from the existing attachments code) and its
+- **The list:** a card per character with its name, player, portrait (its Encyclopedia entry's picture) and its
   Play fields in small form (an HP bar, conditions). This is also the GM's party-at-a-glance view.
 - **New character:** pick a template from the library (search by game), then a name. A player can own several
   characters in a campaign (retainers, a backup); a GM can make characters for NPCs.
@@ -130,8 +130,10 @@ are stored by key.
   Old fields; a new field starts empty.
 - A character's owner and the campaign's GMs can edit it. Hidden fields and sections never reach other members: the
   API leaves them out, it isn't only the page hiding them (as with `is_secret` elsewhere).
-- Character saves use the same version check as Library tomes, so two people editing at once can't overwrite each
-  other: the later save is refused and the page reloads the newer copy.
+- **Values are saved one field at a time**, so a player tapping HP in Play view and the GM fixing a skill at the same
+  moment never overwrite each other; two people changing the *same* field means the later change wins. The sheet's
+  settings (name, PC/NPC, owner, hidden list, shown to players) use the Library's version check instead: a save from
+  an older copy is refused and the page reloads the newer one.
 - A template in use can't be deleted. Its author can unlist it, which hides it from search but keeps it working for
   characters and forks.
 
@@ -141,7 +143,9 @@ This is a database change: one new migration (the next free number in `db/migrat
 `db/schema.sql`). The deploy reply must name it and the step Josh runs, per the project instructions.
 
 - **`sheet_templates`**: id, name, game, edition, `author_id` (users), `forked_from_id` (sheet_templates, NULL),
-  `layout` (JSON: sections and fields), `version`, `is_listed`, `is_starter`, created_at, updated_at. Fork and use
+  `layout` (JSON: sections and fields), `version`, `is_listed`, `starter_key` (the starter file's name, NULL for
+  user templates), created_at, updated_at. Starter templates have no author (`author_id` NULL), show "Campaign
+  Chronicle" as author, and only site admins edit them. Fork and use
   counts are counted on demand, not stored.
 - **`characters`**: id, `campaign_id`, `owner_id` (users), `template_id`, `entry_id` (encyclopedia_entries, unique;
   the character's entry, which supplies the name), `kind` ('pc' or 'npc'), `sheet_public` (NPCs: whether players
@@ -149,7 +153,9 @@ This is a database change: one new migration (the next free number in `db/migrat
   (JSON list of hidden field and section keys), `version`, created_at, updated_at. Deleted with its campaign; deleting
   the entry is refused while a character uses it.
 - **`campaign_members.active_character_id`** (characters, NULL, set NULL when the character is deleted).
-  `AUTHOR_SQL` becomes: active character's name, else `character_name`, else display name.
+  The active character's name is written into `character_name` whenever it is set or the character is renamed, so
+  `AUTHOR_SQL` and every query using it stay as they are. Typing a character name for a member who has an active
+  character renames that character (and its entry).
 
 Size limits keep JSON columns small: at most 50 sections, 1,000 fields per template, and 200 rows per list field.
 The 2,595-field Monster of the Week file bundles ten playbooks and splits into ten templates.
@@ -161,8 +167,9 @@ The 2,595-field Monster of the Week file bundles ten playbooks and splits into t
   the `layout` format.
 - **First batch:** about 40 games from the popularity list, each reviewed carefully before release. **Second
   batch**, after launch: every other game with a decent draft (probably 150 or more), with lighter review.
-- **Loaded** with a one-time admin import. The templates are published under a "Campaign Chronicle" starter author
-  with `is_starter` set, so anyone can use or fork them.
+- **Kept in the repository** as one JSON file per template in `db/starter-templates/`, and **loaded** by a site
+  admin's *Load starter templates* button, which adds new files and updates changed ones by `starter_key` (safe to
+  press again after a second batch). They show "Campaign Chronicle" as author, and anyone can use or fork them.
 
 ## Licensing and sources
 
