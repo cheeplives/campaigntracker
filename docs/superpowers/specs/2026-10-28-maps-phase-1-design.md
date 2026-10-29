@@ -28,7 +28,7 @@ later and are out of scope here.
 The scale dialog offers two ways, and the map keeps whichever was used last:
 
 1. **Two points:** "Click two places you know the distance between", then "How far apart are they?" with a number
-   and a unit (feet, metres, miles, kilometres).
+   and a unit (feet, metres, miles, kilometres, astronomical units, light-years).
 2. **Grid squares:** "One square is [5] [feet]", then "Click the corners of a run of squares" and "How many squares
    is that?". When the file name already says it (`Tavern_30x20.png`: 30 squares across; `..._70px.jpg`: a square is
    70 pixels) the dialog fills the square size in for the GM to confirm. A *Roll20 (70 px = 5 ft)* button fills in
@@ -36,7 +36,10 @@ The scale dialog offers two ways, and the map keeps whichever was used last:
 
 Distances are shown in the reader's units (the account's Metric/Imperial choice, else the campaign's), whatever unit
 the scale was set in: imperial in feet below a mile and miles above, metric in metres below a kilometre and kilometres
-above. A map with no scale measures nothing and says "Set the scale to measure" (GMs) or "The GM hasn't set this
+above. A **space map** (one scaled in astronomical units or light-years, such as a star system or a sector) keeps
+to space units for everyone: light-years from 1,000 AU up, AU from 0.01 AU up, and below that kilometres or miles by
+the reader's units ("4.2 ly", "5.2 AU", "384,400 km"). The au and light-year are the same constants the travel planner
+already uses and cites (JPL's au and the IAU light-year). A map with no scale measures nothing and says "Set the scale to measure" (GMs) or "The GM hasn't set this
 map's scale yet" (players).
 
 ### Measure and routes
@@ -135,7 +138,7 @@ same tables in `db/schema.sql`:
 
 | Table | Columns |
 |---|---|
-| `maps` | id, campaign_id, name, image_id (attachments.id, NULL until a picture is added), width, height (pixels), scale_per_px DOUBLE NULL, scale_unit ('ft', 'm', 'mi', 'km') NULL, grid_px DOUBLE NULL, grid_offset_x, grid_offset_y DOUBLE NULL (where the first grid line falls; for tokens and the grid overlay later), is_secret, created_by, created_at |
+| `maps` | id, campaign_id, name, image_id (attachments.id, NULL until a picture is added), width, height (pixels), scale_per_px DOUBLE NULL, scale_unit ('ft', 'm', 'mi', 'km', 'au', 'ly') NULL, grid_px DOUBLE NULL, grid_offset_x, grid_offset_y DOUBLE NULL (where the first grid line falls; for tokens and the grid overlay later), is_secret, created_by, created_at |
 | `map_pins` | id, map_id, campaign_id, x, y (DOUBLE), kind ('note', 'entry', 'event'), entry_id NULL, event_id NULL, label, note, is_secret, created_by, created_at |
 | `map_routes` | id, map_id, campaign_id, name, points_json, is_secret, created_by, created_at |
 | `party_groups` | id, campaign_id, name, members_json (user ids), region_id NULL, map_id NULL, x, y NULL, token_id NULL (tokens.id), is_main, created_at |
