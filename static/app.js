@@ -1926,6 +1926,13 @@
     return el('div', { class: 'shiftnotes' }, el('span', { class: 'lbl' }, 'Notes'), el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
 
+  /** "📍 On the map: <map>" links, one per pin this member can see that points at entry or event `id` (key: 'entry_id' or 'event_id'). */
+  const mapLinks = (key, id) => {
+    const links = (S.mapIndex || []).filter(p => p[key] === id).map(p =>
+      el('a', { class: 'map-link', href: `#/c/${S.camp.id}/maps/${p.map_id}?pin=${p.pin_id}`, 'data-tip': 'Open the map at this pin' }, `📍 On the map: ${p.map_name}`));
+    return links.length ? el('div', { class: 'map-links small' }, links) : null;
+  };
+
   function eventView(e, d) {
     const c = cal();
     const mine = Number(e.created_by) === S.user.id;
@@ -1949,6 +1956,7 @@
       el('div', { class: 'row spread' },
         el('h4', {}, Number(e.is_secret) ? secretTag() : null, linked(e.title)),
         el('small', { class: 'muted' }, shiftRange(e), span)),
+      mapLinks('event_id', Number(e.id)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.body ? el('p', { class: 'pre' }, linked(e.body)) : null,
       el('small', { class: 'muted' }, 'Added by ', byline(e)),
@@ -2188,6 +2196,7 @@
           el('div', { class: 'small muted' }, shiftRange(e), state === 'now' ? el('span', { class: 'evnow' }, ' · Today') : null)),
         el('div', { class: 'evbody' },
           el('h4', {}, Number(e.is_secret) ? secretTag() : null, el('a', { href: `#/c/${S.camp.id}/day/${a}` }, marked(e.title, words))),
+          mapLinks('event_id', Number(e.id)),
           e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
           e.body ? el('p', { class: 'small pre' }, words.length ? marked(clip(e.body), words) : linked(clip(e.body))) : null,
           el('small', { class: 'muted' }, 'Added by ', byline(e), notes ? ` · ${notes} note${notes === 1 ? '' : 's'}` : '')));
@@ -2952,6 +2961,7 @@
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
+      mapLinks('entry_id', e.id),
       encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
         (e.tags || []).map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
@@ -3500,7 +3510,7 @@
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
-    uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
+    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -3588,6 +3598,7 @@
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
     const f = el('form', { class: 'enc-form' },
       el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
+      e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
         category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,

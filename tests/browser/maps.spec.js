@@ -551,3 +551,183 @@ test("Maps: leaving a map and coming back leaves one map on the page and no erro
   await page.waitForTimeout(300);
   expectNoErrors(errors);
 });
+
+// ---- pins and routes on the map ----
+/** A click at (fx, fy) of the map's picture itself, which the container is wider than. */
+async function clickPic(page, fx, fy) {
+  await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();
+  const box = await page.locator(".map-view .leaflet-image-layer").boundingBox();
+  await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+}
+const pinForm = page => page.getByRole("dialog", { name: "Add pin" });
+/** Add pin, then a click on the map at (fx, fy) of its size. */
+async function startPin(page, fx = 0.5, fy = 0.5) {
+  await page.getByRole("button", { name: "Add pin", exact: true }).click();
+  await clickPic(page, fx, fy);
+  await expect(pinForm(page)).toBeVisible();
+}
+
+test("Maps: a player adds a public pin the GM sees", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps player pin");
+  const mapId = await mapWithPicture(page, cid);
+  await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await startPin(pp);
+  await expect(pinForm(pp).getByLabel("GM only")).toHaveCount(0);
+  await expect(pinForm(pp).getByRole("button", { name: "Encyclopedia entry" })).toHaveCount(0);
+  await expect(pinForm(pp).getByRole("button", { name: "Event" })).toHaveCount(0);
+  await pinForm(pp).getByLabel("Label").fill("Our camp");
+  await pinForm(pp).getByLabel("Note").fill("By the ford");
+  await pinForm(pp).getByRole("button", { name: "Add pin" }).click();
+  await expect(pp.locator(".map-pin")).toContainText("Our camp");
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-pin")).toContainText("Our camp");
+  await page.locator(".map-pin").click();
+  await expect(page.locator(".leaflet-popup")).toContainText("Added by Pip");
+  await expect(page.locator(".leaflet-popup")).toContainText("By the ford");
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM pins a new entry and an existing event, and the entry links back", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps GM pins");
+  const mapId = await mapWithPicture(page, cid);
+  const day = (await api(page, "campaign", undefined, cid)).json.campaign.current_day ?? 0;
+  const ev = await api(page, "event_save", { abs_day: day, title: "Council at dawn", shift: null }, cid);
+  expect(ev.status, JSON.stringify(ev.json)).toBe(200);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await startPin(page, 0.3, 0.3);
+  await pinForm(page).getByRole("button", { name: "Encyclopedia entry" }).click();
+  await pinForm(page).getByLabel("Entry name").fill("Weathertop");
+  await pinForm(page).getByRole("button", { name: "New entry here" }).click();
+  await expect(page.locator(".map-pin")).toHaveCount(1);
+  await expect(page.locator(".map-pin .map-marker-icon")).toHaveText("📍");
+  await expect(page.locator(".map-pin")).toContainText("Weathertop");
+  await page.goto(`#/c/${cid}/encyclopedia`);
+  await expect(page.locator("section[data-cat=location]")).toContainText("Weathertop");   // listed under the Location Category
+  await page.getByRole("link", { name: /Weathertop/ }).first().click();
+  await expect(page.locator("select[name=category]")).toHaveValue("location");
+  const back = page.getByRole("link", { name: "📍 On the map: Sartar" });
+  await expect(back).toBeVisible();
+  await back.click();
+  await expect(page.locator(".leaflet-popup")).toContainText("Weathertop");
+  await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Weathertop/ })).toBeVisible();
+
+  await startPin(page, 0.7, 0.6);
+  await pinForm(page).getByRole("button", { name: "Event" }).click();
+  await pinForm(page).getByLabel("Event title").fill("Council");
+  await pinForm(page).getByRole("button", { name: /Council at dawn/ }).click();
+  await pinForm(page).getByRole("button", { name: "Add pin" }).click();
+  await expect(page.locator(".map-pin")).toHaveCount(2);
+  await page.goto(`#/c/${cid}/day/${day}`);
+  await expect(page.getByRole("link", { name: "📍 On the map: Sartar" })).toBeVisible();
+  await page.goto(`#/c/${cid}/events`);
+  await page.getByRole("link", { name: "📍 On the map: Sartar" }).click();
+  await expect(page.locator(".leaflet-popup")).toContainText("Council at dawn");
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM saves a route and a player sees its length", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps routes");
+  const mapId = await mapWithPicture(page, cid, { scale_per_px: 0.1, scale_unit: "mi" });
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await page.getByRole("button", { name: "Measure" }).click();
+  await clickPic(page, 0.1, 0.5);
+  await clickPic(page, 0.5, 0.5);
+  await clickPic(page, 0.5, 0.8);
+  await page.getByRole("button", { name: "Save route…" }).click();
+  await page.getByLabel("Route name").fill("Old North Road");
+  await page.getByRole("dialog", { name: "Save route" }).getByRole("button", { name: "Save route" }).click();
+  const row = page.locator(".map-route", { hasText: "Old North Road" });
+  await expect(row).toContainText(/\d+(\.\d)? (km|mi)/);
+  await expect(page.locator("path.map-route-line")).toHaveCount(1);
+  await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(pp.locator(".map-route", { hasText: "Old North Road" })).toContainText(/\d+(\.\d)? (km|mi)/);
+  await expect(pp.locator(".map-route").getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await row.getByRole("button", { name: "GM only" }).click();
+  await expect(row.getByRole("button", { name: "GM only" })).toHaveAttribute("aria-pressed", "true");
+  await pp.reload();
+  await expect(pp.locator(".map-view .leaflet-container")).toHaveCount(1);
+  await expect(pp.locator(".map-route")).toHaveCount(0);
+  await row.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(page.locator(".map-route")).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps add to enc");
+  const mapId = await mapWithPicture(page, cid);
+  await api(pp, "pin_save", { map_id: mapId, x: 30, y: 40, label: "Burnt Ford", note: "Where we crossed" }, cid);
+  await api(pp, "pin_save", { map_id: mapId, x: 90, y: 40, label: "The old mill" }, cid);
+  await api(page, "entry_save", { name: "Old Mill" }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
+  await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📍" })).toHaveCount(1);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await expect(page.locator(".leaflet-popup")).toContainText("Added by Pip");
+  await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Burnt Ford/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.locator(".map-pin", { hasText: "The old mill" }).click();
+  await expect(page.getByRole("button", { name: "Add to Encyclopedia" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Link to Old Mill" }).click();
+  await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📌" })).toHaveCount(1);   // an entry without a Category
+  expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE campaign_id=${cid}`).trim()).toBe("2");
+  expectNoErrors(errors);
+});
+
+test("Maps: a player can't move or delete the GM's pins", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps no touch");
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 30, y: 40, label: "Keep out", kind: "note" }, cid);
+  await api(pp, "pin_save", { map_id: mapId, x: 90, y: 40, label: "Mine" }, cid);
+  await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(pp.locator(".map-pin")).toHaveCount(2);
+  await pp.locator(".map-pin", { hasText: "Keep out" }).click();
+  await expect(pp.locator(".leaflet-popup")).toContainText("Keep out");
+  await expect(pp.locator(".leaflet-popup").getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(pp.locator(".leaflet-popup").getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await expect(pp.locator(".leaflet-marker-draggable")).toHaveCount(1);   // only their own
+  await expect(pp.locator(".leaflet-marker-draggable .map-marker-label")).toHaveText("Mine");
+  expectNoErrors(errors);
+});
+
+test("Maps: a new entry from a pin's note goes through the detector; a GM-only entry warns", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps detector");
+  const mapId = await mapWithPicture(page, cid);
+  await api(pp, "pin_save", { map_id: mapId, x: 30, y: 40, label: "Burnt Ford", note: "We met Gareth Stormborn here" }, cid);
+  await api(pp, "pin_save", { map_id: mapId, x: 90, y: 40, label: "Hidden Vault" }, cid);
+  await api(page, "entry_save", { name: "Hidden Vault", is_secret: true }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
+  await expect(page.locator("dialog.noun-dialog").getByLabel("Name for Gareth Stormborn")).toBeVisible();
+  await page.locator("dialog.noun-dialog").getByRole("button", { name: "Not now" }).click();
+  await page.locator(".map-pin", { hasText: "Hidden Vault" }).click();
+  await page.getByRole("button", { name: "Link to Hidden Vault" }).click();
+  await expect(page.getByText(/players won't see the pin until the entry is shown to them/)).toBeVisible();
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM drags a pin and it stays there; ?pin= opens its card", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps drag");
+  const mapId = await mapWithPicture(page, cid);
+  const pin = (await api(page, "pin_save", { map_id: mapId, x: 100, y: 100, label: "Drag me" }, cid)).json.pin;
+  await page.goto(`#/c/${cid}/maps/${mapId}?pin=${pin.id}`);
+  await expect(page.locator(".leaflet-popup")).toContainText("Drag me");   // ?pin= opens the card
+  await page.keyboard.press("Escape");
+  const m = page.locator(".leaflet-marker-draggable").first();
+  const box = await m.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 30, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await getMap(page, cid, mapId)).json.pins[0].x).toBeGreaterThan(100);
+  expectNoErrors(errors);
+});
