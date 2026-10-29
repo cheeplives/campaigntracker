@@ -1,0 +1,308 @@
+{
+ "name": "Genesys",
+ "game": "Genesys",
+ "edition": "Core Rulebook",
+ "source": {
+  "title": "Genesys Character Sheet",
+  "owner": "Fantasy Flight Games (Wayback copy)",
+  "url": "https://web.archive.org/web/2020id_/https://images-cdn.fantasyflightgames.com/filer_public/51/80/51807b45-7dc3-4530-93da-609c7075caad/genesys_character_sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "archetype",
+      "label": "Archetype/Species",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "setting",
+      "label": "Setting",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "fields": [
+     {
+      "key": "ch_brawn",
+      "label": "Brawn",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_cunning",
+      "label": "Cunning",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Wounds, Strain & Defense",
+    "fields": [
+     {
+      "key": "soak",
+      "label": "Soak",
+      "type": "number"
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "strain",
+      "label": "Strain",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "defense_ranged",
+      "label": "Ranged Defense",
+      "type": "number"
+     },
+     {
+      "key": "defense_melee",
+      "label": "Melee Defense",
+      "type": "number"
+     },
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "severity",
+        "label": "Severity"
+       },
+       {
+        "key": "result",
+        "label": "Result"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "characteristic",
+        "label": "Characteristic"
+       },
+       {
+        "key": "career",
+        "label": "Career"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapon_list",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "crit",
+        "label": "Crit"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "special",
+        "label": "Special"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Abilities",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "motivations",
+    "title": "Motivations",
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "text"
+     },
+     {
+      "key": "flaw",
+      "label": "Flaw",
+      "type": "text"
+     },
+     {
+      "key": "desire",
+      "label": "Desire",
+      "type": "text"
+     },
+     {
+      "key": "fear",
+      "label": "Fear",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "xp_gear",
+    "title": "XP & Gear",
+    "fields": [
+     {
+      "key": "xp_total",
+      "label": "Total XP",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "xp_available",
+      "label": "Available XP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "money",
+      "label": "Money",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "gear_list",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance Threshold",
+      "type": "number"
+     }
+    ]
+   }
+  ]
+ }
+}

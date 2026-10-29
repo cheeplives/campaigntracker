@@ -1,0 +1,213 @@
+{
+ "name": "Thirsty Sword Lesbians",
+ "game": "Thirsty Sword Lesbians",
+ "edition": "Core",
+ "source": {
+  "title": "All Playbooks (form-fillable)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2021/08/Thirsty-Sword-Lesbians-ALL-Playbooks-Formfillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "The Beast",
+       "The Chosen",
+       "The Devoted",
+       "The Infamous",
+       "The Nature Witch",
+       "The Scoundrel",
+       "The Seeker",
+       "The Spooky Witch",
+       "The Trickster",
+       "The Wanderer"
+      ],
+      "summary": true
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "feeling",
+      "label": "Playbook Feeling",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "stat_daring",
+      "label": "Daring",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "stat_grace",
+      "label": "Grace",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "stat_heart",
+      "label": "Heart",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "stat_spirit",
+      "label": "Spirit",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "stat_wit",
+      "label": "Wit",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     }
+    ]
+   },
+   {
+    "key": "conditions",
+    "title": "Conditions & XP",
+    "fields": [
+     {
+      "key": "cond_angry",
+      "label": "Angry",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_frightened",
+      "label": "Frightened",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_guilty",
+      "label": "Guilty",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_hopeless",
+      "label": "Hopeless",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_insecure",
+      "label": "Insecure",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "strings",
+    "title": "Strings",
+    "fields": [
+     {
+      "key": "string_list",
+      "label": "Strings",
+      "type": "list",
+      "columns": [
+       {
+        "key": "character",
+        "label": "Character"
+       },
+       {
+        "key": "strings",
+        "label": "Strings"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "fields": [
+     {
+      "key": "move_list",
+      "label": "Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear_notes",
+    "title": "Gear & Advances",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "advances",
+      "label": "Advances Taken",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

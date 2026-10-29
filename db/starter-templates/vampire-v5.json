@@ -1,0 +1,551 @@
+{
+ "name": "Vampire: The Masquerade 5th Edition",
+ "game": "Vampire: The Masquerade",
+ "edition": "5th Edition",
+ "source": {
+  "title": "V5 Character sheet (interactive)",
+  "owner": "Mr. Gone (fan-made)",
+  "url": "http://mrgone.rocksolidshells.com/pdf/V5/Vampire_5thEdition_Classic_CharacterStatSheet_Interactive.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "kindred",
+    "title": "Kindred",
+    "fields": [
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text"
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text"
+     },
+     {
+      "key": "ambition",
+      "label": "Ambition",
+      "type": "text"
+     },
+     {
+      "key": "desire",
+      "label": "Desire",
+      "type": "text"
+     },
+     {
+      "key": "predator_type",
+      "label": "Predator Type",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "clan",
+      "label": "Clan",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "generation",
+      "label": "Generation",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "sire",
+      "label": "Sire",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_composure",
+      "label": "Composure",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_resolve",
+      "label": "Resolve",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_larceny",
+      "label": "Larceny",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_animal_ken",
+      "label": "Animal Ken",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_finance",
+      "label": "Finance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_politics",
+      "label": "Politics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "specialties",
+      "label": "Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "disciplines",
+    "title": "Disciplines",
+    "fields": [
+     {
+      "key": "discipline_list",
+      "label": "Disciplines",
+      "type": "list",
+      "columns": [
+       {
+        "key": "discipline",
+        "label": "Discipline"
+       },
+       {
+        "key": "dots",
+        "label": "Dots"
+       },
+       {
+        "key": "powers",
+        "label": "Powers"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Health, Willpower & Hunger",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "pips",
+      "count": 15,
+      "play": true
+     },
+     {
+      "key": "health_superficial",
+      "label": "Superficial Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "health_aggravated",
+      "label": "Aggravated Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 15,
+      "play": true
+     },
+     {
+      "key": "wp_superficial",
+      "label": "Superficial Willpower Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "wp_aggravated",
+      "label": "Aggravated Willpower Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "hunger",
+      "label": "Hunger",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "humanity",
+      "label": "Humanity",
+      "type": "pips",
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "stains",
+      "label": "Stains",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "resonance",
+      "label": "Resonance",
+      "type": "choice",
+      "options": [
+       "Choleric",
+       "Melancholic",
+       "Phlegmatic",
+       "Sanguine",
+       "Animal",
+       "Empty"
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "blood",
+    "title": "Blood",
+    "fields": [
+     {
+      "key": "blood_potency",
+      "label": "Blood Potency",
+      "type": "pips",
+      "count": 10
+     },
+     {
+      "key": "blood_surge",
+      "label": "Blood Surge",
+      "type": "text"
+     },
+     {
+      "key": "mend_amount",
+      "label": "Mend Amount",
+      "type": "text"
+     },
+     {
+      "key": "power_bonus",
+      "label": "Power Bonus",
+      "type": "text"
+     },
+     {
+      "key": "rouse_reroll",
+      "label": "Rouse Re-Roll",
+      "type": "text"
+     },
+     {
+      "key": "feeding_penalty",
+      "label": "Feeding Penalty",
+      "type": "text"
+     },
+     {
+      "key": "bane",
+      "label": "Clan Bane",
+      "type": "text"
+     },
+     {
+      "key": "compulsion",
+      "label": "Clan Compulsion",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages & Flaws",
+    "fields": [
+     {
+      "key": "merits_flaws",
+      "label": "Merits, Backgrounds & Flaws",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "dots",
+        "label": "Dots"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "convictions",
+      "label": "Convictions & Touchstones",
+      "type": "list",
+      "columns": [
+       {
+        "key": "conviction",
+        "label": "Conviction"
+       },
+       {
+        "key": "touchstone",
+        "label": "Touchstone"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "experience",
+    "title": "Experience",
+    "fields": [
+     {
+      "key": "xp_total",
+      "label": "Total XP",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "xp_spent",
+      "label": "Spent XP",
+      "type": "number",
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "profile",
+    "title": "Profile",
+    "fields": [
+     {
+      "key": "true_age",
+      "label": "True Age",
+      "type": "number"
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "number"
+     },
+     {
+      "key": "date_of_death",
+      "label": "Date of Death",
+      "type": "text"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "history",
+      "label": "History",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

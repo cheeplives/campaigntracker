@@ -1,0 +1,308 @@
+{
+ "name": "Dungeon Crawl Classics",
+ "game": "Dungeon Crawl Classics",
+ "edition": "Core Rulebook",
+ "source": {
+  "title": "DCC character sheets",
+  "owner": "Goodman Games (Wayback copy)",
+  "url": "https://web.archive.org/web/2020id_/https://www.goodman-games.com/downloads/WarriorSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text"
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "choice",
+      "options": [
+       "0-level",
+       "Cleric",
+       "Thief",
+       "Warrior",
+       "Wizard",
+       "Dwarf",
+       "Elf",
+       "Halfling"
+      ],
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 0,
+      "max": 10,
+      "summary": true
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "choice",
+      "options": [
+       "Lawful",
+       "Neutral",
+       "Chaotic"
+      ],
+      "summary": true
+     },
+     {
+      "key": "title",
+      "label": "Title",
+      "type": "text"
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "ab_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "ab_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "ab_personality",
+      "label": "Personality",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "lucky_roll",
+      "label": "Birth Augur & Lucky Roll",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "ac",
+      "label": "Armor Class",
+      "type": "number"
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number"
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "attack_bonus",
+      "label": "Attack Bonus",
+      "type": "number"
+     },
+     {
+      "key": "action_dice",
+      "label": "Action Dice",
+      "type": "text"
+     },
+     {
+      "key": "crit",
+      "label": "Crit Die/Table",
+      "type": "text"
+     },
+     {
+      "key": "fumble",
+      "label": "Fumble Die",
+      "type": "text"
+     },
+     {
+      "key": "save_reflex",
+      "label": "Reflex",
+      "type": "number"
+     },
+     {
+      "key": "save_fortitude",
+      "label": "Fortitude",
+      "type": "number"
+     },
+     {
+      "key": "save_will",
+      "label": "Will",
+      "type": "number"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "class_features",
+    "title": "Class Features",
+    "fields": [
+     {
+      "key": "abilities_text",
+      "label": "Class Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text"
+     },
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "check",
+        "label": "Check"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "patron",
+      "label": "Patron / Deity",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "coin_gp",
+      "label": "GP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_sp",
+      "label": "SP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_cp",
+      "label": "CP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "trade_good",
+      "label": "Trade Good",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,397 @@
+{
+ "name": "Lancer",
+ "game": "Lancer",
+ "edition": "Core Book",
+ "source": {
+  "title": "Lancer - Character Sheets",
+  "owner": "Massif Press",
+  "url": "https://massif-press.itch.io/corebook-pdf-free",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "pilot",
+    "title": "Pilot",
+    "fields": [
+     {
+      "key": "callsign",
+      "label": "Callsign",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text"
+     },
+     {
+      "key": "license_level",
+      "label": "License Level",
+      "type": "number",
+      "min": 0,
+      "max": 12,
+      "summary": true
+     },
+     {
+      "key": "grit",
+      "label": "Grit",
+      "type": "number"
+     },
+     {
+      "key": "pilot_hp",
+      "label": "Pilot HP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "pilot_armor",
+      "label": "Pilot Armor",
+      "type": "number"
+     },
+     {
+      "key": "pilot_evasion",
+      "label": "Pilot Evasion",
+      "type": "number"
+     },
+     {
+      "key": "pilot_edef",
+      "label": "Pilot E-Defense",
+      "type": "number"
+     },
+     {
+      "key": "pilot_speed",
+      "label": "Pilot Speed",
+      "type": "number"
+     },
+     {
+      "key": "pilot_gear",
+      "label": "Pilot Loadout",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills_talents",
+    "title": "Skill Triggers, Talents & Licenses",
+    "fields": [
+     {
+      "key": "triggers",
+      "label": "Skill Triggers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trigger",
+        "label": "Trigger"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     },
+     {
+      "key": "talents",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     },
+     {
+      "key": "licenses",
+      "label": "Licenses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "license",
+        "label": "License"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     },
+     {
+      "key": "core_bonuses",
+      "label": "Core Bonuses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "core_bonus",
+        "label": "Core Bonus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mech",
+    "title": "Mech",
+    "fields": [
+     {
+      "key": "frame",
+      "label": "Frame",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "mech_name",
+      "label": "Mech Name",
+      "type": "text"
+     },
+     {
+      "key": "hase_hull",
+      "label": "Hull",
+      "type": "number",
+      "min": 0,
+      "max": 6
+     },
+     {
+      "key": "hase_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 0,
+      "max": 6
+     },
+     {
+      "key": "hase_systems",
+      "label": "Systems",
+      "type": "number",
+      "min": 0,
+      "max": 6
+     },
+     {
+      "key": "hase_engineering",
+      "label": "Engineering",
+      "type": "number",
+      "min": 0,
+      "max": 6
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "number"
+     },
+     {
+      "key": "mech_armor",
+      "label": "Armor",
+      "type": "number"
+     },
+     {
+      "key": "mech_evasion",
+      "label": "Evasion",
+      "type": "number"
+     },
+     {
+      "key": "mech_edef",
+      "label": "E-Defense",
+      "type": "number"
+     },
+     {
+      "key": "mech_speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "sensors",
+      "label": "Sensors",
+      "type": "number"
+     },
+     {
+      "key": "tech_attack",
+      "label": "Tech Attack",
+      "type": "number"
+     },
+     {
+      "key": "save_target",
+      "label": "Save Target",
+      "type": "number"
+     },
+     {
+      "key": "system_points",
+      "label": "System Points",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "mech_status",
+    "title": "Mech Status",
+    "fields": [
+     {
+      "key": "mech_hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "structure",
+      "label": "Structure",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "heat",
+      "label": "Heat",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "reactor_stress",
+      "label": "Reactor Stress",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "repair_cap",
+      "label": "Repair Capacity",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "core_power",
+      "label": "Core Power Available",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "overcharge",
+      "label": "Overcharge",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions & Statuses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "loadout",
+    "title": "Mech Loadout",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Mounts & Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "mount",
+        "label": "Mount"
+       },
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       }
+      ]
+     },
+     {
+      "key": "systems",
+      "label": "Systems",
+      "type": "list",
+      "columns": [
+       {
+        "key": "system",
+        "label": "System"
+       },
+       {
+        "key": "sp",
+        "label": "SP"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "core_system",
+      "label": "Core System",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "reserves",
+    "title": "Reserves & Notes",
+    "fields": [
+     {
+      "key": "reserves_list",
+      "label": "Reserves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "reserve",
+        "label": "Reserve"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "pilot_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,473 @@
+{
+ "name": "The One Ring 2e",
+ "game": "The One Ring",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Character Sheets",
+  "owner": "Free League Publishing",
+  "url": "https://freeleaguepublishing.com/wp-content/uploads/2025/09/TOR_Character-Sheets.zip",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hero",
+    "title": "Hero",
+    "fields": [
+     {
+      "key": "culture",
+      "label": "Heroic Culture",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "calling",
+      "label": "Calling",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "cultural_blessing",
+      "label": "Cultural Blessing",
+      "type": "text"
+     },
+     {
+      "key": "distinctive_features",
+      "label": "Distinctive Features",
+      "type": "text"
+     },
+     {
+      "key": "flaws",
+      "label": "Shadow Path & Flaws",
+      "type": "text"
+     },
+     {
+      "key": "standard_of_living",
+      "label": "Standard of Living",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "patron",
+      "label": "Patron",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 1,
+      "max": 8
+     },
+     {
+      "key": "attr_heart",
+      "label": "Heart",
+      "type": "number",
+      "min": 1,
+      "max": 8
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "number",
+      "min": 1,
+      "max": 8
+     },
+     {
+      "key": "tn_strength_tn",
+      "label": "Strength TN",
+      "type": "number"
+     },
+     {
+      "key": "tn_heart_tn",
+      "label": "Heart TN",
+      "type": "number"
+     },
+     {
+      "key": "tn_wits_tn",
+      "label": "Wits TN",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_awe",
+      "label": "Awe",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_hunting",
+      "label": "Hunting",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_song",
+      "label": "Song",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_enhearten",
+      "label": "Enhearten",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_travel",
+      "label": "Travel",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_healing",
+      "label": "Healing",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_courtesy",
+      "label": "Courtesy",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_battle",
+      "label": "Battle",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_persuade",
+      "label": "Persuade",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_scan",
+      "label": "Scan",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_explore",
+      "label": "Explore",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_riddle",
+      "label": "Riddle",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "sk_lore",
+      "label": "Lore",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "favoured",
+      "label": "Favoured Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat_prof",
+    "title": "Combat Proficiencies",
+    "fields": [
+     {
+      "key": "prof_axes",
+      "label": "Axes",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "prof_bows",
+      "label": "Bows",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "prof_spears",
+      "label": "Spears",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "prof_swords",
+      "label": "Swords",
+      "type": "pips",
+      "count": 6
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Endurance, Hope & Shadow",
+    "fields": [
+     {
+      "key": "endurance",
+      "label": "Endurance",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "hope",
+      "label": "Hope",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "shadow",
+      "label": "Shadow Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "shadow_scars",
+      "label": "Shadow Scars",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "cond_weary",
+      "label": "Weary",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_miserable",
+      "label": "Miserable",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_wounded",
+      "label": "Wounded",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "injury",
+      "label": "Injury",
+      "type": "text",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "defense",
+    "title": "Defense",
+    "fields": [
+     {
+      "key": "parry",
+      "label": "Parry",
+      "type": "number"
+     },
+     {
+      "key": "protection",
+      "label": "Protection",
+      "type": "number"
+     },
+     {
+      "key": "armour",
+      "label": "Armour",
+      "type": "text"
+     },
+     {
+      "key": "helm",
+      "label": "Helm",
+      "type": "text"
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "war_gear",
+    "title": "War Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "load",
+        "label": "Load"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "useful_items",
+      "label": "Useful Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "progress",
+    "title": "Progress",
+    "fields": [
+     {
+      "key": "valour",
+      "label": "Valour",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "wisdom",
+      "label": "Wisdom",
+      "type": "pips",
+      "count": 6
+     },
+     {
+      "key": "adventure_points",
+      "label": "Adventure Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "skill_points",
+      "label": "Skill Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "treasure",
+      "label": "Treasure",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "fellowship_points",
+      "label": "Fellowship Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "virtues_rewards",
+      "label": "Virtues & Rewards",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

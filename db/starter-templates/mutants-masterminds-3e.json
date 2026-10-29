@@ -1,0 +1,366 @@
+{
+ "name": "Mutants & Masterminds 3e",
+ "game": "Mutants & Masterminds",
+ "edition": "3rd Edition",
+ "source": {
+  "title": "M&M 3E Character Sheet (B&W)",
+  "owner": "Green Ronin Publishing",
+  "url": "https://freeronin.com/3e_files/MnM3_charsheet_bw.pdf",
+  "licence": "OGL 1.0a (M&M 3e SRD)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hero",
+    "title": "Hero",
+    "fields": [
+     {
+      "key": "identity",
+      "label": "Identity",
+      "type": "text"
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "power_level",
+      "label": "Power Level",
+      "type": "number",
+      "min": 1,
+      "max": 20,
+      "summary": true
+     },
+     {
+      "key": "power_points",
+      "label": "Power Points",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "affiliation",
+      "label": "Group Affiliation",
+      "type": "text"
+     },
+     {
+      "key": "base",
+      "label": "Base of Operations",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_fighting",
+      "label": "Fighting",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_awareness",
+      "label": "Awareness",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     },
+     {
+      "key": "ab_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": -5,
+      "max": 20
+     }
+    ]
+   },
+   {
+    "key": "defenses",
+    "title": "Defenses",
+    "fields": [
+     {
+      "key": "def_dodge",
+      "label": "Dodge",
+      "type": "number"
+     },
+     {
+      "key": "def_parry",
+      "label": "Parry",
+      "type": "number"
+     },
+     {
+      "key": "def_fortitude",
+      "label": "Fortitude",
+      "type": "number"
+     },
+     {
+      "key": "def_toughness",
+      "label": "Toughness",
+      "type": "number"
+     },
+     {
+      "key": "def_will",
+      "label": "Will",
+      "type": "number"
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Hero Points & Damage",
+    "fields": [
+     {
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "toughness_penalty",
+      "label": "Damage Penalty",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "cond_dazed",
+      "label": "Dazed",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_staggered",
+      "label": "Staggered",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_incapacitated",
+      "label": "Incapacitated",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_impaired",
+      "label": "Impaired",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_disabled",
+      "label": "Disabled",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_fatigued",
+      "label": "Fatigued",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_exhausted",
+      "label": "Exhausted",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_vulnerable",
+      "label": "Vulnerable",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_defenseless",
+      "label": "Defenseless",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages",
+    "fields": [
+     {
+      "key": "advantage_list",
+      "label": "Advantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advantage",
+        "label": "Advantage"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "powers",
+    "title": "Powers",
+    "fields": [
+     {
+      "key": "power_list",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "offense",
+    "title": "Offense",
+    "fields": [
+     {
+      "key": "attack_list",
+      "label": "Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "dc",
+        "label": "DC"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "complications",
+    "title": "Complications",
+    "fields": [
+     {
+      "key": "complication_list",
+      "label": "Complications",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

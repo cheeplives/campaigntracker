@@ -1,0 +1,368 @@
+{
+ "name": "GURPS 4th Edition",
+ "game": "GURPS",
+ "edition": "4th Edition",
+ "source": {
+  "title": "GURPS 4E Character Sheet",
+  "owner": "Steve Jackson Games",
+  "url": "https://www.sjgames.com/gurps/resources/CharacterSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "points_total",
+      "label": "Point Total",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "points_unspent",
+      "label": "Unspent Points",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "tl",
+      "label": "Tech Level",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "size_modifier",
+      "label": "Size Modifier",
+      "type": "number"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text"
+     },
+     {
+      "key": "reaction_mods",
+      "label": "Reaction Modifiers",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_st",
+      "label": "ST",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_dx",
+      "label": "DX",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_iq",
+      "label": "IQ",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_ht",
+      "label": "HT",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "fp",
+      "label": "Fatigue Points",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number"
+     },
+     {
+      "key": "per",
+      "label": "Per",
+      "type": "number"
+     },
+     {
+      "key": "basic_speed",
+      "label": "Basic Speed",
+      "type": "number"
+     },
+     {
+      "key": "basic_move",
+      "label": "Basic Move",
+      "type": "number"
+     },
+     {
+      "key": "basic_lift",
+      "label": "Basic Lift",
+      "type": "number"
+     },
+     {
+      "key": "damage",
+      "label": "Thrust / Swing Damage",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "defense",
+    "title": "Defense & Encumbrance",
+    "fields": [
+     {
+      "key": "dodge",
+      "label": "Dodge",
+      "type": "number"
+     },
+     {
+      "key": "parry",
+      "label": "Parry",
+      "type": "number"
+     },
+     {
+      "key": "block",
+      "label": "Block",
+      "type": "number"
+     },
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance",
+      "type": "choice",
+      "options": [
+       "None (0)",
+       "Light (1)",
+       "Medium (2)",
+       "Heavy (3)",
+       "X-Heavy (4)"
+      ],
+      "play": true
+     },
+     {
+      "key": "dr",
+      "label": "Damage Resistance",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "dr",
+        "label": "DR"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Advantages & Disadvantages",
+    "fields": [
+     {
+      "key": "advantages",
+      "label": "Advantages & Perks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     },
+     {
+      "key": "disadvantages",
+      "label": "Disadvantages & Quirks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text"
+     },
+     {
+      "key": "cultural_familiarity",
+      "label": "Cultural Familiarity",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "relative_level",
+        "label": "Relative Level"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "melee",
+      "label": "Melee Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "reach",
+        "label": "Reach"
+       },
+       {
+        "key": "parry",
+        "label": "Parry"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "ranged",
+      "label": "Ranged Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "acc",
+        "label": "Acc"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "rof",
+        "label": "RoF"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       },
+       {
+        "key": "rcl",
+        "label": "Rcl"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Possessions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "money",
+      "label": "Money",
+      "type": "number",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

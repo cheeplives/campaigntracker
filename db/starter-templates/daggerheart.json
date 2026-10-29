@@ -1,0 +1,312 @@
+{
+ "name": "Daggerheart",
+ "game": "Daggerheart",
+ "edition": "Core",
+ "source": {
+  "title": "Character Sheets and Guides",
+  "owner": "Darrington Press",
+  "url": "https://www.daggerheart.com/wp-content/uploads/2025/05/Character-Sheets-and-Guides-Daggerheart-Aug252026.pdf",
+  "licence": "Darrington Press Community Gaming License (DPCGL)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hero",
+    "title": "Hero",
+    "fields": [
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "subclass",
+      "label": "Subclass",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "community",
+      "label": "Community",
+      "type": "text"
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "summary": true
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "fields": [
+     {
+      "key": "tr_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     },
+     {
+      "key": "tr_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     },
+     {
+      "key": "tr_finesse",
+      "label": "Finesse",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     },
+     {
+      "key": "tr_instinct",
+      "label": "Instinct",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     },
+     {
+      "key": "tr_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     },
+     {
+      "key": "tr_knowledge",
+      "label": "Knowledge",
+      "type": "number",
+      "min": -1,
+      "max": 6
+     }
+    ]
+   },
+   {
+    "key": "defense",
+    "title": "Defense & Damage",
+    "fields": [
+     {
+      "key": "evasion",
+      "label": "Evasion",
+      "type": "number"
+     },
+     {
+      "key": "armor_score",
+      "label": "Armor Score",
+      "type": "number"
+     },
+     {
+      "key": "armor_slots",
+      "label": "Armor Slots",
+      "type": "pips",
+      "count": 12,
+      "play": true
+     },
+     {
+      "key": "threshold_major",
+      "label": "Major Damage Threshold",
+      "type": "number"
+     },
+     {
+      "key": "threshold_severe",
+      "label": "Severe Damage Threshold",
+      "type": "number"
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "pips",
+      "count": 12,
+      "play": true
+     },
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "count": 12,
+      "play": true
+     },
+     {
+      "key": "hope",
+      "label": "Hope",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "experiences",
+    "title": "Experiences",
+    "fields": [
+     {
+      "key": "experience_list",
+      "label": "Experiences",
+      "type": "list",
+      "columns": [
+       {
+        "key": "experience",
+        "label": "Experience"
+       },
+       {
+        "key": "modifier",
+        "label": "Modifier"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Weapons & Armor",
+    "fields": [
+     {
+      "key": "primary_weapon",
+      "label": "Primary Weapon",
+      "type": "text"
+     },
+     {
+      "key": "secondary_weapon",
+      "label": "Secondary Weapon",
+      "type": "text"
+     },
+     {
+      "key": "active_armor",
+      "label": "Active Armor",
+      "type": "text"
+     },
+     {
+      "key": "proficiency",
+      "label": "Proficiency",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "cards",
+    "title": "Features & Domain Cards",
+    "fields": [
+     {
+      "key": "class_feature",
+      "label": "Class Feature",
+      "type": "longtext"
+     },
+     {
+      "key": "hope_feature",
+      "label": "Hope Feature",
+      "type": "longtext"
+     },
+     {
+      "key": "domain_cards",
+      "label": "Domain Cards",
+      "type": "list",
+      "columns": [
+       {
+        "key": "card",
+        "label": "Card"
+       },
+       {
+        "key": "domain",
+        "label": "Domain"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "recall_cost",
+        "label": "Recall Cost"
+       },
+       {
+        "key": "in_loadout",
+        "label": "In Loadout"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "inventory",
+    "title": "Inventory",
+    "fields": [
+     {
+      "key": "items",
+      "label": "Inventory",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "gold_handfuls",
+      "label": "Handfuls",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "gold_bags",
+      "label": "Bags",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "gold_chest",
+      "label": "Chest",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "background",
+    "title": "Background & Connections",
+    "fields": [
+     {
+      "key": "background_qs",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "connections",
+      "label": "Connections",
+      "type": "longtext"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

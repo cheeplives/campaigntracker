@@ -1,0 +1,169 @@
+{
+ "name": "Fate Core",
+ "game": "Fate",
+ "edition": "Core System",
+ "source": {
+  "title": "Fate Core Character Sheet (form-fillable)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2022/04/Fate-Core-Character-Sheet-Formfillable.pdf",
+  "licence": "CC BY 3.0 (Fate Core SRD)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "aspects",
+    "title": "Aspects",
+    "fields": [
+     {
+      "key": "high_concept",
+      "label": "High Concept",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "trouble",
+      "label": "Trouble",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "aspect_3",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "aspect_4",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "aspect_5",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "rung_superb_5",
+      "label": "Superb (+5)",
+      "type": "text"
+     },
+     {
+      "key": "rung_great_4",
+      "label": "Great (+4)",
+      "type": "text"
+     },
+     {
+      "key": "rung_good_3",
+      "label": "Good (+3)",
+      "type": "text"
+     },
+     {
+      "key": "rung_fair_2",
+      "label": "Fair (+2)",
+      "type": "text"
+     },
+     {
+      "key": "rung_average_1",
+      "label": "Average (+1)",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "stunts",
+    "title": "Stunts & Refresh",
+    "fields": [
+     {
+      "key": "stunt_list",
+      "label": "Stunts",
+      "type": "longtext"
+     },
+     {
+      "key": "refresh",
+      "label": "Refresh",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "fate_points",
+      "label": "Fate Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "stress",
+    "title": "Stress",
+    "fields": [
+     {
+      "key": "physical_stress",
+      "label": "Physical Stress",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "mental_stress",
+      "label": "Mental Stress",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "consequences",
+    "title": "Consequences",
+    "fields": [
+     {
+      "key": "cons_mild",
+      "label": "Mild (2)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_moderate",
+      "label": "Moderate (4)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_severe",
+      "label": "Severe (6)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_mild2",
+      "label": "Extra Mild (2)",
+      "type": "text",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "extras_s",
+    "title": "Extras",
+    "fields": [
+     {
+      "key": "extras",
+      "label": "Extras",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

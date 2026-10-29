@@ -1,0 +1,211 @@
+{
+ "name": "Monster of the Week (Hunter)",
+ "game": "Monster of the Week",
+ "edition": "Revised",
+ "source": {
+  "title": "Hunter Playbooks (consolidated 2025)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2023/01/Monster-of-the-Week-Hunter-Playbooks-Consolidated-2025.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hunter",
+    "title": "Hunter",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "The Chosen",
+       "The Crooked",
+       "The Divine",
+       "The Expert",
+       "The Flake",
+       "The Initiate",
+       "The Monstrous",
+       "The Mundane",
+       "The Professional",
+       "The Spell-Slinger",
+       "The Spooky",
+       "The Wronged",
+       "The Gumshoe",
+       "The Hex",
+       "The Pararomantic",
+       "The Searcher",
+       "The Celebrity",
+       "The Snoop",
+       "The Something Borrowed",
+       "The Undercover Agent"
+      ],
+      "summary": true
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "ratings",
+    "title": "Ratings",
+    "fields": [
+     {
+      "key": "rt_charm",
+      "label": "Charm",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "rt_cool",
+      "label": "Cool",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "rt_sharp",
+      "label": "Sharp",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "rt_tough",
+      "label": "Tough",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     },
+     {
+      "key": "rt_weird",
+      "label": "Weird",
+      "type": "number",
+      "min": -1,
+      "max": 3
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Luck, Harm & Experience",
+    "fields": [
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "pips",
+      "count": 7,
+      "play": true
+     },
+     {
+      "key": "harm",
+      "label": "Harm",
+      "type": "pips",
+      "count": 7,
+      "play": true
+     },
+     {
+      "key": "unstable",
+      "label": "Unstable",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "fields": [
+     {
+      "key": "move_list",
+      "label": "Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear_history",
+    "title": "Gear & History",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "harm",
+        "label": "Harm"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       }
+      ]
+     },
+     {
+      "key": "history",
+      "label": "History",
+      "type": "list",
+      "columns": [
+       {
+        "key": "hunter",
+        "label": "Hunter"
+       },
+       {
+        "key": "history",
+        "label": "History"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "improvements",
+    "title": "Improvements",
+    "fields": [
+     {
+      "key": "improvement_list",
+      "label": "Improvements Taken",
+      "type": "longtext"
+     },
+     {
+      "key": "advanced_improvements",
+      "label": "Advanced Improvements",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,387 @@
+{
+ "name": "Draw Steel",
+ "game": "Draw Steel",
+ "edition": "Core",
+ "source": {
+  "title": "Character Sheet (blank)",
+  "owner": "MCDM Productions",
+  "url": "https://files.mcdmproductions.com/DrawSteel/DrawSteel_CharacterSheetBlank.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hero",
+    "title": "Hero",
+    "fields": [
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "subclass",
+      "label": "Subclass",
+      "type": "text"
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "summary": true
+     },
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "text"
+     },
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text"
+     },
+     {
+      "key": "kit",
+      "label": "Kit",
+      "type": "text"
+     },
+     {
+      "key": "complication",
+      "label": "Complication",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "fields": [
+     {
+      "key": "ch_might",
+      "label": "Might",
+      "type": "number",
+      "min": -5,
+      "max": 5
+     },
+     {
+      "key": "ch_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": -5,
+      "max": 5
+     },
+     {
+      "key": "ch_reason",
+      "label": "Reason",
+      "type": "number",
+      "min": -5,
+      "max": 5
+     },
+     {
+      "key": "ch_intuition",
+      "label": "Intuition",
+      "type": "number",
+      "min": -5,
+      "max": 5
+     },
+     {
+      "key": "ch_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": -5,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "vitals",
+    "title": "Vitals",
+    "fields": [
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "winded",
+      "label": "Winded",
+      "type": "number"
+     },
+     {
+      "key": "recoveries",
+      "label": "Recoveries",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "recovery_value",
+      "label": "Recovery Value",
+      "type": "number"
+     },
+     {
+      "key": "heroic_resource",
+      "label": "Heroic Resource",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "surges",
+      "label": "Surges",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "stability",
+      "label": "Stability",
+      "type": "number"
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text"
+     },
+     {
+      "key": "disengage",
+      "label": "Disengage",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "conditions",
+    "title": "Conditions",
+    "fields": [
+     {
+      "key": "cond_bleeding",
+      "label": "Bleeding",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_dazed",
+      "label": "Dazed",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_frightened",
+      "label": "Frightened",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_grabbed",
+      "label": "Grabbed",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_prone",
+      "label": "Prone",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_restrained",
+      "label": "Restrained",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_slowed",
+      "label": "Slowed",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_taunted",
+      "label": "Taunted",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_weakened",
+      "label": "Weakened",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ability_list",
+      "label": "Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "distance",
+        "label": "Distance"
+       },
+       {
+        "key": "target",
+        "label": "Target"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills_perks",
+    "title": "Skills, Perks & Languages",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "group",
+        "label": "Group"
+       }
+      ]
+     },
+     {
+      "key": "perk_list",
+      "label": "Perks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "perk",
+        "label": "Perk"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "progress",
+    "title": "Progress",
+    "fields": [
+     {
+      "key": "victories",
+      "label": "Victories",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "renown",
+      "label": "Renown",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "wealth",
+      "label": "Wealth",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "hero_tokens",
+      "label": "Hero Tokens",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "project_list",
+      "label": "Projects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "project",
+        "label": "Project"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       },
+       {
+        "key": "goal",
+        "label": "Goal"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "inventory",
+    "title": "Inventory",
+    "fields": [
+     {
+      "key": "treasure_list",
+      "label": "Treasures & Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

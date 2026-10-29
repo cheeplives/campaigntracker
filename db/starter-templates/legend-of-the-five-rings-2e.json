@@ -1,0 +1,389 @@
+{
+ "name": "Legend of the Five Rings 2nd Edition",
+ "game": "Legend of the Five Rings",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Legend of the Five Rings 2nd Edition",
+  "owner": "rpgsheets.com (Wayback copy)",
+  "url": "https://web.archive.org/web/20101129154346id_/http://rpgsheets.com/sheets/048101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "samurai",
+    "title": "Samurai",
+    "fields": [
+     {
+      "key": "clan",
+      "label": "Clan",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "family",
+      "label": "Family",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "school",
+      "label": "School",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "insight_rank",
+      "label": "Insight Rank",
+      "type": "number",
+      "min": 1,
+      "max": 5,
+      "summary": true
+     },
+     {
+      "key": "insight",
+      "label": "Insight",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "rings",
+    "title": "Rings & Traits",
+    "fields": [
+     {
+      "key": "ring_earth",
+      "label": "Earth",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "ring_water",
+      "label": "Water",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "ring_fire",
+      "label": "Fire",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "ring_air",
+      "label": "Air",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "ring_void",
+      "label": "Void",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_perception",
+      "label": "Perception",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_reflexes",
+      "label": "Reflexes",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "trait_awareness",
+      "label": "Awareness",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "void_points",
+      "label": "Void Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "standing",
+    "title": "Honor, Glory & Status",
+    "fields": [
+     {
+      "key": "honor",
+      "label": "Honor",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "glory",
+      "label": "Glory",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "status",
+      "label": "Status",
+      "type": "number"
+     },
+     {
+      "key": "taint",
+      "label": "Shadowlands Taint",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Wounds",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wounds Taken",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "wound_level",
+      "label": "Wound Level",
+      "type": "choice",
+      "options": [
+       "Healthy",
+       "Nicked",
+       "Grazed",
+       "Hurt",
+       "Injured",
+       "Crippled",
+       "Down",
+       "Out",
+       "Dead"
+      ],
+      "play": true
+     },
+     {
+      "key": "tn_to_be_hit",
+      "label": "TN to Be Hit",
+      "type": "number"
+     },
+     {
+      "key": "armor_tn",
+      "label": "Armor TN",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "emphasis",
+        "label": "Emphasis"
+       },
+       {
+        "key": "school_skill",
+        "label": "School Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages & Disadvantages",
+    "fields": [
+     {
+      "key": "advantage_list",
+      "label": "Advantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advantage",
+        "label": "Advantage"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     },
+     {
+      "key": "disadvantage_list",
+      "label": "Disadvantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "disadvantage",
+        "label": "Disadvantage"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "techniques",
+    "title": "Techniques & Spells",
+    "fields": [
+     {
+      "key": "technique_list",
+      "label": "School Techniques",
+      "type": "list",
+      "columns": [
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "technique",
+        "label": "Technique"
+       }
+      ]
+     },
+     {
+      "key": "spell_list",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "ring",
+        "label": "Ring"
+       },
+       {
+        "key": "mastery",
+        "label": "Mastery"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "outfit",
+    "title": "Outfit",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "gear",
+      "label": "Outfit",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "koku",
+      "label": "Koku",
+      "type": "number",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

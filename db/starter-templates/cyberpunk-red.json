@@ -1,0 +1,468 @@
+{
+ "name": "Cyberpunk RED",
+ "game": "Cyberpunk",
+ "edition": "RED",
+ "source": {
+  "title": "Character Sheet (fillable)",
+  "owner": "R. Talsorian Games",
+  "url": "https://rtalsoriangames.com/wp-content/uploads/2020/11/RTG-CPR-CharacterSheet-Fillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "edgerunner",
+    "title": "Edgerunner",
+    "fields": [
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "text"
+     },
+     {
+      "key": "role",
+      "label": "Role",
+      "type": "choice",
+      "options": [
+       "Rockerboy",
+       "Solo",
+       "Netrunner",
+       "Tech",
+       "Medtech",
+       "Media",
+       "Exec",
+       "Lawman",
+       "Fixer",
+       "Nomad"
+      ],
+      "summary": true
+     },
+     {
+      "key": "role_ability",
+      "label": "Role Ability",
+      "type": "text"
+     },
+     {
+      "key": "role_rank",
+      "label": "Role Ability Rank",
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "summary": true
+     },
+     {
+      "key": "ip",
+      "label": "Improvement Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "reputation",
+      "label": "Reputation",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "st_int",
+      "label": "INT",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_ref",
+      "label": "REF",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_dex",
+      "label": "DEX",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_tech",
+      "label": "TECH",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_cool",
+      "label": "COOL",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_will",
+      "label": "WILL",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_move",
+      "label": "MOVE",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "st_body",
+      "label": "BODY",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "luck",
+      "label": "LUCK",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "emp",
+      "label": "EMP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Health",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "seriously_wounded",
+      "label": "Seriously Wounded",
+      "type": "number"
+     },
+     {
+      "key": "death_save",
+      "label": "Death Save",
+      "type": "number"
+     },
+     {
+      "key": "humanity",
+      "label": "Humanity",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "sp_head",
+      "label": "Head Armor SP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "sp_body",
+      "label": "Body Armor SP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "quick_fix",
+        "label": "Quick Fix"
+       },
+       {
+        "key": "treatment",
+        "label": "Treatment"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "addictions",
+      "label": "Addictions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "substance",
+        "label": "Substance"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "base",
+        "label": "Base"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Weapons & Armor",
+    "fields": [
+     {
+      "key": "weapon_list",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "dmg",
+        "label": "DMG"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "rof",
+        "label": "ROF"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor_list",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "sp",
+        "label": "SP"
+       },
+       {
+        "key": "penalty",
+        "label": "Penalty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "cyberware",
+    "title": "Cyberware",
+    "fields": [
+     {
+      "key": "cyber_list",
+      "label": "Cyberware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "cyberware",
+        "label": "Cyberware"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "humanity_loss",
+        "label": "Humanity Loss"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "eurobucks",
+      "label": "Eurobucks",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "housing",
+      "label": "Housing",
+      "type": "text"
+     },
+     {
+      "key": "rent",
+      "label": "Rent",
+      "type": "text"
+     },
+     {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "lifepath",
+    "title": "Lifepath",
+    "fields": [
+     {
+      "key": "cultural_origin",
+      "label": "Cultural Origin",
+      "type": "text"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "text"
+     },
+     {
+      "key": "dress_style",
+      "label": "Clothing Style",
+      "type": "text"
+     },
+     {
+      "key": "hairstyle",
+      "label": "Hairstyle",
+      "type": "text"
+     },
+     {
+      "key": "affectation",
+      "label": "Affectation",
+      "type": "text"
+     },
+     {
+      "key": "values_most",
+      "label": "Values Most",
+      "type": "text"
+     },
+     {
+      "key": "feel_about_people",
+      "label": "Feelings About People",
+      "type": "text"
+     },
+     {
+      "key": "valued_person",
+      "label": "Most Valued Person",
+      "type": "text"
+     },
+     {
+      "key": "valued_possession",
+      "label": "Most Valued Possession",
+      "type": "text"
+     },
+     {
+      "key": "family_background",
+      "label": "Family Background",
+      "type": "longtext"
+     },
+     {
+      "key": "life_goals",
+      "label": "Life Goals",
+      "type": "longtext"
+     },
+     {
+      "key": "friends_enemies",
+      "label": "Friends, Enemies & Lovers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "relationship",
+        "label": "Relationship"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

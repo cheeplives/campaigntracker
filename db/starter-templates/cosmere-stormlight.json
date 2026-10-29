@@ -1,0 +1,443 @@
+{
+ "name": "Cosmere RPG: Stormlight",
+ "game": "Cosmere Roleplaying Game",
+ "edition": "Stormlight Handbook",
+ "source": {
+  "title": "Stormlight Character Sheet",
+  "owner": "Brotherwise Games",
+  "url": "https://www.cosmererpg.com/s/SL020_Stormlight-Character-Sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "paths",
+      "label": "Paths",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 21,
+      "summary": true
+     },
+     {
+      "key": "radiant_order",
+      "label": "Radiant Order",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "attr_speed",
+      "label": "Speed",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "attr_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "attr_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "attr_awareness",
+      "label": "Awareness",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "attr_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "defenses",
+    "title": "Defenses",
+    "fields": [
+     {
+      "key": "def_physical",
+      "label": "Physical",
+      "type": "number"
+     },
+     {
+      "key": "def_cognitive",
+      "label": "Cognitive",
+      "type": "number"
+     },
+     {
+      "key": "def_spiritual",
+      "label": "Spiritual",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "resources",
+    "title": "Resources",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "focus",
+      "label": "Focus",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "investiture",
+      "label": "Investiture",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "deflect",
+      "label": "Deflect",
+      "type": "number"
+     },
+     {
+      "key": "movement",
+      "label": "Movement",
+      "type": "number"
+     },
+     {
+      "key": "senses",
+      "label": "Senses",
+      "type": "text"
+     },
+     {
+      "key": "lifting",
+      "label": "Lifting Capacity",
+      "type": "text"
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions & Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_agility",
+      "label": "Agility",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_heavy_weaponry",
+      "label": "Heavy Weaponry",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_light_weaponry",
+      "label": "Light Weaponry",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_thievery",
+      "label": "Thievery",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_crafting",
+      "label": "Crafting",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_deduction",
+      "label": "Deduction",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_discipline",
+      "label": "Discipline",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_lore",
+      "label": "Lore",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_deception",
+      "label": "Deception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "surge_skills",
+      "label": "Surge Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "surge",
+        "label": "Surge"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Expertises",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "path",
+        "label": "Path"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "expertise_list",
+      "label": "Expertises",
+      "type": "list",
+      "columns": [
+       {
+        "key": "expertise",
+        "label": "Expertise"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "weapon_list",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "traits",
+        "label": "Traits"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "gear_list",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "marks",
+      "label": "Marks",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "story",
+    "title": "Goals & Connections",
+    "fields": [
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "goal",
+        "label": "Goal"
+       },
+       {
+        "key": "progress",
+        "label": "Progress"
+       }
+      ]
+     },
+     {
+      "key": "connections",
+      "label": "Connections",
+      "type": "longtext"
+     },
+     {
+      "key": "purpose",
+      "label": "Purpose",
+      "type": "longtext"
+     },
+     {
+      "key": "obstacle",
+      "label": "Obstacle",
+      "type": "longtext"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

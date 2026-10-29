@@ -1,0 +1,421 @@
+{
+ "name": "Alien RPG (Evolved Edition)",
+ "game": "Alien RPG",
+ "edition": "Evolved Edition",
+ "source": {
+  "title": "Evolved Edition Character Sheet",
+  "owner": "Free League Publishing",
+  "url": "https://freeleaguepublishing.com/wp-content/uploads/2023/09/ALIEN-Evolved-Edition-Character-Sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "choice",
+      "options": [
+       "Colonial Marine",
+       "Colonial Marshal",
+       "Company Agent",
+       "Kid",
+       "Medic",
+       "Officer",
+       "Pilot",
+       "Roughneck",
+       "Scientist",
+       "Wildcatter",
+       "Synthetic"
+      ],
+      "summary": true
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text"
+     },
+     {
+      "key": "personal_agenda",
+      "label": "Personal Agenda",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "buddy",
+      "label": "Buddy",
+      "type": "text"
+     },
+     {
+      "key": "rival",
+      "label": "Rival",
+      "type": "text"
+     },
+     {
+      "key": "signature_item",
+      "label": "Signature Item",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "number",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "attr_empathy",
+      "label": "Empathy",
+      "type": "number",
+      "min": 1,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_heavy_machinery",
+      "label": "Heavy Machinery",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_close_combat",
+      "label": "Close Combat",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_mobility",
+      "label": "Mobility",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_ranged_combat",
+      "label": "Ranged Combat",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_piloting",
+      "label": "Piloting",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_observation",
+      "label": "Observation",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_comtech",
+      "label": "Comtech",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_command",
+      "label": "Command",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_manipulation",
+      "label": "Manipulation",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_medical_aid",
+      "label": "Medical Aid",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Health & Stress",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "stress",
+      "label": "Stress Level",
+      "type": "pips",
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "cond_starving",
+      "label": "Starving",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_dehydrated",
+      "label": "Dehydrated",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_exhausted",
+      "label": "Exhausted",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_freezing",
+      "label": "Freezing",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "healing_time",
+        "label": "Healing Time"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "permanent_mental_trauma",
+      "label": "Permanent Mental Trauma",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trauma",
+        "label": "Trauma"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "resources",
+    "title": "Consumables",
+    "fields": [
+     {
+      "key": "res_air",
+      "label": "Air",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "res_food",
+      "label": "Food",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "res_power",
+      "label": "Power",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "res_water",
+      "label": "Water",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number"
+     },
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       }
+      ]
+     },
+     {
+      "key": "tiny_items",
+      "label": "Tiny Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
+      "key": "cash",
+      "label": "Cash",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "progress",
+    "title": "Progress",
+    "fields": [
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "pips",
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "story_points",
+      "label": "Story Points",
+      "type": "pips",
+      "count": 3,
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,243 @@
+{
+ "name": "Mothership 1e",
+ "game": "Mothership",
+ "edition": "1st Edition",
+ "source": {
+  "title": "1E Character Sheet",
+  "owner": "Tuesday Knight Games",
+  "url": "https://cdn.shopify.com/s/files/1/0022/2727/3817/files/Mothership-Character-Sheet.pdf?v=1713672550",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     },
+     {
+      "key": "role",
+      "label": "Role / Job",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "choice",
+      "options": [
+       "Teamster",
+       "Android",
+       "Scientist",
+       "Marine"
+      ],
+      "summary": true
+     },
+     {
+      "key": "high_score",
+      "label": "High Score",
+      "type": "number"
+     },
+     {
+      "key": "trinket",
+      "label": "Trinket",
+      "type": "text"
+     },
+     {
+      "key": "patch",
+      "label": "Patch",
+      "type": "text"
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats & Saves",
+    "fields": [
+     {
+      "key": "stat_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "stat_speed",
+      "label": "Speed",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "stat_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "stat_combat",
+      "label": "Combat",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "save_sanity",
+      "label": "Sanity",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "save_fear",
+      "label": "Fear",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "save_body",
+      "label": "Body",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     }
+    ]
+   },
+   {
+    "key": "vitals",
+    "title": "Health, Wounds & Stress",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "counter",
+      "play": true,
+      "min": 2,
+      "max": 20
+     },
+     {
+      "key": "armor_points",
+      "label": "Armor Points",
+      "type": "number"
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "loadout",
+    "title": "Loadout",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "wound",
+        "label": "Wound"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

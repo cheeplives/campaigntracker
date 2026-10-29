@@ -1,0 +1,179 @@
+{
+ "name": "Fate Accelerated",
+ "game": "Fate",
+ "edition": "Fate Accelerated Edition",
+ "source": {
+  "title": "FAE Character Sheet (form-fillable)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2022/07/Fate-Accelerated-Character-Sheet-Formfillable.pdf",
+  "licence": "CC BY 3.0 (Fate Accelerated SRD)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "aspects",
+    "title": "Aspects",
+    "fields": [
+     {
+      "key": "high_concept",
+      "label": "High Concept",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "trouble",
+      "label": "Trouble",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "aspect_3",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "aspect_4",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "aspect_5",
+      "label": "Aspect",
+      "type": "text"
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "approaches",
+    "title": "Approaches",
+    "fields": [
+     {
+      "key": "ap_careful",
+      "label": "Careful",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "ap_clever",
+      "label": "Clever",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "ap_flashy",
+      "label": "Flashy",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "ap_forceful",
+      "label": "Forceful",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "ap_quick",
+      "label": "Quick",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "ap_sneaky",
+      "label": "Sneaky",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "stunts",
+    "title": "Stunts & Refresh",
+    "fields": [
+     {
+      "key": "stunt_list",
+      "label": "Stunts",
+      "type": "longtext"
+     },
+     {
+      "key": "refresh",
+      "label": "Refresh",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "fate_points",
+      "label": "Fate Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "stress",
+    "title": "Stress",
+    "fields": [
+     {
+      "key": "stress_track",
+      "label": "Stress",
+      "type": "pips",
+      "count": 3,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "consequences",
+    "title": "Consequences",
+    "fields": [
+     {
+      "key": "cons_mild",
+      "label": "Mild (2)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_moderate",
+      "label": "Moderate (4)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_severe",
+      "label": "Severe (6)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "cons_mild2",
+      "label": "Extra Mild (2)",
+      "type": "text",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "extras_s",
+    "title": "Extras",
+    "fields": [
+     {
+      "key": "extras",
+      "label": "Extras",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

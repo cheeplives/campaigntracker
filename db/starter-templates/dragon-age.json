@@ -1,0 +1,283 @@
+{
+ "name": "Dragon Age RPG",
+ "game": "Dragon Age",
+ "edition": "Core (AGE)",
+ "source": {
+  "title": "Dragon Age RPG Character Sheet",
+  "owner": "Green Ronin Publishing",
+  "url": "https://freeronin.com/dragon_age_rpg/DragonAge_CharacterSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "choice",
+      "options": [
+       "Dwarf",
+       "Elf",
+       "Human",
+       "Qunari"
+      ],
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "choice",
+      "options": [
+       "Mage",
+       "Rogue",
+       "Warrior"
+      ],
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 20,
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ab_communication",
+      "label": "Communication",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_constitution",
+      "label": "Constitution",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_cunning",
+      "label": "Cunning",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_magic",
+      "label": "Magic",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_perception",
+      "label": "Perception",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "focuses",
+      "label": "Focuses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "focus",
+        "label": "Focus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "mana",
+      "label": "Mana",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number"
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number"
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Spells",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "degree",
+        "label": "Degree"
+       }
+      ]
+     },
+     {
+      "key": "spell_list",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "mana_cost",
+        "label": "Mana Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "coin_gold",
+      "label": "Gold",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_silver",
+      "label": "Silver",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_copper",
+      "label": "Copper",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "goals_ties",
+      "label": "Goals & Ties",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
