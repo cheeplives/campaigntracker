@@ -221,8 +221,7 @@ Tables (InnoDB utf8mb4 as the others):
   - `character_presence` POST `{ id, editing: bool, since: string|null }` → `{ viewers: [{ name, role, editing }],
     changes: { [key]: { value, by } }, stamp }`: records me as viewing (editing only allowed for owner and GMs),
     returns others seen in the last 40 s and the field values others changed after `since` (filtered by
-    visibility). Needs a `field_changes` record: add `changed_by` and `changed_at` per key inside `field_values`'
-    sibling JSON column `field_stamps` (`{ key: [user_id, unix_ms] }`), written by `character_field`.
+    visibility), read from `field_stamps` (`{ key: [user_id, unix_ms] }`), which `character_field` writes.
   - `character_field` from a GM who doesn't own the sheet is refused (409 `not_editing`, "Press Edit first") unless
     their presence row has `editing = 1`.
   - `member_active_character` POST `{ character_id|null }` → `{ ok }`: your own active character, one you own; sets
