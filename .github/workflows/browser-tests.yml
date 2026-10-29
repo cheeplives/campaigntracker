@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.project }}
+    # The PHP 8.3 jobs keep their plain names, so any required checks that name them still match.
+    name: ${{ matrix.project }}${{ matrix.php != '8.3' && format(' (PHP {0})', matrix.php) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     # Playwright's own image, with every browser and the system libraries they need already in it. Installing WebKit's
@@ -31,6 +32,11 @@ jobs:
       fail-fast: false          # one engine failing must not hide another's result
       matrix:
         project: [chromium, firefox, webkit, mobile-safari, mobile-chrome, ipad]
+        php: ['8.3']
+        # The newest PHP the server may move to, once: the server side doesn't change with the browser.
+        include:
+          - project: chromium
+            php: '8.5'
     services:
       mysql:
         image: mysql:8.0
@@ -46,6 +52,9 @@ jobs:
       DB_PASSWORD: ci
       DB_NAME: chronicle_test
       HOME: /root               # Firefox won't start as root with a HOME owned by someone else
+      PHP: ${{ matrix.php }}
+      # Where the test server (tests/playwright.config.js) writes PHP's warnings, checked after the run.
+      PHP_ERROR_LOG: /tmp/php-errors.log
     defaults:
       run:
         working-directory: tests
@@ -56,13 +65,23 @@ jobs:
           want=$(node -p 'require("./package-lock.json").packages["node_modules/@playwright/test"].version')
           test "$want" = "1.56.1" || { echo "::error::tests/package-lock.json has @playwright/test $want; set the container image to v$want-noble"; exit 1; }
       # PHP and the MySQL client, from Ubuntu's own archive: a few MB, where WebKit's libraries were hundreds.
-      - name: Install PHP and the MySQL client
+      # Ubuntu 24.04 ships PHP 8.3 only; a newer PHP comes from Ondřej Surý's PPA, the usual source of PHP on Ubuntu.
+      - name: Install PHP ${{ matrix.php }} and the MySQL client
         timeout-minutes: 6
         run: |
           echo 'Acquire::Retries "5"; Acquire::http::Timeout "30";' > /etc/apt/apt.conf.d/80-retries
           apt-get update -q
+          if [ "$PHP" != "8.3" ]; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends ca-certificates curl
+            mkdir -p /etc/apt/keyrings
+            curl -fsSL 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x14AA40EC0831756756D7F66C4F4EA0AAE5267A6C' -o /etc/apt/keyrings/ondrej-php.asc
+            echo 'deb [signed-by=/etc/apt/keyrings/ondrej-php.asc] https://ppa.launchpadcontent.net/ondrej/php/ubuntu noble main' > /etc/apt/sources.list.d/ondrej-php.list
+            apt-get update -q
+          fi
           DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
-            php8.3-cli php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml mysql-client-core-8.0
+            php$PHP-cli php$PHP-mysql php$PHP-curl php$PHP-mbstring php$PHP-xml mysql-client-core-8.0
+          php -v
+          php -r 'exit(PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION === getenv("PHP") ? 0 : 1);' || { echo "::error::php -v is not PHP $PHP"; exit 1; }
       - run: find ../api ../install.php ../tools ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
       # The upgrade deploy.sh runs: on an empty database it makes every table, then finds nothing left to do.
       - name: Database upgrade from the command line
@@ -74,11 +93,18 @@ jobs:
           php ../tools/migrate.php --check
       - run: npm ci
       - run: npx playwright test --project=${{ matrix.project }}
+      # A deprecation today is an error in the next PHP: none may be logged while the tests use the app.
+      - name: No PHP deprecations or fatal errors
+        if: always()
+        run: |
+          touch "$PHP_ERROR_LOG"
+          if grep -E 'PHP (Deprecated|Fatal error)' "$PHP_ERROR_LOG"; then echo "::error::PHP $PHP logged the lines above"; exit 1; fi
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: report-${{ matrix.project }}
+          name: report-${{ matrix.project }}-php${{ matrix.php }}
           path: |
             tests/playwright-report/
             tests/test-results/
+            /tmp/php-errors.log
           retention-days: 14

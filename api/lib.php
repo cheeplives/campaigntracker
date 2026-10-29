@@ -490,7 +490,7 @@ function http_request(string $method, string $url, array $opts = []): array {
   $body = curl_exec($ch);
   $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err = curl_error($ch);
-  curl_close($ch);
+  // No curl_close(): it has done nothing since PHP 8.0 (the handle is freed when $ch goes) and 8.5 deprecates it.
   return ['status' => $status, 'body' => (string) $body, 'error' => $err];
 }
 

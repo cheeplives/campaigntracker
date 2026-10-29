@@ -339,7 +339,7 @@ function image_download(string $url, int $max): string {
         curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $next = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
-        curl_close($ch);
+        unset($ch);                                       // frees the handle (curl_close() is deprecated in PHP 8.5)
         fclose($fh);
         if ($got > $max) { @unlink($tmp); throw new LengthException('too big'); }
         if ($status === 200 && $got > 0) return $tmp;
