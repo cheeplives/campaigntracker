@@ -111,12 +111,16 @@ const MapsTab = (() => {
       if (!name.value.trim()) return toast('Give the map a name', true);
       if (!f) return toast('Choose the map\'s picture, or use Find Image', true);
       go.disabled = true;
+      let file = null;
       try {
-        made = (await post('map_save', { name: name.value.trim() }, cid)).map;
-        const file = await ctx.uploadFile('map', made.id, f);
+        if (!made) made = (await post('map_save', { name: name.value.trim() }, cid)).map;   // a retry reuses the map already made
+        file = await ctx.uploadFile('map', made.id, f);
         await post('map_save', { id: made.id, image_id: file.id }, cid);
         open(made, f.name);
-      } catch (err) { toast(err.message, true); go.disabled = false; }
+      } catch (err) {
+        if (file) await post('file_delete', { id: file.id }, cid).catch(() => {});   // not kept as a picture the map can't use
+        toast(err.message, true); go.disabled = false;
+      }
     });
     // a map made for a picture that never came is not kept
     d.addEventListener('close', async () => {
@@ -184,7 +188,7 @@ const MapsTab = (() => {
       pts = []; measureLayer && drawMeasure();
       const hasGrid = map.grid_px > 0;
       let way = hasGrid || hint ? 'grid' : 'points', offset = null;
-      const dist = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Distance', value: '' });
+      const apart = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Distance', value: '' });
       const unit = select(UNITS, map.scale_unit || (system() === 'metric' ? 'km' : 'mi'), { 'aria-label': 'Unit' });
       const sq = hasGrid && map.scale_per_px ? +(map.scale_per_px * map.grid_px).toPrecision(6) : G.ROLL20.per_square;
       const per = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Distance per square', value: String(sq) });
@@ -204,7 +208,7 @@ const MapsTab = (() => {
         way1.setAttribute('aria-pressed', String(w === 'points')); way2.setAttribute('aria-pressed', String(w === 'grid'));
         body.replaceChildren(...(w === 'points' ? [
           el('p', { class: 'small' }, 'Click two places you know the distance between.'),
-          el('div', { class: 'row' }, field('How far apart are they?', dist), field('Unit', unit))
+          el('div', { class: 'row' }, field('How far apart are they?', apart), field('Unit', unit))
         ] : [
           el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''),
             btn(`Roll20 (${G.ROLL20.grid_px} px = ${G.ROLL20.per_square} ft)`, () => { px.value = String(G.ROLL20.grid_px); per.value = String(G.ROLL20.per_square); perUnit.value = G.ROLL20.unit; }, 'small')),
@@ -217,7 +221,7 @@ const MapsTab = (() => {
         try {
           if (way === 'points') {
             if (picks.length < 2) throw new Error('Click two places on the map first');
-            patch = { ...G.scaleFromPoints(picks[0], picks[1], +dist.value, unit.value), grid_px: null, grid_offset_x: null, grid_offset_y: null };
+            patch = { ...G.scaleFromPoints(picks[0], picks[1], +apart.value, unit.value), grid_px: null, grid_offset_x: null, grid_offset_y: null };
           } else {
             fromRun();
             if (!(+px.value > 0)) throw new Error('Type how many pixels one square is');
@@ -312,8 +316,11 @@ const MapsTab = (() => {
     lf = { map: lmap, scale: bar };
     lmap.on('click', onClick);
     // the map must know its size once it is on the page, and again whenever that changes
-    const fit = () => { if (!host.isConnected) { lmap.remove(); ro.disconnect(); return; } lmap.invalidateSize(); };
+    let gone = false;
+    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };
+    const fit = () => { if (!host.isConnected) teardown(); else lmap.invalidateSize(); };
     const ro = new ResizeObserver(fit);
+    window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
     ro.observe(host);
     requestAnimationFrame(() => { if (host.isConnected) { lmap.invalidateSize(); lmap.fitBounds(bounds()); } });
     syncTools();

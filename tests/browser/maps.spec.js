@@ -441,6 +441,10 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   await expect(page.getByLabel("Distance per square")).toHaveValue("5");
   await expect(page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit")).toHaveValue("ft");
   // the first click on the grid gives its offset, which is the click's position within a square
+  const img = await page.locator(".map-view img.leaflet-image-layer").boundingBox();
+  const box = await page.locator(".map-view .leaflet-container").boundingBox();
+  const at = fx => ({ x: ((box.x + box.width * fx - img.x) / img.width) * 300, y: ((box.y + box.height * 0.5 - img.y) / img.height) * 200 });
+  const a = at(0.5), b = at(0.9);
   await clickMap(page, 0.5, 0.5);
   await clickMap(page, 0.9, 0.5);
   await page.getByLabel("How many squares").fill("2");
@@ -449,8 +453,10 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   const saved = (await api(page, "maps", undefined, cid)).json.maps[0];
   expect(saved.scale_unit).toBe("ft");
   expect(saved.grid_px).toBeGreaterThan(0);
-  expect(saved.grid_offset_x).toBeGreaterThanOrEqual(0);
-  expect(saved.grid_offset_x).toBeLessThanOrEqual(saved.grid_px);
+  const grid = Math.hypot(b.x - a.x, b.y - a.y) / 2;
+  expect(Math.abs(saved.grid_px - grid)).toBeLessThan(1);
+  expect(Math.abs(saved.grid_offset_x - (a.x % saved.grid_px))).toBeLessThan(1);
+  expect(Math.abs(saved.grid_offset_y - (a.y % saved.grid_px))).toBeLessThan(1);
   expectNoErrors(errors);
 });
 
@@ -525,5 +531,23 @@ test("Maps: marker() draws a labelled marker and the coordinates map to the pict
       label: host.querySelector(".map-marker.test-pin .map-marker-label")?.textContent, icon: host.querySelector(".map-marker-icon")?.textContent };
   });
   expect(out).toMatchObject({ ll: [-20, 10], xy: { x: 10, y: 20 }, isMarker: true, label: "Inn", icon: "📍" });
+  expectNoErrors(errors);
+});
+
+test("Maps: leaving a map and coming back leaves one map on the page and no errors", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps leave");
+  const id = (await api(page, "map_save", { name: "Twice" }, cid)).json.map.id;
+  const up = await upload(page, cid, "map", id);
+  await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
+  for (let i = 0; i < 2; i++) {
+    await page.goto(`#/c/${cid}/maps/${id}`);
+    await expect(page.locator(".map-view .leaflet-container")).toHaveCount(1);
+    await page.goto(`#/c/${cid}/today`);
+    await expect(page.locator(".leaflet-container")).toHaveCount(0);
+  }
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await expect(page.locator(".leaflet-container")).toHaveCount(1);
+  await page.waitForTimeout(300);
   expectNoErrors(errors);
 });

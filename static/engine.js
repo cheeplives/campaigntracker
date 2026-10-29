@@ -1231,8 +1231,8 @@
     // software and fonts bundled with the app
     quill: { title: 'Quill 2 rich text editor (static/vendor/quill)', by: 'Slab and the Quill contributors', licence: 'BSD 3-Clause',
       url: 'https://github.com/slab/quill' },
-    leaflet: { title: 'Leaflet map viewer (static/vendor/leaflet)', by: 'Volodymyr Agafonkin and the Leaflet contributors', licence: 'BSD 2-Clause',
-      url: 'https://leafletjs.com' },
+    leaflet: { title: 'Leaflet 1.9.4 map viewer (static/vendor/leaflet)', by: 'Volodymyr Agafonkin and the Leaflet contributors', licence: 'BSD 2-Clause',
+      url: 'https://github.com/Leaflet/Leaflet' },
     inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
     barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',
       url: 'https://fonts.google.com/specimen/Barlow+Condensed' },
