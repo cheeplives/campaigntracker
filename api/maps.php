@@ -700,14 +700,6 @@ function token_save(int $cid): array {
             $t['entry_id'] = (int)$body['entry_id'];
         }
     }
-    if (has_map_grid()) {
-        $m += ['grid_type' => 'square', 'grid_shown' => 0];
-        if ($has('grid_type')) {
-            if (!in_array($body['grid_type'], MAP_GRID_TYPES, true)) fail('Pick squares, flat-topped hexes or pointy-topped hexes');
-            $m['grid_type'] = $body['grid_type'];
-        }
-        if ($has('grid_shown')) $m['grid_shown'] = !empty($body['grid_shown']) ? 1 : 0;
-    }
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') $t['image_id'] = null;
         else {
