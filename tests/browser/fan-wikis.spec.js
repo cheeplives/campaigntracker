@@ -3,7 +3,8 @@
 // tests/support/fanwiki-stub.php answers for Wookieepedia (CC BY-SA), Memory Alpha (CC BY-NC) and Greyhawk Online
 // (no licence stated), and nothing leaves the machine.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 const fs = require("fs");
 const path = require("path");
 // Once tools/fanwiki-kill-switch.sh --non-open has removed the non-open wikis and fair-use pictures, what needs them is skipped.
@@ -14,7 +15,7 @@ async function setup(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

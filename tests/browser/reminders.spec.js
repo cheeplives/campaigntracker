@@ -1,7 +1,8 @@
 // Calendar reminders: set on a day and shift from the day page, they pop up once the campaign
 // clock reaches them, for whoever they are meant for, until each person dismisses them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign , notNow } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign , notNow, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("a GM's reminder pops up for the GM and an open player page when time passes to it", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -9,7 +10,7 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Reminders ${gm.id}`); // now: Dawn of day 2 (shift 8)
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await pp.clock.install();
@@ -96,7 +97,7 @@ test("players keep their own reminders, GMs can share theirs, and only future ti
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Reminder access ${gm.id}`); // now: shift 8
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

@@ -2,14 +2,15 @@
 // new names in it (capitalized, emphasized or set apart), each to Add, Ignore or Skip; added names become entries with
 // Public notes for everyone and GM notes for GMs, tags of their own, and links wherever the name is written.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
   const gm = person("Gwen"), player = person("Pip");
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -99,6 +100,7 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   await nounRow(page, "Black Hand").getByText("Skip").click();
   await dlg.getByRole("button", { name: "Save choices" }).click();
   await expect(page.getByText("Added 2 to the Encyclopedia · 1 ignored")).toBeVisible();
+  await expect(page.locator("[data-box=notes] .enc-mentions")).toContainText("Gunther");   // the page has redrawn with the new entries
   // A skipped name isn't asked about again until the page is reloaded; a scan still finds it.
   await page.getByRole("button", { name: "Save notes" }).click();
   await expect(page.getByText("Notes saved")).toBeVisible();

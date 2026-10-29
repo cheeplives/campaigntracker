@@ -1,7 +1,8 @@
 // The month grid and the week view preview each day's notes: day notes, shift
 // notes and (for GMs only) GM notes, with the full text on hover.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("month and week views preview the notes each member may read", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -9,7 +10,7 @@ test("month and week views preview the notes each member may read", async ({ pag
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Previews ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

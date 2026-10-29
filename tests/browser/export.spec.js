@@ -2,7 +2,8 @@
 // file holds only what that player can see.
 const fs = require("fs");
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 async function exportDay(page) {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "⬇ Export" }).click()]);
@@ -32,7 +33,7 @@ test("a day exports to Markdown, and players get only what they can see", async 
   expect(md).not.toContain("**Forecast** not known");
 
   // The same day as a player.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

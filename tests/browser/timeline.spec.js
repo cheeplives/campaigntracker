@@ -3,7 +3,8 @@
 // (static/timeline.js) runs under Node; the page is checked in every browser, touch ones included.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 const E = require(path.join(__dirname, "..", "..", "static", "engine.js"));
 const T = require(path.join(__dirname, "..", "..", "static", "timeline.js"));
 
@@ -162,7 +163,7 @@ test("the Events tab switches to a timeline of the same events, remembered, and 
   expectNoErrors(errors);
 
   // a player sees the timeline without the secret event or the unpublished session
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

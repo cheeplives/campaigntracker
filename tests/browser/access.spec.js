@@ -4,7 +4,8 @@
 // groups below, which is the moment to decide who may use it.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
-const { person, signIn, approve, makeCampaign, api } = require("./helpers");
+const { person, signIn, approve, makeCampaign, api, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const root = path.join(__dirname, "..", "..");
 const index = fs.readFileSync(path.join(root, "api", "index.php"), "utf8");
@@ -26,7 +27,8 @@ const GM_ONLY = ["campaign_update", "campaign_delete", "campaign_copy", "set_tim
   "region_save", "region_delete", "holiday_save", "holiday_delete", "days_save", "day_update", "shift_save", "shifts_fill",
   "downtime_delete", "secret_reveal", "relation_type_save", "relation_type_delete", "session_save", "session_summary_save",
   "session_end", "session_delete", "snote_add", "snote_bulk", "snote_save", "snote_move", "snote_delete",
-  "scabard_import", "scabard_picture"];
+  "scabard_import", "scabard_picture", "map_save", "map_delete", "route_save", "route_delete", "pin_to_entry",
+  "group_split", "group_save", "group_move", "group_merge", "tokens", "token_upload", "token_save", "token_delete"];
 /** Everything else works on one campaign and needs its members: players and GMs, each action checking the rest. */
 const MEMBER = ACTIONS.filter(a => ![...PUBLIC, ...ACCOUNT, ...ADMIN_ONLY, ...GM_ONLY].includes(a));
 const CAMPAIGN = [...MEMBER, ...GM_ONLY];
@@ -75,7 +77,7 @@ test.describe("who may use each API action", () => {
     await approve(browser, owner.email);
     const cid = await makeCampaign(page, `Fenced ${owner.id}`);
 
-    const octx = await browser.newContext();
+    const octx = await newContext(browser);
     const op = await octx.newPage();
     await signIn(op, outsider);
     await approve(browser, outsider.email);
@@ -97,7 +99,7 @@ test.describe("who may use each API action", () => {
     await signIn(page, gm);
     await approve(browser, gm.email);
     const cid = await makeCampaign(page, `Table ${gm.id}`);
-    const pctx = await browser.newContext();
+    const pctx = await newContext(browser);
     const pp = await pctx.newPage();
     await signIn(pp, player);
     await approve(browser, player.email);

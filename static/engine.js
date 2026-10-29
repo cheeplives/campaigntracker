@@ -1231,6 +1231,8 @@
     // software and fonts bundled with the app
     quill: { title: 'Quill 2 rich text editor (static/vendor/quill)', by: 'Slab and the Quill contributors', licence: 'BSD 3-Clause',
       url: 'https://github.com/slab/quill' },
+    leaflet: { title: 'Leaflet 1.9.4 map viewer (static/vendor/leaflet)', by: 'Volodymyr Agafonkin and the Leaflet contributors', licence: 'BSD 2-Clause',
+      url: 'https://github.com/Leaflet/Leaflet' },
     inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
     barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',
       url: 'https://fonts.google.com/specimen/Barlow+Condensed' },
@@ -2380,7 +2382,7 @@
     eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, RED_MOON_BANDS, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
-    travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
+    travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, AU, LY, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
   else root.Engine = Engine;

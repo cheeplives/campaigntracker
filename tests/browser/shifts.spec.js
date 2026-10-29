@@ -1,7 +1,8 @@
 // A GM picks baseline actions into a shift's activity and can still type freely;
 // players and GMs add notes to a shift, signed with their character name.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("shift actions are picked into the activity alongside free text", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -111,7 +112,7 @@ test("players and GMs add shift notes, signed with their character name", async 
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Notes ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);
@@ -187,7 +188,7 @@ test("the GM moves the NOW flag from shift title to shift title; players only se
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(9);
 
   // A player sees the flag but can't move it.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

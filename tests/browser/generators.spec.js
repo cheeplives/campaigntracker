@@ -1,7 +1,8 @@
 // The Generators tab: names, taverns, companies and towns made in the browser from static/generators.js,
 // with 📖 Add putting a result in the Encyclopedia (GM only by default for a GM).
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("every generator gives real text in every genre, and a seed repeats it", async ({ page }) => {
   await page.goto("about:blank");
@@ -151,7 +152,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(page.locator(".enc-detail h2")).toHaveText(coName);
 
   // A player has no GM-only switch; what they add is public.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

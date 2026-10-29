@@ -2,7 +2,8 @@
 // names, notes, GM secrets, connections and pictures) and Sessions for the dated session logs; it can be run again
 // without adding anything twice, and only a GM may run it.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 /** A small export in Scabard's shape: pages with ids, and connections between them by id and name. */
 function scabardExport() {
@@ -158,7 +159,7 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
 
   // A player gets none of the GM's side.
   const player = person("Pip");
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

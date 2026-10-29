@@ -1,7 +1,8 @@
 // Every campaign screen renders for a GM with no script errors, members are
 // picked from the registered accounts or added by sign-in email, and players never receive secret events.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("a GM creates a campaign and every tab renders", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -142,7 +143,7 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   await api(page, "event_save", { abs_day: 2, title: "Hidden ambush", is_secret: true }, cid);
 
   // Not approved yet: can't be added.
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(404);
@@ -170,11 +171,11 @@ test("a GM picks a player they already play with from the list; only approved no
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Picker ${gm.id}`);
 
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
-  const wctx = await browser.newContext();
+  const wctx = await newContext(browser);
   await signIn(await wctx.newPage(), waiting);
 
   // Accounts are shared with Sinless, so a stranger's name isn't offered to a GM who isn't a site admin...
@@ -190,7 +191,7 @@ test("a GM picks a player they already play with from the list; only approved no
   // a GM who isn't a site admin gets no one's email
   expect(offered.filter(u => "email" in u)).toEqual([]);
   // the site admin does
-  const actx = await browser.newContext();
+  const actx = await newContext(browser);
   const ap = await actx.newPage();
   await signIn(ap, ADMIN);
   expect((await api(ap, "member_candidates", undefined, cid)).json.users.map(u => u.email)).toContain(player.email);

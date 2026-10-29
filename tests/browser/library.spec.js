@@ -1,7 +1,8 @@
 // The Library tab: books, journals and notes ("tomes") with a title, a description and a long rich-text body. Every
 // member, GM or player, adds tomes and changes any of them; a save from a copy someone else has saved over is refused.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 // A 2×1 PNG, inline so the test needs no image files.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
@@ -11,7 +12,7 @@ async function gmAndPlayer(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -105,7 +106,7 @@ test("a save from an older copy is refused, the body is cleaned, and only the au
 
   // Someone outside the campaign gets nothing.
   const outsider = person("Ozzy");
-  const octx = await browser.newContext();
+  const octx = await newContext(browser);
   const op = await octx.newPage();
   await signIn(op, outsider);
   await approve(browser, outsider.email);

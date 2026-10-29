@@ -59,7 +59,7 @@
 
   // ------------------------------------------------------------ API
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
-    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null };
+    encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
   const APP_VERSION = '24';
   async function api(action, { query = {}, body = null } = {}) {
@@ -218,7 +218,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
-    S.libReady = !!r.library_ready;
+    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.mapIndex = r.maps_index || [];
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
@@ -951,8 +951,8 @@
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
     ['Party', 'What the party does and owns: journeys, rests and holdings', [['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
-    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators']]],
-    ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['settings', 'Settings']]],
+    ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
+    ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
   const TAB_TIPS = {
     today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
@@ -968,6 +968,8 @@
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
+    maps: 'Pictures of the world you can zoom, scale and measure on',
+    tokens: 'Round pictures for the party\'s groups, characters and entries (GM only)',
     settings: 'Campaign options and the calendar itself (GM only)',
   };
   function campaignHeader(active) {
@@ -1013,7 +1015,7 @@
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => k !== 'settings' || isGM()).map(([k, l]) =>
+      const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
         el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
@@ -1924,6 +1926,13 @@
     return el('div', { class: 'shiftnotes' }, el('span', { class: 'lbl' }, 'Notes'), el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
 
+  /** "📍 On the map: <map>" links, one per pin this member can see that points at entry or event `id` (key: 'entry_id' or 'event_id'). */
+  const mapLinks = (key, id) => {
+    const links = (S.mapIndex || []).filter(p => p[key] === id).map(p =>
+      el('a', { class: 'map-link', href: `#/c/${S.camp.id}/maps/${p.map_id}?pin=${p.pin_id}`, 'data-tip': 'Open the map at this pin' }, `📍 On the map: ${p.map_name}`));
+    return links.length ? el('div', { class: 'map-links small' }, links) : null;
+  };
+
   function eventView(e, d) {
     const c = cal();
     const mine = Number(e.created_by) === S.user.id;
@@ -1947,6 +1956,7 @@
       el('div', { class: 'row spread' },
         el('h4', {}, Number(e.is_secret) ? secretTag() : null, linked(e.title)),
         el('small', { class: 'muted' }, shiftRange(e), span)),
+      mapLinks('event_id', Number(e.id)),
       e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
       e.body ? el('p', { class: 'pre' }, linked(e.body)) : null,
       el('small', { class: 'muted' }, 'Added by ', byline(e)),
@@ -2186,6 +2196,7 @@
           el('div', { class: 'small muted' }, shiftRange(e), state === 'now' ? el('span', { class: 'evnow' }, ' · Today') : null)),
         el('div', { class: 'evbody' },
           el('h4', {}, Number(e.is_secret) ? secretTag() : null, el('a', { href: `#/c/${S.camp.id}/day/${a}` }, marked(e.title, words))),
+          mapLinks('event_id', Number(e.id)),
           e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,
           e.body ? el('p', { class: 'small pre' }, words.length ? marked(clip(e.body), words) : linked(clip(e.body))) : null,
           el('small', { class: 'muted' }, 'Added by ', byline(e), notes ? ` · ${notes} note${notes === 1 ? '' : 's'}` : '')));
@@ -2942,7 +2953,7 @@
     const publicNote = html => revealButtons(note(html), 'entry', e.id);
     return clean([
       el('div', { class: 'row spread' },
-        el('h2', {}, e.is_secret ? secretTag() : null, e.name),
+        el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), 'small primary', 'Change this entry'),
           scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
@@ -2950,6 +2961,7 @@
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
+      mapLinks('entry_id', e.id),
       encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
         (e.tags || []).map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
@@ -3035,9 +3047,9 @@
         const b = ev.currentTarget;
         b.disabled = true;
         try {
-          await post('image_import', { parent_type: parentType, parent_id: parentId, source: it.source, id: it.id, mode, is_secret: !!gmOnly?.checked }, cid);
+          const r = await post('image_import', { parent_type: parentType, parent_id: parentId, source: it.source, id: it.id, mode, is_secret: !!gmOnly?.checked }, cid);
           toast('Picture added');
-          opts.onAdded();
+          opts.onAdded(r.file);
         } catch (err) { b.disabled = false; toast(err.message, true); }
       };
       const da = it.source === 'deviantart';
@@ -3053,9 +3065,9 @@
             el('p', { class: 'small muted' }, 'Not openly licensed: it can be kept on this entry for your campaign\'s own use, credited to the wiki.'),
             btn('Keep as personal fair use', ev => pick('copy', ev), 'small', 'Copy this picture to the entry, credited to the wiki and marked "Personal fair use". If its owner asks, remove it'))
           : el('div', { class: 'find-closed' },
-            el('p', { class: 'small muted' }, da ? 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.' : 'Not openly licensed, so it can\'t be copied here.'),
+            el('p', { class: 'small muted' }, da ? (opts.copyOnly ? 'Not openly licensed: ask the artist before copying it.' : 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.') : 'Not openly licensed, so it can\'t be copied here.'),
             da ? el('div', { class: 'row' }, link(it.landing_url, 'View on DeviantArt', 'button small'), link(it.author_url, 'Artist\'s page', 'button small'),
-              btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
+              opts.copyOnly ? null : btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
     }
     const panel = el('div', { class: 'find-image' },
       el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs),
@@ -3496,6 +3508,9 @@
   const Fan = typeof FanWikis === 'undefined' ? null : FanWikis;
   const fanCtx = extra => ({ el, btn, api, extLink, cid: S.camp?.id, key: S.camp ? settings().fan_wiki : null, gm: isGM(),
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
+  /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
+  const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
+    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -3583,6 +3598,7 @@
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
     const f = el('form', { class: 'enc-form' },
       el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
+      e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
         category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,
@@ -3609,7 +3625,7 @@
         const { id } = await post('entry_save', body, S.camp.id);
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
-        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null,
+        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null, token_url: S.encyclopedia.find(x => x.id === id)?.token_url || null,
           preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
@@ -3978,9 +3994,95 @@
     return [head[0], bar, details, cols, pictures];
   }
 
+  /** The Maps and Tokens tabs before the database upgrade: what to do, in the campaign's header (as the Library and Sessions do). */
+  function mapsNotReady(tab) {
+    const title = tab === 'tokens' ? 'Tokens' : 'Maps';
+    mount(...campaignHeader(tab), el('div', { class: 'card' }, el('h2', {}, title),
+      el('p', {}, isGM() ? 'Maps need the database upgrade: open install.php on the server and press Install or upgrade.'
+        : 'Maps aren\'t set up on this server yet. Ask whoever runs it to open install.php.')));
+  }
+
   // ------------------------------------------------------------ travel tab
-  function viewTravel() {
+  async function viewTravel() {
     const out = el('div', { class: 'travel-out' });
+    // The party's groups (main first), the maps' names and, for Depart, the pins of the map a group is on.
+    let groups = [], mapNames = new Map(), result = null;
+    const pinCache = new Map();
+    const loadParty = async () => {
+      if (!S.mapsReady) return;
+      try {
+        groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+        mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
+      } catch { /* the card is only a convenience; the planner still works */ }
+    };
+    await loadParty();
+    const partyCard = el('div', { class: 'card party-card' });
+    const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    const reloadParty = async () => { await loadParty(); drawParty(); result = null; out.replaceChildren(); };   // Depart is offered again with the new groups
+    /** A small modal form: run() does the work, and the card is redrawn after. */
+    const partyDialog = (title, kids, ok, run) => {
+      const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
+      const go = el('button', { class: 'primary', type: 'submit' }, ok);
+      const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault(); go.disabled = true;
+        try { await run(); d.close(); await reloadParty(); } catch (err) { toast(err.message, true); go.disabled = false; }
+      });
+      d.addEventListener('close', () => d.remove());
+      d.append(form); document.body.append(d); d.showModal();
+    };
+    const splitParty = () => {
+      const name = el('input', { maxlength: 100, required: true, autocomplete: 'off', placeholder: 'e.g. Scouts' });
+      const from = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id) : null;
+      const region = select([['', '— none —'], ...S.regions.map(r => [r.id, r.name])], groups[0].region_id ?? '');
+      const pick = el('div', { class: 'party-pick' });
+      const fromGroup = () => groups.find(g => g.id === Number(from ? from.value : groups[0].id));
+      const drawPick = () => {
+        region.value = fromGroup().region_id ?? '';
+        pick.replaceChildren(...fromGroup().members.map(u => el('label', {}, el('input', { type: 'checkbox', value: u }), memberName(u))));
+        if (!pick.children.length) pick.append(el('small', { class: 'muted' }, 'No one is in that group'));
+      };
+      from?.addEventListener('change', drawPick); drawPick();
+      partyDialog('Split the party', [from ? field('From', from) : null, field('Group name', name), field('Who goes', pick), field('Region', region, 'Where they are now')], 'Split', async () => {
+        const members = [...pick.querySelectorAll('input:checked')].map(i => Number(i.value));
+        await post('group_split', { from_id: fromGroup().id, name: name.value, members, region_id: region.value ? Number(region.value) : null }, S.camp.id);
+      });
+    };
+    const mergeParty = g => {
+      const into = select(groups.filter(x => x.id !== g.id).map(x => [x.id, x.name]), '');
+      partyDialog(`Merge ${g.name}`, [field('Merge into', into, `${g.name}'s members join that group, and ${g.name} is gone`)], 'Merge',
+        () => post('group_merge', { id: g.id, into_id: Number(into.value) }, S.camp.id));
+    };
+    const tokenParty = async g => {
+      let tokens;
+      try { tokens = (await api('tokens', { query: { cid: S.camp.id } })).tokens; } catch (err) { return toast(err.message, true); }
+      const sel = select([['', 'None (a flag)'], ...tokens.map(t => [t.id, t.name])], g.token_id ?? '');
+      partyDialog(`Token for ${g.name}`, [field('Token', sel, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
+        () => post('group_save', { id: g.id, token_id: sel.value ? Number(sel.value) : null }, S.camp.id));
+    };
+    const drawParty = () => {
+      partyCard.hidden = !groups.length;
+      partyCard.replaceChildren(el('div', { class: 'row spread' }, el('h2', {}, 'Where the party is'),
+        isGM() ? btn('Split the party…', splitParty, 'small', 'Send some of the party off as a group of their own') : null),
+        ...groups.map(g => el('div', { class: 'party-row' },
+          el('div', { class: 'party-info' },
+            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
+            el('small', { class: 'party-members muted' }, g.members.map(memberName).join(', ') || 'No one yet'),
+            el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
+              ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
+          isGM() ? el('div', { class: 'actions' },
+            btn('Rename', async () => {
+              const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
+              if (!name || !name.trim()) return;
+              try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
+            }, 'small'),
+            g.is_main ? null : btn('Make main group', async () => {
+              try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reloadParty(); } catch (err) { toast(err.message, true); }
+            }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
+            groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null,
+            btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps')) : null)));
+    };
+    drawParty();
     const genre = E.genreOf(settings());
     const modes = [
       ['overland', 'Overland (on foot, mounted, by road or rail)'],
@@ -4131,7 +4233,6 @@
       fieldsWrap,
       el('div', { class: 'row' }, el('button', { class: 'primary', 'data-tip': 'Work out the travel time. Nothing changes until you depart' }, 'Calculate')), out);
 
-    let result = null;
     f.addEventListener('submit', e => {
       e.preventDefault();
       try {
@@ -4160,6 +4261,26 @@
       const useWorld = el('input', { type: 'checkbox' });
       const shiftsFor = () => E.hoursToShifts(cal(), useWorld.checked && result.worldHours ? result.worldHours : result.hours);
       const info = el('small', { class: 'muted' });
+      // with more than one group, who is travelling; the main group is first
+      const who = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id, { 'aria-label': 'Who is travelling' }) : null;
+      const travelling = () => who ? groups.find(g => g.id === Number(who.value)) : groups.find(g => g.is_main) || null;
+      const toList = el('datalist', { id: 'travel-to-list' });
+      toName.setAttribute('list', 'travel-to-list');
+      const pinsOf = async mapId => {
+        if (!pinCache.has(mapId)) pinCache.set(mapId, (await api('map', { query: { cid: S.camp.id, id: mapId } })).pins || []);
+        return pinCache.get(mapId);
+      };
+      // the To box suggests the pins of the travelling group's map: their labels and their entries' names
+      const suggest = async () => {
+        const g = travelling();
+        const pins = g && g.map_id ? await pinsOf(g.map_id).catch(() => []) : [];
+        const names = [...new Set(pins.flatMap(p => [p.label, p.entry && p.entry.name]).filter(Boolean))];
+        toList.replaceChildren(...names.map(n => el('option', { value: n })));
+      };
+      const travelField = field('Region while travelling', travelReg.node, 'e.g. "Ship interior" so transit days get shipboard conditions');
+      const sideTrip = () => { const g = travelling(); return !!g && !g.is_main; };
+      who?.addEventListener('change', () => { suggest(); travelField.style.display = sideTrip() ? 'none' : ''; });
+      suggest();
       const upd = () => {
         const n = shiftsFor();
         info.textContent = `${n} ${word()}s (${(n / spd()).toFixed(1)} days). Arrive: ${E.fmtShift(cal(), nowShift() + n)}`;
@@ -4169,10 +4290,22 @@
       go.addEventListener('click', busy(go, async () => {
         const n = shiftsFor();
         if (n <= 0) throw new Error(`Trip is shorter than one ${word()}`);
-        const label = `In transit${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
+        const g = travelling(), side = sideTrip();
+        const label = `In transit${side ? ` (${g.name})` : ''}${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
         const startDay = today();
-        const travelId = await travelReg.resolve(), arriveId = await arriveReg.resolve();
-        await passShifts(n, label, travelId || null, arriveId || null);
+        const travelId = side ? '' : await travelReg.resolve(), arriveId = await arriveReg.resolve();
+        // a side group's trip only moves the clock: the shifts are the main party's, and so is the weather's region
+        await passShifts(n, side ? null : label, travelId || null, side ? null : arriveId || null);
+        if (side && arriveId) {
+          try { await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id); }
+          catch (err) { toast(`${g.name}'s region did not change: ${err.message}`, true); }
+        }
+        if (g && g.map_id && toName.value.trim()) {
+          try {
+            const pin = MapGeo.pinFor(await pinsOf(g.map_id), toName.value);
+            if (pin) await post('group_move', { id: g.id, map_id: g.map_id, x: pin.x, y: pin.y }, S.camp.id);
+          } catch (err) { toast(`The marker did not move: ${err.message}`, true); }
+        }
         // From joins the departure day's Locations visited and To the arrival day's (one day's list for a same-day trip).
         await addLocations(startDay, [fromName.value]);
         await addLocations(today(), [toName.value]);
@@ -4183,14 +4316,14 @@
         location.hash = `#/c/${S.camp.id}/calendar`;
       }));
       return el('div', { class: 'depart' }, el('h3', {}, 'Make the trip'),
-        el('div', { class: 'grid2' }, field('From', fromName), field('To', toName),
-          field('Region while travelling', travelReg.node, 'e.g. "Ship interior" so transit days get shipboard conditions'),
+        el('div', { class: 'grid2' }, who ? field('Who is travelling', who, 'The clock moves for everyone') : null, field('From', fromName), field('To', toName),
+          travelField,
           field('Region on arrival', arriveReg.node, null, 'The party is moved here when the trip ends'),
           result.worldHours ? field('Advance by outside-world time instead', useWorld, null, 'Near light speed, less time passes on board than back home. Tick this to move the clock by the longer, outside time') : null),
-        info, el('div', { class: 'row' }, go),
+        toList, info, el('div', { class: 'row' }, go),
         el('small', { class: 'muted' }, `Labels every passed ${word()} with the trip (without overwriting existing activity), logs a multi-day travel event, and adds From to the first day's Locations visited and To to the last day's.`));
     };
-    mount(...campaignHeader('travel'), f);
+    mount(...campaignHeader('travel'), partyCard, f);
   }
 
   // ------------------------------------------------------------ regions tab
@@ -5217,7 +5350,7 @@
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
         return el('div', { class: 'listrow member' },
-          el('div', { class: 'who' }, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
             el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
@@ -5725,6 +5858,7 @@
       section('Software and fonts',
         list([
           ['The notes editor: ', cite('quill'), '.'],
+          ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
@@ -5888,6 +6022,9 @@
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
+        else if ((tab === 'maps' || tab === 'tokens') && !S.mapsReady) mapsNotReady(tab);
+        else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
+        else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();

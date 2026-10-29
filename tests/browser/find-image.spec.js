@@ -2,7 +2,8 @@
 // tests/support/image-stub.php answers for them), copies only openly licensed pictures, credited, and embeds other
 // DeviantArt works without copying them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
 const OV_OPEN = "11111111-1111-1111-1111-111111111111", OV_NC = "22222222-2222-2222-2222-222222222222", OV_BIG = "33333333-3333-3333-3333-333333333333";
@@ -13,7 +14,7 @@ async function setup(page, browser, label) {
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `${label} ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -33,10 +34,11 @@ const pick = (page, cid, id, body) => api(page, "image_import", { parent_type: "
 async function routeImages(page) {
   await page.route(/^https:\/\/(www\.artic\.edu|ids\.si\.edu)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: PNG }));
   // Asked through the page's own API client, not route.fetch(), which WebKit lets follow the redirect regardless.
-  // A picture can still be loading as the test ends and closes the page: that request is let go, not a failure.
+  // A picture can still be loading as the test ends and closes the page (or its browser, which can say so before the
+  // page knows it is closed): that request is let go, not a failure.
   await page.route(/\/api\/index\.php\?a=file&/, async route => {
     let res;
-    try { res = await page.request.get(route.request().url(), { maxRedirects: 0 }); } catch (err) { if (page.isClosed()) return; throw err; }
+    try { res = await page.request.get(route.request().url(), { maxRedirects: 0 }); } catch (err) { if (page.isClosed() || /has been closed/.test(err.message)) return; throw err; }
     if (res.status() === 302 && /^https:\/\/[a-z0-9-]+\.wixmp\.com\//.test(res.headers().location)) return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
     return route.fulfill({ response: res });
   });
@@ -82,14 +84,16 @@ test.describe("Find Image API", () => {
 
   test("only members search, and each may make 30 searches a minute", async ({ page, browser }) => {
     const { cid } = await setup(page, browser, "Limit");
-    const outsider = await (await browser.newContext()).newPage();
+    const outsider = await (await newContext(browser)).newPage();
     const o = person("Olaf");
     await signIn(outsider, o);
     await approve(browser, o.email);
     expect((await search(outsider, cid, "openverse", "keep")).status).toBe(403);
-    let last;
-    for (let i = 0; i < 31; i++) last = await search(page, cid, "openverse", "keep");
+    // the limit counts per clock minute, so a run that crosses into the next minute starts again: of 61 searches, one minute sees more than 30
+    let ok = 0, last;
+    while (ok < 61 && (last = await search(page, cid, "openverse", "keep")).status === 200) ok++;
     expect(last.status).toBe(429);
+    expect(ok).toBeGreaterThanOrEqual(30);
   });
 
   test("Use this picture copies an open picture with its credit; a closed one is refused", async ({ page, browser }) => {

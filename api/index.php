@@ -12,6 +12,7 @@ require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
+require __DIR__ . '/maps.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
@@ -581,7 +582,7 @@ function entry_tags(int $cid): array {
     return $tags;
 }
 /** Every entry this member may see, short: what the browser needs to link names and to know which are new. */
-function entry_index(int $cid, bool $isGm): array {
+function entry_index(int $cid, bool $isGm, array $tokens = []): array {
     if (!has_encyclopedia()) return [];
     $st = db()->prepare("SELECT id, name, " . (has_categories() ? 'category' : 'NULL AS category') . ", aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
@@ -589,7 +590,7 @@ function entry_index(int $cid, bool $isGm): array {
     $pics = entry_pics($cid, $isGm);
     return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'category' => $e['category'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
         'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm)),
-        'pic' => $pics[(int)$e['id']] ?? null], $st->fetchAll());
+        'pic' => $pics[(int)$e['id']] ?? null, 'token_url' => $tokens[(int)$e['id']] ?? null], $st->fetchAll());
 }
 /** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
 function entry_pics(int $cid, bool $isGm): array {
@@ -796,7 +797,7 @@ function relation_mine(array $r, bool $isGm): bool {
 // 'file' action below with headers that stop the browser running or sniffing them.
 
 /** What a file can hang off. Add a kind here and a case to attachment_parent(). */
-const ATTACHMENT_PARENTS = ['encyclopedia', 'library', 'session'];
+const ATTACHMENT_PARENTS = ['encyclopedia', 'library', 'session', 'map', 'token'];
 /** The types allowed, by the type the contents show: [extensions, 'image' (shown on the page) or 'file' (downloaded)].
  * No SVG or HTML: both can carry scripts. Text files are checked to be text and always downloaded. */
 const UPLOAD_TYPES = [
@@ -830,6 +831,15 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
             need_sessions();
             session_row($cid, $id, $role === 'gm');
             return ['secret' => false, 'manage_any' => false, 'gm_adds' => true];
+        case 'map':                                       // a map's picture: GMs add, and a GM-only map's is theirs alone
+            need_maps();
+            $m = map_row($cid, $id, $role === 'gm');
+            return ['secret' => (bool)(int)$m['is_secret'], 'manage_any' => false, 'gm_adds' => true];
+        case 'token':                                     // a token's picture: GMs add; players may see it unless the token or its entry is GM only
+            need_maps();
+            $t = token_row($cid, $id);
+            if ($role !== 'gm' && token_hidden($t)) fail('Token not found', 404);   // not even its list of files
+            return ['secret' => token_hidden($t), 'manage_any' => false, 'gm_adds' => true];
     }
     fail('Files can\'t be attached to that', 400);
 }
@@ -889,6 +899,15 @@ function attachments_purge(int $cid, ?string $type = null, ?int $id = null): voi
     $dir = upload_dir()['dir'];
     if ($dir) foreach ($names as $n) if (preg_match('/^[0-9a-f]{32}$/', $n)) @unlink("$dir/$n");
 }
+/** Delete one file of campaign $cid, its row and then its stored file. */
+function attachment_remove(int $cid, int $id): void {
+    $st = db()->prepare('SELECT stored_name FROM attachments WHERE id=? AND campaign_id=?');
+    $st->execute([$id, $cid]);
+    $name = $st->fetchColumn();
+    if ($name === false) return;
+    db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$id]);
+    if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', (string)$name)) @unlink("$dir/$name");
+}
 /** An uploaded file's name, safe to keep and to send back: no folders, no control characters, 200 characters at most. */
 function upload_name(string $name): string {
     $name = preg_replace('/[\x00-\x1F\x7F"\\\\\/:*?<>|]+/u', '_', basename(str_replace('\\', '/', $name))) ?? '';
@@ -934,6 +953,21 @@ function upload_info(): array {
     return $out;
 }
 
+/** The file just uploaded as the form's `file` field, checked: [its $_FILES entry, its size in bytes], or fail. */
+function upload_received(): array {
+    $max = upload_max_bytes();
+    $limit = round($max / 1048576, 1) . ' MB';
+    $f = $_FILES['file'] ?? null;
+    if (!is_array($f) || is_array($f['error'] ?? null)) fail('Pick a file to upload');
+    if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) fail("That file is too big: files can be $limit at most", 413);
+    if ($f['error'] === UPLOAD_ERR_NO_FILE) fail('Pick a file to upload');
+    if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { error_log('upload failed: error ' . $f['error']); fail('The upload didn\'t arrive. Try again', 500); }
+    $size = (int)filesize($f['tmp_name']);
+    if ($size < 1) fail('That file is empty');
+    if ($size > $max) fail("That file is too big: files can be $limit at most", 413);
+    if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+    return [$f, $size];
+}
 /** Fail unless parent ($type, $pid) has room for one more file and the campaign for $size more bytes. */
 function attachment_room(int $cid, string $type, int $pid, int $size): void {
     $st = db()->prepare('SELECT COUNT(*) FROM attachments WHERE campaign_id=? AND parent_type=? AND parent_id=?');
@@ -1275,7 +1309,7 @@ if ($method === 'POST') require_csrf();
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
 $readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search',
+    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
@@ -1371,6 +1405,8 @@ try {
         $admin = need_admin();
         $id = int_in(p('id'), 1);
         if ($id === $admin['id']) fail("You can't delete yourself");
+        // Their token (in any campaign) is free for another, as when a member is removed; party_rows drops them from the groups.
+        if (has_maps()) db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
         $st = db()->prepare('SELECT provider FROM users WHERE id=?');
         $st->execute([$id]);
         // The account is shared with Sinless, so it stays: they leave Chronicle (its list and their campaigns) only. An
@@ -1418,9 +1454,11 @@ try {
         $st->execute([$cid]);
         $members = $st->fetchAll();
         if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
+        $tokenUrls = token_urls($cid, $isGm);
+        $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
-            'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'sessions_ready' => has_sessions(),
+            'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
+            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -1481,6 +1519,8 @@ try {
             $pdo->rollBack();
             throw $e;
         }
+        try { party_sync_main_region($cid); }   // the main group's region follows current_region; the settings are saved either way
+        catch (Throwable $e) { error_log('campaign-chronicle: party_sync_main_region: ' . $e->getMessage()); }
         out(['ok' => true]);
 
     case 'campaign_delete':
@@ -1547,6 +1587,8 @@ try {
         $isGmTarget->execute([$cid, $uid]);
         if ($isGmTarget->fetchColumn() === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
+        party_remove_member($cid, $uid);
+        if (has_maps()) db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=?')->execute([$cid, $uid]);   // their token is free for another
         out(['ok' => true]);
 
     case 'member_character': // a player names their own character; a GM can name anyone's
@@ -2206,8 +2248,10 @@ try {
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
-        $entries = array_map(function ($e) use ($isGm) {
+        $tokens = token_urls($cid, $isGm)['entry'];
+        $entries = array_map(function ($e) use ($isGm, $tokens) {
             $e['id'] = (int)$e['id'];
+            $e['token_url'] = $tokens[$e['id']] ?? null;
             $e['aliases'] = entry_aliases($e);
             $e['notes'] = rich_for($e['notes'], $isGm);
             unset($e['aliases_json']);
@@ -2908,15 +2952,7 @@ try {
         $pid = int_in($_POST['parent_id'] ?? null, 1);
         $parent = attachment_parent($cid, $type, $pid, $role);
         if (!empty($parent['gm_adds']) && $role !== 'gm') fail('Only a GM can add files here', 403);
-        $f = $_FILES['file'] ?? null;
-        if (!is_array($f) || is_array($f['error'] ?? null)) fail('Pick a file to upload');
-        if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) fail("That file is too big: files can be $limit at most", 413);
-        if ($f['error'] === UPLOAD_ERR_NO_FILE) fail('Pick a file to upload');
-        if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { error_log('upload failed: error ' . $f['error']); fail('The upload didn\'t arrive. Try again', 500); }
-        $size = (int)filesize($f['tmp_name']);
-        if ($size < 1) fail('That file is empty');
-        if ($size > $max) fail("That file is too big: files can be $limit at most", 413);
-        if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
+        [$f, $size] = upload_received();
         attachment_room($cid, $type, $pid, $size);
         $name = upload_name((string)($f['name'] ?? ''));
         [$mime, $kind, $w, $h] = upload_type($f['tmp_name'], $name);
@@ -3004,6 +3040,11 @@ try {
         if (!attachment_mine($a, $role)) fail('Only a GM can change a file someone else added', 403);
         $caption = array_key_exists('caption', body()) ? (trim((string)str_in(p('caption'), 200)) ?: null) : $a['caption'];
         $secret = $role === 'gm' && array_key_exists('is_secret', body()) ? (p('is_secret') ? 1 : 0) : (int)$a['is_secret'];
+        if ($secret && !(int)$a['is_secret'] && has_maps()) {   // a picture a map or token shows is hidden by hiding the map or token
+            $st = db()->prepare('SELECT (SELECT COUNT(*) FROM maps WHERE image_id=?) + (SELECT COUNT(*) FROM tokens WHERE image_id=?)');
+            $st->execute([$a['id'], $a['id']]);
+            if ((int)$st->fetchColumn() > 0) fail('This picture is in use; hide the map or token instead');
+        }
         db()->prepare('UPDATE attachments SET caption=?, is_secret=? WHERE id=?')->execute([$caption, $secret, $a['id']]);
         $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
         $st->execute([$a['id']]);
@@ -3015,8 +3056,146 @@ try {
         need_attachments();
         $a = attachment_row($cid, int_in(p('id'), 1), $role);
         if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
-        db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$a['id']]);
-        if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', $a['stored_name'])) @unlink("$dir/{$a['stored_name']}");
+        attachment_remove($cid, (int)$a['id']);
+        if ($a['parent_type'] === 'map' && has_maps())   // a map whose picture this was goes back to having none
+            db()->prepare('UPDATE maps SET image_id=NULL, width=NULL, height=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
+        if ($a['parent_type'] === 'token' && has_maps())   // and a token goes back to having no picture
+            db()->prepare('UPDATE tokens SET image_id=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
+        out(['ok' => true]);
+
+    // ===== maps =====
+    case 'maps':
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['maps' => maps_list($cid, $isGm)]);
+
+    case 'map': // one map with its pins, routes and party groups
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
+        out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
+            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id']))]);
+
+    case 'groups': // every member: the party's groups, main first
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['groups' => party_groups($cid, $isGm)]);
+
+    case 'group_split': // GMs: from_id, name, members [user ids from that group], region_id (default: the group's)
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_split($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_save': // GMs: id, then name, region_id, is_main, token_id
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_save($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_move': // GMs: id, map_id (null to take it off the maps), x, y
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_move($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'group_merge': // GMs: id, into_id
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        group_merge($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['ok' => true, 'map' => map_save($cid)]);
+
+    case 'map_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        $m = map_row($cid, int_in(p('id'), 1), true);
+        db()->prepare('DELETE FROM maps WHERE id=?')->execute([$m['id']]);
+        attachments_purge($cid, 'map', (int)$m['id']);   // files have no foreign key to cascade
+        touch_campaign($cid);
+        out(['ok' => true]);
+
+    case 'pin_save': // members: id (to change one), map_id, x, y, label, note; GMs also kind (note|entry|event), entry_id, event_id, is_secret
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        out(['ok' => true, 'pin' => pin_save($cid, $isGm)]);
+
+    case 'pin_delete': // a player's own note pin, or any pin for a GM
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        need_maps();
+        $pin = pin_row($cid, int_in(p('id'), 1), $isGm);
+        if (!$isGm && ((int)$pin['created_by'] !== me()['id'] || $pin['kind'] !== 'note')) fail('You can only change your own pins', 403);
+        db()->prepare('DELETE FROM map_pins WHERE id=?')->execute([$pin['id']]);
+        if ($isGm) touch_campaign($cid);   // a player's pin is like their notes: not a campaign change
+        out(['ok' => true]);
+
+    case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        [$pin, $entryId, $created] = pin_to_entry($cid, int_in(p('id'), 1), p('entry_id') ? int_in(p('entry_id'), 1) : null);
+        out(['ok' => true, 'pin' => $pin, 'entry_id' => $entryId, 'created' => $created]);
+
+    case 'route_save': // GMs: id (to change one), map_id, name, points [[x, y], ...], is_secret
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['ok' => true, 'route' => route_save($cid)]);
+
+    case 'route_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        $st = db()->prepare('DELETE FROM map_routes WHERE id=? AND campaign_id=?');
+        $st->execute([int_in(p('id'), 1), $cid]);
+        if (!$st->rowCount()) fail('Route not found', 404);
+        touch_campaign($cid);
+        out(['ok' => true]);
+
+    // ===== tokens =====
+    case 'tokens': // GMs: every token with the groups using it
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['tokens' => tokens_list($cid)]);
+
+    case 'token_upload': // GMs, multipart: file, name (default: the file's name). One token and its picture
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        need_attachments();
+        if (empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) fail('That file is too big for the server', 413);
+        out(['ok' => true, 'token' => token_upload($cid)]);
+
+    case 'token_save': // GMs: id (to change one), name, kind, size_squares, member_id, entry_id, is_secret, image_id, group_ids
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        out(['ok' => true, 'token' => token_save($cid)]);
+
+    case 'token_delete':
+        $cid = cid();
+        need_gm($cid);
+        need_maps();
+        $t = token_row($cid, int_in(p('id'), 1));
+        db()->prepare('DELETE FROM tokens WHERE id=?')->execute([$t['id']]);   // the groups using it let go of it
+        attachments_purge($cid, 'token', (int)$t['id']);
+        touch_campaign($cid);
         out(['ok' => true]);
 
     case 'scabard_import': // GMs: pages and/or connections from a Scabard JSON export, in batches (api/scabard.php)

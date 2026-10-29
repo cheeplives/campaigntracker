@@ -2,7 +2,8 @@
 // player's edit doesn't undo the GM's secret flag, and a player who may not see future weather isn't sent the
 // seed that rolls it.
 const { test, expect } = require("@playwright/test");
-const { person, signIn, api, approve, makeCampaign, sql } = require("./helpers");
+const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("a GM can't change the tags of an event in someone else's campaign", async ({ page, browser }) => {
   const owner = person("Nell"), other = person("Olaf");
@@ -11,7 +12,7 @@ test("a GM can't change the tags of an event in someone else's campaign", async 
   const cid = await makeCampaign(page, `Tags ${owner.id}`);
   const eid = (await api(page, "event_save", { abs_day: 3, title: "Market day", tags: [{ name: "Fair" }] }, cid)).json.id;
 
-  const octx = await browser.newContext();
+  const octx = await newContext(browser);
   const op = await octx.newPage();
   await signIn(op, other);
   await approve(browser, other.email);
@@ -31,7 +32,7 @@ test("a player's edit keeps the secret flag the GM set on their event", async ({
   const cid = await makeCampaign(page, `Secret ${gm.id}`);
   await api(page, "campaign_update", { settings: { players_can_add_events: true } }, cid);
 
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
@@ -49,7 +50,7 @@ test("only those who may see future weather are sent the weather seed", async ({
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Seed ${gm.id}`);
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);

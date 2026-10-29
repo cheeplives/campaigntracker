@@ -2,7 +2,8 @@
 // which labels the shifts it covers and can move the clock; each is its own card, with
 // activities, players put on them, public notes and GM-only notes.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 const activities = cid => sql(`SELECT abs_day, shift, activity FROM shifts WHERE campaign_id = ${cid} ORDER BY abs_day, shift`).trim().split("\n").filter(Boolean);
 const clock = cid => Number(sql(`SELECT current_shift FROM campaigns WHERE id = ${cid}`).trim());
@@ -13,7 +14,7 @@ test("a long rest labels its shifts, moves the clock, and its card holds activit
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Rest ${gm.id}`); // now: Dawn of day 2 (shift 8)
-  const pctx = await browser.newContext();
+  const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   const perrors = watchErrors(pp);
   await signIn(pp, player);

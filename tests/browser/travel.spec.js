@@ -2,7 +2,7 @@
 // shifts (a quarter of the calendar's day), and the campaign's genre limits the
 // modes and samples on offer.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture, settledBox } = require("./helpers");
 
 test("samples fill the planner, trips count shifts, and the genre limits the modes", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -222,11 +222,43 @@ test("an On the move action on a shift, or in Pass time, tags the events running
 
   // Passing time with Travel tags what runs in the passed shifts.
   await page.goto(`index.html#/c/${cid}/calendar`);
+  await expect(page.locator("a.daycell").first()).toBeVisible();   // the day page, still redrawing after its save, is gone
   await page.locator(".passtime input[type=number]").fill(String(4 * (day + 2) - now));
   await page.locator(".passtime").getByLabel("Activity").fill("Travel");
   await page.getByRole("button", { name: "Pass time ▶" }).click();
   await expect(page.locator("#toast")).toContainText("Now:");
   await expect.poll(() => tags(evening)).toEqual(["Battle", "Transit"]);
   expect(await tags(morning)).toEqual(["Battle", "Transit"]);
+  expectNoErrors(errors);
+});
+
+test("Travel: Depart moves the party's marker to the pin named in To", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Mara");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Depart marker ${gm.id}`);
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 50, y: 60, label: "Bree" }, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 200, y: 120, label: "Weathertop" }, cid);
+  const main = (await api(page, "groups", undefined, cid)).json.groups[0];
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 50, y: 60 }, cid);
+
+  await page.goto(`index.html#/c/${cid}/travel`);
+  await page.getByRole("button", { name: "Calculate" }).click();
+  // one group: no question about who travels, and To suggests the map's pins
+  await expect(page.locator(".depart").getByLabel("Who is travelling")).toHaveCount(0);
+  await expect(page.locator(".depart datalist option[value=Weathertop]")).toHaveCount(1);
+  await page.locator(".depart").getByLabel("From", { exact: true }).fill("Bree");
+  await page.locator(".depart").getByLabel("To", { exact: true }).fill("weathertop");
+  await page.getByRole("button", { name: /Depart/ }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  const after = (await api(page, "groups", undefined, cid)).json.groups[0];
+  expect(after).toMatchObject({ map_id: mapId, x: 200, y: 120 });
+
+  await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  const flag = await settledBox(page.locator(".map-party")), pin = await settledBox(page.locator(".map-pin", { hasText: "Weathertop" }));
+  expect(Math.abs(flag.x + flag.width / 2 - (pin.x + pin.width / 2))).toBeLessThan(3);
+  expect(Math.abs(flag.y + flag.height / 2 - (pin.y + pin.height / 2))).toBeLessThan(3);
   expectNoErrors(errors);
 });

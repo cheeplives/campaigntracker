@@ -1,7 +1,8 @@
 // The year view: every month of the year on one page, stepping a year at a
 // time, with days that open the day page and month names that open the month.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
 
 test("year view shows every month and links to months and days", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -55,7 +56,7 @@ test("year view shows every month and links to months and days", async ({ page, 
 test("a player's year view never carries secret events", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Yorick"), player = person("Pell");
-  const gctx = await browser.newContext();
+  const gctx = await newContext(browser);
   const gp = await gctx.newPage();
   await signIn(gp, gm);
   await approve(browser, gm.email);
