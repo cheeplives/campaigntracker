@@ -1,5 +1,5 @@
 // Copy and Delete on the campaign list: a GM copies a campaign into a new one of their own (everything in it, or only
-// its setup) and deletes one after typing DELETE; players get neither.
+// its setup) and deletes one after typing DELETE (any case); players get neither.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
 
@@ -134,7 +134,7 @@ test("copying only the setup brings the calendar, regions, holidays and tag list
   expectNoErrors(errors);
 });
 
-test("a GM deletes a campaign from the list after typing DELETE; players see neither button", async ({ page, browser }) => {
+test("a GM deletes a campaign from the list after typing DELETE (any case); players see neither button", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Mara"), player = person("Odo");
   await signIn(page, gm);
@@ -156,14 +156,14 @@ test("a GM deletes a campaign from the list after typing DELETE; players see nei
 
   await page.goto("index.html#/");
   const row = page.locator(".camp-row").filter({ hasText: "Doomed Run" });
-  // Anything but DELETE keeps it.
+  // Anything but DELETE (in any case) keeps it.
   await row.getByRole("button", { name: "Delete" }).click();
-  await page.locator("dialog.kit-dialog input").fill("delete");
+  await page.locator("dialog.kit-dialog input").fill("delet");
   await page.locator("dialog.kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Not deleted: type DELETE to confirm")).toBeVisible();
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Delete" }).click();
-  await page.locator("dialog.kit-dialog input").fill("DELETE");
+  await page.locator("dialog.kit-dialog input").fill("delete ");
   await page.locator("dialog.kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(row).toHaveCount(0);
   await expect(page.locator(".camp-row").filter({ hasText: "Keeper" })).toBeVisible();
