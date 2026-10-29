@@ -5894,6 +5894,7 @@
         list([
           ['The notes editor: ', cite('quill'), '.'],
           ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
+          ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
