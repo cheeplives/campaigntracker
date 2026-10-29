@@ -19,7 +19,7 @@ const ACTIONS = [
 /** Open to anyone, signed in or not. */
 const PUBLIC = ["fanwiki_wikis"];
 /** Need an approved account, and no campaign. */
-const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb"];
+const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb", "templates", "template", "template_save", "template_fork", "template_delete"];
 /** Site admins only. */
 const ADMIN_ONLY = ["users", "user_status", "user_email", "user_delete"];
 /** A campaign's GMs only, refused to its players before anything else is looked at. */

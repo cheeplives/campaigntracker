@@ -1312,7 +1312,7 @@ if ($method === 'POST') require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
-$readActions = ['campaigns', 'campaign', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+$readActions = ['campaigns', 'campaign', 'templates', 'template', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
@@ -1425,6 +1425,13 @@ try {
         out(['ok' => true]);
 
     // ===== campaigns =====
+    case 'templates':
+    case 'template':
+    case 'template_save':
+    case 'template_fork':
+    case 'template_delete':
+        templates_action($action);
+
     case 'campaigns':
         $u = me();
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
