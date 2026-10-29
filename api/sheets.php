@@ -183,3 +183,333 @@ function templates_action(string $action): void {
             out(['ok' => true]);
     }
 }
+
+// ---------- Values: the same rules as SheetLayout.coerce / reconcile / visibleTo ----------
+
+/** [ok, value as stored] for a value of field $f. */
+function sheet_value(array $f, $v): array {
+    $num = function ($x): array {
+        if ($x === null || $x === '') return [true, null];
+        if (is_int($x) || is_float($x)) return [true, $x];
+        return is_string($x) && is_numeric(trim($x)) ? [true, trim($x) + 0] : [false, null];
+    };
+    switch ($f['type']) {
+        case 'text': case 'longtext':
+            if ($v === null) return [true, ''];
+            return is_string($v) && mb_strlen($v) <= SHEET_LIMITS[$f['type']] ? [true, $v] : [false, null];
+        case 'number': return $num($v);
+        case 'counter':
+            if (!is_array($v) || array_is_list($v) && $v) return [false, null];
+            [$ok1, $c] = $num($v['cur'] ?? null);
+            [$ok2, $m] = $num($v['max'] ?? null);
+            return $ok1 && $ok2 ? [true, ['cur' => $c, 'max' => $m]] : [false, null];
+        case 'pips': return is_int($v) && $v >= 0 && $v <= $f['count'] ? [true, $v] : [false, null];
+        case 'checkbox': return is_bool($v) ? [true, $v] : [false, null];
+        case 'choice': return $v === null || in_array($v, $f['options'] ?? [], true) ? [true, $v] : [false, null];
+        case 'list':
+            if (!is_array($v) || !array_is_list($v) || count($v) > SHEET_LIMITS['rows']) return [false, null];
+            $cols = array_column($f['columns'] ?? [], 'key');
+            $rows = [];
+            foreach ($v as $r) {
+                if (!is_array($r) || (array_is_list($r) && $r)) return [false, null];
+                $row = [];
+                foreach ($cols as $k) {
+                    if (!isset($r[$k])) continue;
+                    if (!is_string($r[$k]) && !is_int($r[$k]) && !is_float($r[$k])) return [false, null];
+                    $s = (string)$r[$k];
+                    if (mb_strlen($s) > SHEET_LIMITS['text']) return [false, null];
+                    $row[$k] = $s;
+                }
+                $rows[] = (object)$row;
+            }
+            return [true, $rows];
+    }
+    return [false, null];
+}
+/** key => [field, section key] for every field of a layout. */
+function sheet_fields(array $layout): array {
+    $out = [];
+    foreach ($layout['sections'] as $s) foreach ($s['fields'] as $f) $out[$f['key']] = [$f, $s['key']];
+    return $out;
+}
+/** [values that fit the layout, old: [{key, value}] that no longer do]. */
+function sheet_reconcile(array $layout, array $values): array {
+    $f = sheet_fields($layout);
+    $ok = [];
+    $old = [];
+    foreach ($values as $k => $v) {
+        [$fits, $val] = isset($f[$k]) ? sheet_value($f[$k][0], $v) : [false, null];
+        if ($fits) $ok[$k] = $val; else $old[] = ['key' => (string)$k, 'value' => $v];
+    }
+    return [$ok, $old];
+}
+/** The values someone may see: hidden fields, and the fields of hidden sections, left out unless $full. */
+function sheet_visible(array $layout, array $values, array $hidden, bool $full): array {
+    if ($full) return $values;
+    $h = array_flip($hidden);
+    $out = [];
+    foreach ($layout['sections'] as $s) {
+        if (isset($h[$s['key']])) continue;
+        foreach ($s['fields'] as $f) if (!isset($h[$f['key']]) && array_key_exists($f['key'], $values)) $out[$f['key']] = $values[$f['key']];
+    }
+    return $out;
+}
+
+// ---------- Characters ----------
+
+/** A character of campaign $cid with its entry's name and secrecy and its template; 404 when this member can't see it. */
+function character_row(int $cid, int $id, bool $isGm): array {
+    $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
+            u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign
+        FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
+        LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
+        WHERE c.id=? AND c.campaign_id=?');
+    $st->execute([$id, $cid]);
+    $c = $st->fetch();
+    if (!$c || (!$isGm && (int)$c['entry_secret'])) fail('Character not found', 404);
+    return $c;
+}
+/** Whether this member sees the whole sheet (its owner or a GM) and may change it. */
+function character_full(array $c, bool $isGm): bool {
+    return $isGm || ($c['owner_id'] !== null && (int)$c['owner_id'] === me()['id']);
+}
+/** The card: who and what it is, its Play and Summary fields as this member may see them. */
+function character_card(array $c, bool $isGm, array $pics = []): array {
+    $full = character_full($c, $isGm);
+    $visible = $full || $c['kind'] === 'pc' || (int)$c['sheet_public'];
+    $layout = json_decode($c['layout'], true);
+    [$values] = sheet_reconcile($layout, json_decode($c['field_values'], true) ?: []);
+    $values = $visible ? sheet_visible($layout, $values, json_decode($c['hidden'], true) ?: [], $full) : [];
+    $play = [];
+    $summary = [];
+    if ($visible) foreach (sheet_fields($layout) as $k => [$f]) {
+        if (!array_key_exists($k, $values)) continue;
+        if (!empty($f['play'])) $play[] = ['key' => $k, 'label' => $f['label'], 'type' => $f['type'], 'value' => $values[$k]] + (isset($f['count']) ? ['count' => $f['count']] : []);
+        if (!empty($f['summary'])) $summary[] = ['key' => $k, 'label' => $f['label'], 'value' => $values[$k]];
+    }
+    return ['id' => (int)$c['id'], 'entry_id' => (int)$c['entry_id'], 'name' => $c['name'], 'kind' => $c['kind'],
+        'owner' => $c['owner_id'] !== null ? ['id' => (int)$c['owner_id'], 'name' => (string)$c['owner_name']] : null,
+        'owner_in_campaign' => (bool)$c['owner_in_campaign'],
+        'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
+        'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
+        'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null];
+}
+/** Each entry's character as entry id => {id, kind, sheet_visible}, for the Encyclopedia. */
+function characters_by_entry(int $cid, bool $isGm): array {
+    if (!has_sheets()) return [];
+    $st = db()->prepare('SELECT c.id, c.entry_id, c.kind, c.sheet_public, c.owner_id FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0'));
+    $st->execute([$cid]);
+    $out = [];
+    foreach ($st->fetchAll() as $c) $out[(int)$c['entry_id']] = ['id' => (int)$c['id'], 'kind' => $c['kind'],
+        'sheet_visible' => character_full($c, $isGm) || $c['kind'] === 'pc' || (bool)(int)$c['sheet_public']];
+    return $out;
+}
+/** Write a character's name into character_name for every member whose active character it is. */
+function character_names_sync(int $entryId): void {
+    if (!has_sheets()) return;
+    db()->prepare('UPDATE campaign_members m JOIN characters c ON c.id=m.active_character_id JOIN encyclopedia_entries e ON e.id=c.entry_id
+        SET m.character_name=e.name WHERE c.entry_id=?')->execute([$entryId]);
+}
+/** A name for a character's entry that no other entry of the campaign has (but $exceptEntry). */
+function character_name_in(int $cid, $v, ?int $exceptEntry = null): string {
+    $name = entry_name($v);
+    $e = entry_by_name($cid, $name);
+    if ($e && (int)$e['id'] !== $exceptEntry) fail('An entry is already called that. Pick another name, or add a sheet to that entry', 409, 'name_taken');
+    return $name;
+}
+function member_role(int $cid, int $uid): ?string {
+    $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
+    $st->execute([$cid, $uid]);
+    return $st->fetchColumn() ?: null;
+}
+const PRESENCE_SECONDS = 40;
+
+/** The character actions of campaign $cid. */
+function characters_action(string $action, int $cid): void {
+    need_sheets();
+    $role = role($cid);
+    $isGm = $role === 'gm';
+    $me = me();
+    switch ($action) {
+        case 'characters':
+            $st = db()->prepare('SELECT id FROM characters WHERE campaign_id=? ORDER BY id');
+            $st->execute([$cid]);
+            $pics = entry_pics($cid, $isGm);
+            $out = [];
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                try { $c = character_row($cid, (int)$id, $isGm); } catch (Throwable $e) { continue; }
+                $out[] = character_card($c, $isGm, $pics);
+            }
+            out(['characters' => $out]);
+
+        case 'character':
+            $c = character_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
+            out(character_out($c, $isGm, true));
+
+        case 'character_create':
+            $t = template_row(int_in(p('template_id'), 1));
+            $kind = p('kind', 'pc');
+            if (!in_array($kind, ['pc', 'npc'], true)) fail('A character is a PC or an NPC');
+            if (!$isGm && ($kind !== 'pc' || p('entry_id') || (p('owner_id') && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
+            $owner = p('owner_id') ? int_in(p('owner_id'), 1) : $me['id'];
+            if ($owner !== $me['id'] && !member_role($cid, $owner)) fail('Pick someone in this campaign');
+            $pdo = db();
+            $pdo->beginTransaction();
+            if (p('entry_id')) {
+                $e = entry_row($cid, int_in(p('entry_id'), 1), $role);
+                if (!in_array($e['category'] ?? null, [null, 'person'], true)) fail('Only a Person entry can have a character sheet');
+                $chk = $pdo->prepare('SELECT 1 FROM characters WHERE entry_id=?');
+                $chk->execute([$e['id']]);
+                if ($chk->fetchColumn()) fail('That entry already has a character sheet', 409);
+                if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$e['id']]);
+                $entry = (int)$e['id'];
+            } else {
+                $name = character_name_in($cid, p('name'));
+                $pdo->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, created_by) VALUES (?,?,?)')->execute([$cid, $name, $me['id']]);
+                $entry = (int)$pdo->lastInsertId();
+                if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
+            }
+            $pdo->prepare("INSERT INTO characters (campaign_id, owner_id, template_id, entry_id, kind, sheet_public, template_version, field_values, field_stamps, hidden)
+                VALUES (?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $kind === 'pc' ? 1 : 0, $t['version']]);
+            $id = (int)$pdo->lastInsertId();
+            $pdo->commit();
+            out(['ok' => true, 'character' => character_out(character_row($cid, $id, $isGm), $isGm)['character']]);
+
+        case 'character_field':
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
+            $mine = $c['owner_id'] !== null && (int)$c['owner_id'] === $me['id'];
+            if (!$mine) {
+                $st = db()->prepare('SELECT 1 FROM sheet_presence WHERE character_id=? AND user_id=? AND editing=1 AND seen_at > NOW() - INTERVAL ' . PRESENCE_SECONDS . ' SECOND');
+                $st->execute([$c['id'], $me['id']]);
+                if (!$st->fetchColumn()) fail('Press Edit first', 409, 'not_editing');
+            }
+            $key = (string)p('key');
+            $fields = sheet_fields(json_decode($c['layout'], true));
+            if (!isset($fields[$key])) fail('This sheet has no such field');
+            [$ok, $value] = sheet_value($fields[$key][0], p('value'));
+            if (!$ok) fail("That doesn't fit the field " . $fields[$key][0]['label']);
+            $path = '$."' . $key . '"';
+            db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
+                ->execute([$path, json_encode($value, JSON_UNESCAPED_UNICODE), $path, $me['id'], (int)floor(microtime(true) * 1000), $c['id']]);
+            out(['ok' => true, 'value' => $value]);
+
+        case 'character_save':
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
+            $set = [];
+            $args = [];
+            $renamed = false;
+            if (p('name') !== null) {
+                $name = character_name_in($cid, p('name'), (int)$c['entry_id']);
+                $renamed = $name !== $c['name'];
+            }
+            $kind = p('kind', $c['kind']);
+            if (!in_array($kind, ['pc', 'npc'], true)) fail('A character is a PC or an NPC');
+            if ($kind !== $c['kind']) {
+                array_push($set, 'kind=?', 'sheet_public=?');
+                array_push($args, $kind, $kind === 'pc' ? 1 : (p('sheet_public') ? 1 : 0));
+            } elseif (p('sheet_public') !== null) {
+                $set[] = 'sheet_public=?';
+                $args[] = p('sheet_public') ? 1 : 0;
+            }
+            if (p('owner_id') !== null) {
+                $owner = int_in(p('owner_id'), 1);
+                $to = member_role($cid, $owner);
+                if (!$to) fail('Pick someone in this campaign');
+                if (!$isGm && $to !== 'gm' && $owner !== $me['id']) fail('You can hand your sheet to a GM; only a GM can give it to another player', 403);
+                $set[] = 'owner_id=?';
+                $args[] = $owner;
+            }
+            if (p('hidden') !== null) {
+                $h = p('hidden');
+                if (!is_array($h) || !array_is_list($h) || count($h) > 1100) fail('Send the hidden fields as a list');
+                $known = [];
+                foreach (json_decode($c['layout'], true)['sections'] as $s) { $known[$s['key']] = true; foreach ($s['fields'] as $f) $known[$f['key']] = true; }
+                $set[] = 'hidden=?';
+                $args[] = json_encode(array_values(array_unique(array_filter($h, fn($k) => is_string($k) && isset($known[$k])))));
+            }
+            $pdo = db();
+            $pdo->beginTransaction();
+            $st = $pdo->prepare('UPDATE characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
+            $st->execute(array_merge($args, [$c['id'], int_in(p('version'), 1)]));
+            if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
+            if ($renamed) {
+                $pdo->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $c['entry_id']]);
+                character_names_sync((int)$c['entry_id']);
+            }
+            $pdo->commit();
+            out(['ok' => true, 'character' => character_out(character_row($cid, (int)$c['id'], $isGm), $isGm)['character']]);
+
+        case 'character_delete':
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            if (!character_full($c, $isGm)) fail('Only its player or a GM can delete this sheet', 403);
+            $pdo = db();
+            $pdo->beginTransaction();
+            $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=?')->execute([$c['id']]);
+            $pdo->prepare('DELETE FROM characters WHERE id=?')->execute([$c['id']]);
+            $pdo->commit();
+            out(['ok' => true]);
+
+        case 'character_presence':
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            $mine = $c['owner_id'] !== null && (int)$c['owner_id'] === $me['id'];
+            $editing = p('editing') && $isGm && !$mine ? 1 : 0;
+            $pdo = db();
+            $pdo->prepare('DELETE FROM sheet_presence WHERE character_id=? AND seen_at < NOW() - INTERVAL 60 SECOND')->execute([$c['id']]);
+            $pdo->prepare('INSERT INTO sheet_presence (character_id, user_id, seen_at, editing) VALUES (?,?,NOW(),?)
+                ON DUPLICATE KEY UPDATE seen_at=NOW(), editing=VALUES(editing)')->execute([$c['id'], $me['id'], $editing]);
+            $st = $pdo->prepare("SELECT COALESCE(NULLIF(m.character_name, ''), u.display_name) AS name, COALESCE(m.role, 'gm') AS role, s.editing
+                FROM sheet_presence s JOIN users u ON u.id=s.user_id LEFT JOIN campaign_members m ON m.campaign_id=? AND m.user_id=s.user_id
+                WHERE s.character_id=? AND s.user_id<>? AND s.seen_at > NOW() - INTERVAL " . PRESENCE_SECONDS . ' SECOND ORDER BY name');
+            $st->execute([$cid, $c['id'], $me['id']]);
+            $viewers = array_map(fn($v) => ['name' => $v['name'], 'role' => $v['role'], 'editing' => (bool)(int)$v['editing']], $st->fetchAll());
+            $now = (int)floor(microtime(true) * 1000);
+            $changes = [];
+            $since = p('since');
+            $full = character_full($c, $isGm);
+            if ($since !== null && ($full || $c['kind'] === 'pc' || (int)$c['sheet_public'])) {
+                $since = (int)$since;
+                $layout = json_decode($c['layout'], true);
+                $values = sheet_visible($layout, json_decode($c['field_values'], true) ?: [], json_decode($c['hidden'], true) ?: [], $full);
+                $by = [];
+                foreach (json_decode($c['field_stamps'], true) ?: [] as $k => [$uid, $ms]) {
+                    if ($ms <= $since || (int)$uid === $me['id'] || !array_key_exists($k, $values)) continue;
+                    if (!isset($by[$uid])) {
+                        $n = $pdo->prepare("SELECT COALESCE(NULLIF(m.character_name, ''), u.display_name) FROM users u LEFT JOIN campaign_members m ON m.campaign_id=? AND m.user_id=u.id WHERE u.id=?");
+                        $n->execute([$cid, $uid]);
+                        $by[$uid] = (string)$n->fetchColumn();
+                    }
+                    $changes[$k] = ['value' => $values[$k], 'by' => $by[$uid]];
+                }
+            }
+            out(['viewers' => $viewers, 'changes' => (object)$changes, 'stamp' => (string)$now]);
+
+        case 'member_active_character':
+            $id = p('character_id');
+            if ($id === null) {
+                db()->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE campaign_id=? AND user_id=?')->execute([$cid, $me['id']]);
+                out(['ok' => true]);
+            }
+            $c = character_row($cid, int_in($id, 1), $isGm);
+            if ($c['owner_id'] === null || (int)$c['owner_id'] !== $me['id']) fail('Pick one of your own characters', 403);
+            db()->prepare('UPDATE campaign_members SET active_character_id=?, character_name=? WHERE campaign_id=? AND user_id=?')
+                ->execute([$c['id'], $c['name'], $cid, $me['id']]);
+            out(['ok' => true]);
+    }
+}
+/** A character in full as this member may see it, with its values reconciled against its template now. */
+function character_out(array $c, bool $isGm, bool $seen = false): array {
+    $full = character_full($c, $isGm);
+    $layout = json_decode($c['layout'], true);
+    [$values, $old] = sheet_reconcile($layout, json_decode($c['field_values'], true) ?: []);
+    $hidden = json_decode($c['hidden'], true) ?: [];
+    $card = character_card($c, $isGm);
+    $changed = (int)$c['template_version'] !== (int)$c['tversion'];
+    if ($seen && $full && $changed) db()->prepare('UPDATE characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
+    $out = $card + ['layout' => $layout, 'values' => $card['sheet_visible'] ? (object)sheet_visible($layout, $values, $hidden, $full) : null,
+        'old' => $full ? $old : []];
+    if ($full) $out['hidden'] = $hidden;
+    return ['character' => $out, 'template_changed' => $full && $changed];
+}

@@ -1312,7 +1312,7 @@ if ($method === 'POST') require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
-$readActions = ['campaigns', 'campaign', 'templates', 'template', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+$readActions = ['campaigns', 'campaign', 'templates', 'template', 'characters', 'character', 'changed', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
@@ -1326,7 +1326,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
     'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
-    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture'];
+    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'character_create', 'character_save', 'character_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1431,6 +1431,16 @@ try {
     case 'template_fork':
     case 'template_delete':
         templates_action($action);
+
+    case 'characters':
+    case 'character':
+    case 'character_create':
+    case 'character_field':
+    case 'character_save':
+    case 'character_delete':
+    case 'character_presence':
+    case 'member_active_character':
+        characters_action($action, cid());
 
     case 'campaigns':
         $u = me();
@@ -1610,6 +1620,18 @@ try {
         $chk = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $chk->execute([$cid, $uid]);
         if (!$chk->fetchColumn()) fail('Only campaign members can have a character name', 404);
+        // with an active character, the name is its entry's name: renaming one renames the other
+        $active = null;
+        if (has_sheets()) {
+            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN characters c ON c.id=m.active_character_id WHERE m.campaign_id=? AND m.user_id=?');
+            $st->execute([$cid, $uid]);
+            $active = $st->fetchColumn() ?: null;
+        }
+        if ($active && $name !== '') {
+            $name = character_name_in($cid, $name, (int)$active);
+            db()->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $active]);
+            character_names_sync((int)$active);
+        }
         db()->prepare('UPDATE campaign_members SET character_name=? WHERE campaign_id=? AND user_id=?')->execute([$name, $cid, $uid]);
         out(['ok' => true]);
 
@@ -2273,7 +2295,8 @@ try {
         attach_tags($entries, 'entry');
         out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role),
             'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
-            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories()]);
+            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories(),
+            'characters' => (object)characters_by_entry($cid, $isGm)]);
 
     case 'encyclopedia_sources':
         // Everything written in the campaign that this member may read, for the detector's full scan and for an
@@ -2418,6 +2441,7 @@ try {
         }
         if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
+        if ($old) character_names_sync($id);
         db()->commit();
         out(['ok' => true, 'id' => $id]);
 
@@ -2509,6 +2533,11 @@ try {
         need_encyclopedia();
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
+        if (has_sheets()) {
+            $st = db()->prepare('SELECT 1 FROM characters WHERE entry_id=?');
+            $st->execute([$e['id']]);
+            if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
+        }
         db()->beginTransaction();
         attachments_purge($cid, 'encyclopedia', (int)$e['id']);
         db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);
