@@ -265,6 +265,7 @@ const MapsTab = (() => {
       map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || [];
       await loadGroups().catch(() => {});
       if (gone) return;
+      lmap_close();   // a card open on a marker about to be redrawn would outlive it
       drawPins(); drawRoutes(); renderRoutes(); drawGroups();
     }
     // ---- the party's groups: a flag, or the group's token, with its name

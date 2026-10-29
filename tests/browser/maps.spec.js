@@ -651,6 +651,7 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
   await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
   await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📍" })).toHaveCount(1);
+  await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card went with the redraw
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
   await expect(page.locator(".leaflet-popup")).toContainText("Added by Pip");
   await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Burnt Ford/ })).toBeVisible();
