@@ -838,6 +838,7 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
         case 'token':                                     // a token's picture: GMs add; players may see it unless the token or its entry is GM only
             need_maps();
             $t = token_row($cid, $id);
+            if ($role !== 'gm' && token_hidden($t)) fail('Token not found', 404);   // not even its list of files
             return ['secret' => token_hidden($t), 'manage_any' => false, 'gm_adds' => true];
     }
     fail('Files can\'t be attached to that', 400);

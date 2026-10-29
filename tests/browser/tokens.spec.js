@@ -196,3 +196,16 @@ test("Tokens: the fields are checked", async ({ page, browser }) => {
   expect(r.json.token).toMatchObject({ kind: "object", size_squares: 3, name: "Ogre chief 2" });
   expect((await api(page, "token_save", { name: "Barrel" }, cid)).json.token).toMatchObject({ name: "Barrel", image_url: null, kind: "creature" });
 });
+
+test("Tokens: a player's list of a token's files follows what they may see", async ({ page, browser }) => {
+  const { cid, pp, pipId } = await setup(page, browser, "Tokens files");
+  const t = (await tokenUpload(page, cid, "Pip")).json.token;
+  const files = (p, id) => p.request.get(`api/index.php?${new URLSearchParams({ a: "files", cid, parent_type: "token", parent_id: id })}`).then(r => r.status());
+  expect(await files(pp, t.id)).toBe(200);
+  expect((await api(page, "token_save", { id: t.id, is_secret: true }, cid)).status).toBe(200);
+  expect(await files(pp, t.id)).toBe(404);
+  expect(await files(page, t.id)).toBe(200);
+  const e = (await api(page, "entry_save", { name: "Hidden", notes: "<p>x</p>", is_secret: true }, cid)).json.id;
+  expect((await api(page, "token_save", { id: t.id, is_secret: false, entry_id: e }, cid)).status).toBe(200);
+  expect(await files(pp, t.id)).toBe(404);
+});

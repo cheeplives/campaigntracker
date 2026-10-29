@@ -85,8 +85,11 @@ const TokensTab = (() => {
       const close = el('button', { type: 'button', onclick: () => d.close() }, 'Close');
       const show = tok => {
         current = tok;
-        d.replaceChildren(el('h3', {}, `Find a picture for ${tok.name}`), ctx.findImage('token', tok.id, tok.name, { onAdded: async file => {
-          try { await post('token_save', { id: tok.id, image_id: file.id }, cid); picked = true; d.close(); } catch (err) { toast(err.message, true); }
+        d.replaceChildren(el('h3', {}, `Find a picture for ${tok.name}`), ctx.findImage('token', tok.id, tok.name, { copyOnly: true, onAdded: async file => {
+          try { await post('token_save', { id: tok.id, image_id: file.id }, cid); picked = true; d.close(); } catch (err) {
+            await post('file_delete', { id: file.id }, cid).catch(() => {});   // not kept as a picture the token can't use
+            toast(err.message, true);
+          }
         } }), el('div', { class: 'kit-dialog-actions' }, close));
       };
       if (t) show(t);
@@ -136,11 +139,15 @@ const TokensTab = (() => {
       pic.addEventListener('change', async () => {
         const f = pic.files[0];
         if (!f) return;
+        let file = null;
         try {
-          const file = await ctx.uploadFile('token', t.id, f);
+          file = await ctx.uploadFile('token', t.id, f);
           await post('token_save', { id: t.id, image_id: file.id }, cid);
           d.close(); toast('Picture changed'); await changed();
-        } catch (err) { toast(err.message, true); }
+        } catch (err) {
+          if (file) await post('file_delete', { id: file.id }, cid).catch(() => {});
+          toast(err.message, true);
+        }
       });
       const d = el('dialog', { class: 'kit-dialog token-dialog', 'aria-label': `Change ${t.name}` }, form);
       form.addEventListener('submit', async ev => {

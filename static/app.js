@@ -3054,9 +3054,9 @@
             el('p', { class: 'small muted' }, 'Not openly licensed: it can be kept on this entry for your campaign\'s own use, credited to the wiki.'),
             btn('Keep as personal fair use', ev => pick('copy', ev), 'small', 'Copy this picture to the entry, credited to the wiki and marked "Personal fair use". If its owner asks, remove it'))
           : el('div', { class: 'find-closed' },
-            el('p', { class: 'small muted' }, da ? 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.' : 'Not openly licensed, so it can\'t be copied here.'),
+            el('p', { class: 'small muted' }, da ? (opts.copyOnly ? 'Not openly licensed: ask the artist before copying it.' : 'Not openly licensed: embed it from DeviantArt, or ask the artist before copying it.') : 'Not openly licensed, so it can\'t be copied here.'),
             da ? el('div', { class: 'row' }, link(it.landing_url, 'View on DeviantArt', 'button small'), link(it.author_url, 'Artist\'s page', 'button small'),
-              btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
+              opts.copyOnly ? null : btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
     }
     const panel = el('div', { class: 'find-image' },
       el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs),
