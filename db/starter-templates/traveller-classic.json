@@ -1,0 +1,212 @@
+{
+ "name": "Classic Traveller",
+ "game": "Traveller",
+ "edition": "Classic",
+ "source": {
+  "title": "Traveller",
+  "owner": "rpgsheets.com (Wayback copy)",
+  "url": "https://web.archive.org/web/20091211082725id_/http://www.rpgsheets.com:80/sheets/086001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "traveller",
+    "title": "Traveller",
+    "fields": [
+     {
+      "key": "service",
+      "label": "Service",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "terms",
+      "label": "Terms Served",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "homeworld",
+      "label": "Homeworld",
+      "type": "text"
+     },
+     {
+      "key": "upp",
+      "label": "UPP",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "fields": [
+     {
+      "key": "ch_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "ch_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "ch_endurance",
+      "label": "Endurance",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "ch_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "ch_education",
+      "label": "Education",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "ch_social_standing",
+      "label": "Social Standing",
+      "type": "number",
+      "min": 0,
+      "max": 15
+     },
+     {
+      "key": "dmg_strength_damage",
+      "label": "Strength Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "dmg_dexterity_damage",
+      "label": "Dexterity Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "dmg_endurance_damage",
+      "label": "Endurance Damage",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "pension",
+      "label": "Pension",
+      "type": "text"
+     },
+     {
+      "key": "ship",
+      "label": "Ship / Ship Shares",
+      "type": "text"
+     },
+     {
+      "key": "benefits",
+      "label": "Mustering Out Benefits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "benefit",
+        "label": "Benefit"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,442 @@
+{
+ "name": "Blades in the Dark (Scoundrel)",
+ "game": "Blades in the Dark",
+ "edition": "Core",
+ "source": {
+  "title": "Blank Character Sheet",
+  "owner": "One Seven Design / Evil Hat",
+  "url": "https://bladesinthedark.com/sites/default/files/sheets/blades_sheets_v8_2_Blank_Character_Sheet.pdf",
+  "licence": "CC BY 3.0 (Blades in the Dark SRD)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "scoundrel",
+    "title": "Scoundrel",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "Cutter",
+       "Hound",
+       "Leech",
+       "Lurk",
+       "Slide",
+       "Spider",
+       "Whisper",
+       "Ghost",
+       "Hull",
+       "Vampire"
+      ],
+      "summary": true
+     },
+     {
+      "key": "alias",
+      "label": "Alias",
+      "type": "text"
+     },
+     {
+      "key": "crew",
+      "label": "Crew",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text"
+     },
+     {
+      "key": "heritage",
+      "label": "Heritage",
+      "type": "choice",
+      "options": [
+       "Akoros",
+       "The Dagger Isles",
+       "Iruvia",
+       "Severos",
+       "Skovlan",
+       "Tycheros"
+      ],
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "choice",
+      "options": [
+       "Academic",
+       "Labor",
+       "Law",
+       "Trade",
+       "Military",
+       "Noble",
+       "Underworld"
+      ]
+     },
+     {
+      "key": "background_detail",
+      "label": "Background Detail",
+      "type": "text"
+     },
+     {
+      "key": "vice",
+      "label": "Vice",
+      "type": "choice",
+      "options": [
+       "Faith",
+       "Gambling",
+       "Luxury",
+       "Obligation",
+       "Pleasure",
+       "Stupor",
+       "Weird"
+      ]
+     },
+     {
+      "key": "vice_purveyor",
+      "label": "Vice Purveyor",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "stress_trauma",
+    "title": "Stress & Trauma",
+    "fields": [
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "trauma_cold",
+      "label": "Cold",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_haunted",
+      "label": "Haunted",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_obsessed",
+      "label": "Obsessed",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_paranoid",
+      "label": "Paranoid",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_reckless",
+      "label": "Reckless",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_soft",
+      "label": "Soft",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_unstable",
+      "label": "Unstable",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "trauma_vicious",
+      "label": "Vicious",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "harm",
+    "title": "Harm",
+    "fields": [
+     {
+      "key": "harm_3",
+      "label": "Level 3 Harm",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_2a",
+      "label": "Level 2 Harm",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_2b",
+      "label": "Level 2 Harm (second)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_1a",
+      "label": "Level 1 Harm",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_1b",
+      "label": "Level 1 Harm (second)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "healing",
+      "label": "Healing Clock",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "heavy_armor",
+      "label": "Heavy Armor",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "special_armor",
+      "label": "Special Armor",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "insight",
+    "title": "Insight",
+    "fields": [
+     {
+      "key": "xp_insight",
+      "label": "Insight XP",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_hunt",
+      "label": "Hunt",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_study",
+      "label": "Study",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_survey",
+      "label": "Survey",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_tinker",
+      "label": "Tinker",
+      "type": "pips",
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "prowess",
+    "title": "Prowess",
+    "fields": [
+     {
+      "key": "xp_prowess",
+      "label": "Prowess XP",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_finesse",
+      "label": "Finesse",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_prowl",
+      "label": "Prowl",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_skirmish",
+      "label": "Skirmish",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_wreck",
+      "label": "Wreck",
+      "type": "pips",
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "resolve",
+    "title": "Resolve",
+    "fields": [
+     {
+      "key": "xp_resolve",
+      "label": "Resolve XP",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_attune",
+      "label": "Attune",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_command",
+      "label": "Command",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_consort",
+      "label": "Consort",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "act_sway",
+      "label": "Sway",
+      "type": "pips",
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Special Abilities",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "playbook_xp",
+      "label": "Playbook XP",
+      "type": "pips",
+      "count": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "contacts",
+    "title": "Friends & Rivals",
+    "fields": [
+     {
+      "key": "friends_rivals",
+      "label": "Friends & Rivals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "friend_or_rival",
+        "label": "Friend or Rival"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "items",
+    "title": "Items & Load",
+    "fields": [
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "choice",
+      "options": [
+       "Light (3)",
+       "Normal (5)",
+       "Heavy (6)"
+      ],
+      "play": true
+     },
+     {
+      "key": "item_list",
+      "label": "Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "load",
+        "label": "Load"
+       },
+       {
+        "key": "carried",
+        "label": "Carried"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "coin",
+      "label": "Coin",
+      "type": "pips",
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "stash",
+      "label": "Stash",
+      "type": "number",
+      "play": true,
+      "min": 0,
+      "max": 40
+     }
+    ]
+   },
+   {
+    "key": "notes_s",
+    "title": "Notes",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

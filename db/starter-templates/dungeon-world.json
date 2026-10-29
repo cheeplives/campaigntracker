@@ -1,0 +1,289 @@
+{
+ "name": "Dungeon World",
+ "game": "Dungeon World",
+ "edition": "Core",
+ "source": {
+  "title": "Dungeon World Play Kit",
+  "owner": "Sage Kobold Productions",
+  "url": "https://dungeon-world.com/downloads/",
+  "licence": "CC BY 3.0 (Dungeon World)"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "adventurer",
+    "title": "Adventurer",
+    "fields": [
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "choice",
+      "options": [
+       "Barbarian",
+       "Bard",
+       "Cleric",
+       "Druid",
+       "Fighter",
+       "Immolator",
+       "Paladin",
+       "Ranger",
+       "Thief",
+       "Wizard"
+      ],
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text"
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "stat_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "stat_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "stat_constitution",
+      "label": "Constitution",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "stat_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "stat_wisdom",
+      "label": "Wisdom",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "stat_charisma",
+      "label": "Charisma",
+      "type": "number",
+      "min": 3,
+      "max": 18
+     },
+     {
+      "key": "debility_weak",
+      "label": "Weak",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_shaky",
+      "label": "Shaky",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_sick",
+      "label": "Sick",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_stunned",
+      "label": "Stunned",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_confused",
+      "label": "Confused",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_scarred",
+      "label": "Scarred",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "vitals",
+    "title": "Vitals",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number"
+     },
+     {
+      "key": "damage_die",
+      "label": "Damage Die",
+      "type": "text"
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "bonds",
+    "title": "Bonds",
+    "fields": [
+     {
+      "key": "bond_list",
+      "label": "Bonds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bond",
+        "label": "Bond"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "fields": [
+     {
+      "key": "starting_moves",
+      "label": "Starting Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "advanced_moves",
+      "label": "Advanced Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "prepared",
+        "label": "Prepared"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "coin",
+      "label": "Coin",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   }
+  ]
+ }
+}

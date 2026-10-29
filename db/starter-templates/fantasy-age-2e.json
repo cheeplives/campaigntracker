@@ -1,0 +1,303 @@
+{
+ "name": "Fantasy AGE 2e",
+ "game": "Fantasy AGE",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Fantasy AGE 2E Form-Fillable Character Sheet",
+  "owner": "Green Ronin Publishing",
+  "url": "https://freeronin.com/fantasy-age-rpg/GRR6101_Fantasy_AGE2_FormFillableCharacterSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text"
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "choice",
+      "options": [
+       "Envoy",
+       "Mage",
+       "Rogue",
+       "Warrior"
+      ],
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "min": 1,
+      "max": 20,
+      "summary": true
+     },
+     {
+      "key": "specializations",
+      "label": "Specializations",
+      "type": "text"
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ab_accuracy",
+      "label": "Accuracy",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_communication",
+      "label": "Communication",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_constitution",
+      "label": "Constitution",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_fighting",
+      "label": "Fighting",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_perception",
+      "label": "Perception",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "ab_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": -2,
+      "max": 10
+     },
+     {
+      "key": "focuses",
+      "label": "Focuses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "focus",
+        "label": "Focus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "fortune",
+      "label": "Fortune",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "mp",
+      "label": "Magic Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number"
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number"
+     },
+     {
+      "key": "armor_penalty",
+      "label": "Armor Penalty",
+      "type": "number"
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Arcana",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "degree",
+        "label": "Degree"
+       }
+      ]
+     },
+     {
+      "key": "arcana_list",
+      "label": "Arcana & Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "arcana_spell",
+        "label": "Arcana / Spell"
+       },
+       {
+        "key": "mp",
+        "label": "MP"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "coin_gold",
+      "label": "Gold",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_silver",
+      "label": "Silver",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "coin_copper",
+      "label": "Copper",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "longtext"
+     },
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,119 @@
+// The sheet template library and editor: building a template by hand, finding it in the library, forking someone
+// else's (whose own Edit button isn't there), and reordering fields by dragging them, which works by touch too.
+const { test, expect } = require("@playwright/test");
+const { person, signIn, approve, api, newContext, closeContexts } = require("./helpers");
+test.afterEach(closeContexts);
+
+async function ready(page, browser, name) {
+  const who = person(name);
+  await signIn(page, who);
+  await approve(browser, who.email);
+  return who;
+}
+/** The layout of template $id, from the server. */
+const layoutOf = async (page, id) => (await (await page.request.get(`api/index.php?a=template&id=${id}`)).json()).template;
+const field = (page, n) => page.locator(".sheet-ed-field").nth(n);
+
+test("Templates: build one by hand, save it, and find it in the library", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Lark");
+  await page.goto("index.html#/templates/new");
+  await page.getByLabel("Template name").fill(`Hand Made ${who.id}`);
+  await page.getByLabel("Game", { exact: true }).fill("Test RPG");
+  const s1 = page.locator(".sheet-ed-section").nth(0);
+  await s1.getByLabel("Section title").fill("Stats");
+  await s1.getByRole("button", { name: "Add field" }).click();
+  await field(page, 0).getByLabel("Field label").fill("HP");
+  await field(page, 0).getByLabel("Field type").selectOption("counter");
+  await field(page, 0).getByLabel("Play view").check();
+  await s1.getByRole("button", { name: "Add field" }).click();
+  await field(page, 1).getByLabel("Field label").fill("Luck");
+  await field(page, 1).getByLabel("Field type").selectOption("pips");
+  await field(page, 1).getByLabel("Pips").fill("5");
+  await page.getByRole("button", { name: "Add section" }).click();
+  const s2 = page.locator(".sheet-ed-section").nth(1);
+  await s2.getByLabel("Section title").fill("Notes");
+  await s2.getByRole("button", { name: "Add field" }).click();
+  await field(page, 2).getByLabel("Field label").fill("Story");
+  await field(page, 2).getByLabel("Field type").selectOption("longtext");
+
+  const preview = page.locator(".sheet-preview");
+  await expect(preview.getByText("HP", { exact: true })).toBeVisible();
+  await expect(preview.locator(".sheet-pip")).toHaveCount(5);
+
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+$/);
+  const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
+  expect((await layoutOf(page, id)).layout).toEqual({ sections: [
+    { key: "stats", title: "Stats", fields: [{ key: "hp", label: "HP", type: "counter", play: true }, { key: "luck", label: "Luck", type: "pips", count: 5 }] },
+    { key: "notes", title: "Notes", fields: [{ key: "story", label: "Story", type: "longtext" }] },
+  ] });
+
+  await page.goto("index.html#/templates");
+  await page.getByLabel("Search templates").fill(`Hand Made ${who.id}`);
+  const card = page.locator(".template-card", { hasText: `Hand Made ${who.id}` });
+  await expect(card).toContainText("Test RPG");
+  await expect(card).toContainText("Used by 0");
+  await expect(card).toContainText("0 forks");
+  await expect(card.getByRole("button", { name: "Edit" })).toBeVisible();
+});
+
+test("Templates: fork someone else's and edit the fork; theirs has no Edit", async ({ page, browser }) => {
+  const other = await (await newContext(browser)).newPage();
+  const owner = await ready(other, browser, "Moth");
+  const theirs = (await api(other, "template_save", { name: `Moth's Sheet ${owner.id}`, game: "Test RPG",
+    layout: { sections: [{ key: "main", title: "Main", fields: [{ key: "name", label: "Name", type: "text" }] }] } })).json.template;
+  await ready(page, browser, "Nell");
+
+  await page.goto(`index.html#/templates/${theirs.id}`);
+  await expect(page.getByRole("heading", { name: theirs.name })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Fork" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+\/edit$/);
+  const forkId = Number(page.url().match(/templates\/(\d+)\/edit$/)[1]);
+  expect(forkId).not.toBe(theirs.id);
+  await page.getByLabel("Template name").fill(`Nell's fork ${owner.id}`);
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/templates/${forkId}$`));
+  await expect(page.getByText(`Forked from ${theirs.name}`)).toBeVisible();
+
+  await page.goto(`index.html#/templates/${theirs.id}`);
+  await expect(page.getByText("1 fork", { exact: true })).toBeVisible();
+  await expect(page.locator(".template-forks")).toContainText(`Nell's fork ${owner.id}`);
+});
+
+test("Templates: dragging a field's handle moves it, by mouse or touch", async ({ page, browser }) => {
+  await ready(page, browser, "Odo");
+  const tpl = (await api(page, "template_save", { name: "Drag me", game: "Test RPG", layout: { sections: [{ key: "main", title: "Main", fields: [
+    { key: "a", label: "Alpha", type: "text" }, { key: "b", label: "Bravo", type: "text" }, { key: "c", label: "Charlie", type: "text" }] }] } })).json.template;
+  await page.goto(`index.html#/templates/${tpl.id}/edit`);
+  const labels = () => page.locator(".sheet-ed-field input[aria-label='Field label']").evaluateAll(els => els.map(e => e.value));
+  await expect.poll(labels).toEqual(["Alpha", "Bravo", "Charlie"]);
+  await page.evaluate(() => document.querySelector(".sheet-ed-section").scrollIntoView());
+  const handle = field(page, 2).locator(".drag-handle");
+  const from = await handle.boundingBox(), to = await field(page, 0).boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2, to.y + 4, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(labels).toEqual(["Charlie", "Alpha", "Bravo"]);
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/templates/${tpl.id}$`));
+  expect((await layoutOf(page, tpl.id)).layout.sections[0].fields.map(f => f.key)).toEqual(["c", "a", "b"]);
+});
+
+test("Templates: a finger on a field's handle drags it too", async ({ page, browser, browserName, isMobile }) => {
+  test.skip(browserName !== "chromium" || !isMobile, "real touch events are sent through Chromium's DevTools protocol, on a phone");
+  await ready(page, browser, "Pim");
+  const tpl = (await api(page, "template_save", { name: "Touch me", game: "Test RPG", layout: { sections: [{ key: "main", title: "Main", fields: [
+    { key: "a", label: "Alpha", type: "text" }, { key: "b", label: "Bravo", type: "text" }] }] } })).json.template;
+  await page.goto(`index.html#/templates/${tpl.id}/edit`);
+  await expect(field(page, 1)).toBeVisible();
+  await page.evaluate(() => document.querySelector(".sheet-ed-section").scrollIntoView());
+  const from = await field(page, 1).locator(".drag-handle").boundingBox(), to = await field(page, 0).boundingBox();
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x: from.x + from.width / 2, y }] });
+  await touch("touchStart", from.y + from.height / 2);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", from.y + from.height / 2 + (to.y + 4 - from.y - from.height / 2) * i / 8);
+  await touch("touchEnd");
+  await expect.poll(() => page.locator(".sheet-ed-field input[aria-label='Field label']").evaluateAll(els => els.map(e => e.value))).toEqual(["Bravo", "Alpha"]);
+});

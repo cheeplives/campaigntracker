@@ -1,0 +1,313 @@
+{
+ "name": "BattleTech: A Time of War",
+ "game": "BattleTech (MechWarrior RPG)",
+ "edition": "A Time of War",
+ "source": {
+  "title": "A Time of War Quick-Start Rules",
+  "owner": "Catalyst Game Labs",
+  "url": "https://battletech.com/wp-content/uploads/sites/6/2025/07/ATOW%20QSR.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "affiliation",
+      "label": "Affiliation",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "phenotype",
+      "label": "Phenotype",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "rank",
+      "label": "Rank / Profession",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "unit",
+      "label": "Unit",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_str",
+      "label": "STR",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_bod",
+      "label": "BOD",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_rfl",
+      "label": "RFL",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_dex",
+      "label": "DEX",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_int",
+      "label": "INT",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_wil",
+      "label": "WIL",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "attr_cha",
+      "label": "CHA",
+      "type": "number",
+      "min": 1,
+      "max": 9
+     },
+     {
+      "key": "edge",
+      "label": "EDG",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "fields": [
+     {
+      "key": "standard_damage",
+      "label": "Standard Damage",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "stunned",
+      "label": "Stunned",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "unconscious",
+      "label": "Unconscious",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp_unspent",
+      "label": "Unspent XP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "fields": [
+     {
+      "key": "trait_list",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "tp",
+        "label": "TP"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "link",
+        "label": "Link"
+       },
+       {
+        "key": "tn",
+        "label": "TN"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     },
+     {
+      "key": "gunnery",
+      "label": "Gunnery",
+      "type": "number"
+     },
+     {
+      "key": "piloting",
+      "label": "Piloting",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Personal Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "ap_bd",
+        "label": "AP/BD"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Personal Armor",
+      "type": "text"
+     },
+     {
+      "key": "armor_ratings",
+      "label": "Armor Ratings (M/B/E/X)",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "vehicle",
+    "title": "Vehicle",
+    "fields": [
+     {
+      "key": "vehicle_name",
+      "label": "'Mech / Vehicle",
+      "type": "text"
+     },
+     {
+      "key": "vehicle_model",
+      "label": "Model / Variant",
+      "type": "text"
+     },
+     {
+      "key": "vehicle_notes",
+      "label": "Vehicle Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "c_bills",
+      "label": "C-Bills",
+      "type": "number",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

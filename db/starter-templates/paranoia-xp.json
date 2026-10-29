@@ -1,0 +1,253 @@
+{
+ "name": "Paranoia XP",
+ "game": "Paranoia",
+ "edition": "XP",
+ "source": {
+  "title": "Paranoia XP",
+  "owner": "rpgsheets.com (Wayback copy)",
+  "url": "https://web.archive.org/web/20101129163106id_/http://rpgsheets.com/sheets/062301.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "troubleshooter",
+    "title": "Troubleshooter",
+    "fields": [
+     {
+      "key": "clearance",
+      "label": "Security Clearance",
+      "type": "choice",
+      "options": [
+       "Infrared",
+       "Red",
+       "Orange",
+       "Yellow",
+       "Green",
+       "Blue",
+       "Indigo",
+       "Violet",
+       "Ultraviolet"
+      ],
+      "summary": true
+     },
+     {
+      "key": "home_sector",
+      "label": "Home Sector",
+      "type": "text"
+     },
+     {
+      "key": "clones",
+      "label": "Clones Remaining",
+      "type": "pips",
+      "count": 6,
+      "play": true,
+      "summary": true
+     },
+     {
+      "key": "service_group",
+      "label": "Service Group",
+      "type": "choice",
+      "options": [
+       "Armed Forces",
+       "CPU",
+       "HPD & Mind Control",
+       "Internal Security",
+       "PLC",
+       "Power Services",
+       "R&D",
+       "Technical Services"
+      ],
+      "summary": true
+     },
+     {
+      "key": "secret_society",
+      "label": "Secret Society",
+      "type": "text"
+     },
+     {
+      "key": "society_degree",
+      "label": "Society Degree",
+      "type": "number"
+     },
+     {
+      "key": "mutant_power",
+      "label": "Mutant Power",
+      "type": "text"
+     },
+     {
+      "key": "power_rating",
+      "label": "Power Rating",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "action_skills",
+    "title": "Action Skills",
+    "fields": [
+     {
+      "key": "skill_management",
+      "label": "Management",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "key": "skill_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "key": "skill_violence",
+      "label": "Violence",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     }
+    ]
+   },
+   {
+    "key": "knowledge_skills",
+    "title": "Knowledge Skills",
+    "fields": [
+     {
+      "key": "know_hardware",
+      "label": "Hardware",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "key": "know_software",
+      "label": "Software",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "key": "know_wetware",
+      "label": "Wetware",
+      "type": "number",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "key": "specialties",
+      "label": "Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Status",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wound Status",
+      "type": "choice",
+      "options": [
+       "Fine",
+       "Snafued",
+       "Wounded",
+       "Maimed",
+       "Down",
+       "Killed",
+       "Vaporized"
+      ],
+      "play": true
+     },
+     {
+      "key": "treason_points",
+      "label": "Treason Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "commendation_points",
+      "label": "Commendation Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp_points",
+      "label": "XP Points",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Assigned Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "access",
+      "label": "Access",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

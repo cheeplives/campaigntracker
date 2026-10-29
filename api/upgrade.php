@@ -72,6 +72,8 @@ function upgrade_steps(): array {
             'Maps can now show a square or hex grid.'],
         ['022_panel_links.sql', fn(PDO $p) => !db_has_table($p, 'connection_keys'),
             'Added panel links, for showing At the Table inside a virtual tabletop or on a stream.'],
+        ['023_character_sheets.sql', fn(PDO $p) => !db_has_column($p, 'campaign_members', 'active_character_id'),
+            'Added character sheets and the template library.'],
     ];
 }
 

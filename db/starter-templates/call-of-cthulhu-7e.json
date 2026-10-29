@@ -1,0 +1,706 @@
+{
+ "name": "Call of Cthulhu 7e",
+ "game": "Call of Cthulhu",
+ "edition": "7th Edition",
+ "source": {
+  "title": "7E Investigator Sheet - Modern (autocalc)",
+  "owner": "Chaosium",
+  "url": "https://downloads.chaosium.com/call-of-cthulhu/cha2300-investigator-sheets/CoC7_Investigator_Sheet_Modern_autocalc.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "investigator",
+    "title": "Investigator",
+    "fields": [
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     },
+     {
+      "key": "birthplace",
+      "label": "Birthplace",
+      "type": "text"
+     },
+     {
+      "key": "residence",
+      "label": "Residence",
+      "type": "text"
+     },
+     {
+      "key": "era",
+      "label": "Era",
+      "type": "choice",
+      "options": [
+       "1920s",
+       "Modern",
+       "Gaslight",
+       "Pulp",
+       "Regency"
+      ],
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "fields": [
+     {
+      "key": "ch_str",
+      "label": "STR",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_con",
+      "label": "CON",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_siz",
+      "label": "SIZ",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_dex",
+      "label": "DEX",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_app",
+      "label": "APP",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_int",
+      "label": "INT",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_pow",
+      "label": "POW",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "ch_edu",
+      "label": "EDU",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Status",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "mp",
+      "label": "Magic Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "sanity",
+      "label": "Sanity",
+      "type": "counter",
+      "play": true,
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "temp_insanity",
+      "label": "Temporary Insanity",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "indef_insanity",
+      "label": "Indefinite Insanity",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "major_wound",
+      "label": "Major Wound",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "unconscious",
+      "label": "Unconscious",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "dying",
+      "label": "Dying",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_accounting",
+      "label": "Accounting",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_anthropology",
+      "label": "Anthropology",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_appraise",
+      "label": "Appraise",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_archaeology",
+      "label": "Archaeology",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_art_craft",
+      "label": "Art/Craft",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_charm",
+      "label": "Charm",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_computer_use",
+      "label": "Computer Use",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_credit_rating",
+      "label": "Credit Rating",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_cthulhu_mythos",
+      "label": "Cthulhu Mythos",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_drive_auto",
+      "label": "Drive Auto",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_electrical_repair",
+      "label": "Electrical Repair",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_electronics",
+      "label": "Electronics",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_fast_talk",
+      "label": "Fast Talk",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_fighting_brawl",
+      "label": "Fighting (Brawl)",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_firearms_handgun",
+      "label": "Firearms (Handgun)",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_firearms_rifle_shotgun",
+      "label": "Firearms (Rifle/Shotgun)",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_history",
+      "label": "History",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_language_other",
+      "label": "Language (Other)",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_language_own",
+      "label": "Language (Own)",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_library_use",
+      "label": "Library Use",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_locksmith",
+      "label": "Locksmith",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_mechanical_repair",
+      "label": "Mechanical Repair",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_natural_world",
+      "label": "Natural World",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_navigate",
+      "label": "Navigate",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_operate_heavy_machinery",
+      "label": "Operate Heavy Machinery",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_persuade",
+      "label": "Persuade",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_psychology",
+      "label": "Psychology",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_psychoanalysis",
+      "label": "Psychoanalysis",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_spot_hidden",
+      "label": "Spot Hidden",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_throw",
+      "label": "Throw",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "sk_track",
+      "label": "Track",
+      "type": "number",
+      "min": 0,
+      "max": 99
+     },
+     {
+      "key": "other_skills",
+      "label": "Other Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
+     },
+     {
+      "key": "skill_checks",
+      "label": "Improvement Checks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "damage_bonus",
+      "label": "Damage Bonus",
+      "type": "text"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "type": "number"
+     },
+     {
+      "key": "move",
+      "label": "Move Rate",
+      "type": "number"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill",
+        "label": "Skill %"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "attacks",
+        "label": "Attacks"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "malfunction",
+        "label": "Malfunction"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "backstory",
+    "title": "Backstory",
+    "fields": [
+     {
+      "key": "description",
+      "label": "Personal Description",
+      "type": "longtext"
+     },
+     {
+      "key": "ideology",
+      "label": "Ideology/Beliefs",
+      "type": "longtext"
+     },
+     {
+      "key": "significant_people",
+      "label": "Significant People",
+      "type": "longtext"
+     },
+     {
+      "key": "meaningful_locations",
+      "label": "Meaningful Locations",
+      "type": "longtext"
+     },
+     {
+      "key": "treasured_possessions",
+      "label": "Treasured Possessions",
+      "type": "longtext"
+     },
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "longtext"
+     },
+     {
+      "key": "injuries_scars",
+      "label": "Injuries & Scars",
+      "type": "longtext"
+     },
+     {
+      "key": "phobias_manias",
+      "label": "Phobias & Manias",
+      "type": "longtext"
+     },
+     {
+      "key": "arcane_tomes",
+      "label": "Arcane Tomes, Spells & Artifacts",
+      "type": "longtext"
+     },
+     {
+      "key": "encounters",
+      "label": "Encounters with Strange Entities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear & Possessions",
+    "fields": [
+     {
+      "key": "possessions",
+      "label": "Gear & Possessions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "spending_level",
+      "label": "Spending Level",
+      "type": "text"
+     },
+     {
+      "key": "cash",
+      "label": "Cash",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "assets",
+      "label": "Assets",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

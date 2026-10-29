@@ -1,0 +1,295 @@
+{
+ "name": "Marvel Multiverse RPG",
+ "game": "Marvel Multiverse Role-Playing Game",
+ "edition": "Core Rulebook",
+ "source": {
+  "title": "All Character Sheets",
+  "owner": "Marvel",
+  "url": "https://cdn.marvel.com/u/prod/marvel/i/pdf/MMRPG_All_Character_Sheets_20240807.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hero",
+    "title": "Hero",
+    "fields": [
+     {
+      "key": "real_name",
+      "label": "Real Name",
+      "type": "text"
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "number",
+      "min": 1,
+      "max": 6,
+      "summary": true
+     },
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "teams",
+      "label": "Teams",
+      "type": "text"
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "ab_melee",
+      "label": "Melee",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "ab_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "ab_resilience",
+      "label": "Resilience",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "ab_vigilance",
+      "label": "Vigilance",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "ab_ego",
+      "label": "Ego",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "ab_logic",
+      "label": "Logic",
+      "type": "number",
+      "min": -3,
+      "max": 10
+     },
+     {
+      "key": "def_melee_defense",
+      "label": "Melee Defense",
+      "type": "number"
+     },
+     {
+      "key": "def_agility_defense",
+      "label": "Agility Defense",
+      "type": "number"
+     },
+     {
+      "key": "def_resilience_defense",
+      "label": "Resilience Defense",
+      "type": "number"
+     },
+     {
+      "key": "def_vigilance_defense",
+      "label": "Vigilance Defense",
+      "type": "number"
+     },
+     {
+      "key": "def_ego_defense",
+      "label": "Ego Defense",
+      "type": "number"
+     },
+     {
+      "key": "def_logic_defense",
+      "label": "Logic Defense",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "vitals",
+    "title": "Health & Focus",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "health_dr",
+      "label": "Health Damage Reduction",
+      "type": "number"
+     },
+     {
+      "key": "focus",
+      "label": "Focus",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "focus_dr",
+      "label": "Focus Damage Reduction",
+      "type": "number"
+     },
+     {
+      "key": "karma",
+      "label": "Karma",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative Modifier",
+      "type": "number"
+     },
+     {
+      "key": "speeds",
+      "label": "Speeds",
+      "type": "text"
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "powers",
+    "title": "Powers",
+    "fields": [
+     {
+      "key": "power_list",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "power_set",
+        "label": "Power Set"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "traits_tags",
+    "title": "Traits & Tags",
+    "fields": [
+     {
+      "key": "trait_list",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       }
+      ]
+     },
+     {
+      "key": "tag_list",
+      "label": "Tags",
+      "type": "list",
+      "columns": [
+       {
+        "key": "tag",
+        "label": "Tag"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bio",
+    "title": "Biography",
+    "fields": [
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text"
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text"
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text"
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text"
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text"
+     },
+     {
+      "key": "history",
+      "label": "History",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

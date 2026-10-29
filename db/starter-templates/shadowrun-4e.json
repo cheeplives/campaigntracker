@@ -1,0 +1,412 @@
+{
+ "name": "Shadowrun 4th Edition",
+ "game": "Shadowrun",
+ "edition": "4th Edition",
+ "source": {
+  "title": "Shadowrun- 4th Edition",
+  "owner": "rpgsheets.com (Wayback copy)",
+  "url": "https://web.archive.org/web/20101129140948id_/http://rpgsheets.com/sheets/073102.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "runner",
+    "title": "Runner",
+    "fields": [
+     {
+      "key": "street_name",
+      "label": "Street Name",
+      "type": "text"
+     },
+     {
+      "key": "metatype",
+      "label": "Metatype",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "karma",
+      "label": "Karma",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "total_karma",
+      "label": "Career Karma",
+      "type": "number"
+     },
+     {
+      "key": "street_cred",
+      "label": "Street Cred",
+      "type": "number"
+     },
+     {
+      "key": "notoriety",
+      "label": "Notoriety",
+      "type": "number"
+     },
+     {
+      "key": "public_awareness",
+      "label": "Public Awareness",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_body",
+      "label": "Body",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_reaction",
+      "label": "Reaction",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_intuition",
+      "label": "Intuition",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_logic",
+      "label": "Logic",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "attr_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": 1,
+      "max": 10
+     },
+     {
+      "key": "edge",
+      "label": "Edge",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "essence",
+      "label": "Essence",
+      "type": "number"
+     },
+     {
+      "key": "magic",
+      "label": "Magic",
+      "type": "number"
+     },
+     {
+      "key": "resonance",
+      "label": "Resonance",
+      "type": "number"
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number"
+     },
+     {
+      "key": "init_passes",
+      "label": "Initiative Passes",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "fields": [
+     {
+      "key": "physical_damage",
+      "label": "Physical Damage",
+      "type": "pips",
+      "count": 18,
+      "play": true
+     },
+     {
+      "key": "stun_damage",
+      "label": "Stun Damage",
+      "type": "pips",
+      "count": 12,
+      "play": true
+     },
+     {
+      "key": "ballistic",
+      "label": "Ballistic Armor",
+      "type": "number"
+     },
+     {
+      "key": "impact",
+      "label": "Impact Armor",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Active Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "specialization",
+        "label": "Specialization"
+       }
+      ]
+     },
+     {
+      "key": "knowledge_skills",
+      "label": "Knowledge & Language Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "qualities",
+    "title": "Qualities & Contacts",
+    "fields": [
+     {
+      "key": "quality_list",
+      "label": "Qualities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "quality",
+        "label": "Quality"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "contacts",
+      "label": "Contacts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "connection",
+        "label": "Connection"
+       },
+       {
+        "key": "loyalty",
+        "label": "Loyalty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "ranged",
+      "label": "Ranged Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "dv",
+        "label": "DV"
+       },
+       {
+        "key": "ap",
+        "label": "AP"
+       },
+       {
+        "key": "mode",
+        "label": "Mode"
+       },
+       {
+        "key": "recoil",
+        "label": "Recoil"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "melee",
+      "label": "Melee Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "reach",
+        "label": "Reach"
+       },
+       {
+        "key": "dv",
+        "label": "DV"
+       },
+       {
+        "key": "ap",
+        "label": "AP"
+       }
+      ]
+     },
+     {
+      "key": "augmentations",
+      "label": "Cyberware & Bioware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "essence",
+        "label": "Essence"
+       }
+      ]
+     },
+     {
+      "key": "spells_powers",
+      "label": "Spells, Adept Powers & Complex Forms",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "nuyen",
+      "label": "Nuyen",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text"
+     },
+     {
+      "key": "ids",
+      "label": "IDs & Licenses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "id",
+        "label": "ID"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

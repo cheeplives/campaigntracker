@@ -12,6 +12,7 @@ require __DIR__ . '/lib.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
+require __DIR__ . '/sheets.php';
 require __DIR__ . '/maps.php';
 require __DIR__ . '/panel.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
@@ -1186,6 +1187,8 @@ const CAMPAIGN_COPY = [
     ['library_tomes', 'key' => 'library'],
     ['play_sessions', 'key' => 'session'],
     ['session_notes', 'maps' => ['session_id' => 'session']],
+    // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
+    ['characters', 'maps' => ['entry_id' => 'encyclopedia']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -1254,6 +1257,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
                     $r[$col] = $ids[$m][(int)$r[$col]];
                 }
                 foreach (array_keys($spec['later'] ?? []) as $col) if (array_key_exists($col, $r)) $r[$col] = null;
+                if ($t === 'characters') $r['owner_id'] = $me['id'];
                 if ($t === 'attachments') {
                     $m = COPY_PARENTS[$r['parent_type']] ?? null;
                     if ($m === null || !isset($ids[$m][(int)$r['parent_id']])) continue;
@@ -1304,8 +1308,9 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
 require_method('GET', 'POST');
 // Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
 // runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
-// The fan wiki list, public like the About page that shows it; the Owlbear Rodeo extension's manifest (api/panel.php).
-const PUBLIC_ACTIONS = ['fanwiki_wikis', 'owlbear_manifest'];
+// The fan wiki list and the starter templates' sources, public like the About page that shows them; the Owlbear
+// Rodeo extension's manifest (api/panel.php).
+const PUBLIC_ACTIONS = ['fanwiki_wikis', 'starter_sources', 'owlbear_manifest'];
 // The At the Table panel signs in with a panel link's code instead of the session, for a short list of actions
 // (api/panel.php); a header no other site can send needs no CSRF token.
 if (panel_request()) panel_gate($action);
@@ -1314,7 +1319,7 @@ if ($method === 'POST' && !panel_request()) require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
 
-$readActions = ['campaigns', 'campaign', 'changed', 'panel_whoami', 'panel_links', 'owlbear_manifest', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
+$readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'panel_whoami', 'panel_links', 'owlbear_manifest', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
@@ -1328,7 +1333,7 @@ $touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', '
     'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
     'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
     'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
-    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'entry_note_add'];
+    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'entry_note_add', 'character_create', 'character_save', 'character_delete'];
 if ($method === 'POST' && in_array($action, $touchActions, true)) {
     register_shutdown_function(function () {
         if (http_response_code() >= 400) return;
@@ -1427,12 +1432,35 @@ try {
         out(['ok' => true]);
 
     // ===== campaigns =====
+    case 'templates':
+    case 'template':
+    case 'template_save':
+    case 'template_fork':
+    case 'template_delete':
+        templates_action($action);
+
+    case 'starter_templates_load':
+        starter_templates_load();
+
+    case 'starter_sources':
+        starter_sources();
+
+    case 'characters':
+    case 'character':
+    case 'character_create':
+    case 'character_field':
+    case 'character_save':
+    case 'character_delete':
+    case 'character_presence':
+    case 'member_active_character':
+        characters_action($action, cid());
+
     case 'campaigns':
         $u = me();
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
         $st = db()->prepare($u['is_admin']
-            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
-            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
+            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, " . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ", m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
+            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, ' . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ', 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
         $st->execute([$u['id']]);
         out(['campaigns' => array_map(fn($r) => ['member' => (bool)(int)$r['member']] + $r, $st->fetchAll())]);
 
@@ -1456,15 +1484,16 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name' . (has_sheets() ? ', m.active_character_id' : '') . ' FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
-        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name']], $members);
+        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name'],
+            'active_character_id' => $m['active_character_id'] ?? null], $members);
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(),
+            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(), 'sheets_ready' => has_sheets(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -1633,6 +1662,19 @@ try {
         $chk = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $chk->execute([$cid, $uid]);
         if (!$chk->fetchColumn()) fail('Only campaign members can have a character name', 404);
+        // with an active character, the name is its entry's name: renaming one renames the other
+        $active = null;
+        if (has_sheets()) {
+            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
+                JOIN encyclopedia_entries e ON e.id=c.entry_id AND e.is_secret=0 WHERE m.campaign_id=? AND m.user_id=?');
+            $st->execute([$cid, $uid]);
+            $active = $st->fetchColumn() ?: null;
+        }
+        if ($active && $name !== '') {
+            $name = character_name_in($cid, $name, role($cid) === 'gm', (int)$active);
+            db()->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $active]);
+            character_names_sync((int)$active);
+        }
         db()->prepare('UPDATE campaign_members SET character_name=? WHERE campaign_id=? AND user_id=?')->execute([$name, $cid, $uid]);
         out(['ok' => true]);
 
@@ -2296,7 +2338,8 @@ try {
         attach_tags($entries, 'entry');
         out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role),
             'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
-            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories()]);
+            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories(),
+            'characters' => (object)characters_by_entry($cid, $isGm)]);
 
     case 'encyclopedia_sources':
         // Everything written in the campaign that this member may read, for the detector's full scan and for an
@@ -2431,6 +2474,13 @@ try {
         $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
         $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
         $category = array_key_exists('category', body()) ? category_in(p('category')) : ($old['category'] ?? null);
+        if ($old && !$isGm && $name !== $old['name'] && has_sheets()) {
+            // a character's name is its player's to change
+            $owner = db()->prepare('SELECT owner_id FROM characters WHERE entry_id=?');
+            $owner->execute([$id]);
+            $o = $owner->fetch();
+            if ($o && (int)$o['owner_id'] !== me()['id']) fail('Only its player or a GM can rename this character', 403);
+        }
         db()->beginTransaction();
         if ($old) {
             db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=? WHERE id=?')->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
@@ -2441,6 +2491,7 @@ try {
         }
         if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
+        if ($old) character_names_sync($id);
         db()->commit();
         out(['ok' => true, 'id' => $id]);
 
@@ -2546,6 +2597,11 @@ try {
         need_encyclopedia();
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
+        if (has_sheets()) {
+            $st = db()->prepare('SELECT 1 FROM characters WHERE entry_id=?');
+            $st->execute([$e['id']]);
+            if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
+        }
         db()->beginTransaction();
         attachments_purge($cid, 'encyclopedia', (int)$e['id']);
         db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);

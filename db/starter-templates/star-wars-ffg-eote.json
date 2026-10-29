@@ -1,0 +1,544 @@
+{
+ "name": "Star Wars: Edge of the Empire",
+ "game": "Star Wars Roleplaying (FFG)",
+ "edition": "Edge of the Empire",
+ "source": {
+  "title": "Edge of the Empire Character Sheet",
+  "owner": "Fantasy Flight Games (Wayback copy)",
+  "url": "https://web.archive.org/web/2020id_/https://images-cdn.fantasyflightgames.com/filer_public/72/ed/72ed3b59-bf9a-41d1-93f0-10d58bd6f17b/eote_character_sheet_low_res.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "specializations",
+      "label": "Specialization Trees",
+      "type": "text",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "fields": [
+     {
+      "key": "ch_brawn",
+      "label": "Brawn",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_cunning",
+      "label": "Cunning",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     },
+     {
+      "key": "ch_presence",
+      "label": "Presence",
+      "type": "number",
+      "min": 1,
+      "max": 6
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Wounds, Strain & Defense",
+    "fields": [
+     {
+      "key": "soak",
+      "label": "Soak",
+      "type": "number"
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "strain",
+      "label": "Strain",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "defense_ranged",
+      "label": "Ranged Defense",
+      "type": "number"
+     },
+     {
+      "key": "defense_melee",
+      "label": "Melee Defense",
+      "type": "number"
+     },
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "severity",
+        "label": "Severity"
+       },
+       {
+        "key": "result",
+        "label": "Result"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_astrogation_int",
+      "label": "Astrogation (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics_br",
+      "label": "Athletics (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_charm_pr",
+      "label": "Charm (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_coercion_will",
+      "label": "Coercion (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computers_int",
+      "label": "Computers (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_cool_pr",
+      "label": "Cool (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_coordination_ag",
+      "label": "Coordination (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_deception_cun",
+      "label": "Deception (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_discipline_will",
+      "label": "Discipline (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership_pr",
+      "label": "Leadership (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_mechanics_int",
+      "label": "Mechanics (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine_int",
+      "label": "Medicine (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_negotiation_pr",
+      "label": "Negotiation (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_perception_cun",
+      "label": "Perception (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_piloting_planetary_ag",
+      "label": "Piloting - Planetary (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_piloting_space_ag",
+      "label": "Piloting - Space (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_resilience_br",
+      "label": "Resilience (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_skulduggery_cun",
+      "label": "Skulduggery (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth_ag",
+      "label": "Stealth (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise_cun",
+      "label": "Streetwise (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival_cun",
+      "label": "Survival (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_vigilance_will",
+      "label": "Vigilance (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl_br",
+      "label": "Brawl (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_gunnery_ag",
+      "label": "Gunnery (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee_br",
+      "label": "Melee (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_ranged_light_ag",
+      "label": "Ranged - Light (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_ranged_heavy_ag",
+      "label": "Ranged - Heavy (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_core_worlds_int",
+      "label": "Core Worlds (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_education_int",
+      "label": "Education (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_lore_int",
+      "label": "Lore (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_outer_rim_int",
+      "label": "Outer Rim (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_underworld_int",
+      "label": "Underworld (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_xenology_int",
+      "label": "Xenology (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "career_skills",
+      "label": "Career Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapon_list",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "crit",
+        "label": "Crit"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "special",
+        "label": "Special"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Abilities",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "obligation",
+    "title": "Obligation & Motivation",
+    "fields": [
+     {
+      "key": "obligations",
+      "label": "Obligation",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "magnitude",
+        "label": "Magnitude"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "xp_gear",
+    "title": "XP & Gear",
+    "fields": [
+     {
+      "key": "xp_total",
+      "label": "Total XP",
+      "type": "number",
+      "min": 0
+     },
+     {
+      "key": "xp_available",
+      "label": "Available XP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "gear_list",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance Threshold",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "fields": [
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "type": "text"
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text"
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text"
+     },
+     {
+      "key": "notable_features",
+      "label": "Notable Features",
+      "type": "longtext"
+     },
+     {
+      "key": "background_story",
+      "label": "Background",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

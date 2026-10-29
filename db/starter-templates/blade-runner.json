@@ -1,0 +1,387 @@
+{
+ "name": "Blade Runner RPG",
+ "game": "Blade Runner: The Roleplaying Game",
+ "edition": "Core",
+ "source": {
+  "title": "Character Sheet",
+  "owner": "Free League Publishing",
+  "url": "https://freeleaguepublishing.com/wp-content/uploads/2023/09/Blade_Runner_Character_Sheet_220811.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "choice",
+      "options": [
+       "Human",
+       "Replicant"
+      ],
+      "summary": true
+     },
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "choice",
+      "options": [
+       "Analyst",
+       "Cityspeaker",
+       "Doxie",
+       "Enforcer",
+       "Fixer",
+       "Inspector"
+      ],
+      "summary": true
+     },
+     {
+      "key": "years_on_force",
+      "label": "Years on the Force",
+      "type": "number"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text"
+     },
+     {
+      "key": "key_memory",
+      "label": "Key Memory",
+      "type": "text"
+     },
+     {
+      "key": "key_relationship",
+      "label": "Key Relationship",
+      "type": "text"
+     },
+     {
+      "key": "signature_item",
+      "label": "Signature Item",
+      "type": "text"
+     },
+     {
+      "key": "home",
+      "label": "Home",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
+     },
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
+     },
+     {
+      "key": "attr_empathy",
+      "label": "Empathy",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_force",
+      "label": "Force",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_hand_to_hand_combat",
+      "label": "Hand-to-Hand Combat",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_stamina",
+      "label": "Stamina",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_mobility",
+      "label": "Mobility",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_medical_aid",
+      "label": "Medical Aid",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_observation",
+      "label": "Observation",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_tech",
+      "label": "Tech",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_connections",
+      "label": "Connections",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "sk_manipulation",
+      "label": "Manipulation",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     },
+     {
+      "key": "specialties",
+      "label": "Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Health & Resolve",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "resolve",
+      "label": "Resolve",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "promotion_points",
+      "label": "Promotion Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "humanity_points",
+      "label": "Humanity Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "chinyen",
+      "label": "Chinyen",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "crit",
+        "label": "Crit"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

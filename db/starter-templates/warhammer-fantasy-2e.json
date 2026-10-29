@@ -1,0 +1,376 @@
+{
+ "name": "Warhammer Fantasy Roleplay 2nd Edition",
+ "game": "Warhammer Fantasy Roleplay",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Warhammer Fantasy 2nd Edition",
+  "owner": "rpgsheets.com (Wayback copy)",
+  "url": "https://web.archive.org/web/20101129192225id_/http://rpgsheets.com/sheets/091001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "choice",
+      "options": [
+       "Human",
+       "Dwarf",
+       "Elf",
+       "Halfling"
+      ],
+      "summary": true
+     },
+     {
+      "key": "current_career",
+      "label": "Current Career",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "previous_careers",
+      "label": "Previous Careers",
+      "type": "text"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "summary": true
+     },
+     {
+      "key": "star_sign",
+      "label": "Star Sign",
+      "type": "text"
+     },
+     {
+      "key": "birthplace",
+      "label": "Birthplace",
+      "type": "text"
+     },
+     {
+      "key": "description",
+      "label": "Distinguishing Marks",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "main_profile",
+    "title": "Main Profile",
+    "fields": [
+     {
+      "key": "main_ws",
+      "label": "WS",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_bs",
+      "label": "BS",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_s",
+      "label": "S",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_t",
+      "label": "T",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_ag",
+      "label": "Ag",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_int",
+      "label": "Int",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_wp",
+      "label": "WP",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "main_fel",
+      "label": "Fel",
+      "type": "number",
+      "min": 0,
+      "max": 100
+     },
+     {
+      "key": "advances",
+      "label": "Advances Taken",
+      "type": "list",
+      "columns": [
+       {
+        "key": "characteristic",
+        "label": "Characteristic"
+       },
+       {
+        "key": "advance",
+        "label": "Advance"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "secondary_profile",
+    "title": "Secondary Profile",
+    "fields": [
+     {
+      "key": "attacks",
+      "label": "Attacks",
+      "type": "number"
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "strength_bonus",
+      "label": "Strength Bonus",
+      "type": "number"
+     },
+     {
+      "key": "toughness_bonus",
+      "label": "Toughness Bonus",
+      "type": "number"
+     },
+     {
+      "key": "movement",
+      "label": "Movement",
+      "type": "number"
+     },
+     {
+      "key": "magic",
+      "label": "Magic",
+      "type": "number"
+     },
+     {
+      "key": "insanity_points",
+      "label": "Insanity Points",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "fate_points",
+      "label": "Fate Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills & Talents",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "characteristic",
+        "label": "Characteristic"
+       },
+       {
+        "key": "taken",
+        "label": "Taken"
+       },
+       {
+        "key": "x10",
+        "label": "+10%"
+       },
+       {
+        "key": "x20",
+        "label": "+20%"
+       }
+      ]
+     },
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "reload",
+        "label": "Reload"
+       },
+       {
+        "key": "qualities",
+        "label": "Qualities"
+       }
+      ]
+     },
+     {
+      "key": "ap_head_ap",
+      "label": "Head AP",
+      "type": "number"
+     },
+     {
+      "key": "ap_body_ap",
+      "label": "Body AP",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_arm_ap",
+      "label": "Left Arm AP",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_arm_ap",
+      "label": "Right Arm AP",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_leg_ap",
+      "label": "Left Leg AP",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_leg_ap",
+      "label": "Right Leg AP",
+      "type": "number"
+     },
+     {
+      "key": "critical_effects",
+      "label": "Critical Effects & Insanities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "trappings",
+    "title": "Trappings",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Trappings",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       }
+      ]
+     },
+     {
+      "key": "money_gold_crowns",
+      "label": "Gold Crowns",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "money_silver_shillings",
+      "label": "Silver Shillings",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "money_brass_pennies",
+      "label": "Brass Pennies",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp_current",
+      "label": "Current XP",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "xp_total",
+      "label": "Total XP",
+      "type": "number",
+      "min": 0
+     }
+    ]
+   }
+  ]
+ }
+}

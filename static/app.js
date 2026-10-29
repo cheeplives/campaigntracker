@@ -226,7 +226,7 @@
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
-    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.mapIndex = r.maps_index || [];
+    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.sheetsReady = !!r.sheets_ready; S.mapIndex = r.maps_index || [];
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
@@ -522,6 +522,7 @@
     const n = $('#topnav');
     n.replaceChildren(...clean([
       S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
+      S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
       S.user?.is_admin ? el('a', { href: '#/admin', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
       S.user ? el('a', { href: '#/account', 'data-tip': `Signed in as ${S.user.email}. Your display preferences` }, S.user.name || S.user.email) : null,
       schemePicker(),
@@ -651,8 +652,27 @@
             toast('Saved');
           } catch (err) { toast(err.message, true); }
         });
+        // with character sheets, the active character's name is the one shown; picked from their own characters there
+        const pick = el('select', { 'aria-label': `Active character in ${c.name}` }, el('option', { value: '' }, 'None: use the name above'));
+        const pickField = field('Active character', pick, null, 'One of your character sheets here. Its name is shown for you, and renaming it renames it everywhere');
+        pickField.hidden = true;
+        if (typeof Sheets !== 'undefined') api('characters', { query: { cid: c.id } }).then(({ characters }) => {
+          const own = characters.filter(x => x.owner?.id === S.user.id && !x.secret);
+          if (!own.length) return;
+          pick.append(...own.map(x => el('option', { value: x.id, selected: Number(c.active_character_id) === x.id }, x.name)));
+          pickField.hidden = false;
+          pick.addEventListener('change', async () => {
+            try {
+              await post('member_active_character', { character_id: pick.value ? Number(pick.value) : null }, c.id);
+              const x = own.find(o => String(o.id) === pick.value);
+              c.active_character_id = x ? x.id : null;
+              if (x) { name.value = c.character_name = x.name; }
+              toast('Saved');
+            } catch (err) { toast(err.message, true); }
+          });
+        }).catch(() => { /* no sheets on this server, or not reachable: the name box stays */ });
         return el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
-          field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'));
+          field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'), pickField);
       })) : el('p', { class: 'muted' }, 'You aren\'t in any campaigns yet.'));
     mount(prefs, list);
   }
@@ -690,7 +710,17 @@
     mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'),
+      typeof Sheets !== 'undefined' ? el('div', { class: 'card' }, el('h2', {}, 'Sheet templates'),
+        el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
+        (() => {
+          const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
+          b.addEventListener('click', busy(b, async () => {
+            const r = await post('starter_templates_load', {});
+            toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
+          }));
+          return b;
+        })()) : null);
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -958,7 +988,7 @@
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
-    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['table', 'At the Table'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
+    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['table', 'At the Table'], ['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
@@ -968,6 +998,7 @@
     events: 'Every event in one list: search it and filter it by tag',
     sessions: 'Each game night\'s quick notes and the summary written from them',
     table: 'The campaign right now, in big type: for the table, a phone, beside a virtual tabletop or on a stream',
+    characters: 'Everyone\'s characters and their sheets',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -1024,7 +1055,7 @@
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
+      const links = ts.filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || (S.sheetsReady && typeof Sheets !== 'undefined'))).map(([k, l]) =>
         el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
@@ -2795,7 +2826,8 @@
     return b;
   }
 
-  const entryBlank = e => !(e.notes || '').trim() && !(isGM() && (e.gm_notes || '').trim());
+  // an entry with a character sheet isn't blank: the sheet is what's written about it
+  const entryBlank = e => !(e.notes || '').trim() && !(isGM() && (e.gm_notes || '').trim()) && !S.encChars?.[e.id];
   /** The Encyclopedia tab: the entries down the left (Blank Entries first), the one picked on the right. sel: an entry
    * id, 'new' for a new entry, or nothing. A blank entry, or a new one, opens straight in its editor. */
   async function viewEncyclopedia(sel) {
@@ -2815,6 +2847,8 @@
     S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
       pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
     S.encCatsReady = !!r.categories_ready;
+    S.encChars = r.characters || {};
+    const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
     // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.
     const st = vs().enc || (vs().enc = { q: '', tagsOff: new Set(), relsOff: new Set(), catsOff: new Set(), folded: new Set() });
     if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
@@ -2834,7 +2868,10 @@
     const ctx = { rel, conns, entries, st, files, draw: null };
     // Each entry is a small card: its name, its other names under it, and its tags along the bottom.
     const item = e => el('a', { class: 'enc-item enc-card' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
-      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name),
+      el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name,
+        chars[e.id]?.sheet_visible ? el('span', { class: 'enc-sheet', role: 'link', tabindex: 0, 'aria-label': `Open ${e.name}'s sheet`, 'data-tip': 'Open the character sheet',
+          onclick: ev => { ev.preventDefault(); ev.stopPropagation(); location.hash = `#/c/${S.camp.id}/characters/${chars[e.id].id}`; },
+          onkeydown: ev => { if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); location.hash = `#/c/${S.camp.id}/characters/${chars[e.id].id}`; } } }, ' 📜') : null),
       e.aliases?.length ? el('small', { class: 'enc-alias' }, `also ${e.aliases.join(', ')}`) : null,
       e.tags?.length ? el('span', { class: 'etags' }, e.tags.map(tagChip)) : null);
     // Each entry's keys for each filter; '' is "none" (no Category, no tags, no connections).
@@ -2849,6 +2886,7 @@
       const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
       if (!words.every(w => hay.get(e).includes(w))) return false;
       if (st.near && e.id !== st.near && !conns.get(e.id).some(c => c.other.id === st.near)) return false;
+      if (st.kind && st.kind !== 'all' && chars[e.id]?.kind !== st.kind) return false;
       return Object.entries(offOf).every(([f, off]) => f === skip || (f === 'cat' && !S.encCatsReady) || keys.get(e)[f].some(k => !off.has(k)));
     };
     const countBy = f => {
@@ -2860,8 +2898,12 @@
     const tagPick = multiPick('Tags', 'tags', st.tagsOff, () => draw());
     const relPick = multiPick('Connections', 'connections', st.relsOff, () => draw());
     catPick.node.classList.add('enc-catpick'); tagPick.node.classList.add('enc-tagpick'); relPick.node.classList.add('enc-relpick');
-    const clearAll = btn('Show all', () => { for (const off of Object.values(offOf)) off.clear(); st.q = search.value = ''; st.near = null; draw(); }, 'link small', 'Clear the search and every filter');
-    const filters = el('div', { class: 'enc-filters' }, S.encCatsReady ? catPick.node : null, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+    const clearAll = btn('Show all', () => { for (const off of Object.values(offOf)) off.clear(); st.q = search.value = ''; st.near = null; st.kind = 'all'; draw(); }, 'link small', 'Clear the search and every filter');
+    // PCs and NPCs: the entries with a character sheet of each kind
+    const kindSeg = hasChars ? el('div', { class: 'seg enc-kinds', role: 'group', 'aria-label': 'Characters' }) : null;
+    const drawKinds = () => kindSeg?.replaceChildren(...[['all', 'All', 'Every entry'], ['pc', 'PCs', 'Only entries with a PC\'s sheet'], ['npc', 'NPCs', 'Only entries with an NPC\'s sheet']].map(([k, l, t]) =>
+      btn(l, () => { st.kind = k; draw(); }, (st.kind || 'all') === k ? 'small on' : 'small', t)));
+    const filters = el('div', { class: 'enc-filters' }, kindSeg, S.encCatsReady ? catPick.node : null, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
     const draw = () => {
       const shown = entries.filter(e => passes(e));
       const blank = shown.filter(entryBlank);
@@ -2889,6 +2931,8 @@
       relPick.update([...[...relUsed].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([k, t]) => ({ key: k, name: t.name, color: t.color })), { key: '', name: 'No connections' }]
         .map(o => ({ ...o, count: rels.get(o.key) || 0 })));
       clearAll.hidden = shown.length === entries.length;
+      drawKinds();
+      kindSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on'))));
       const near = st.near && entries.find(e => e.id === st.near);
       nearRow.hidden = !near;
       nearRow.replaceChildren(...(near ? [el('span', { class: 'muted' }, 'Connected to'), el('strong', {}, near.name),
@@ -2960,17 +3004,31 @@
     const others = Nouns.linker(S.encyclopedia.filter(x => x.id !== e.id), (x, text) => el('a', { class: 'enc-link', href: `#/c/${S.camp.id}/encyclopedia/${x.id}`, 'data-tip': `${x.name}: open it in the Encyclopedia`, 'data-tip-img': x.pic || null }, text));
     const note = html => others.tree(RichText.view(html, 'html'));
     const publicNote = html => revealButtons(note(html), 'entry', e.id);
+    const ch = S.encChars?.[e.id] || null;
+    const sheetHref = ch ? `#/c/${S.camp.id}/characters/${ch.id}` : null;
+    const pic = (e.files || []).find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null;
+    // the character card: the whole card opens the sheet; nothing of it for members the sheet is hidden from
+    const charCard = ch?.sheet_visible ? el('a', { class: 'card enc-character', href: sheetHref, 'data-tip': 'Open the character sheet' },
+      pic ? el('img', { src: pic, alt: '', class: 'character-pic' }) : null,
+      el('div', {},
+        el('div', { class: 'row' }, el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
+          ch.kind === 'pc' && ch.owner ? el('span', {}, `Played by ${ch.owner.name}`) : null, el('span', { class: 'muted small' }, ch.game)),
+        (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small' }, `${f.label}: ${f.value}`)))) : null;
     return clean([
       el('div', { class: 'row spread' },
         el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
         el('div', { class: 'row' },
-          btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), 'small primary', 'Change this entry'),
+          ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
+          !ch && isGM() && S.sheetsReady && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
+            ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
+          btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
           scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
             try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
           }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
       mapLinks('entry_id', e.id),
+      charCard,
       encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
         (e.tags || []).map(tagChip)) : null,
       e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
@@ -5817,6 +5875,20 @@
   };
   const aboutTable = (head, rows) => el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl about-tbl' },
     el('tr', {}, head.map(h => el('th', {}, h))), rows.map(r => el('tr', {}, r.map(c => el('td', {}, c))))));
+  /** The starter templates' section: each game and the sheet it was built from, filled in once the list comes. */
+  function starterAbout(section) {
+    const body = el('div', {}, el('p', { class: 'muted small' }, 'Loading…'));
+    fetch('api/index.php?a=starter_sources', { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(r => r.json()).then(({ starters }) => {
+      if (!starters?.length) return body.closest('section')?.remove();
+      body.replaceChildren(
+        el('p', {}, 'Each starter template in the sheet template library is this app\'s own list of field labels and sections, made from the character sheet named beside its game. No artwork, logos or rules text are copied. ',
+          'Not affiliated with or endorsed by the publishers.'),
+        aboutTable(['Game', 'Built from'], starters.map(st => [[st.game, st.edition ? ` (${st.edition})` : ''].join(''),
+          el('span', {}, st.source.url ? extLink({ url: st.source.url, title: st.source.title || st.source.url }) : st.source.title,
+            el('span', { class: 'muted' }, ` · ${st.source.owner}${st.source.licence ? ` (${st.source.licence})` : ''}`))])));
+    }).catch(() => body.closest('section')?.remove());
+    return section('Starter templates', body);
+  }
   function viewAbout() {
     const MODE = { overland: 'Overland', sea: 'Sea and river', air: 'Air' };
     const speedRows = Object.entries(E.SPEEDS).flatMap(([m, groups]) => groups.flatMap(g => g.items.map(([label, kmh, , src]) => [MODE[m], label, `${kmh}`, cite(src)])));
@@ -5903,6 +5975,7 @@
         list([
           ['The notes editor: ', cite('quill'), '.'],
           ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
+          ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
@@ -5917,6 +5990,7 @@
           fanAbout ? [fanAbout.used] : null,
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
+      starterAbout(section),
       section('No open source',
         p('These figures cannot come from open data, so they are the app\'s judgement or come from sources that are not openly licensed:'),
         list([
@@ -6339,6 +6413,7 @@
       if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
       if (parts[0] === 'admin') return await viewAdmin();
+      if (parts[0] === 'templates' && typeof Sheets !== 'undefined') return await Sheets.route(parts.slice(1));
       if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
@@ -6353,6 +6428,7 @@
         else if ((tab === 'maps' || tab === 'tokens') && !S.mapsReady) mapsNotReady(tab);
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
+        else if (tab === 'characters' && S.sheetsReady && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
@@ -6391,6 +6467,9 @@
     if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);
     route();
   }
+
+  // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route });
 
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {

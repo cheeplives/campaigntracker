@@ -648,3 +648,65 @@ test("migration 018 turns Location, Person, Item, Group and Vehicle tags into Ca
     run(`DROP DATABASE IF EXISTS ${db};`);
   }
 });
+
+/** A template with a Summary field (Class) and a second one its owner can hide (Title). */
+const SHEET = { sections: [{ key: "about", title: "About", fields: [
+  { key: "cls", label: "Class", type: "text", summary: true }, { key: "title", label: "Title", type: "text", summary: true },
+  { key: "hp", label: "HP", type: "counter", play: true }] }] };
+
+test("an entry with a character opens its sheet from its header, its card and the list", async ({ page, browser }) => {
+  const { cid, pp } = await gmAndPlayer(page, browser, "Sheets");
+  const tpl = (await api(page, "template_save", { name: "Enc sheet", game: "Test RPG", layout: SHEET })).json.template;
+  const make = async (p, body) => (await api(p, "character_create", { template_id: tpl.id, ...body }, cid)).json.character;
+  const pc = await make(pp, { name: "Brannoc" });
+  await api(pp, "character_field", { id: pc.id, key: "cls", value: "Wizard" }, cid);
+  const hero = await make(page, { name: "Gwen's Hero" });
+  await api(page, "character_field", { id: hero.id, key: "title", value: "Secret Heir" }, cid);
+  await api(page, "character_field", { id: hero.id, key: "cls", value: "Bard" }, cid);
+  expect((await api(page, "character_save", { id: hero.id, version: hero.version, hidden: ["title"] }, cid)).status).toBe(200);
+  const mag = await make(page, { name: "Old Mag", kind: "npc" });
+
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${pc.entry_id}`);
+  const open = pp.getByRole("link", { name: "Open sheet" });
+  await expect(open).toBeInViewport();
+  const card = pp.locator(".enc-character");
+  await expect(card).toContainText("PC");
+  await expect(card).toContainText("Played by Pip");
+  await expect(card).toContainText("Test RPG");
+  await expect(card).toContainText("Class: Wizard");
+  await open.click();
+  await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/characters/${pc.id}$`));
+
+  // the owner hid Title, so it isn't on the card for anyone else
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${hero.entry_id}`);
+  await expect(pp.locator(".enc-character")).toContainText("Class: Bard");
+  await expect(pp.locator(".enc-character")).not.toContainText("Secret Heir");
+  // a private NPC sheet: no button and no card for a player
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${mag.entry_id}`);
+  await expect(pp.getByRole("heading", { name: "Old Mag", exact: true })).toBeVisible();
+  await expect(pp.getByRole("link", { name: "Open sheet" })).toHaveCount(0);
+  await expect(pp.locator(".enc-character")).toHaveCount(0);
+
+  // the list: a sheet icon, and PCs / NPCs
+  await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  await page.getByRole("group", { name: "Characters" }).getByRole("button", { name: "PCs", exact: true }).click();
+  await expect(page.locator(".enc-item")).toHaveText([/Brannoc/, /Gwen's Hero/]);
+  await page.getByRole("group", { name: "Characters" }).getByRole("button", { name: "NPCs", exact: true }).click();
+  await expect(page.locator(".enc-item")).toHaveText([/Old Mag/]);
+  await page.getByRole("group", { name: "Characters" }).getByRole("button", { name: "All", exact: true }).click();
+  await page.getByRole("link", { name: "Open Brannoc's sheet", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/characters/${pc.id}$`));
+});
+
+test("a GM adds a character sheet to a Person entry", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Add sheet");
+  const tpl = (await api(page, "template_save", { name: "Add sheet tpl", game: "Test RPG", layout: SHEET })).json.template;
+  const e = (await api(page, "entry_save", { name: "Captain Vey", notes: "<p>Master of the Gull.</p>" }, cid)).json;
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
+  await page.getByRole("button", { name: "Add character sheet" }).click();
+  await page.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await page.getByRole("button", { name: "Add sheet" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/characters/\\d+$`));
+  await expect(page.getByRole("heading", { name: "Captain Vey", exact: true })).toBeVisible();
+  await expect(page.getByLabel("PC or NPC")).toHaveValue("npc");
+});

@@ -1,0 +1,414 @@
+{
+ "name": "Trinity Continuum",
+ "game": "Trinity Continuum",
+ "edition": "Core (Storypath)",
+ "source": {
+  "title": "Trinity Continuum Core Character Sheet",
+  "owner": "Onyx Path Publishing",
+  "url": "https://theonyxpath.com/sheets/Trinity_Core_Character_Sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "aspiration_short1",
+      "label": "Short-Term Aspiration",
+      "type": "text"
+     },
+     {
+      "key": "aspiration_short2",
+      "label": "Short-Term Aspiration (second)",
+      "type": "text"
+     },
+     {
+      "key": "aspiration_long",
+      "label": "Long-Term Aspiration",
+      "type": "text"
+     },
+     {
+      "key": "favored_approach",
+      "label": "Favored Approach",
+      "type": "choice",
+      "options": [
+       "Force",
+       "Finesse",
+       "Resilience"
+      ],
+      "summary": true
+     },
+     {
+      "key": "psi_type",
+      "label": "Talent / Psi Order",
+      "type": "text",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "paths",
+    "title": "Paths",
+    "fields": [
+     {
+      "key": "path_list",
+      "label": "Paths",
+      "type": "list",
+      "columns": [
+       {
+        "key": "path",
+        "label": "Path"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "dots",
+        "label": "Dots"
+       },
+       {
+        "key": "skills",
+        "label": "Skills"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_intellect",
+      "label": "Intellect",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_cunning",
+      "label": "Cunning",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_resolve",
+      "label": "Resolve",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_might",
+      "label": "Might",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_presence",
+      "label": "Presence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_composure",
+      "label": "Composure",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "sk_aim",
+      "label": "Aim",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_close_combat",
+      "label": "Close Combat",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_command",
+      "label": "Command",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_culture",
+      "label": "Culture",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_enigmas",
+      "label": "Enigmas",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_humanities",
+      "label": "Humanities",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_integrity",
+      "label": "Integrity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_larceny",
+      "label": "Larceny",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "specialties",
+      "label": "Skill Tricks & Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "trick_specialty",
+        "label": "Trick / Specialty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "edges",
+    "title": "Edges & Gifts",
+    "fields": [
+     {
+      "key": "edge_list",
+      "label": "Edges",
+      "type": "list",
+      "columns": [
+       {
+        "key": "edge",
+        "label": "Edge"
+       },
+       {
+        "key": "dots",
+        "label": "Dots"
+       }
+      ]
+     },
+     {
+      "key": "gift_list",
+      "label": "Gifts / Psi Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "gift",
+        "label": "Gift"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Health & Defense",
+    "fields": [
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number"
+     },
+     {
+      "key": "bruised",
+      "label": "Bruised (+1)",
+      "type": "pips",
+      "count": 3,
+      "play": true
+     },
+     {
+      "key": "injured",
+      "label": "Injured (+2)",
+      "type": "pips",
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "maimed",
+      "label": "Maimed (+4)",
+      "type": "pips",
+      "count": 1,
+      "play": true
+     },
+     {
+      "key": "taken_out",
+      "label": "Taken Out",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "momentum",
+      "label": "Momentum",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "play": true,
+      "min": 0
+     }
+    ]
+   }
+  ]
+ }
+}

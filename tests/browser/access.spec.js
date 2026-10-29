@@ -17,11 +17,11 @@ const ACTIONS = [
 ];
 
 /** Open to anyone, signed in or not. */
-const PUBLIC = ["fanwiki_wikis", "owlbear_manifest"];
+const PUBLIC = ["fanwiki_wikis", "starter_sources", "owlbear_manifest"];
 /** Need an approved account, and no campaign. */
-const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb"];
+const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb", "templates", "template", "template_save", "template_fork", "template_delete"];
 /** Site admins only. */
-const ADMIN_ONLY = ["users", "user_status", "user_email", "user_delete"];
+const ADMIN_ONLY = ["users", "user_status", "user_email", "user_delete", "starter_templates_load"];
 /** A campaign's GMs only, refused to its players before anything else is looked at. */
 const GM_ONLY = ["campaign_update", "campaign_delete", "campaign_copy", "set_time", "member_candidates", "member_add", "member_remove",
   "region_save", "region_delete", "holiday_save", "holiday_delete", "days_save", "day_update", "shift_save", "shifts_fill",

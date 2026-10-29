@@ -1,0 +1,575 @@
+{
+ "name": "Pendragon 6th Edition",
+ "game": "King Arthur Pendragon",
+ "edition": "6th Edition",
+ "source": {
+  "title": "Pendragon 6E Character Sheet (blank)",
+  "owner": "Chaosium",
+  "url": "https://chaosium.itch.io/pendragon-core-rules-zcharacter-sheets-pack",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "knight",
+    "title": "Knight",
+    "fields": [
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text"
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "lord",
+      "label": "Liege Lord",
+      "type": "text"
+     },
+     {
+      "key": "manor",
+      "label": "Manor",
+      "type": "text"
+     },
+     {
+      "key": "current_class",
+      "label": "Current Class",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "year_born",
+      "label": "Year Born",
+      "type": "number"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "father",
+      "label": "Father",
+      "type": "text"
+     },
+     {
+      "key": "family_characteristic",
+      "label": "Family Characteristic",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "fields": [
+     {
+      "key": "trait_chaste",
+      "label": "Chaste",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_lustful",
+      "label": "Lustful",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_energetic",
+      "label": "Energetic",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_lazy",
+      "label": "Lazy",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_forgiving",
+      "label": "Forgiving",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_vengeful",
+      "label": "Vengeful",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_generous",
+      "label": "Generous",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_selfish",
+      "label": "Selfish",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_honest",
+      "label": "Honest",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_deceitful",
+      "label": "Deceitful",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_just",
+      "label": "Just",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_arbitrary",
+      "label": "Arbitrary",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_merciful",
+      "label": "Merciful",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_cruel",
+      "label": "Cruel",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_modest",
+      "label": "Modest",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_proud",
+      "label": "Proud",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_prudent",
+      "label": "Prudent",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_reckless",
+      "label": "Reckless",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_spiritual",
+      "label": "Spiritual",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_worldly",
+      "label": "Worldly",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_temperate",
+      "label": "Temperate",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_indulgent",
+      "label": "Indulgent",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_trusting",
+      "label": "Trusting",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_suspicious",
+      "label": "Suspicious",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_valorous",
+      "label": "Valorous",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_cowardly",
+      "label": "Cowardly",
+      "type": "number",
+      "min": 0,
+      "max": 20
+     },
+     {
+      "key": "trait_checks",
+      "label": "Trait Checks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "passions",
+    "title": "Passions",
+    "fields": [
+     {
+      "key": "passion_list",
+      "label": "Passions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "passion",
+        "label": "Passion"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       },
+       {
+        "key": "checked",
+        "label": "Checked"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "attr_siz",
+      "label": "SIZ",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_dex",
+      "label": "DEX",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_str",
+      "label": "STR",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_con",
+      "label": "CON",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     },
+     {
+      "key": "attr_app",
+      "label": "APP",
+      "type": "number",
+      "min": 1,
+      "max": 30
+     }
+    ]
+   },
+   {
+    "key": "derived",
+    "title": "Derived Statistics",
+    "fields": [
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "text"
+     },
+     {
+      "key": "healing_rate",
+      "label": "Healing Rate",
+      "type": "number"
+     },
+     {
+      "key": "move_rate",
+      "label": "Move Rate",
+      "type": "number"
+     },
+     {
+      "key": "unconscious",
+      "label": "Unconscious",
+      "type": "number"
+     },
+     {
+      "key": "knockdown",
+      "label": "Knockdown",
+      "type": "number"
+     },
+     {
+      "key": "major_wound",
+      "label": "Major Wound",
+      "type": "number"
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "wound",
+        "label": "Wound"
+       },
+       {
+        "key": "hp",
+        "label": "HP"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "chirurgery",
+      "label": "Needs Chirurgery",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       },
+       {
+        "key": "checked",
+        "label": "Checked"
+       }
+      ]
+     },
+     {
+      "key": "combat_skills",
+      "label": "Combat Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       },
+       {
+        "key": "checked",
+        "label": "Checked"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "renown",
+    "title": "Glory",
+    "fields": [
+     {
+      "key": "glory",
+      "label": "Glory",
+      "type": "number",
+      "play": true,
+      "min": 0
+     },
+     {
+      "key": "glory_log",
+      "label": "Glory Log",
+      "type": "list",
+      "columns": [
+       {
+        "key": "year",
+        "label": "Year"
+       },
+       {
+        "key": "deed",
+        "label": "Deed"
+       },
+       {
+        "key": "glory",
+        "label": "Glory"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment & Horses",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text"
+     },
+     {
+      "key": "armor_points",
+      "label": "Armor Points",
+      "type": "number"
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text"
+     },
+     {
+      "key": "horses",
+      "label": "Horses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "horse",
+        "label": "Horse"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "hp",
+        "label": "HP"
+       }
+      ]
+     },
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "annual_wealth",
+      "label": "Annual Wealth",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "history",
+    "title": "History",
+    "fields": [
+     {
+      "key": "history_log",
+      "label": "Personal History",
+      "type": "list",
+      "columns": [
+       {
+        "key": "year",
+        "label": "Year"
+       },
+       {
+        "key": "event",
+        "label": "Event"
+       }
+      ]
+     },
+     {
+      "key": "family",
+      "label": "Family",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

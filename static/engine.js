@@ -1233,6 +1233,8 @@
       url: 'https://github.com/slab/quill' },
     leaflet: { title: 'Leaflet 1.9.4 map viewer (static/vendor/leaflet)', by: 'Volodymyr Agafonkin and the Leaflet contributors', licence: 'BSD 2-Clause',
       url: 'https://github.com/Leaflet/Leaflet' },
+    pdfjs: { title: 'PDF.js 3.11.174 PDF reader, for drafting a sheet template from a PDF (static/vendor/pdfjs)', by: 'Mozilla and the PDF.js contributors',
+      licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' },
     inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
     barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',
       url: 'https://fonts.google.com/specimen/Barlow+Condensed' },
