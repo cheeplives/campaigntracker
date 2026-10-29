@@ -530,6 +530,8 @@ const MapsTab = (() => {
       total.hidden = !m;
       if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
       host.classList.toggle('picking', m || mode === 'scale' || mode === 'pin');
+      // two quick taps while laying down points are two points, not a zoom
+      lf?.map.doubleClickZoom[m || mode === 'scale' || mode === 'pin' ? 'disable' : 'enable']();
     }
     const scaleBtn = gm ? btn('Scale', () => (mode === 'scale' ? closePanel() : openScale()), '', 'Tell the map how far apart things are') : null;
     const rename = () => {
@@ -586,21 +588,23 @@ const MapsTab = (() => {
     groupLayer = L.layerGroup().addTo(lmap);
     const bar = scaleControl(() => map, system).addTo(lmap);
     lf = { map: lmap, scale: bar };
+    syncTools();
     lmap.on('click', onClick);
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
     const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };
-    const fit = () => { if (!host.isConnected) teardown(); else lmap.invalidateSize(); };
+    // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map
+    const fit = () => { if (!host.isConnected) teardown(); else lmap.invalidateSize({ animate: false }); };
     const ro = new ResizeObserver(fit);
     window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
     ro.observe(host);
     drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
-      lmap.invalidateSize(); lmap.fitBounds(bounds());
+      lmap.invalidateSize({ animate: false }); lmap.fitBounds(bounds(), { animate: false });
       const want = pinMarkers.get(Number(params.get('pin')));   // a link back from an entry or event: centre on that pin and open its card
       const at = pins.find(q => q.id === Number(params.get('pin')));
-      if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0); want.openPopup(); }
+      if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); }
       else if (params.get('pin')) note.textContent = 'That pin is not on this map';
     });
     syncTools();

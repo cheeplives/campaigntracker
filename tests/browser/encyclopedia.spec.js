@@ -100,6 +100,7 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   await nounRow(page, "Black Hand").getByText("Skip").click();
   await dlg.getByRole("button", { name: "Save choices" }).click();
   await expect(page.getByText("Added 2 to the Encyclopedia · 1 ignored")).toBeVisible();
+  await expect(page.locator("[data-box=notes] .enc-mentions")).toContainText("Gunther");   // the page has redrawn with the new entries
   // A skipped name isn't asked about again until the page is reloaded; a scan still finds it.
   await page.getByRole("button", { name: "Save notes" }).click();
   await expect(page.getByText("Notes saved")).toBeVisible();
