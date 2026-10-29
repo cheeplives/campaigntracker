@@ -13,10 +13,10 @@ Players sign in with **Google or GitHub**, the same way as the Sinless app on th
 The full runbook (OAuth apps, config fields, upgrading an older install) is in [docs/DEPLOY.md](docs/DEPLOY.md). In short:
 
 1. **Create a MySQL database** in your host's panel, or reuse the Sinless database so the two apps share accounts and one approval queue (fresh installs only).
-2. **Deploy with git:** `git clone https://github.com/cheeplives/campaigntracker.git chronicle` inside your web root. Updates are `./deploy.sh` (pull + PHP syntax check).
+2. **Deploy with git:** `git clone https://github.com/cheeplives/campaigntracker.git chronicle` inside your web root. Updates are `./deploy.sh` (pull, PHP syntax check, database upgrade).
 3. **Configure:** copy `api/config.example.php` to `~/chronicle-config.php` (above the web root; `api/config.php` also works) and fill in the database, `base_url`, the Google/GitHub client ids and secrets, and your email under `admin_identities`.
 4. **Add the callback** `<base_url>/api/auth/callback.php` to your Google OAuth client (as a second redirect URI next to Sinless's) and register a GitHub OAuth app for it.
-5. **Install:** set `'allow_install' => true`, open `<base_url>/install.php` and press *Install or upgrade*, then set it back to `false`. Later upgrades need you signed in as a site admin.
+5. **Install:** run `php tools/migrate.php` in the app folder to create the tables. (Or set `'allow_install' => true`, open `<base_url>/install.php` and press *Install or upgrade*, then set it back to `false`.) Later upgrades happen by themselves: `./deploy.sh` runs `tools/migrate.php` after each pull, backing up the database first.
 6. **Sign in** with the email in `admin_identities`. You're approved as admin straight away; everyone else appears under *Users* to approve.
 
 ## Using it
@@ -89,11 +89,12 @@ Hover over any visibility badge to see this breakdown.
 | `api/auth/` | Google/GitHub sign-in (`login`, `callback`, `me`, `logout`), the same flow as Sinless |
 | `api/lib.php` | Shared server library ported from Sinless: config lookup, sessions, CSRF, rate limits, OAuth helpers |
 | `api/config.example.php` | Copy to `~/chronicle-config.php` or `api/config.php` |
-| `install.php` | Creates tables, or upgrades an older install |
+| `install.php` | Creates tables, or upgrades an older install, from the browser (`tools/migrate.php` does the same from the command line) |
+| `api/upgrade.php` | The upgrade steps both of them run: which migration each table or column needs |
 | `db/schema.sql`, `db/migrations/` | Database tables, and one-time upgrades for existing installs |
 | `tests/` | Playwright browser tests, run in five browsers on GitHub Actions ([tests/README.md](tests/README.md)) |
-| `tools/` | `climate-normals.json` (the station normals behind the Köppen baselines) and `climate-baselines.js`, which works out the baselines from them; not served |
-| `deploy.sh` | `git pull` + PHP syntax check, run on the server |
+| `tools/` | `climate-normals.json` (the station normals behind the Köppen baselines) and `climate-baselines.js`, which works out the baselines from them; `migrate.php` (database upgrade) and `security-check.php`, run by `deploy.sh`; not served |
+| `deploy.sh` | `git pull`, PHP syntax check, database upgrade and security check, run on the server |
 
 ## Notes
 

@@ -5,22 +5,16 @@
  * There is no admin to create here: list your email in admin_identities in the
  * config and your first sign-in is approved as admin.
  * After it succeeds, set 'allow_install' => false in the config (or delete this file).
+ * Upgrades after a deploy don't need this page: deploy.sh runs tools/migrate.php, which does the same from the
+ * command line (the steps themselves are in api/upgrade.php).
  */
 declare(strict_types=1);
 const CHRONICLE_INSTALLER = true;   // lib.php shows setup problems as a readable page
 require __DIR__ . '/api/lib.php';
+require __DIR__ . '/api/upgrade.php';
 header('Content-Type: text/html; charset=utf-8');
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-
-/** Run a .sql file statement by statement, skipping comment-only chunks. */
-function run_sql_file(PDO $pdo, string $file): void {
-    $sql = file_get_contents($file);
-    foreach (array_filter(array_map('trim', preg_split('/;\s*\n/', $sql))) as $stmt) {
-        if (preg_match('/^\s*(--.*\n\s*)*(--.*)?$/', $stmt)) continue;
-        $pdo->exec($stmt);
-    }
-}
 
 /** Once someone has signed in as a site admin, only a signed-in site admin may run the installer, so leaving
  * allow_install on doesn't let a stranger start an upgrade. Before that (a fresh database, or one from before
@@ -36,101 +30,15 @@ function installer_locked(): bool {
 
 $msg = ''; $ok = false; $locked = false;
 if (!cfg('allow_install')) {
-    $msg = "The installer is turned off. Set 'allow_install' => true in the config to run it again.";
+    $msg = "The installer is turned off. To upgrade the database, run php tools/migrate.php on the server (deploy.sh does it for you). "
+         . "To use this page instead, set 'allow_install' => true in the config.";
 } elseif ($locked = installer_locked()) {
     $msg = 'Sign in to Campaign Chronicle as a site admin, then open this page again.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if (!hash_equals(csrf_token(), (string)($_POST['csrf'] ?? ''))) throw new RuntimeException('Security token mismatch. Reload the page.');
-        $pdo = db();
-        $hasUsers = (bool)$pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn();
-        $oldUsers = $hasUsers && (bool)$pdo->query("SHOW COLUMNS FROM users LIKE 'password_hash'")->fetchColumn();
-        // Asked before schema.sql runs, since it creates chronicle_access empty: an install with accounts already needs 020
-        // to carry their access over.
-        $needAccess = $hasUsers && !$pdo->query("SHOW TABLES LIKE 'chronicle_access'")->fetchColumn();
-        if ($oldUsers) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/001_oauth_signin.sql');
-            $msg = 'Upgraded to Google/GitHub sign-in. Existing accounts kept their campaigns. '
-                 . 'Sign in, then enter each player\'s email under Users so their first sign-in takes over their old account.';
-        } else {
-            run_sql_file($pdo, __DIR__ . '/db/schema.sql');
-            $msg = 'Tables are ready.';
-        }
-        // Event shift ranges and tags. schema.sql already made the new tables,
-        // so on an older install this only adds the events.shift_end column.
-        if (!$pdo->query("SHOW COLUMNS FROM events LIKE 'shift_end'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/002_event_shifts_tags.sql');
-            $msg .= ' Events now have Shift Start/End and tags; existing events are unchanged.';
-        }
-        // schema.sql only creates missing tables, so columns added later come from their migration.
-        if (!$pdo->query("SHOW COLUMNS FROM campaign_members LIKE 'character_name'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/003_shift_notes_characters.sql');
-            $msg .= ' Added character names and shift notes.';
-        }
-        if (!$pdo->query("SHOW COLUMNS FROM days LIKE 'locations'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/004_day_locations.sql');
-            $msg .= ' Days now have a Locations visited box.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'downtimes'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/005_downtime.sql');
-            $msg .= ' Added the Downtime tab.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'holdings'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/006_party_holdings.sql');
-            $msg .= ' Added the Party Holdings tab.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'reminder_dismissals'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/007_reminders.sql');
-            $msg .= ' Added calendar reminders.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'party_funds'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/008_party_funds.sql');
-            $msg .= ' Added Party Funds.';
-        }
-        if (!$pdo->query("SHOW COLUMNS FROM party_funds LIKE 'location'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/009_party_funds_location.sql');
-            $msg .= ' Party Funds now have a Location.';
-        }
-        if (!$pdo->query("SHOW COLUMNS FROM days LIKE 'notes_format'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/010_day_notes_rich_text.sql');
-            $msg .= ' Day notes can now be formatted (Public and Secret notes).';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'encyclopedia_ignored'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/011_encyclopedia.sql');
-            $msg .= ' Added the Encyclopedia tab and the Proper Noun Detector.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'encyclopedia_relations'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/012_encyclopedia_relations.sql');
-            $msg .= ' Encyclopedia entries can now be connected to each other.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'attachments'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/013_attachments.sql');
-            $msg .= ' Encyclopedia entries can now have pictures and files.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'library_tomes'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/014_library.sql');
-            $msg .= ' Added the Library tab for books, journals and notes.';
-        }
-        if (!$pdo->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/015_sessions.sql');
-            $msg .= ' Added the Sessions tab.';
-        }
-        if ($pdo->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM play_sessions LIKE 'rewards'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/016_session_rewards.sql');
-            $msg .= ' Sessions can now record Session Rewards and Loot Found.';
-        }
-        if ($pdo->query("SHOW TABLES LIKE 'attachments'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM attachments LIKE 'credit_license'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/017_attachment_credits.sql');
-            $msg .= ' Encyclopedia entries can now find pictures with Find Image, credited, or embedded from DeviantArt.';
-        }
-        if ($pdo->query("SHOW TABLES LIKE 'encyclopedia_entries'")->fetchColumn() && !$pdo->query("SHOW COLUMNS FROM encyclopedia_entries LIKE 'category'")->fetchColumn()) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/018_encyclopedia_categories.sql');
-            $msg .= ' Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.';
-        }
-        if ($needAccess) {
-            run_sql_file($pdo, __DIR__ . '/db/migrations/020_chronicle_access.sql');
-            $msg .= ' Campaign Chronicle now approves its own users, apart from Sinless; everyone kept the access they had.';
-        }
+        $done = upgrade_database(db(), __DIR__);
+        $msg = $done ? implode(' ', $done) : 'The database is already up to date.';
         // Where uploads are kept: say so now if the folder can't be used, rather than at the first upload.
         $up = upload_dir();
         $msg .= $up['dir'] ? '' : ' Pictures and files can\'t be uploaded yet: ' . $up['problem'];

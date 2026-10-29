@@ -37,7 +37,7 @@ if ($path === '') {
   if ((fileperms($path) & 0o004) !== 0)
     $warn("The config can be read by every account on the server. Run: chmod 600 $path");
   if (!empty($cfg['debug'])) $warn("'debug' => true sends error details to every visitor. Set it to false.");
-  if (!empty($cfg['allow_install'])) $warn("'allow_install' => true leaves install.php open. Set it to false once the upgrade is done.");
+  if (!empty($cfg['allow_install'])) $warn("'allow_install' => true leaves install.php open. Set it to false: deploy.sh upgrades the database itself now.");
   if (!empty($cfg['test_login'])) $warn("'test_login' is set: that switch is for the browser tests only. Remove it.");
   if (array_key_exists('rate_limit_enabled', $cfg) && !$cfg['rate_limit_enabled']) $warn("'rate_limit_enabled' => false turns off the sign-in and per-account limits. Set it to true.");
   if (isset($cfg['session']['cookie_secure']) && !$cfg['session']['cookie_secure']) $warn("'cookie_secure' => false lets the sign-in cookie travel over plain http. Set it to true.");

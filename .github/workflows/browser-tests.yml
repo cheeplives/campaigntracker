@@ -63,7 +63,15 @@ jobs:
           apt-get update -q
           DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
             php8.3-cli php8.3-mysql php8.3-curl php8.3-mbstring php8.3-xml mysql-client-core-8.0
-      - run: find ../api ../install.php ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: find ../api ../install.php ../tools ../tests/support -name '*.php' -print0 | xargs -0 -n1 php -l
+      # The upgrade deploy.sh runs: on an empty database it makes every table, then finds nothing left to do.
+      - name: Database upgrade from the command line
+        env:
+          CHRONICLE_CONFIG: support/config.test.php
+        run: |
+          mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -e "DROP DATABASE IF EXISTS $DB_NAME; CREATE DATABASE $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+          php ../tools/migrate.php --no-backup
+          php ../tools/migrate.php --check
       - run: npm ci
       - run: npx playwright test --project=${{ matrix.project }}
       - if: failure()
