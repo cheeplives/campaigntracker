@@ -32,6 +32,17 @@
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
+# --- The At the Table panel may be framed ----------------------------------
+# panel.html is the one page another site may show in a frame: an Owlbear Rodeo extension, a Foundry window, OBS. It
+# signs in with a panel link sent in a header, never the cookie, and changes nothing without a click, so framing it is
+# safe. Same policy as above, but any site may frame it. <Files> applies after the site-wide headers, so these win.
+<IfModule mod_headers.c>
+  <Files "panel.html">
+    Header always unset X-Frame-Options
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors *; form-action 'self'"
+  </Files>
+</IfModule>
+
 # --- Make browsers check for a new app after each deploy -------------------
 # The page, scripts and styles keep their names between releases, so without
 # this a browser can keep running last week's app.js (missing new tabs, say)

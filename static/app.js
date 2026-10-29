@@ -6,6 +6,8 @@
 (function () {
   'use strict';
   const E = window.Engine;
+  /** panel.html: At the Table on its own, signed in with a panel link (see "the panel" below). */
+  const PANEL = document.documentElement.hasAttribute('data-panel');
 
   const { el, $, toast, tip, tipped, hideTip, confirmDialog, promptDialog, alertDialog } = KIT;
   const app = () => $('#app');
@@ -61,15 +63,21 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '24';
+  const APP_VERSION = '25';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
-    const opt = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
-    if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
-    if (body) { opt.headers['Content-Type'] = 'application/json'; opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
+    const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
+    if (PANEL) opt.headers['X-Chronicle-Panel'] = panelCodeNow;
+    else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
+    if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
     const res = await fetch('api/index.php?' + qs, opt);
     let data;
     try { data = await res.json(); } catch { throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
+    // The panel's link was revoked (or its maker lost access): ask for a new one.
+    if (PANEL && (res.status === 401 || data.error === 'not_approved')) {
+      if (data.error !== 'panel_not_allowed') { forgetPanelCode(); panelAsk(data.message || 'That panel link no longer works.'); }
+      throw Object.assign(new Error(data.message || 'Not allowed'), { status: res.status });
+    }
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
     if (!res.ok) throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status });
@@ -120,8 +128,8 @@
       btn('✕', () => { if (S.camp) S.camp.changed = stamp; hideChangeBanner(); }, 'link', 'Dismiss until the next change')));
   }
   function hideChangeBanner() { $('#change-banner')?.remove(); }
-  setInterval(checkForChanges, CHANGE_POLL_MS);
-  document.addEventListener('visibilitychange', checkForChanges);
+  setInterval(() => (PANEL ? panelPoll() : checkForChanges()), CHANGE_POLL_MS);
+  document.addEventListener('visibilitychange', () => (PANEL ? panelPoll() : checkForChanges()));
 
   // ------------------------------------------------------------ reminders
   // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
@@ -143,7 +151,7 @@
   }
   /** Show the reminders the clock has reached that this person hasn't dismissed (or put off at this time). */
   function popDueReminders({ reminders, current_shift: clock }) {
-    if (reminderOpen) return;
+    if (reminderOpen || PANEL) return;
     const due = reminders.filter(x => x.due && !x.dismissed && !snoozed.has(`${x.id}@${clock}`));
     if (due.length) reminderDialog(due, clock);
   }
@@ -950,7 +958,7 @@
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
-    ['Party', 'What the party does and owns: journeys, rests and holdings', [['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
+    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['table', 'At the Table'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
@@ -959,6 +967,7 @@
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list: search it and filter it by tag',
     sessions: 'Each game night\'s quick notes and the summary written from them',
+    table: 'The campaign right now, in big type: for the table, a phone, beside a virtual tabletop or on a stream',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -6028,6 +6037,289 @@
     input.focus();
   }
 
+  // ------------------------------------------------------------ At the Table
+  // The campaign right now, in big type, for the table, a phone, a virtual tabletop or a stream: the date and shift,
+  // the weather, light and moons, where the party is, what's on today, an Encyclopedia lookup, a note on this shift or
+  // an entry, and Pass a shift for GMs. The same view is the panel (panel.html, PANEL below), signed in with a panel
+  // link where Chronicle's own sign-in can't reach; the links are made in the box at its foot.
+  const ENTRY_NOTE_TIP = 'Added to the end of the entry\'s Public notes, which everyone in the campaign can read';
+  let tableEntries = null;   // the Encyclopedia's entries with their notes, loaded the first time one is looked up
+  async function viewTable() {
+    const cid = S.camp.id, c = cal(), d = today(), sh = E.mod(nowShift(), spd());
+    tableEntries = null;
+    const [range, groups] = await Promise.all([fetchRange(d, d), S.mapsReady ? api('groups', { query: { cid } }).then(r => r.groups).catch(() => []) : []]);
+    if (S.camp?.id !== cid) return;
+    const row = range.days.get(d) || null, region = regionById(row?.region_id) || currentRegion();
+    const w = row?.weather || null, sw = shiftWx(d, region, w)[sh] || null;
+    const v = E.visibility(c, region, sw, d, sh, null);
+    const card = (title, ...kids) => el('div', { class: 'tv-card' }, el('b', {}, title), ...kids);
+    const chronicleHref = h => (PANEL ? `index.html${h}` : h);
+    const outLink = (href, label, tipText) => el('a', { href: chronicleHref(href), target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null, 'data-tip': tipText }, label);
+
+    // where the party is: the main group (else the first), its region and the pin nearest its marker on its map
+    const party = await (async () => {
+      const g = groups.find(x => x.is_main) || groups[0];
+      const reg = (g && regionById(g.region_id)) || region;
+      const lines = [];
+      if (g?.map_id) {
+        try {
+          const m = await api('map', { query: { cid, id: g.map_id } });
+          const reach = Math.max(m.map.width || 0, m.map.height || 0) * 0.03 + 10;
+          const pin = MapGeo.nearestPin(m.pins, { x: g.x, y: g.y }, reach);
+          lines.push(el('div', {}, '📍 ', pin ? `Near ${MapGeo.pinName(pin)}` : 'On the map'));
+          lines.push(el('div', { class: 'small' }, outLink(`#/c/${cid}/maps/${g.map_id}`, m.map.name, 'Open the map')));
+        } catch { /* a map this member can't open: the region is enough */ }
+      }
+      if (reg) lines.unshift(el('div', { class: 'big' }, reg.name));
+      if (groups.length > 1) lines.push(el('div', { class: 'small muted' }, `${groups.length} groups: ${groups.map(x => x.name).join(', ')}`));
+      return lines.length ? lines : [el('div', { class: 'muted' }, 'Not set')];
+    })();
+
+    // what's on today: its events, and the reminders that fall on it
+    const from = d * spd(), to = from + spd();
+    const todays = [
+      ...range.events.filter(e => Number(e.abs_day) <= d && Number(e.end_day ?? e.abs_day) >= d)
+        .map(e => el('li', {}, '📅 ', Number(e.is_secret) ? secretTag() : null, ' ', outLink(`#/c/${cid}/day/${d}`, e.title, shiftRange(e)))),
+      ...(S.reminders || []).filter(x => x.due_shift >= from && x.due_shift < to)
+        .map(x => el('li', { class: x.due ? '' : 'muted' }, '⏰ ', x.title, el('span', { class: 'small muted' }, ` · ${E.fmtShift(c, x.due_shift).split(',')[0]}`))),
+    ];
+
+    const view = el('div', { class: 'table-view' + (PANEL ? ' in-panel' : '') });
+    const head = el('div', { class: 'tv-head' },
+      el('div', { class: 'tv-camp' }, S.camp.name),
+      el('div', { class: 'tv-date' }, E.fmtDate(c, d)),
+      el('div', { class: 'tv-shift' }, hourMode() ? `${shiftNames()[sh]}` : `${shiftNames()[sh]} · ${spd() === 2 ? (sh ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][sh]} shift of 4`}`),
+      E.holidaysOn(c, S.holidays, d).map(holidayChip));
+    const cards = el('div', { class: 'tv-grid' },
+      card('Weather', el('div', { class: 'big' }, weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`))),
+      card('Light', el('div', { class: 'big' }, visPill(v))),
+      card('Moons', E.moons(c, d, region).length ? el('div', { class: 'tv-moons' }, E.moons(c, d, region).map(m => el('div', {}, moonGlyph(m), ` ${m.name}: ${m.label}`))) : el('div', { class: 'muted' }, 'None')),
+      card('Party', ...party));
+    const gmRow = isGM() && !S.viewAs ? el('div', { class: 'tv-gm row' },
+      tvTimeBtn(`◀ Back a ${word()}`, -1, '', `Step back one ${word()}. Recorded weather, notes and activities stay`),
+      tvTimeBtn(`Pass a ${word()} ▶`, 1, 'primary', `Move "now" on one ${word()} and roll the weather for a new day. Everyone's view catches up`),
+      tvTimeBtn('+1 day', spd(), '', 'Move "now" on a whole day')) : null;
+    view.append(head, cards, ...clean([gmRow,
+      el('section', { class: 'tv-sec' }, el('b', {}, 'Today'), todays.length ? el('ul', { class: 'tv-today' }, todays) : el('p', { class: 'muted small' }, 'Nothing on today')),
+      S.encReady ? tableLookup(view) : null,
+      tableNote(d, sh),
+      PANEL ? panelFooter() : await tableLinksBox()]));
+    if (PANEL) mount(view); else mount(...campaignHeader('table'), view);
+  }
+  function tvTimeBtn(label, n, cls, tipText) {
+    const b = btn(label, null, `small ${cls}`, tipText);
+    b.addEventListener('click', busy(b, async () => { await passShifts(n); toast(`Now: ${E.fmtShift(cal(), nowShift())}`); await viewTable(); }));
+    return b;
+  }
+  async function loadTableEntries() {
+    if (!tableEntries) tableEntries = (await api('encyclopedia', { query: { cid: S.camp.id } })).entries;
+    return tableEntries;
+  }
+  /** Look an entry up by name or alias and read it here, with Add a note and a link into the Encyclopedia. */
+  function tableLookup(view) {
+    const input = el('input', { type: 'search', placeholder: 'Look up a name in the Encyclopedia', 'aria-label': 'Look up a name in the Encyclopedia', autocomplete: 'off' });
+    const out = el('div', { class: 'tv-lookup' });
+    const show = async () => {
+      const q = input.value.trim().toLowerCase();
+      if (!q) return out.replaceChildren();
+      const named = e => [e.name, ...(e.aliases || [])].map(n => n.toLowerCase());
+      const hits = S.encyclopedia.filter(e => named(e).some(n => n.includes(q)))
+        .sort((a, b) => Number(!named(b).some(n => n.startsWith(q))) - Number(!named(a).some(n => n.startsWith(q))) || a.name.localeCompare(b.name));
+      if (!hits.length) return out.replaceChildren(el('p', { class: 'muted small' }, 'No entry by that name'));
+      const entries = await loadTableEntries();
+      const full = entries.find(e => e.id === hits[0].id) || hits[0];
+      const cat = encCat(full.category);
+      out.replaceChildren(el('div', { class: 'tv-entry' + (full.is_secret ? ' secret' : '') },
+        el('h3', {}, full.is_secret ? secretTag() : null, ' ', full.name, cat ? el('span', { class: 'chip tag' }, `${cat[2]} ${cat[1]}`) : null),
+        full.notes ? RichText.view(full.notes, 'html', 'tv-notes') : el('p', { class: 'muted small' }, 'Nothing written about it yet'),
+        el('div', { class: 'row' },
+          btn('📝 Add a note', () => { const n = view.querySelector('.tv-note'); n?.setEntry(full); n?.scrollIntoView({ block: 'nearest' }); n?.querySelector('textarea')?.focus(); }, 'small'),
+          el('a', { class: 'button small', href: (PANEL ? 'index.html' : '') + `#/c/${S.camp.id}/encyclopedia/${full.id}`, target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null }, PANEL ? 'Open in Chronicle ↗' : 'Open the entry')),
+        hits.length > 1 ? el('p', { class: 'small muted' }, `Also: ${hits.slice(1, 6).map(e => e.name).join(', ')}`) : null));
+    };
+    let t = 0;
+    input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => show().catch(e => toast(e.message, true)), 200); });
+    return el('section', { class: 'tv-sec' }, el('b', {}, 'Encyclopedia'), input, out);
+  }
+  /** A note on this shift (shift notes, as on Current Day) or at the end of an Encyclopedia entry's notes. */
+  function tableNote(d, sh) {
+    let entry = null;
+    const kinds = el('div', { class: 'tv-seg', role: 'radiogroup', 'aria-label': 'Where the note goes' });
+    const kindBtn = (k, label) => el('button', { type: 'button', role: 'radio', 'data-kind': k, onclick: () => setKind(k) }, label);
+    kinds.append(kindBtn('shift', `On this ${word()}`), ...(S.encReady ? [kindBtn('entry', 'On an Encyclopedia entry')] : []));
+    const entryIn = el('input', { list: 'tv-entry-names', placeholder: 'Entry name', 'aria-label': 'Entry', autocomplete: 'off' });
+    const names = el('datalist', { id: 'tv-entry-names' }, S.encyclopedia.map(e => el('option', { value: e.name })));
+    const text = el('textarea', { rows: 3, 'aria-label': 'Note', placeholder: 'What happened, or what you found out' });
+    const gmOnly = el('input', { type: 'checkbox' });
+    const gmLabel = el('label', { class: 'small', 'data-tip': 'Goes in the entry\'s GM notes instead, which players never see' }, gmOnly, ' GM only');
+    const hint = el('p', { class: 'small muted' });
+    const save = btn('Save note', null, 'primary small');
+    const box = el('section', { class: 'tv-sec tv-note' }, el('b', {}, 'Add a note'), kinds, el('div', { class: 'tv-entry-pick' }, entryIn, names), text,
+      el('div', { class: 'row spread' }, isGM() ? gmLabel : el('span'), save), hint);
+    let kind = 'shift';
+    function setKind(k) {
+      kind = k;
+      kinds.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.kind === k)));
+      box.querySelector('.tv-entry-pick').hidden = k !== 'entry';
+      gmLabel.hidden = k !== 'entry';
+      hint.textContent = k === 'entry' ? ENTRY_NOTE_TIP : `Saved as ${PANEL ? S.user.display_name || 'you' : 'you'}, on ${shiftNames()[sh]}, ${E.fmtDate(cal(), d, { noWeekday: true })}`;
+    }
+    box.setEntry = e => { entry = e; entryIn.value = e.name; setKind('entry'); };
+    save.addEventListener('click', busy(save, async () => {
+      const body = text.value.trim();
+      if (!body) return toast('Write the note first', true);
+      if (kind === 'entry') {
+        const n = entryIn.value.trim().toLowerCase();
+        const e = S.encyclopedia.find(x => x.name.toLowerCase() === n || (x.aliases || []).some(a => a.toLowerCase() === n));
+        if (!e) return toast('Pick an entry from the list', true);
+        await post('entry_note_add', { id: e.id, body, gm_only: isGM() && gmOnly.checked }, S.camp.id);
+        tableEntries = null;
+        toast(`Note added to ${e.name}`);
+      } else {
+        await post('shift_note_add', { abs_day: d, shift: sh, body }, S.camp.id);
+        toast(`Note added to ${shiftNames()[sh]}`);
+      }
+      text.value = '';
+    }));
+    setKind('shift');
+    return box;
+  }
+
+  // ------------------------------------------------------------ panel links
+  /** Where panel.html lives, beside index.html. */
+  const panelBase = () => new URL('panel.html', location.href.split('#')[0]).href;
+  /** The box at the foot of At the Table: the panel links this member made (a GM: everyone's), and New panel link. */
+  async function tableLinksBox() {
+    const cid = S.camp.id;
+    const r = await api('panel_links', { query: { cid } }).catch(() => ({ ready: false, links: [] }));
+    const box = el('section', { class: 'card tv-links' }, el('h3', {}, 'Use in a VTT or on stream',
+      tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen. Make a panel link, then paste it there once. A link sees what you see, and can be revoked here at any time')));
+    if (!r.ready) return box.append(el('p', { class: 'muted small' }, 'Run the upgrade (./deploy.sh, or install.php → Install or upgrade) to use panel links.')), box;
+    const kindText = k => (k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
+    const list = el('div', {}, r.links.length ? r.links.map(k => el('div', { class: 'listrow tv-link' },
+      el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${kindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}`)),
+      btn('Revoke', async () => {
+        if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
+        try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
+      }, 'small'))) : el('p', { class: 'muted small' }, 'No panel links yet.'));
+    box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small primary'),
+      el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href), ' under Extensions → Add custom extension.')));
+    return box;
+  }
+  function newPanelLink(box) {
+    const label = el('input', { maxlength: 80, placeholder: isGM() ? 'e.g. Owlbear, or Twitch overlay' : 'e.g. Owlbear on my laptop', 'aria-label': 'Label' });
+    const scope = select([['panel', 'Personal: sees what I see'], ['public_panel', 'Public: what every player sees, read-only (streams, a shared TV)']], 'panel', { 'aria-label': 'Kind' });
+    const overlay = el('input', { type: 'checkbox' });
+    const overlayRow = el('label', { class: 'small', hidden: true }, overlay, ' Overlay style: see-through, large text, for an OBS browser source');
+    scope.addEventListener('change', () => { overlayRow.hidden = scope.value !== 'public_panel'; });
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New panel link' });
+    const form = el('form', { method: 'dialog' }, el('h3', {}, 'New panel link'),
+      field('Label', label, 'So you know where it is pasted'), isGM() ? field('Kind', scope) : null, overlayRow,
+      el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, 'Make link'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
+    d.append(form);
+    form.addEventListener('submit', async ev => {
+      if (ev.submitter?.value !== 'ok') return;
+      ev.preventDefault();
+      try {
+        const r = await post('panel_link_create', { scope: isGM() ? scope.value : 'panel', label: label.value.trim(), overlay: overlay.checked }, S.camp.id);
+        const url = `${panelBase()}#k=${r.link.code}${r.link.overlay ? '&overlay=1' : ''}`;
+        const shown = el('input', { readonly: true, value: url, 'aria-label': 'Panel link', onfocus: e => e.target.select() });
+        form.replaceChildren(el('h3', {}, `"${r.link.label}" is ready`),
+          el('p', {}, 'Copy the link and paste it into the panel the first time it opens (or into OBS as a Browser Source).'),
+          shown, el('p', { class: 'small muted' }, 'You won\'t see this link again. Anyone who has it sees ' + (r.link.scope === 'public_panel' ? 'what every player sees.' : 'what you see, and can add notes as you.')),
+          el('div', { class: 'kit-dialog-actions' },
+            btn('Copy', async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
+            el('button', { value: 'done' }, 'Done')));
+        box.replaceWith(await tableLinksBox());
+      } catch (e) { toast(e.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+  }
+
+  // ------------------------------------------------------------ the panel (panel.html)
+  // At the Table on its own, for another site's frame (Owlbear Rodeo, Foundry) or OBS. It signs in with a panel link's
+  // code, sent in the X-Chronicle-Panel header (api/panel.php), as the browser won't send Chronicle's cookie there. The
+  // code comes in the address (#k=…) or is pasted once, and is kept in this frame's own storage.
+  const PANEL_KEY = 'chronicle-panel-code';
+  let panelCodeNow = '';
+  const codeIn = s => (String(s || '').match(/(?:^|[#&?]k=|^)([0-9a-f]{64})(?:$|[&\s])/) || [])[1] || '';
+  function readPanelCode() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const fromHash = codeIn(h.get('k') || '');
+    if (fromHash) {
+      try { localStorage.setItem(PANEL_KEY, fromHash); } catch { /* storage blocked: keeps working until reloaded */ }
+      h.delete('k');
+      history.replaceState(null, '', location.pathname + location.search + (h.toString() ? `#${h}` : ''));
+      return fromHash;
+    }
+    try { return localStorage.getItem(PANEL_KEY) || ''; } catch { return ''; }
+  }
+  function forgetPanelCode() {
+    panelCodeNow = '';
+    try { localStorage.removeItem(PANEL_KEY); } catch { /* nothing kept */ }
+  }
+  const panelOverlay = () => new URLSearchParams(location.hash.slice(1)).get('overlay') === '1' || new URLSearchParams(location.search).get('overlay') === '1' || !!S.panel?.link?.overlay;
+  function panelAsk(why) {
+    S.camp = null;
+    const input = el('input', { placeholder: 'https://…/panel.html#k=…', 'aria-label': 'Panel link', autocomplete: 'off' });
+    const f = el('form', { class: 'card panel-ask' }, el('h2', {}, 'Campaign Chronicle'),
+      why ? el('p', { class: 'error' }, why) : null,
+      el('p', {}, 'Paste your panel link. Make one in Chronicle: open the campaign, then At the Table → Use in a VTT or on stream → New panel link.'),
+      input, el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Open')));
+    f.addEventListener('submit', ev => {
+      ev.preventDefault();
+      const code = codeIn(input.value.trim());
+      if (!code) return toast('That isn\'t a panel link', true);
+      try { localStorage.setItem(PANEL_KEY, code); } catch { /* this page only */ }
+      panelCodeNow = code;
+      panelBoot();
+    });
+    mount(f);
+    input.focus();
+  }
+  async function panelBoot() {
+    panelCodeNow ||= readPanelCode();
+    if (!panelCodeNow) return panelAsk();
+    try {
+      const who = await api('panel_whoami');
+      S.panel = who;
+      S.user = { id: who.link?.user_id || 0, display_name: who.name || '', prefs: {} };
+      document.documentElement.classList.toggle('panel-overlay', panelOverlay());
+      await loadCampaign(who.campaign_id, true);
+      S.reminders = (await api('reminders', { query: { cid: who.campaign_id } }).catch(() => ({ reminders: [] }))).reminders;
+      await viewTable();
+      panelStamp = Date.now();
+    } catch (e) {
+      if (e.status === 401) return;   // api() has asked for a new link
+      mount(el('div', { class: 'card' }, el('h2', {}, 'Can\'t reach Chronicle'), el('p', {}, e.message), btn('Try again', () => panelBoot(), 'primary')));
+    }
+  }
+  let panelStamp = 0;
+  function panelFooter() {
+    const who = S.panel?.link?.scope === 'public_panel' ? 'Public panel' : `Signed in as ${S.user.display_name}${isGM() ? ' (GM)' : ''}`;
+    const ago = el('span', { class: 'panel-ago' }, '↻ just now');
+    return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago,
+      btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'link small'));
+  }
+  /** The panel follows the campaign: when a GM changes it (passes time, say), it redraws, unless a note is being typed. */
+  async function panelPoll() {
+    if (!S.camp || document.hidden) return;
+    try {
+      const r = await api('changed', { query: { cid: S.camp.id } });
+      const typing = [...document.querySelectorAll('.table-view textarea, .table-view input')].some(i => i.value && i === document.activeElement) || !!document.querySelector('.table-view textarea')?.value;
+      if (r.changed !== S.camp.changed && !typing) {
+        await loadCampaign(S.camp.id, true);
+        S.reminders = (await api('reminders', { query: { cid: S.camp.id } })).reminders;
+        await viewTable();
+        panelStamp = Date.now();
+      }
+      const ago = document.querySelector('.panel-ago');
+      if (ago) { const m = Math.round((Date.now() - panelStamp) / 60000); ago.textContent = m < 1 ? '↻ just now' : `↻ ${m} min ago`; }
+    } catch { /* offline for a moment */ }
+  }
+
   // ------------------------------------------------------------ router
   // Pages draw one at a time, in order, so a page still loading when the address changes again (Back while a day loads)
   // can't draw over the newer one, or over what has been typed in it. One that a newer address replaced before it began is skipped.
@@ -6062,7 +6354,7 @@
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }
@@ -6075,6 +6367,7 @@
 
   /** Ask the server who we are (the same probe as Sinless), then show the gate or the app. */
   async function boot() {
+    if (PANEL) return panelBoot();
     clearTimeout(pendingTimer);
     let res, data;
     try {
@@ -6099,10 +6392,12 @@
   }
 
   // Signed out, leaving the About page goes back through the gate.
-  window.addEventListener('hashchange', () => (S.user ? route() : boot()));
-  $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
-  $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
-  // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
-  if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!PANEL) {
+    window.addEventListener('hashchange', () => (S.user ? route() : boot()));
+    $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
+    $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
+    // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
+    if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
   boot();
 })();
