@@ -657,7 +657,7 @@
         const pickField = field('Active character', pick, null, 'One of your character sheets here. Its name is shown for you, and renaming it renames it everywhere');
         pickField.hidden = true;
         if (typeof Sheets !== 'undefined') api('characters', { query: { cid: c.id } }).then(({ characters }) => {
-          const own = characters.filter(x => x.owner?.id === S.user.id);
+          const own = characters.filter(x => x.owner?.id === S.user.id && !x.secret);
           if (!own.length) return;
           pick.append(...own.map(x => el('option', { value: x.id, selected: Number(c.active_character_id) === x.id }, x.name)));
           pickField.hidden = false;

@@ -154,9 +154,9 @@ function templates_action(string $action): void {
             $where = '(t.is_listed=1 OR t.author_id=?)';
             $args = [$me['id']];
             if ($q !== '') {
-                $where .= ' AND (t.name LIKE ? OR t.game LIKE ?)';
+                $where .= ' AND (t.name LIKE ? OR t.game LIKE ? OR t.edition LIKE ?)';
                 $like = '%' . addcslashes($q, '%_\\') . '%';
-                array_push($args, $like, $like);
+                array_push($args, $like, $like, $like);
             }
             out(['templates' => templates_query($where, $args)]);
         case 'template':
@@ -254,9 +254,18 @@ function sheet_reconcile(array $layout, array $values): array {
     $old = [];
     foreach ($values as $k => $v) {
         [$fits, $val] = isset($f[$k]) ? sheet_value($f[$k][0], $v) : [false, null];
-        if ($fits) $ok[$k] = $val; else $old[] = ['key' => (string)$k, 'value' => $v];
+        if ($fits) $ok[$k] = $val;
+        if (!$fits || sheet_stale_list($f[$k][0], $v)) $old[] = ['key' => (string)$k, 'value' => $v];
     }
     return [$ok, $old];
+}
+/** Whether a list's stored rows hold a column the field no longer has (a renamed or removed column), which reading
+ * it with the current columns would drop. */
+function sheet_stale_list(array $f, $v): bool {
+    if ($f['type'] !== 'list' || !is_array($v)) return false;
+    $cols = array_flip(array_column($f['columns'] ?? [], 'key'));
+    foreach ($v as $r) if (is_array($r)) foreach ($r as $k => $_) if (!isset($cols[$k])) return true;
+    return false;
 }
 /** The values someone may see: hidden fields, and the fields of hidden sections, left out unless $full. */
 function sheet_visible(array $layout, array $values, array $hidden, bool $full): array {
@@ -284,8 +293,8 @@ function character_rows(int $cid, bool $isGm, ?int $id = null): array {
             u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign
         FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
-        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
-    $st->execute($id !== null ? [$cid, $id] : [$cid]);
+        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
+    $st->execute(array_merge([$cid], $isGm ? [] : [(int)me()['id']], $id !== null ? [$id] : []));
     return $st->fetchAll();
 }
 /** Whether this member sees the whole sheet (its owner or a GM) and may change it. */
@@ -308,7 +317,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
     }
     return ['id' => (int)$c['id'], 'entry_id' => (int)$c['entry_id'], 'name' => $c['name'], 'kind' => $c['kind'],
         'owner' => $c['owner_id'] !== null ? ['id' => (int)$c['owner_id'], 'name' => (string)$c['owner_name']] : null,
-        'owner_in_campaign' => (bool)$c['owner_in_campaign'],
+        'owner_in_campaign' => (bool)$c['owner_in_campaign'], 'secret' => (bool)(int)$c['entry_secret'],
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
         'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null];
@@ -406,7 +415,7 @@ function characters_action(string $action, int $cid): void {
             $path = '$."' . $key . '"';
             // a value kept from before a template change, which no longer fits this field, stays among the old fields
             $stored = json_decode($c['field_values'], true) ?: [];
-            if (array_key_exists($key, $stored) && !sheet_value($fields[$key][0], $stored[$key])[0]) {
+            if (array_key_exists($key, $stored) && (!sheet_value($fields[$key][0], $stored[$key])[0] || sheet_stale_list($fields[$key][0], $stored[$key]))) {
                 for ($n = 1, $keep = "$key~old"; array_key_exists($keep, $stored); $keep = "$key~old" . ++$n);
                 db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
                     ->execute(['$."' . $keep . '"', $path, $c['id']]);
@@ -518,6 +527,7 @@ function characters_action(string $action, int $cid): void {
             }
             $c = character_row($cid, int_in($id, 1), $isGm);
             if ($c['owner_id'] === null || (int)$c['owner_id'] !== $me['id']) fail('Pick one of your own characters', 403);
+            if ((int)$c['entry_secret']) fail("A GM-only character can't be your active character", 409);
             db()->prepare('UPDATE campaign_members SET active_character_id=?, character_name=? WHERE campaign_id=? AND user_id=?')
                 ->execute([$c['id'], $c['name'], $cid, $me['id']]);
             out(['ok' => true]);

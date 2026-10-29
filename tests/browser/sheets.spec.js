@@ -352,3 +352,54 @@ test("Characters: a secret NPC stays secret, and only its player renames or hide
   expect(unhide.status).toBe(403);
   expect(unhide.json.message).toBe("Only its player can hide or show parts of their sheet");
 });
+
+test("Characters: renaming a list's column keeps the rows typed under the old one among the old fields", async ({ page, browser }) => {
+  const { cid, gm, p1 } = await party(page, browser);
+  const gear = cols => ({ sections: [{ key: "kit", title: "Kit", fields: [{ key: "gear", label: "Gear", type: "list", columns: cols }] }] });
+  const tpl = (await api(gm, "template_save", { name: `Gear ${cid}`, game: "Test RPG",
+    layout: gear([{ key: "item", label: "Item" }, { key: "wieght", label: "Wieght" }]) })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Packer" });
+  const rows = [{ item: "Rope", wieght: "10" }];
+  expect((await api(p1, "character_field", { id: c.id, key: "gear", value: rows }, cid)).status).toBe(200);
+  expect((await api(gm, "template_save", { id: tpl.id, name: tpl.name, game: "Test RPG", version: tpl.version,
+    layout: gear([{ key: "item", label: "Item" }, { key: "weight", label: "Weight" }]) })).status).toBe(200);
+  const s = (await sheet(p1, cid, c.id)).json.character;
+  expect(s.old).toEqual([{ key: "gear", value: rows }]);
+  // the next edit of the list keeps the old rows among the old fields
+  expect((await api(p1, "character_field", { id: c.id, key: "gear", value: [{ item: "Rope", weight: "10" }] }, cid)).status).toBe(200);
+  const again = (await sheet(p1, cid, c.id)).json.character;
+  expect(again.values.gear).toEqual([{ item: "Rope", weight: "10" }]);
+  expect(again.old.map(o => o.value)).toEqual([rows]);
+});
+
+test("Characters: a GM-only character can't be anyone's active character", async ({ page, browser }) => {
+  const { cid, gm, tpl, ids } = await party(page, browser);
+  const lich = await make(gm, cid, { template_id: tpl.id, name: "Morrow", kind: "npc" });
+  expect((await api(gm, "entry_save", { id: lich.entry_id, name: "The Hollow King", is_secret: true }, cid)).status).toBe(200);
+  // the account page's picker leaves it out
+  expect((await get(gm, "characters", {}, cid)).json.characters.find(x => x.id === lich.id).secret).toBe(true);
+  const r = await api(gm, "member_active_character", { character_id: lich.id }, cid);
+  expect(r.status).toBe(409);
+  expect(r.json.message).toBe("A GM-only character can't be your active character");
+  expect(sql(`SELECT character_name FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.gm}`).trim()).not.toContain("Hollow King");
+});
+
+test("Characters: a PC whose entry is made GM-only stays open to its player", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl } = await party(page, browser);
+  const pc = await make(p1, cid, { template_id: tpl.id, name: "Veil" });
+  expect((await api(gm, "entry_save", { id: pc.entry_id, name: "Veil", is_secret: true }, cid)).status).toBe(200);
+  expect((await sheet(p1, cid, pc.id)).status).toBe(200);
+  expect((await get(p1, "characters", {}, cid)).json.characters.map(c => c.id)).toContain(pc.id);
+  expect((await sheet(p2, cid, pc.id)).status).toBe(404);
+  expect((await get(p2, "characters", {}, cid)).json.characters.map(c => c.id)).not.toContain(pc.id);
+});
+
+test("Templates: the library search finds a template by its edition", async ({ page, browser }) => {
+  const who = person("Esme");
+  await signIn(page, who);
+  await approve(browser, who.email);
+  const ed = `Edition ${who.id}`;
+  const t = (await api(page, "template_save", { name: "By edition", game: "Test RPG", edition: ed,
+    layout: { sections: [{ key: "main", title: "Main", fields: [{ key: "name", label: "Name", type: "text" }] }] } })).json.template;
+  expect((await get(page, "templates", { q: ed })).json.templates.map(x => x.id)).toEqual([t.id]);
+});
