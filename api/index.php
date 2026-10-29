@@ -3112,7 +3112,7 @@ try {
         group_merge($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
-    case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y
+    case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, grid_type, grid_shown
         $cid = cid();
         need_gm($cid);
         need_maps();

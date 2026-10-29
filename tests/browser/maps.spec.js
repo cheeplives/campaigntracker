@@ -158,6 +158,23 @@ test("Maps: a new grid size alone wraps the stored offsets to fit", async ({ pag
   expect((await api(page, "map_save", { id, grid_px: 10, grid_offset_x: 15 }, cid)).status).toBe(400);   // one the request itself supplies
 });
 
+test("Maps: a map's grid can be squares or hexes and shown to everyone; anything else is refused", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps grid shape");
+  const fresh = (await api(page, "map_save", { name: "Hexland" }, cid)).json.map;
+  expect(fresh).toMatchObject({ grid_type: "square", grid_shown: false });
+  const r = await api(page, "map_save", { id: fresh.id, grid_px: 50, grid_type: "hex_flat", grid_shown: true }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.map).toMatchObject({ grid_px: 50, grid_type: "hex_flat", grid_shown: true });
+  expect((await api(page, "map_save", { id: fresh.id, name: "Hexland 2" }, cid)).json.map).toMatchObject({ grid_type: "hex_flat", grid_shown: true });   // kept when not named
+  const bad = await api(page, "map_save", { id: fresh.id, grid_type: "triangle" }, cid);
+  expect(bad.status).toBe(400);
+  expect(bad.json.message).toBe("Pick squares, flat-topped hexes or pointy-topped hexes");
+  expect((await api(pp, "maps", undefined, cid)).json.maps[0]).toMatchObject({ grid_type: "hex_flat", grid_shown: true });
+  expect((await api(pp, "map_save", { id: fresh.id, grid_type: "square" }, cid)).status).toBe(403);
+  const made = (await api(page, "map_save", { name: "Pointy", grid_type: "hex_pointy" }, cid)).json.map;
+  expect(made.grid_type).toBe("hex_pointy");
+});
+
 // ---- pins and routes ----
 /** A public 300x200 map with a picture; returns its id. */
 async function mapWithPicture(page, cid, extra = {}) {
@@ -451,6 +468,123 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   expect(Math.abs(saved.grid_px - grid)).toBeLessThan(near);
   expect(Math.abs(saved.grid_offset_x - (a.x % saved.grid_px))).toBeLessThan(near);
   expect(Math.abs(saved.grid_offset_y - (a.y % saved.grid_px))).toBeLessThan(near);
+  expectNoErrors(errors);
+});
+
+test("Maps: the grid is drawn over the map, each person can hide it, and Measure counts squares", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps overlay");
+  const id = await mapWithPicture(page, cid);
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await expect(page.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Grid", exact: true })).toBeHidden();   // no grid yet
+  // the GM sets 20 px squares of 5 ft, shown to everyone, through the scale dialog
+  await page.getByRole("button", { name: "Scale" }).click();
+  await page.getByRole("button", { name: "Grid squares" }).click();
+  await expect(page.getByLabel("Shape")).toHaveValue("square");
+  await page.getByLabel("Pixels per square").fill("20");
+  await page.getByLabel("Distance per square").fill("5");
+  await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("ft");
+  await page.getByLabel("Show the grid to everyone").check();
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  expect((await api(page, "maps", undefined, cid)).json.maps[0]).toMatchObject({ grid_px: 20, grid_type: "square", grid_shown: true });
+  await expect(page.locator("svg.map-grid pattern path")).toHaveCount(2);
+  await expect(page.locator("svg.map-grid pattern")).toHaveAttribute("width", "20");
+  // a player sees it too, and hiding it is theirs alone
+  await pp.goto(`#/c/${cid}/maps/${id}`);
+  await expect(pp.locator("svg.map-grid")).toHaveCount(1);
+  await pp.getByRole("button", { name: "Grid", exact: true }).click();
+  await expect(pp.locator("svg.map-grid")).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "Grid", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await pp.reload();
+  await expect(pp.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(pp.getByRole("button", { name: "Grid", exact: true })).toHaveAttribute("aria-pressed", "false");   // remembered
+  await expect(pp.locator("svg.map-grid")).toHaveCount(0);
+  await expect(page.locator("svg.map-grid")).toHaveCount(1);
+  // measuring says how many squares
+  await page.getByRole("button", { name: "Measure" }).click();
+  await clickPicture(page, 0.1, 0.5);
+  await clickPicture(page, 0.9, 0.5);
+  await expect(page.locator(".map-measure-total")).toHaveText(/ · 12 squares$/);   // 240 px across 20 px squares
+  // hexes draw a hex tile
+  expect((await api(page, "map_save", { id, grid_type: "hex_pointy" }, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator("svg.map-grid pattern")).toHaveAttribute("width", "20");
+  await expect(page.locator("svg.map-grid pattern path").first()).toHaveAttribute("d", /Z/);
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM imports a Universal VTT file, and a Foundry scene whose notes become GM-only pins", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps import");
+  await page.goto(`#/c/${cid}/maps`);
+  // Universal VTT: the picture is inside; it says nothing of distance, so 5 ft a square and the scale dialog to check it
+  const uvtt = { format: 0.3, resolution: { map_origin: { x: 0, y: 0 }, map_size: { x: 6, y: 4 }, pixels_per_grid: 50 }, lights: [{}], image: MAP_PNG.toString("base64") };
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Import a VTT file").setInputFiles({ name: "Goblin_Cave.dd2vtt", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(uvtt)) });
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+  await expect(page.locator("#toast")).toContainText("Walls and lights aren't kept.");
+  await expect(page.getByLabel("Pixels per square")).toHaveValue("50");
+  await expect(page.getByLabel("Distance per square")).toHaveValue("5");
+  await expect(page.locator(".map-head h2")).toHaveText("Goblin Cave");
+  let maps = (await api(page, "maps", undefined, cid)).json.maps;
+  expect(maps[0]).toMatchObject({ name: "Goblin Cave", width: 300, height: 200, grid_px: 50, grid_type: "square", grid_shown: true, scale_unit: "ft" });
+  expect(maps[0].scale_per_px).toBeCloseTo(0.1, 6);
+  await expect(page.locator("svg.map-grid")).toHaveCount(1);
+
+  // a Foundry scene's JSON and its picture, picked together; the name typed wins over the scene's
+  const scene = { name: "Bree", width: 300, height: 200, padding: 0, grid: { type: 1, size: 25, distance: 10, units: "m" }, notes: [{ x: 100, y: 60, text: "Prancing Pony" }] };
+  await page.goto(`#/c/${cid}/maps`);
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Map name").fill("Bree-land");
+  await page.getByLabel("Import a VTT file").setInputFiles([
+    { name: "fvtt-Scene-bree.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scene)) },
+    { name: "bree.png", mimeType: "image/png", buffer: MAP_PNG }]);
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+  await expect(page.locator("#toast")).toContainText("1 note became a GM-only pin.");
+  maps = (await api(page, "maps", undefined, cid)).json.maps;
+  const bree = maps.find(m => m.name === "Bree-land");
+  expect(bree).toMatchObject({ grid_px: 25, scale_unit: "m" });
+  expect(bree.scale_per_px).toBeCloseTo(0.4, 6);
+  const pins = (await getMap(page, cid, bree.id)).json.pins;
+  expect(pins).toHaveLength(1);
+  expect(pins[0]).toMatchObject({ x: 100, y: 60, label: "Prancing Pony", kind: "note", is_secret: true });
+  expect((await getMap(pp, cid, bree.id)).json.pins).toHaveLength(0);
+
+  // a file that is none of these says so and makes nothing
+  await page.goto(`#/c/${cid}/maps`);
+  await page.getByRole("button", { name: "+ New map" }).click();
+  await page.getByLabel("Import a VTT file").setInputFiles({ name: "notes.json", mimeType: "application/json", buffer: Buffer.from("{\"a\":1}") });
+  await expect(page.locator("#toast")).toContainText("That isn't a Universal VTT file or a Foundry scene");
+  expect((await api(page, "maps", undefined, cid)).json.maps).toHaveLength(2);
+  expectNoErrors(errors);
+});
+
+test("Maps: a GM exports the picture, and a gridded map as Universal VTT that reads back the same", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps export");
+  const id = await mapWithPicture(page, cid, { name: "Keep: Upper/Lower" });
+  await page.goto(`#/c/${cid}/maps/${id}`);
+  await page.getByRole("button", { name: "Export…" }).click();
+  await expect(page.getByRole("button", { name: "Universal VTT (.dd2vtt)" })).toBeDisabled();   // no grid yet
+  await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("Set grid squares first (Scale → Grid squares)");
+  const [pic] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Export the map" }).getByRole("button", { name: "Picture", exact: true }).click()]);
+  expect(pic.suggestedFilename()).toBe("Keep Upper Lower.png");
+  expect(Buffer.compare(require("fs").readFileSync(await pic.path()), MAP_PNG)).toBe(0);
+
+  expect((await api(page, "map_save", { id, grid_px: 50, grid_offset_x: 10, grid_offset_y: 0, scale_per_px: 0.1, scale_unit: "ft" }, cid)).status).toBe(200);
+  await page.reload();
+  await page.getByRole("button", { name: "Export…" }).click();
+  const [uv] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Universal VTT (.dd2vtt)" }).click()]);
+  expect(uv.suggestedFilename()).toBe("Keep Upper Lower.dd2vtt");
+  const json = JSON.parse(require("fs").readFileSync(await uv.path(), "utf8"));
+  expect(json.resolution).toEqual({ map_origin: { x: -0.2, y: 0 }, map_size: { x: 6, y: 4 }, pixels_per_grid: 50 });
+  expect(Buffer.compare(Buffer.from(json.image, "base64"), MAP_PNG)).toBe(0);
+  // players have no Export
+  await pp.goto(`#/c/${cid}/maps/${id}`);
+  await expect(pp.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(pp.getByRole("button", { name: "Export…" })).toHaveCount(0);
   expectNoErrors(errors);
 });
 

@@ -68,6 +68,8 @@ function upgrade_steps(): array {
             'Encyclopedia entries now have a Category; entries tagged Location, Person, Item, Group or Vehicle were given it.'],
         // Maps: party_groups is its last table, so a run that stopped part way is made good (every statement is IF NOT EXISTS).
         ['019_maps.sql', fn(PDO $p) => !db_has_table($p, 'party_groups'), 'Maps are ready.'],
+        ['021_map_grid.sql', fn(PDO $p) => db_has_table($p, 'maps') && !db_has_column($p, 'maps', 'grid_type'),
+            'Maps can now show a square or hex grid.'],
     ];
 }
 

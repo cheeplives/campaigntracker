@@ -74,3 +74,31 @@ test("nameKey and pinFor match a pin to an entry name", () => {
   expect(MapGeo.pinFor(served, "prancing pony")).toBe(served[0]);
   expect(MapGeo.pinFor(served, "bree")).toBe(served[1]);
 });
+
+test("gridTile gives one tile of a square or hex grid, and squaresAlong counts them", () => {
+  expect(MapGeo.gridTile("square", 70)).toEqual({ w: 70, h: 70, d: "M0 0H70M0 0V70" });
+  const r = 60 / Math.sqrt(3);
+  const flat = MapGeo.gridTile("hex_flat", 60);
+  expect(flat.w).toBeCloseTo(3 * r, 2);
+  expect(flat.h).toBe(60);
+  expect(flat.d.startsWith("M0 30L")).toBe(true);
+  expect(flat.d).toContain("Z");
+  const pointy = MapGeo.gridTile("hex_pointy", 60);
+  expect(pointy).toMatchObject({ w: 60 });
+  expect(pointy.h).toBeCloseTo(3 * r, 2);
+  expect(pointy.d.startsWith("M30 0L")).toBe(true);   // the flat-topped tile turned on its side
+  expect(MapGeo.gridTile("anything else", 10).d).toBe("M0 0H10M0 0V10");
+  expect(MapGeo.squaresAlong(560, 70)).toBe(8);
+  expect(MapGeo.squaresAlong(590, 70)).toBe(8);
+  expect(MapGeo.squaresAlong(100, 0)).toBe(null);
+  expect(MapGeo.GRID_TYPES).toEqual(["square", "hex_flat", "hex_pointy"]);
+});
+
+test("nearestPin finds the closest pin within reach, and pinName is the name it goes by", () => {
+  const pins = [{ x: 10, y: 10, kind: "note", label: "Bree" }, { x: 100, y: 100, kind: "entry", label: "x", entry: { name: "Weathertop" } }, { x: 104, y: 100, kind: "event", label: "", event: { title: "Ambush" } }];
+  expect(MapGeo.nearestPin(pins, { x: 12, y: 9 }, 20)).toBe(pins[0]);
+  expect(MapGeo.nearestPin(pins, { x: 101, y: 100 }, 20)).toBe(pins[1]);
+  expect(MapGeo.nearestPin(pins, { x: 50, y: 50 }, 20)).toBe(null);
+  expect(MapGeo.nearestPin([], { x: 0, y: 0 }, 20)).toBe(null);
+  expect(pins.map(MapGeo.pinName)).toEqual(["Bree", "Weathertop", "Ambush"]);
+});

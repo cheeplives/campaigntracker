@@ -10,6 +10,7 @@ const MapsTab = (() => {
   const G = MapGeo, { el } = KIT;
   const UNITS = [['ft', 'Feet'], ['m', 'Metres'], ['mi', 'Miles'], ['km', 'Kilometres'], ['au', 'Astronomical units'], ['ly', 'Light-years']];
   const PICTURES = 'image/png,image/jpeg,image/gif,image/webp';
+  const VTT_FILES = '.uvtt,.dd2vtt,.df2vtt,.json,' + PICTURES;
 
   /** A map's pixel position <-> Leaflet's. */
   const toLatLng = (x, y) => [-y, x];
@@ -104,7 +105,35 @@ const MapsTab = (() => {
             }
           } }), el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
         }, '', 'Search open picture libraries for the map\'s picture'),
+        el('label', { class: 'button file-add', 'data-tip': 'A Universal VTT file (from Dungeondraft, Dungeon Alchemist, DungeonFog…), or a Foundry scene\'s JSON picked together with its picture' },
+          el('input', { type: 'file', multiple: true, accept: VTT_FILES, class: 'file-input', 'aria-label': 'Import a VTT file', onchange: ev => importVtt([...ev.target.files]) }), 'Import a VTT file…'),
         btn('Cancel', () => d.close())));
+    // a VTT file: read here, then the map is made with its picture, grid and scale, and its notes become GM-only pins
+    async function importVtt(files) {
+      if (!files.length) return;
+      let vtt, file = null;
+      try {
+        vtt = await VTT.readVtt(await Promise.all(files.map(async f => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
+        made = made || (await post('map_save', { name: name.value.trim() || vtt.name || 'Imported map' }, cid)).map;
+        file = await ctx.uploadFile('map', made.id, new File([vtt.picture.bytes], vtt.picture.name, { type: vtt.picture.type }));
+        const g = vtt.grid, sc = vtt.scale;
+        await post('map_save', { id: made.id, image_id: file.id, ...(g ? { grid_px: g.px, grid_offset_x: g.offset_x, grid_offset_y: g.offset_y, grid_type: g.type, grid_shown: true } : {}),
+          ...(g && sc ? { scale_per_px: sc.per_square / g.px, scale_unit: sc.unit } : {}) }, cid);
+      } catch (err) {
+        if (file) await post('file_delete', { id: file.id }, cid).catch(() => {});
+        return toast(err.message, true);
+      }
+      let pinned = 0;
+      for (const n of vtt.notes) {
+        try { await post('pin_save', { map_id: made.id, x: n.x, y: n.y, kind: 'note', label: n.label, is_secret: true }, cid); pinned++; } catch { /* a note that can't be a pin is left out */ }
+      }
+      const said = [`Imported from a ${vtt.format}.`];
+      if (pinned) said.push(pinned === 1 ? '1 note became a GM-only pin.' : `${pinned} notes became GM-only pins.`);
+      if (vtt.dropped.walls || vtt.dropped.lights) said.push('Walls and lights aren\'t kept.');
+      if (vtt.scale?.guessed) said.push('The file doesn\'t say how far a square is, so 5 ft was assumed: check it here.');
+      toast(said.join(' '));
+      open(made);
+    }
     form.addEventListener('submit', async ev => {
       ev.preventDefault();
       const f = pic.files[0];
@@ -169,6 +198,7 @@ const MapsTab = (() => {
     const drawMeasure = () => {
       measureLayer.clearLayers();
       saveRouteBtn.hidden = !(gm && mode === 'measure' && pts.length > 1);
+      planBtn.hidden = !(gm && mode === 'measure' && pts.length > 1 && hasScale());
       if (!pts.length) { total.textContent = ''; return; }
       L.polyline(pts.map(p => toLatLng(p.x, p.y)), { color: 'var(--accent)', weight: 3, className: 'map-line' }).addTo(measureLayer);
       pts.forEach((p, i) => {
@@ -177,8 +207,48 @@ const MapsTab = (() => {
       });
       total.textContent = pts.length > 1 ? dist() : '';
     };
-    const dist = () => G.fmtDistance(G.toMetres(G.pathPx(pts), map), system(), G.isSpace(map));
+    const dist = () => {
+      const d = G.fmtDistance(G.toMetres(G.pathPx(pts), map), system(), G.isSpace(map));
+      const n = map.grid_px > 0 ? G.squaresAlong(G.pathPx(pts), map.grid_px) : null;
+      const hex = map.grid_type === 'hex_flat' || map.grid_type === 'hex_pointy';
+      return n === null ? d : `${d} · ${n} ${hex ? (n === 1 ? 'hex' : 'hexes') : (n === 1 ? 'square' : 'squares')}`;
+    };
     const hasScale = () => G.toMetres(1, map) !== null;
+
+    // ---- the grid overlay: one SVG pattern over the picture, in its pixels, drawn for whoever has it shown
+    let gridLayer = null, gridLines = [];
+    const gridKey = `chronicle-map-grid-${cid}-${id}`;
+    const gridWanted = () => {
+      try { const v = localStorage.getItem(gridKey); if (v !== null) return v === '1'; } catch { /* storage may be off */ }
+      return !!map.grid_shown;
+    };
+    const gridWidth = () => {   // lines one screen pixel wide (with a light edge) at every zoom
+      const k = lf ? 1 / lf.map.getZoomScale(lf.map.getZoom(), 0) : 1;
+      gridLines.forEach((l, i) => l.setAttribute('stroke-width', String((i ? 1 : 3) * k)));
+    };
+    function drawGrid() {
+      gridLayer?.remove(); gridLayer = null; gridLines = [];
+      const has = map.grid_px > 0;
+      gridBtn.hidden = !has || !map.image_url;
+      gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
+      if (!lf || !has || !gridWanted()) return;
+      const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+      const t = G.gridTile(map.grid_type, map.grid_px), pid = `map-grid-${id}`;
+      const root = svg('svg', { viewBox: `0 0 ${map.width} ${map.height}`, preserveAspectRatio: 'none' });
+      const pattern = svg('pattern', { id: pid, patternUnits: 'userSpaceOnUse', x: map.grid_offset_x || 0, y: map.grid_offset_y || 0, width: t.w, height: t.h });
+      gridLines = [svg('path', { d: t.d, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.45 }), svg('path', { d: t.d, fill: 'none', stroke: '#000', 'stroke-opacity': 0.55 })];
+      pattern.append(...gridLines);
+      root.append(svg('defs', {}), svg('rect', { width: map.width, height: map.height, fill: `url(#${pid})` }));
+      root.firstChild.append(pattern);
+      gridWidth();
+      gridLayer = L.svgOverlay(root, bounds(), { pane: 'mapGrid', interactive: false, className: 'map-grid' }).addTo(lf.map);
+    }
+    const gridBtn = btn('Grid', () => {
+      const on = !gridWanted();
+      try { localStorage.setItem(gridKey, on ? '1' : '0'); } catch { /* shown or hidden for this visit only */ }
+      drawGrid();
+    }, '', 'Show or hide the map\'s grid (just for you)');
+    gridBtn.hidden = true;
 
     // ---- the scale panel
     let picks = [], pickLayer = null, panel = null;
@@ -201,6 +271,9 @@ const MapsTab = (() => {
       const perUnit = select(UNITS, hasGrid && map.scale_unit ? map.scale_unit : G.ROLL20.unit, { 'aria-label': 'Unit' });
       const px = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Pixels per square', value: hasGrid ? String(map.grid_px) : hint ? String(hint.grid_px) : '' });
       const count = el('input', { type: 'number', min: 1, step: 'any', 'aria-label': 'How many squares', value: '' });
+      const graded = 'grid_type' in map;   // the shape and default need the database upgrade (migration 021)
+      const shape = select([['square', 'Squares'], ['hex_flat', 'Hexes (flat top)'], ['hex_pointy', 'Hexes (pointy top)']], map.grid_type || 'square', { 'aria-label': 'Shape' });
+      const shown = el('input', { type: 'checkbox', checked: !!map.grid_shown });
       const way1 = btn('Two points', () => show('points'), '', 'Click two places you know the distance between');
       const way2 = btn('Grid squares', () => show('grid'), '', 'Say how big one square of the map\'s grid is');
       const body = el('div', { class: 'map-panel-body' });
@@ -216,11 +289,13 @@ const MapsTab = (() => {
           el('p', { class: 'small' }, 'Click two places you know the distance between.'),
           el('div', { class: 'row' }, field('How far apart are they?', apart), field('Unit', unit))
         ] : [
+          graded ? el('div', { class: 'row' }, field('Shape', shape, null, 'A hex\'s size is from its centre to the next one\'s, flat side to flat side'),
+            el('label', { class: 'check' }, shown, ' Show the grid to everyone')) : null,
           el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''),
             btn(`Roll20 (${G.ROLL20.grid_px} px = ${G.ROLL20.per_square} ft)`, () => { px.value = String(G.ROLL20.grid_px); per.value = String(G.ROLL20.per_square); perUnit.value = G.ROLL20.unit; }, 'small')),
           el('p', { class: 'small' }, 'Or click the corners of a run of squares, then say how many squares that is.'),
           el('div', { class: 'row' }, field('How many squares is that?', count))
-        ]));
+        ].filter(Boolean)));
       }
       const save = async () => {
         let patch;
@@ -233,11 +308,12 @@ const MapsTab = (() => {
             if (!(+px.value > 0)) throw new Error('Type how many pixels one square is');
             if (!(+per.value > 0)) throw new Error('Type how far one square is');
             patch = G.scaleFromGrid(+px.value, +per.value, perUnit.value);
+            if (graded) Object.assign(patch, { grid_type: shape.value, grid_shown: shown.checked });
             if (picks.length) { offset = { x: ((picks[0].x % patch.grid_px) + patch.grid_px) % patch.grid_px, y: ((picks[0].y % patch.grid_px) + patch.grid_px) % patch.grid_px }; patch.grid_offset_x = offset.x; patch.grid_offset_y = offset.y; }
           }
           map = (await post('map_save', { id: map.id, ...patch }, cid)).map;
         } catch (err) { return toast(err.message, true); }
-        toast('Scale saved'); closePanel(); lf.scale.update(); ctx.reloadCampaign().catch(() => {});
+        toast('Scale saved'); closePanel(); lf.scale.update(); drawGrid(); ctx.reloadCampaign().catch(() => {});
       };
       panel = el('div', { class: 'map-panel card', role: 'dialog', 'aria-label': 'Set the scale' },
         el('div', { class: 'row' }, el('strong', {}, 'Set the scale'), way1, way2), body,
@@ -478,6 +554,7 @@ const MapsTab = (() => {
         el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)) }, r.is_secret ? '🔒 ' : '', r.name),
         el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
         gm ? el('div', { class: 'row' },
+          hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
           btn('Rename', async () => {
             const got = await routeDialog('Rename the route', r.name, null, 'Save');
             if (!got) return;
@@ -521,6 +598,11 @@ const MapsTab = (() => {
     addPinBtn.hidden = !map.image_url;
     const saveRouteBtn = btn('Save route…', () => saveRoute(), '', 'Keep the path you measured as a named route on this map');
     saveRouteBtn.hidden = true;
+    // Plan this trip: the Travel tab, with the path's length and the pins at its ends filled in
+    const tripLink = query => `#/c/${cid}/travel?map=${map.id}&${query}`;
+    const planBtn = btn('Plan this trip', () => { location.hash = tripLink('path=' + pts.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')); }, '',
+      'Work out the travel time along this path on the Travel tab; Depart then moves the party\'s marker to its end');
+    planBtn.hidden = true;
     const undoBtn = btn('Undo point', () => { pts.pop(); drawMeasure(); }, 'small');
     const clearBtn = btn('Clear', () => { pts = []; drawMeasure(); }, 'small');
     function syncTools() {
@@ -528,6 +610,7 @@ const MapsTab = (() => {
       measureBtn.setAttribute('aria-pressed', String(m));
       addPinBtn.setAttribute('aria-pressed', String(mode === 'pin'));
       saveRouteBtn.hidden = !(gm && m && pts.length > 1);
+      planBtn.hidden = !(gm && m && pts.length > 1 && hasScale());
       undoBtn.hidden = clearBtn.hidden = !m;
       total.hidden = !m;
       if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
@@ -548,6 +631,39 @@ const MapsTab = (() => {
       d.addEventListener('close', () => d.remove());
       d.append(form); document.body.append(d); d.showModal();
     };
+    /** Export…: the picture as uploaded, or the map as a Universal VTT file for another tabletop (it needs the grid). */
+    const exportMap = () => {
+      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the map' });
+      const fileName = ext => `${map.name.replace(/[\\/:*?"<>|\s]+/g, ' ').trim() || 'map'}.${ext}`;
+      const save = (blob, nameOf) => {
+        const a = el('a', { href: URL.createObjectURL(blob), download: nameOf });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      };
+      const picture = async () => {
+        const res = await fetch(map.image_url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(`The picture could not be fetched (${res.status})`);
+        return new Uint8Array(await res.arrayBuffer());
+      };
+      const asPicture = btn('Picture', async () => {
+        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[VTT.pictureType(bytes)] || 'img')); d.close(); }
+        catch (err) { toast(err.message, true); }
+      }, '', 'The map\'s picture, as it was uploaded');
+      const hasGrid = map.grid_px > 0;
+      const asUvtt = btn('Universal VTT (.dd2vtt)', async () => {
+        try { save(new Blob([VTT.toUvtt(map, await picture())], { type: 'application/json' }), fileName('dd2vtt')); d.close(); }
+        catch (err) { toast(err.message, true); }
+      }, '', 'The picture with its grid, for Foundry, Roll20, Owlbear Rodeo, MapTool or Fantasy Grounds. Pins and routes stay here');
+      asUvtt.disabled = !hasGrid;
+      d.append(el('h3', {}, `Export ${map.name}`),
+        el('div', { class: 'row' }, asPicture, asUvtt),
+        hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
+          : el('p', { class: 'small' }, 'Set grid squares first (Scale → Grid squares) to export a Universal VTT file.'),
+        el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
+      d.addEventListener('close', () => d.remove());
+      document.body.append(d); d.showModal();
+    };
+    const exportBtn = gm && map.image_url ? btn('Export…', exportMap, '', 'Download the picture, or the map for another virtual tabletop') : null;
     const secretBtn = gm ? btn('GM only', async () => {
       try {
         map = (await post('map_save', { id: map.id, is_secret: !map.is_secret }, cid)).map;
@@ -567,8 +683,8 @@ const MapsTab = (() => {
         try { file = await ctx.uploadFile('map', map.id, f); await post('map_save', { id: map.id, image_id: file.id }, cid); toast('Picture changed'); location.hash = `${base}?scale=1&file=${encodeURIComponent(f.name)}`; }
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
-    tools.append(saveRouteBtn);
-    toolbar.append(addPinBtn, measureBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, gm ? btn('Rename', rename) : null, secretBtn, del);
+    tools.append(saveRouteBtn, planBtn);
+    toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, exportBtn, gm ? btn('Rename', rename) : null, secretBtn, del);
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
@@ -581,7 +697,10 @@ const MapsTab = (() => {
       return;
     }
     const lmap = L.map(host, { crs: L.CRS.Simple, minZoom: -5, maxZoom: 4, zoomSnap: 0.25, attributionControl: false });
-    L.imageOverlay(map.image_url, bounds()).addTo(lmap);
+    // the picture, then the grid over it, both under the routes and pins (overlayPane is 400, markers above)
+    lmap.createPane('mapPicture').style.zIndex = 300;
+    lmap.createPane('mapGrid').style.zIndex = 350;
+    L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
     lmap.fitBounds(bounds());
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);
@@ -592,6 +711,8 @@ const MapsTab = (() => {
     lf = { map: lmap, scale: bar };
     syncTools();
     lmap.on('click', onClick);
+    lmap.on('zoom', gridWidth);
+    drawGrid();
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
     const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };
