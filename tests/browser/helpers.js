@@ -113,6 +113,16 @@ async function mapWithPicture(page, cid, extra = {}) {
   expect((await api(page, "map_save", { id, image_id: (await up.json()).file.id }, cid)).status).toBe(200);
   return id;
 }
+/** A locator's box once it has stopped moving (a map that is still panning or fitting moves its markers). */
+async function settledBox(locator) {
+  let box = null;
+  await expect.poll(async () => {
+    const b = await locator.boundingBox(), same = box && b && Math.abs(b.x - box.x) < 0.5 && Math.abs(b.y - box.y) < 0.5;
+    box = b;
+    return same;
+  }).toBe(true);
+  return box;
+}
 /** Upload a token picture; returns the token. */
 async function tokenUpload(page, cid, name) {
   const me = await (await page.request.get("api/auth/me.php")).json();
@@ -124,4 +134,4 @@ async function tokenUpload(page, cid, name) {
   return (await res.json()).token;
 }
 
-module.exports = { makePng, mapWithPicture, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+module.exports = { makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

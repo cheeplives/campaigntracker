@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox } = require("./helpers");
 // Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
 const contexts = [];
 const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
@@ -713,13 +713,7 @@ test("Maps: a GM drags a pin and it stays there; ?pin= opens its card", async ({
   await page.locator(".leaflet-popup-close-button").click();
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);
   const m = page.locator(".leaflet-marker-draggable").first();
-  // Opening the card pans the map; read the marker's box once it has stopped moving.
-  let box = null;
-  await expect.poll(async () => {
-    const b = await m.boundingBox(), same = box && b && Math.abs(b.x - box.x) < 0.5 && Math.abs(b.y - box.y) < 0.5;
-    box = b;
-    return same;
-  }).toBe(true);
+  const box = await settledBox(m);   // opening the card panned the map
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 30, { steps: 6 });

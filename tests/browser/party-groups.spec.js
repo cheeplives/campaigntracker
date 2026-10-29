@@ -1,6 +1,6 @@
 // Party groups: the main group (every player, its region the campaign's current one) and the groups split from it.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload, settledBox } = require("./helpers");
 // Players' browsers are closed after each test: left open, WebKit keeps a page process for every one.
 const contexts = [];
 const opened = async made => { const ctx = await made; contexts.push(ctx); return ctx; };
@@ -294,7 +294,7 @@ test("Party: a GM drags a group's marker and it stays there", async ({ page, bro
   await api(page, "group_move", { id: main.id, map_id: mapId, x: 100, y: 100 }, cid);
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   const m = page.locator(".leaflet-marker-draggable").filter({ has: page.locator(".map-party") });
-  const box = await m.boundingBox();
+  const box = await settledBox(m);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 30, { steps: 6 });
