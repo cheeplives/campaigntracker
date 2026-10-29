@@ -50,10 +50,16 @@ The callback is `https://www.discreteinfinity.com/chronicle/api/auth/callback.ph
 
 ### Create the tables
 
-Set `'allow_install' => true` in the config (it ships off), open
+From the app folder on the server:
+
+```sh
+php tools/migrate.php
+```
+
+It reads the same config as the app and creates the tables. Or set
+`'allow_install' => true` in the config (it ships off), open
 `https://www.discreteinfinity.com/chronicle/install.php` and press
-*Install or upgrade* (or run `mysql -u USER -p DB < db/schema.sql`). Then set
-`'allow_install' => false` again. Once a site admin has signed in, install.php
+*Install or upgrade*, then set `'allow_install' => false` again. Once a site admin has signed in, install.php
 also asks you to be signed in as a site admin, so for a later upgrade sign in to
 the app first.
 
@@ -105,7 +111,7 @@ they can carry scripts. Back up the uploads folder along with the database.
 ## Verify
 
 ```sh
-find api install.php -name '*.php' -exec php -l {} \;
+find api install.php tools -name '*.php' -exec php -l {} \;
 curl -s https://www.discreteinfinity.com/chronicle/api/auth/me.php
 #   → {"error":"not_authenticated","providers":["google","github"]}
 curl -sI https://www.discreteinfinity.com/chronicle/tests/support/login.php   # → 404
@@ -134,7 +140,7 @@ stray copies of the config (`config.php.bak`, `config.php.save`…). It changes 
 
 Back up the database first. Then pull, fill in the new config (it moved from
 `lib/config.php` to `~/chronicle-config.php` and gained the OAuth fields), and
-open `install.php`: it finds the old users table and runs
+run `php tools/migrate.php` (or open `install.php`): it finds the old users table and runs
 `db/migrations/001_oauth_signin.sql`. Or run that file with `mysql` yourself.
 
 Every existing account is kept, approved, with its campaigns, roles and notes.
@@ -147,7 +153,22 @@ over the old account. Your own old account can be linked the same way, or delete
 
 ```sh
 cd ~/public_html/chronicle
-./deploy.sh        # git pull --ff-only, php -l, then tools/security-check.php
+./deploy.sh        # git pull --ff-only, php -l, tools/migrate.php, then tools/security-check.php
 ```
 
-If an update adds a file under `db/migrations/`, run it once after the pull.
+Database upgrades need nothing from you: after the pull, deploy.sh runs
+`php tools/migrate.php`, which looks for anything new under `db/migrations/`
+(each step checks for its table or column, so it never runs twice) and does
+nothing when there isn't. When there is, it first saves a copy of the database
+with `mysqldump` to `~/chronicle-backups/` (only your account can read it; the
+last 5 are kept; set `'backups' => ['path' => '/home/you/elsewhere']` in the
+config to move it), then runs the migrations and lists what changed. If the
+backup or a migration fails, deploy.sh ends with *NOT done* and says why; fix
+that and run `php tools/migrate.php` again.
+
+- `php tools/migrate.php --check` says what would run, and changes nothing.
+- `php tools/migrate.php --no-backup` skips the copy, if `mysqldump` isn't
+  available or you've just made a backup yourself.
+
+`allow_install` can stay `false` for good: install.php is only needed if you
+can't run commands on the server.
