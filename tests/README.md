@@ -153,6 +153,21 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
+- **maps**: the Maps tab sits after Generators; a GM adds a map with its picture (uploaded or from Find Image), scales
+  it by two points or grid squares (a `30x20` file name fills in the square size, the Roll20 button 70 px = 5 ft, and the
+  grid offset is the first click's position modulo the square), and measures; an unscaled map says so; a 6000 × 4000
+  picture opens; a GM-only map, its picture and its pins never reach players; players add public note pins and change
+  only their own; GMs pin new or existing entries and events, which link back with 📍, save routes, and turn a player's
+  pin into an entry (or link it to the one of that name); replacing or deleting a map's picture leaves no file behind.
+- **mapgeo**: `static/mapgeo.js` sets a scale from two points or grid squares, reads square sizes from file names,
+  and shows distances in the reader's units, with AU and light-years on space maps.
+- **party-groups**: a campaign starts with one main group holding every player, and a late joiner goes into it; GMs
+  split and merge groups on the Travel tab; the main group's region is the current region both ways; a side group's
+  trip moves the clock but leaves the main party's region and shifts alone; markers move with Depart, are flags or
+  their token, and only GMs drag them; members who leave or become GMs drop out of every group.
+- **tokens**: GMs upload many tokens at once, named after their files, assign them to characters, entries and the
+  party, filter them, and delete them, which clears what used them; players never see the tab, a GM-only token or
+  its picture.
 - **library**: the Library tab sits just under the Encyclopedia; a player adds a journal with a title, a description and
   formatted contents, the GM opens and changes it and the player sees who changed it; search and the kind buttons narrow the
   list; a save from an older copy is refused naming who saved since, the contents are cleaned of scripts, images and unsafe
