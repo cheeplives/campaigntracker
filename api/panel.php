@@ -130,6 +130,9 @@ function panel_link_revoke(int $cid, bool $isGm): void {
  * The Owlbear Rodeo extension: its manifest, added in Owlbear under Extensions → Add custom extension. The panel opens
  * as the extension's popover. Owlbear reads the manifest from its own page, so it is open to any origin; it holds
  * nothing private. The addresses are whole URLs from base_url, as Owlbear doesn't say how it resolves a relative one.
+ * The icon travels inside the manifest as a data: URL: Owlbear draws the toolbar button with the icon as a CSS mask,
+ * which the browser fetches in CORS mode, and a base_url that redirects (example.com to www.example.com, say) loses
+ * the CORS header on the way, leaving the button blank.
  */
 function owlbear_manifest(): void {
     $base = rtrim((string)cfg('base_url', ''), '/');
@@ -137,9 +140,10 @@ function owlbear_manifest(): void {
         $https = ($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off';
         $base = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php')), '/');
     }
+    $icon = 'data:image/svg+xml;base64,' . base64_encode((string)file_get_contents(__DIR__ . '/../static/icons/owlbear.svg'));
     header('Access-Control-Allow-Origin: *');
     out(['name' => 'Campaign Chronicle', 'version' => '1.0.0', 'manifest_version' => 1,
         'description' => 'The campaign right now: date, weather, moons, where the party is, notes and lore.',
-        'author' => 'Campaign Chronicle', 'homepage_url' => "$base/", 'icon' => "$base/static/icons/owlbear.svg",
-        'action' => ['title' => 'Campaign Chronicle', 'icon' => "$base/static/icons/owlbear.svg", 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
+        'author' => 'Campaign Chronicle', 'homepage_url' => "$base/", 'icon' => $icon,
+        'action' => ['title' => 'Campaign Chronicle', 'icon' => $icon, 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
 }
