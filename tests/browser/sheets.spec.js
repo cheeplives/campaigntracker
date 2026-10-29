@@ -187,7 +187,7 @@ test("Characters: every character has an Encyclopedia entry, and renames follow 
   let enc = (await api(p1, "encyclopedia", undefined, cid)).json;
   const entry = enc.entries.find(e => e.id === c.entry_id);
   expect(entry).toMatchObject({ name: "Wren", category: "person" });
-  expect(enc.characters[c.entry_id]).toEqual({ id: c.id, kind: "pc", sheet_visible: true });
+  expect(enc.characters[c.entry_id]).toMatchObject({ id: c.id, kind: "pc", sheet_visible: true });
   expect((await api(p1, "character_save", { id: c.id, version: c.version, name: "Wren Ashdown" }, cid)).status).toBe(200);
   enc = (await api(p1, "encyclopedia", undefined, cid)).json;
   expect(enc.entries.find(e => e.id === c.entry_id).name).toBe("Wren Ashdown");

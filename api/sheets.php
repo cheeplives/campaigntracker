@@ -313,15 +313,16 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null];
 }
-/** Each entry's character as entry id => {id, kind, sheet_visible}, for the Encyclopedia. */
+/** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
+ * Summary fields as this member may see them (none when the sheet is hidden from them). */
 function characters_by_entry(int $cid, bool $isGm): array {
     if (!has_sheets()) return [];
-    $st = db()->prepare('SELECT c.id, c.entry_id, c.kind, c.sheet_public, c.owner_id FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
-        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0'));
-    $st->execute([$cid]);
     $out = [];
-    foreach ($st->fetchAll() as $c) $out[(int)$c['entry_id']] = ['id' => (int)$c['id'], 'kind' => $c['kind'],
-        'sheet_visible' => character_full($c, $isGm) || $c['kind'] === 'pc' || (bool)(int)$c['sheet_public']];
+    foreach (character_rows($cid, $isGm) as $c) {
+        $card = character_card($c, $isGm);
+        $out[$card['entry_id']] = ['id' => $card['id'], 'kind' => $card['kind'], 'sheet_visible' => $card['sheet_visible'],
+            'owner' => $card['owner'], 'game' => $card['template']['game'], 'summary' => $card['summary']];
+    }
     return $out;
 }
 /** Write a character's name into character_name for every member whose active character it is. */

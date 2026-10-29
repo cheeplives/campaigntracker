@@ -1446,8 +1446,8 @@ try {
         $u = me();
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
         $st = db()->prepare($u['is_admin']
-            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
-            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
+            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, " . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ", m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
+            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, ' . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ', 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
         $st->execute([$u['id']]);
         out(['campaigns' => array_map(fn($r) => ['member' => (bool)(int)$r['member']] + $r, $st->fetchAll())]);
 

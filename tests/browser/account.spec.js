@@ -130,3 +130,22 @@ test("the campaign's default units are one Imperial or Metric choice, and an old
   expect(s.temp_unit).toBeUndefined();
   expectNoErrors(errors);
 });
+
+test("the account page picks your active character, whose name the Members tab then shows", async ({ page, browser }) => {
+  const gm = person("Rowan"), player = person("Pip");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Active ${gm.id}`);
+  const pp = await (await newContext(browser)).newPage();
+  await signIn(pp, player);
+  await approve(browser, player.email);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  const tpl = (await api(page, "template_save", { name: "Active tpl", game: "Test RPG", layout: { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] } })).json.template;
+  const c = (await api(pp, "character_create", { template_id: tpl.id, name: "Ser Whitlock" }, cid)).json.character;
+
+  await pp.goto("index.html#/account");
+  await pp.getByLabel(`Active character in Active ${gm.id}`).selectOption(String(c.id));
+  await expect(pp.getByLabel(`Your character in Active ${gm.id}`)).toHaveValue("Ser Whitlock");
+  await page.goto(`index.html#/c/${cid}/members`);
+  await expect(page.locator(".listrow.member").filter({ hasText: "Pip" }).locator(".charname")).toHaveText("Ser Whitlock");
+});

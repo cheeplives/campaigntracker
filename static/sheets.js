@@ -636,6 +636,27 @@ const Sheets = (() => {
     name.focus();
   }
 
+  /** A GM gives Encyclopedia entry e a character sheet: pick a template, and PC or NPC (NPC to start). */
+  async function addToEntry(e) {
+    const { templates } = await ctx.api('templates');
+    if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
+    const pick = el('select', { 'aria-label': 'Template', required: true }, templates.map(t => el('option', { value: t.id }, `${t.name} — ${metaLine(t)}`)));
+    const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'npc' }, 'NPC (GM only until shown)'), el('option', { value: 'pc' }, 'PC (a player character)'));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': `A character sheet for ${e.name}` },
+      el('form', { method: 'dialog' }, el('h3', {}, `A character sheet for ${e.name}`), ctx.field('Template', pick), ctx.field('Kind', kind),
+        el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Add sheet'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
+    d.addEventListener('close', async () => {
+      d.remove();
+      if (d.returnValue !== 'ok') return;
+      try {
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), entry_id: e.id, kind: kind.value }, cid());
+        location.hash = `#/c/${cid()}/characters/${r.character.id}`;
+      } catch (err) { toast(err.message, true); }
+    });
+    document.body.append(d);
+    d.showModal();
+  }
+
   /** The settings strip: name, PC or NPC, whose sheet, shown to players, the active character. */
   function settingsStrip(ch, mine, save) {
     const S = ctx.S, gm = ctx.isGM();
@@ -795,5 +816,5 @@ const Sheets = (() => {
     return renderLibrary();
   }
 
-  return { mount, route, campaignRoute, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, closePdf, stopPresence };
+  return { mount, route, campaignRoute, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, closePdf, stopPresence };
 })();
