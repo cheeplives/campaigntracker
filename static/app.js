@@ -514,6 +514,7 @@
     const n = $('#topnav');
     n.replaceChildren(...clean([
       S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
+      S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
       S.user?.is_admin ? el('a', { href: '#/admin', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
       S.user ? el('a', { href: '#/account', 'data-tip': `Signed in as ${S.user.email}. Your display preferences` }, S.user.name || S.user.email) : null,
       schemePicker(),
@@ -6047,6 +6048,7 @@
       if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
       if (parts[0] === 'admin') return await viewAdmin();
+      if (parts[0] === 'templates' && typeof Sheets !== 'undefined') return await Sheets.route(parts.slice(1));
       if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
@@ -6098,6 +6100,9 @@
     if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);
     route();
   }
+
+  // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field });
 
   // Signed out, leaving the About page goes back through the gate.
   window.addEventListener('hashchange', () => (S.user ? route() : boot()));
