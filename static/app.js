@@ -6307,11 +6307,12 @@
   async function panelPoll() {
     if (!S.camp || document.hidden) return;
     try {
-      const r = await api('changed', { query: { cid: S.camp.id } });
+      // the change stamp is to the second, so a pass of time in the same second as the last change is caught by the clock
+      const [r, rem] = await Promise.all([api('changed', { query: { cid: S.camp.id } }), api('reminders', { query: { cid: S.camp.id } })]);
       const typing = [...document.querySelectorAll('.table-view textarea, .table-view input')].some(i => i.value && i === document.activeElement) || !!document.querySelector('.table-view textarea')?.value;
-      if (r.changed !== S.camp.changed && !typing) {
+      if ((r.changed !== S.camp.changed || rem.current_shift !== S.camp.current_shift) && !typing) {
         await loadCampaign(S.camp.id, true);
-        S.reminders = (await api('reminders', { query: { cid: S.camp.id } })).reminders;
+        S.reminders = rem.reminders;
         await viewTable();
         panelStamp = Date.now();
       }
