@@ -195,7 +195,7 @@ test("Characters: an NPC sheet is GM-only until shown to players", async ({ page
   expect(card).toMatchObject({ sheet_visible: false, play: [], summary: [] });
   const s = await sheet(p1, cid, n.id);
   expect(s.json.character.values).toBeNull();
-  expect(JSON.stringify(s.json)).not.toContain("7731");
+  expect(JSON.stringify(s.json)).not.toMatch(/(?<!\d)7731(?!\d)/);   // not inside the random ids and names
   expect((await api(gm, "character_save", { id: n.id, version: n.version, sheet_public: true }, cid)).status).toBe(200);
   expect((await sheet(p1, cid, n.id)).json.character.values).toEqual({ str: 7731 });
   // A player can't make an NPC, or a character for someone else.
