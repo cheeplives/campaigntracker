@@ -136,15 +136,18 @@ test("Templates: a field can be small, medium or large on the sheet, and a bad s
   await field(page, 3).getByLabel("Field type").selectOption("longtext");
   await expect(field(page, 3).getByLabel("Box size")).toHaveCount(0);
 
-  const preview = page.locator(".sheet-preview");
-  const width = async key => (await preview.locator(`.sheet-field[data-key="${key}"]`).boundingBox()).width;
-  await expect(preview.locator('.sheet-field[data-key="motto"]')).toBeVisible();
-  const [small, medium, large] = [await width("age"), await width("name"), await width("motto")];
-  expect(Math.abs(small * 2 - medium)).toBeLessThan(16);
-  expect(Math.abs(medium * 2 - large)).toBeLessThan(16);
-  // a small box's input stays inside it
-  const [cell, input] = [await preview.locator('.sheet-field[data-key="age"]').boundingBox(), await preview.getByLabel("Age").boundingBox()];
-  expect(input.x + input.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+  // the preview is drawn again a moment after each change, so each look measures one drawing whole
+  const measure = () => page.evaluate(() => {
+    const box = k => document.querySelector(`.sheet-preview .sheet-field[data-key="${k}"]`)?.getBoundingClientRect();
+    const [age, name, motto] = [box("age"), box("name"), box("motto")];
+    const input = document.querySelector('.sheet-preview .sheet-field[data-key="age"] input')?.getBoundingClientRect();
+    if (!age || !name || !motto || !input) return null;
+    return { small: age.width, medium: name.width, large: motto.width, inside: input.right <= age.right + 1 };
+  });
+  await expect.poll(async () => {
+    const m = await measure();
+    return !!m && Math.abs(m.small * 2 - m.medium) < 16 && Math.abs(m.medium * 2 - m.large) < 16 && m.inside;  // a small box's input stays inside it
+  }).toBe(true);
 
   await page.getByRole("button", { name: "Save template" }).click();
   await expect(page).toHaveURL(/#\/templates\/\d+$/);
