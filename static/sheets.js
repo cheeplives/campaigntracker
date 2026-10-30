@@ -56,7 +56,21 @@ const Sheets = (() => {
         return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : size) + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
           el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
       }))));
-    const form = el('div', { class: `sheet-form sheet-${mode}` }, sections);
+    // pages: a tab for each, only the open one's sections shown
+    const pages = L.pages(layout);
+    let tabs = null;
+    if (pages.length > 1) {
+      const secOf = new Map((layout.sections || []).map((s, i) => [s, sections[i]]));
+      let open = pages.find(p => p.name === opts.page) || pages[0];
+      tabs = el('div', { class: 'seg sheet-tabs', role: 'tablist', 'aria-label': 'Pages' });
+      const show = () => {
+        tabs.replaceChildren(...pages.map(p => button(p.name, () => { open = p; opts.onPage?.(p.name); show(); }, p === open ? 'on' : '',
+          { role: 'tab', 'aria-selected': String(p === open) })));
+        for (const p of pages) for (const sec of p.sections) secOf.get(sec).hidden = p !== open;
+      };
+      show();
+    }
+    const form = el('div', { class: `sheet-form sheet-${mode}` }, tabs, sections);
     /** Show a value someone else saved, in place of what the field shows. */
     form.setValue = (key, v) => {
       const x = slots.get(key);
@@ -286,11 +300,11 @@ const Sheets = (() => {
     const errors = el('ul', { class: 'sheet-ed-errors', 'aria-live': 'polite' });
     const preview = el('div', { class: 'sheet-preview' });
     const pdfPanel = el('div', { class: 'sheet-pdf-slot' });
-    let previewTimer = 0;
+    let previewTimer = 0, previewPage = null;
     const refresh = () => {
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
-        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview' }));
+        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview', page: previewPage, onPage: p => { previewPage = p; } }));
         errors.replaceChildren(...L.validate(layout).slice(0, 8).map(e => el('li', {}, e)));
       }, 60);
     };
@@ -422,7 +436,11 @@ const Sheets = (() => {
           settings));
       return row;
     }
+    // the page names already in use, offered in each section's Page box
+    const pageOptions = el('datalist', { id: 'sheet-ed-pages' });
+    const pageList = () => pageOptions.replaceChildren(...[...new Set(layout.sections.map(s => s.page).filter(Boolean))].map(p => el('option', { value: p })));
     function draw() {
+      pageList();
       list.replaceChildren(...layout.sections.map((s, si) => {
         const title = el('input', { value: s.title, maxlength: L.LIMITS.label, 'aria-label': 'Section title' });
         const sec = el('div', { class: 'sheet-ed-section', 'data-key': s.key });
@@ -431,8 +449,11 @@ const Sheets = (() => {
           if (fresh.has(s.key)) { freshKey(s, title.value || 'section'); sec.dataset.key = s.key; }
           refresh();
         });
+        const page = el('input', { value: s.page || '', maxlength: L.LIMITS.label, 'aria-label': 'Page', placeholder: 'Page (optional)', list: 'sheet-ed-pages', class: 'sheet-ed-page',
+          'data-tip': 'Sections on a named page show under its tab. Leave it empty for the first page' });
+        page.addEventListener('input', () => { if (page.value.trim()) s.page = page.value; else delete s.page; pageList(); refresh(); });
         sec.append(
-          el('div', { class: 'row sheet-ed-sec-head' }, title,
+          el('div', { class: 'row sheet-ed-sec-head' }, title, page,
             button('↑', () => { if (moveIn(layout.sections, si, -1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} up`, disabled: si === 0 }),
             button('↓', () => { if (moveIn(layout.sections, si, 1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} down`, disabled: si === layout.sections.length - 1 }),
             button('Remove section', async () => {
@@ -510,7 +531,7 @@ const Sheets = (() => {
         errors),
       pdfPanel,
       el('div', { class: 'sheet-ed' },
-        el('div', { class: 'card sheet-ed-pane' }, list,
+        el('div', { class: 'card sheet-ed-pane' }, list, pageOptions,
           el('div', { class: 'row' }, button('Add section', () => { addSection(); draw(); }, 'small'), save)),
         el('div', { class: 'card sheet-ed-preview' }, preview)));
     draw();
@@ -731,6 +752,7 @@ const Sheets = (() => {
     let editing = false;
     const values = ch.values ? { ...ch.values } : {};
     let hidden = ch.hidden || [];
+    let openPage = null;   // the sheet's open page, kept when it is drawn again
     // a refused or failed save: say why, and draw the sheet again from the server (a GM whose Edit ran out is back to reading)
     const sender = fieldSender(ch.id, err => {
       toast(err.message, true);
@@ -766,7 +788,7 @@ const Sheets = (() => {
       if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
       if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v)));
       form = renderSheetForm(ch.layout, values, {
-        mode: canChange() ? 'edit' : 'view', hidden, canHide: mine,
+        mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
       });

@@ -10,7 +10,7 @@
 'use strict';
 (function (root) {
   const TYPES = ['text', 'longtext', 'number', 'counter', 'pips', 'checkbox', 'choice', 'list'];
-  const LIMITS = { sections: 50, fields: 1000, label: 100, option: 60, options: 50, columns: 10, pips: 30, rows: 200, text: 500, longtext: 20000 };
+  const LIMITS = { pages: 20, sections: 50, fields: 1000, label: 100, option: 60, options: 50, columns: 10, pips: 30, rows: 200, text: 500, longtext: 20000 };
   const KEY = /^[a-z][a-z0-9_]{0,39}$/;
   // how wide a field's box is on the sheet: small is half the usual, large twice it (long text and lists run the full width)
   const SIZES = ['small', 'medium', 'large'];
@@ -36,9 +36,14 @@
     };
     if (layout.sections.length > LIMITS.sections) out.push(`A template can have ${LIMITS.sections} sections at most`);
     let n = 0;
+    const pageNames = new Set();
     for (const s of layout.sections) {
       if (!isObj(s)) { out.push('A section is not a section'); continue; }
       key(s.key, `Section "${s.title}"`);
+      if (s.page !== undefined) {
+        if (okLabel(s.page)) pageNames.add(s.page);
+        else out.push(`Section "${s.title}": page names are 1 to ${LIMITS.label} characters`);
+      }
       if (!okLabel(s.title)) out.push(`Section titles are 1 to ${LIMITS.label} characters`);
       if (!Array.isArray(s.fields)) { out.push(`Section "${s.title}" needs a list of fields`); continue; }
       for (const f of s.fields) {
@@ -67,6 +72,7 @@
       }
     }
     if (n > LIMITS.fields) out.push(`A template can have ${LIMITS.fields} fields at most`);
+    if (pageNames.size > LIMITS.pages) out.push(`A template can have ${LIMITS.pages} pages at most`);
     return out;
   }
 
@@ -85,6 +91,20 @@
       const k = `${base.slice(0, 40 - String(i).length - 1)}_${i}`;
       if (!taken.has(k)) return k;
     }
+  }
+
+  /** The sheet's pages in order, each with its sections: [{ name, sections }]. Sections without a page are on the
+   * first, named Sheet; a layout with no pages is one page. */
+  function pages(layout) {
+    const out = new Map();
+    const secs = layout?.sections || [];
+    if (secs.some(s => !s.page)) out.set('', { name: 'Sheet', sections: [] });
+    for (const s of secs) {
+      const k = s.page ? `p:${s.page}` : '';
+      if (!out.has(k)) out.set(k, { name: s.page, sections: [] });
+      out.get(k).sections.push(s);
+    }
+    return [...out.values()];
   }
 
   /** Every field by key: Map key → { field, section }. */
@@ -246,7 +266,7 @@
     return { sections: sections.filter(s => s.fields.length).slice(0, LIMITS.sections).map(({ labels, ...s }) => s) };
   }
 
-  const SheetLayout = { TYPES, LIMITS, validate, newKey, fields, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
+  const SheetLayout = { TYPES, LIMITS, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
   if (typeof module !== 'undefined' && module.exports) module.exports = SheetLayout;
   else root.SheetLayout = SheetLayout;
 })(typeof window !== 'undefined' ? window : globalThis);

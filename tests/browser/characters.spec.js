@@ -283,3 +283,21 @@ test("Characters: a dropdown takes a custom entry, kept and shown again", async 
   // a custom entry is a short text: too long is refused
   expect((await api(p1, "character_field", { id: c.id, key: "cls", value: "x".repeat(501) }, cid)).status).toBe(400);
 });
+
+test("Characters: a sheet with pages keeps its open page when the sheet is drawn again", async ({ page, browser }) => {
+  const { cid, p1 } = await party(page, browser);
+  const layout = { sections: [
+    { key: "main", title: "Main", fields: [{ key: "lvl", label: "Level", type: "number" }] },
+    { key: "spells", title: "Spells", page: "Magic", fields: [{ key: "slots", label: "Slots", type: "text" }] },
+  ] };
+  const tpl = (await api(page, "template_save", { name: "Paged party", game: "Test RPG", layout })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Mage" });
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await p1.getByRole("tab", { name: "Magic" }).click();
+  await expect(p1.getByRole("tab", { name: "Magic" })).toHaveAttribute("aria-selected", "true");
+  // hiding a section saves and draws the sheet again
+  await p1.getByRole("button", { name: "Hide the Spells section from the party" }).click();
+  await expect(p1.getByRole("button", { name: "Show the Spells section to the party" })).toBeVisible();
+  await expect(p1.getByLabel("Slots", { exact: true })).toBeVisible();
+  await expect(p1.getByLabel("Level", { exact: true })).toBeHidden();
+});

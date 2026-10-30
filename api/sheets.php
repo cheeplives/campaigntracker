@@ -20,7 +20,7 @@ function need_sheets(): void {
 // ---------- Layouts: the same rules as static/sheetlayout.js, which only gives the editor its messages ----------
 
 const SHEET_TYPES = ['text', 'longtext', 'number', 'counter', 'pips', 'checkbox', 'choice', 'list'];
-const SHEET_LIMITS = ['sections' => 50, 'fields' => 1000, 'label' => 100, 'option' => 60, 'options' => 50, 'columns' => 10,
+const SHEET_LIMITS = ['pages' => 20, 'sections' => 50, 'fields' => 1000, 'label' => 100, 'option' => 60, 'options' => 50, 'columns' => 10,
     'pips' => 30, 'rows' => 200, 'text' => 500, 'longtext' => 20000];
 const SHEET_KEY = '/^[a-z][a-z0-9_]{0,39}$/';
 // A field's optional mapping to a VTT's character data, for importing and syncing later: VTT name => {system, path}.
@@ -48,9 +48,12 @@ function sheet_layout_in($layout): array {
     };
     $out = [];
     $n = 0;
+    $pages = [];
     foreach ($layout['sections'] as $s) {
         if (!is_array($s) || !isset($s['fields']) || !is_array($s['fields']) || !array_is_list($s['fields'])) fail('Each section needs a list of fields');
-        $sec = ['key' => $key($s['key'] ?? null, 'A section'), 'title' => $label($s['title'] ?? null, 'Section titles'), 'fields' => []];
+        $sec = ['key' => $key($s['key'] ?? null, 'A section'), 'title' => $label($s['title'] ?? null, 'Section titles')];
+        if (isset($s['page'])) $pages[$sec['page'] = $label($s['page'], 'Page names')] = true;
+        $sec['fields'] = [];
         foreach ($s['fields'] as $f) {
             if (++$n > $L['fields']) fail("A template can have {$L['fields']} fields at most");
             if (!is_array($f)) fail('A field is not a field');
@@ -103,6 +106,7 @@ function sheet_layout_in($layout): array {
         }
         $out[] = $sec;
     }
+    if (count($pages) > $L['pages']) fail("A template can have {$L['pages']} pages at most");
     $layout = ['sections' => $out];
     if (strlen(json_encode($layout, JSON_UNESCAPED_UNICODE)) > 1_000_000) fail('That template is too large', 413);
     return $layout;
