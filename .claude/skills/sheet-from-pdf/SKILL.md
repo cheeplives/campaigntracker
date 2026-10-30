@@ -8,7 +8,7 @@ description: Turn a character sheet PDF into a Campaign Chronicle sheet template
 You turn one character sheet PDF into one starter template: `db/starter-templates/<key>.json`. The scripts in
 `tools/sheet-agent/` read the PDF and draw your template; your job is the judgement in between: which boxes are
 fields, what they are called, how wide each is, and how the sections sit, so the result looks and reads like the
-sheet it came from, on a desktop and on a phone.
+sheet it came from, on a desktop and on an iPad. Those two come first; a phone is a nice to have.
 
 Needs: Node, and `npm ci` once in `tests/` (the scripts use the Playwright installed there). Work files go in a
 scratch folder outside the repo, never in it.
@@ -74,7 +74,8 @@ comment and `validate`); the ones that matter most here:
 - **Side by side.** Where `gutters` splits a page into two columns of sections, give those sections
   `"width": "half"` (three columns: `"third"`; a wide one beside a narrow one: `"two-thirds"` and `"third"`).
   Sections fill a line left to right in the order you list them, so list them in reading order across the line.
-  On a phone every section takes the full width on its own.
+  In a narrow sheet (under 640 pixels, so a phone) every section takes the full width on its own; an iPad in
+  portrait still shows halves side by side.
 - **Compact.** A long list of short entries, label then a small box (skills, saving throws), is
   `"compact": true`: the label sits beside its box, two or three to a line.
 - **Pages.** A sheet over several PDF pages, or with clearly separate parts (a front, spells, gear, story), gets
@@ -95,12 +96,13 @@ node tools/sheet-agent/preview.js db/starter-templates/<key>.json <work>/preview
 ```
 
 `check.js` applies the starter test's rules. `preview.js` draws the template with the app's own CSS and code, one
-picture per page at 1200 and 390 pixels wide, and lists problems: a sheet wider than the screen, a label cut
+picture per page at 1280 (desktop) and 820 (iPad, portrait) pixels wide, and lists problems: a sheet wider than the screen, a label cut
 short, a box off the edge.
 
 **Open the pictures and compare them with the PDF's pages**, side by side, section by section. Ask: are the same
 fields there, in the same order, the same relative widths, grouped the same way? Fix the template and run both
-again. Repeat until `check.js` says ok, `preview.js` says nothing looks wrong, and the pictures read like the PDF.
+again. Add `--widths 1280,820,390` for a look at a phone too if you like; fix
+what's easy there, but desktop and iPad are what matter. Repeat until `check.js` says ok, `preview.js` says nothing looks wrong, and the pictures read like the PDF.
 Three rounds is usual.
 
 ## 4. Record the source and finish

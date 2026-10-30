@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /* preview.js — draw a template the way a character's sheet draws it (Sheets.renderSheetForm, with the site's CSS),
- * take a picture of each page of it at desktop and phone widths, and say what looks wrong: a page wider than the
+ * take a picture of each page of it at desktop and iPad (portrait) widths, and say what looks wrong: a page wider than the
  * screen, a box narrower than its label, or a label cut short.
  *
- *   node tools/sheet-agent/preview.js <template.json> <out-dir> [--widths 1200,390]
+ *   node tools/sheet-agent/preview.js <template.json> <out-dir> [--widths 1280,820]
  *
  * <template.json> is a starter file ({ name, game, layout, ... }) or a bare layout ({ sections }). Writes
  * <out-dir>/preview-<width>-<page>.png and <out-dir>/preview.json, and prints the problems. */
@@ -13,7 +13,7 @@ const { browser, serve, args } = require('./lib');
 
 const SCRIPTS = ['kit.js', 'sheetlayout.js', 'sheetimport.js', 'pdfimport.js', 'sheets.js'];
 
-async function preview(file, outDir, widths = [1200, 390]) {
+async function preview(file, outDir, widths = [1280, 820]) {
   const t = JSON.parse(fs.readFileSync(file, 'utf8'));
   const layout = t.layout || t;
   const site = await serve();
@@ -59,7 +59,7 @@ async function preview(file, outDir, widths = [1200, 390]) {
 if (require.main === module) {
   const a = args(process.argv.slice(2));
   if (a._.length !== 2) {
-    console.error('usage: node tools/sheet-agent/preview.js <template.json> <out-dir> [--widths 1200,390]');
+    console.error('usage: node tools/sheet-agent/preview.js <template.json> <out-dir> [--widths 1280,820]');
     process.exit(2);
   }
   fs.mkdirSync(a._[1], { recursive: true });

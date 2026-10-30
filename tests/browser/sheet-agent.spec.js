@@ -1,5 +1,5 @@
 // The sheet agent's scripts (tools/sheet-agent), run under Node: reading a PDF's fields, text and geometry, drawing
-// a template at desktop and phone widths, and checking a starter file. They start their own browser, so they run
+// a template at desktop and iPad widths, and checking a starter file. They start their own browser, so they run
 // once, in the chromium project.
 const { test, expect } = require("@playwright/test");
 const fs = require("fs"), os = require("os"), path = require("path");
@@ -53,11 +53,11 @@ test("Agent: extract reads a fillable PDF's fields, text and pages, with the edi
   expect(JSON.parse(fs.readFileSync(path.join(out, "extract.json"), "utf8")).pages[0].rows.length).toBe(p.rows.length);
 });
 
-test("Agent: preview draws each page of a template at desktop and phone widths and finds nothing wrong with a starter", async ({}, info) => {
+test("Agent: preview draws each page of a template at desktop and iPad widths and finds nothing wrong with a starter", async ({}, info) => {
   test.skip(info.project.name !== "chromium", "the scripts start their own browser");
   const out = tmp();
   const { shots, problems } = await preview(path.join(STARTERS, "dnd-5e-2024.json"), out);
-  expect(shots.map(s => s.width)).toEqual([1200, 390]);
+  expect(shots.map(s => s.width)).toEqual([1280, 820]);
   for (const s of shots) expect(fs.existsSync(path.join(out, s.image))).toBe(true);
   expect(problems).toEqual([]);
 });

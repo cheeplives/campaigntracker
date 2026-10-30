@@ -108,7 +108,7 @@ Hover over any visibility badge to see this breakdown.
 `.claude/skills/sheet-from-pdf/` is a Claude Code skill that turns a character sheet PDF into a starter template in `db/starter-templates/`, laid out like the PDF: box widths from the PDF's boxes, sections side by side where the page has columns, compact rows for skill lists, and a tab for each page. Run Claude Code in the repo and ask it to make a template from a PDF. It uses three local scripts in `tools/sheet-agent/` (they need `npm ci` in `tests/` once):
 
 - `node tools/sheet-agent/extract.js <sheet.pdf> <out-dir>` reads the PDF with the app's own pdf.js: each page's form fields and text with their positions, which fields share a row, where the page splits into columns, likely headings, the width each box would be on the sheet, and the editor's first draft; and a picture of each page.
-- `node tools/sheet-agent/preview.js <template.json> <out-dir>` draws a template with the app's own CSS and code, a picture of each page at desktop and phone widths, and lists what looks wrong (a sheet wider than the screen, a label cut short).
+- `node tools/sheet-agent/preview.js <template.json> <out-dir>` draws a template with the app's own CSS and code, a picture of each page at desktop and iPad widths (add `--widths 1280,820,390` for a phone), and lists what looks wrong (a sheet wider than the screen, a label cut short).
 - `node tools/sheet-agent/check.js <template.json>` checks a starter file against the starter test's rules.
 
 The PDF and the work files stay on your computer; only the finished template is committed. Nothing here is deployed.

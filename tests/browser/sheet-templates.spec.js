@@ -303,6 +303,13 @@ test("Templates: sections sit side by side, a compact section puts labels beside
     return !!label && !!input && input.x > label.x + 20 && Math.abs((label.y + label.h / 2) - (input.y + input.h / 2)) < 12;
   }).toBe(true);
 
+  // an iPad in portrait still has room for them side by side
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await expect.poll(async () => {
+    const [a, b] = [await box('.sheet-preview .sheet-sec[data-key="stats"]'), await box('.sheet-preview .sheet-sec[data-key="skills"]')];
+    return !!a && !!b && Math.abs(a.y - b.y) < 2 && b.x > a.right - 1;
+  }).toBe(true);
+
   // on a phone the sections stack and nothing runs off the screen
   await page.setViewportSize({ width: 360, height: 740 });
   await page.goto(`index.html#/templates/${id}`);
