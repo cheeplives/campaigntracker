@@ -75,56 +75,64 @@
       "label": "INT",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_ref",
       "label": "REF",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_dex",
       "label": "DEX",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_tech",
       "label": "TECH",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_cool",
       "label": "COOL",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_will",
       "label": "WILL",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_move",
       "label": "MOVE",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "st_body",
       "label": "BODY",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "luck",
@@ -465,4 +473,4 @@
    }
   ]
  }
-}
+}

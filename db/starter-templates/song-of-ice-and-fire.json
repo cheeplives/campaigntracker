@@ -266,7 +266,8 @@
      {
       "key": "bulk",
       "label": "Bulk",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "movement",
@@ -374,4 +375,4 @@
    }
   ]
  }
-}
+}

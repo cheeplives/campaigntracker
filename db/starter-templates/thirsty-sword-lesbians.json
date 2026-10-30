@@ -59,35 +59,40 @@
       "label": "Daring",
       "type": "number",
       "min": -1,
-      "max": 3
+      "max": 3,
+      "size": "small"
      },
      {
       "key": "stat_grace",
       "label": "Grace",
       "type": "number",
       "min": -1,
-      "max": 3
+      "max": 3,
+      "size": "small"
      },
      {
       "key": "stat_heart",
       "label": "Heart",
       "type": "number",
       "min": -1,
-      "max": 3
+      "max": 3,
+      "size": "small"
      },
      {
       "key": "stat_spirit",
       "label": "Spirit",
       "type": "number",
       "min": -1,
-      "max": 3
+      "max": 3,
+      "size": "small"
      },
      {
       "key": "stat_wit",
       "label": "Wit",
       "type": "number",
       "min": -1,
-      "max": 3
+      "max": 3,
+      "size": "small"
      }
     ]
    },
@@ -210,4 +215,4 @@
    }
   ]
  }
-}
+}

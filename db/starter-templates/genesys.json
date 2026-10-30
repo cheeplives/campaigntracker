@@ -42,42 +42,48 @@
       "label": "Brawn",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      },
      {
       "key": "ch_agility",
       "label": "Agility",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      },
      {
       "key": "ch_intellect",
       "label": "Intellect",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      },
      {
       "key": "ch_cunning",
       "label": "Cunning",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      },
      {
       "key": "ch_willpower",
       "label": "Willpower",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      },
      {
       "key": "ch_presence",
       "label": "Presence",
       "type": "number",
       "min": 1,
-      "max": 6
+      "max": 6,
+      "size": "small"
      }
     ]
    },
@@ -299,10 +305,11 @@
      {
       "key": "encumbrance",
       "label": "Encumbrance Threshold",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    }
   ]
  }
-}
+}

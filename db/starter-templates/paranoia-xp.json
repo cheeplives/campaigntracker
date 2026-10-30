@@ -91,21 +91,24 @@
       "label": "Management",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      },
      {
       "key": "skill_stealth",
       "label": "Stealth",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      },
      {
       "key": "skill_violence",
       "label": "Violence",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      }
     ]
    },
@@ -118,21 +121,24 @@
       "label": "Hardware",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      },
      {
       "key": "know_software",
       "label": "Software",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      },
      {
       "key": "know_wetware",
       "label": "Wetware",
       "type": "number",
       "min": 1,
-      "max": 20
+      "max": 20,
+      "size": "small"
      },
      {
       "key": "specialties",
@@ -250,4 +256,4 @@
    }
   ]
  }
-}
+}

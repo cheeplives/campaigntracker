@@ -50,42 +50,48 @@
       "label": "Strength",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_speed",
       "label": "Speed",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_intellect",
       "label": "Intellect",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_willpower",
       "label": "Willpower",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_awareness",
       "label": "Awareness",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_presence",
       "label": "Presence",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      }
     ]
    },
@@ -181,109 +187,127 @@
       "key": "sk_agility",
       "label": "Agility",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_athletics",
       "label": "Athletics",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_heavy_weaponry",
       "label": "Heavy Weaponry",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_light_weaponry",
       "label": "Light Weaponry",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_thievery",
       "label": "Thievery",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_crafting",
       "label": "Crafting",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_deduction",
       "label": "Deduction",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_discipline",
       "label": "Discipline",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_intimidation",
       "label": "Intimidation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_lore",
       "label": "Lore",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_deception",
       "label": "Deception",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_insight",
       "label": "Insight",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_leadership",
       "label": "Leadership",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_perception",
       "label": "Perception",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_persuasion",
       "label": "Persuasion",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "surge_skills",
@@ -440,4 +464,4 @@
    }
   ]
  }
-}
+}

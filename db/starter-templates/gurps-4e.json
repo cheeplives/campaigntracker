@@ -64,28 +64,32 @@
       "label": "ST",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_dx",
       "label": "DX",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_iq",
       "label": "IQ",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_ht",
       "label": "HT",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "hp",
@@ -102,32 +106,38 @@
      {
       "key": "will",
       "label": "Will",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "per",
       "label": "Per",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "basic_speed",
       "label": "Basic Speed",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "basic_move",
       "label": "Basic Move",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "basic_lift",
       "label": "Basic Lift",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "damage",
       "label": "Thrust / Swing Damage",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      }
     ]
    },
@@ -161,7 +171,8 @@
        "Heavy (3)",
        "X-Heavy (4)"
       ],
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "dr",
@@ -365,4 +376,4 @@
    }
   ]
  }
-}
+}

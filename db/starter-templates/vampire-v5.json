@@ -67,55 +67,64 @@
       "key": "attr_strength",
       "label": "Strength",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_stamina",
       "label": "Stamina",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_charisma",
       "label": "Charisma",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_manipulation",
       "label": "Manipulation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_composure",
       "label": "Composure",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_intelligence",
       "label": "Intelligence",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_wits",
       "label": "Wits",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_resolve",
       "label": "Resolve",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      }
     ]
    },
@@ -127,163 +136,190 @@
       "key": "sk_athletics",
       "label": "Athletics",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_brawl",
       "label": "Brawl",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_craft",
       "label": "Craft",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_drive",
       "label": "Drive",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_firearms",
       "label": "Firearms",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_larceny",
       "label": "Larceny",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_melee",
       "label": "Melee",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_animal_ken",
       "label": "Animal Ken",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_etiquette",
       "label": "Etiquette",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_insight",
       "label": "Insight",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_intimidation",
       "label": "Intimidation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_leadership",
       "label": "Leadership",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_performance",
       "label": "Performance",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_persuasion",
       "label": "Persuasion",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_streetwise",
       "label": "Streetwise",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_subterfuge",
       "label": "Subterfuge",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_academics",
       "label": "Academics",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_awareness",
       "label": "Awareness",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_finance",
       "label": "Finance",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_investigation",
       "label": "Investigation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_occult",
       "label": "Occult",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_politics",
       "label": "Politics",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_science",
       "label": "Science",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_technology",
       "label": "Technology",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "specialties",
@@ -548,4 +584,4 @@
    }
   ]
  }
-}
+}

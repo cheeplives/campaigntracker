@@ -166,97 +166,116 @@
      {
       "key": "sk_acrobatics",
       "label": "Acrobatics (DEX)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_animal_handling",
       "label": "Animal Handling (WIS)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_arcana",
       "label": "Arcana (INT)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_athletics",
       "label": "Athletics (STR)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_deception",
       "label": "Deception (CHA)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_history",
       "label": "History (INT)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_insight",
       "label": "Insight (WIS)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_intimidation",
       "label": "Intimidation (CHA)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_investigation",
       "label": "Investigation (INT)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine (WIS)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_nature",
       "label": "Nature (INT)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_perception",
       "label": "Perception (WIS)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_performance",
       "label": "Performance (CHA)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_persuasion",
       "label": "Persuasion (CHA)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_religion",
       "label": "Religion (INT)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_sleight_of_hand",
       "label": "Sleight of Hand (DEX)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth (DEX)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival (WIS)",
-      "type": "checkbox"
+      "type": "checkbox",
+      "size": "small"
      },
      {
       "key": "passive_perception",
       "label": "Passive Perception",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -609,4 +628,4 @@
    }
   ]
  }
-}
+}

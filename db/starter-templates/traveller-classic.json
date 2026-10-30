@@ -58,63 +58,72 @@
       "label": "Strength",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "ch_dexterity",
       "label": "Dexterity",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "ch_endurance",
       "label": "Endurance",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "ch_intelligence",
       "label": "Intelligence",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "ch_education",
       "label": "Education",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "ch_social_standing",
       "label": "Social Standing",
       "type": "number",
       "min": 0,
-      "max": 15
+      "max": 15,
+      "size": "small"
      },
      {
       "key": "dmg_strength_damage",
       "label": "Strength Damage",
       "type": "number",
       "play": true,
-      "min": 0
+      "min": 0,
+      "size": "small"
      },
      {
       "key": "dmg_dexterity_damage",
       "label": "Dexterity Damage",
       "type": "number",
       "play": true,
-      "min": 0
+      "min": 0,
+      "size": "small"
      },
      {
       "key": "dmg_endurance_damage",
       "label": "Endurance Damage",
       "type": "number",
       "play": true,
-      "min": 0
+      "min": 0,
+      "size": "small"
      }
     ]
    },
@@ -209,4 +218,4 @@
    }
   ]
  }
-}
+}

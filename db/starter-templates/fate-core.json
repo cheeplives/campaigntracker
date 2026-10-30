@@ -55,27 +55,32 @@
      {
       "key": "rung_superb_5",
       "label": "Superb (+5)",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "rung_great_4",
       "label": "Great (+4)",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "rung_good_3",
       "label": "Good (+3)",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "rung_fair_2",
       "label": "Fair (+2)",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "rung_average_1",
       "label": "Average (+1)",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      }
     ]
    },
@@ -166,4 +171,4 @@
    }
   ]
  }
-}
+}

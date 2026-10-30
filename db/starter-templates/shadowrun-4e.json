@@ -68,56 +68,64 @@
       "label": "Body",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_agility",
       "label": "Agility",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_reaction",
       "label": "Reaction",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_strength",
       "label": "Strength",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_charisma",
       "label": "Charisma",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_intuition",
       "label": "Intuition",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_logic",
       "label": "Logic",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_willpower",
       "label": "Willpower",
       "type": "number",
       "min": 1,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "edge",
@@ -129,27 +137,32 @@
      {
       "key": "essence",
       "label": "Essence",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "magic",
       "label": "Magic",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "resonance",
       "label": "Resonance",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "initiative",
       "label": "Initiative",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "init_passes",
       "label": "Initiative Passes",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -409,4 +422,4 @@
    }
   ]
  }
-}
+}

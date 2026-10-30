@@ -52,55 +52,64 @@
       "key": "attr_strength",
       "label": "Strength",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_stamina",
       "label": "Stamina",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_charisma",
       "label": "Charisma",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_manipulation",
       "label": "Manipulation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_appearance",
       "label": "Appearance",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_perception",
       "label": "Perception",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_intelligence",
       "label": "Intelligence",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_wits",
       "label": "Wits",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      }
     ]
    },
@@ -585,4 +594,4 @@
    }
   ]
  }
-}
+}

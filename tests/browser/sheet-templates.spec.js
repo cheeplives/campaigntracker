@@ -164,7 +164,8 @@ test("Templates: a field can be small, medium or large on the sheet, and a bad s
 test("Templates: a large box fits a phone screen", async ({ page, browser }) => {
   await ready(page, browser, "Narrow");
   await page.setViewportSize({ width: 360, height: 740 });
-  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "big", label: "Big", type: "text", size: "large" }, { key: "tiny", label: "Tiny", type: "number", size: "small" }] }] };
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "big", label: "Big", type: "text", size: "large" }, { key: "tiny", label: "Tiny", type: "number", size: "small" },
+    { key: "rank", label: "Rank", type: "choice", options: ["Untrained", "Trained", "Expert", "Master", "Legendary"], size: "small" }] }] };
   const tpl = (await api(page, "template_save", { name: "Phone", game: "X", layout })).json.template;
   await page.goto(`index.html#/templates/${tpl.id}`);
   const big = page.locator('.sheet-field[data-key="big"]');
@@ -172,4 +173,7 @@ test("Templates: a large box fits a phone screen", async ({ page, browser }) => 
   const box = await big.boundingBox();
   expect(box.x + box.width).toBeLessThanOrEqual(360);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  // a small box's dropdown is squeezed to fit inside it
+  const [cell, pick] = [await page.locator('.sheet-field[data-key="rank"]').boundingBox(), await page.getByLabel("Rank", { exact: true }).boundingBox()];
+  expect(pick.x + pick.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
 });
