@@ -1305,6 +1305,8 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
     return [$new, $copied];
 }
 
+// A request with an API key may come from any site's page (a Foundry module, say), so CORS is open to it alone.
+api_cors();
 require_method('GET', 'POST');
 // Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
 // runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
@@ -1487,7 +1489,8 @@ try {
         $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name' . (has_sheets() ? ', m.active_character_id' : '') . ' FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
-        if (!$isGm) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name'],
+        // an API key's program gets no one's email, even through a GM's key
+        if (!$isGm || api_request()) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name'],
             'active_character_id' => $m['active_character_id'] ?? null], $members);
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
