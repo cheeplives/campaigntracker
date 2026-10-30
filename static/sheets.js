@@ -11,7 +11,7 @@
 
 const Sheets = (() => {
   const { el, toast, confirmDialog } = KIT;
-  const L = SheetLayout;
+  const L = SheetLayout, I = SheetImport;
   let ctx = null;
   /** app.js's helpers: { S, api, post, mount, field, campaignHeader, isGM, route }. */
   function mount(c) { ctx = c; }
@@ -56,7 +56,21 @@ const Sheets = (() => {
         return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : size) + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
           el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
       }))));
-    const form = el('div', { class: `sheet-form sheet-${mode}` }, sections);
+    // pages: a tab for each, only the open one's sections shown
+    const pages = L.pages(layout);
+    let tabs = null;
+    if (pages.length > 1) {
+      const secOf = new Map((layout.sections || []).map((s, i) => [s, sections[i]]));
+      let open = pages.find(p => p.name === opts.page) || pages[0];
+      tabs = el('div', { class: 'seg sheet-tabs', role: 'tablist', 'aria-label': 'Pages' });
+      const show = () => {
+        tabs.replaceChildren(...pages.map(p => button(p.name, () => { open = p; opts.onPage?.(p.name); show(); }, p === open ? 'on' : '',
+          { role: 'tab', 'aria-selected': String(p === open) })));
+        for (const p of pages) for (const sec of p.sections) secOf.get(sec).hidden = p !== open;
+      };
+      show();
+    }
+    const form = el('div', { class: `sheet-form sheet-${mode}` }, tabs, sections);
     /** Show a value someone else saved, in place of what the field shows. */
     form.setValue = (key, v) => {
       const x = slots.get(key);
@@ -286,11 +300,11 @@ const Sheets = (() => {
     const errors = el('ul', { class: 'sheet-ed-errors', 'aria-live': 'polite' });
     const preview = el('div', { class: 'sheet-preview' });
     const pdfPanel = el('div', { class: 'sheet-pdf-slot' });
-    let previewTimer = 0;
+    let previewTimer = 0, previewPage = null;
     const refresh = () => {
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
-        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview' }));
+        preview.replaceChildren(el('h2', {}, 'Preview'), renderSheetForm(layout, {}, { mode: 'preview', page: previewPage, onPage: p => { previewPage = p; } }));
         errors.replaceChildren(...L.validate(layout).slice(0, 8).map(e => el('li', {}, e)));
       }, 60);
     };
@@ -422,7 +436,11 @@ const Sheets = (() => {
           settings));
       return row;
     }
+    // the page names already in use, offered in each section's Page box
+    const pageOptions = el('datalist', { id: 'sheet-ed-pages' });
+    const pageList = () => pageOptions.replaceChildren(...[...new Set(layout.sections.map(s => s.page).filter(Boolean))].map(p => el('option', { value: p })));
     function draw() {
+      pageList();
       list.replaceChildren(...layout.sections.map((s, si) => {
         const title = el('input', { value: s.title, maxlength: L.LIMITS.label, 'aria-label': 'Section title' });
         const sec = el('div', { class: 'sheet-ed-section', 'data-key': s.key });
@@ -431,8 +449,11 @@ const Sheets = (() => {
           if (fresh.has(s.key)) { freshKey(s, title.value || 'section'); sec.dataset.key = s.key; }
           refresh();
         });
+        const page = el('input', { value: s.page || '', maxlength: L.LIMITS.label, 'aria-label': 'Page', placeholder: 'Page (optional)', list: 'sheet-ed-pages', class: 'sheet-ed-page',
+          'data-tip': 'Sections on a named page show under its tab. Leave it empty for the first page' });
+        page.addEventListener('input', () => { if (page.value.trim()) s.page = page.value; else delete s.page; pageList(); refresh(); });
         sec.append(
-          el('div', { class: 'row sheet-ed-sec-head' }, title,
+          el('div', { class: 'row sheet-ed-sec-head' }, title, page,
             button('↑', () => { if (moveIn(layout.sections, si, -1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} up`, disabled: si === 0 }),
             button('↓', () => { if (moveIn(layout.sections, si, 1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} down`, disabled: si === layout.sections.length - 1 }),
             button('Remove section', async () => {
@@ -510,7 +531,7 @@ const Sheets = (() => {
         errors),
       pdfPanel,
       el('div', { class: 'sheet-ed' },
-        el('div', { class: 'card sheet-ed-pane' }, list,
+        el('div', { class: 'card sheet-ed-pane' }, list, pageOptions,
           el('div', { class: 'row' }, button('Add section', () => { addSection(); draw(); }, 'small'), save)),
         el('div', { class: 'card sheet-ed-preview' }, preview)));
     draw();
@@ -721,6 +742,39 @@ const Sheets = (() => {
         }, 'small', { 'data-tip': 'Events, notes and the member list show this character\'s name for you' })) : null);
   }
 
+  /** Import: a Pathbuilder 2e export or a D&D Beyond character, by link, file or pasted JSON, onto this sheet's fields. */
+  function importPanel(ch) {
+    const box = el('textarea', { rows: 3, 'aria-label': 'Link or JSON to import', placeholder: 'A Pathbuilder 2e Export JSON link, a public D&D Beyond character link, or the JSON itself' });
+    const file = el('input', { type: 'file', accept: 'application/json,.json', 'aria-label': 'JSON file to import' });
+    const msg = el('p', { class: 'small', role: 'status' });
+    const go = async text => {
+      msg.textContent = '';
+      text = text.trim();
+      let json = null;
+      try {
+        if (I.link(text)) {
+          msg.textContent = 'Fetching…';
+          json = (await ctx.post('sheet_import_fetch', { url: text })).json;
+        } else {
+          try { json = JSON.parse(text); } catch { throw new Error('Paste a Pathbuilder 2e Export JSON link, a public D&D Beyond character link, or the JSON from either'); }
+        }
+        const read = I.read(json), from = I.detect(json) === 'pathbuilder' ? 'Pathbuilder 2e export' : 'D&D Beyond character';
+        const { values, count } = I.fit(ch.layout, read.values);
+        if (!count) throw new Error(`Nothing in that ${from} matches this sheet's fields. Imports fill the starter ${I.detect(json) === 'pathbuilder' ? 'Pathfinder 2e' : 'D&D 5e'} template and forks that keep its fields`);
+        msg.textContent = '';
+        if (!await confirmDialog(`Fill ${plural(count, 'field')} from ${read.name ? `${read.name}'s` : 'the'} ${from}? What is in those fields now is replaced; the rest stay as they are.`, { ok: 'Fill the sheet' })) return;
+        await ctx.post('character_values', { id: ch.id, values }, cid());
+        toast(`Filled ${plural(count, 'field')}`);
+        ctx.route();
+      } catch (err) { msg.textContent = err.message; }
+    };
+    file.addEventListener('change', async () => { const f = file.files[0]; file.value = ''; if (f) go(await f.text()); });
+    return el('div', { class: 'card sheet-import', hidden: true },
+      el('h3', {}, 'Import a character'),
+      el('p', { class: 'small muted' }, 'From Pathbuilder 2e (Menu > Export > Export JSON, then copy the link) or D&D Beyond (the character\'s page link; its privacy must be Public). The values land on the fields of the starter Pathfinder 2e or D&D 5e template. The name stays this sheet\'s.'),
+      box, el('div', { class: 'row' }, button('Read it', () => go(box.value), 'primary small'), el('label', { class: 'small' }, 'or a file ', file)), msg);
+  }
+
   /** A character's sheet, or (play) its Play view. */
   async function renderCharacter(id, play = false) {
     stopPresence();
@@ -731,6 +785,7 @@ const Sheets = (() => {
     let editing = false;
     const values = ch.values ? { ...ch.values } : {};
     let hidden = ch.hidden || [];
+    let openPage = null;   // the sheet's open page, kept when it is drawn again
     // a refused or failed save: say why, and draw the sheet again from the server (a GM whose Edit ran out is back to reading)
     const sender = fieldSender(ch.id, err => {
       toast(err.message, true);
@@ -740,6 +795,7 @@ const Sheets = (() => {
     for (const [k, v] of Object.entries(values)) sender.known(k, v);
     const bar = viewersBar();
     const body = el('div');
+    const imports = importPanel(ch);
     const href = `#/c/${cid()}/characters/${ch.id}`;
     const editBtn = gmOnOthers ? button('Edit', async () => {
       editing = !editing;
@@ -766,7 +822,7 @@ const Sheets = (() => {
       if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
       if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v)));
       form = renderSheetForm(ch.layout, values, {
-        mode: canChange() ? 'edit' : 'view', hidden, canHide: mine,
+        mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
       });
@@ -784,7 +840,9 @@ const Sheets = (() => {
       el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
-        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, ch.can_edit ? button('Delete character', async () => {
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn,
+          ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
+          ch.can_edit ? button('Delete character', async () => {
           if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
           try {
             await ctx.post('character_delete', { id: ch.id }, cid());
@@ -795,7 +853,7 @@ const Sheets = (() => {
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
-        bar, body));
+        bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded
     startPresence(ch, {
       editing,

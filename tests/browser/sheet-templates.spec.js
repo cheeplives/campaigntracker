@@ -1,7 +1,7 @@
 // The sheet template library and editor: building a template by hand, finding it in the library, forking someone
 // else's (whose own Edit button isn't there), and reordering fields by dragging them, which works by touch too.
 const { test, expect } = require("@playwright/test");
-const { person, signIn, approve, api, newContext, closeContexts } = require("./helpers");
+const { person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function ready(page, browser, name) {
@@ -176,4 +176,67 @@ test("Templates: a large box fits a phone screen", async ({ page, browser }) => 
   // a small box's dropdown is squeezed to fit inside it
   const [cell, pick] = [await page.locator('.sheet-field[data-key="rank"]').boundingBox(), await page.getByLabel("Rank", { exact: true }).boundingBox()];
   expect(pick.x + pick.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+});
+
+test("Templates: sections can sit on pages, shown as tabs on the sheet", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Pager");
+  await page.goto("index.html#/templates/new");
+  await page.getByLabel("Template name").fill(`Paged ${who.id}`);
+  await page.getByLabel("Game", { exact: true }).fill("Test RPG");
+  const sec = n => page.locator(".sheet-ed-section").nth(n);
+  await sec(0).getByLabel("Section title").fill("Stats");
+  await sec(0).getByRole("button", { name: "Add field" }).click();
+  await page.getByRole("button", { name: "Add section" }).click();
+  await sec(1).getByLabel("Section title").fill("Spells");
+  await sec(1).getByLabel("Page").fill("Magic");
+  await sec(1).getByRole("button", { name: "Add field" }).click();
+  await field(page, 1).getByLabel("Field label").fill("Spell list");
+  await page.getByRole("button", { name: "Add section" }).click();
+  await sec(2).getByLabel("Section title").fill("Gear");
+  await sec(2).getByRole("button", { name: "Add field" }).click();
+  await field(page, 2).getByLabel("Field label").fill("Pack");
+
+  // the preview shows the tabs: sections without a page are on the first, named Sheet
+  const preview = page.locator(".sheet-preview");
+  await expect(preview.getByRole("tab")).toHaveText(["Sheet", "Magic"]);
+  await expect(preview.getByRole("heading", { name: "Stats" })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "Gear" })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "Spells" })).toBeHidden();
+  await preview.getByRole("tab", { name: "Magic" }).click();
+  await expect(preview.getByRole("heading", { name: "Spells" })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "Stats" })).toBeHidden();
+
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+$/);
+  const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
+  const secs = (await layoutOf(page, id)).layout.sections;
+  expect(secs.map(s => s.page ?? null)).toEqual([null, "Magic", null]);
+
+  const bad = { sections: [{ key: "a", title: "A", page: "", fields: [] }] };
+  const r = await api(page, "template_save", { name: "No page name", game: "X", layout: bad });
+  expect(r.status).toBe(400);
+  expect(r.json.message).toMatch(/[Pp]age/);
+});
+
+test("Templates: a template without pages has no tabs", async ({ page, browser }) => {
+  await ready(page, browser, "Flat");
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] };
+  const tpl = (await api(page, "template_save", { name: "Flat", game: "X", layout })).json.template;
+  await page.goto(`index.html#/templates/${tpl.id}`);
+  await expect(page.getByRole("heading", { name: "A", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab")).toHaveCount(0);
+});
+
+test("Templates: the library lists templates by name, A to Z, whatever is used most", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Sorter");
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] };
+  const tag = `Zq${who.id}`;
+  for (const name of [`${tag} beta`, `${tag} Alpha`, `${tag} gamma`]) expect((await api(page, "template_save", { name, game: "X", layout })).status).toBe(200);
+  // the last one is used, which used to put it first
+  const used = (await (await page.request.get(`api/index.php?a=templates&q=${encodeURIComponent(`${tag} gamma`)}`)).json()).templates[0];
+  const cid = await makeCampaign(page, `Sort ${who.id}`);
+  expect((await api(page, "character_create", { template_id: used.id, name: "User" }, cid)).status).toBe(200);
+  await page.goto("index.html#/templates");
+  await page.getByLabel("Search templates").fill(tag);
+  await expect(page.locator(".template-card .template-name")).toHaveText([`${tag} Alpha`, `${tag} beta`, `${tag} gamma`]);
 });

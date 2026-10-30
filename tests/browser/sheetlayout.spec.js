@@ -124,3 +124,16 @@ test("a field's box size is small, medium or large", () => {
   const bad = sample(); bad.sections[0].fields[0].size = "huge";
   expect(L.validate(bad).join(" ")).toMatch(/size/);
 });
+
+test("a section's page is a name of 1 to 100 characters, and a template has 20 pages at most", () => {
+  const ok = sample(); ok.sections[1].page = "Magic";
+  expect(L.validate(ok)).toEqual([]);
+  for (const page of ["", "   ", "x".repeat(101), 3]) {
+    const bad = sample(); bad.sections[0].page = page;
+    expect(L.validate(bad).join(" "), JSON.stringify(page)).toMatch(/[Pp]age/);
+  }
+  const many = { sections: Array.from({ length: 21 }, (_, i) => ({ key: `s${i}`, title: `S${i}`, page: `P${i}`, fields: [] })) };
+  expect(L.validate(many).join(" ")).toMatch(/20 pages/);
+  expect(L.pages(ok).map(p => p.name)).toEqual(["Sheet", "Magic"]);
+  expect(L.pages(sample()).length).toBe(1);
+});

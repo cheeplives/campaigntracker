@@ -1140,6 +1140,11 @@ path.map-route-line.secret { stroke: var(--dim); }
 .sheet-pdf-pages { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow: auto; }
 .sheet-pdf-pages canvas { max-width: 100%; border: 1px solid var(--line); background: #fff; }
 .sheet-sec { margin-bottom: 12px; }
+.sheet-tabs { margin-bottom: 10px; flex-wrap: wrap; }
+.sheet-import { margin: 8px 0; }
+.sheet-import textarea { width: 100%; }
+.sheet-import[hidden] { display: none; }
+.sheet-ed-page { max-width: 12em; }
 .sheet-sec.is-hidden, .sheet-field.is-hidden { opacity: .55; }
 .sheet-sec-head { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .sheet-sec-head h3 { margin: 0; flex: 1; }

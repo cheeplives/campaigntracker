@@ -1439,6 +1439,7 @@ try {
     case 'template_save':
     case 'template_fork':
     case 'template_delete':
+    case 'sheet_import_fetch':
         templates_action($action);
 
     case 'starter_templates_load':
@@ -1451,6 +1452,7 @@ try {
     case 'character':
     case 'character_create':
     case 'character_field':
+    case 'character_values':
     case 'character_save':
     case 'character_delete':
     case 'character_presence':
