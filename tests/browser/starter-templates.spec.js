@@ -28,7 +28,7 @@ test("Starter files: about forty, each a valid layout with its source, named by 
 test("Starter templates load, and loading again updates", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "chromium", "the server answers the same whatever the browser");
   await signIn(page, ADMIN);
-  sql("DELETE FROM sheet_templates WHERE starter_key IS NOT NULL AND id NOT IN (SELECT template_id FROM characters)");
+  sql("DELETE FROM sheet_templates WHERE starter_key IS NOT NULL AND id NOT IN (SELECT template_id FROM sheet_characters)");
   const first = await api(page, "starter_templates_load", {});
   expect(first.status).toBe(200);
   const n = Number(sql("SELECT COUNT(*) FROM sheet_templates WHERE starter_key IS NOT NULL").trim());

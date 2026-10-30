@@ -110,7 +110,7 @@ function sheet_layout_in($layout): array {
 function templates_query(string $where, array $args): array {
     $st = db()->prepare("SELECT t.id, t.name, t.game, t.edition, t.author_id, t.forked_from_id, t.version, t.is_listed, t.starter_key, t.updated_at,
             u.display_name AS author, o.name AS forked_from_name,
-            (SELECT COUNT(*) FROM characters c WHERE c.template_id=t.id) AS uses,
+            (SELECT COUNT(*) FROM sheet_characters c WHERE c.template_id=t.id) AS uses,
             (SELECT COUNT(*) FROM sheet_templates f WHERE f.forked_from_id=t.id) AS forks
         FROM sheet_templates t LEFT JOIN users u ON u.id=t.author_id LEFT JOIN sheet_templates o ON o.id=t.forked_from_id
         WHERE $where ORDER BY uses DESC, t.name");
@@ -191,7 +191,7 @@ function templates_action(string $action): void {
         case 'template_delete':
             $t = template_row(int_in(p('id'), 1));
             need_template_editor($t);
-            $st = db()->prepare('SELECT COUNT(*) FROM characters WHERE template_id=?');
+            $st = db()->prepare('SELECT COUNT(*) FROM sheet_characters WHERE template_id=?');
             $st->execute([$t['id']]);
             if ((int)$st->fetchColumn()) fail('Characters use this template. Unlist it instead', 409, 'in_use');
             db()->prepare('DELETE FROM sheet_templates WHERE id=?')->execute([$t['id']]);
@@ -291,7 +291,7 @@ function character_row(int $cid, int $id, bool $isGm): array {
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
     $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
             u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign
-        FROM characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
+        FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
         WHERE c.campaign_id=?' . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
     $st->execute(array_merge([$cid], $isGm ? [] : [(int)me()['id']], $id !== null ? [$id] : []));
@@ -337,7 +337,7 @@ function characters_by_entry(int $cid, bool $isGm): array {
 /** Write a character's name into character_name for every member whose active character it is. */
 function character_names_sync(int $entryId): void {
     if (!has_sheets()) return;
-    db()->prepare('UPDATE campaign_members m JOIN characters c ON c.id=m.active_character_id JOIN encyclopedia_entries e ON e.id=c.entry_id
+    db()->prepare('UPDATE campaign_members m JOIN sheet_characters c ON c.id=m.active_character_id JOIN encyclopedia_entries e ON e.id=c.entry_id
         SET m.character_name=e.name WHERE c.entry_id=? AND c.owner_id=m.user_id AND e.is_secret=0')->execute([$entryId]);
 }
 /** A name for a character's entry that no other entry of the campaign has (but $exceptEntry). */
@@ -381,7 +381,7 @@ function characters_action(string $action, int $cid): void {
             if (p('entry_id')) {
                 $e = entry_row($cid, int_in(p('entry_id'), 1), $role);
                 if (!in_array($e['category'] ?? null, [null, 'person'], true)) fail('Only a Person entry can have a character sheet');
-                $chk = $pdo->prepare('SELECT 1 FROM characters WHERE entry_id=?');
+                $chk = $pdo->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
                 $chk->execute([$e['id']]);
                 if ($chk->fetchColumn()) fail('That entry already has a character sheet', 409);
                 if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$e['id']]);
@@ -392,7 +392,7 @@ function characters_action(string $action, int $cid): void {
                 $entry = (int)$pdo->lastInsertId();
                 if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
             }
-            $pdo->prepare("INSERT INTO characters (campaign_id, owner_id, template_id, entry_id, kind, sheet_public, template_version, field_values, field_stamps, hidden)
+            $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, sheet_public, template_version, field_values, field_stamps, hidden)
                 VALUES (?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $kind === 'pc' ? 1 : 0, $t['version']]);
             $id = (int)$pdo->lastInsertId();
             $pdo->commit();
@@ -417,10 +417,10 @@ function characters_action(string $action, int $cid): void {
             $stored = json_decode($c['field_values'], true) ?: [];
             if (array_key_exists($key, $stored) && (!sheet_value($fields[$key][0], $stored[$key])[0] || sheet_stale_list($fields[$key][0], $stored[$key]))) {
                 for ($n = 1, $keep = "$key~old"; array_key_exists($keep, $stored); $keep = "$key~old" . ++$n);
-                db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
+                db()->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
                     ->execute(['$."' . $keep . '"', $path, $c['id']]);
             }
-            db()->prepare('UPDATE characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
+            db()->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
                 ->execute([$path, json_encode($value, JSON_UNESCAPED_UNICODE), $path, $me['id'], (int)floor(microtime(true) * 1000), $c['id']]);
             out(['ok' => true, 'value' => $value]);
 
@@ -464,7 +464,7 @@ function characters_action(string $action, int $cid): void {
             }
             $pdo = db();
             $pdo->beginTransaction();
-            $st = $pdo->prepare('UPDATE characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
+            $st = $pdo->prepare('UPDATE sheet_characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
             $st->execute(array_merge($args, [$c['id'], int_in(p('version'), 1)]));
             if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
             if ($handed !== null) $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
@@ -481,7 +481,7 @@ function characters_action(string $action, int $cid): void {
             $pdo = db();
             $pdo->beginTransaction();
             $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=?')->execute([$c['id']]);
-            $pdo->prepare('DELETE FROM characters WHERE id=?')->execute([$c['id']]);
+            $pdo->prepare('DELETE FROM sheet_characters WHERE id=?')->execute([$c['id']]);
             $pdo->commit();
             out(['ok' => true]);
 
@@ -541,7 +541,7 @@ function character_out(array $c, bool $isGm, bool $seen = false): array {
     $hidden = json_decode($c['hidden'], true) ?: [];
     $card = character_card($c, $isGm);
     $changed = (int)$c['template_version'] !== (int)$c['tversion'];
-    if ($seen && $full && $changed) db()->prepare('UPDATE characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
+    if ($seen && $full && $changed) db()->prepare('UPDATE sheet_characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
     // the rest of the party isn't told which fields and sections are hidden, or that they exist
     if (!$full) foreach ($layout['sections'] as $i => $sec) {
         if (in_array($sec['key'], $hidden, true)) { unset($layout['sections'][$i]); continue; }

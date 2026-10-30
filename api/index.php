@@ -1188,7 +1188,7 @@ const CAMPAIGN_COPY = [
     ['play_sessions', 'key' => 'session'],
     ['session_notes', 'maps' => ['session_id' => 'session']],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
-    ['characters', 'maps' => ['entry_id' => 'encyclopedia']],
+    ['sheet_characters', 'maps' => ['entry_id' => 'encyclopedia']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -1257,7 +1257,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
                     $r[$col] = $ids[$m][(int)$r[$col]];
                 }
                 foreach (array_keys($spec['later'] ?? []) as $col) if (array_key_exists($col, $r)) $r[$col] = null;
-                if ($t === 'characters') $r['owner_id'] = $me['id'];
+                if ($t === 'sheet_characters') $r['owner_id'] = $me['id'];
                 if ($t === 'attachments') {
                     $m = COPY_PARENTS[$r['parent_type']] ?? null;
                     if ($m === null || !isset($ids[$m][(int)$r['parent_id']])) continue;
@@ -1665,7 +1665,7 @@ try {
         // with an active character, the name is its entry's name: renaming one renames the other
         $active = null;
         if (has_sheets()) {
-            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
+            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN sheet_characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
                 JOIN encyclopedia_entries e ON e.id=c.entry_id AND e.is_secret=0 WHERE m.campaign_id=? AND m.user_id=?');
             $st->execute([$cid, $uid]);
             $active = $st->fetchColumn() ?: null;
@@ -2476,7 +2476,7 @@ try {
         $category = array_key_exists('category', body()) ? category_in(p('category')) : ($old['category'] ?? null);
         if ($old && !$isGm && $name !== $old['name'] && has_sheets()) {
             // a character's name is its player's to change
-            $owner = db()->prepare('SELECT owner_id FROM characters WHERE entry_id=?');
+            $owner = db()->prepare('SELECT owner_id FROM sheet_characters WHERE entry_id=?');
             $owner->execute([$id]);
             $o = $owner->fetch();
             if ($o && (int)$o['owner_id'] !== me()['id']) fail('Only its player or a GM can rename this character', 403);
@@ -2598,7 +2598,7 @@ try {
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
         if (has_sheets()) {
-            $st = db()->prepare('SELECT 1 FROM characters WHERE entry_id=?');
+            $st = db()->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
             $st->execute([$e['id']]);
             if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
         }

@@ -4,14 +4,15 @@
 const { test, expect } = require("@playwright/test");
 const { execFileSync } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 const ROOT = path.join(__dirname, "..", "..");
 
 test("Sheets: a fresh database has the tables, and the upgrade finds nothing left to do", async ({ page, browser }) => {
-  const tables = sql("SHOW TABLES LIKE 'sheet\\_%'; SHOW TABLES LIKE 'characters';").trim().split("\n");
-  for (const t of ["sheet_templates", "sheet_presence", "characters"]) expect(tables).toContain(t);
+  const tables = sql("SHOW TABLES LIKE 'sheet\\_%';").trim().split("\n");
+  for (const t of ["sheet_templates", "sheet_presence", "sheet_characters"]) expect(tables).toContain(t);
   expect(sql("SHOW COLUMNS FROM campaign_members LIKE 'active_character_id'").trim()).not.toBe("");
   const gm = person("Hob");
   await signIn(page, gm);
@@ -23,6 +24,26 @@ test("Sheets: a fresh database has the tables, and the upgrade finds nothing lef
   const steps = execFileSync("php", ["-r", `require '${ROOT}/api/upgrade.php'; echo implode("\\n", array_column(upgrade_steps(), 0));`], { env }).toString();
   expect(steps).toContain("023_character_sheets.sql");
   execFileSync("php", [path.join(ROOT, "tools", "migrate.php"), "--check"], { env });
+});
+
+test("Sheets: the schema installs beside another app's characters table and leaves it alone", ({}, info) => {
+  test.skip(info.project.name !== "chromium", "the database answers the same whatever the browser");
+  // Chronicle can share its database with Sinless, which has a characters table of its own (with a BIGINT id).
+  const db = `chronicle_shared_${process.pid}`;
+  const mysql = (input, database = "") => {
+    const args = ["-h", process.env.DB_HOST || "127.0.0.1", "-P", process.env.DB_PORT || "3306", "-u", process.env.DB_USER || "root", "-N"];
+    if (process.env.DB_PASSWORD) args.push(`-p${process.env.DB_PASSWORD}`);
+    return execFileSync("mysql", [...args, ...(database ? [database] : [])], { input, stdio: ["pipe", "pipe", "pipe"] }).toString();
+  };
+  mysql(`DROP DATABASE IF EXISTS ${db}; CREATE DATABASE ${db};`);
+  try {
+    mysql("CREATE TABLE characters (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, handle VARCHAR(40)); INSERT INTO characters (handle) VALUES ('Twitch');", db);
+    mysql(fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8"), db);
+    expect(mysql("SELECT handle FROM characters", db).trim()).toBe("Twitch");
+    expect(mysql("SHOW TABLES LIKE 'sheet\\_%'", db).trim().split("\n").sort()).toEqual(["sheet_characters", "sheet_presence", "sheet_templates"]);
+  } finally {
+    mysql(`DROP DATABASE IF EXISTS ${db}`);
+  }
 });
 
 /** A small valid layout: Stats (a number and a Play counter) and Background (long text). */

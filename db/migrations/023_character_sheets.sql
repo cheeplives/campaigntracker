@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS sheet_templates (
 -- A character in a campaign: one filled-in copy of a template, with its own Encyclopedia entry (which holds its name).
 -- field_values: JSON keyed by field key; field_stamps: who last changed each field and when, [user id, unix ms];
 -- hidden: field and section keys only the owner and GMs see. sheet_public: an NPC's sheet is GM-only until it is 1.
-CREATE TABLE IF NOT EXISTS characters (
+CREATE TABLE IF NOT EXISTS sheet_characters (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   owner_id BIGINT UNSIGNED NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS characters (
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (template_id) REFERENCES sheet_templates(id),
-  FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id)
+  FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id) ON DELETE CASCADE   -- only with its campaign: entry_delete refuses an entry with a sheet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Who has a sheet open: one row per person per sheet, refreshed every 15 seconds while it is open; rows older than
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS sheet_presence (
   seen_at DATETIME NOT NULL,
   editing TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (character_id, user_id),
-  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+  FOREIGN KEY (character_id) REFERENCES sheet_characters(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
