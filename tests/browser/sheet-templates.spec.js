@@ -297,6 +297,9 @@ test("Templates: sections sit side by side, a compact section puts labels beside
       await box('.sheet-preview .sheet-field[data-key="notes"]'), await box('.sheet-preview .sheet-sec[data-key="stats"] .sheet-fields')];
     return !!name && !!motto && !!notes && Math.abs(motto.w - (name.w * 3 + 24)) < 6 && Math.abs(notes.w - s.w) < 2;
   }).toBe(true);
+  // and the text box inside a wide field fills it
+  const [motto, mottoInput] = [await box('.sheet-preview .sheet-field[data-key="motto"]'), await box('.sheet-preview .sheet-field[data-key="motto"] input')];
+  expect(Math.abs(mottoInput.w - motto.w)).toBeLessThan(2);
   // compact: the label sits on the same line as its box
   await expect.poll(async () => {
     const [label, input] = [await box('.sheet-preview .sheet-field[data-key="stealth"] .sheet-label'), await box('.sheet-preview .sheet-field[data-key="stealth"] input')];
