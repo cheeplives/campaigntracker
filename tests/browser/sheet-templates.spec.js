@@ -117,3 +117,63 @@ test("Templates: a finger on a field's handle drags it too", async ({ page, brow
   await touch("touchEnd");
   await expect.poll(() => page.locator(".sheet-ed-field input[aria-label='Field label']").evaluateAll(els => els.map(e => e.value))).toEqual(["Bravo", "Alpha"]);
 });
+
+test("Templates: a field can be small, medium or large on the sheet, and a bad size is refused", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Sizer");
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("index.html#/templates/new");
+  await page.getByLabel("Template name").fill(`Sized ${who.id}`);
+  await page.getByLabel("Game", { exact: true }).fill("Test RPG");
+  const s1 = page.locator(".sheet-ed-section").nth(0);
+  for (const [i, label, size] of [[0, "Age", "small"], [1, "Name", null], [2, "Motto", "large"]]) {
+    await s1.getByRole("button", { name: "Add field" }).click();
+    await field(page, i).getByLabel("Field label").fill(label);
+    expect(await field(page, i).getByLabel("Box size").inputValue()).toBe("medium");
+    if (size) await field(page, i).getByLabel("Box size").selectOption(size);
+  }
+  // a long text has no size to pick: it runs the full width
+  await s1.getByRole("button", { name: "Add field" }).click();
+  await field(page, 3).getByLabel("Field type").selectOption("longtext");
+  await expect(field(page, 3).getByLabel("Box size")).toHaveCount(0);
+
+  // the preview is drawn again a moment after each change, so each look measures one drawing whole
+  const measure = () => page.evaluate(() => {
+    const box = k => document.querySelector(`.sheet-preview .sheet-field[data-key="${k}"]`)?.getBoundingClientRect();
+    const [age, name, motto] = [box("age"), box("name"), box("motto")];
+    const input = document.querySelector('.sheet-preview .sheet-field[data-key="age"] input')?.getBoundingClientRect();
+    if (!age || !name || !motto || !input) return null;
+    return { small: age.width, medium: name.width, large: motto.width, inside: input.right <= age.right + 1 };
+  });
+  await expect.poll(async () => {
+    const m = await measure();
+    return !!m && Math.abs(m.small * 2 - m.medium) < 16 && Math.abs(m.medium * 2 - m.large) < 16 && m.inside;  // a small box's input stays inside it
+  }).toBe(true);
+
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+$/);
+  const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
+  const fields = (await layoutOf(page, id)).layout.sections[0].fields;
+  expect(fields.map(f => f.size ?? null)).toEqual(["small", null, "large", null]);
+
+  const bad = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text", size: "huge" }] }] };
+  const r = await api(page, "template_save", { name: "Huge", game: "X", layout: bad });
+  expect(r.status).toBe(400);
+  expect(r.json.message).toMatch(/size/);
+});
+
+test("Templates: a large box fits a phone screen", async ({ page, browser }) => {
+  await ready(page, browser, "Narrow");
+  await page.setViewportSize({ width: 360, height: 740 });
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "big", label: "Big", type: "text", size: "large" }, { key: "tiny", label: "Tiny", type: "number", size: "small" },
+    { key: "rank", label: "Rank", type: "choice", options: ["Untrained", "Trained", "Expert", "Master", "Legendary"], size: "small" }] }] };
+  const tpl = (await api(page, "template_save", { name: "Phone", game: "X", layout })).json.template;
+  await page.goto(`index.html#/templates/${tpl.id}`);
+  const big = page.locator('.sheet-field[data-key="big"]');
+  await expect(big).toBeVisible();
+  const box = await big.boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  // a small box's dropdown is squeezed to fit inside it
+  const [cell, pick] = [await page.locator('.sheet-field[data-key="rank"]').boundingBox(), await page.getByLabel("Rank", { exact: true }).boundingBox()];
+  expect(pick.x + pick.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+});

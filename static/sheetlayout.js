@@ -12,6 +12,8 @@
   const TYPES = ['text', 'longtext', 'number', 'counter', 'pips', 'checkbox', 'choice', 'list'];
   const LIMITS = { sections: 50, fields: 1000, label: 100, option: 60, options: 50, columns: 10, pips: 30, rows: 200, text: 500, longtext: 20000 };
   const KEY = /^[a-z][a-z0-9_]{0,39}$/;
+  // how wide a field's box is on the sheet: small is half the usual, large twice it (long text and lists run the full width)
+  const SIZES = ['small', 'medium', 'large'];
 
   const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const okLabel = s => typeof s === 'string' && s.trim().length >= 1 && s.length <= LIMITS.label;
@@ -60,6 +62,7 @@
           }
         }
         for (const b of ['min', 'max']) if (f[b] !== undefined && f[b] !== null && !Number.isFinite(f[b])) out.push(`${name}: ${b} must be a number`);
+        if (f.size !== undefined && !SIZES.includes(f.size)) out.push(`${name}: a box size is small, medium or large`);
         if (f.vtt !== undefined && !okVtt(f.vtt)) out.push(`${name}: each VTT mapping needs a lower-case VTT name, a system and a data path (letters, digits, _ . - [ ])`);
       }
     }
@@ -114,7 +117,8 @@
       }
       case 'pips': return Number.isInteger(v) && v >= 0 && v <= field.count ? { ok: true, value: v } : NO;
       case 'checkbox': return typeof v === 'boolean' ? { ok: true, value: v } : NO;
-      case 'choice': return v === null || (field.options || []).includes(v) ? { ok: true, value: v } : NO;
+      // one of its options, or a custom entry typed in its place
+      case 'choice': return v === null || (typeof v === 'string' && v.length <= LIMITS.text) ? { ok: true, value: v } : NO;
       case 'list': {
         if (!Array.isArray(v) || v.length > LIMITS.rows) return NO;
         const cols = (field.columns || []).map(c => c.key), rows = [];

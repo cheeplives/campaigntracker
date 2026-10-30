@@ -70,28 +70,32 @@
       "label": "Strength",
       "type": "number",
       "min": 1,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_agility",
       "label": "Agility",
       "type": "number",
       "min": 1,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_wits",
       "label": "Wits",
       "type": "number",
       "min": 1,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "attr_empathy",
       "label": "Empathy",
       "type": "number",
       "min": 1,
-      "max": 5
+      "max": 5,
+      "size": "small"
      }
     ]
    },
@@ -104,84 +108,96 @@
       "label": "Heavy Machinery",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_stamina",
       "label": "Stamina",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_close_combat",
       "label": "Close Combat",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_mobility",
       "label": "Mobility",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_ranged_combat",
       "label": "Ranged Combat",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_piloting",
       "label": "Piloting",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_observation",
       "label": "Observation",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_comtech",
       "label": "Comtech",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_command",
       "label": "Command",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_manipulation",
       "label": "Manipulation",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "sk_medical_aid",
       "label": "Medical Aid",
       "type": "number",
       "min": 0,
-      "max": 5
+      "max": 5,
+      "size": "small"
      }
     ]
    },
@@ -295,7 +311,8 @@
      {
       "key": "encumbrance",
       "label": "Encumbrance",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -418,4 +435,4 @@
    }
   ]
  }
-}
+}

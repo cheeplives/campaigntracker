@@ -578,8 +578,11 @@ test("a published session is the player's to read and export; notes move between
   await expect(page.locator(".sess-notes .snote")).toHaveCount(4);
   expect((await one(page, cid, other)).json.notes.map(n => n.text)).toEqual(["Took a quick job to Europa", "Sensor set off on approach to Jupiter"]);
   await page.goto(`index.html#/c/${cid}/sessions/${other}`);
-  await page.locator(".sess-more > summary").click();
-  await page.getByRole("button", { name: "Delete session" }).click();
+  // the page can be drawn again just after it opens (the move above changed the campaign), closing the ⋯ menu: open it until it stays
+  await expect(async () => {
+    if (!await page.locator(".sess-more").evaluate(d => d.open)) await page.locator(".sess-more > summary").click();
+    await page.getByRole("button", { name: "Delete session" }).click({ timeout: 2000 });
+  }).toPass();
   await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/sessions$`));
   await expect(page.locator(".sess-item")).toHaveCount(1);

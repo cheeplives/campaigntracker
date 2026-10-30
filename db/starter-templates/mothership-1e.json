@@ -69,49 +69,56 @@
       "label": "Strength",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "stat_speed",
       "label": "Speed",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "stat_intellect",
       "label": "Intellect",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "stat_combat",
       "label": "Combat",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "save_sanity",
       "label": "Sanity",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "save_fear",
       "label": "Fear",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "save_body",
       "label": "Body",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      }
     ]
    },
@@ -240,4 +247,4 @@
    }
   ]
  }
-}
+}

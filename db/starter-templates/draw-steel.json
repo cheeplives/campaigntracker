@@ -70,35 +70,40 @@
       "label": "Might",
       "type": "number",
       "min": -5,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "ch_agility",
       "label": "Agility",
       "type": "number",
       "min": -5,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "ch_reason",
       "label": "Reason",
       "type": "number",
       "min": -5,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "ch_intuition",
       "label": "Intuition",
       "type": "number",
       "min": -5,
-      "max": 5
+      "max": 5,
+      "size": "small"
      },
      {
       "key": "ch_presence",
       "label": "Presence",
       "type": "number",
       "min": -5,
-      "max": 5
+      "max": 5,
+      "size": "small"
      }
     ]
    },
@@ -299,7 +304,8 @@
      {
       "key": "languages",
       "label": "Languages",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      }
     ]
    },
@@ -384,4 +390,4 @@
    }
   ]
  }
-}
+}

@@ -51,7 +51,9 @@ test("coerce says what each type of field may hold", () => {
   expect(L.coerce(f.hp, 5).ok).toBe(false);
   expect(L.coerce(f.inspiration, 4).ok).toBe(false);
   expect(L.coerce(f.inspiration, 2)).toEqual({ ok: true, value: 2 });
-  expect(L.coerce(f.class, "Bard").ok).toBe(false);
+  expect(L.coerce(f.class, "Bard")).toEqual({ ok: true, value: "Bard" });  // a custom entry beside the options
+  expect(L.coerce(f.class, "x".repeat(501)).ok).toBe(false);
+  expect(L.coerce(f.class, 3).ok).toBe(false);
   expect(L.coerce(f.class, null)).toEqual({ ok: true, value: null });
   expect(L.coerce(f.gear, Array.from({ length: 201 }, () => ({ item: "Rope" }))).ok).toBe(false);
   expect(L.coerce(f.gear, [{ item: "Rope", qty: "2", junk: "x" }])).toEqual({ ok: true, value: [{ item: "Rope", qty: "2" }] });
@@ -112,4 +114,13 @@ test("validate takes an optional VTT mapping on a field: a system and a path for
     const bad = sample(); bad.sections[0].fields[1].vtt = vtt;
     expect(L.validate(bad).join(" "), JSON.stringify(vtt)).toMatch(/VTT/);
   }
+});
+
+test("a field's box size is small, medium or large", () => {
+  for (const size of ["small", "medium", "large"]) {
+    const ok = sample(); ok.sections[0].fields[0].size = size;
+    expect(L.validate(ok)).toEqual([]);
+  }
+  const bad = sample(); bad.sections[0].fields[0].size = "huge";
+  expect(L.validate(bad).join(" ")).toMatch(/size/);
 });

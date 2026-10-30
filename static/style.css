@@ -1143,9 +1143,18 @@ path.map-route-line.secret { stroke: var(--dim); }
 .sheet-sec.is-hidden, .sheet-field.is-hidden { opacity: .55; }
 .sheet-sec-head { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .sheet-sec-head h3 { margin: 0; flex: 1; }
-.sheet-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 12px; }
-.sheet-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+/* half-width columns: a field takes two (medium), one (small) or four (large; the full width when four don't fit) */
+.sheet-sec { container-type: inline-size; }
+.sheet-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(79px, 1fr)); gap: 8px 12px; }
+.sheet-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; grid-column: span 2; }
+.sheet-field.size-small { grid-column: span 1; }
+.sheet-field.size-large { grid-column: span 4; }
+@container (max-width: 351px) { .sheet-field.size-large { grid-column: 1 / -1; } }
+@container (max-width: 169px) { .sheet-field { grid-column: 1 / -1; } }
 .sheet-field.wide { grid-column: 1 / -1; }
+.sheet-choice { display: flex; flex-direction: column; gap: 4px; }
+.sheet-control select, .sheet-control input:not([type=checkbox]) { max-width: 100%; }  /* a small box squeezes its dropdown and number box to fit */
+.sheet-choice input[hidden] { display: none; }
 .sheet-label { display: flex; align-items: center; gap: 6px; font: 700 .85rem var(--disp); text-transform: uppercase; letter-spacing: .05em; color: var(--label); }
 .sheet-eye { padding: 0 4px; font-size: .85rem; }
 .sheet-counter-box { display: flex; gap: 6px; align-items: center; }

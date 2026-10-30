@@ -67,78 +67,90 @@
       "label": "Strength",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "stat_dexterity",
       "label": "Dexterity",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "stat_constitution",
       "label": "Constitution",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "stat_intelligence",
       "label": "Intelligence",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "stat_wisdom",
       "label": "Wisdom",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "stat_charisma",
       "label": "Charisma",
       "type": "number",
       "min": 3,
-      "max": 18
+      "max": 18,
+      "size": "small"
      },
      {
       "key": "debility_weak",
       "label": "Weak",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "debility_shaky",
       "label": "Shaky",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "debility_sick",
       "label": "Sick",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "debility_stunned",
       "label": "Stunned",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "debility_confused",
       "label": "Confused",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "debility_scarred",
       "label": "Scarred",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      }
     ]
    },
@@ -286,4 +298,4 @@
    }
   ]
  }
-}
+}

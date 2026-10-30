@@ -65,56 +65,64 @@
       "label": "STR",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_con",
       "label": "CON",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_siz",
       "label": "SIZ",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_dex",
       "label": "DEX",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_app",
       "label": "APP",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_int",
       "label": "INT",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_pow",
       "label": "POW",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      },
      {
       "key": "ch_edu",
       "label": "EDU",
       "type": "number",
       "min": 0,
-      "max": 100
+      "max": 100,
+      "size": "small"
      }
     ]
    },
@@ -192,336 +200,384 @@
       "label": "Accounting",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_anthropology",
       "label": "Anthropology",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_appraise",
       "label": "Appraise",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_archaeology",
       "label": "Archaeology",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_art_craft",
       "label": "Art/Craft",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_charm",
       "label": "Charm",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_climb",
       "label": "Climb",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_computer_use",
       "label": "Computer Use",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_credit_rating",
       "label": "Credit Rating",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_cthulhu_mythos",
       "label": "Cthulhu Mythos",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_disguise",
       "label": "Disguise",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_dodge",
       "label": "Dodge",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_drive_auto",
       "label": "Drive Auto",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_electrical_repair",
       "label": "Electrical Repair",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_electronics",
       "label": "Electronics",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_fast_talk",
       "label": "Fast Talk",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_fighting_brawl",
       "label": "Fighting (Brawl)",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_firearms_handgun",
       "label": "Firearms (Handgun)",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_firearms_rifle_shotgun",
       "label": "Firearms (Rifle/Shotgun)",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_first_aid",
       "label": "First Aid",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_history",
       "label": "History",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_intimidate",
       "label": "Intimidate",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_jump",
       "label": "Jump",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_language_other",
       "label": "Language (Other)",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_language_own",
       "label": "Language (Own)",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_law",
       "label": "Law",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_library_use",
       "label": "Library Use",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_listen",
       "label": "Listen",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_locksmith",
       "label": "Locksmith",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_mechanical_repair",
       "label": "Mechanical Repair",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_natural_world",
       "label": "Natural World",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_navigate",
       "label": "Navigate",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_occult",
       "label": "Occult",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_operate_heavy_machinery",
       "label": "Operate Heavy Machinery",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_persuade",
       "label": "Persuade",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_pilot",
       "label": "Pilot",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_psychology",
       "label": "Psychology",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_psychoanalysis",
       "label": "Psychoanalysis",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_ride",
       "label": "Ride",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_science",
       "label": "Science",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_sleight_of_hand",
       "label": "Sleight of Hand",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_spot_hidden",
       "label": "Spot Hidden",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_swim",
       "label": "Swim",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_throw",
       "label": "Throw",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "sk_track",
       "label": "Track",
       "type": "number",
       "min": 0,
-      "max": 99
+      "max": 99,
+      "size": "small"
      },
      {
       "key": "other_skills",
@@ -703,4 +759,4 @@
    }
   ]
  }
-}
+}

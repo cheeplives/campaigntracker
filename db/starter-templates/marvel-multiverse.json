@@ -261,7 +261,8 @@
      {
       "key": "weight",
       "label": "Weight",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "gender",
@@ -292,4 +293,4 @@
    }
   ]
  }
-}
+}

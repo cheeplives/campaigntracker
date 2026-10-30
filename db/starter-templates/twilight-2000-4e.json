@@ -81,7 +81,8 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "attr_agility",
@@ -92,7 +93,8 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "attr_intelligence",
@@ -103,7 +105,8 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "attr_empathy",
@@ -114,7 +117,8 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ]
+      ],
+      "size": "small"
      }
     ]
    },
@@ -132,7 +136,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_heavy_weapons",
@@ -144,7 +149,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_stamina",
@@ -156,7 +162,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_driving",
@@ -168,7 +175,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_mobility",
@@ -180,7 +188,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_ranged_combat",
@@ -192,7 +201,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_recon",
@@ -204,7 +214,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_survival",
@@ -216,7 +227,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_tech",
@@ -228,7 +240,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_command",
@@ -240,7 +253,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_persuasion",
@@ -252,7 +266,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_medical_aid",
@@ -264,7 +279,8 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "specialties",
@@ -418,7 +434,8 @@
      {
       "key": "encumbrance",
       "label": "Encumbrance",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "vehicles",
@@ -451,4 +468,4 @@
    }
   ]
  }
-}
+}

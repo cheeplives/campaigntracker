@@ -91,55 +91,64 @@
       "key": "attr_intellect",
       "label": "Intellect",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_cunning",
       "label": "Cunning",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_resolve",
       "label": "Resolve",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_might",
       "label": "Might",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_stamina",
       "label": "Stamina",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_presence",
       "label": "Presence",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_manipulation",
       "label": "Manipulation",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "attr_composure",
       "label": "Composure",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      }
     ]
    },
@@ -151,97 +160,113 @@
       "key": "sk_aim",
       "label": "Aim",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_athletics",
       "label": "Athletics",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_close_combat",
       "label": "Close Combat",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_command",
       "label": "Command",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_culture",
       "label": "Culture",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_empathy",
       "label": "Empathy",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_enigmas",
       "label": "Enigmas",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_humanities",
       "label": "Humanities",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_integrity",
       "label": "Integrity",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_larceny",
       "label": "Larceny",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_persuasion",
       "label": "Persuasion",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_pilot",
       "label": "Pilot",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_science",
       "label": "Science",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "sk_technology",
       "label": "Technology",
       "type": "pips",
-      "count": 5
+      "count": 5,
+      "size": "small"
      },
      {
       "key": "specialties",
@@ -411,4 +436,4 @@
    }
   ]
  }
-}
+}

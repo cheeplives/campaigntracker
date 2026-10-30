@@ -387,7 +387,8 @@
        "Normal (5)",
        "Heavy (6)"
       ],
-      "play": true
+      "play": true,
+      "size": "small"
      },
      {
       "key": "item_list",
@@ -439,4 +440,4 @@
    }
   ]
  }
-}
+}

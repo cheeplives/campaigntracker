@@ -53,49 +53,56 @@
       "label": "STR",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_bod",
       "label": "BOD",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_rfl",
       "label": "RFL",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_dex",
       "label": "DEX",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_int",
       "label": "INT",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_wil",
       "label": "WIL",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "attr_cha",
       "label": "CHA",
       "type": "number",
       "min": 1,
-      "max": 9
+      "max": 9,
+      "size": "small"
      },
      {
       "key": "edge",
@@ -207,12 +214,14 @@
      {
       "key": "gunnery",
       "label": "Gunnery",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "piloting",
       "label": "Piloting",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -310,4 +319,4 @@
    }
   ]
  }
-}
+}

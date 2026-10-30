@@ -67,42 +67,48 @@
       "label": "Strength",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_constitution",
       "label": "Constitution",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_intelligence",
       "label": "Intelligence",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_wisdom",
       "label": "Wisdom",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      },
      {
       "key": "attr_charisma",
       "label": "Charisma",
       "type": "number",
       "min": -5,
-      "max": 10
+      "max": 10,
+      "size": "small"
      }
     ]
    },
@@ -253,7 +259,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_acrobatics",
@@ -265,7 +272,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_arcana",
@@ -277,7 +285,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_athletics",
@@ -289,7 +298,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_computers",
@@ -301,7 +311,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_crafting",
@@ -313,7 +324,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_deception",
@@ -325,7 +337,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_diplomacy",
@@ -337,7 +350,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_intimidation",
@@ -349,7 +363,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_medicine",
@@ -361,7 +376,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_nature",
@@ -373,7 +389,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_occultism",
@@ -385,7 +402,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_performance",
@@ -397,7 +415,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_piloting",
@@ -409,7 +428,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_religion",
@@ -421,7 +441,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_society",
@@ -433,7 +454,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_stealth",
@@ -445,7 +467,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_survival",
@@ -457,7 +480,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "sk_thievery",
@@ -469,7 +493,8 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "lores",
@@ -496,12 +521,14 @@
        "Expert",
        "Master",
        "Legendary"
-      ]
+      ],
+      "size": "small"
      },
      {
       "key": "speed",
       "label": "Speed",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -652,7 +679,8 @@
      {
       "key": "bulk",
       "label": "Total Bulk",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "money_credits",
@@ -688,4 +716,4 @@
    }
   ]
  }
-}
+}

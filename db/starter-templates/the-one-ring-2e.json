@@ -68,36 +68,42 @@
       "label": "Strength",
       "type": "number",
       "min": 1,
-      "max": 8
+      "max": 8,
+      "size": "small"
      },
      {
       "key": "attr_heart",
       "label": "Heart",
       "type": "number",
       "min": 1,
-      "max": 8
+      "max": 8,
+      "size": "small"
      },
      {
       "key": "attr_wits",
       "label": "Wits",
       "type": "number",
       "min": 1,
-      "max": 8
+      "max": 8,
+      "size": "small"
      },
      {
       "key": "tn_strength_tn",
       "label": "Strength TN",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "tn_heart_tn",
       "label": "Heart TN",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "tn_wits_tn",
       "label": "Wits TN",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      }
     ]
    },
@@ -109,109 +115,127 @@
       "key": "sk_awe",
       "label": "Awe",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_athletics",
       "label": "Athletics",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_awareness",
       "label": "Awareness",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_hunting",
       "label": "Hunting",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_song",
       "label": "Song",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_craft",
       "label": "Craft",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_enhearten",
       "label": "Enhearten",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_travel",
       "label": "Travel",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_insight",
       "label": "Insight",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_healing",
       "label": "Healing",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_courtesy",
       "label": "Courtesy",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_battle",
       "label": "Battle",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_persuade",
       "label": "Persuade",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_scan",
       "label": "Scan",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_explore",
       "label": "Explore",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_riddle",
       "label": "Riddle",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "sk_lore",
       "label": "Lore",
       "type": "pips",
-      "count": 6
+      "count": 6,
+      "size": "small"
      },
      {
       "key": "favoured",
@@ -300,7 +324,8 @@
       "label": "Load",
       "type": "number",
       "play": true,
-      "min": 0
+      "min": 0,
+      "size": "small"
      },
      {
       "key": "cond_weary",
@@ -470,4 +495,4 @@
    }
   ]
  }
-}
+}

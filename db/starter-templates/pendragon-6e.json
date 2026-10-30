@@ -303,35 +303,40 @@
       "label": "SIZ",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_dex",
       "label": "DEX",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_str",
       "label": "STR",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_con",
       "label": "CON",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      },
      {
       "key": "attr_app",
       "label": "APP",
       "type": "number",
       "min": 1,
-      "max": 30
+      "max": 30,
+      "size": "small"
      }
     ]
    },
@@ -342,32 +347,38 @@
      {
       "key": "damage",
       "label": "Damage",
-      "type": "text"
+      "type": "text",
+      "size": "small"
      },
      {
       "key": "healing_rate",
       "label": "Healing Rate",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "move_rate",
       "label": "Move Rate",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "unconscious",
       "label": "Unconscious",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "knockdown",
       "label": "Knockdown",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "major_wound",
       "label": "Major Wound",
-      "type": "number"
+      "type": "number",
+      "size": "small"
      },
      {
       "key": "hp",
@@ -396,7 +407,8 @@
       "key": "chirurgery",
       "label": "Needs Chirurgery",
       "type": "checkbox",
-      "play": true
+      "play": true,
+      "size": "small"
      }
     ]
    },
@@ -572,4 +584,4 @@
    }
   ]
  }
-}
+}

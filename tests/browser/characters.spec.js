@@ -213,8 +213,8 @@ test("Characters: Use theirs keeps the other person's value, on screen and saved
   await p1.getByRole("button", { name: "Use theirs" }).click();
   await expect(str).toHaveValue("9");
   await p1.clock.runFor(1000);
-  await p1.waitForTimeout(500);
-  expect(stored(c.id, "str")).toBe(9);
+  // what was typed is sent first, on leaving the box, and theirs after it: wait for the last to land
+  await expect.poll(() => stored(c.id, "str")).toBe(9);
 });
 
 test("Characters: a GM whose Edit ran out is put back to reading, and stops showing as editing", async ({ page, browser }) => {
@@ -231,4 +231,55 @@ test("Characters: a GM whose Edit ran out is put back to reading, and stops show
   await expect(gm.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
   await expect(gm.getByLabel("Strength", { exact: true })).toBeDisabled();
   await expect.poll(() => sql(`SELECT editing FROM sheet_presence WHERE character_id=${c.id} AND user_id=${ids.gm}`).trim()).toBe("0");
+});
+
+test("Characters: the player deletes a character from its sheet; its Encyclopedia entry stays", async ({ page, browser }) => {
+  const { cid, p1, p2, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Doomed" });
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p2.getByRole("heading", { name: "Doomed" })).toBeVisible();
+  await expect(p2.getByRole("button", { name: "Delete character" })).toHaveCount(0);
+
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await p1.getByRole("button", { name: "Delete character" }).click();
+  await p1.getByRole("button", { name: "Cancel" }).click();
+  expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("1");
+  await p1.getByRole("button", { name: "Delete character" }).click();
+  await p1.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(p1).toHaveURL(new RegExp(`#/c/${cid}/characters$`));
+  await expect(p1.locator(".character-card", { hasText: "Doomed" })).toHaveCount(0);
+  expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("0");
+  expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE id=${c.entry_id}`).trim()).toBe("1");
+});
+
+test("Characters: a GM deletes a player's character from its sheet", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Removed" });
+  await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await gm.getByRole("button", { name: "Delete character" }).click();
+  await gm.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(gm).toHaveURL(new RegExp(`#/c/${cid}/characters$`));
+  expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("0");
+});
+
+test("Characters: a dropdown takes a custom entry, kept and shown again", async ({ page, browser }) => {
+  const { cid, p1 } = await party(page, browser);
+  const layout = { sections: [{ key: "who", title: "Who", fields: [{ key: "cls", label: "Class", type: "choice", options: ["Fighter", "Mage"] }] }] };
+  const tpl = (await api(page, "template_save", { name: "Choosy", game: "Test RPG", layout })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Odd One" });
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  const custom = p1.getByLabel("Class, custom entry");
+  await expect(custom).toBeHidden();
+  await p1.getByLabel("Class", { exact: true }).selectOption("Mage");
+  await expect.poll(() => stored(c.id, "cls")).toBe("Mage");
+  await p1.getByLabel("Class", { exact: true }).selectOption({ label: "Custom…" });
+  await expect(custom).toBeVisible();
+  await custom.fill("Witch hunter");
+  await custom.press("Tab");
+  await expect.poll(() => stored(c.id, "cls")).toBe("Witch hunter");
+  await p1.reload();
+  await expect(p1.getByLabel("Class, custom entry")).toHaveValue("Witch hunter");
+  await expect(p1.getByLabel("Class", { exact: true })).toHaveValue("__custom");
+  // a custom entry is a short text: too long is refused
+  expect((await api(p1, "character_field", { id: c.id, key: "cls", value: "x".repeat(501) }, cid)).status).toBe(400);
 });
