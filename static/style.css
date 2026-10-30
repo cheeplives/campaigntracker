@@ -1218,6 +1218,7 @@ path.map-route-line.secret { stroke: var(--dim); }
 .tv-note textarea, .tv-sec input[type=search], .tv-entry-pick input { width: 100%; box-sizing: border-box; }
 .tv-links .tv-link { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .tv-links code { word-break: break-all; }
+.api-example { white-space: pre-wrap; word-break: break-all; }
 /* the panel: no top bar or footer, and room to breathe in a narrow popover */
 .panel-page .table-view { padding-top: 10px; }
 .panel-foot { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }

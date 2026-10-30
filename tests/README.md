@@ -90,6 +90,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   catches up when the GM passes time, takes the code out of the address, and asks for a new link once revoked; a
   public overlay link is see-through with only the date, weather, light and moons; the GM makes a link from At the
   Table, sees it once, and revokes it.
+- **api-keys**: a read-only key reads only its maker's campaign, with no member's email, and is refused writes, other actions, the panel link's header, both headers at once and revocation; a read/write key does what its maker may (a GM's passes time, a player's can't but adds notes signed as them and events) and stops when its maker leaves; a key request is open to any site (CORS) and nothing else is; New API key… shows the key once with a curl example and lists it.
 - **current-day**: a campaign opens on the Current Day tab and the GM's browser
   saves today's shift weather; players get today's weather only up to the current
   shift (never the forecast), nothing for later days, and everything once allowed;
@@ -213,10 +214,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
 - **calendar-file**: Settings exports the calendar, its holidays and the date reached
-- **vtt-export**: the Encyclopedia's Export downloads a zip of linked Markdown pages with their pictures (credited) or a Foundry journal with a page per entry, linked, its pictures under the folder it names; a GM's leaves out GM-only entries, paragraphs, GM notes, connections and pictures unless asked, a player's never has them; Copy as handout puts an entry on the clipboard as HTML and Markdown without its GM-only paragraphs; Settings' For Foundry downloads the calendar for Seasons & Stars and says the date to set. **vtt-export-logic** (under Node): every preset calendar gives the same dates, weekdays and new and full moons in Seasons & Stars (its date maths copied into the test), leap rules, festival days, seasons and holidays carry over and what can't is listed; the export's pick, Markdown, Foundry journal, zip (read back by its central directory, CRCs checked) and handout.
   as JSON; importing it into another campaign's Settings replaces the calendar and adds
   the holidays it lacks (only once), a file that isn't a calendar is refused, and the
   new-campaign form starts a campaign on the file's calendar, holidays and date.
+- **vtt-export**: the Encyclopedia's Export downloads a zip of linked Markdown pages with their pictures (credited) or a Foundry journal with a page per entry, linked, its pictures under the folder it names; a GM's leaves out GM-only entries, paragraphs, GM notes, connections and pictures unless asked, a player's never has them; Copy as handout puts an entry on the clipboard as HTML and Markdown without its GM-only paragraphs; Settings' For Foundry downloads the calendar for Seasons & Stars and says the date to set. **vtt-export-logic** (under Node): every preset calendar gives the same dates, weekdays and new and full moons in Seasons & Stars (its date maths copied into the test), leap rules, festival days, seasons and holidays carry over and what can't is listed; the export's pick, Markdown, Foundry journal, zip (read back by its central directory, CRCs checked) and handout.
 - **scabard-import**: Settings → Tools → Import from Scabard refuses a file that isn't JSON or isn't a Scabard export,
   says what the export holds (entries by kind, session logs, connections, pictures, what is left out) and follows the
   Sessions / Encyclopedia entries choice; the import makes entries with their kind and category tags, other names,

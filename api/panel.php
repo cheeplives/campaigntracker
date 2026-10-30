@@ -12,14 +12,27 @@
  * A link only reaches its own campaign, and only the actions in PANEL_READ (and PANEL_WRITE for a member's own link).
  * The code is shown once; only its SHA-256 is stored. A header, unlike a cookie, is never sent by another site's form
  * or script (no CORS here), so panel requests need no CSRF token.
+ *
+ * API keys are the same rows with scope 'api', for programs rather than the panel: a Foundry module, a bot, a script.
+ * One is sent in the X-Chronicle-Key header and acts as the member who made it, on the actions in API_READ (and
+ * API_WRITE when it was made read/write). As a key, not a cookie, is all that signs such a request in, any site may
+ * make one (CORS is open to it, see api_cors()): it gets nothing without the key, and never the member's session.
+ * docs/API.md documents what a key can do.
  */
 declare(strict_types=1);
 
 const PANEL_SCOPES = ['panel', 'public_panel'];
+/** Every kind of link or key a member can make. */
+const KEY_SCOPES = ['panel', 'public_panel', 'api'];
 /** What any panel link may read. */
 const PANEL_READ = ['panel_whoami', 'campaign', 'changed', 'days', 'reminders', 'encyclopedia', 'groups', 'maps', 'map'];
 /** What a member's own link may also change; each action still checks GM or player as usual. */
 const PANEL_WRITE = ['set_time', 'days_save', 'shift_note_add', 'entry_note_add'];
+/** What an API key may read: the campaign (calendar, clock, regions, holidays), days, events, reminders, the
+ * Encyclopedia, the party's whereabouts and maps. docs/API.md lists them with their answers. */
+const API_READ = ['panel_whoami', 'campaign', 'changed', 'day', 'days', 'events', 'reminders', 'encyclopedia', 'groups', 'maps', 'map'];
+/** What a read/write key may also change; each action still checks GM or player as usual. */
+const API_WRITE = ['set_time', 'shift_note_add', 'entry_note_add', 'event_save'];
 
 /** Whether migration 022 has been run. */
 function has_panel_links(): bool {
@@ -30,9 +43,30 @@ function need_panel_links(): void {
     if (!has_panel_links()) fail('Panel links need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
 }
 
-/** Whether this request came from the panel, with a link code instead of the session. */
+/** Whether this request came from the panel or a program, with a link code or an API key instead of the session. */
 function panel_request(): bool {
-    return ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '';
+    return ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '' || api_request();
+}
+/** Whether this request came with an API key. */
+function api_request(): bool {
+    return ($_SERVER['HTTP_X_CHRONICLE_KEY'] ?? '') !== '';
+}
+/** Open CORS to requests that carry an API key, answering the browser's preflight. Nothing else is opened: a
+ * request without the key header signs in as nobody here, and the session cookie is never sent with these (any site
+ * may ask, so no credentials are allowed). */
+function api_cors(): void {
+    $asks = strtolower((string)($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'] ?? ''));
+    $pre = ($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS' && str_contains($asks, 'x-chronicle-key');
+    if (!$pre && !api_request()) return;
+    header('Access-Control-Allow-Origin: *');
+    header('Vary: Origin');
+    if ($pre) {
+        header('Access-Control-Allow-Methods: GET, POST');
+        header('Access-Control-Allow-Headers: X-Chronicle-Key, Content-Type');
+        header('Access-Control-Max-Age: 86400');
+        http_response_code(204);
+        exit;
+    }
 }
 /** The link this request signed in with (set by panel_gate()), or null. */
 function panel_link(): ?array {
@@ -48,15 +82,21 @@ function panel_public(): bool {
  * 401. Pins the request to the link's campaign, and sets who it acts as for current_user() (api/lib.php).
  */
 function panel_gate(string $action): void {
-    if (!has_panel_links()) json_error(401, 'bad_panel_link', 'This Chronicle hasn\'t been upgraded for panel links yet.');
-    $code = (string)$_SERVER['HTTP_X_CHRONICLE_PANEL'];
-    if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', 'That panel link isn\'t right. Make a new one in Chronicle.');
+    $api = api_request();
+    $what = $api ? 'API key' : 'panel link';
+    if (!has_panel_links()) json_error(401, 'bad_panel_link', "This Chronicle hasn't been upgraded for {$what}s yet.");
+    if ($api && ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '') json_error(401, 'bad_panel_link', 'Send an API key or a panel link, not both.');
+    $code = (string)($api ? $_SERVER['HTTP_X_CHRONICLE_KEY'] : $_SERVER['HTTP_X_CHRONICLE_PANEL']);
+    if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', "That $what isn't right. Make a new one in Chronicle.");
     $st = db()->prepare('SELECT * FROM connection_keys WHERE token_hash=? AND revoked_at IS NULL');
     $st->execute([hash('sha256', $code)]);
     $link = $st->fetch();
-    if (!$link || !in_array($link['scope'], PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', 'That panel link was revoked, or never existed. Make a new one in Chronicle.');
-    $allowed = $link['scope'] === 'panel' ? [...PANEL_READ, ...PANEL_WRITE] : PANEL_READ;
-    if (!in_array($action, $allowed, true)) json_error(401, 'panel_not_allowed', 'A panel link can\'t do that. Open Chronicle itself.');
+    // a key only works in its own header: a panel link is no API key, and an API key no panel link
+    if (!$link || !in_array($link['scope'], $api ? ['api'] : PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', "That $what was revoked, or never existed. Make a new one in Chronicle.");
+    $write = $link['scope'] === 'panel' || ($link['scope'] === 'api' && !empty((dec($link['options_json'] ?? null) ?: [])['write']));
+    $allowed = $api ? [...API_READ, ...($write ? API_WRITE : [])] : [...PANEL_READ, ...($write ? PANEL_WRITE : [])];
+    if (!in_array($action, $allowed, true)) json_error(401, 'panel_not_allowed', $api ? ($write || !in_array($action, API_WRITE, true) ? 'An API key can\'t do that.' : 'This API key is read-only.')
+        : 'A panel link can\'t do that. Open Chronicle itself.');
     rate_limit('panel', 'k' . $link['id'], (int)(cfg('limits', [])['panel_per_minute'] ?? 240), 60);
     $GLOBALS['panel_link'] = $link;
     if ($link['scope'] === 'public_panel') {
@@ -72,7 +112,7 @@ function panel_gate(string $action): void {
         if (!$u) json_error(401, 'bad_panel_link', 'That panel link\'s account is gone.');
         $st = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $st->execute([(int)$link['campaign_id'], (int)$u['id']]);
-        if (!(int)$u['is_admin'] && !$st->fetchColumn()) json_error(401, 'bad_panel_link', 'You are no longer in this campaign, so its panel link stopped working.');
+        if (!(int)$u['is_admin'] && !$st->fetchColumn()) json_error(401, 'bad_panel_link', "You are no longer in this campaign, so its $what stopped working.");
         $u['status'] = chronicle_status($u);
         $GLOBALS['panel_user'] = $u;
     }
@@ -85,7 +125,7 @@ function panel_gate(string $action): void {
 /** A link as its list shows it. */
 function panel_link_out(array $k): array {
     $o = dec($k['options_json'] ?? null) ?: [];
-    return ['id' => (int)$k['id'], 'scope' => $k['scope'], 'label' => $k['label'], 'overlay' => !empty($o['overlay']),
+    return ['id' => (int)$k['id'], 'scope' => $k['scope'], 'label' => $k['label'], 'overlay' => !empty($o['overlay']), 'write' => !empty($o['write']),
         'user_id' => $k['user_id'] !== null ? (int)$k['user_id'] : null, 'maker' => $k['maker'] ?? null,
         'created_at' => $k['created_at'], 'last_used_at' => $k['last_used_at']];
 }
@@ -100,17 +140,17 @@ function panel_links_list(int $cid, bool $isGm): array {
 /** Make a link; returns it with its code, the only time the code is seen. */
 function panel_link_create(int $cid, bool $isGm): array {
     $scope = (string)p('scope', 'panel');
-    if (!in_array($scope, PANEL_SCOPES, true)) fail('Pick the kind of link');
+    if (!in_array($scope, KEY_SCOPES, true)) fail('Pick the kind of link');
     if ($scope === 'public_panel' && !$isGm) fail('Only a GM can make a public panel link', 403);
     $label = trim((string)str_in(p('label'), 80, false));
-    if ($label === '') $label = $scope === 'public_panel' ? 'Public panel' : 'My panel';
+    if ($label === '') $label = ['public_panel' => 'Public panel', 'api' => 'API key'][$scope] ?? 'My panel';
     $st = db()->prepare('SELECT COUNT(*) FROM connection_keys WHERE campaign_id=? AND created_by=? AND revoked_at IS NULL');
     $st->execute([$cid, me()['id']]);
-    if ((int)$st->fetchColumn() >= 20) fail('You have 20 panel links in this campaign already. Revoke some first');
+    if ((int)$st->fetchColumn() >= 20) fail('You have 20 panel links and API keys in this campaign already. Revoke some first');
     $code = bin2hex(random_bytes(32));
-    $overlay = $scope === 'public_panel' && p('overlay') ? json_encode(['overlay' => true]) : null;
+    $options = $scope === 'public_panel' && p('overlay') ? ['overlay' => true] : ($scope === 'api' && p('write') ? ['write' => true] : null);
     db()->prepare('INSERT INTO connection_keys (campaign_id, user_id, scope, label, token_hash, options_json, created_by) VALUES (?,?,?,?,?,?,?)')
-        ->execute([$cid, $scope === 'panel' ? me()['id'] : null, $scope, $label, hash('sha256', $code), $overlay, me()['id']]);
+        ->execute([$cid, $scope === 'public_panel' ? null : me()['id'], $scope, $label, hash('sha256', $code), $options ? json_encode($options) : null, me()['id']]);
     $id = (int)db()->lastInsertId();
     $st = db()->prepare('SELECT * FROM connection_keys WHERE id=?');
     $st->execute([$id]);

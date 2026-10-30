@@ -63,7 +63,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '26';
+  const APP_VERSION = '27';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
@@ -6369,9 +6369,9 @@
     const cid = S.camp.id;
     const r = await api('panel_links', { query: { cid } }).catch(() => ({ ready: false, links: [] }));
     const box = el('section', { class: 'card tv-links' }, el('h3', {}, 'Use in a VTT or on stream',
-      tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen. Make a panel link, then paste it there once. A link sees what you see, and can be revoked here at any time')));
+      tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen: make a panel link, then paste it there once. Or give a program (a Foundry module, a bot) an API key. Each sees what you see, and can be revoked here at any time')));
     if (!r.ready) return box.append(el('p', { class: 'muted small' }, 'Run the upgrade (./deploy.sh, or install.php → Install or upgrade) to use panel links.')), box;
-    const kindText = k => (k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
+    const kindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
     const list = el('div', {}, r.links.length ? r.links.map(k => el('div', { class: 'listrow tv-link' },
       el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${kindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}`)),
       btn('Revoke', async () => {
@@ -6379,6 +6379,7 @@
         try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
       }, 'small'))) : el('p', { class: 'muted small' }, 'No panel links yet.'));
     box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small primary'),
+      btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
       el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href), ' under Extensions → Add custom extension.')));
     return box;
   }
@@ -6405,6 +6406,39 @@
           shown, el('p', { class: 'small muted' }, 'You won\'t see this link again. Anyone who has it sees ' + (r.link.scope === 'public_panel' ? 'what every player sees.' : 'what you see, and can add notes as you.')),
           el('div', { class: 'kit-dialog-actions' },
             btn('Copy', async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
+            el('button', { value: 'done' }, 'Done')));
+        box.replaceWith(await tableLinksBox());
+      } catch (e) { toast(e.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /** A key for a program: what it may do, then the key, shown once, with how to send it. */
+  function newApiKey(box) {
+    const label = el('input', { maxlength: 80, placeholder: 'e.g. Foundry module, or Discord bot', 'aria-label': 'Label' });
+    const access = select([['read', 'Read only: the date, weather, Encyclopedia and the like'], ['write', isGM() ? 'Read and write: also pass time, add notes and events' : 'Read and write: also add notes and events']], 'read', { 'aria-label': 'Access' });
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New API key' });
+    const form = el('form', { method: 'dialog' }, el('h3', {}, 'New API key'),
+      field('Label', label, 'So you know which program has it'), field('Access', access),
+      el('p', { class: 'small muted' }, 'The key acts as you: it sees what you see in this campaign, and nothing in your other campaigns.'),
+      el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, 'Make key'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
+    d.append(form);
+    form.addEventListener('submit', async ev => {
+      if (ev.submitter?.value !== 'ok') return;
+      ev.preventDefault();
+      try {
+        const r = await post('panel_link_create', { scope: 'api', label: label.value.trim(), write: access.value === 'write' }, S.camp.id);
+        const key = r.link.code, url = new URL('api/index.php', panelBase()).href;
+        const shown = el('input', { readonly: true, value: key, 'aria-label': 'API key', onfocus: e => e.target.select() });
+        form.replaceChildren(el('h3', {}, `"${r.link.label}" is ready`),
+          el('p', {}, 'Copy the key into the program. You won\'t see it again.'), shown,
+          el('p', { class: 'small muted' }, 'Programs send it in the X-Chronicle-Key header, for example:'),
+          el('pre', { class: 'small api-example' }, `curl -H "X-Chronicle-Key: ${key}" \\\n  "${url}?a=campaign"`),
+          el('p', { class: 'small muted' }, 'What it can do is in docs/API.md in Campaign Chronicle\'s code. Revoke it here whenever you like.'),
+          el('div', { class: 'kit-dialog-actions' },
+            btn('Copy', async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
         box.replaceWith(await tableLinksBox());
       } catch (e) { toast(e.message, true); }
