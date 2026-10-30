@@ -38,7 +38,7 @@ async function fill(page, cid, uid) {
     INSERT INTO encyclopedia_relations (campaign_id, from_id, to_id, type_id) VALUES (${cid}, ${e1}, ${e2}, ${rtype});
     INSERT INTO library_tomes (campaign_id, title, body) VALUES (${cid}, 'Journal', '<p>Day one</p>');`);
   const tpl = one(`INSERT INTO sheet_templates (name, game, layout) VALUES ('Copy test', 'Test', '{"sections":[]}')`);
-  sql(`INSERT INTO characters (campaign_id, owner_id, template_id, entry_id, template_version, field_values, field_stamps, hidden)
+  sql(`INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, template_version, field_values, field_stamps, hidden)
     VALUES (${cid}, ${uid}, ${tpl}, ${e1}, 1, '{}', '{}', '[]');`);
   const ses = one(`INSERT INTO play_sessions (campaign_id, number, first_day) VALUES (${cid}, 1, 3)`);
   sql(`INSERT INTO session_notes (campaign_id, session_id, position, text, abs_shift) VALUES (${cid}, ${ses}, 1, 'Met Hoffmann', 13);`);
@@ -53,7 +53,7 @@ const TABLES = [["regions"], ["holidays"], ["days"], ["shifts"], ["shift_notes"]
   ["event_notes", ["event_id", "events"]], ["downtimes"], ["party_gear"], ["holdings"], ["holding_tag_names"], ["holding_tags", ["holding_id", "holdings"]],
   ["holding_storage", ["holding_id", "holdings"]], ["reminders"], ["party_funds"], ["encyclopedia_entries"], ["encyclopedia_tag_names"],
   ["encyclopedia_tags", ["entry_id", "encyclopedia_entries"]], ["encyclopedia_ignored"], ["encyclopedia_relation_types"], ["encyclopedia_relations"],
-  ["library_tomes"], ["play_sessions"], ["session_notes"], ["characters"], ["attachments"]];
+  ["library_tomes"], ["play_sessions"], ["session_notes"], ["sheet_characters"], ["attachments"]];
 
 test("a GM copies a campaign from the list, with everything in it, into a new one of their own", async ({ page, browser }) => {
   const errors = watchErrors(page);

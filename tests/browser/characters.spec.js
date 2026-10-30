@@ -34,7 +34,7 @@ async function party(page, browser) {
 const make = async (p, cid, body) => (await api(p, "character_create", body, cid)).json.character;
 /** A field's saved value, or null while it has none (mysql prints a missing one as NULL). */
 const stored = (id, key) => {
-  const out = sql(`SELECT JSON_EXTRACT(field_values, '$.${key}') FROM characters WHERE id=${id}`).trim();
+  const out = sql(`SELECT JSON_EXTRACT(field_values, '$.${key}') FROM sheet_characters WHERE id=${id}`).trim();
   return out === "" || out === "NULL" ? null : JSON.parse(out);
 };
 const presenceChecked = p => p.waitForResponse(r => r.url().includes("a=character_presence"));
@@ -115,7 +115,7 @@ test("Characters: the GM hands a sheet to another player", async ({ page, browse
   const c = await make(p1, cid, { template_id: tpl.id, name: "Passed On" });
   await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await gm.getByLabel("Whose sheet").selectOption(String(ids.p2));
-  await expect.poll(() => Number(sql(`SELECT owner_id FROM characters WHERE id=${c.id}`).trim())).toBe(ids.p2);
+  await expect.poll(() => Number(sql(`SELECT owner_id FROM sheet_characters WHERE id=${c.id}`).trim())).toBe(ids.p2);
   await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await expect(p2.getByLabel("Strength", { exact: true })).toBeEnabled();
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
