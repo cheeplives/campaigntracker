@@ -114,14 +114,14 @@ function sheet_layout_in($layout): array {
 
 // ---------- Templates ----------
 
-/** Templates with their author, use and fork counts and the template each was forked from; $where is SQL on t. */
+/** Templates with their author, use and fork counts and the template each was forked from, A to Z by name; $where is SQL on t. */
 function templates_query(string $where, array $args): array {
     $st = db()->prepare("SELECT t.id, t.name, t.game, t.edition, t.author_id, t.forked_from_id, t.version, t.is_listed, t.starter_key, t.updated_at,
             u.display_name AS author, o.name AS forked_from_name,
             (SELECT COUNT(*) FROM sheet_characters c WHERE c.template_id=t.id) AS uses,
             (SELECT COUNT(*) FROM sheet_templates f WHERE f.forked_from_id=t.id) AS forks
         FROM sheet_templates t LEFT JOIN users u ON u.id=t.author_id LEFT JOIN sheet_templates o ON o.id=t.forked_from_id
-        WHERE $where ORDER BY uses DESC, t.name");
+        WHERE $where ORDER BY t.name, t.edition, t.id");
     $st->execute($args);
     return array_map('template_out', $st->fetchAll());
 }

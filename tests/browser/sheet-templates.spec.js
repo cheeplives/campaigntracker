@@ -1,7 +1,7 @@
 // The sheet template library and editor: building a template by hand, finding it in the library, forking someone
 // else's (whose own Edit button isn't there), and reordering fields by dragging them, which works by touch too.
 const { test, expect } = require("@playwright/test");
-const { person, signIn, approve, api, newContext, closeContexts } = require("./helpers");
+const { person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function ready(page, browser, name) {
@@ -225,4 +225,18 @@ test("Templates: a template without pages has no tabs", async ({ page, browser }
   await page.goto(`index.html#/templates/${tpl.id}`);
   await expect(page.getByRole("heading", { name: "A", exact: true })).toBeVisible();
   await expect(page.getByRole("tab")).toHaveCount(0);
+});
+
+test("Templates: the library lists templates by name, A to Z, whatever is used most", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Sorter");
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] };
+  const tag = `Zq${who.id}`;
+  for (const name of [`${tag} beta`, `${tag} Alpha`, `${tag} gamma`]) expect((await api(page, "template_save", { name, game: "X", layout })).status).toBe(200);
+  // the last one is used, which used to put it first
+  const used = (await (await page.request.get(`api/index.php?a=templates&q=${encodeURIComponent(`${tag} gamma`)}`)).json()).templates[0];
+  const cid = await makeCampaign(page, `Sort ${who.id}`);
+  expect((await api(page, "character_create", { template_id: used.id, name: "User" }, cid)).status).toBe(200);
+  await page.goto("index.html#/templates");
+  await page.getByLabel("Search templates").fill(tag);
+  await expect(page.locator(".template-card .template-name")).toHaveText([`${tag} Alpha`, `${tag} beta`, `${tag} gamma`]);
 });
