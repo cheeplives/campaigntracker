@@ -85,6 +85,10 @@ function sheet_layout_in($layout): array {
                     $field['columns'][] = ['key' => $col['key'], 'label' => $label($col['label'] ?? null, 'Column labels')];
                 }
             }
+            if (isset($f['size'])) {
+                if (!in_array($f['size'], ['small', 'medium', 'large'], true)) fail("$name: a box size is small, medium or large");
+                if ($f['size'] !== 'medium') $field['size'] = $f['size'];   // medium is the usual size, so it isn't kept
+            }
             if (isset($f['vtt'])) {
                 $v = $f['vtt'];
                 if (!is_array($v) || array_is_list($v) || count($v) > SHEET_VTT_MAX) fail("$name: a VTT mapping names each VTT (" . SHEET_VTT_MAX . ' at most) with its system and path');
@@ -220,7 +224,8 @@ function sheet_value(array $f, $v): array {
             return $ok1 && $ok2 ? [true, ['cur' => $c, 'max' => $m]] : [false, null];
         case 'pips': return is_int($v) && $v >= 0 && $v <= $f['count'] ? [true, $v] : [false, null];
         case 'checkbox': return is_bool($v) ? [true, $v] : [false, null];
-        case 'choice': return $v === null || in_array($v, $f['options'] ?? [], true) ? [true, $v] : [false, null];
+        // one of its options, or a custom entry typed in its place
+        case 'choice': return $v === null || is_string($v) && mb_strlen($v) <= SHEET_LIMITS['text'] ? [true, $v] : [false, null];
         case 'list':
             if (!is_array($v) || !array_is_list($v) || count($v) > SHEET_LIMITS['rows']) return [false, null];
             $cols = array_column($f['columns'] ?? [], 'key');

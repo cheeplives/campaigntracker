@@ -49,10 +49,11 @@ const Sheets = (() => {
       el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
         if (!TYPE_NAMES[f.type]) return null;
         const wide = f.type === 'longtext' || f.type === 'list';
+        const size = !wide && (f.size === 'small' || f.size === 'large') ? ` size-${f.size}` : '';
         const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live));
         const note = el('div', { class: 'sheet-conflict', hidden: true });
         slots.set(f.key, { f, slot, note });
-        return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : '') + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
+        return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : size) + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
           el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
       }))));
     const form = el('div', { class: `sheet-form sheet-${mode}` }, sections);
@@ -84,6 +85,7 @@ const Sheets = (() => {
   }
   const numOrNull = s => (String(s).trim() === '' ? null : Number(s));
   /** The input for one field, sending the new value to set(v) as it changes. */
+  const CUSTOM = '__custom';
   function control(f, value, set, off, live) {
     const label = f.label;
     // while typing, the value is sent 400 ms after the last key, as well as on leaving the box
@@ -133,10 +135,19 @@ const Sheets = (() => {
       return c;
     }
     if (f.type === 'choice') {
+      // Custom… opens a box beside the list for anything the options don't have
+      const opts = f.options || [], own = typeof value === 'string' && value !== '' && !opts.includes(value);
       const s = el('select', { 'aria-label': label, disabled: off }, el('option', { value: '' }, '—'),
-        (f.options || []).map(o => el('option', { value: o, selected: o === value }, o)));
-      s.addEventListener('change', () => set(s.value === '' ? null : s.value));
-      return s;
+        opts.map(o => el('option', { value: o, selected: o === value }, o)), el('option', { value: CUSTOM, selected: own }, 'Custom…'));
+      const box = el('input', { value: own ? value : '', maxlength: L.LIMITS.text, 'aria-label': `${label}, custom entry`, placeholder: 'Type your own', disabled: off, hidden: !own });
+      typed(box, () => (box.value === '' ? null : box.value));
+      s.addEventListener('change', () => {
+        box.hidden = s.value !== CUSTOM;
+        if (s.value !== CUSTOM) return set(s.value === '' ? null : s.value);
+        box.focus();
+        if (box.value !== '') set(box.value);
+      });
+      return el('div', { class: 'sheet-choice' }, s, box);
     }
     // list: rows of the field's columns
     const cols = f.columns || [];
@@ -361,6 +372,14 @@ const Sheets = (() => {
       }
       return null;
     }
+    /** How wide the field's box is on the sheet; long text and lists always run the full width. */
+    function sizePick(f) {
+      if (f.type === 'longtext' || f.type === 'list') return null;
+      const pick = el('select', { 'aria-label': 'Box size' }, [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']].map(([v, t]) =>
+        el('option', { value: v, selected: v === (f.size || 'medium') }, t)));
+      pick.addEventListener('change', () => { if (pick.value === 'medium') delete f.size; else f.size = pick.value; refresh(); });
+      return el('label', { class: 'small', 'data-tip': 'Small is half the usual width, large twice it' }, 'Size ', pick);
+    }
     function fieldRow(s, f, i) {
       const row = el('div', { class: 'sheet-ed-field', 'data-key': f.key });
       const handle = el('span', { class: 'drag-handle', role: 'button', tabindex: 0, 'aria-label': `Move ${f.label}`, 'data-tip': 'Drag to move. Or focus it and use the arrow keys' }, '⠿');
@@ -381,10 +400,11 @@ const Sheets = (() => {
       type.addEventListener('change', () => {
         f.type = type.value;
         for (const k of ['count', 'options', 'columns', 'min', 'max']) delete f[k];
+        if (f.type === 'longtext' || f.type === 'list') delete f.size;
         if (f.type === 'pips') f.count = 3;
         if (f.type === 'choice') f.options = [];
         if (f.type === 'list') f.columns = [];
-        settings.replaceChildren(...[typeSettings(f)].filter(Boolean));
+        settings.replaceChildren(...[sizePick(f), typeSettings(f)].filter(Boolean));
         refresh();
       });
       const flag = (k, text, tipText) => {
@@ -392,7 +412,7 @@ const Sheets = (() => {
         c.addEventListener('change', () => { if (c.checked) f[k] = true; else delete f[k]; refresh(); });
         return el('label', { class: 'small check', 'data-tip': tipText }, c, ` ${text}`);
       };
-      const settings = el('div', { class: 'sheet-ed-settings' }, typeSettings(f));
+      const settings = el('div', { class: 'sheet-ed-settings' }, sizePick(f), typeSettings(f));
       row.append(el('div', { class: 'sheet-ed-side' }, handle,
           button('×', () => { s.fields.splice(i, 1); fresh.delete(f.key); draw(); }, 'icon-btn', { 'aria-label': `Remove ${f.label}`, 'data-tip': 'Remove this field' })),
         el('div', { class: 'sheet-ed-main' },
@@ -764,7 +784,15 @@ const Sheets = (() => {
       el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
-        el('div', { class: 'row spread' }, el('h1', {}, ch.name), editBtn),
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, ch.can_edit ? button('Delete character', async () => {
+          if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
+          try {
+            await ctx.post('character_delete', { id: ch.id }, cid());
+            for (const m of ctx.S.members) if (Number(m.active_character_id) === ch.id) m.active_character_id = null;
+            toast(`${ch.name}'s sheet is deleted`);
+            location.hash = `#/c/${cid()}/characters`;
+          } catch (err) { toast(err.message, true); }
+        }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, body));

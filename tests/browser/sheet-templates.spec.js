@@ -117,3 +117,56 @@ test("Templates: a finger on a field's handle drags it too", async ({ page, brow
   await touch("touchEnd");
   await expect.poll(() => page.locator(".sheet-ed-field input[aria-label='Field label']").evaluateAll(els => els.map(e => e.value))).toEqual(["Bravo", "Alpha"]);
 });
+
+test("Templates: a field can be small, medium or large on the sheet, and a bad size is refused", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Sizer");
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("index.html#/templates/new");
+  await page.getByLabel("Template name").fill(`Sized ${who.id}`);
+  await page.getByLabel("Game", { exact: true }).fill("Test RPG");
+  const s1 = page.locator(".sheet-ed-section").nth(0);
+  for (const [i, label, size] of [[0, "Age", "small"], [1, "Name", null], [2, "Motto", "large"]]) {
+    await s1.getByRole("button", { name: "Add field" }).click();
+    await field(page, i).getByLabel("Field label").fill(label);
+    expect(await field(page, i).getByLabel("Box size").inputValue()).toBe("medium");
+    if (size) await field(page, i).getByLabel("Box size").selectOption(size);
+  }
+  // a long text has no size to pick: it runs the full width
+  await s1.getByRole("button", { name: "Add field" }).click();
+  await field(page, 3).getByLabel("Field type").selectOption("longtext");
+  await expect(field(page, 3).getByLabel("Box size")).toHaveCount(0);
+
+  const preview = page.locator(".sheet-preview");
+  const width = async key => (await preview.locator(`.sheet-field[data-key="${key}"]`).boundingBox()).width;
+  await expect(preview.locator('.sheet-field[data-key="motto"]')).toBeVisible();
+  const [small, medium, large] = [await width("age"), await width("name"), await width("motto")];
+  expect(Math.abs(small * 2 - medium)).toBeLessThan(16);
+  expect(Math.abs(medium * 2 - large)).toBeLessThan(16);
+  // a small box's input stays inside it
+  const [cell, input] = [await preview.locator('.sheet-field[data-key="age"]').boundingBox(), await preview.getByLabel("Age").boundingBox()];
+  expect(input.x + input.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+$/);
+  const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
+  const fields = (await layoutOf(page, id)).layout.sections[0].fields;
+  expect(fields.map(f => f.size ?? null)).toEqual(["small", null, "large", null]);
+
+  const bad = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text", size: "huge" }] }] };
+  const r = await api(page, "template_save", { name: "Huge", game: "X", layout: bad });
+  expect(r.status).toBe(400);
+  expect(r.json.message).toMatch(/size/);
+});
+
+test("Templates: a large box fits a phone screen", async ({ page, browser }) => {
+  await ready(page, browser, "Narrow");
+  await page.setViewportSize({ width: 360, height: 740 });
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "big", label: "Big", type: "text", size: "large" }, { key: "tiny", label: "Tiny", type: "number", size: "small" }] }] };
+  const tpl = (await api(page, "template_save", { name: "Phone", game: "X", layout })).json.template;
+  await page.goto(`index.html#/templates/${tpl.id}`);
+  const big = page.locator('.sheet-field[data-key="big"]');
+  await expect(big).toBeVisible();
+  const box = await big.boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});
