@@ -137,3 +137,21 @@ test("a section's page is a name of 1 to 100 characters, and a template has 20 p
   expect(L.pages(ok).map(p => p.name)).toEqual(["Sheet", "Magic"]);
   expect(L.pages(sample()).length).toBe(1);
 });
+
+test("a field's width is a size or a number of half-columns; a section's is full, half, third or two-thirds, and it may be compact", () => {
+  const ok = sample();
+  ok.sections[0].fields[0].size = "full";
+  ok.sections[0].fields[1].cols = 6;
+  ok.sections[0].width = "half";
+  ok.sections[1].width = "two-thirds";
+  ok.sections[1].compact = true;
+  expect(L.validate(ok)).toEqual([]);
+  for (const [where, k, v, msg] of [[0, "cols", 0, /column/], [0, "cols", 13, /column/], [0, "cols", 2.5, /column/], [0, "size", "huge", /size/]]) {
+    const bad = sample(); bad.sections[where].fields[0][k] = v;
+    expect(L.validate(bad).join(" "), `${k} ${v}`).toMatch(msg);
+  }
+  const wide = sample(); wide.sections[0].width = "quarter";
+  expect(L.validate(wide).join(" ")).toMatch(/width/);
+  const comp = sample(); comp.sections[0].compact = "yes";
+  expect(L.validate(comp).join(" ")).toMatch(/[Cc]ompact/);
+});

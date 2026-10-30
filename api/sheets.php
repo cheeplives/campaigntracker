@@ -53,6 +53,14 @@ function sheet_layout_in($layout): array {
         if (!is_array($s) || !isset($s['fields']) || !is_array($s['fields']) || !array_is_list($s['fields'])) fail('Each section needs a list of fields');
         $sec = ['key' => $key($s['key'] ?? null, 'A section'), 'title' => $label($s['title'] ?? null, 'Section titles')];
         if (isset($s['page'])) $pages[$sec['page'] = $label($s['page'], 'Page names')] = true;
+        if (isset($s['width'])) {
+            if (!in_array($s['width'], ['full', 'half', 'third', 'two-thirds'], true)) fail("Section \"{$sec['title']}\": a section's width is full, half, third or two-thirds");
+            if ($s['width'] !== 'full') $sec['width'] = $s['width'];   // full is the usual, so it isn't kept
+        }
+        if (isset($s['compact'])) {
+            if (!is_bool($s['compact'])) fail("Section \"{$sec['title']}\": compact is on or off");
+            if ($s['compact']) $sec['compact'] = true;
+        }
         $sec['fields'] = [];
         foreach ($s['fields'] as $f) {
             if (++$n > $L['fields']) fail("A template can have {$L['fields']} fields at most");
@@ -89,8 +97,12 @@ function sheet_layout_in($layout): array {
                 }
             }
             if (isset($f['size'])) {
-                if (!in_array($f['size'], ['small', 'medium', 'large'], true)) fail("$name: a box size is small, medium or large");
+                if (!in_array($f['size'], ['small', 'medium', 'large', 'full'], true)) fail("$name: a box size is small, medium, large or full");
                 if ($f['size'] !== 'medium') $field['size'] = $f['size'];   // medium is the usual size, so it isn't kept
+            }
+            if (isset($f['cols'])) {
+                if (!is_int($f['cols']) || $f['cols'] < 1 || $f['cols'] > 12) fail("$name: a box is 1 to 12 half-columns wide");
+                $field['cols'] = $f['cols'];
             }
             if (isset($f['vtt'])) {
                 $v = $f['vtt'];

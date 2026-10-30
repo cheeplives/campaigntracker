@@ -1152,21 +1152,61 @@ path.map-route-line.secret { stroke: var(--dim); }
 .sheet-sec { container-type: inline-size; }
 .sheet-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(79px, 1fr)); gap: 8px 12px; }
 .sheet-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; grid-column: span 2; }
-.sheet-field.size-small { grid-column: span 1; }
-.sheet-field.size-large { grid-column: span 4; }
-@container (max-width: 351px) { .sheet-field.size-large { grid-column: 1 / -1; } }
+/* a box is a number of half-columns (data-cols, 1 to 12; medium is 2) or the full width, and a box wider than its section
+   has room for runs the full width: n half-columns need n × 79px and the 12px gaps between */
+.sheet-field[data-cols="1"] { grid-column: span 1; }
+.sheet-field[data-cols="2"] { grid-column: span 2; }
+.sheet-field[data-cols="3"] { grid-column: span 3; }
+.sheet-field[data-cols="4"] { grid-column: span 4; }
+.sheet-field[data-cols="5"] { grid-column: span 5; }
+.sheet-field[data-cols="6"] { grid-column: span 6; }
+.sheet-field[data-cols="7"] { grid-column: span 7; }
+.sheet-field[data-cols="8"] { grid-column: span 8; }
+.sheet-field[data-cols="9"] { grid-column: span 9; }
+.sheet-field[data-cols="10"] { grid-column: span 10; }
+.sheet-field[data-cols="11"] { grid-column: span 11; }
+.sheet-field[data-cols="12"] { grid-column: span 12; }
+@container (max-width: 260px) { .sheet-field[data-cols="3"], .sheet-field[data-cols="4"], .sheet-field[data-cols="5"], .sheet-field[data-cols="6"], .sheet-field[data-cols="7"], .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 351px) { .sheet-field[data-cols="4"], .sheet-field[data-cols="5"], .sheet-field[data-cols="6"], .sheet-field[data-cols="7"], .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 442px) { .sheet-field[data-cols="5"], .sheet-field[data-cols="6"], .sheet-field[data-cols="7"], .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 533px) { .sheet-field[data-cols="6"], .sheet-field[data-cols="7"], .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 624px) { .sheet-field[data-cols="7"], .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 715px) { .sheet-field[data-cols="8"], .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 806px) { .sheet-field[data-cols="9"], .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 897px) { .sheet-field[data-cols="10"], .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 988px) { .sheet-field[data-cols="11"], .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
+@container (max-width: 1079px) { .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
 @container (max-width: 169px) { .sheet-field { grid-column: 1 / -1; } }
 .sheet-field.wide { grid-column: 1 / -1; }
+/* sections side by side on a wide sheet (half, third, two-thirds of it), one under another on a narrow one */
+.sheet-form { container: sheetform / inline-size; }
+.sheet-secs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 20px; align-items: start; }
+.sheet-secs > .sheet-sec { grid-column: 1 / -1; min-width: 0; }
+.sheet-secs > .sheet-sec.w-half { grid-column: span 3; }
+.sheet-secs > .sheet-sec.w-third { grid-column: span 2; }
+.sheet-secs > .sheet-sec.w-two-thirds { grid-column: span 4; }
+.sheet-secs > .sheet-sec[hidden] { display: none; }
+@container sheetform (max-width: 640px) { .sheet-secs > .sheet-sec { grid-column: 1 / -1 !important; } }
+/* compact: a row per field, its label beside its box, as on a printed skill list */
+.sheet-sec.compact .sheet-fields { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 16px; }
+.sheet-sec.compact .sheet-field:not(.wide) { grid-column: auto; flex-direction: row; align-items: center; gap: 8px; border-bottom: 1px dotted var(--line); padding: 2px 0; }
+.sheet-sec.compact .sheet-field:not(.wide) .sheet-label { flex: 1; min-width: 0; }
+.sheet-sec.compact .sheet-field:not(.wide) .sheet-control { flex: 0 1 auto; max-width: 60%; }
+.sheet-sec.compact .sheet-field:not(.wide) .sheet-control input:not([type=checkbox]) { width: 6em; }
 .sheet-choice { display: flex; flex-direction: column; gap: 4px; }
 .sheet-control select, .sheet-control input:not([type=checkbox]) { max-width: 100%; }  /* a small box squeezes its dropdown and number box to fit */
+.sheet-text .sheet-control input { width: 100%; }  /* a text box fills its field, however wide */
 .sheet-choice input[hidden] { display: none; }
 .sheet-label { display: flex; align-items: center; gap: 6px; font: 700 .85rem var(--disp); text-transform: uppercase; letter-spacing: .05em; color: var(--label); }
+.sheet-label > span { min-width: 0; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+.sheet-field[data-cols="1"] .sheet-label { font-size: .72rem; letter-spacing: .01em; }
 .sheet-eye { padding: 0 4px; font-size: .85rem; }
 .sheet-counter-box { display: flex; gap: 6px; align-items: center; }
 .sheet-counter-box input { width: 5em; }
 .sheet-pips { display: flex; flex-wrap: wrap; gap: 4px; }
 .sheet-pip { width: 22px; height: 22px; padding: 0; border-radius: 50%; }
 .sheet-pip.on { background: var(--accent); border-color: var(--accent); }
+.sheet-list { overflow-x: auto; }
 .sheet-list table { width: 100%; }
 .sheet-list input { width: 100%; }
 .sheet-ed-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
