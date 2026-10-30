@@ -44,16 +44,18 @@ const Sheets = (() => {
       { 'aria-pressed': String(hidden.has(key)), 'aria-label': hidden.has(key) ? `Show ${what} to the party` : `Hide ${what} from the party`,
         'data-tip': hidden.has(key) ? 'Hidden from the rest of the party. Tap to show it' : 'Seen by the party. Tap to hide it' }) : null;
     const slots = new Map();
-    const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : ''), 'data-key': s.key },
+    const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : '') + (s.compact ? ' compact' : '')
+        + (s.width && s.width !== 'full' ? ` w-${s.width}` : ''), 'data-key': s.key },
       el('div', { class: 'sheet-sec-head' }, el('h3', {}, s.title || ''), eye(s.key, `the ${s.title} section`)),
       el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
         if (!TYPE_NAMES[f.type]) return null;
-        const wide = f.type === 'longtext' || f.type === 'list';
-        const size = !wide && (f.size === 'small' || f.size === 'large') ? ` size-${f.size}` : '';
+        // its width in half-columns: medium is two, small one, large four, or the number the template gives; full is all
+        const wide = f.type === 'longtext' || f.type === 'list' || f.size === 'full';
+        const cols = wide ? null : Number.isInteger(f.cols) ? f.cols : { small: 1, large: 4 }[f.size] ?? null;
         const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live));
         const note = el('div', { class: 'sheet-conflict', hidden: true });
         slots.set(f.key, { f, slot, note });
-        return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : size) + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key },
+        return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : '') + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key, 'data-cols': cols },
           el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
       }))));
     // pages: a tab for each, only the open one's sections shown
@@ -70,7 +72,7 @@ const Sheets = (() => {
       };
       show();
     }
-    const form = el('div', { class: `sheet-form sheet-${mode}` }, tabs, sections);
+    const form = el('div', { class: `sheet-form sheet-${mode}` }, tabs, el('div', { class: 'sheet-secs' }, sections));
     /** Show a value someone else saved, in place of what the field shows. */
     form.setValue = (key, v) => {
       const x = slots.get(key);
@@ -389,10 +391,21 @@ const Sheets = (() => {
     /** How wide the field's box is on the sheet; long text and lists always run the full width. */
     function sizePick(f) {
       if (f.type === 'longtext' || f.type === 'list') return null;
-      const pick = el('select', { 'aria-label': 'Box size' }, [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']].map(([v, t]) =>
-        el('option', { value: v, selected: v === (f.size || 'medium') }, t)));
-      pick.addEventListener('change', () => { if (pick.value === 'medium') delete f.size; else f.size = pick.value; refresh(); });
-      return el('label', { class: 'small', 'data-tip': 'Small is half the usual width, large twice it' }, 'Size ', pick);
+      const now = Number.isInteger(f.cols) ? 'custom' : f.size || 'medium';
+      const pick = el('select', { 'aria-label': 'Box size' }, [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['full', 'Full width'], ['custom', 'Custom']]
+        .map(([v, t]) => el('option', { value: v, selected: v === now }, t)));
+      const cols = el('input', { type: 'number', min: 1, max: L.COLS, step: 1, value: f.cols ?? 3, 'aria-label': 'Half-columns', class: 'num-sm', hidden: now !== 'custom',
+        'data-tip': `How many half-columns wide, 1 to ${L.COLS}: a medium box is 2` });
+      const setCols = () => { f.cols = Math.round(Number(cols.value)) || 0; refresh(); };
+      cols.addEventListener('input', setCols);
+      pick.addEventListener('change', () => {
+        delete f.size; delete f.cols;
+        cols.hidden = pick.value !== 'custom';
+        if (pick.value === 'custom') return setCols();
+        if (pick.value !== 'medium') f.size = pick.value;
+        refresh();
+      });
+      return el('label', { class: 'small', 'data-tip': 'Small is half the usual width, large twice it, full the whole row' }, 'Size ', pick, cols);
     }
     function fieldRow(s, f, i) {
       const row = el('div', { class: 'sheet-ed-field', 'data-key': f.key });
@@ -452,8 +465,14 @@ const Sheets = (() => {
         const page = el('input', { value: s.page || '', maxlength: L.LIMITS.label, 'aria-label': 'Page', placeholder: 'Page (optional)', list: 'sheet-ed-pages', class: 'sheet-ed-page',
           'data-tip': 'Sections on a named page show under its tab. Leave it empty for the first page' });
         page.addEventListener('input', () => { if (page.value.trim()) s.page = page.value; else delete s.page; pageList(); refresh(); });
+        const width = el('select', { 'aria-label': 'Section width', 'data-tip': 'Beside other sections on a wide screen; the full width on a phone' },
+          [['full', 'Full width'], ['half', 'Half'], ['third', 'Third'], ['two-thirds', 'Two thirds']].map(([v, t]) => el('option', { value: v, selected: v === (s.width || 'full') }, t)));
+        width.addEventListener('change', () => { if (width.value === 'full') delete s.width; else s.width = width.value; refresh(); });
+        const compact = el('input', { type: 'checkbox', checked: !!s.compact });
+        compact.addEventListener('change', () => { if (compact.checked) s.compact = true; else delete s.compact; refresh(); });
         sec.append(
-          el('div', { class: 'row sheet-ed-sec-head' }, title, page,
+          el('div', { class: 'row sheet-ed-sec-head' }, title, page, width,
+            el('label', { class: 'small check', 'data-tip': 'Each field on a line, its label beside its box, like a skill list' }, compact, ' Compact rows'),
             button('↑', () => { if (moveIn(layout.sections, si, -1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} up`, disabled: si === 0 }),
             button('↓', () => { if (moveIn(layout.sections, si, 1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} down`, disabled: si === layout.sections.length - 1 }),
             button('Remove section', async () => {

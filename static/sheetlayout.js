@@ -2,7 +2,8 @@
  * template made from a PDF.
  *
  * Plain script, no build step, and no page needed, so the same file runs under Node in the tests. A layout is
- * { sections: [{ key, title, fields: [{ key, label, type, play?, summary?, min?, max?, count?, options?, columns? }] }] };
+ * { sections: [{ key, title, page?, width?, compact?, fields: [{ key, label, type, size?, cols?, play?, summary?, min?, max?,
+ * count?, options?, columns? }] }] };
  * keys are permanent (values are stored by key) and unique across a template's sections and fields together.
  * api/sheets.php checks the same rules and is the authority; these give the editor its messages and the drafts.
  * The drafts come from what static/pdfimport.js reads with pdf.js: a fillable PDF's form fields and the text near
@@ -13,7 +14,11 @@
   const LIMITS = { pages: 20, sections: 50, fields: 1000, label: 100, option: 60, options: 50, columns: 10, pips: 30, rows: 200, text: 500, longtext: 20000 };
   const KEY = /^[a-z][a-z0-9_]{0,39}$/;
   // how wide a field's box is on the sheet: small is half the usual, large twice it (long text and lists run the full width)
-  const SIZES = ['small', 'medium', 'large'];
+  const SIZES = ['small', 'medium', 'large', 'full'];
+  // or any number of half-columns, 1 to 12 (cols, in place of a size)
+  const COLS = 12;
+  // a section's share of the sheet's width: side by side with others on a wide screen, the full width on a narrow one
+  const WIDTHS = ['full', 'half', 'third', 'two-thirds'];
 
   const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const okLabel = s => typeof s === 'string' && s.trim().length >= 1 && s.length <= LIMITS.label;
@@ -40,6 +45,8 @@
     for (const s of layout.sections) {
       if (!isObj(s)) { out.push('A section is not a section'); continue; }
       key(s.key, `Section "${s.title}"`);
+      if (s.width !== undefined && !WIDTHS.includes(s.width)) out.push(`Section "${s.title}": a section's width is full, half, third or two-thirds`);
+      if (s.compact !== undefined && typeof s.compact !== 'boolean') out.push(`Section "${s.title}": compact is on or off`);
       if (s.page !== undefined) {
         if (okLabel(s.page)) pageNames.add(s.page);
         else out.push(`Section "${s.title}": page names are 1 to ${LIMITS.label} characters`);
@@ -67,7 +74,8 @@
           }
         }
         for (const b of ['min', 'max']) if (f[b] !== undefined && f[b] !== null && !Number.isFinite(f[b])) out.push(`${name}: ${b} must be a number`);
-        if (f.size !== undefined && !SIZES.includes(f.size)) out.push(`${name}: a box size is small, medium or large`);
+        if (f.size !== undefined && !SIZES.includes(f.size)) out.push(`${name}: a box size is small, medium, large or full`);
+        if (f.cols !== undefined && !(Number.isInteger(f.cols) && f.cols >= 1 && f.cols <= COLS)) out.push(`${name}: a box is 1 to ${COLS} half-columns wide`);
         if (f.vtt !== undefined && !okVtt(f.vtt)) out.push(`${name}: each VTT mapping needs a lower-case VTT name, a system and a data path (letters, digits, _ . - [ ])`);
       }
     }
@@ -266,7 +274,7 @@
     return { sections: sections.filter(s => s.fields.length).slice(0, LIMITS.sections).map(({ labels, ...s }) => s) };
   }
 
-  const SheetLayout = { TYPES, LIMITS, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
+  const SheetLayout = { TYPES, LIMITS, SIZES, COLS, WIDTHS, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
   if (typeof module !== 'undefined' && module.exports) module.exports = SheetLayout;
   else root.SheetLayout = SheetLayout;
 })(typeof window !== 'undefined' ? window : globalThis);

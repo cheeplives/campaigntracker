@@ -165,7 +165,9 @@ test("Templates: a large box fits a phone screen", async ({ page, browser }) => 
   await ready(page, browser, "Narrow");
   await page.setViewportSize({ width: 360, height: 740 });
   const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "big", label: "Big", type: "text", size: "large" }, { key: "tiny", label: "Tiny", type: "number", size: "small" },
-    { key: "rank", label: "Rank", type: "choice", options: ["Untrained", "Trained", "Expert", "Master", "Legendary"], size: "small" }] }] };
+    { key: "rank", label: "Rank", type: "choice", options: ["Untrained", "Trained", "Expert", "Master", "Legendary"], size: "small" },
+    { key: "intim", label: "Counterintelligence", type: "number", size: "small" },
+    { key: "weapons", label: "Weapons", type: "list", columns: ["Weapon", "Damage", "Accuracy", "Range", "Rate", "Shots", "Bulk", "Recoil"].map(l => ({ key: l.toLowerCase(), label: l })) }] }] };
   const tpl = (await api(page, "template_save", { name: "Phone", game: "X", layout })).json.template;
   await page.goto(`index.html#/templates/${tpl.id}`);
   const big = page.locator('.sheet-field[data-key="big"]');
@@ -176,6 +178,14 @@ test("Templates: a large box fits a phone screen", async ({ page, browser }) => 
   // a small box's dropdown is squeezed to fit inside it
   const [cell, pick] = [await page.locator('.sheet-field[data-key="rank"]').boundingBox(), await page.getByLabel("Rank", { exact: true }).boundingBox()];
   expect(pick.x + pick.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+  // a long label in a small box wraps inside it rather than running past it
+  const [small, label] = [await page.locator('.sheet-field[data-key="intim"]').boundingBox(), await page.locator('.sheet-field[data-key="intim"] .sheet-label span').boundingBox()];
+  expect(label.x + label.width).toBeLessThanOrEqual(small.x + small.width + 1);
+  // a list with many columns scrolls sideways inside its box; the page doesn't
+  await expect(page.locator('.sheet-field[data-key="weapons"] table')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  const list = await page.locator('.sheet-field[data-key="weapons"] .sheet-list').evaluate(e => ({ scroll: e.scrollWidth, width: e.clientWidth }));
+  expect(list.scroll).toBeGreaterThan(list.width);
 });
 
 test("Templates: sections can sit on pages, shown as tabs on the sheet", async ({ page, browser }) => {
@@ -239,4 +249,72 @@ test("Templates: the library lists templates by name, A to Z, whatever is used m
   await page.goto("index.html#/templates");
   await page.getByLabel("Search templates").fill(tag);
   await expect(page.locator(".template-card .template-name")).toHaveText([`${tag} Alpha`, `${tag} beta`, `${tag} gamma`]);
+});
+
+test("Templates: sections sit side by side, a compact section puts labels beside their boxes, and a box can be any width", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Layout");
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("index.html#/templates/new");
+  await page.getByLabel("Template name").fill(`Laid out ${who.id}`);
+  await page.getByLabel("Game", { exact: true }).fill("Test RPG");
+  const sec = n => page.locator(".sheet-ed-section").nth(n);
+  await sec(0).getByLabel("Section title").fill("Stats");
+  await sec(0).getByLabel("Section width").selectOption("half");
+  for (const [i, label] of [[0, "Name"], [1, "Motto"], [2, "Notes"]]) {
+    await sec(0).getByRole("button", { name: "Add field" }).click();
+    await field(page, i).getByLabel("Field label").fill(label);
+  }
+  await field(page, 1).getByLabel("Box size").selectOption("custom");
+  await field(page, 1).getByLabel("Half-columns").fill("6");
+  await field(page, 2).getByLabel("Box size").selectOption("full");
+  await page.getByRole("button", { name: "Add section" }).click();
+  await sec(1).getByLabel("Section title").fill("Skills");
+  await sec(1).getByLabel("Section width").selectOption("half");
+  await sec(1).getByLabel("Compact rows").check();
+  await sec(1).getByRole("button", { name: "Add field" }).click();
+  await field(page, 3).getByLabel("Field label").fill("Stealth");
+  await field(page, 3).getByLabel("Field type").selectOption("number");
+
+  await page.getByRole("button", { name: "Save template" }).click();
+  await expect(page).toHaveURL(/#\/templates\/\d+$/);
+  const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
+  const secs = (await layoutOf(page, id)).layout.sections;
+  expect(secs.map(s => [s.width ?? null, s.compact ?? null])).toEqual([["half", null], ["half", true]]);
+  expect(secs[0].fields.map(f => [f.size ?? null, f.cols ?? null])).toEqual([[null, null], [null, 6], ["full", null]]);
+
+
+  // the saved template's preview is wide enough to show the sections side by side
+  await page.goto(`index.html#/templates/${id}`);
+  const box = sel => page.evaluate(s => { const r = document.querySelector(s)?.getBoundingClientRect(); return r && { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right }; }, sel);
+  // the two half sections share a row
+  await expect.poll(async () => {
+    const [a, b] = [await box('.sheet-preview .sheet-sec[data-key="stats"]'), await box('.sheet-preview .sheet-sec[data-key="skills"]')];
+    return !!a && !!b && Math.abs(a.y - b.y) < 2 && b.x > a.right - 1 && Math.abs(a.w - b.w) < 4;
+  }).toBe(true);
+  // six half-columns are three times a medium box, and full runs the section's width
+  await expect.poll(async () => {
+    const [name, motto, notes, s] = [await box('.sheet-preview .sheet-field[data-key="name"]'), await box('.sheet-preview .sheet-field[data-key="motto"]'),
+      await box('.sheet-preview .sheet-field[data-key="notes"]'), await box('.sheet-preview .sheet-sec[data-key="stats"] .sheet-fields')];
+    return !!name && !!motto && !!notes && Math.abs(motto.w - (name.w * 3 + 24)) < 6 && Math.abs(notes.w - s.w) < 2;
+  }).toBe(true);
+  // compact: the label sits on the same line as its box
+  await expect.poll(async () => {
+    const [label, input] = [await box('.sheet-preview .sheet-field[data-key="stealth"] .sheet-label'), await box('.sheet-preview .sheet-field[data-key="stealth"] input')];
+    return !!label && !!input && input.x > label.x + 20 && Math.abs((label.y + label.h / 2) - (input.y + input.h / 2)) < 12;
+  }).toBe(true);
+
+  // on a phone the sections stack and nothing runs off the screen
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto(`index.html#/templates/${id}`);
+  await expect.poll(async () => {
+    const [a, b] = [await box('.sheet-preview .sheet-sec[data-key="stats"]'), await box('.sheet-preview .sheet-sec[data-key="skills"]')];
+    return !!a && !!b && b.y > a.y + a.h - 1;
+  }).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+
+  for (const [what, layout] of [
+    ["cols", { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text", cols: 20 }] }] }],
+    ["width", { sections: [{ key: "a", title: "A", width: "quarter", fields: [] }] }],
+    ["compact", { sections: [{ key: "a", title: "A", compact: 1, fields: [] }] }],
+  ]) expect((await api(page, "template_save", { name: "Bad", game: "X", layout })).status, what).toBe(400);
 });
