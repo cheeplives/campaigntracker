@@ -63,7 +63,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '25';
+  const APP_VERSION = '26';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
@@ -2964,7 +2964,9 @@
     setWide();
     const left = el('section', { class: 'card enc-index' },
       el('div', { class: 'row spread' }, el('h2', {}, 'Encyclopedia', tip('The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only')),
-        el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn, wideBtn)),
+        el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn,
+          btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), 'small', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here'),
+          wideBtn)),
       search, filters, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
 
     // --- the entry picked
@@ -3022,6 +3024,7 @@
           !ch && isGM() && S.sheetsReady && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
             ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
           btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
+          btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out'),
           scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
@@ -3040,6 +3043,83 @@
       e.author ? el('small', { class: 'muted' }, 'Added by ', byline(e)) : null,
       attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret, name: e.name }),
       box]);
+  }
+
+  // ------------------------------------------------------------ the Encyclopedia for virtual tabletops
+  /** Entries as static/lore-export.js takes them: each with its connections as seen from it. */
+  const loreEntries = (list, conns) => list.map(e => ({ ...e, files: e.files || [],
+    links: (conns.get(e.id) || []).map(c => ({ label: c.label, to: c.other.id, note: c.r.note, is_secret: !!c.r.is_secret })) }));
+  function saveFile(blob, name) {
+    const a = el('a', { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove();
+    // iPad Safari reads the file only once its "Download?" prompt is answered, so keep it for a minute, not a second
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  }
+  /** One entry, formatted, on the clipboard: HTML for a handout, and Markdown for anything that only takes text. */
+  async function copyHandout(e, ctx) {
+    // a GM-only entry is copied whole for the GM; any other leaves out what players can't see
+    const all = LoreExport.pick(loreEntries(ctx.entries, ctx.conns), { gmOnly: !!e.is_secret });
+    const one = all.find(x => x.id === e.id);
+    const names = new Map(all.map(x => [x.id, x.name]));
+    const html = LoreExport.handout(one, names);
+    const text = `# ${one.name}\n\n${RichText.toMarkdown(one.notes || '')}`;
+    try {
+      if (window.ClipboardItem) await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
+      else await navigator.clipboard.writeText(text);
+      toast('Copied. Paste it into a handout or a note');
+    } catch { toast('This browser won\'t let the page copy', true); }
+  }
+  /** The Export dialog: which entries, in which format, and for a GM whether GM-only things go too. */
+  function exportLore(all, conns, shown) {
+    const gm = isGM();
+    const fmt = el('select', { 'aria-label': 'Format' },
+      el('option', { value: 'md' }, 'Markdown pages and pictures (.zip): Obsidian, wikis, Owlbear notes, anything'),
+      el('option', { value: 'foundry' }, 'Foundry VTT journal and pictures (.zip)'));
+    const which = el('select', { 'aria-label': 'Which entries' },
+      el('option', { value: 'all' }, `Every entry (${all.length})`),
+      shown.length !== all.length ? el('option', { value: 'shown' }, `The ${shown.length} the search and filters show`) : null);
+    const gmOnly = gm ? el('input', { type: 'checkbox' }) : null;
+    const how = el('p', { class: 'small muted' });
+    const status = el('p', { class: 'small muted', 'aria-live': 'polite' });
+    const drawHow = () => how.replaceChildren(fmt.value === 'foundry'
+      ? 'In Foundry: make a journal entry, right-click it and choose Import Data, then pick the .json file from the zip. Upload the zip\'s chronicle folder to Foundry\'s User Data (in the File Browser, or by copying it into the Data folder) so the pictures show. GM-only entries and notes are hidden from players there too.'
+      : 'One page per entry, linked to each other, with an Encyclopedia page listing them all. Open the folder as an Obsidian vault, or paste a page into any wiki or VTT note.');
+    fmt.addEventListener('change', drawHow);
+    drawHow();
+    const go = el('button', { type: 'button', class: 'primary' }, 'Download');
+    const cancel = el('button', { value: 'cancel' }, 'Cancel');
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the Encyclopedia' },
+      el('form', { method: 'dialog' },
+        el('h3', {}, '⬇ Export the Encyclopedia'),
+        el('label', { class: 'row small' }, 'Format ', fmt),
+        el('label', { class: 'row small' }, 'Entries ', which),
+        gm ? el('label', { class: 'row small' }, gmOnly, ' Include GM-only entries, notes, paragraphs, connections and pictures') : el('p', { class: 'small muted' }, 'It holds what you can see here.'),
+        how, status,
+        el('div', { class: 'kit-dialog-actions' }, go, cancel)));
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('cancel', ev => { if (go.disabled) ev.preventDefault(); });
+    go.addEventListener('click', busy(go, async () => {
+      const withGm = !!gmOnly?.checked;
+      const list = LoreExport.pick(loreEntries(which.value === 'shown' ? shown : all, conns), { gmOnly: withGm });
+      if (!list.length) throw new Error('There are no entries to export.');
+      const pictures = LoreExport.plan(list);
+      const out = [], folder = fmt.value === 'foundry' ? `${LoreExport.foundryFolder(S.camp.name)}/` : '';
+      let done = 0;
+      for (const p of pictures) {
+        status.textContent = `Fetching pictures and files: ${++done} of ${pictures.length}`;
+        const res = await fetch(p.file.url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(`Couldn't fetch ${p.file.name} (${res.status})`);
+        out.push({ path: folder + p.path, data: new Uint8Array(await res.arrayBuffer()) });
+      }
+      const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
+      const date = new Date().toISOString().slice(0, 10);
+      if (fmt.value === 'foundry') out.unshift({ path: `${base} Encyclopedia (Foundry journal).json`, data: JSON.stringify(LoreExport.foundry(list, pictures, { campaign: S.camp.name, gmOnly: withGm }), null, 2) + '\n' });
+      else out.unshift(...LoreExport.markdown(list, pictures, { campaign: S.camp.name, gm, gmOnly: withGm, toMarkdown: RichText.toMarkdown, date }).files.map(f => ({ path: f.path, data: f.text })));
+      saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} Encyclopedia${fmt.value === 'foundry' ? ' for Foundry' : ''}.zip`);
+      d.close();
+    }));
+    document.body.append(d);
+    d.showModal();
   }
 
   // ------------------------------------------------------------ pictures and files
@@ -5734,6 +5814,26 @@
     });
 
     const presetSel = select(E.presetOptions(), 'gregorian');
+    /** The calendar for Seasons & Stars in Foundry: say what didn't fit and what date to set, then download it. */
+    async function exportSeasonsStars() {
+      const r = VttCalendar.seasonsAndStars(S.camp, S.holidays);
+      const c = r.calendar, today = r.today;
+      const ok = el('button', { value: 'ok', class: 'primary' }, 'Download');
+      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Calendar for Foundry' },
+        el('form', { method: 'dialog' },
+          el('h3', {}, '⬇ Calendar for Foundry VTT'),
+          el('p', { class: 'small' }, 'For the Seasons & Stars module (Foundry 13). In Foundry, upload the file (the File Browser, or the Data folder), then in Seasons & Stars choose Select Calendar, pick the file, and Select.'),
+          today ? el('p', { class: 'small' }, 'Then set Foundry\'s date to ', el('strong', {}, `${today.day} ${c.months[today.month - 1].name} ${today.year}`), ', where this campaign is now.')
+            : el('p', { class: 'small' }, 'This campaign is on a festival day now; set Foundry\'s date to the day after it.'),
+          r.lost.length ? [el('p', { class: 'small muted' }, 'Seasons & Stars can\'t hold everything:'), el('ul', { class: 'small muted' }, r.lost.map(t => el('li', {}, t)))] : null,
+          el('div', { class: 'kit-dialog-actions' }, ok, el('button', { value: 'cancel' }, 'Cancel'))));
+      d.addEventListener('close', () => {
+        if (d.returnValue === 'ok') saveFile(new Blob([JSON.stringify(c, null, 2) + '\n'], { type: 'application/json' }), VttCalendar.fileName(S.camp));
+        d.remove();
+      });
+      document.body.append(d);
+      d.showModal();
+    }
     async function importCalendar() {
       try {
         const r = await CalendarFile.pick();
@@ -5853,6 +5953,8 @@
       el('div', { class: 'row' },
         btn('⬇ Export calendar', () => CalendarFile.download(S.camp, S.holidays), 'small',
           'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
+        btn('⬇ For Foundry…', exportSeasonsStars, 'small',
+          'Download this calendar for Seasons & Stars, the calendar module most Foundry VTT worlds use, so Foundry shows the same months, weekdays, moons, seasons and holidays'),
         btn('Import calendar…', importCalendar, 'small',
           'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
       el('div', { class: 'row' }, btn('⬆ Import from Scabard…', importScabard, 'small',

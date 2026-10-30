@@ -213,6 +213,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   GM's file has secret events and GM notes, a player's has neither and leaves
   out the weather of shifts that haven't happened yet.
 - **calendar-file**: Settings exports the calendar, its holidays and the date reached
+- **vtt-export**: the Encyclopedia's Export downloads a zip of linked Markdown pages with their pictures (credited) or a Foundry journal with a page per entry, linked, its pictures under the folder it names; a GM's leaves out GM-only entries, paragraphs, GM notes, connections and pictures unless asked, a player's never has them; Copy as handout puts an entry on the clipboard as HTML and Markdown without its GM-only paragraphs; Settings' For Foundry downloads the calendar for Seasons & Stars and says the date to set. **vtt-export-logic** (under Node): every preset calendar gives the same dates, weekdays and new and full moons in Seasons & Stars (its date maths copied into the test), leap rules, festival days, seasons and holidays carry over and what can't is listed; the export's pick, Markdown, Foundry journal, zip (read back by its central directory, CRCs checked) and handout.
   as JSON; importing it into another campaign's Settings replaces the calendar and adds
   the holidays it lacks (only once), a file that isn't a calendar is refused, and the
   new-campaign form starts a campaign on the file's calendar, holidays and date.
