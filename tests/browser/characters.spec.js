@@ -213,8 +213,8 @@ test("Characters: Use theirs keeps the other person's value, on screen and saved
   await p1.getByRole("button", { name: "Use theirs" }).click();
   await expect(str).toHaveValue("9");
   await p1.clock.runFor(1000);
-  await p1.waitForTimeout(500);
-  expect(stored(c.id, "str")).toBe(9);
+  // what was typed is sent first, on leaving the box, and theirs after it: wait for the last to land
+  await expect.poll(() => stored(c.id, "str")).toBe(9);
 });
 
 test("Characters: a GM whose Edit ran out is put back to reading, and stops showing as editing", async ({ page, browser }) => {
