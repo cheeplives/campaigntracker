@@ -196,6 +196,21 @@ function templates_action(string $action): void {
             db()->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, forked_from_id, layout) VALUES (?,?,?,?,?,?)')
                 ->execute([$t['name'], $t['game'], $t['edition'], $me['id'], $t['id'], json_encode($t['layout'], JSON_UNESCAPED_UNICODE)]);
             out(['ok' => true, 'template' => template_full((int)db()->lastInsertId())]);
+        case 'sheet_import_fetch':
+            // a character from Pathbuilder 2e (its Export JSON link) or D&D Beyond (a public character's page), fetched
+            // here as the browser can't reach either; only those two hosts, by the number in the link
+            $url = trim((string)str_in(p('url'), 300));
+            if (preg_match('~^(?:https?://)?(?:www\.)?pathbuilder2e\.com/json\.php\?id=(\d{1,12})$~i', $url, $m))
+                $get = "https://pathbuilder2e.com/json.php?id=$m[1]";
+            elseif (preg_match('~^(?:https?://)?(?:www\.)?dndbeyond\.com/(?:profile/[^/?#]+/)?characters/(\d{1,12})(?:[/?#].*)?$~i', $url, $m))
+                $get = "https://character-service.dndbeyond.com/character/v5/character/$m[1]";
+            else fail('Paste a Pathbuilder 2e Export JSON link or a D&D Beyond character link');
+            $r = http_request('GET', $get, ['timeout' => 15, 'compress' => true, 'headers' => ['Accept: application/json', 'User-Agent: CampaignChronicle/1.0']]);
+            $json = $r['status'] === 200 && strlen($r['body']) < 5_000_000 ? json_decode($r['body'], true) : null;
+            if (!is_array($json) || (isset($json['success']) && !$json['success']))
+                fail(str_contains($get, 'dndbeyond') ? "D&D Beyond didn't send that character. Its privacy must be Public (in the character's Home > Manage > Character Privacy)" : "Pathbuilder didn't send that character. Check the link from its Export JSON", 502);
+            out(['json' => $json]);
+
         case 'template_delete':
             $t = template_row(int_in(p('id'), 1));
             need_template_editor($t);
@@ -408,6 +423,7 @@ function characters_action(string $action, int $cid): void {
             out(['ok' => true, 'character' => character_out(character_row($cid, $id, $isGm), $isGm)['character']]);
 
         case 'character_field':
+        case 'character_values':
             $c = character_row($cid, int_in(p('id'), 1), $isGm);
             if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
             $mine = $c['owner_id'] !== null && (int)$c['owner_id'] === $me['id'];
@@ -416,22 +432,35 @@ function characters_action(string $action, int $cid): void {
                 $st->execute([$c['id'], $me['id']]);
                 if (!$st->fetchColumn()) fail('Press Edit first', 409, 'not_editing');
             }
-            $key = (string)p('key');
             $fields = sheet_fields(json_decode($c['layout'], true));
-            if (!isset($fields[$key])) fail('This sheet has no such field');
-            [$ok, $value] = sheet_value($fields[$key][0], p('value'));
-            if (!$ok) fail("That doesn't fit the field " . $fields[$key][0]['label']);
-            $path = '$."' . $key . '"';
-            // a value kept from before a template change, which no longer fits this field, stays among the old fields
-            $stored = json_decode($c['field_values'], true) ?: [];
-            if (array_key_exists($key, $stored) && (!sheet_value($fields[$key][0], $stored[$key])[0] || sheet_stale_list($fields[$key][0], $stored[$key]))) {
-                for ($n = 1, $keep = "$key~old"; array_key_exists($keep, $stored); $keep = "$key~old" . ++$n);
-                db()->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
-                    ->execute(['$."' . $keep . '"', $path, $c['id']]);
+            // one field as it is typed, or (values) many at once, as an import fills them: all of them fit, or none is kept
+            $in = $action === 'character_field' ? [(string)p('key') => p('value')] : p('values');
+            if (!is_array($in) || !$in || array_is_list($in) || count($in) > SHEET_LIMITS['fields']) fail('Send the values by field key');
+            $set = [];
+            foreach ($in as $key => $raw) {
+                $key = (string)$key;
+                if (!isset($fields[$key])) fail('This sheet has no such field');
+                [$ok, $set[$key]] = sheet_value($fields[$key][0], $raw);
+                if (!$ok) fail("That doesn't fit the field " . $fields[$key][0]['label']);
             }
-            db()->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
-                ->execute([$path, json_encode($value, JSON_UNESCAPED_UNICODE), $path, $me['id'], (int)floor(microtime(true) * 1000), $c['id']]);
-            out(['ok' => true, 'value' => $value]);
+            $pdo = db();
+            $pdo->beginTransaction();
+            $stored = json_decode($c['field_values'], true) ?: [];
+            $stamp = (int)floor(microtime(true) * 1000);
+            foreach ($set as $key => $value) {
+                $path = '$."' . $key . '"';
+                // a value kept from before a template change, which no longer fits this field, stays among the old fields
+                if (array_key_exists($key, $stored) && (!sheet_value($fields[$key][0], $stored[$key])[0] || sheet_stale_list($fields[$key][0], $stored[$key]))) {
+                    for ($n = 1, $keep = "$key~old"; array_key_exists($keep, $stored); $keep = "$key~old" . ++$n);
+                    $pdo->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, JSON_EXTRACT(field_values, ?)) WHERE id=?')
+                        ->execute(['$."' . $keep . '"', $path, $c['id']]);
+                    $stored[$keep] = true;
+                }
+                $pdo->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
+                    ->execute([$path, json_encode($value, JSON_UNESCAPED_UNICODE), $path, $me['id'], $stamp, $c['id']]);
+            }
+            $pdo->commit();
+            out($action === 'character_field' ? ['ok' => true, 'value' => reset($set)] : ['ok' => true, 'count' => count($set)]);
 
         case 'character_save':
             $c = character_row($cid, int_in(p('id'), 1), $isGm);

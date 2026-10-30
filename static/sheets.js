@@ -11,7 +11,7 @@
 
 const Sheets = (() => {
   const { el, toast, confirmDialog } = KIT;
-  const L = SheetLayout;
+  const L = SheetLayout, I = SheetImport;
   let ctx = null;
   /** app.js's helpers: { S, api, post, mount, field, campaignHeader, isGM, route }. */
   function mount(c) { ctx = c; }
@@ -742,6 +742,39 @@ const Sheets = (() => {
         }, 'small', { 'data-tip': 'Events, notes and the member list show this character\'s name for you' })) : null);
   }
 
+  /** Import: a Pathbuilder 2e export or a D&D Beyond character, by link, file or pasted JSON, onto this sheet's fields. */
+  function importPanel(ch) {
+    const box = el('textarea', { rows: 3, 'aria-label': 'Link or JSON to import', placeholder: 'A Pathbuilder 2e Export JSON link, a public D&D Beyond character link, or the JSON itself' });
+    const file = el('input', { type: 'file', accept: 'application/json,.json', 'aria-label': 'JSON file to import' });
+    const msg = el('p', { class: 'small', role: 'status' });
+    const go = async text => {
+      msg.textContent = '';
+      text = text.trim();
+      let json = null;
+      try {
+        if (I.link(text)) {
+          msg.textContent = 'Fetching…';
+          json = (await ctx.post('sheet_import_fetch', { url: text })).json;
+        } else {
+          try { json = JSON.parse(text); } catch { throw new Error('Paste a Pathbuilder 2e Export JSON link, a public D&D Beyond character link, or the JSON from either'); }
+        }
+        const read = I.read(json), from = I.detect(json) === 'pathbuilder' ? 'Pathbuilder 2e export' : 'D&D Beyond character';
+        const { values, count } = I.fit(ch.layout, read.values);
+        if (!count) throw new Error(`Nothing in that ${from} matches this sheet's fields. Imports fill the starter ${I.detect(json) === 'pathbuilder' ? 'Pathfinder 2e' : 'D&D 5e'} template and forks that keep its fields`);
+        msg.textContent = '';
+        if (!await confirmDialog(`Fill ${plural(count, 'field')} from ${read.name ? `${read.name}'s` : 'the'} ${from}? What is in those fields now is replaced; the rest stay as they are.`, { ok: 'Fill the sheet' })) return;
+        await ctx.post('character_values', { id: ch.id, values }, cid());
+        toast(`Filled ${plural(count, 'field')}`);
+        ctx.route();
+      } catch (err) { msg.textContent = err.message; }
+    };
+    file.addEventListener('change', async () => { const f = file.files[0]; file.value = ''; if (f) go(await f.text()); });
+    return el('div', { class: 'card sheet-import', hidden: true },
+      el('h3', {}, 'Import a character'),
+      el('p', { class: 'small muted' }, 'From Pathbuilder 2e (Menu > Export > Export JSON, then copy the link) or D&D Beyond (the character\'s page link; its privacy must be Public). The values land on the fields of the starter Pathfinder 2e or D&D 5e template. The name stays this sheet\'s.'),
+      box, el('div', { class: 'row' }, button('Read it', () => go(box.value), 'primary small'), el('label', { class: 'small' }, 'or a file ', file)), msg);
+  }
+
   /** A character's sheet, or (play) its Play view. */
   async function renderCharacter(id, play = false) {
     stopPresence();
@@ -762,6 +795,7 @@ const Sheets = (() => {
     for (const [k, v] of Object.entries(values)) sender.known(k, v);
     const bar = viewersBar();
     const body = el('div');
+    const imports = importPanel(ch);
     const href = `#/c/${cid()}/characters/${ch.id}`;
     const editBtn = gmOnOthers ? button('Edit', async () => {
       editing = !editing;
@@ -806,7 +840,9 @@ const Sheets = (() => {
       el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
-        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, ch.can_edit ? button('Delete character', async () => {
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn,
+          ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
+          ch.can_edit ? button('Delete character', async () => {
           if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
           try {
             await ctx.post('character_delete', { id: ch.id }, cid());
@@ -817,7 +853,7 @@ const Sheets = (() => {
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
-        bar, body));
+        bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded
     startPresence(ch, {
       editing,

@@ -301,3 +301,64 @@ test("Characters: a sheet with pages keeps its open page when the sheet is drawn
   await expect(p1.getByLabel("Slots", { exact: true })).toBeVisible();
   await expect(p1.getByLabel("Level", { exact: true })).toBeHidden();
 });
+
+test("Characters: a Pathbuilder export pasted in fills the sheet, after asking", async ({ page, browser }) => {
+  const { cid, p1, p2 } = await party(page, browser);
+  const fs = require("fs"), path = require("path");
+  const pf = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "db", "starter-templates", "pathfinder-2e.json"), "utf8"));
+  const tpl = (await api(page, "template_save", { name: `PF import ${Date.now()}`, game: pf.game, layout: pf.layout })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Blank" });
+  await api(p1, "character_field", { id: c.id, key: "ancestry", value: "Dwarf" }, cid);
+  const build = { success: true, build: { name: "Valeros", class: "Fighter", level: 3, ancestry: "Human", heritage: "Versatile Human", background: "Farmhand",
+    attributes: { ancestryhp: 8, classhp: 10, bonushp: 0, bonushpPerLevel: 0, speed: 25, speedBonus: 0 },
+    abilities: { str: 18, dex: 14, con: 14, int: 10, wis: 12, cha: 10 }, proficiencies: { athletics: 4, fortitude: 4 },
+    equipment: [["Rope", 1]], money: { gp: 15 } } };
+
+  // someone else in the party has no Import
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p2.getByRole("heading", { name: "Blank" })).toBeVisible();
+  await expect(p2.getByRole("button", { name: "Import" })).toHaveCount(0);
+
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await p1.getByRole("button", { name: "Import" }).click();
+  await p1.getByLabel("Link or JSON to import").fill("not json at all");
+  await p1.getByRole("button", { name: "Read it" }).click();
+  await expect(p1.locator(".sheet-import")).toContainText("Paste a Pathbuilder 2e Export JSON link");
+  await p1.getByLabel("Link or JSON to import").fill(JSON.stringify(build));
+  await p1.getByRole("button", { name: "Read it" }).click();
+  const dlg = p1.locator("dialog");
+  await expect(dlg).toContainText("Valeros");
+  await dlg.getByRole("button", { name: "Cancel" }).click();
+  expect(stored(c.id, "ancestry")).toBe("Dwarf");
+  await p1.getByRole("button", { name: "Read it" }).click();
+  await dlg.getByRole("button", { name: "Fill the sheet" }).click();
+  await expect(p1.getByLabel("Ancestry", { exact: true })).toHaveValue("Human");
+  expect(stored(c.id, "ancestry")).toBe("Human");
+  expect(stored(c.id, "attr_strength")).toBe(4);
+  expect(stored(c.id, "sk_athletics")).toBe("Expert");
+  expect(stored(c.id, "hp")).toEqual({ cur: 44, max: 44 });
+  expect(stored(c.id, "items")).toEqual([{ item: "Rope", qty: "1" }]);
+  // the name stays the sheet's own
+  await expect(p1.getByRole("heading", { name: "Blank" })).toBeVisible();
+});
+
+test("Characters: many values at once all fit or none is kept, and only for the sheet's player or a GM", async ({ page, browser }) => {
+  const { cid, p1, p2, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Batch" });
+  expect((await api(p1, "character_values", { id: c.id, values: { str: 12, luck: 2 } }, cid)).status).toBe(200);
+  expect([stored(c.id, "str"), stored(c.id, "luck")]).toEqual([12, 2]);
+  const bad = await api(p1, "character_values", { id: c.id, values: { str: 15, luck: 9 } }, cid);
+  expect(bad.status).toBe(400);
+  expect(bad.json.message).toMatch(/Luck/);
+  expect(stored(c.id, "str")).toBe(12);
+  expect((await api(p2, "character_values", { id: c.id, values: { str: 1 } }, cid)).status).toBe(403);
+  expect((await api(p1, "character_values", { id: c.id, values: [] }, cid)).status).toBe(400);
+});
+
+test("Characters: an import link is fetched only from Pathbuilder or D&D Beyond", async ({ page, browser }) => {
+  const { p1 } = await party(page, browser);
+  for (const url of ["https://evil.example/json.php?id=1", "http://127.0.0.1/characters/1", "file:///etc/passwd"]) {
+    const r = await api(p1, "sheet_import_fetch", { url });
+    expect(r.status, url).toBe(400);
+  }
+});

@@ -33,6 +33,10 @@ test("About & sources: open signed out from the footer, with every travel sample
   await expect(find.getByRole("link", { name: /Smithsonian/ })).toBeVisible();
   await expect(find.getByRole("link", { name: "DeviantArt" })).toBeVisible();
   await expect(page.locator("li", { hasText: "DeviantArt, through its API and oEmbed" })).toBeVisible();
+  // and where Import on a character's sheet reads from
+  const imp = page.locator("li", { hasText: "Import on a character's sheet" });
+  await expect(imp.getByRole("link", { name: "Pathbuilder 2e" })).toHaveAttribute("href", "https://pathbuilder2e.com/");
+  await expect(imp.getByRole("link", { name: "D&D Beyond" })).toHaveAttribute("href", "https://www.dndbeyond.com/");
   // Leaving the page goes back to the sign-in card.
   await page.goto("index.html#/");
   await expect(page.getByRole("link", { name: "Sign in with Google" })).toBeVisible();
