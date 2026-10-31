@@ -13,123 +13,363 @@
    {
     "key": "traveller",
     "title": "Traveller",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "service",
-      "label": "Service",
+      "key": "name_title",
+      "label": "Name & Title",
       "type": "text",
-      "summary": true
+      "cols": 4
      },
      {
-      "key": "rank",
-      "label": "Rank",
+      "key": "upp",
+      "label": "UPP",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "terms",
-      "label": "Terms Served",
-      "type": "number",
+      "cols": 2,
       "summary": true
      },
      {
       "key": "age",
       "label": "Age",
-      "type": "number"
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "passport",
+      "label": "Passport",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "homeworld",
-      "label": "Homeworld",
-      "type": "text"
+      "label": "Home Planet",
+      "type": "text",
+      "cols": 3,
+      "summary": true
      },
      {
-      "key": "upp",
-      "label": "UPP",
-      "type": "text"
+      "key": "sector",
+      "label": "Sector / Subsector",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "homeworld_upp",
+      "label": "Home Planet UPP",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "affiliation",
+      "label": "Affiliation",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "civilian_education",
+      "label": "Civilian Education",
+      "type": "text",
+      "cols": 4
      }
     ]
    },
    {
     "key": "characteristics",
     "title": "Characteristics",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ch_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Strength (STR)",
+      "type": "number"
      },
      {
       "key": "ch_dexterity",
-      "label": "Dexterity",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Dexterity (DEX)",
+      "type": "number"
      },
      {
       "key": "ch_endurance",
-      "label": "Endurance",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Endurance (END)",
+      "type": "number"
      },
      {
       "key": "ch_intelligence",
-      "label": "Intelligence",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Intelligence (INT)",
+      "type": "number"
      },
      {
       "key": "ch_education",
-      "label": "Education",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Education (EDU)",
+      "type": "number"
      },
      {
       "key": "ch_social_standing",
-      "label": "Social Standing",
-      "type": "number",
-      "min": 0,
-      "max": 15,
-      "size": "small"
+      "label": "Social Standing (SOC)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "service_sec",
+    "title": "Imperial Service",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "service",
+      "label": "Service",
+      "type": "text",
+      "cols": 3,
+      "summary": true
      },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "rank",
+      "label": "Discharge Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "terms",
+      "label": "Terms Served",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "years_service",
+      "label": "Years of Service",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "security_clearance",
+      "label": "Security Clearance",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "military_education",
+      "label": "Military Education",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "assignments",
+      "label": "Command & Special Assignments",
+      "type": "longtext"
+     },
+     {
+      "key": "awards",
+      "label": "Awards & Decorations",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "damage",
+    "title": "Damage & Modifiers",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "dmg_strength_damage",
       "label": "Strength Damage",
       "type": "number",
-      "play": true,
-      "min": 0,
-      "size": "small"
+      "play": true
      },
      {
       "key": "dmg_dexterity_damage",
       "label": "Dexterity Damage",
       "type": "number",
-      "play": true,
-      "min": 0,
-      "size": "small"
+      "play": true
      },
      {
       "key": "dmg_endurance_damage",
       "label": "Endurance Damage",
       "type": "number",
-      "play": true,
-      "min": 0,
-      "size": "small"
+      "play": true
+     },
+     {
+      "key": "dm_intelligence",
+      "label": "INT DM",
+      "type": "number"
+     },
+     {
+      "key": "dm_education",
+      "label": "EDU DM",
+      "type": "number"
+     },
+     {
+      "key": "dm_social_standing",
+      "label": "SOC DM",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "finances",
+    "title": "Benefits & Finances",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "savings",
+      "label": "Savings / Investments",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "credit_line",
+      "label": "Bank Credit Line",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "pension",
+      "label": "Retirement Benefits",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ship",
+      "label": "Ship / Ship Shares",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "benefits",
+      "label": "Mustering Out Benefits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "benefit",
+        "label": "Benefit"
+       }
+      ]
+     },
+     {
+      "key": "licenses",
+      "label": "Professional Licenses & Permits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "license",
+        "label": "License / Permit"
+       }
+      ]
+     },
+     {
+      "key": "memberships",
+      "label": "Association & Guild Memberships",
+      "type": "list",
+      "columns": [
+       {
+        "key": "membership",
+        "label": "Membership"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "special",
+    "title": "Special Information",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "special_info",
+      "label": "Special Information",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Skills & Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon (Caliber / TL)"
+       },
+       {
+        "key": "weight",
+        "label": "Weight (kg)"
+       },
+       {
+        "key": "magazines",
+        "label": "Magazines"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo Type"
+       },
+       {
+        "key": "max_range",
+        "label": "Max Range"
+       },
+       {
+        "key": "to_hit",
+        "label": "To Hit"
+       },
+       {
+        "key": "to_penetrate",
+        "label": "To Penetrate"
+       },
+       {
+        "key": "to_damage",
+        "label": "To Damage"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
      }
     ]
    },
    {
     "key": "skills",
-    "title": "Skills",
+    "title": "Skills Inventory",
+    "page": "Skills & Weapons",
+    "width": "third",
     "fields": [
      {
       "key": "skill_list",
@@ -142,7 +382,7 @@
        },
        {
         "key": "level",
-        "label": "Level"
+        "label": "DM"
        }
       ]
      }
@@ -150,27 +390,15 @@
    },
    {
     "key": "equipment",
-    "title": "Equipment",
+    "title": "Armor & Equipment",
+    "page": "Skills & Weapons",
+    "width": "two-thirds",
     "fields": [
-     {
-      "key": "weapons",
-      "label": "Weapons",
-      "type": "list",
-      "columns": [
-       {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
      {
       "key": "armor",
       "label": "Armor",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "gear",
@@ -186,36 +414,9 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "credits",
-      "label": "Credits",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "pension",
-      "label": "Pension",
-      "type": "text"
-     },
-     {
-      "key": "ship",
-      "label": "Ship / Ship Shares",
-      "type": "text"
-     },
-     {
-      "key": "benefits",
-      "label": "Mustering Out Benefits",
-      "type": "list",
-      "columns": [
-       {
-        "key": "benefit",
-        "label": "Benefit"
-       }
-      ]
      }
     ]
    }
   ]
  }
-}
+}
