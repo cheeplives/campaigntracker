@@ -13,17 +13,27 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "ancestry",
       "label": "Ancestry",
       "type": "text",
+      "cols": 3,
       "summary": true
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "background",
       "label": "Background",
-      "type": "text"
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "class",
@@ -35,90 +45,189 @@
        "Rogue",
        "Warrior"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 3
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
-      "min": 1,
-      "max": 20,
+      "cols": 2,
       "summary": true
-     },
-     {
-      "key": "specializations",
-      "label": "Specializations",
-      "type": "text"
      },
      {
       "key": "xp",
       "label": "Experience",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3
+     },
+     {
+      "key": "health",
+      "label": "Health (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "fortune",
+      "label": "Fortune (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_penalty",
+      "label": "Armor Penalty",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "charge",
+      "label": "Charge",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "abilities",
     "title": "Abilities",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ab_accuracy",
       "label": "Accuracy",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_communication",
       "label": "Communication",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_constitution",
       "label": "Constitution",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number"
      },
      {
       "key": "ab_fighting",
       "label": "Fighting",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_intelligence",
       "label": "Intelligence",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_perception",
       "label": "Perception",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_strength",
       "label": "Strength",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
      },
      {
       "key": "ab_willpower",
       "label": "Willpower",
-      "type": "number",
-      "min": -2,
-      "max": 10
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents, Specializations & Features",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "specializations",
+      "label": "Specializations",
+      "type": "text",
+      "size": "full"
      },
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "degree",
+        "label": "Degree"
+       }
+      ]
+     },
+     {
+      "key": "special_features",
+      "label": "Special Features",
+      "type": "longtext"
+     },
+     {
+      "key": "weapon_groups",
+      "label": "Weapon Groups",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "focuses_sec",
+    "title": "Focuses",
+    "page": "Character",
+    "width": "third",
+    "fields": [
      {
       "key": "focuses",
       "label": "Focuses",
@@ -138,49 +247,9 @@
    },
    {
     "key": "combat",
-    "title": "Combat",
+    "title": "Weapons",
+    "page": "Character",
     "fields": [
-     {
-      "key": "health",
-      "label": "Health",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "fortune",
-      "label": "Fortune",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "mp",
-      "label": "Magic Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "defense",
-      "label": "Defense",
-      "type": "number"
-     },
-     {
-      "key": "armor_rating",
-      "label": "Armor Rating",
-      "type": "number"
-     },
-     {
-      "key": "armor_penalty",
-      "label": "Armor Penalty",
-      "type": "number"
-     },
-     {
-      "key": "speed",
-      "label": "Speed",
-      "type": "number"
-     },
      {
       "key": "weapons",
       "label": "Weapons",
@@ -201,29 +270,71 @@
        {
         "key": "range",
         "label": "Range"
+       },
+       {
+        "key": "short_range",
+        "label": "Short Range"
+       },
+       {
+        "key": "long_range",
+        "label": "Long Range"
+       },
+       {
+        "key": "reload",
+        "label": "Reload"
        }
-      ]
+      ],
+      "play": true
      }
     ]
    },
    {
-    "key": "talents",
-    "title": "Talents & Arcana",
+    "key": "stunts_sec",
+    "title": "Stunts, Relationships & Goals",
+    "page": "Magic & Story",
+    "width": "half",
     "fields": [
      {
-      "key": "talent_list",
-      "label": "Talents",
-      "type": "list",
-      "columns": [
-       {
-        "key": "talent",
-        "label": "Talent"
-       },
-       {
-        "key": "degree",
-        "label": "Degree"
-       }
-      ]
+      "key": "stunts",
+      "label": "Favorite & Class Stunts",
+      "type": "longtext"
+     },
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "longtext"
+     },
+     {
+      "key": "goals",
+      "label": "Goals & Ties",
+      "type": "longtext"
+     },
+     {
+      "key": "history",
+      "label": "Personal Details & History",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "magic",
+    "title": "Spells",
+    "page": "Magic & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mp",
+      "label": "Magic Points (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "spellpower",
+      "label": "Spellpower",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "arcana_list",
@@ -248,11 +359,13 @@
    },
    {
     "key": "equipment",
-    "title": "Equipment",
+    "title": "Equipment & Wealth",
+    "page": "Magic & Story",
+    "width": "half",
     "fields": [
      {
       "key": "gear",
-      "label": "Equipment",
+      "label": "Equipment & Special Items",
       "type": "list",
       "columns": [
        {
@@ -269,32 +382,22 @@
       "key": "coin_gold",
       "label": "Gold",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_silver",
       "label": "Silver",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_copper",
       "label": "Copper",
       "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "goals",
-      "label": "Goals",
-      "type": "longtext"
-     },
-     {
-      "key": "relationships",
-      "label": "Relationships",
-      "type": "longtext"
+      "cols": 2,
+      "play": true
      }
     ]
    }
