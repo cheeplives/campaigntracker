@@ -13,113 +13,186 @@
    {
     "key": "identity",
     "title": "Character",
+    "page": "Statistics",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "ancestry",
       "label": "Ancestry",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "heritage",
-      "label": "Heritage",
-      "type": "text"
+      "label": "Heritage & Traits",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "homeworld",
+      "label": "Homeworld",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "background",
       "label": "Background",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "class",
       "label": "Class",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
-      "min": 1,
-      "max": 20,
+      "cols": 2,
       "summary": true
      },
      {
       "key": "xp",
-      "label": "Experience Points",
+      "label": "XP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2
      },
      {
-      "key": "homeworld",
-      "label": "Homeworld",
-      "type": "text"
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "pips",
+      "count": 3,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "speed",
+      "label": "Speed (feet)",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "attributes",
     "title": "Attribute Modifiers",
+    "page": "Statistics",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
       "label": "Strength",
-      "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
-      "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_constitution",
       "label": "Constitution",
-      "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_intelligence",
       "label": "Intelligence",
-      "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_wisdom",
       "label": "Wisdom",
-      "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_charisma",
       "label": "Charisma",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Hit Points",
+    "page": "Statistics",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "temp_hp",
+      "label": "Temporary HP",
       "type": "number",
-      "min": -5,
-      "max": 10,
-      "size": "small"
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "wounded",
+      "label": "Wounded",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "dying",
+      "label": "Dying",
+      "type": "pips",
+      "count": 4,
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "resistances",
+      "label": "Resistances & Immunities",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ],
+      "play": true
      }
     ]
    },
    {
     "key": "defenses",
     "title": "Defenses",
+    "page": "Statistics",
+    "width": "third",
     "fields": [
      {
       "key": "ac",
       "label": "Armor Class",
-      "type": "number"
+      "type": "number",
+      "play": true
      },
      {
       "key": "armor_rank",
@@ -142,8 +215,8 @@
       "key": "shield_hp",
       "label": "Shield HP",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "min": 0,
+      "play": true
      },
      {
       "key": "fort_rank",
@@ -180,78 +253,19 @@
        "Master",
        "Legendary"
       ]
-     },
-     {
-      "key": "resistances",
-      "label": "Resistances & Immunities",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "health",
-    "title": "Hit Points",
-    "fields": [
-     {
-      "key": "hp",
-      "label": "Hit Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "temp_hp",
-      "label": "Temporary HP",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "dying",
-      "label": "Dying",
-      "type": "pips",
-      "count": 4,
-      "play": true
-     },
-     {
-      "key": "wounded",
-      "label": "Wounded",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "hero_points",
-      "label": "Hero Points",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "conditions",
-      "label": "Conditions",
-      "type": "list",
-      "columns": [
-       {
-        "key": "condition",
-        "label": "Condition"
-       },
-       {
-        "key": "value",
-        "label": "Value"
-       }
-      ],
-      "play": true
      }
     ]
    },
    {
     "key": "skills",
     "title": "Skills",
+    "page": "Statistics",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "perception_rank",
-      "label": "Perception",
+      "label": "Perception (Wis)",
       "type": "choice",
       "options": [
        "Untrained",
@@ -259,261 +273,11 @@
        "Expert",
        "Master",
        "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_acrobatics",
-      "label": "Acrobatics",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_arcana",
-      "label": "Arcana",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_athletics",
-      "label": "Athletics",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_computers",
-      "label": "Computers",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_crafting",
-      "label": "Crafting",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_deception",
-      "label": "Deception",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_diplomacy",
-      "label": "Diplomacy",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_intimidation",
-      "label": "Intimidation",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_medicine",
-      "label": "Medicine",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_nature",
-      "label": "Nature",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_occultism",
-      "label": "Occultism",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_performance",
-      "label": "Performance",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_piloting",
-      "label": "Piloting",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_religion",
-      "label": "Religion",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_society",
-      "label": "Society",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_stealth",
-      "label": "Stealth",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_survival",
-      "label": "Survival",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "sk_thievery",
-      "label": "Thievery",
-      "type": "choice",
-      "options": [
-       "Untrained",
-       "Trained",
-       "Expert",
-       "Master",
-       "Legendary"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "lores",
-      "label": "Lore Skills",
-      "type": "list",
-      "columns": [
-       {
-        "key": "lore",
-        "label": "Lore"
-       },
-       {
-        "key": "rank",
-        "label": "Rank"
-       }
       ]
      },
      {
-      "key": "class_dc_rank",
-      "label": "Class DC",
+      "key": "sk_acrobatics",
+      "label": "Acrobatics (Dex)",
       "type": "choice",
       "options": [
        "Untrained",
@@ -521,20 +285,219 @@
        "Expert",
        "Master",
        "Legendary"
-      ],
-      "size": "small"
+      ]
      },
      {
-      "key": "speed",
-      "label": "Speed",
-      "type": "number",
-      "size": "small"
+      "key": "sk_arcana",
+      "label": "Arcana (Int)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics (Str)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_computers",
+      "label": "Computers (Int)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_crafting",
+      "label": "Crafting (Int)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_deception",
+      "label": "Deception (Cha)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy (Cha)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation (Cha)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine (Wis)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_nature",
+      "label": "Nature (Wis)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_occultism",
+      "label": "Occultism (Int)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance (Cha)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_piloting",
+      "label": "Piloting (Dex)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_religion",
+      "label": "Religion (Wis)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_society",
+      "label": "Society (Int)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth (Dex)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival (Wis)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "sk_thievery",
+      "label": "Thievery (Dex)",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
      }
     ]
    },
    {
     "key": "strikes",
-    "title": "Strikes",
+    "title": "Strikes, Lore & Languages",
+    "page": "Statistics",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "strike_list",
@@ -554,20 +517,126 @@
         "label": "Damage"
        },
        {
+        "key": "range",
+        "label": "Range (ft.)"
+       },
+       {
+        "key": "mag",
+        "label": "Mag / Exp"
+       },
+       {
         "key": "traits",
-        "label": "Traits"
+        "label": "Traits & Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "prof_unarmed",
+      "label": "Unarmed",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ],
+      "cols": 2
+     },
+     {
+      "key": "prof_simple",
+      "label": "Simple",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ],
+      "cols": 2
+     },
+     {
+      "key": "prof_martial",
+      "label": "Martial",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ],
+      "cols": 2
+     },
+     {
+      "key": "prof_advanced",
+      "label": "Advanced",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ],
+      "cols": 2
+     },
+     {
+      "key": "critical_specializations",
+      "label": "Critical Specializations",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "class_dc_rank",
+      "label": "Class DC",
+      "type": "choice",
+      "options": [
+       "Untrained",
+       "Trained",
+       "Expert",
+       "Master",
+       "Legendary"
+      ]
+     },
+     {
+      "key": "lores",
+      "label": "Lore Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "lore",
+        "label": "Lore"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
        }
       ]
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "longtext"
+     },
+     {
+      "key": "senses",
+      "label": "Senses & Special Movement",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "feats",
-    "title": "Feats & Features",
+    "title": "Feats & Class Abilities",
+    "page": "Feats & Inventory",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "feat_list",
-      "label": "Feats",
+      "label": "Feats (ancestry, skill, general, class)",
       "type": "list",
       "columns": [
        {
@@ -586,80 +655,20 @@
      },
      {
       "key": "class_features",
-      "label": "Class Features",
+      "label": "Class Feats & Features",
       "type": "longtext"
-     }
-    ]
-   },
-   {
-    "key": "spells",
-    "title": "Spells",
-    "fields": [
-     {
-      "key": "spell_dc",
-      "label": "Spell DC",
-      "type": "number"
-     },
-     {
-      "key": "spell_attack",
-      "label": "Spell Attack",
-      "type": "number"
-     },
-     {
-      "key": "focus_points",
-      "label": "Focus Points",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "spell_slots",
-      "label": "Spell Slots",
-      "type": "list",
-      "columns": [
-       {
-        "key": "rank",
-        "label": "Rank"
-       },
-       {
-        "key": "slots",
-        "label": "Slots"
-       },
-       {
-        "key": "used",
-        "label": "Used"
-       }
-      ],
-      "play": true
-     },
-     {
-      "key": "spell_list",
-      "label": "Spells",
-      "type": "list",
-      "columns": [
-       {
-        "key": "rank",
-        "label": "Rank"
-       },
-       {
-        "key": "spell",
-        "label": "Spell"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
      }
     ]
    },
    {
     "key": "inventory",
     "title": "Inventory",
+    "page": "Feats & Inventory",
+    "width": "third",
     "fields": [
      {
       "key": "items",
-      "label": "Items",
+      "label": "Held Items",
       "type": "list",
       "columns": [
        {
@@ -677,43 +686,461 @@
       ]
      },
      {
+      "key": "consumables",
+      "label": "Consumables",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       }
+      ]
+     },
+     {
+      "key": "worn_items",
+      "label": "Worn Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "invested",
+        "label": "Invested"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       }
+      ]
+     },
+     {
+      "key": "inv_weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Weapon"
+       },
+       {
+        "key": "mag",
+        "label": "Mag"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       }
+      ]
+     },
+     {
       "key": "bulk",
       "label": "Total Bulk",
       "type": "number",
-      "size": "small"
+      "cols": 2
      },
      {
       "key": "money_credits",
       "label": "Credits",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "money_upbs",
-      "label": "UPBs",
+      "label": "UPB",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "valuables",
+      "label": "Valuables",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "price",
+        "label": "Price"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "origin",
+    "title": "Origin & Appearance",
+    "page": "Notes & Actions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "port_of_call",
+      "label": "Port of Call",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender_pronouns",
+      "label": "Gender & Pronouns",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "personality",
+    "title": "Personality",
+    "page": "Notes & Actions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "attitude",
+      "label": "Attitude",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "deity",
+      "label": "Deity or Philosophy",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "edicts",
+      "label": "Edicts",
+      "type": "longtext"
+     },
+     {
+      "key": "anathema",
+      "label": "Anathema",
+      "type": "longtext"
+     },
+     {
+      "key": "likes",
+      "label": "Likes",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "dislikes",
+      "label": "Dislikes",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "catchphrases",
+      "label": "Catchphrases",
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
     "key": "notes",
-    "title": "Notes",
+    "title": "Campaign Notes",
+    "page": "Notes & Actions",
     "fields": [
      {
-      "key": "languages",
-      "label": "Languages",
+      "key": "backstory",
+      "label": "Notes & Backstory",
       "type": "longtext"
      },
      {
-      "key": "backstory",
-      "label": "Backstory",
+      "key": "allies",
+      "label": "Allies",
       "type": "longtext"
+     },
+     {
+      "key": "enemies",
+      "label": "Enemies",
+      "type": "longtext"
+     },
+     {
+      "key": "faction",
+      "label": "Faction",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "actions_sec",
+    "title": "Actions & Reactions",
+    "page": "Notes & Actions",
+    "fields": [
+     {
+      "key": "actions",
+      "label": "Actions & Activities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "actions",
+        "label": "Actions"
+       },
+       {
+        "key": "traits",
+        "label": "Traits"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       },
+       {
+        "key": "effects",
+        "label": "Effects"
+       }
+      ]
+     },
+     {
+      "key": "reactions",
+      "label": "Free Actions & Reactions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "type",
+        "label": "Free / Reaction"
+       },
+       {
+        "key": "traits",
+        "label": "Traits"
+       },
+       {
+        "key": "trigger",
+        "label": "Trigger"
+       },
+       {
+        "key": "effects",
+        "label": "Effects"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spell_stats",
+    "title": "Spell Statistics",
+    "page": "Spells",
+    "width": "half",
+    "fields": [
+     {
+      "key": "tradition",
+      "label": "Magical Tradition",
+      "type": "choice",
+      "options": [
+       "Arcane",
+       "Divine",
+       "Occult",
+       "Primal"
+      ],
+      "cols": 3
+     },
+     {
+      "key": "caster_type",
+      "label": "Caster",
+      "type": "choice",
+      "options": [
+       "Prepared",
+       "Spontaneous"
+      ],
+      "cols": 3
+     },
+     {
+      "key": "spell_attack",
+      "label": "Spell Attack",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "spell_dc",
+      "label": "Spell DC",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_points",
+      "label": "Focus Points",
+      "type": "pips",
+      "count": 3,
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "focus_rank",
+      "label": "Focus Spell Rank",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cantrips_per_day",
+      "label": "Cantrips per Day",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cantrip_rank",
+      "label": "Cantrip Rank",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "spell_slots",
+      "label": "Spell Slots",
+      "type": "list",
+      "columns": [
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "slots",
+        "label": "Spells per Day"
+       },
+       {
+        "key": "used",
+        "label": "Spells Remaining"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "spell_lists",
+    "title": "Cantrips & Focus Spells",
+    "page": "Spells",
+    "width": "half",
+    "fields": [
+     {
+      "key": "cantrips",
+      "label": "Cantrips",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "actions",
+        "label": "Actions"
+       },
+       {
+        "key": "prep",
+        "label": "Prep"
+       }
+      ]
+     },
+     {
+      "key": "focus_spells",
+      "label": "Focus Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "actions",
+        "label": "Actions"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spell_list_sec",
+    "title": "Spells & Rituals",
+    "page": "Spells",
+    "fields": [
+     {
+      "key": "spell_list",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Name"
+       },
+       {
+        "key": "actions",
+        "label": "Actions"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "prep",
+        "label": "Prep"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "rituals",
+      "label": "Rituals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
      }
     ]
    }
   ]
  }
-}
+}

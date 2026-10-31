@@ -13,6 +13,7 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "playbook",
@@ -30,140 +31,71 @@
        "The Trickster",
        "The Wanderer"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 4
      },
      {
       "key": "pronouns",
       "label": "Pronouns",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "look",
-      "label": "Look",
+      "label": "Aesthetics",
       "type": "text",
-      "summary": true
+      "size": "full"
      },
      {
       "key": "feeling",
       "label": "Playbook Feeling",
-      "type": "text"
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "playbook_questions",
+      "label": "Playbook Questions & Answers (Victories, Scars, etc.)",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "stats",
     "title": "Stats",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "stat_daring",
       "label": "Daring",
-      "type": "number",
-      "min": -1,
-      "max": 3,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "stat_grace",
       "label": "Grace",
-      "type": "number",
-      "min": -1,
-      "max": 3,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "stat_heart",
       "label": "Heart",
-      "type": "number",
-      "min": -1,
-      "max": 3,
-      "size": "small"
-     },
-     {
-      "key": "stat_spirit",
-      "label": "Spirit",
-      "type": "number",
-      "min": -1,
-      "max": 3,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "stat_wit",
       "label": "Wit",
-      "type": "number",
-      "min": -1,
-      "max": 3,
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "conditions",
-    "title": "Conditions & XP",
-    "fields": [
-     {
-      "key": "cond_angry",
-      "label": "Angry",
-      "type": "checkbox",
-      "play": true
+      "type": "number"
      },
      {
-      "key": "cond_frightened",
-      "label": "Frightened",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_guilty",
-      "label": "Guilty",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_hopeless",
-      "label": "Hopeless",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_insecure",
-      "label": "Insecure",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "xp",
-      "label": "Experience",
-      "type": "pips",
-      "count": 5,
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "strings",
-    "title": "Strings",
-    "fields": [
-     {
-      "key": "string_list",
-      "label": "Strings",
-      "type": "list",
-      "columns": [
-       {
-        "key": "character",
-        "label": "Character"
-       },
-       {
-        "key": "strings",
-        "label": "Strings"
-       }
-      ],
-      "play": true
+      "key": "stat_spirit",
+      "label": "Spirit",
+      "type": "number"
      }
     ]
    },
    {
     "key": "moves",
-    "title": "Moves",
+    "title": "Playbook Moves",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "move_list",
@@ -183,8 +115,77 @@
     ]
    },
    {
+    "key": "conditions",
+    "title": "Conditions & XP",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "cond_angry",
+      "label": "Angry (-2 to Figure Out a Person)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_frightened",
+      "label": "Frightened (-2 to Fight)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_guilty",
+      "label": "Guilty (-2 to Emotional Support)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_hopeless",
+      "label": "Hopeless (-2 to Defy Disaster)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_insecure",
+      "label": "Insecure (-2 to Entice)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience (XP)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "strings",
+    "title": "Strings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "string_list",
+      "label": "Strings (a fourth string triggers a String Advance)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "character",
+        "label": "Character"
+       },
+       {
+        "key": "strings",
+        "label": "Strings (0-4)"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
     "key": "gear_notes",
-    "title": "Gear & Advances",
+    "title": "Gear, Advances & Notes",
+    "width": "half",
     "fields": [
      {
       "key": "gear",
@@ -215,4 +216,4 @@
    }
   ]
  }
-}
+}
