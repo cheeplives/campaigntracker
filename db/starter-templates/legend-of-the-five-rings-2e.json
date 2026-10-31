@@ -11,193 +11,183 @@
  "layout": {
   "sections": [
    {
+    "key": "rings",
+    "title": "Rings & Traits",
+    "page": "Samurai",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "trait_stamina",
+      "label": "Stamina",
+      "type": "number"
+     },
+     {
+      "key": "trait_willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "ring_earth",
+      "label": "Earth Ring",
+      "type": "number"
+     },
+     {
+      "key": "trait_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "trait_perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "ring_water",
+      "label": "Water Ring",
+      "type": "number"
+     },
+     {
+      "key": "trait_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "trait_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "ring_fire",
+      "label": "Fire Ring",
+      "type": "number"
+     },
+     {
+      "key": "trait_reflexes",
+      "label": "Reflexes",
+      "type": "number"
+     },
+     {
+      "key": "trait_awareness",
+      "label": "Awareness",
+      "type": "number"
+     },
+     {
+      "key": "ring_air",
+      "label": "Air Ring",
+      "type": "number"
+     },
+     {
+      "key": "ring_void",
+      "label": "Void Ring",
+      "type": "number"
+     },
+     {
+      "key": "void_points",
+      "label": "Void Points",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
     "key": "samurai",
     "title": "Samurai",
+    "page": "Samurai",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "clan",
       "label": "Clan",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "family",
       "label": "Family",
       "type": "text",
-      "summary": true
+      "cols": 4
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "school",
       "label": "School",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "insight_rank",
-      "label": "Insight Rank",
+      "label": "Rank",
       "type": "number",
-      "min": 1,
-      "max": 5,
-      "summary": true
+      "cols": 2,
+      "min": 1
      },
      {
       "key": "insight",
       "label": "Insight",
-      "type": "number"
-     }
-    ]
-   },
-   {
-    "key": "rings",
-    "title": "Rings & Traits",
-    "fields": [
-     {
-      "key": "ring_earth",
-      "label": "Earth",
       "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "ring_water",
-      "label": "Water",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "ring_fire",
-      "label": "Fire",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "ring_air",
-      "label": "Air",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "ring_void",
-      "label": "Void",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_stamina",
-      "label": "Stamina",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_willpower",
-      "label": "Willpower",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_perception",
-      "label": "Perception",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_intelligence",
-      "label": "Intelligence",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_reflexes",
-      "label": "Reflexes",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "trait_awareness",
-      "label": "Awareness",
-      "type": "number",
-      "min": 1,
-      "max": 10
-     },
-     {
-      "key": "void_points",
-      "label": "Void Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     }
-    ]
-   },
-   {
-    "key": "standing",
-    "title": "Honor, Glory & Status",
-    "fields": [
-     {
-      "key": "honor",
-      "label": "Honor",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "glory",
-      "label": "Glory",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "status",
-      "label": "Status",
-      "type": "number"
-     },
-     {
-      "key": "taint",
-      "label": "Shadowlands Taint",
-      "type": "number",
-      "play": true,
+      "cols": 2,
       "min": 0
      },
      {
-      "key": "xp",
-      "label": "Experience",
+      "key": "primary_weapon",
+      "label": "Primary Weapon",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "roll_to_hit",
+      "label": "Roll & Keep To Hit",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "roll_damage",
+      "label": "Roll & Keep Damage",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "tn_to_be_hit",
+      "label": "TN to Be Hit",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2
+     },
+     {
+      "key": "armor_tn",
+      "label": "Armor TN",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "text",
+      "cols": 2
      }
     ]
    },
    {
     "key": "health",
     "title": "Wounds",
+    "page": "Samurai",
+    "width": "third",
     "fields": [
      {
       "key": "wounds",
       "label": "Wounds Taken",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
      },
      {
       "key": "wound_level",
@@ -214,23 +204,49 @@
        "Out",
        "Dead"
       ],
-      "play": true
+      "play": true,
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "standing",
+    "title": "Glory & Honor",
+    "page": "Samurai",
+    "width": "third",
+    "fields": [
+     {
+      "key": "glory",
+      "label": "Glory",
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "tn_to_be_hit",
-      "label": "TN to Be Hit",
-      "type": "number"
+      "key": "honor",
+      "label": "Honor",
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "armor_tn",
-      "label": "Armor TN",
-      "type": "number"
+      "key": "status",
+      "label": "Status",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "cols": 2,
+      "min": 0
      }
     ]
    },
    {
     "key": "skills",
     "title": "Skills",
+    "page": "Samurai",
+    "width": "third",
     "fields": [
      {
       "key": "skill_list",
@@ -243,7 +259,7 @@
        },
        {
         "key": "rank",
-        "label": "Rank"
+        "label": "Level"
        },
        {
         "key": "emphasis",
@@ -258,8 +274,73 @@
     ]
    },
    {
+    "key": "outfit",
+    "title": "Equipment",
+    "page": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "koku",
+      "label": "Koku",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "arrows",
+      "label": "Arrows",
+      "type": "text",
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
     "key": "advantages",
     "title": "Advantages & Disadvantages",
+    "page": "Equipment",
+    "width": "half",
     "fields": [
      {
       "key": "advantage_list",
@@ -296,10 +377,12 @@
    {
     "key": "techniques",
     "title": "Techniques & Spells",
+    "page": "Equipment",
+    "width": "half",
     "fields": [
      {
       "key": "technique_list",
-      "label": "School Techniques",
+      "label": "Techniques",
       "type": "list",
       "columns": [
        {
@@ -330,57 +413,26 @@
         "label": "Mastery"
        }
       ]
+     },
+     {
+      "key": "taint",
+      "label": "Shadowlands Taint",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
      }
     ]
    },
    {
-    "key": "outfit",
-    "title": "Outfit",
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Equipment",
+    "width": "half",
     "fields": [
      {
-      "key": "weapons",
-      "label": "Weapons",
-      "type": "list",
-      "columns": [
-       {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
-     {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
-     },
-     {
-      "key": "gear",
-      "label": "Outfit",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
-     {
-      "key": "koku",
-      "label": "Koku",
-      "type": "number",
-      "play": true
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
      }
     ]
    }

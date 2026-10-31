@@ -13,152 +13,164 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
     "fields": [
      {
       "key": "concept",
       "label": "Concept",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "points_total",
       "label": "Point Total",
       "type": "number",
-      "summary": true
+      "cols": 2
      },
      {
       "key": "points_unspent",
       "label": "Unspent Points",
       "type": "number",
-      "play": true
+      "cols": 2
      },
      {
-      "key": "tl",
-      "label": "Tech Level",
-      "type": "number",
-      "summary": true
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 1
      },
      {
       "key": "size_modifier",
       "label": "Size Modifier",
-      "type": "number"
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 1
      },
      {
       "key": "appearance",
       "label": "Appearance",
-      "type": "text"
-     },
-     {
-      "key": "reaction_mods",
-      "label": "Reaction Modifiers",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
     "key": "attributes",
     "title": "Attributes",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "attr_st",
       "label": "ST",
       "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "cols": 3
+     },
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "cols": 3,
+      "play": true
      },
      {
       "key": "attr_dx",
       "label": "DX",
       "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
-     },
-     {
-      "key": "attr_iq",
-      "label": "IQ",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
-     },
-     {
-      "key": "attr_ht",
-      "label": "HT",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
-     },
-     {
-      "key": "hp",
-      "label": "Hit Points",
-      "type": "counter",
-      "play": true
-     },
-     {
-      "key": "fp",
-      "label": "Fatigue Points",
-      "type": "counter",
-      "play": true
+      "cols": 3
      },
      {
       "key": "will",
       "label": "Will",
       "type": "number",
-      "size": "small"
+      "cols": 3
+     },
+     {
+      "key": "attr_iq",
+      "label": "IQ",
+      "type": "number",
+      "cols": 3
      },
      {
       "key": "per",
       "label": "Per",
       "type": "number",
-      "size": "small"
+      "cols": 3
      },
      {
-      "key": "basic_speed",
-      "label": "Basic Speed",
+      "key": "attr_ht",
+      "label": "HT",
       "type": "number",
-      "size": "small"
+      "cols": 3
      },
      {
-      "key": "basic_move",
-      "label": "Basic Move",
-      "type": "number",
-      "size": "small"
+      "key": "fp",
+      "label": "FP",
+      "type": "counter",
+      "cols": 3,
+      "play": true
      },
      {
       "key": "basic_lift",
       "label": "Basic Lift",
       "type": "number",
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "damage",
-      "label": "Thrust / Swing Damage",
+      "label": "Damage (Thr / Sw)",
       "type": "text",
-      "size": "small"
+      "cols": 3
+     },
+     {
+      "key": "basic_speed",
+      "label": "Basic Speed",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "basic_move",
+      "label": "Basic Move",
+      "type": "number",
+      "cols": 3
      }
     ]
    },
    {
     "key": "defense",
     "title": "Defense & Encumbrance",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "dodge",
       "label": "Dodge",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "parry",
       "label": "Parry",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "block",
       "label": "Block",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "encumbrance",
@@ -172,11 +184,11 @@
        "X-Heavy (4)"
       ],
       "play": true,
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "dr",
-      "label": "Damage Resistance",
+      "label": "DR",
       "type": "list",
       "columns": [
        {
@@ -193,7 +205,65 @@
    },
    {
     "key": "traits",
+    "title": "Languages & Cultures",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "languages",
+      "label": "Languages (Spoken / Written)",
+      "type": "longtext"
+     },
+     {
+      "key": "tl",
+      "label": "TL",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "cultural_familiarity",
+      "label": "Cultural Familiarities",
+      "type": "text",
+      "cols": 5
+     }
+    ]
+   },
+   {
+    "key": "reactions",
+    "title": "Reaction Modifiers",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "reaction_appearance",
+      "label": "Appearance",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "reaction_status",
+      "label": "Status",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "reaction_reputation",
+      "label": "Reputation",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "reaction_mods",
+      "label": "Other Reaction Modifiers",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "advantages_sec",
     "title": "Advantages & Disadvantages",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "advantages",
@@ -224,22 +294,14 @@
         "label": "Points"
        }
       ]
-     },
-     {
-      "key": "languages",
-      "label": "Languages",
-      "type": "text"
-     },
-     {
-      "key": "cultural_familiarity",
-      "label": "Cultural Familiarity",
-      "type": "text"
      }
     ]
    },
    {
     "key": "skills",
     "title": "Skills",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "skill_list",
@@ -248,7 +310,7 @@
       "columns": [
        {
         "key": "skill",
-        "label": "Skill"
+        "label": "Name"
        },
        {
         "key": "level",
@@ -269,10 +331,11 @@
    {
     "key": "weapons",
     "title": "Weapons",
+    "page": "Equipment",
     "fields": [
      {
       "key": "melee",
-      "label": "Melee Weapons",
+      "label": "Hand Weapons",
       "type": "list",
       "columns": [
        {
@@ -294,8 +357,17 @@
        {
         "key": "notes",
         "label": "Notes"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
        }
-      ]
+      ],
+      "play": true
      },
      {
       "key": "ranged",
@@ -327,12 +399,20 @@
         "label": "Shots"
        },
        {
+        "key": "st",
+        "label": "ST"
+       },
+       {
         "key": "bulk",
         "label": "Bulk"
        },
        {
         "key": "rcl",
         "label": "Rcl"
+       },
+       {
+        "key": "notes",
+        "label": "LC / Notes"
        }
       ],
       "play": true
@@ -340,12 +420,57 @@
     ]
    },
    {
+    "key": "notes_sec",
+    "title": "Character Notes & Points",
+    "page": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Character Notes",
+      "type": "longtext"
+     },
+     {
+      "key": "pts_attributes",
+      "label": "Attributes & Secondary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pts_advantages",
+      "label": "Advantages, Perks, TL, Languages",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pts_disadvantages",
+      "label": "Disadvantages & Quirks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pts_skills",
+      "label": "Skills & Techniques",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pts_other",
+      "label": "Other",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
     "key": "possessions",
-    "title": "Possessions",
+    "title": "Armor & Possessions",
+    "page": "Equipment",
+    "width": "half",
     "fields": [
      {
       "key": "gear",
-      "label": "Possessions",
+      "label": "Armor & Possessions",
       "type": "list",
       "columns": [
        {
@@ -357,12 +482,12 @@
         "label": "Location"
        },
        {
-        "key": "weight",
-        "label": "Weight"
-       },
-       {
         "key": "cost",
         "label": "Cost"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
        }
       ]
      },
@@ -370,10 +495,11 @@
       "key": "money",
       "label": "Money",
       "type": "number",
+      "cols": 3,
       "play": true
      }
     ]
    }
   ]
  }
-}
+}

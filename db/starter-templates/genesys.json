@@ -13,138 +13,393 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
     "fields": [
      {
       "key": "archetype",
-      "label": "Archetype/Species",
+      "label": "Species / Archetype",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "career",
       "label": "Career",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "setting",
       "label": "Setting",
-      "type": "text"
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Soak, Wounds, Strain & Defense",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "soak",
+      "label": "Soak Value",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "strain",
+      "label": "Strain",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "defense_ranged",
+      "label": "Ranged Defense",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "defense_melee",
+      "label": "Melee Defense",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "characteristics",
     "title": "Characteristics",
+    "page": "Character",
     "fields": [
      {
       "key": "ch_brawn",
       "label": "Brawn",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      },
      {
       "key": "ch_agility",
       "label": "Agility",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      },
      {
       "key": "ch_intellect",
       "label": "Intellect",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      },
      {
       "key": "ch_cunning",
       "label": "Cunning",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      },
      {
       "key": "ch_willpower",
       "label": "Willpower",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      },
      {
       "key": "ch_presence",
       "label": "Presence",
       "type": "number",
+      "cols": 2,
       "min": 1,
-      "max": 6,
-      "size": "small"
+      "max": 6
      }
     ]
    },
    {
-    "key": "tracks",
-    "title": "Wounds, Strain & Defense",
+    "key": "sk_general",
+    "title": "General Skills",
+    "page": "Character",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
-      "key": "soak",
-      "label": "Soak",
-      "type": "number"
+      "key": "sk_alchemy",
+      "label": "Alchemy (Int)",
+      "type": "pips",
+      "count": 5
      },
      {
-      "key": "wounds",
-      "label": "Wounds",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "key": "sk_astrocartography",
+      "label": "Astrocartography (Int)",
+      "type": "pips",
+      "count": 5
      },
      {
-      "key": "strain",
-      "label": "Strain",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "key": "sk_athletics",
+      "label": "Athletics (Br)",
+      "type": "pips",
+      "count": 5
      },
      {
-      "key": "defense_ranged",
-      "label": "Ranged Defense",
-      "type": "number"
+      "key": "sk_computers",
+      "label": "Computers (Int)",
+      "type": "pips",
+      "count": 5
      },
      {
-      "key": "defense_melee",
-      "label": "Melee Defense",
-      "type": "number"
+      "key": "sk_cool",
+      "label": "Cool (Pr)",
+      "type": "pips",
+      "count": 5
      },
      {
-      "key": "critical_injuries",
-      "label": "Critical Injuries",
-      "type": "list",
-      "columns": [
-       {
-        "key": "severity",
-        "label": "Severity"
-       },
-       {
-        "key": "result",
-        "label": "Result"
-       }
-      ],
-      "play": true
+      "key": "sk_coordination",
+      "label": "Coordination (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_discipline",
+      "label": "Discipline (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_driving",
+      "label": "Driving (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_mechanics",
+      "label": "Mechanics (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_operating",
+      "label": "Operating (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_piloting",
+      "label": "Piloting (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_resilience",
+      "label": "Resilience (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_riding",
+      "label": "Riding (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_skulduggery",
+      "label": "Skulduggery (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_vigilance",
+      "label": "Vigilance (Will)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "sk_combat",
+    "title": "Combat Skills",
+    "page": "Character",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_brawl",
+      "label": "Brawl (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_gunnery",
+      "label": "Gunnery (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee_heavy",
+      "label": "Melee-Heavy (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee_light",
+      "label": "Melee-Light (Br)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_ranged",
+      "label": "Ranged (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_ranged_heavy",
+      "label": "Ranged-Heavy (Ag)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_ranged_light",
+      "label": "Ranged-Light (Ag)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "sk_social",
+    "title": "Social Skills",
+    "page": "Character",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_charm",
+      "label": "Charm (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_coercion",
+      "label": "Coercion (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_deception",
+      "label": "Deception (Cun)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership (Pr)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_negotiation",
+      "label": "Negotiation (Pr)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "sk_magic",
+    "title": "Magic Skills",
+    "page": "Character",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_arcana",
+      "label": "Arcana (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_divine",
+      "label": "Divine (Will)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_primal",
+      "label": "Primal (Cun)",
+      "type": "pips",
+      "count": 5
      }
     ]
    },
    {
     "key": "skills",
-    "title": "Skills",
+    "title": "Knowledge & Custom Skills",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
+      "key": "sk_knowledge",
+      "label": "Knowledge (Int)",
+      "type": "pips",
+      "count": 5
+     },
+     {
       "key": "skill_list",
-      "label": "Skills",
+      "label": "Other Skills",
       "type": "list",
       "columns": [
        {
@@ -157,7 +412,7 @@
        },
        {
         "key": "career",
-        "label": "Career"
+        "label": "Career?"
        },
        {
         "key": "rank",
@@ -170,6 +425,7 @@
    {
     "key": "weapons",
     "title": "Weapons",
+    "page": "Character",
     "fields": [
      {
       "key": "weapon_list",
@@ -200,92 +456,141 @@
         "key": "special",
         "label": "Special"
        }
-      ]
+      ],
+      "play": true
      }
     ]
    },
    {
-    "key": "talents",
-    "title": "Talents & Abilities",
-    "fields": [
-     {
-      "key": "talent_list",
-      "label": "Talents",
-      "type": "list",
-      "columns": [
-       {
-        "key": "tier",
-        "label": "Tier"
-       },
-       {
-        "key": "talent",
-        "label": "Talent"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
-     {
-      "key": "abilities",
-      "label": "Special Abilities",
-      "type": "longtext"
-     }
-    ]
-   },
-   {
-    "key": "motivations",
-    "title": "Motivations",
-    "fields": [
-     {
-      "key": "strength",
-      "label": "Strength",
-      "type": "text"
-     },
-     {
-      "key": "flaw",
-      "label": "Flaw",
-      "type": "text"
-     },
-     {
-      "key": "desire",
-      "label": "Desire",
-      "type": "text"
-     },
-     {
-      "key": "fear",
-      "label": "Fear",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "xp_gear",
-    "title": "XP & Gear",
+    "key": "xp",
+    "title": "Experience",
+    "page": "Character",
     "fields": [
      {
       "key": "xp_total",
       "label": "Total XP",
       "type": "number",
+      "cols": 3,
       "min": 0
      },
      {
       "key": "xp_available",
       "label": "Available XP",
       "type": "number",
-      "play": true,
+      "cols": 3,
       "min": 0
+     }
+    ]
+   },
+   {
+    "key": "motivations",
+    "title": "Motivations",
+    "page": "Background",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "text",
+      "cols": 4
      },
+     {
+      "key": "flaw",
+      "label": "Flaw",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "desire",
+      "label": "Desire",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "fear",
+      "label": "Fear",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "description",
+    "title": "Character Description",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "notable_features",
+      "label": "Notable Features",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "xp_gear",
+    "title": "Equipment Log",
+    "page": "Background",
+    "width": "two-thirds",
+    "fields": [
      {
       "key": "money",
       "label": "Money",
       "type": "number",
+      "cols": 3,
       "play": true
      },
      {
+      "key": "encumbrance",
+      "label": "Encumbrance Threshold",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "weapons_armor",
+      "label": "Weapons & Armor",
+      "type": "longtext"
+     },
+     {
       "key": "gear_list",
-      "label": "Equipment",
+      "label": "Personal Gear",
       "type": "list",
       "columns": [
        {
@@ -301,15 +606,80 @@
         "label": "Notes"
        }
       ]
+     }
+    ]
+   },
+   {
+    "key": "injuries",
+    "title": "Critical Injuries",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "critical_injuries",
+      "label": "Critical Injuries",
+      "type": "list",
+      "columns": [
+       {
+        "key": "severity",
+        "label": "Severity"
+       },
+       {
+        "key": "result",
+        "label": "Result"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Background",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents & Special Abilities",
+    "page": "Background",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Name"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       },
+       {
+        "key": "notes",
+        "label": "Ability Summary"
+       }
+      ]
      },
      {
-      "key": "encumbrance",
-      "label": "Encumbrance Threshold",
-      "type": "number",
-      "size": "small"
+      "key": "abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
      }
     ]
    }
   ]
  }
-}
+}
