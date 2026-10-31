@@ -13,33 +13,39 @@
    {
     "key": "investigator",
     "title": "Investigator",
+    "page": "Investigator",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "occupation",
       "label": "Occupation",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "age",
       "label": "Age",
       "type": "number",
-      "summary": true
+      "cols": 2
      },
      {
       "key": "pronouns",
-      "label": "Pronouns",
-      "type": "text"
+      "label": "Pronoun",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "birthplace",
       "label": "Birthplace",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "residence",
       "label": "Residence",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "era",
@@ -52,533 +58,570 @@
        "Pulp",
        "Regency"
       ],
-      "summary": true
-     }
-    ]
-   },
-   {
-    "key": "characteristics",
-    "title": "Characteristics",
-    "fields": [
-     {
-      "key": "ch_str",
-      "label": "STR",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
+      "summary": true,
+      "cols": 2
      },
-     {
-      "key": "ch_con",
-      "label": "CON",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_siz",
-      "label": "SIZ",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_dex",
-      "label": "DEX",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_app",
-      "label": "APP",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_int",
-      "label": "INT",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_pow",
-      "label": "POW",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     },
-     {
-      "key": "ch_edu",
-      "label": "EDU",
-      "type": "number",
-      "min": 0,
-      "max": 100,
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "status",
-    "title": "Status",
-    "fields": [
      {
       "key": "hp",
       "label": "Hit Points",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "mp",
       "label": "Magic Points",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "luck",
       "label": "Luck",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "sanity",
       "label": "Sanity",
       "type": "counter",
-      "play": true,
+      "cols": 4,
       "min": 0,
-      "max": 99
+      "play": true
+     },
+     {
+      "key": "max_sanity",
+      "label": "Max Sanity",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "temp_insanity",
       "label": "Temporary Insanity",
       "type": "checkbox",
+      "cols": 3,
       "play": true
      },
      {
       "key": "indef_insanity",
       "label": "Indefinite Insanity",
       "type": "checkbox",
+      "cols": 3,
       "play": true
      },
      {
       "key": "major_wound",
       "label": "Major Wound",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "unconscious",
       "label": "Unconscious",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "dying",
       "label": "Dying",
       "type": "checkbox",
+      "cols": 2,
       "play": true
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "page": "Investigator",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ch_str",
+      "label": "STR",
+      "type": "number"
+     },
+     {
+      "key": "ch_con",
+      "label": "CON",
+      "type": "number"
+     },
+     {
+      "key": "ch_siz",
+      "label": "SIZ",
+      "type": "number"
+     },
+     {
+      "key": "ch_dex",
+      "label": "DEX",
+      "type": "number"
+     },
+     {
+      "key": "ch_app",
+      "label": "APP",
+      "type": "number"
+     },
+     {
+      "key": "ch_int",
+      "label": "INT (Idea)",
+      "type": "number"
+     },
+     {
+      "key": "ch_pow",
+      "label": "POW",
+      "type": "number"
+     },
+     {
+      "key": "ch_edu",
+      "label": "EDU (Know)",
+      "type": "number"
      }
     ]
    },
    {
     "key": "skills",
     "title": "Skills",
+    "page": "Investigator",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "sk_accounting",
       "label": "Accounting",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_anthropology",
       "label": "Anthropology",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_appraise",
       "label": "Appraise",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_archaeology",
       "label": "Archaeology",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_art_craft",
       "label": "Art/Craft",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_charm",
       "label": "Charm",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_climb",
       "label": "Climb",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_computer_use",
       "label": "Computer Use",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_credit_rating",
       "label": "Credit Rating",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_cthulhu_mythos",
       "label": "Cthulhu Mythos",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_disguise",
       "label": "Disguise",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_dodge",
       "label": "Dodge",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_drive_auto",
       "label": "Drive Auto",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_electrical_repair",
       "label": "Electrical Repair",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_electronics",
       "label": "Electronics",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_fast_talk",
       "label": "Fast Talk",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
-     },
+      "max": 99
+     }
+    ]
+   },
+   {
+    "key": "skills_2",
+    "title": "Skills (continued)",
+    "page": "Investigator",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "sk_fighting_brawl",
       "label": "Fighting (Brawl)",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_firearms_handgun",
       "label": "Firearms (Handgun)",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_firearms_rifle_shotgun",
       "label": "Firearms (Rifle/Shotgun)",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_first_aid",
       "label": "First Aid",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_history",
       "label": "History",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_intimidate",
       "label": "Intimidate",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_jump",
       "label": "Jump",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_language_other",
       "label": "Language (Other)",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_language_own",
       "label": "Language (Own)",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_law",
       "label": "Law",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_library_use",
       "label": "Library Use",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_listen",
       "label": "Listen",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_locksmith",
       "label": "Locksmith",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_mechanical_repair",
       "label": "Mechanical Repair",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_medicine",
       "label": "Medicine",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_natural_world",
       "label": "Natural World",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
-     },
+      "max": 99
+     }
+    ]
+   },
+   {
+    "key": "skills_3",
+    "title": "Skills (continued)",
+    "page": "Investigator",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "sk_navigate",
       "label": "Navigate",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_occult",
       "label": "Occult",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_operate_heavy_machinery",
       "label": "Operate Heavy Machinery",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_persuade",
       "label": "Persuade",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_pilot",
       "label": "Pilot",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_psychology",
       "label": "Psychology",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_psychoanalysis",
       "label": "Psychoanalysis",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_ride",
       "label": "Ride",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_science",
       "label": "Science",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_sleight_of_hand",
       "label": "Sleight of Hand",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_spot_hidden",
       "label": "Spot Hidden",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_stealth",
       "label": "Stealth",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_survival",
       "label": "Survival",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_swim",
       "label": "Swim",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_throw",
       "label": "Throw",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
      },
      {
       "key": "sk_track",
       "label": "Track",
       "type": "number",
       "min": 0,
-      "max": 99,
-      "size": "small"
+      "max": 99
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "page": "Investigator",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "move",
+      "label": "Move Rate",
+      "type": "number",
+      "cols": 2
      },
+     {
+      "key": "build",
+      "label": "Build",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage Bonus",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "dodge",
+      "label": "Dodge",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "attacks",
+        "label": "# of Attacks"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "malfunction",
+        "label": "Malf."
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills_other",
+    "title": "Other Skills & Improvement Checks",
+    "page": "Investigator",
+    "width": "third",
+    "fields": [
      {
       "key": "other_skills",
       "label": "Other Skills",
@@ -603,94 +646,30 @@
         "key": "skill",
         "label": "Skill"
        }
-      ],
-      "play": true
+      ]
      }
     ]
    },
    {
-    "key": "combat",
-    "title": "Combat",
+    "key": "my_story",
+    "title": "My Story",
+    "page": "Backstory",
     "fields": [
      {
-      "key": "damage_bonus",
-      "label": "Damage Bonus",
-      "type": "text"
-     },
-     {
-      "key": "build",
-      "label": "Build",
-      "type": "number"
-     },
-     {
-      "key": "move",
-      "label": "Move Rate",
-      "type": "number"
-     },
-     {
-      "key": "weapons",
-      "label": "Weapons",
-      "type": "list",
-      "columns": [
-       {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "skill",
-        "label": "Skill %"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       },
-       {
-        "key": "range",
-        "label": "Range"
-       },
-       {
-        "key": "attacks",
-        "label": "Attacks"
-       },
-       {
-        "key": "ammo",
-        "label": "Ammo"
-       },
-       {
-        "key": "malfunction",
-        "label": "Malfunction"
-       }
-      ]
+      "key": "story",
+      "label": "My Story",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "backstory",
     "title": "Backstory",
+    "page": "Backstory",
     "fields": [
      {
       "key": "description",
       "label": "Personal Description",
-      "type": "longtext"
-     },
-     {
-      "key": "ideology",
-      "label": "Ideology/Beliefs",
-      "type": "longtext"
-     },
-     {
-      "key": "significant_people",
-      "label": "Significant People",
-      "type": "longtext"
-     },
-     {
-      "key": "meaningful_locations",
-      "label": "Meaningful Locations",
-      "type": "longtext"
-     },
-     {
-      "key": "treasured_possessions",
-      "label": "Treasured Possessions",
       "type": "longtext"
      },
      {
@@ -699,8 +678,18 @@
       "type": "longtext"
      },
      {
+      "key": "ideology",
+      "label": "Ideology & Beliefs",
+      "type": "longtext"
+     },
+     {
       "key": "injuries_scars",
       "label": "Injuries & Scars",
+      "type": "longtext"
+     },
+     {
+      "key": "significant_people",
+      "label": "Significant People",
       "type": "longtext"
      },
      {
@@ -709,8 +698,18 @@
       "type": "longtext"
      },
      {
+      "key": "meaningful_locations",
+      "label": "Meaningful Locations",
+      "type": "longtext"
+     },
+     {
       "key": "arcane_tomes",
       "label": "Arcane Tomes, Spells & Artifacts",
+      "type": "longtext"
+     },
+     {
+      "key": "treasured_possessions",
+      "label": "Treasured Possessions",
       "type": "longtext"
      },
      {
@@ -723,6 +722,8 @@
    {
     "key": "gear",
     "title": "Gear & Possessions",
+    "page": "Backstory",
+    "width": "half",
     "fields": [
      {
       "key": "possessions",
@@ -738,17 +739,26 @@
         "label": "Notes"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "wealth",
+    "title": "Wealth",
+    "page": "Backstory",
+    "width": "half",
+    "fields": [
      {
       "key": "spending_level",
       "label": "Spending Level",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "cash",
       "label": "Cash",
       "type": "text",
-      "play": true
+      "cols": 3
      },
      {
       "key": "assets",
@@ -756,7 +766,43 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "fellows",
+    "title": "Fellow Investigators",
+    "page": "Backstory",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fellow_investigators",
+      "label": "Fellow Investigators",
+      "type": "list",
+      "columns": [
+       {
+        "key": "character",
+        "label": "Character"
+       },
+       {
+        "key": "player",
+        "label": "Player"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Backstory",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
    }
   ]
  }
-}
+}

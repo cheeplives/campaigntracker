@@ -13,105 +13,102 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
     "fields": [
-     {
-      "key": "ancestry",
-      "label": "Ancestry",
-      "type": "text",
-      "summary": true
-     },
      {
       "key": "paths",
       "label": "Paths",
       "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
-      "min": 1,
-      "max": 21,
+      "cols": 2,
       "summary": true
-     },
-     {
-      "key": "radiant_order",
-      "label": "Radiant Order",
-      "type": "text"
      }
     ]
    },
    {
-    "key": "attributes",
-    "title": "Attributes",
+    "key": "physical",
+    "title": "Physical",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
       "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "def_physical",
+      "label": "Physical Defense",
       "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
+      "play": true
      },
      {
       "key": "attr_speed",
       "label": "Speed",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_intellect",
-      "label": "Intellect",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_willpower",
-      "label": "Willpower",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_awareness",
-      "label": "Awareness",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_presence",
-      "label": "Presence",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      }
     ]
    },
    {
-    "key": "defenses",
-    "title": "Defenses",
+    "key": "cognitive",
+    "title": "Cognitive",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "def_physical",
-      "label": "Physical",
+      "key": "attr_intellect",
+      "label": "Intellect",
       "type": "number"
      },
      {
       "key": "def_cognitive",
-      "label": "Cognitive",
+      "label": "Cognitive Defense",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "attr_willpower",
+      "label": "Willpower",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "spiritual",
+    "title": "Spiritual",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_awareness",
+      "label": "Awareness",
       "type": "number"
      },
      {
       "key": "def_spiritual",
-      "label": "Spiritual",
+      "label": "Spiritual Defense",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "attr_presence",
+      "label": "Presence",
       "type": "number"
      }
     ]
@@ -119,47 +116,214 @@
    {
     "key": "resources",
     "title": "Resources",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "health",
-      "label": "Health",
+      "label": "Health (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "focus",
-      "label": "Focus",
+      "label": "Focus (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "investiture",
-      "label": "Investiture",
+      "label": "Investiture (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
-     },
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "deflect_sec",
+    "title": "Deflect & Recovery",
+    "page": "Character",
+    "width": "third",
+    "fields": [
      {
       "key": "deflect",
       "label": "Deflect",
-      "type": "number"
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "recovery_die",
+      "label": "Recovery Die",
+      "type": "text",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "skills_physical",
+    "title": "Physical Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_agility",
+      "label": "Agility (SPD)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics (STR)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_heavy_weaponry",
+      "label": "Heavy Weaponry (STR)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_light_weaponry",
+      "label": "Light Weaponry (SPD)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth (SPD)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_thievery",
+      "label": "Thievery (SPD)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills_cognitive",
+    "title": "Cognitive Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_crafting",
+      "label": "Crafting (INT)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_deduction",
+      "label": "Deduction (INT)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_discipline",
+      "label": "Discipline (WIL)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation (WIL)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_lore",
+      "label": "Lore (INT)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine (INT)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills_spiritual",
+    "title": "Spiritual Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_deception",
+      "label": "Deception (PRE)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight (AWA)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership (PRE)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception (AWA)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion (PRE)",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival (AWA)",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "movement_sec",
+    "title": "Movement & Senses",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "lifting",
+      "label": "Lifting Capacity",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "movement",
       "label": "Movement",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "senses",
-      "label": "Senses",
-      "type": "text"
-     },
-     {
-      "key": "lifting",
-      "label": "Lifting Capacity",
-      "type": "text"
+      "label": "Senses Range",
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "conditions",
@@ -180,156 +344,22 @@
     ]
    },
    {
-    "key": "skills",
-    "title": "Skills",
+    "key": "talents",
+    "title": "Expertises & Talents",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "sk_agility",
-      "label": "Agility",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_athletics",
-      "label": "Athletics",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_heavy_weaponry",
-      "label": "Heavy Weaponry",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_light_weaponry",
-      "label": "Light Weaponry",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_stealth",
-      "label": "Stealth",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_thievery",
-      "label": "Thievery",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_crafting",
-      "label": "Crafting",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_deduction",
-      "label": "Deduction",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_discipline",
-      "label": "Discipline",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_intimidation",
-      "label": "Intimidation",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_lore",
-      "label": "Lore",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_medicine",
-      "label": "Medicine",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_deception",
-      "label": "Deception",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_insight",
-      "label": "Insight",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_leadership",
-      "label": "Leadership",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_perception",
-      "label": "Perception",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_persuasion",
-      "label": "Persuasion",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_survival",
-      "label": "Survival",
-      "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
-     {
-      "key": "surge_skills",
-      "label": "Surge Skills",
+      "key": "expertise_list",
+      "label": "Expertises",
       "type": "list",
       "columns": [
        {
-        "key": "surge",
-        "label": "Surge"
-       },
-       {
-        "key": "rank",
-        "label": "Rank"
+        "key": "expertise",
+        "label": "Expertise"
        }
       ]
-     }
-    ]
-   },
-   {
-    "key": "talents",
-    "title": "Talents & Expertises",
-    "fields": [
+     },
      {
       "key": "talent_list",
       "label": "Talents",
@@ -348,23 +378,13 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "expertise_list",
-      "label": "Expertises",
-      "type": "list",
-      "columns": [
-       {
-        "key": "expertise",
-        "label": "Expertise"
-       }
-      ]
      }
     ]
    },
    {
-    "key": "equipment",
-    "title": "Equipment",
+    "key": "weapons",
+    "title": "Weapons",
+    "page": "Character",
     "fields": [
      {
       "key": "weapon_list",
@@ -391,12 +411,47 @@
         "key": "traits",
         "label": "Traits"
        }
-      ]
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "appearance_sec",
+    "title": "Appearance & Other Abilities",
+    "page": "Story & Gear",
+    "width": "third",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Character Appearance",
+      "type": "longtext"
      },
+     {
+      "key": "other_abilities",
+      "label": "Other Talents & Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Armor & Equipment",
+    "page": "Story & Gear",
+    "width": "third",
+    "fields": [
      {
       "key": "armor",
       "label": "Armor",
-      "type": "text"
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "marks",
+      "label": "Marks",
+      "type": "number",
+      "cols": 4,
+      "play": true
      },
      {
       "key": "gear_list",
@@ -412,39 +467,15 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "marks",
-      "label": "Marks",
-      "type": "number",
-      "play": true
      }
     ]
    },
    {
     "key": "story",
-    "title": "Goals & Connections",
+    "title": "Purpose & Goals",
+    "page": "Story & Gear",
+    "width": "third",
     "fields": [
-     {
-      "key": "goals",
-      "label": "Goals",
-      "type": "list",
-      "columns": [
-       {
-        "key": "goal",
-        "label": "Goal"
-       },
-       {
-        "key": "progress",
-        "label": "Progress"
-       }
-      ]
-     },
-     {
-      "key": "connections",
-      "label": "Connections",
-      "type": "longtext"
-     },
      {
       "key": "purpose",
       "label": "Purpose",
@@ -456,12 +487,173 @@
       "type": "longtext"
      },
      {
-      "key": "appearance",
-      "label": "Appearance",
+      "key": "goals",
+      "label": "Goals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "goal",
+        "label": "Goal"
+       },
+       {
+        "key": "progress",
+        "label": "Progress (0-3)"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes & Connections",
+    "page": "Story & Gear",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
       "type": "longtext"
+     },
+     {
+      "key": "connections",
+      "label": "Connections",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "radiant",
+    "title": "Radiant Order",
+    "page": "Radiant",
+    "width": "third",
+    "fields": [
+     {
+      "key": "radiant_order",
+      "label": "Radiant Order",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ideals",
+      "label": "Ideals Sworn",
+      "type": "pips",
+      "count": 5,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "ideal_1",
+      "label": "1st Ideal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ideal_2",
+      "label": "2nd Ideal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ideal_3",
+      "label": "3rd Ideal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ideal_4",
+      "label": "4th Ideal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ideal_5",
+      "label": "5th Ideal",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "spren",
+    "title": "Spren",
+    "page": "Radiant",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "spren_name",
+      "label": "Spren Name",
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "spren_bond_range",
+      "label": "Spren Bond Range",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "spren_personality",
+      "label": "Personality",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "surges",
+    "title": "Surges",
+    "page": "Radiant",
+    "fields": [
+     {
+      "key": "surge_skills",
+      "label": "Surges",
+      "type": "list",
+      "columns": [
+       {
+        "key": "surge",
+        "label": "Surge"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "mod",
+        "label": "Mod"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "die",
+        "label": "Die"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     },
+     {
+      "key": "radiant_talents",
+      "label": "Radiant Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "surge",
+        "label": "Surge"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
      }
     ]
    }
   ]
  }
-}
+}
