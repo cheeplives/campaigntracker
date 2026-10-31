@@ -11,124 +11,142 @@
  "layout": {
   "sections": [
    {
+    "key": "id",
+    "title": "ID",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "fate",
+    "title": "Refresh & Fate Points",
+    "width": "third",
+    "fields": [
+     {
+      "key": "refresh",
+      "label": "Refresh",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "fate_points",
+      "label": "Current Fate Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
     "key": "aspects",
     "title": "Aspects",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "high_concept",
       "label": "High Concept",
       "type": "text",
+      "size": "full",
       "summary": true
      },
      {
       "key": "trouble",
       "label": "Trouble",
       "type": "text",
-      "summary": true
+      "size": "full"
      },
      {
       "key": "aspect_3",
       "label": "Aspect",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "aspect_4",
       "label": "Aspect",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "aspect_5",
       "label": "Aspect",
-      "type": "text"
-     },
-     {
-      "key": "pronouns",
-      "label": "Pronouns",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
     "key": "approaches",
     "title": "Approaches",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ap_careful",
       "label": "Careful",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      },
      {
       "key": "ap_clever",
       "label": "Clever",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      },
      {
       "key": "ap_flashy",
       "label": "Flashy",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      },
      {
       "key": "ap_forceful",
       "label": "Forceful",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      },
      {
       "key": "ap_quick",
       "label": "Quick",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      },
      {
       "key": "ap_sneaky",
       "label": "Sneaky",
-      "type": "number",
-      "min": 0,
-      "max": 5
+      "type": "number"
      }
     ]
    },
    {
     "key": "stunts",
-    "title": "Stunts & Refresh",
+    "title": "Stunts",
     "fields": [
      {
       "key": "stunt_list",
       "label": "Stunts",
       "type": "longtext"
-     },
-     {
-      "key": "refresh",
-      "label": "Refresh",
-      "type": "number",
-      "min": 0
-     },
-     {
-      "key": "fate_points",
-      "label": "Fate Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
      }
     ]
    },
    {
     "key": "stress",
     "title": "Stress",
+    "width": "third",
     "fields": [
      {
       "key": "stress_track",
-      "label": "Stress",
+      "label": "Stress (1, 2, 3)",
       "type": "pips",
       "count": 3,
+      "size": "full",
       "play": true
      }
     ]
@@ -136,29 +154,34 @@
    {
     "key": "consequences",
     "title": "Consequences",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "cons_mild",
       "label": "Mild (2)",
       "type": "text",
+      "size": "full",
       "play": true
      },
      {
       "key": "cons_moderate",
       "label": "Moderate (4)",
       "type": "text",
+      "size": "full",
       "play": true
      },
      {
       "key": "cons_severe",
       "label": "Severe (6)",
       "type": "text",
+      "size": "full",
       "play": true
      },
      {
       "key": "cons_mild2",
       "label": "Extra Mild (2)",
       "type": "text",
+      "size": "full",
       "play": true
      }
     ]

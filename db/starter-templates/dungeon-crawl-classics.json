@@ -13,11 +13,19 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "half",
     "fields": [
+     {
+      "key": "title",
+      "label": "Title",
+      "type": "text",
+      "cols": 3
+     },
      {
       "key": "occupation",
       "label": "Occupation",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "class",
@@ -33,15 +41,8 @@
        "Elf",
        "Halfling"
       ],
-      "summary": true
-     },
-     {
-      "key": "level",
-      "label": "Level",
-      "type": "number",
-      "min": 0,
-      "max": 10,
-      "summary": true
+      "summary": true,
+      "cols": 3
      },
      {
       "key": "alignment",
@@ -52,136 +53,37 @@
        "Neutral",
        "Chaotic"
       ],
-      "summary": true
-     },
-     {
-      "key": "title",
-      "label": "Title",
-      "type": "text"
-     },
-     {
-      "key": "xp",
-      "label": "Experience",
-      "type": "number",
-      "play": true,
-      "min": 0
-     }
-    ]
-   },
-   {
-    "key": "abilities",
-    "title": "Abilities",
-    "fields": [
-     {
-      "key": "ab_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": 3,
-      "max": 18
-     },
-     {
-      "key": "ab_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": 3,
-      "max": 18
-     },
-     {
-      "key": "ab_stamina",
-      "label": "Stamina",
-      "type": "number",
-      "min": 3,
-      "max": 18
-     },
-     {
-      "key": "ab_personality",
-      "label": "Personality",
-      "type": "number",
-      "min": 3,
-      "max": 18
-     },
-     {
-      "key": "ab_intelligence",
-      "label": "Intelligence",
-      "type": "number",
-      "min": 3,
-      "max": 18
-     },
-     {
-      "key": "luck",
-      "label": "Luck",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "lucky_roll",
-      "label": "Birth Augur & Lucky Roll",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "combat",
-    "title": "Combat",
-    "fields": [
-     {
-      "key": "hp",
-      "label": "Hit Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "ac",
-      "label": "Armor Class",
-      "type": "number"
-     },
-     {
-      "key": "initiative",
-      "label": "Initiative",
-      "type": "number"
+      "summary": true,
+      "cols": 3
      },
      {
       "key": "speed",
       "label": "Speed",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "attack_bonus",
-      "label": "Attack Bonus",
-      "type": "number"
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "summary": true
      },
      {
-      "key": "action_dice",
-      "label": "Action Dice",
-      "type": "text"
-     },
-     {
-      "key": "crit",
-      "label": "Crit Die/Table",
-      "type": "text"
-     },
-     {
-      "key": "fumble",
-      "label": "Fumble Die",
-      "type": "text"
-     },
-     {
-      "key": "save_reflex",
-      "label": "Reflex",
-      "type": "number"
-     },
-     {
-      "key": "save_fortitude",
-      "label": "Fortitude",
-      "type": "number"
-     },
-     {
-      "key": "save_will",
-      "label": "Will",
-      "type": "number"
-     },
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Weapons & Equipment",
+    "width": "half",
+    "fields": [
      {
       "key": "weapons",
       "label": "Weapons",
@@ -203,13 +105,167 @@
         "key": "notes",
         "label": "Notes"
        }
+      ],
+      "play": true
+     },
+     {
+      "key": "gear",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
       ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "treasure",
+      "label": "Treasure",
+      "type": "longtext"
+     },
+     {
+      "key": "coin_gp",
+      "label": "GP",
+      "type": "number",
+      "cols": 1,
+      "min": 0
+     },
+     {
+      "key": "coin_sp",
+      "label": "SP",
+      "type": "number",
+      "cols": 1,
+      "min": 0
+     },
+     {
+      "key": "coin_cp",
+      "label": "CP",
+      "type": "number",
+      "cols": 1,
+      "min": 0
+     },
+     {
+      "key": "trade_good",
+      "label": "Trade Good",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat Basics",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ac",
+      "label": "Armor Class",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "action_dice",
+      "label": "Action Dice",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "attack_bonus",
+      "label": "Attack",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "crit",
+      "label": "Crit Die",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "crit_table",
+      "label": "Crit Table",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "fumble",
+      "label": "Fumble Die",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "melee_attack",
+      "label": "Melee Attack",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "melee_damage",
+      "label": "Melee Damage",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "missile_attack",
+      "label": "Missile Attack",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "missile_damage",
+      "label": "Missile Damage",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "save_reflex",
+      "label": "Ref Save",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "save_fortitude",
+      "label": "Fort Save",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "save_will",
+      "label": "Will Save",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "class_features",
-    "title": "Class Features",
+    "title": "Class Abilities",
+    "width": "half",
     "fields": [
      {
       "key": "abilities_text",
@@ -217,9 +273,10 @@
       "type": "longtext"
      },
      {
-      "key": "languages",
-      "label": "Languages",
-      "type": "text"
+      "key": "patron",
+      "label": "Patron / Deity",
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "spells",
@@ -243,63 +300,70 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "patron",
-      "label": "Patron / Deity",
-      "type": "text"
      }
     ]
    },
    {
-    "key": "equipment",
-    "title": "Equipment",
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number"
      },
      {
-      "key": "gear",
-      "label": "Equipment",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
+      "key": "ab_agility",
+      "label": "Agility",
+      "type": "number"
      },
      {
-      "key": "coin_gp",
-      "label": "GP",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "ab_stamina",
+      "label": "Stamina",
+      "type": "number"
      },
      {
-      "key": "coin_sp",
-      "label": "SP",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "ab_personality",
+      "label": "Personality",
+      "type": "number"
      },
      {
-      "key": "coin_cp",
-      "label": "CP",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "luck",
+      "label": "Luck",
+      "type": "counter",
+      "min": 0,
+      "play": true
      },
      {
-      "key": "trade_good",
-      "label": "Trade Good",
-      "type": "text"
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "lucky_roll",
+      "label": "Birth Augur & Lucky Roll",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
      }
     ]
    }

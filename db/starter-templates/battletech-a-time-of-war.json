@@ -13,155 +13,212 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "affiliation",
       "label": "Affiliation",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "phenotype",
       "label": "Phenotype",
       "type": "text",
-      "summary": true
+      "cols": 2
      },
      {
       "key": "age",
       "label": "Age",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "rank",
       "label": "Rank / Profession",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "unit",
       "label": "Unit",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      }
     ]
    },
    {
     "key": "attributes",
-    "title": "Attributes",
+    "title": "Attributes (score)",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "attr_str",
       "label": "STR",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_bod",
       "label": "BOD",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_rfl",
       "label": "RFL",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_dex",
       "label": "DEX",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_int",
       "label": "INT",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_wil",
       "label": "WIL",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_cha",
       "label": "CHA",
-      "type": "number",
-      "min": 1,
-      "max": 9,
-      "size": "small"
-     },
-     {
-      "key": "edge",
-      "label": "EDG",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "type": "number"
      }
     ]
    },
    {
-    "key": "condition",
-    "title": "Condition Monitor",
+    "key": "combat_data",
+    "title": "Condition Monitor & Movement",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "standard_damage",
-      "label": "Standard Damage",
+      "label": "Standard Damage (taken / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "fatigue",
-      "label": "Fatigue",
+      "label": "Fatigue Damage (taken / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "edge",
+      "label": "Edge (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "stunned",
-      "label": "Stunned",
+      "label": "Stun",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "unconscious",
       "label": "Unconscious",
       "type": "checkbox",
+      "cols": 2,
       "play": true
+     },
+     {
+      "key": "move_walk",
+      "label": "Walk (m/turn)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "move_run",
+      "label": "Run / Evade",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "move_sprint",
+      "label": "Sprint",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "xp",
       "label": "Experience Points",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3
      },
      {
       "key": "xp_unspent",
       "label": "Unspent XP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "link_mods",
+    "title": "Link Modifiers",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "link_str",
+      "label": "STR",
+      "type": "number"
+     },
+     {
+      "key": "link_bod",
+      "label": "BOD",
+      "type": "number"
+     },
+     {
+      "key": "link_rfl",
+      "label": "RFL",
+      "type": "number"
+     },
+     {
+      "key": "link_dex",
+      "label": "DEX",
+      "type": "number"
+     },
+     {
+      "key": "link_int",
+      "label": "INT",
+      "type": "number"
+     },
+     {
+      "key": "link_wil",
+      "label": "WIL",
+      "type": "number"
+     },
+     {
+      "key": "link_cha",
+      "label": "CHA",
+      "type": "number"
+     },
+     {
+      "key": "link_edg",
+      "label": "EDG",
+      "type": "number"
      }
     ]
    },
    {
     "key": "traits",
-    "title": "Traits",
+    "title": "Traits (Personal)",
+    "width": "half",
     "fields": [
      {
       "key": "trait_list",
@@ -178,7 +235,7 @@
        },
        {
         "key": "notes",
-        "label": "Notes"
+        "label": "Effect"
        }
       ]
      }
@@ -187,6 +244,7 @@
    {
     "key": "skills",
     "title": "Skills",
+    "width": "half",
     "fields": [
      {
       "key": "skill_list",
@@ -199,15 +257,15 @@
        },
        {
         "key": "link",
-        "label": "Link"
+        "label": "Links"
        },
        {
         "key": "tn",
-        "label": "TN"
+        "label": "TN / C"
        },
        {
         "key": "level",
-        "label": "Level"
+        "label": "LVL"
        }
       ]
      },
@@ -215,23 +273,41 @@
       "key": "gunnery",
       "label": "Gunnery",
       "type": "number",
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "piloting",
       "label": "Piloting",
       "type": "number",
-      "size": "small"
+      "cols": 3
      }
     ]
    },
    {
     "key": "combat",
-    "title": "Combat",
+    "title": "Armor & Weapons",
     "fields": [
      {
+      "key": "armor",
+      "label": "Personal Armor (Loc)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "armor_ratings",
+      "label": "BAR (M/B/E/X)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "armor_notes",
+      "label": "Armor Notes",
+      "type": "text",
+      "cols": 3
+     },
+     {
       "key": "weapons",
-      "label": "Personal Weapons",
+      "label": "Weapons",
       "type": "list",
       "columns": [
        {
@@ -240,7 +316,7 @@
        },
        {
         "key": "ap_bd",
-        "label": "AP/BD"
+        "label": "AP / BD"
        },
        {
         "key": "range",
@@ -256,32 +332,25 @@
        }
       ],
       "play": true
-     },
-     {
-      "key": "armor",
-      "label": "Personal Armor",
-      "type": "text"
-     },
-     {
-      "key": "armor_ratings",
-      "label": "Armor Ratings (M/B/E/X)",
-      "type": "text"
      }
     ]
    },
    {
     "key": "vehicle",
     "title": "Vehicle",
+    "width": "half",
     "fields": [
      {
       "key": "vehicle_name",
       "label": "'Mech / Vehicle",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "vehicle_model",
       "label": "Model / Variant",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "vehicle_notes",
@@ -293,6 +362,7 @@
    {
     "key": "gear",
     "title": "Equipment",
+    "width": "half",
     "fields": [
      {
       "key": "equipment",
@@ -313,10 +383,11 @@
       "key": "c_bills",
       "label": "C-Bills",
       "type": "number",
+      "cols": 3,
       "play": true
      }
     ]
    }
   ]
  }
-}
+}

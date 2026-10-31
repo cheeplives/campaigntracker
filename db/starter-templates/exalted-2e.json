@@ -18,104 +18,113 @@
       "key": "exalt_type",
       "label": "Exalt Type",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "caste",
-      "label": "Caste / Aspect",
+      "label": "Caste",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "concept",
       "label": "Concept",
       "type": "text",
-      "summary": true
+      "cols": 3
      },
      {
       "key": "motivation",
       "label": "Motivation",
-      "type": "text"
-     },
-     {
-      "key": "anima",
-      "label": "Anima Banner",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      }
     ]
    },
    {
-    "key": "attributes",
-    "title": "Attributes",
+    "key": "attr_physical",
+    "title": "Physical Attributes",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
       "label": "Strength",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_dexterity",
       "label": "Dexterity",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_stamina",
       "label": "Stamina",
       "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_social",
+    "title": "Social Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "attr_charisma",
       "label": "Charisma",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_manipulation",
       "label": "Manipulation",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_appearance",
       "label": "Appearance",
       "type": "pips",
-      "count": 5,
-      "size": "small"
-     },
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "attr_perception",
       "label": "Perception",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_intelligence",
       "label": "Intelligence",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      },
      {
       "key": "attr_wits",
       "label": "Wits",
       "type": "pips",
-      "count": 5,
-      "size": "small"
+      "count": 5
      }
     ]
    },
    {
-    "key": "abilities",
-    "title": "Abilities",
+    "key": "abil_dawn",
+    "title": "Dawn",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "abil_archery",
@@ -146,7 +155,15 @@
       "label": "War",
       "type": "pips",
       "count": 5
-     },
+     }
+    ]
+   },
+   {
+    "key": "abil_zenith",
+    "title": "Zenith",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "abil_integrity",
       "label": "Integrity",
@@ -176,7 +193,15 @@
       "label": "Survival",
       "type": "pips",
       "count": 5
-     },
+     }
+    ]
+   },
+   {
+    "key": "abil_twilight",
+    "title": "Twilight",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "abil_craft",
       "label": "Craft",
@@ -206,7 +231,15 @@
       "label": "Occult",
       "type": "pips",
       "count": 5
-     },
+     }
+    ]
+   },
+   {
+    "key": "abil_night",
+    "title": "Night",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "abil_athletics",
       "label": "Athletics",
@@ -236,7 +269,15 @@
       "label": "Stealth",
       "type": "pips",
       "count": 5
-     },
+     }
+    ]
+   },
+   {
+    "key": "abil_eclipse",
+    "title": "Eclipse",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "abil_bureaucracy",
       "label": "Bureaucracy",
@@ -266,18 +307,14 @@
       "label": "Socialize",
       "type": "pips",
       "count": 5
-     },
-     {
-      "key": "favored",
-      "label": "Caste & Favored Abilities",
-      "type": "list",
-      "columns": [
-       {
-        "key": "ability",
-        "label": "Ability"
-       }
-      ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "specialties_sec",
+    "title": "Specialties & Favored",
+    "width": "third",
+    "fields": [
      {
       "key": "specialties",
       "label": "Specialties",
@@ -296,197 +333,15 @@
         "label": "Dots"
        }
       ]
-     }
-    ]
-   },
-   {
-    "key": "virtues",
-    "title": "Virtues & Willpower",
-    "fields": [
-     {
-      "key": "virtue_compassion",
-      "label": "Compassion",
-      "type": "pips",
-      "count": 5
      },
      {
-      "key": "virtue_conviction",
-      "label": "Conviction",
-      "type": "pips",
-      "count": 5
-     },
-     {
-      "key": "virtue_temperance",
-      "label": "Temperance",
-      "type": "pips",
-      "count": 5
-     },
-     {
-      "key": "virtue_valor",
-      "label": "Valor",
-      "type": "pips",
-      "count": 5
-     },
-     {
-      "key": "willpower",
-      "label": "Willpower",
-      "type": "pips",
-      "count": 10
-     },
-     {
-      "key": "willpower_current",
-      "label": "Temporary Willpower",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "limit",
-      "label": "Limit",
-      "type": "pips",
-      "count": 10,
-      "play": true
-     },
-     {
-      "key": "virtue_flaw",
-      "label": "Virtue Flaw / Great Curse",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "essence",
-    "title": "Essence",
-    "fields": [
-     {
-      "key": "essence_rating",
-      "label": "Essence",
-      "type": "pips",
-      "count": 10
-     },
-     {
-      "key": "personal_essence",
-      "label": "Personal Essence",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "peripheral_essence",
-      "label": "Peripheral Essence",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "committed_essence",
-      "label": "Committed Essence",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "anima_level",
-      "label": "Anima Level",
-      "type": "choice",
-      "options": [
-       "Dim",
-       "Glowing",
-       "Burning",
-       "Bonfire",
-       "Iconic"
-      ],
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "health",
-    "title": "Health",
-    "fields": [
-     {
-      "key": "health_levels",
-      "label": "Health Levels",
-      "type": "pips",
-      "count": 7,
-      "play": true
-     },
-     {
-      "key": "bashing",
-      "label": "Bashing Damage",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "lethal",
-      "label": "Lethal Damage",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "aggravated",
-      "label": "Aggravated Damage",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "dv_dodge_dv",
-      "label": "Dodge DV",
-      "type": "number"
-     },
-     {
-      "key": "dv_parry_dv",
-      "label": "Parry DV",
-      "type": "number"
-     },
-     {
-      "key": "dv_mental_dodge_dv",
-      "label": "Mental Dodge DV",
-      "type": "number"
-     },
-     {
-      "key": "dv_mental_parry_dv",
-      "label": "Mental Parry DV",
-      "type": "number"
-     },
-     {
-      "key": "soak",
-      "label": "Soak (B/L/A)",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "charms",
-    "title": "Charms",
-    "fields": [
-     {
-      "key": "charm_list",
-      "label": "Charms",
+      "key": "favored",
+      "label": "Caste & Favored Abilities",
       "type": "list",
       "columns": [
        {
-        "key": "charm",
-        "label": "Charm"
-       },
-       {
-        "key": "type",
-        "label": "Type"
-       },
-       {
-        "key": "cost",
-        "label": "Cost"
-       },
-       {
-        "key": "duration",
-        "label": "Duration"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
+        "key": "ability",
+        "label": "Ability"
        }
       ]
      }
@@ -494,7 +349,8 @@
    },
    {
     "key": "backgrounds",
-    "title": "Backgrounds & Merits",
+    "title": "Backgrounds",
+    "width": "third",
     "fields": [
      {
       "key": "background_list",
@@ -525,6 +381,237 @@
         "label": "Points"
        }
       ]
+     }
+    ]
+   },
+   {
+    "key": "charms",
+    "title": "Charms",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "charm_list",
+      "label": "Charms",
+      "type": "list",
+      "columns": [
+       {
+        "key": "charm",
+        "label": "Name"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "anima_sec",
+    "title": "Anima & Limit",
+    "width": "third",
+    "fields": [
+     {
+      "key": "anima",
+      "label": "Anima",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "limit",
+      "label": "Limit Break",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "virtue_flaw",
+      "label": "Virtue Flaw",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Willpower, Soak & Health",
+    "width": "third",
+    "fields": [
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_current",
+      "label": "Temporary Willpower",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "soak",
+      "label": "Soak (B / L / A)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "health_levels",
+      "label": "Health Levels Marked",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "bashing",
+      "label": "Bashing",
+      "type": "number",
+      "cols": 1,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "lethal",
+      "label": "Lethal",
+      "type": "number",
+      "cols": 1,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "aggravated",
+      "label": "Aggravated",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "dv_dodge_dv",
+      "label": "Dodge DV",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "dv_parry_dv",
+      "label": "Parry DV",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "dv_mental_dodge_dv",
+      "label": "Mental Dodge DV",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "dv_mental_parry_dv",
+      "label": "Mental Parry DV",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "virtues",
+    "title": "Virtues & Essence",
+    "width": "third",
+    "fields": [
+     {
+      "key": "virtue_compassion",
+      "label": "Compassion",
+      "type": "pips",
+      "count": 5,
+      "cols": 2
+     },
+     {
+      "key": "virtue_temperance",
+      "label": "Temperance",
+      "type": "pips",
+      "count": 5,
+      "cols": 2
+     },
+     {
+      "key": "virtue_conviction",
+      "label": "Conviction",
+      "type": "pips",
+      "count": 5,
+      "cols": 2
+     },
+     {
+      "key": "virtue_valor",
+      "label": "Valor",
+      "type": "pips",
+      "count": 5,
+      "cols": 2
+     },
+     {
+      "key": "essence_rating",
+      "label": "Essence",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "personal_essence",
+      "label": "Personal",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "peripheral_essence",
+      "label": "Peripheral",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "committed_essence",
+      "label": "Committed",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
+     {
+      "key": "anima_level",
+      "label": "Anima Banner",
+      "type": "choice",
+      "options": [
+       "Dim",
+       "Glowing",
+       "Burning",
+       "Bonfire",
+       "Iconic"
+      ],
+      "play": true,
+      "cols": 2
+     },
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "cols": 2,
+      "min": 0
      }
     ]
    },
@@ -561,12 +648,14 @@
         "key": "rate",
         "label": "Rate"
        }
-      ]
+      ],
+      "play": true
      },
      {
       "key": "armor",
       "label": "Armor",
-      "type": "text"
+      "type": "text",
+      "cols": 6
      },
      {
       "key": "artifacts",
@@ -582,16 +671,9 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "xp",
-      "label": "Experience",
-      "type": "number",
-      "play": true,
-      "min": 0
      }
     ]
    }
   ]
  }
-}
+}

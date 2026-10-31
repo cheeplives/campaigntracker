@@ -13,273 +13,370 @@
    {
     "key": "hero",
     "title": "Hero",
+    "page": "Hero",
     "fields": [
      {
       "key": "identity",
       "label": "Identity",
-      "type": "text"
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "identity_status",
+      "label": "Identity Is",
+      "type": "choice",
+      "options": [
+       "Secret",
+       "Public"
+      ],
+      "cols": 2
      },
      {
       "key": "concept",
       "label": "Concept",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "power_level",
       "label": "Power Level",
       "type": "number",
-      "min": 1,
-      "max": 20,
+      "cols": 2,
       "summary": true
      },
      {
-      "key": "power_points",
-      "label": "Power Points",
-      "type": "number",
-      "min": 0
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "affiliation",
       "label": "Group Affiliation",
-      "type": "text"
+      "type": "text",
+      "cols": 6
      },
      {
       "key": "base",
       "label": "Base of Operations",
-      "type": "text"
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "pp_abilities",
+      "label": "PP: Abilities",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pp_powers",
+      "label": "PP: Powers",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pp_advantages",
+      "label": "PP: Advantages",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pp_skills",
+      "label": "PP: Skills",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pp_defenses",
+      "label": "PP: Defenses",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "power_points",
+      "label": "Power Point Total",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "abilities",
     "title": "Abilities",
+    "page": "Hero",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "ab_strength",
       "label": "Strength",
       "type": "number",
-      "min": -5,
-      "max": 20
-     },
-     {
-      "key": "ab_stamina",
-      "label": "Stamina",
-      "type": "number",
-      "min": -5,
-      "max": 20
+      "cols": 2
      },
      {
       "key": "ab_agility",
       "label": "Agility",
       "type": "number",
-      "min": -5,
-      "max": 20
-     },
-     {
-      "key": "ab_dexterity",
-      "label": "Dexterity",
-      "type": "number",
-      "min": -5,
-      "max": 20
+      "cols": 2
      },
      {
       "key": "ab_fighting",
       "label": "Fighting",
       "type": "number",
-      "min": -5,
-      "max": 20
-     },
-     {
-      "key": "ab_intellect",
-      "label": "Intellect",
-      "type": "number",
-      "min": -5,
-      "max": 20
+      "cols": 2
      },
      {
       "key": "ab_awareness",
       "label": "Awareness",
       "type": "number",
-      "min": -5,
-      "max": 20
+      "cols": 2
+     },
+     {
+      "key": "ab_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "ab_presence",
       "label": "Presence",
       "type": "number",
-      "min": -5,
-      "max": 20
+      "cols": 2
      }
     ]
    },
    {
     "key": "defenses",
-    "title": "Defenses",
+    "title": "Defense",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "def_dodge",
-      "label": "Dodge",
+      "label": "Dodge (Agl)",
       "type": "number"
      },
      {
       "key": "def_parry",
-      "label": "Parry",
+      "label": "Parry (Fgt)",
       "type": "number"
      },
      {
       "key": "def_fortitude",
-      "label": "Fortitude",
+      "label": "Fortitude (Sta)",
       "type": "number"
      },
      {
       "key": "def_toughness",
-      "label": "Toughness",
+      "label": "Toughness (Sta)",
       "type": "number"
      },
      {
       "key": "def_will",
-      "label": "Will",
-      "type": "number"
-     },
-     {
-      "key": "initiative",
-      "label": "Initiative",
+      "label": "Will (Awe)",
       "type": "number"
      }
     ]
    },
    {
-    "key": "status",
-    "title": "Hero Points & Damage",
+    "key": "offense",
+    "title": "Offense",
+    "page": "Hero",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attack_list",
+      "label": "Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "dc",
+        "label": "DC"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Hero & Power Points",
+    "page": "Hero",
+    "width": "third",
     "fields": [
      {
       "key": "hero_points",
       "label": "Hero Points",
       "type": "pips",
       "count": 5,
+      "size": "full",
       "play": true
      },
+     {
+      "key": "pp_earned",
+      "label": "Power Points Earned",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pp_spent",
+      "label": "Power Points Spent",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Notes & Conditions",
+    "page": "Hero",
+    "fields": [
      {
       "key": "toughness_penalty",
       "label": "Damage Penalty",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "cond_dazed",
       "label": "Dazed",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_staggered",
       "label": "Staggered",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_incapacitated",
       "label": "Incapacitated",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_impaired",
       "label": "Impaired",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_disabled",
       "label": "Disabled",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_fatigued",
       "label": "Fatigued",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_exhausted",
       "label": "Exhausted",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_vulnerable",
       "label": "Vulnerable",
       "type": "checkbox",
+      "cols": 2,
       "play": true
      },
      {
       "key": "cond_defenseless",
       "label": "Defenseless",
       "type": "checkbox",
+      "cols": 2,
       "play": true
-     }
-    ]
-   },
-   {
-    "key": "skills",
-    "title": "Skills",
-    "fields": [
+     },
      {
-      "key": "skill_list",
-      "label": "Skills",
-      "type": "list",
-      "columns": [
-       {
-        "key": "skill",
-        "label": "Skill"
-       },
-       {
-        "key": "ability",
-        "label": "Ability"
-       },
-       {
-        "key": "ranks",
-        "label": "Ranks"
-       },
-       {
-        "key": "total",
-        "label": "Total"
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "key": "advantages",
-    "title": "Advantages",
-    "fields": [
-     {
-      "key": "advantage_list",
-      "label": "Advantages",
-      "type": "list",
-      "columns": [
-       {
-        "key": "advantage",
-        "label": "Advantage"
-       },
-       {
-        "key": "ranks",
-        "label": "Ranks"
-       }
-      ]
+      "key": "notes",
+      "label": "Notes & Conditions",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "powers",
-    "title": "Powers",
+    "title": "Powers & Devices",
+    "page": "Hero",
     "fields": [
      {
       "key": "power_list",
-      "label": "Powers",
+      "label": "Powers & Devices",
       "type": "list",
       "columns": [
        {
@@ -307,29 +404,58 @@
     ]
    },
    {
-    "key": "offense",
-    "title": "Offense",
+    "key": "advantages",
+    "title": "Advantages",
+    "page": "Skills & Gear",
+    "width": "half",
     "fields": [
      {
-      "key": "attack_list",
-      "label": "Attacks",
+      "key": "advantage_list",
+      "label": "Advantages",
       "type": "list",
       "columns": [
        {
-        "key": "attack",
-        "label": "Attack"
+        "key": "advantage",
+        "label": "Advantage"
        },
        {
-        "key": "bonus",
-        "label": "Bonus"
+        "key": "ranks",
+        "label": "Ranks"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "page": "Skills & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skill_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
        },
        {
-        "key": "effect",
-        "label": "Effect"
+        "key": "total",
+        "label": "Total"
        },
        {
-        "key": "dc",
-        "label": "DC"
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "other",
+        "label": "Other"
        }
       ]
      }
@@ -338,6 +464,8 @@
    {
     "key": "complications",
     "title": "Complications",
+    "page": "Skills & Gear",
+    "width": "half",
     "fields": [
      {
       "key": "complication_list",
@@ -357,6 +485,53 @@
      {
       "key": "description",
       "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment, Vehicles & Headquarters",
+    "page": "Skills & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_list",
+      "label": "Equipment, Vehicles & Headquarters",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "information",
+    "title": "Information",
+    "page": "Skills & Gear",
+    "fields": [
+     {
+      "key": "series",
+      "label": "Series",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "gamemaster",
+      "label": "Gamemaster",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "info_notes",
+      "label": "Notes",
       "type": "longtext"
      }
     ]

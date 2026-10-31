@@ -13,6 +13,8 @@
    {
     "key": "adventurer",
     "title": "Adventurer",
+    "page": "Adventurer",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "class",
@@ -30,163 +32,173 @@
        "Thief",
        "Wizard"
       ],
+      "summary": true,
+      "cols": 3
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
       "summary": true
      },
      {
       "key": "race",
       "label": "Race",
       "type": "text",
-      "summary": true
+      "cols": 3
+     },
+     {
+      "key": "look",
+      "label": "Look (body, eyes, decoration, clothes)",
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "alignment",
       "label": "Alignment",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
-      "key": "level",
-      "label": "Level",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "summary": true
+      "key": "alignment_goal",
+      "label": "Alignment Goal",
+      "type": "text",
+      "cols": 5
      },
      {
-      "key": "look",
-      "label": "Look",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "stats",
-    "title": "Stats",
-    "fields": [
-     {
-      "key": "stat_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "stat_dexterity",
-      "label": "Dexterity",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "stat_constitution",
-      "label": "Constitution",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "stat_intelligence",
-      "label": "Intelligence",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "stat_wisdom",
-      "label": "Wisdom",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "stat_charisma",
-      "label": "Charisma",
-      "type": "number",
-      "min": 3,
-      "max": 18,
-      "size": "small"
-     },
-     {
-      "key": "debility_weak",
-      "label": "Weak",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "debility_shaky",
-      "label": "Shaky",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "debility_sick",
-      "label": "Sick",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "debility_stunned",
-      "label": "Stunned",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "debility_confused",
-      "label": "Confused",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "debility_scarred",
-      "label": "Scarred",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
+      "key": "race_move",
+      "label": "Race Move",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "vitals",
     "title": "Vitals",
+    "page": "Adventurer",
+    "width": "third",
     "fields": [
      {
       "key": "hp",
-      "label": "HP",
+      "label": "Hit Points (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
      },
      {
       "key": "armor",
       "label": "Armor",
-      "type": "number"
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
       "key": "damage_die",
-      "label": "Damage Die",
-      "type": "text"
+      "label": "Damage",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "xp",
-      "label": "XP",
+      "label": "XP (current / next level)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Adventurer",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "stat_dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "stat_constitution",
+      "label": "Constitution",
+      "type": "number"
+     },
+     {
+      "key": "stat_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "stat_wisdom",
+      "label": "Wisdom",
+      "type": "number"
+     },
+     {
+      "key": "stat_charisma",
+      "label": "Charisma",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "debilities",
+    "title": "Debilities (-1)",
+    "page": "Adventurer",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "debility_weak",
+      "label": "Weak (STR)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_shaky",
+      "label": "Shaky (DEX)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_sick",
+      "label": "Sick (CON)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_stunned",
+      "label": "Stunned (INT)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_confused",
+      "label": "Confused (WIS)",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "debility_scarred",
+      "label": "Scarred (CHA)",
+      "type": "checkbox",
+      "play": true
      }
     ]
    },
    {
     "key": "bonds",
     "title": "Bonds",
+    "page": "Adventurer",
+    "width": "third",
     "fields": [
      {
       "key": "bond_list",
@@ -203,7 +215,8 @@
    },
    {
     "key": "moves",
-    "title": "Moves",
+    "title": "Starting Moves",
+    "page": "Adventurer",
     "fields": [
      {
       "key": "starting_moves",
@@ -219,7 +232,15 @@
         "label": "Notes"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "advanced",
+    "title": "Advanced Moves & Spells",
+    "page": "Moves & Gear",
+    "width": "two-thirds",
+    "fields": [
      {
       "key": "advanced_moves",
       "label": "Advanced Moves",
@@ -259,13 +280,23 @@
    {
     "key": "gear",
     "title": "Gear",
+    "page": "Moves & Gear",
+    "width": "third",
     "fields": [
      {
+      "key": "coin",
+      "label": "Coin",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
       "key": "load",
-      "label": "Load",
+      "label": "Load (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
      },
      {
       "key": "gear_list",
@@ -286,16 +317,9 @@
        }
       ],
       "play": true
-     },
-     {
-      "key": "coin",
-      "label": "Coin",
-      "type": "number",
-      "play": true,
-      "min": 0
      }
     ]
    }
   ]
  }
-}
+}

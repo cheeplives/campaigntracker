@@ -13,215 +13,400 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
     "fields": [
-     {
-      "key": "house",
-      "label": "House",
-      "type": "text",
-      "summary": true
-     },
      {
       "key": "age",
       "label": "Age",
       "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "house",
+      "label": "House",
+      "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "role",
       "label": "Role",
       "type": "text",
+      "cols": 2,
       "summary": true
      },
      {
       "key": "motivation",
       "label": "Motivation",
-      "type": "text"
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "virtue",
       "label": "Virtue",
-      "type": "text"
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "vice",
       "label": "Vice",
-      "type": "text"
+      "type": "text",
+      "cols": 2
      }
     ]
    },
    {
     "key": "abilities",
     "title": "Abilities",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "ab_agility",
       "label": "Agility",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_agility",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_animal_handling",
       "label": "Animal Handling",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_animal_handling",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_athletics",
       "label": "Athletics",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_athletics",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_awareness",
       "label": "Awareness",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_awareness",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_cunning",
       "label": "Cunning",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_cunning",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_deception",
       "label": "Deception",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_deception",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_endurance",
       "label": "Endurance",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_endurance",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_fighting",
       "label": "Fighting",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_fighting",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_healing",
       "label": "Healing",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
      },
      {
-      "key": "ab_knowledge",
-      "label": "Knowledge",
-      "type": "number",
-      "min": 1,
-      "max": 7
+      "key": "spec_healing",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_language",
       "label": "Language",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_language",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "abilities_2",
+    "title": "Abilities (continued)",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ab_knowledge",
+      "label": "Knowledge",
+      "type": "number",
+      "cols": 2,
+      "min": 1,
+      "max": 7
+     },
+     {
+      "key": "spec_knowledge",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_marksmanship",
       "label": "Marksmanship",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_marksmanship",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_persuasion",
       "label": "Persuasion",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_persuasion",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_status",
       "label": "Status",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_status",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_stealth",
       "label": "Stealth",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_stealth",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_survival",
       "label": "Survival",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_survival",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_thievery",
       "label": "Thievery",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_thievery",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_warfare",
       "label": "Warfare",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
+     },
+     {
+      "key": "spec_warfare",
+      "label": "Specialties",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "ab_will",
       "label": "Will",
       "type": "number",
+      "cols": 2,
       "min": 1,
       "max": 7
      },
      {
-      "key": "specialties",
+      "key": "spec_will",
       "label": "Specialties",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "destiny",
+    "title": "Qualities",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "qualities",
+      "label": "Qualities",
       "type": "list",
       "columns": [
        {
-        "key": "ability",
-        "label": "Ability"
+        "key": "quality",
+        "label": "Quality"
        },
        {
-        "key": "specialty",
-        "label": "Specialty"
-       },
-       {
-        "key": "bonus_dice",
-        "label": "Bonus Dice"
+        "key": "notes",
+        "label": "Notes"
        }
       ]
+     },
+     {
+      "key": "destiny_points",
+      "label": "Destiny Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
      }
     ]
    },
    {
     "key": "intrigue",
-    "title": "Intrigue",
+    "title": "Intrigue & Combat",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "intrigue_defense",
       "label": "Intrigue Defense",
-      "type": "number"
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "combat_defense",
+      "label": "Combat Defense",
+      "type": "number",
+      "cols": 3
      },
      {
       "key": "composure",
       "label": "Composure",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
       "key": "frustration",
@@ -239,55 +424,10 @@
    },
    {
     "key": "warfare_combat",
-    "title": "Combat",
+    "title": "Weapons",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
-     {
-      "key": "combat_defense",
-      "label": "Combat Defense",
-      "type": "number"
-     },
-     {
-      "key": "health",
-      "label": "Health",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "armor_rating",
-      "label": "Armor Rating",
-      "type": "number"
-     },
-     {
-      "key": "armor_penalty",
-      "label": "Armor Penalty",
-      "type": "number"
-     },
-     {
-      "key": "bulk",
-      "label": "Bulk",
-      "type": "number",
-      "size": "small"
-     },
-     {
-      "key": "movement",
-      "label": "Movement",
-      "type": "number"
-     },
-     {
-      "key": "injuries",
-      "label": "Injuries",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "wounds",
-      "label": "Wounds",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
      {
       "key": "weapons",
       "label": "Weapons",
@@ -295,7 +435,7 @@
       "columns": [
        {
         "key": "weapon",
-        "label": "Weapon"
+        "label": "Attack"
        },
        {
         "key": "test_dice",
@@ -303,47 +443,141 @@
        },
        {
         "key": "damage",
-        "label": "Damage"
+        "label": "Weapon Damage"
        },
        {
         "key": "qualities",
         "label": "Qualities"
        }
-      ]
+      ],
+      "play": true
+     },
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "pips",
+      "count": 21,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "injuries",
+      "label": "Injuries",
+      "type": "pips",
+      "count": 7,
+      "cols": 4,
+      "play": true
      }
     ]
    },
    {
-    "key": "destiny",
-    "title": "Destiny & Qualities",
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
-      "key": "destiny_points",
-      "label": "Destiny Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "size": "full"
      },
      {
-      "key": "qualities",
-      "label": "Benefits & Drawbacks",
-      "type": "list",
-      "columns": [
-       {
-        "key": "quality",
-        "label": "Quality"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_penalty",
+      "label": "Armor Penalty",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "bulk",
+      "label": "Bulk",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "movement",
+      "label": "Movement",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds",
+    "page": "Background",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "wound_notes",
+      "label": "Wounds",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "appearance",
+    "title": "Appearance",
+    "page": "Background",
+    "width": "half",
+    "fields": [
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eye_color",
+      "label": "Eye Color",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair_color",
+      "label": "Hair Color",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "mannerisms",
+      "label": "Mannerisms",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "distinguishing_features",
+      "label": "Distinguishing Features",
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
     "key": "gear_history",
-    "title": "Gear & History",
+    "title": "Equipment",
+    "page": "Background",
+    "width": "half",
     "fields": [
      {
       "key": "gear",
@@ -364,15 +598,94 @@
       "key": "coin",
       "label": "Coin",
       "type": "number",
+      "cols": 2,
       "play": true
-     },
+     }
+    ]
+   },
+   {
+    "key": "retainers_sec",
+    "title": "Retainers",
+    "page": "Background",
+    "width": "half",
+    "fields": [
+     {
+      "key": "retainers",
+      "label": "Retainers",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history_sec",
+    "title": "Personal History",
+    "page": "Background",
+    "fields": [
      {
       "key": "history",
-      "label": "History",
+      "label": "Personal History",
       "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "allies_sec",
+    "title": "Allies",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "allies",
+      "label": "Allies",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "enemies_sec",
+    "title": "Enemies",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "enemies",
+      "label": "Enemies",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "oaths_sec",
+    "title": "Oaths",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "oaths",
+      "label": "Oaths",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "heraldry_sec",
+    "title": "Heraldry & Motto",
+    "page": "Background",
+    "fields": [
+     {
+      "key": "heraldry",
+      "label": "Heraldry",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "motto",
+      "label": "Motto",
+      "type": "text",
+      "cols": 6
      }
     ]
    }
   ]
  }
-}
+}

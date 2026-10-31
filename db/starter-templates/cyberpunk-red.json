@@ -13,11 +13,15 @@
    {
     "key": "edgerunner",
     "title": "Edgerunner",
+    "page": "Edgerunner",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "handle",
       "label": "Handle",
-      "type": "text"
+      "type": "text",
+      "cols": 4,
+      "summary": true
      },
      {
       "key": "role",
@@ -35,162 +39,125 @@
        "Fixer",
        "Nomad"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 4
      },
      {
       "key": "role_ability",
       "label": "Role Ability",
-      "type": "text"
+      "type": "text",
+      "cols": 6
      },
      {
       "key": "role_rank",
-      "label": "Role Ability Rank",
+      "label": "Rank",
       "type": "number",
-      "min": 1,
-      "max": 10,
-      "summary": true
+      "cols": 2
      },
      {
-      "key": "ip",
-      "label": "Improvement Points",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "reputation",
-      "label": "Reputation",
-      "type": "number",
-      "min": 0,
-      "max": 10
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "stats",
     "title": "Stats",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "st_int",
       "label": "INT",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_ref",
       "label": "REF",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_dex",
       "label": "DEX",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_tech",
       "label": "TECH",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_cool",
       "label": "COOL",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_will",
       "label": "WILL",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_move",
       "label": "MOVE",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "st_body",
       "label": "BODY",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "luck",
-      "label": "LUCK",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "emp",
-      "label": "EMP",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "type": "number"
      }
     ]
    },
    {
     "key": "health",
-    "title": "Health",
+    "title": "Health & Humanity",
+    "page": "Edgerunner",
     "fields": [
      {
       "key": "hp",
       "label": "Hit Points",
       "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "seriously_wounded",
-      "label": "Seriously Wounded",
-      "type": "number"
-     },
-     {
-      "key": "death_save",
-      "label": "Death Save",
-      "type": "number"
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
       "key": "humanity",
       "label": "Humanity",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
-      "key": "sp_head",
-      "label": "Head Armor SP",
+      "key": "luck",
+      "label": "Luck",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
-      "key": "sp_body",
-      "label": "Body Armor SP",
+      "key": "emp",
+      "label": "EMP",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "seriously_wounded",
+      "label": "Seriously Wounded (-2 to all actions)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "death_save",
+      "label": "Death Save",
+      "type": "number",
+      "cols": 3
      },
      {
       "key": "critical_injuries",
@@ -229,18 +196,562 @@
         "key": "notes",
         "label": "Notes"
        }
-      ],
-      "play": true
+      ]
+     }
+    ]
+   },
+   {
+    "key": "grp_education",
+    "title": "Education Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_accounting",
+      "label": "Accounting (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_animal_handling",
+      "label": "Animal Handling (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_bureaucracy",
+      "label": "Bureaucracy (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_business",
+      "label": "Business (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_composition",
+      "label": "Composition (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_criminology",
+      "label": "Criminology (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_cryptography",
+      "label": "Cryptography (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_deduction",
+      "label": "Deduction (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_education",
+      "label": "Education (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_gamble",
+      "label": "Gamble (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_language_streetslang",
+      "label": "Language (Streetslang) (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_library_search",
+      "label": "Library Search (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_local_expert_your_home",
+      "label": "Local Expert (Your Home) (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_science",
+      "label": "Science (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_tactics",
+      "label": "Tactics (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_wilderness_survival",
+      "label": "Wilderness Survival (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_technique",
+    "title": "Technique Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_air_vehicle_tech",
+      "label": "Air Vehicle Tech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_basic_tech",
+      "label": "Basic Tech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_cybertech",
+      "label": "Cybertech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions (x2) (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_electronics_security_tech",
+      "label": "Electronics/Security Tech (x2) (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_land_vehicle_tech",
+      "label": "Land Vehicle Tech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_paint_draw_sculpt",
+      "label": "Paint/Draw/Sculpt (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_paramedic",
+      "label": "Paramedic (x2) (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_photography_film",
+      "label": "Photography/Film (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_pick_lock",
+      "label": "Pick Lock (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_pick_pocket",
+      "label": "Pick Pocket (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_sea_vehicle_tech",
+      "label": "Sea Vehicle Tech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_weaponstech",
+      "label": "Weaponstech (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_social",
+    "title": "Social Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_bribery",
+      "label": "Bribery (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_conversation",
+      "label": "Conversation (EMP)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_human_perception",
+      "label": "Human Perception (EMP)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_interrogation",
+      "label": "Interrogation (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_personal_grooming",
+      "label": "Personal Grooming (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_trading",
+      "label": "Trading (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_wardrobe_style",
+      "label": "Wardrobe & Style (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_body",
+    "title": "Body Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_athletics",
+      "label": "Athletics (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_contortionist",
+      "label": "Contortionist (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_dance",
+      "label": "Dance (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_endurance",
+      "label": "Endurance (WILL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_resist_torture_drugs",
+      "label": "Resist Torture/Drugs (WILL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_awareness",
+    "title": "Awareness Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_concentration",
+      "label": "Concentration (WILL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_conceal_reveal_object",
+      "label": "Conceal/Reveal Object (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_lip_reading",
+      "label": "Lip Reading (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_tracking",
+      "label": "Tracking (INT)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_ranged",
+    "title": "Ranged Weapon Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_archery",
+      "label": "Archery (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_autofire",
+      "label": "Autofire (x2) (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_handgun",
+      "label": "Handgun (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_heavy_weapons",
+      "label": "Heavy Weapons (x2) (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_shoulder_arms",
+      "label": "Shoulder Arms (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_control",
+    "title": "Control Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_drive_land_vehicle",
+      "label": "Drive Land Vehicle (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_pilot_air_vehicle",
+      "label": "Pilot Air Vehicle (x2) (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_pilot_sea_vehicle",
+      "label": "Pilot Sea Vehicle (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_riding",
+      "label": "Riding (REF)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_fighting",
+    "title": "Fighting Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_brawling",
+      "label": "Brawling (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_evasion",
+      "label": "Evasion (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_martial_arts",
+      "label": "Martial Arts (x2) (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_melee_weapon",
+      "label": "Melee Weapon (DEX)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "grp_performance",
+    "title": "Performance Skills",
+    "page": "Edgerunner",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_acting",
+      "label": "Acting (COOL)",
+      "type": "number",
+      "min": 0,
+      "max": 10
+     },
+     {
+      "key": "sk_play_instrument",
+      "label": "Play Instrument (TECH)",
+      "type": "number",
+      "min": 0,
+      "max": 10
      }
     ]
    },
    {
     "key": "skills",
-    "title": "Skills",
+    "title": "Other Skills",
+    "page": "Edgerunner",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "skill_list",
-      "label": "Skills",
+      "label": "Other Skills (languages, local expert, science...)",
       "type": "list",
       "columns": [
        {
@@ -253,7 +764,7 @@
        },
        {
         "key": "level",
-        "label": "Level"
+        "label": "LVL"
        },
        {
         "key": "base",
@@ -266,6 +777,7 @@
    {
     "key": "weapons",
     "title": "Weapons & Armor",
+    "page": "Edgerunner",
     "fields": [
      {
       "key": "weapon_list",
@@ -296,8 +808,32 @@
       "play": true
      },
      {
+      "key": "sp_head",
+      "label": "Head Armor SP",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_body",
+      "label": "Body Armor SP",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_shield",
+      "label": "Shield HP",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
       "key": "armor_list",
-      "label": "Armor",
+      "label": "Armor (penalty applies to REF, DEX & MOVE)",
       "type": "list",
       "columns": [
        {
@@ -321,37 +857,42 @@
     ]
    },
    {
-    "key": "cyberware",
-    "title": "Cyberware",
+    "key": "reputation_sec",
+    "title": "Reputation",
+    "page": "Lifepath & Gear",
+    "width": "half",
     "fields": [
      {
-      "key": "cyber_list",
-      "label": "Cyberware",
-      "type": "list",
-      "columns": [
-       {
-        "key": "cyberware",
-        "label": "Cyberware"
-       },
-       {
-        "key": "type",
-        "label": "Type"
-       },
-       {
-        "key": "humanity_loss",
-        "label": "Humanity Loss"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
+      "key": "aliases",
+      "label": "Aliases",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ip",
+      "label": "Improvement Points",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "reputation",
+      "label": "Reputation",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "reputation_events",
+      "label": "Reputation Events",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "gear",
     "title": "Gear",
+    "page": "Lifepath & Gear",
+    "width": "half",
     "fields": [
      {
       "key": "gear_list",
@@ -360,7 +901,7 @@
       "columns": [
        {
         "key": "item",
-        "label": "Item"
+        "label": "Gear"
        },
        {
         "key": "notes",
@@ -369,76 +910,79 @@
       ]
      },
      {
+      "key": "ammunition",
+      "label": "Ammunition",
+      "type": "text",
+      "size": "full"
+     },
+     {
       "key": "eurobucks",
-      "label": "Eurobucks",
+      "label": "Cash (eb)",
       "type": "number",
+      "cols": 3,
       "play": true
-     },
-     {
-      "key": "housing",
-      "label": "Housing",
-      "type": "text"
-     },
-     {
-      "key": "rent",
-      "label": "Rent",
-      "type": "text"
-     },
-     {
-      "key": "lifestyle",
-      "label": "Lifestyle",
-      "type": "text"
      }
     ]
    },
    {
     "key": "lifepath",
     "title": "Lifepath",
+    "page": "Lifepath & Gear",
+    "width": "half",
     "fields": [
      {
       "key": "cultural_origin",
-      "label": "Cultural Origin",
-      "type": "text"
+      "label": "Cultural Origins",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "personality",
       "label": "Personality",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "dress_style",
       "label": "Clothing Style",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "hairstyle",
       "label": "Hairstyle",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "affectation",
       "label": "Affectation",
-      "type": "text"
+      "type": "text",
+      "cols": 6
      },
      {
       "key": "values_most",
-      "label": "Values Most",
-      "type": "text"
+      "label": "What Do You Value Most?",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "feel_about_people",
-      "label": "Feelings About People",
-      "type": "text"
+      "label": "Feelings About People?",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "valued_person",
       "label": "Most Valued Person",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "valued_possession",
       "label": "Most Valued Possession",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "family_background",
@@ -446,13 +990,68 @@
       "type": "longtext"
      },
      {
+      "key": "childhood_environment",
+      "label": "Childhood Environment",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "family_crisis",
+      "label": "Family Crisis",
+      "type": "text",
+      "size": "full"
+     },
+     {
       "key": "life_goals",
       "label": "Life Goals",
       "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "home",
+    "title": "Fashion, Housing & Role",
+    "page": "Lifepath & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fashion",
+      "label": "Fashion",
+      "type": "longtext"
      },
      {
+      "key": "housing",
+      "label": "Housing",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rent",
+      "label": "Rent",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "role_lifepath",
+      "label": "Role Specific Lifepath",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "relations",
+    "title": "Friends, Lovers & Enemies",
+    "page": "Lifepath & Gear",
+    "fields": [
+     {
       "key": "friends_enemies",
-      "label": "Friends, Enemies & Lovers",
+      "label": "Friends & Tragic Love Affairs",
       "type": "list",
       "columns": [
        {
@@ -468,9 +1067,62 @@
         "label": "Notes"
        }
       ]
+     },
+     {
+      "key": "enemies",
+      "label": "Enemies",
+      "type": "list",
+      "columns": [
+       {
+        "key": "who",
+        "label": "Who?"
+       },
+       {
+        "key": "cause",
+        "label": "What Caused It?"
+       },
+       {
+        "key": "throw",
+        "label": "What Can They Throw at You?"
+       },
+       {
+        "key": "happen",
+        "label": "What's Gonna Happen?"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "cyberware",
+    "title": "Cyberware",
+    "page": "Cyberware",
+    "fields": [
+     {
+      "key": "cyber_list",
+      "label": "Cyberware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "cyberware",
+        "label": "Cyberware"
+       },
+       {
+        "key": "type",
+        "label": "Slot (Neural Link, Cybereye, Internal...)"
+       },
+       {
+        "key": "humanity_loss",
+        "label": "Humanity Loss"
+       },
+       {
+        "key": "notes",
+        "label": "Data"
+       }
+      ]
      }
     ]
    }
   ]
  }
-}
+}

@@ -3,7 +3,7 @@
  "game": "King Arthur Pendragon",
  "edition": "6th Edition",
  "source": {
-  "title": "Pendragon 6E Character Sheet (blank)",
+  "title": "PEN Character Sheet (fillable), from the 6E Character Sheets pack",
   "owner": "Chaosium",
   "url": "https://chaosium.itch.io/pendragon-core-rules-zcharacter-sheets-pack",
   "licence": null
@@ -12,380 +12,212 @@
   "sections": [
    {
     "key": "knight",
-    "title": "Knight",
+    "title": "Personal Information",
+    "page": "Knight",
+    "width": "two-thirds",
     "fields": [
+     {
+      "key": "year_born",
+      "label": "Born",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "heir",
+      "label": "Heir?",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "current_class",
+      "label": "Class",
+      "type": "text",
+      "cols": 2,
+      "summary": true
+     },
      {
       "key": "homeland",
       "label": "Homeland",
       "type": "text",
+      "cols": 4,
       "summary": true
+     },
+     {
+      "key": "lord",
+      "label": "Lord",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "culture",
       "label": "Culture",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "religion",
       "label": "Religion",
       "type": "text",
-      "summary": true
+      "cols": 4
      },
      {
-      "key": "lord",
-      "label": "Liege Lord",
-      "type": "text"
-     },
-     {
-      "key": "manor",
-      "label": "Manor",
-      "type": "text"
-     },
-     {
-      "key": "current_class",
-      "label": "Current Class",
+      "key": "distinctive_features",
+      "label": "Distinctive Features",
       "type": "text",
-      "summary": true
+      "size": "full"
      },
      {
-      "key": "year_born",
-      "label": "Year Born",
-      "type": "number"
-     },
-     {
-      "key": "age",
-      "label": "Age",
-      "type": "number"
-     },
-     {
-      "key": "father",
-      "label": "Father",
-      "type": "text"
-     },
-     {
-      "key": "family_characteristic",
-      "label": "Family Characteristic",
-      "type": "text"
+      "key": "blazon",
+      "label": "Blazon",
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
-    "key": "traits",
-    "title": "Traits",
+    "key": "glory_sec",
+    "title": "Glory",
+    "page": "Knight",
+    "width": "third",
     "fields": [
      {
-      "key": "trait_chaste",
-      "label": "Chaste",
+      "key": "glory",
+      "label": "Glory",
       "type": "number",
-      "min": 0,
-      "max": 20
+      "cols": 2,
+      "play": true
      },
      {
-      "key": "trait_lustful",
-      "label": "Lustful",
-      "type": "number",
-      "min": 0,
-      "max": 20
+      "key": "honor",
+      "label": "Honor",
+      "type": "checkbox",
+      "cols": 2
      },
      {
-      "key": "trait_energetic",
-      "label": "Energetic",
+      "key": "session_glory",
+      "label": "Session Glory",
       "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_lazy",
-      "label": "Lazy",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_forgiving",
-      "label": "Forgiving",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_vengeful",
-      "label": "Vengeful",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_generous",
-      "label": "Generous",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_selfish",
-      "label": "Selfish",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_honest",
-      "label": "Honest",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_deceitful",
-      "label": "Deceitful",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_just",
-      "label": "Just",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_arbitrary",
-      "label": "Arbitrary",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_merciful",
-      "label": "Merciful",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_cruel",
-      "label": "Cruel",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_modest",
-      "label": "Modest",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_proud",
-      "label": "Proud",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_prudent",
-      "label": "Prudent",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_reckless",
-      "label": "Reckless",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_spiritual",
-      "label": "Spiritual",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_worldly",
-      "label": "Worldly",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_temperate",
-      "label": "Temperate",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_indulgent",
-      "label": "Indulgent",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_trusting",
-      "label": "Trusting",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_suspicious",
-      "label": "Suspicious",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_valorous",
-      "label": "Valorous",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_cowardly",
-      "label": "Cowardly",
-      "type": "number",
-      "min": 0,
-      "max": 20
-     },
-     {
-      "key": "trait_checks",
-      "label": "Trait Checks",
-      "type": "list",
-      "columns": [
-       {
-        "key": "trait",
-        "label": "Trait"
-       }
-      ],
+      "cols": 4,
       "play": true
      }
     ]
    },
    {
-    "key": "passions",
-    "title": "Passions",
-    "fields": [
-     {
-      "key": "passion_list",
-      "label": "Passions",
-      "type": "list",
-      "columns": [
-       {
-        "key": "passion",
-        "label": "Passion"
-       },
-       {
-        "key": "value",
-        "label": "Value"
-       },
-       {
-        "key": "checked",
-        "label": "Checked"
-       }
-      ]
-     }
-    ]
-   },
-   {
     "key": "attributes",
-    "title": "Attributes",
+    "title": "Characteristics",
+    "page": "Knight",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "attr_siz",
       "label": "SIZ",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_dex",
       "label": "DEX",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_str",
       "label": "STR",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_con",
       "label": "CON",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "attr_app",
       "label": "APP",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "size": "small"
+      "type": "number"
      }
     ]
    },
    {
     "key": "derived",
-    "title": "Derived Statistics",
+    "title": "Derived Characteristics & Wounds",
+    "page": "Knight",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "damage",
-      "label": "Damage",
-      "type": "text",
-      "size": "small"
+      "key": "knockdown",
+      "label": "Knockdown (SIZ)",
+      "type": "number",
+      "cols": 4
      },
      {
-      "key": "healing_rate",
-      "label": "Healing Rate",
-      "type": "number",
-      "size": "small"
+      "key": "damage",
+      "label": "Weapon Damage ((STR+SIZ)/6 d6)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "brawling_damage",
+      "label": "Brawling Damage",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "move_rate",
-      "label": "Move Rate",
+      "label": "Movement Rate",
       "type": "number",
-      "size": "small"
-     },
-     {
-      "key": "unconscious",
-      "label": "Unconscious",
-      "type": "number",
-      "size": "small"
-     },
-     {
-      "key": "knockdown",
-      "label": "Knockdown",
-      "type": "number",
-      "size": "small"
+      "cols": 2
      },
      {
       "key": "major_wound",
-      "label": "Major Wound",
+      "label": "Major Wound (CON)",
       "type": "number",
-      "size": "small"
+      "cols": 2
+     },
+     {
+      "key": "healing_rate",
+      "label": "Healing Rate (CON/5)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "unconscious",
+      "label": "Unconscious (HP/4)",
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "hp",
-      "label": "Hit Points",
+      "label": "Hit Points (current / total)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "chirurgery",
+      "label": "Debilitated (needs chirurgery)",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "aggravation_damage",
+      "label": "Aggravation Damage",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "deterioration_damage",
+      "label": "Deterioration Damage",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
       "key": "wounds",
@@ -402,23 +234,225 @@
        }
       ],
       "play": true
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "page": "Knight",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "trait_chaste",
+      "label": "Chaste",
+      "type": "number"
      },
      {
-      "key": "chirurgery",
-      "label": "Needs Chirurgery",
-      "type": "checkbox",
-      "play": true,
-      "size": "small"
+      "key": "trait_energetic",
+      "label": "Energetic",
+      "type": "number"
+     },
+     {
+      "key": "trait_forgiving",
+      "label": "Forgiving",
+      "type": "number"
+     },
+     {
+      "key": "trait_generous",
+      "label": "Generous",
+      "type": "number"
+     },
+     {
+      "key": "trait_honest",
+      "label": "Honest",
+      "type": "number"
+     },
+     {
+      "key": "trait_just",
+      "label": "Just",
+      "type": "number"
+     },
+     {
+      "key": "trait_merciful",
+      "label": "Merciful",
+      "type": "number"
+     },
+     {
+      "key": "trait_modest",
+      "label": "Modest",
+      "type": "number"
+     },
+     {
+      "key": "trait_prudent",
+      "label": "Prudent",
+      "type": "number"
+     },
+     {
+      "key": "trait_spiritual",
+      "label": "Spiritual",
+      "type": "number"
+     },
+     {
+      "key": "trait_temperate",
+      "label": "Temperate",
+      "type": "number"
+     },
+     {
+      "key": "trait_trusting",
+      "label": "Trusting",
+      "type": "number"
+     },
+     {
+      "key": "trait_valorous",
+      "label": "Valorous",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "traits_opposed",
+    "title": "Opposed Traits",
+    "page": "Knight",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "trait_lustful",
+      "label": "Lustful",
+      "type": "number"
+     },
+     {
+      "key": "trait_lazy",
+      "label": "Lazy",
+      "type": "number"
+     },
+     {
+      "key": "trait_vengeful",
+      "label": "Vengeful",
+      "type": "number"
+     },
+     {
+      "key": "trait_selfish",
+      "label": "Selfish",
+      "type": "number"
+     },
+     {
+      "key": "trait_deceitful",
+      "label": "Deceitful",
+      "type": "number"
+     },
+     {
+      "key": "trait_arbitrary",
+      "label": "Arbitrary",
+      "type": "number"
+     },
+     {
+      "key": "trait_cruel",
+      "label": "Cruel",
+      "type": "number"
+     },
+     {
+      "key": "trait_proud",
+      "label": "Proud",
+      "type": "number"
+     },
+     {
+      "key": "trait_reckless",
+      "label": "Reckless",
+      "type": "number"
+     },
+     {
+      "key": "trait_worldly",
+      "label": "Worldly",
+      "type": "number"
+     },
+     {
+      "key": "trait_indulgent",
+      "label": "Indulgent",
+      "type": "number"
+     },
+     {
+      "key": "trait_suspicious",
+      "label": "Suspicious",
+      "type": "number"
+     },
+     {
+      "key": "trait_cowardly",
+      "label": "Cowardly",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "passions",
+    "title": "Passions & Directed Traits",
+    "page": "Knight",
+    "width": "third",
+    "fields": [
+     {
+      "key": "ideal",
+      "label": "Ideal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "passion_list",
+      "label": "Passions (Homage, Fealty, Love, Devotion...)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "passion",
+        "label": "Passion"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       },
+       {
+        "key": "checked",
+        "label": "Checked"
+       }
+      ]
+     },
+     {
+      "key": "trait_checks",
+      "label": "Checked Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       }
+      ]
+     },
+     {
+      "key": "directed_traits",
+      "label": "Directed Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Directed Trait"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
      }
     ]
    },
    {
     "key": "skills",
     "title": "Skills",
+    "page": "Knight",
+    "width": "half",
     "fields": [
      {
       "key": "skill_list",
-      "label": "Skills",
+      "label": "Non-Combat Skills",
       "type": "list",
       "columns": [
        {
@@ -457,15 +491,186 @@
     ]
    },
    {
-    "key": "renown",
-    "title": "Glory",
+    "key": "armor_sec",
+    "title": "Armor & Attacks",
+    "page": "Knight",
+    "width": "half",
     "fields": [
      {
-      "key": "glory",
-      "label": "Glory",
+      "key": "armor",
+      "label": "Mail / Plate",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "textile",
+      "label": "Textile",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "helm",
+      "label": "Helm",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "armor_points",
+      "label": "Total Armor Protection",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 4
+     },
+     {
+      "key": "attacks",
+      "label": "Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Horses",
+    "page": "Horses & History",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "horses",
+      "label": "Horses (warhorse, riding horse, squire's horse...)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "horse",
+        "label": "Horse"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "worth",
+        "label": "Worth"
+       },
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "hp",
+        "label": "HP"
+       }
+      ]
+     },
+     {
+      "key": "jousting_wins",
+      "label": "Jousting Wins",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "jousting_losses",
+      "label": "Jousting Losses",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "equestrian_notes",
+      "label": "Equestrian Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "squire",
+    "title": "Squire",
+    "page": "Horses & History",
+    "width": "third",
+    "fields": [
+     {
+      "key": "squire_name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "squire_age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "squire_skill",
+      "label": "Skill",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "squire_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history",
+    "title": "History & Events",
+    "page": "Horses & History",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "history_log",
+      "label": "History & Events",
+      "type": "list",
+      "columns": [
+       {
+        "key": "year",
+        "label": "Year"
+       },
+       {
+        "key": "event",
+        "label": "Event"
+       },
+       {
+        "key": "standard_of_living",
+        "label": "Standard of Living"
+       },
+       {
+        "key": "new_glory",
+        "label": "New Glory"
+       },
+       {
+        "key": "total_glory",
+        "label": "Total Glory"
+       }
+      ]
      },
      {
       "key": "glory_log",
@@ -489,51 +694,45 @@
     ]
    },
    {
-    "key": "equipment",
-    "title": "Equipment & Horses",
+    "key": "passive_glory",
+    "title": "Passive Glory",
+    "page": "Horses & History",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
-     },
-     {
-      "key": "armor_points",
-      "label": "Armor Points",
+      "key": "pg_traits",
+      "label": "Traits & Passions",
       "type": "number"
      },
      {
-      "key": "shield",
-      "label": "Shield",
-      "type": "text"
+      "key": "pg_fair_appeal",
+      "label": "Fair Appeal",
+      "type": "number"
      },
      {
-      "key": "horses",
-      "label": "Horses",
-      "type": "list",
-      "columns": [
-       {
-        "key": "horse",
-        "label": "Horse"
-       },
-       {
-        "key": "type",
-        "label": "Type"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       },
-       {
-        "key": "move",
-        "label": "Move"
-       },
-       {
-        "key": "hp",
-        "label": "HP"
-       }
-      ]
+      "key": "pg_standard_of_living",
+      "label": "Standard of Living",
+      "type": "number"
      },
+     {
+      "key": "pg_titles",
+      "label": "Titles",
+      "type": "number"
+     },
+     {
+      "key": "pg_other",
+      "label": "Other",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "gear_sec",
+    "title": "Equipment & Wealth",
+    "page": "Horses & History",
+    "width": "third",
+    "fields": [
      {
       "key": "gear",
       "label": "Equipment",
@@ -552,36 +751,65 @@
      {
       "key": "annual_wealth",
       "label": "Annual Wealth",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
-    "key": "history",
-    "title": "History",
+    "key": "family_sec",
+    "title": "Family & Holdings",
+    "page": "Horses & History",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "history_log",
-      "label": "Personal History",
-      "type": "list",
-      "columns": [
-       {
-        "key": "year",
-        "label": "Year"
-       },
-       {
-        "key": "event",
-        "label": "Event"
-       }
-      ]
+      "key": "father",
+      "label": "Parent's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "father_glory",
+      "label": "Glory",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "mother",
+      "label": "Parent's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "mother_glory",
+      "label": "Glory",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "family_characteristic",
+      "label": "Family Characteristic",
+      "type": "text",
+      "cols": 6
      },
      {
       "key": "family",
-      "label": "Family",
+      "label": "Family Notes",
+      "type": "longtext"
+     },
+     {
+      "key": "manor",
+      "label": "Manor",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "holdings",
+      "label": "Holdings",
       "type": "longtext"
      }
     ]
    }
   ]
  }
-}
+}

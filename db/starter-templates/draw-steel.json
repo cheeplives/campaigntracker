@@ -13,140 +13,193 @@
    {
     "key": "hero",
     "title": "Hero",
+    "page": "Hero",
+    "width": "half",
     "fields": [
      {
       "key": "ancestry",
       "label": "Ancestry",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "class",
       "label": "Class",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "subclass",
-      "label": "Subclass",
-      "type": "text"
-     },
-     {
-      "key": "level",
-      "label": "Level",
-      "type": "number",
-      "min": 1,
-      "max": 10,
+      "cols": 3,
       "summary": true
      },
      {
       "key": "career",
       "label": "Career",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
-      "key": "culture",
-      "label": "Culture",
-      "type": "text"
+      "key": "subclass",
+      "label": "Subclass",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "progress",
+    "title": "Progress",
+    "page": "Hero",
+    "width": "half",
+    "fields": [
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
      },
      {
-      "key": "kit",
-      "label": "Kit",
-      "type": "text"
+      "key": "victories",
+      "label": "Victories",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
-      "key": "complication",
-      "label": "Complication",
-      "type": "text"
+      "key": "xp",
+      "label": "XP / Epic",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wealth",
+      "label": "Wealth",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "renown",
+      "label": "Renown",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hero_tokens",
+      "label": "Hero Tokens",
+      "type": "number",
+      "cols": 2,
+      "play": true
      }
     ]
    },
    {
     "key": "characteristics",
     "title": "Characteristics",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ch_might",
       "label": "Might",
-      "type": "number",
-      "min": -5,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "ch_agility",
       "label": "Agility",
-      "type": "number",
-      "min": -5,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "ch_reason",
       "label": "Reason",
-      "type": "number",
-      "min": -5,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "ch_intuition",
       "label": "Intuition",
-      "type": "number",
-      "min": -5,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "ch_presence",
       "label": "Presence",
-      "type": "number",
-      "min": -5,
-      "max": 5,
-      "size": "small"
+      "type": "number"
      }
     ]
    },
    {
     "key": "vitals",
-    "title": "Vitals",
+    "title": "Stamina & Resources",
+    "page": "Hero",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "stamina",
-      "label": "Stamina",
+      "label": "Stamina (current / max)",
       "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "temp_stamina",
+      "label": "Temporary Stamina",
+      "type": "number",
+      "cols": 2,
       "play": true
      },
      {
       "key": "winded",
-      "label": "Winded",
-      "type": "number"
+      "label": "Winded at",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "recoveries",
-      "label": "Recoveries",
+      "label": "Recoveries (current / max)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "recovery_value",
-      "label": "Recovery Value",
-      "type": "number"
-     },
-     {
-      "key": "heroic_resource",
-      "label": "Heroic Resource",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "label": "Recovery Stamina",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "surges",
       "label": "Surges",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "heroic_resource_name",
+      "label": "Heroic Resource",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "heroic_resource",
+      "label": "Heroic Resource (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "movement",
+    "title": "Size & Movement",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text"
      },
      {
       "key": "speed",
@@ -154,18 +207,37 @@
       "type": "number"
      },
      {
-      "key": "stability",
-      "label": "Stability",
+      "key": "disengage",
+      "label": "Disengage",
       "type": "number"
      },
      {
-      "key": "size",
-      "label": "Size",
-      "type": "text"
+      "key": "stability",
+      "label": "Stability",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "potency",
+    "title": "Potency",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "potency_weak",
+      "label": "Weak",
+      "type": "number"
      },
      {
-      "key": "disengage",
-      "label": "Disengage",
+      "key": "potency_average",
+      "label": "Average",
+      "type": "number"
+     },
+     {
+      "key": "potency_strong",
+      "label": "Strong",
       "type": "number"
      }
     ]
@@ -173,6 +245,9 @@
    {
     "key": "conditions",
     "title": "Conditions",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "cond_bleeding",
@@ -231,60 +306,171 @@
     ]
    },
    {
-    "key": "abilities",
-    "title": "Abilities",
+    "key": "kit_sec",
+    "title": "Equipment & Modifiers",
+    "page": "Hero",
     "fields": [
      {
-      "key": "ability_list",
-      "label": "Abilities",
-      "type": "list",
-      "columns": [
-       {
-        "key": "ability",
-        "label": "Ability"
-       },
-       {
-        "key": "type",
-        "label": "Type"
-       },
-       {
-        "key": "cost",
-        "label": "Cost"
-       },
-       {
-        "key": "distance",
-        "label": "Distance"
-       },
-       {
-        "key": "target",
-        "label": "Target"
-       },
-       {
-        "key": "effect",
-        "label": "Effect"
-       }
-      ]
+      "key": "kit",
+      "label": "Kit",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kit_weapon",
+      "label": "Weapon / Implement",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kit_armor",
+      "label": "Armor / Ward",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kit_speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_disengage",
+      "label": "Disengage",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_stability",
+      "label": "Stability",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_melee_distance",
+      "label": "Melee Distance",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_ranged_distance",
+      "label": "Ranged Distance",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "kit_melee_damage",
+      "label": "Melee Damage Bonus (≤11 / 12-16 / 17+)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "kit_ranged_damage",
+      "label": "Ranged Damage Bonus (≤11 / 12-16 / 17+)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "kit_effects",
+      "label": "Effects",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "features",
+    "title": "Class Features",
+    "page": "Hero",
+    "fields": [
+     {
+      "key": "class_features",
+      "label": "Class Features",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "culture_sec",
+    "title": "Culture",
+    "page": "Background & Skills",
+    "fields": [
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "culture_environment",
+      "label": "Environment",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "culture_organization",
+      "label": "Organization",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "culture_upbringing",
+      "label": "Upbringing",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "career_sec",
+    "title": "Career & Complication",
+    "page": "Background & Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "career_benefits",
+      "label": "Career Benefits",
+      "type": "longtext"
+     },
+     {
+      "key": "inciting_incident",
+      "label": "Inciting Incident",
+      "type": "longtext"
+     },
+     {
+      "key": "complication",
+      "label": "Complication",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "complication_details",
+      "label": "Complication Details",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "skills_perks",
-    "title": "Skills, Perks & Languages",
+    "title": "Ancestry Traits & Perks",
+    "page": "Background & Skills",
+    "width": "half",
     "fields": [
      {
-      "key": "skill_list",
-      "label": "Skills",
-      "type": "list",
-      "columns": [
-       {
-        "key": "skill",
-        "label": "Skill"
-       },
-       {
-        "key": "group",
-        "label": "Group"
-       }
-      ]
+      "key": "ancestry_traits",
+      "label": "Ancestry Traits",
+      "type": "longtext"
      },
      {
       "key": "perk_list",
@@ -302,50 +488,476 @@
       ]
      },
      {
-      "key": "languages",
-      "label": "Languages",
-      "type": "text",
-      "size": "small"
+      "key": "skill_list",
+      "label": "Other Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "group",
+        "label": "Group"
+       }
+      ]
      }
     ]
    },
    {
-    "key": "progress",
-    "title": "Progress",
+    "key": "skg_crafting",
+    "title": "Crafting",
+    "page": "Background & Skills",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "victories",
-      "label": "Victories",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "skill_alchemy",
+      "label": "Alchemy",
+      "type": "checkbox"
      },
      {
-      "key": "xp",
-      "label": "Experience",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "skill_architecture",
+      "label": "Architecture",
+      "type": "checkbox"
      },
      {
-      "key": "renown",
-      "label": "Renown",
-      "type": "number",
-      "min": 0
+      "key": "skill_blacksmithing",
+      "label": "Blacksmithing",
+      "type": "checkbox"
      },
      {
-      "key": "wealth",
-      "label": "Wealth",
-      "type": "number",
-      "min": 0
+      "key": "skill_carpentry",
+      "label": "Carpentry",
+      "type": "checkbox"
      },
      {
-      "key": "hero_tokens",
-      "label": "Hero Tokens",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "skill_cooking",
+      "label": "Cooking",
+      "type": "checkbox"
      },
+     {
+      "key": "skill_fletching",
+      "label": "Fletching",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_forgery",
+      "label": "Forgery",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_jewelry",
+      "label": "Jewelry",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_mechanics",
+      "label": "Mechanics",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_tailoring",
+      "label": "Tailoring",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "skg_exploration",
+    "title": "Exploration",
+    "page": "Background & Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_climb",
+      "label": "Climb",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_drive",
+      "label": "Drive",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_endurance",
+      "label": "Endurance",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_gymnastics",
+      "label": "Gymnastics",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_heal",
+      "label": "Heal",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_jump",
+      "label": "Jump",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_lift",
+      "label": "Lift",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_navigate",
+      "label": "Navigate",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_ride",
+      "label": "Ride",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_swim",
+      "label": "Swim",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "skg_interpersonal",
+    "title": "Interpersonal",
+    "page": "Background & Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_brag",
+      "label": "Brag",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_empathize",
+      "label": "Empathize",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_flirt",
+      "label": "Flirt",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_gamble",
+      "label": "Gamble",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_handle_animals",
+      "label": "Handle Animals",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_interrogate",
+      "label": "Interrogate",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_intimidate",
+      "label": "Intimidate",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_lead",
+      "label": "Lead",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_lie",
+      "label": "Lie",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_music",
+      "label": "Music",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_perform",
+      "label": "Perform",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_persuade",
+      "label": "Persuade",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_read_person",
+      "label": "Read Person",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "skg_intrigue",
+    "title": "Intrigue",
+    "page": "Background & Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_alertness",
+      "label": "Alertness",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_conceal_object",
+      "label": "Conceal Object",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_disguise",
+      "label": "Disguise",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_eavesdrop",
+      "label": "Eavesdrop",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_escape_artist",
+      "label": "Escape Artist",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_hide",
+      "label": "Hide",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_pick_lock",
+      "label": "Pick Lock",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_pick_pocket",
+      "label": "Pick Pocket",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_sabotage",
+      "label": "Sabotage",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_search",
+      "label": "Search",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_sneak",
+      "label": "Sneak",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_track",
+      "label": "Track",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "skg_lore",
+    "title": "Lore",
+    "page": "Background & Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_culture",
+      "label": "Culture",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_criminal_underworld",
+      "label": "Criminal Underworld",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_history",
+      "label": "History",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_magic",
+      "label": "Magic",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_monsters",
+      "label": "Monsters",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_nature",
+      "label": "Nature",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_psionics",
+      "label": "Psionics",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_religion",
+      "label": "Religion",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_rumors",
+      "label": "Rumors",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_society",
+      "label": "Society",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_strategy",
+      "label": "Strategy",
+      "type": "checkbox"
+     },
+     {
+      "key": "skill_timescape",
+      "label": "Timescape",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "page": "Abilities",
+    "fields": [
+     {
+      "key": "ability_list",
+      "label": "Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Action"
+       },
+       {
+        "key": "type",
+        "label": "Type (Free Strike, Signature, Heroic...)"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "distance",
+        "label": "Distance"
+       },
+       {
+        "key": "target",
+        "label": "Target"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "keywords",
+        "label": "Keywords"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "inventory",
+    "title": "Treasures",
+    "page": "Treasures & Projects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "treasure_list",
+      "label": "Leveled Treasures & Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "trinkets",
+      "label": "Trinkets",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Trinket"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "consumables",
+      "label": "Consumables",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Consumable"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "titles_sec",
+    "title": "Titles",
+    "page": "Treasures & Projects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "titles",
+      "label": "Titles",
+      "type": "list",
+      "columns": [
+       {
+        "key": "title",
+        "label": "Title"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "projects",
+    "title": "Projects",
+    "page": "Treasures & Projects",
+    "fields": [
      {
       "key": "project_list",
       "label": "Projects",
@@ -353,7 +965,15 @@
       "columns": [
        {
         "key": "project",
-        "label": "Project"
+        "label": "Project Name"
+       },
+       {
+        "key": "assigned",
+        "label": "Assigned Hero / Follower"
+       },
+       {
+        "key": "characteristic",
+        "label": "Characteristic"
        },
        {
         "key": "points",
@@ -366,28 +986,7 @@
       ]
      }
     ]
-   },
-   {
-    "key": "inventory",
-    "title": "Inventory",
-    "fields": [
-     {
-      "key": "treasure_list",
-      "label": "Treasures & Items",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     }
-    ]
    }
   ]
  }
-}
+}

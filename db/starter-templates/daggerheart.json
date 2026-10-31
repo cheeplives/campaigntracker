@@ -13,129 +13,123 @@
    {
     "key": "hero",
     "title": "Hero",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "ancestry",
+      "label": "Ancestry",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "community",
+      "label": "Community",
+      "type": "text",
+      "cols": 3
+     },
      {
       "key": "class",
       "label": "Class",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "subclass",
       "label": "Subclass",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "ancestry",
-      "label": "Ancestry",
-      "type": "text",
-      "summary": true
-     },
-     {
-      "key": "community",
-      "label": "Community",
-      "type": "text"
+      "cols": 3
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
-      "min": 1,
-      "max": 10,
+      "cols": 2,
       "summary": true
-     },
-     {
-      "key": "pronouns",
-      "label": "Pronouns",
-      "type": "text"
      }
     ]
    },
    {
-    "key": "traits",
-    "title": "Traits",
+    "key": "hope_sec",
+    "title": "Hope",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
-      "key": "tr_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": -1,
-      "max": 6
+      "key": "hope",
+      "label": "Hope",
+      "type": "pips",
+      "count": 6,
+      "size": "full",
+      "play": true
      },
      {
-      "key": "tr_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": -1,
-      "max": 6
+      "key": "proficiency",
+      "label": "Proficiency",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "tr_finesse",
-      "label": "Finesse",
-      "type": "number",
-      "min": -1,
-      "max": 6
-     },
-     {
-      "key": "tr_instinct",
-      "label": "Instinct",
-      "type": "number",
-      "min": -1,
-      "max": 6
-     },
-     {
-      "key": "tr_presence",
-      "label": "Presence",
-      "type": "number",
-      "min": -1,
-      "max": 6
-     },
-     {
-      "key": "tr_knowledge",
-      "label": "Knowledge",
-      "type": "number",
-      "min": -1,
-      "max": 6
+      "key": "hope_feature",
+      "label": "Hope Feature",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "defense",
-    "title": "Defense & Damage",
+    "title": "Damage & Health",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "evasion",
       "label": "Evasion",
-      "type": "number"
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
       "key": "armor_score",
-      "label": "Armor Score",
-      "type": "number"
+      "label": "Armor",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
       "key": "armor_slots",
       "label": "Armor Slots",
       "type": "pips",
       "count": 12,
+      "cols": 4,
       "play": true
      },
      {
       "key": "threshold_major",
-      "label": "Major Damage Threshold",
-      "type": "number"
+      "label": "Major Damage Threshold (mark 2 HP)",
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "threshold_severe",
-      "label": "Severe Damage Threshold",
-      "type": "number"
+      "label": "Severe Damage Threshold (mark 3 HP)",
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "hp",
       "label": "Hit Points",
       "type": "pips",
       "count": 12,
+      "size": "full",
       "play": true
      },
      {
@@ -143,20 +137,135 @@
       "label": "Stress",
       "type": "pips",
       "count": 12,
-      "play": true
-     },
-     {
-      "key": "hope",
-      "label": "Hope",
-      "type": "pips",
-      "count": 6,
+      "size": "full",
       "play": true
      }
     ]
    },
    {
+    "key": "traits",
+    "title": "Traits",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "tr_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "tr_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "tr_finesse",
+      "label": "Finesse",
+      "type": "number"
+     },
+     {
+      "key": "tr_instinct",
+      "label": "Instinct",
+      "type": "number"
+     },
+     {
+      "key": "tr_presence",
+      "label": "Presence",
+      "type": "number"
+     },
+     {
+      "key": "tr_knowledge",
+      "label": "Knowledge",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Active Weapons & Armor",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "primary_weapon",
+      "label": "Primary Weapon",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "primary_weapon_trait_range",
+      "label": "Trait & Range",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "primary_weapon_damage",
+      "label": "Damage Dice & Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "primary_weapon_feature",
+      "label": "Primary Weapon Feature",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "secondary_weapon",
+      "label": "Secondary Weapon",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "secondary_weapon_trait_range",
+      "label": "Trait & Range",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "secondary_weapon_damage",
+      "label": "Damage Dice & Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "secondary_weapon_feature",
+      "label": "Secondary Weapon Feature",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "active_armor",
+      "label": "Active Armor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "armor_base_thresholds",
+      "label": "Base Thresholds",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "armor_base_score",
+      "label": "Base Score",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "active_armor_feature",
+      "label": "Armor Feature",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
     "key": "experiences",
-    "title": "Experiences",
+    "title": "Experience",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
       "key": "experience_list",
@@ -176,45 +285,93 @@
     ]
    },
    {
-    "key": "weapons",
-    "title": "Weapons & Armor",
+    "key": "inventory",
+    "title": "Inventory & Gold",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "primary_weapon",
-      "label": "Primary Weapon",
-      "type": "text"
+      "key": "items",
+      "label": "Inventory",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
      },
      {
-      "key": "secondary_weapon",
-      "label": "Secondary Weapon",
-      "type": "text"
+      "key": "inventory_weapons",
+      "label": "Inventory Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Name"
+       },
+       {
+        "key": "trait_range",
+        "label": "Trait & Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage Dice & Type"
+       },
+       {
+        "key": "feature",
+        "label": "Feature"
+       }
+      ]
      },
      {
-      "key": "active_armor",
-      "label": "Active Armor",
-      "type": "text"
+      "key": "gold_handfuls",
+      "label": "Handfuls",
+      "type": "pips",
+      "count": 10,
+      "cols": 4,
+      "play": true
      },
      {
-      "key": "proficiency",
-      "label": "Proficiency",
-      "type": "text"
+      "key": "gold_bags",
+      "label": "Bags",
+      "type": "pips",
+      "count": 10,
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "gold_chest",
+      "label": "Chest",
+      "type": "pips",
+      "count": 1,
+      "cols": 2,
+      "play": true
      }
     ]
    },
    {
-    "key": "cards",
-    "title": "Features & Domain Cards",
+    "key": "class_feature_sec",
+    "title": "Class Feature",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
       "key": "class_feature",
       "label": "Class Feature",
       "type": "longtext"
-     },
-     {
-      "key": "hope_feature",
-      "label": "Hope Feature",
-      "type": "longtext"
-     },
+     }
+    ]
+   },
+   {
+    "key": "cards",
+    "title": "Domain Cards",
+    "page": "Cards & Background",
+    "fields": [
      {
       "key": "domain_cards",
       "label": "Domain Cards",
@@ -245,64 +402,23 @@
     ]
    },
    {
-    "key": "inventory",
-    "title": "Inventory",
-    "fields": [
-     {
-      "key": "items",
-      "label": "Inventory",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
-     {
-      "key": "gold_handfuls",
-      "label": "Handfuls",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "gold_bags",
-      "label": "Bags",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "gold_chest",
-      "label": "Chest",
-      "type": "number",
-      "play": true,
-      "min": 0
-     }
-    ]
-   },
-   {
     "key": "background",
     "title": "Background & Connections",
+    "page": "Cards & Background",
     "fields": [
      {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     },
+     {
       "key": "background_qs",
-      "label": "Background",
+      "label": "Background Questions",
       "type": "longtext"
      },
      {
       "key": "connections",
       "label": "Connections",
-      "type": "longtext"
-     },
-     {
-      "key": "description",
-      "label": "Description",
       "type": "longtext"
      }
     ]

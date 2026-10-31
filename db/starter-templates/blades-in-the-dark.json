@@ -13,6 +13,7 @@
    {
     "key": "scoundrel",
     "title": "Scoundrel",
+    "width": "third",
     "fields": [
      {
       "key": "playbook",
@@ -30,23 +31,26 @@
        "Hull",
        "Vampire"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 2
      },
      {
       "key": "alias",
       "label": "Alias",
-      "type": "text"
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "crew",
       "label": "Crew",
       "type": "text",
-      "summary": true
+      "size": "full"
      },
      {
       "key": "look",
       "label": "Look",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "heritage",
@@ -60,7 +64,8 @@
        "Skovlan",
        "Tycheros"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 2
      },
      {
       "key": "background",
@@ -74,12 +79,14 @@
        "Military",
        "Noble",
        "Underworld"
-      ]
+      ],
+      "cols": 2
      },
      {
       "key": "background_detail",
       "label": "Background Detail",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "vice",
@@ -93,133 +100,33 @@
        "Pleasure",
        "Stupor",
        "Weird"
-      ]
+      ],
+      "cols": 2
      },
      {
       "key": "vice_purveyor",
-      "label": "Vice Purveyor",
-      "type": "text"
+      "label": "Purveyor",
+      "type": "text",
+      "cols": 2
      }
     ]
    },
    {
-    "key": "stress_trauma",
-    "title": "Stress & Trauma",
+    "key": "abilities",
+    "title": "Special Abilities",
+    "width": "third",
     "fields": [
      {
-      "key": "stress",
-      "label": "Stress",
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "playbook_xp",
+      "label": "Playbook XP",
       "type": "pips",
-      "count": 9,
-      "play": true
-     },
-     {
-      "key": "trauma_cold",
-      "label": "Cold",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_haunted",
-      "label": "Haunted",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_obsessed",
-      "label": "Obsessed",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_paranoid",
-      "label": "Paranoid",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_reckless",
-      "label": "Reckless",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_soft",
-      "label": "Soft",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_unstable",
-      "label": "Unstable",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "trauma_vicious",
-      "label": "Vicious",
-      "type": "checkbox",
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "harm",
-    "title": "Harm",
-    "fields": [
-     {
-      "key": "harm_3",
-      "label": "Level 3 Harm",
-      "type": "text",
-      "play": true
-     },
-     {
-      "key": "harm_2a",
-      "label": "Level 2 Harm",
-      "type": "text",
-      "play": true
-     },
-     {
-      "key": "harm_2b",
-      "label": "Level 2 Harm (second)",
-      "type": "text",
-      "play": true
-     },
-     {
-      "key": "harm_1a",
-      "label": "Level 1 Harm",
-      "type": "text",
-      "play": true
-     },
-     {
-      "key": "harm_1b",
-      "label": "Level 1 Harm (second)",
-      "type": "text",
-      "play": true
-     },
-     {
-      "key": "healing",
-      "label": "Healing Clock",
-      "type": "pips",
-      "count": 4,
-      "play": true
-     },
-     {
-      "key": "armor",
-      "label": "Armor",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "heavy_armor",
-      "label": "Heavy Armor",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "special_armor",
-      "label": "Special Armor",
-      "type": "checkbox",
+      "count": 8,
+      "size": "full",
       "play": true
      }
     ]
@@ -227,6 +134,8 @@
    {
     "key": "insight",
     "title": "Insight",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "xp_insight",
@@ -262,8 +171,95 @@
     ]
    },
    {
+    "key": "stress_trauma",
+    "title": "Stress & Trauma",
+    "width": "third",
+    "fields": [
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "count": 9,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "trauma_cold",
+      "label": "Cold",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_haunted",
+      "label": "Haunted",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_obsessed",
+      "label": "Obsessed",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_paranoid",
+      "label": "Paranoid",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_reckless",
+      "label": "Reckless",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_soft",
+      "label": "Soft",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_unstable",
+      "label": "Unstable",
+      "type": "checkbox",
+      "cols": 1
+     },
+     {
+      "key": "trauma_vicious",
+      "label": "Vicious",
+      "type": "checkbox",
+      "cols": 1
+     }
+    ]
+   },
+   {
+    "key": "contacts",
+    "title": "Friends & Rivals",
+    "width": "third",
+    "fields": [
+     {
+      "key": "friends_rivals",
+      "label": "Friends & Rivals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "friend_or_rival",
+        "label": "Friend or Rival"
+       }
+      ]
+     }
+    ]
+   },
+   {
     "key": "prowess",
     "title": "Prowess",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "xp_prowess",
@@ -299,8 +295,136 @@
     ]
    },
    {
+    "key": "harm",
+    "title": "Harm",
+    "width": "third",
+    "fields": [
+     {
+      "key": "harm_3",
+      "label": "Level 3: Need Help",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "harm_2a",
+      "label": "Level 2: -1d",
+      "type": "text",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "harm_2b",
+      "label": "Level 2 (second)",
+      "type": "text",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "harm_1a",
+      "label": "Level 1: Less Effect",
+      "type": "text",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "harm_1b",
+      "label": "Level 1 (second)",
+      "type": "text",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "healing",
+      "label": "Healing Clock",
+      "type": "pips",
+      "count": 4,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "checkbox",
+      "cols": 1,
+      "play": true
+     },
+     {
+      "key": "heavy_armor",
+      "label": "Heavy",
+      "type": "checkbox",
+      "cols": 1,
+      "play": true
+     },
+     {
+      "key": "special_armor",
+      "label": "Special",
+      "type": "checkbox",
+      "cols": 1,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "items",
+    "title": "Items & Load",
+    "width": "third",
+    "fields": [
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "choice",
+      "options": [
+       "Light (3)",
+       "Normal (5)",
+       "Heavy (6)"
+      ],
+      "play": true,
+      "cols": 2
+     },
+     {
+      "key": "coin",
+      "label": "Coin",
+      "type": "pips",
+      "count": 4,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stash",
+      "label": "Stash",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "max": 40
+     },
+     {
+      "key": "item_list",
+      "label": "Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "load",
+        "label": "Load"
+       },
+       {
+        "key": "carried",
+        "label": "Carried"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
     "key": "resolve",
     "title": "Resolve",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "xp_resolve",
@@ -336,98 +460,6 @@
     ]
    },
    {
-    "key": "abilities",
-    "title": "Special Abilities",
-    "fields": [
-     {
-      "key": "special_abilities",
-      "label": "Special Abilities",
-      "type": "longtext"
-     },
-     {
-      "key": "playbook_xp",
-      "label": "Playbook XP",
-      "type": "pips",
-      "count": 8,
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "contacts",
-    "title": "Friends & Rivals",
-    "fields": [
-     {
-      "key": "friends_rivals",
-      "label": "Friends & Rivals",
-      "type": "list",
-      "columns": [
-       {
-        "key": "name",
-        "label": "Name"
-       },
-       {
-        "key": "friend_or_rival",
-        "label": "Friend or Rival"
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "key": "items",
-    "title": "Items & Load",
-    "fields": [
-     {
-      "key": "load",
-      "label": "Load",
-      "type": "choice",
-      "options": [
-       "Light (3)",
-       "Normal (5)",
-       "Heavy (6)"
-      ],
-      "play": true,
-      "size": "small"
-     },
-     {
-      "key": "item_list",
-      "label": "Items",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "load",
-        "label": "Load"
-       },
-       {
-        "key": "carried",
-        "label": "Carried"
-       }
-      ],
-      "play": true
-     },
-     {
-      "key": "coin",
-      "label": "Coin",
-      "type": "pips",
-      "count": 4,
-      "play": true
-     },
-     {
-      "key": "stash",
-      "label": "Stash",
-      "type": "number",
-      "play": true,
-      "min": 0,
-      "max": 40
-     }
-    ]
-   },
-   {
     "key": "notes_s",
     "title": "Notes",
     "fields": [
@@ -440,4 +472,4 @@
    }
   ]
  }
-}
+}

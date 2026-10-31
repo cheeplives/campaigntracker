@@ -12,218 +12,345 @@
   "sections": [
    {
     "key": "hero",
-    "title": "Hero",
+    "title": "Identity",
+    "page": "Hero",
+    "width": "two-thirds",
     "fields": [
-     {
-      "key": "real_name",
-      "label": "Real Name",
-      "type": "text"
-     },
      {
       "key": "rank",
       "label": "Rank",
       "type": "number",
-      "min": 1,
-      "max": 6,
+      "cols": 2,
       "summary": true
+     },
+     {
+      "key": "real_name",
+      "label": "Real Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "distinguishing_features",
+      "label": "Distinguishing Features",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "teams",
+      "label": "Teams",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "origin",
       "label": "Origin",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "occupation",
       "label": "Occupation",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "teams",
-      "label": "Teams",
-      "type": "text"
-     },
-     {
-      "key": "base",
-      "label": "Base",
-      "type": "text"
-     }
-    ]
-   },
-   {
-    "key": "abilities",
-    "title": "Abilities",
-    "fields": [
-     {
-      "key": "ab_melee",
-      "label": "Melee",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "ab_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "ab_resilience",
-      "label": "Resilience",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "ab_vigilance",
-      "label": "Vigilance",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "ab_ego",
-      "label": "Ego",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "ab_logic",
-      "label": "Logic",
-      "type": "number",
-      "min": -3,
-      "max": 10
-     },
-     {
-      "key": "def_melee_defense",
-      "label": "Melee Defense",
-      "type": "number"
-     },
-     {
-      "key": "def_agility_defense",
-      "label": "Agility Defense",
-      "type": "number"
-     },
-     {
-      "key": "def_resilience_defense",
-      "label": "Resilience Defense",
-      "type": "number"
-     },
-     {
-      "key": "def_vigilance_defense",
-      "label": "Vigilance Defense",
-      "type": "number"
-     },
-     {
-      "key": "def_ego_defense",
-      "label": "Ego Defense",
-      "type": "number"
-     },
-     {
-      "key": "def_logic_defense",
-      "label": "Logic Defense",
-      "type": "number"
+      "cols": 4
      }
     ]
    },
    {
     "key": "vitals",
-    "title": "Health & Focus",
+    "title": "Health, Focus & Karma",
+    "page": "Hero",
+    "width": "third",
     "fields": [
      {
       "key": "health",
-      "label": "Health",
+      "label": "Health (Resilience x 30)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
      },
      {
       "key": "health_dr",
       "label": "Health Damage Reduction",
-      "type": "number"
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "focus",
-      "label": "Focus",
+      "label": "Focus (Vigilance x 30)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
      },
      {
       "key": "focus_dr",
       "label": "Focus Damage Reduction",
-      "type": "number"
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "karma",
-      "label": "Karma",
+      "label": "Karma (Rank)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Ability Scores",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ab_melee",
+      "label": "Melee",
+      "type": "number"
      },
+     {
+      "key": "ab_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "ab_resilience",
+      "label": "Resilience",
+      "type": "number"
+     },
+     {
+      "key": "ab_vigilance",
+      "label": "Vigilance",
+      "type": "number"
+     },
+     {
+      "key": "ab_ego",
+      "label": "Ego",
+      "type": "number"
+     },
+     {
+      "key": "ab_logic",
+      "label": "Logic",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "defenses",
+    "title": "Defense Scores",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "def_melee_defense",
+      "label": "Melee",
+      "type": "number"
+     },
+     {
+      "key": "def_agility_defense",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "def_resilience_defense",
+      "label": "Resilience",
+      "type": "number"
+     },
+     {
+      "key": "def_vigilance_defense",
+      "label": "Vigilance",
+      "type": "number"
+     },
+     {
+      "key": "def_ego_defense",
+      "label": "Ego",
+      "type": "number"
+     },
+     {
+      "key": "def_logic_defense",
+      "label": "Logic",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "checks",
+    "title": "Non-Combat Checks",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "nc_melee",
+      "label": "Melee",
+      "type": "number"
+     },
+     {
+      "key": "nc_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "nc_resilience",
+      "label": "Resilience",
+      "type": "number"
+     },
+     {
+      "key": "nc_vigilance",
+      "label": "Vigilance",
+      "type": "number"
+     },
+     {
+      "key": "nc_ego",
+      "label": "Ego",
+      "type": "number"
+     },
+     {
+      "key": "nc_logic",
+      "label": "Logic",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "damage",
+    "title": "Damage Multipliers",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dmg_melee",
+      "label": "Melee Multiplier",
+      "type": "number"
+     },
+     {
+      "key": "dmg_agility",
+      "label": "Agility Multiplier",
+      "type": "number"
+     },
+     {
+      "key": "dmg_ego",
+      "label": "Ego Multiplier",
+      "type": "number"
+     },
+     {
+      "key": "dmg_logic",
+      "label": "Logic Multiplier",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "speed",
+    "title": "Speed & Initiative",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "initiative",
       "label": "Initiative Modifier",
       "type": "number"
      },
      {
-      "key": "speeds",
-      "label": "Speeds",
-      "type": "text"
+      "key": "speed_run",
+      "label": "Run",
+      "type": "number"
      },
      {
-      "key": "conditions",
-      "label": "Conditions",
-      "type": "list",
-      "columns": [
-       {
-        "key": "condition",
-        "label": "Condition"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ],
-      "play": true
+      "key": "speed_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "speed_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "speeds",
+      "label": "Other Speeds",
+      "type": "text"
      }
     ]
    },
    {
-    "key": "powers",
-    "title": "Powers",
+    "key": "team",
+    "title": "Team Maneuver",
+    "page": "Hero",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "power_list",
-      "label": "Powers",
-      "type": "list",
-      "columns": [
-       {
-        "key": "power",
-        "label": "Power"
-       },
-       {
-        "key": "power_set",
-        "label": "Power Set"
-       },
-       {
-        "key": "cost",
-        "label": "Cost"
-       },
-       {
-        "key": "effect",
-        "label": "Effect"
-       }
-      ]
+      "key": "team_offensive",
+      "label": "Offensive (level / cost)",
+      "type": "text"
+     },
+     {
+      "key": "team_defensive",
+      "label": "Defensive (level / cost)",
+      "type": "text"
+     },
+     {
+      "key": "team_rally",
+      "label": "Rally (level / cost)",
+      "type": "text"
      }
     ]
    },
    {
     "key": "traits_tags",
     "title": "Traits & Tags",
+    "page": "Hero",
+    "width": "third",
     "fields": [
      {
       "key": "trait_list",
@@ -250,35 +377,82 @@
     ]
    },
    {
-    "key": "bio",
-    "title": "Biography",
+    "key": "notes_sec",
+    "title": "Notes & Conditions",
+    "page": "Hero",
+    "width": "two-thirds",
     "fields": [
      {
-      "key": "height",
-      "label": "Height",
-      "type": "text"
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
      },
      {
-      "key": "weight",
-      "label": "Weight",
-      "type": "text",
-      "size": "small"
-     },
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "powers",
+    "title": "Powers",
+    "page": "Powers & Biography",
+    "fields": [
      {
-      "key": "gender",
-      "label": "Gender",
-      "type": "text"
-     },
-     {
-      "key": "eyes",
-      "label": "Eyes",
-      "type": "text"
-     },
-     {
-      "key": "hair",
-      "label": "Hair",
-      "type": "text"
-     },
+      "key": "power_list",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "power_set",
+        "label": "Set"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "page",
+        "label": "Page #"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "effect",
+        "label": "Summary"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "bio",
+    "title": "History & Personality",
+    "page": "Powers & Biography",
+    "fields": [
      {
       "key": "history",
       "label": "History",
@@ -293,4 +467,4 @@
    }
   ]
  }
-}
+}

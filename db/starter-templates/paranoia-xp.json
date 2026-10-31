@@ -13,6 +13,7 @@
    {
     "key": "troubleshooter",
     "title": "Troubleshooter",
+    "page": "Troubleshooter",
     "fields": [
      {
       "key": "clearance",
@@ -29,20 +30,33 @@
        "Violet",
        "Ultraviolet"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 3
      },
      {
       "key": "home_sector",
-      "label": "Home Sector",
-      "type": "text"
+      "label": "Sector",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "clones",
-      "label": "Clones Remaining",
+      "label": "Clone Number",
       "type": "pips",
       "count": 6,
-      "play": true,
-      "summary": true
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "choice",
+      "options": [
+       "M",
+       "F",
+       "Other"
+      ],
+      "cols": 2
      },
      {
       "key": "service_group",
@@ -58,91 +72,380 @@
        "R&D",
        "Technical Services"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 4
      },
      {
-      "key": "secret_society",
-      "label": "Secret Society",
-      "type": "text"
+      "key": "firm",
+      "label": "Firm",
+      "type": "text",
+      "cols": 4
      },
      {
-      "key": "society_degree",
-      "label": "Society Degree",
+      "key": "tics",
+      "label": "Tics",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "bonus_duty",
+      "label": "Mandatory Bonus Duty",
+      "type": "choice",
+      "options": [
+       "Team leader",
+       "Loyalty officer",
+       "Hygiene officer",
+       "Comm & recording",
+       "Equipment Guy",
+       "Happiness officer"
+      ],
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "skill_management_sec",
+    "title": "Management",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_management",
+      "label": "Management (rating)",
       "type": "number"
      },
      {
-      "key": "mutant_power",
-      "label": "Mutant Power",
-      "type": "text"
+      "key": "spec_bootlicking",
+      "label": "Bootlicking",
+      "type": "number"
      },
      {
-      "key": "power_rating",
-      "label": "Power Rating",
+      "key": "spec_chutzpah",
+      "label": "Chutzpah",
+      "type": "number"
+     },
+     {
+      "key": "spec_con_games",
+      "label": "Con Games",
+      "type": "number"
+     },
+     {
+      "key": "spec_hygiene",
+      "label": "Hygiene",
+      "type": "number"
+     },
+     {
+      "key": "spec_interrogation",
+      "label": "Interrogation",
+      "type": "number"
+     },
+     {
+      "key": "spec_intimidation",
+      "label": "Intimidation",
+      "type": "number"
+     },
+     {
+      "key": "spec_moxie",
+      "label": "Moxie",
+      "type": "number"
+     },
+     {
+      "key": "spec_oratory",
+      "label": "Oratory",
       "type": "number"
      }
     ]
    },
    {
-    "key": "action_skills",
-    "title": "Action Skills",
+    "key": "skill_stealth_sec",
+    "title": "Stealth",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "skill_management",
-      "label": "Management",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
+      "key": "skill_stealth",
+      "label": "Stealth (rating)",
+      "type": "number"
      },
      {
-      "key": "skill_stealth",
-      "label": "Stealth",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
+      "key": "spec_concealment",
+      "label": "Concealment",
+      "type": "number"
      },
+     {
+      "key": "spec_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "spec_high_alert",
+      "label": "High Alert",
+      "type": "number"
+     },
+     {
+      "key": "spec_security_systems",
+      "label": "Security Systems",
+      "type": "number"
+     },
+     {
+      "key": "spec_shadowing",
+      "label": "Shadowing",
+      "type": "number"
+     },
+     {
+      "key": "spec_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number"
+     },
+     {
+      "key": "spec_sneaking",
+      "label": "Sneaking",
+      "type": "number"
+     },
+     {
+      "key": "spec_surveillance",
+      "label": "Surveillance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skill_violence_sec",
+    "title": "Violence",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "skill_violence",
-      "label": "Violence",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
+      "label": "Violence (rating)",
+      "type": "number"
+     },
+     {
+      "key": "spec_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "spec_energy_weapons",
+      "label": "Energy Weapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_demolition",
+      "label": "Demolition",
+      "type": "number"
+     },
+     {
+      "key": "spec_field_weapons",
+      "label": "Field Weapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_fine_manipulation",
+      "label": "Fine Manipulation",
+      "type": "number"
+     },
+     {
+      "key": "spec_hand_weapons",
+      "label": "Hand Weapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_projectile_weapons",
+      "label": "Projectile Weapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_thrown_weapons",
+      "label": "Thrown Weapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_unarmed_combat",
+      "label": "Unarmed Combat",
+      "type": "number"
+     },
+     {
+      "key": "spec_vehicular_combat",
+      "label": "Vehicular Combat",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "know_hardware_sec",
+    "title": "Hardware",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "know_hardware",
+      "label": "Hardware (rating)",
+      "type": "number"
+     },
+     {
+      "key": "spec_bot_ops_maintenance",
+      "label": "Bot Ops & Maintenance",
+      "type": "number"
+     },
+     {
+      "key": "spec_chemical_engineering",
+      "label": "Chemical Engineering",
+      "type": "number"
+     },
+     {
+      "key": "spec_electronic_engineering",
+      "label": "Electronic Engineering",
+      "type": "number"
+     },
+     {
+      "key": "spec_habitat_engineering",
+      "label": "Habitat Engineering",
+      "type": "number"
+     },
+     {
+      "key": "spec_mechanical_engineering",
+      "label": "Mechanical Engineering",
+      "type": "number"
+     },
+     {
+      "key": "spec_nuclear_engineering",
+      "label": "Nuclear Engineering",
+      "type": "number"
+     },
+     {
+      "key": "spec_vehicle_ops_maintenance",
+      "label": "Vehicle Ops & Maintenance",
+      "type": "number"
+     },
+     {
+      "key": "spec_weapon_armor_maintenance",
+      "label": "Weapon & Armor Maintenance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "know_software_sec",
+    "title": "Software",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "know_software",
+      "label": "Software (rating)",
+      "type": "number"
+     },
+     {
+      "key": "spec_bot_programming",
+      "label": "Bot Programming",
+      "type": "number"
+     },
+     {
+      "key": "spec_c_bay",
+      "label": "C-Bay",
+      "type": "number"
+     },
+     {
+      "key": "spec_data_analysis",
+      "label": "Data Analysis",
+      "type": "number"
+     },
+     {
+      "key": "spec_data_search",
+      "label": "Data Search",
+      "type": "number"
+     },
+     {
+      "key": "spec_financial_systems",
+      "label": "Financial Systems",
+      "type": "number"
+     },
+     {
+      "key": "spec_hacking",
+      "label": "Hacking",
+      "type": "number"
+     },
+     {
+      "key": "spec_operating_systems",
+      "label": "Operating Systems",
+      "type": "number"
+     },
+     {
+      "key": "spec_vehicle_programming",
+      "label": "Vehicle Programming",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "know_wetware_sec",
+    "title": "Wetware",
+    "page": "Troubleshooter",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "know_wetware",
+      "label": "Wetware (rating)",
+      "type": "number"
+     },
+     {
+      "key": "spec_biosciences",
+      "label": "Biosciences",
+      "type": "number"
+     },
+     {
+      "key": "spec_bioweapons",
+      "label": "Bioweapons",
+      "type": "number"
+     },
+     {
+      "key": "spec_cloning",
+      "label": "Cloning",
+      "type": "number"
+     },
+     {
+      "key": "spec_medical",
+      "label": "Medical",
+      "type": "number"
+     },
+     {
+      "key": "spec_outdoor_life",
+      "label": "Outdoor Life",
+      "type": "number"
+     },
+     {
+      "key": "spec_pharmatherapy",
+      "label": "Pharmatherapy",
+      "type": "number"
+     },
+     {
+      "key": "spec_psychotherapy",
+      "label": "Psychotherapy",
+      "type": "number"
+     },
+     {
+      "key": "spec_suggestion",
+      "label": "Suggestion",
+      "type": "number"
      }
     ]
    },
    {
     "key": "knowledge_skills",
-    "title": "Knowledge Skills",
+    "title": "Other Specialties",
+    "page": "Troubleshooter",
+    "width": "half",
     "fields": [
      {
-      "key": "know_hardware",
-      "label": "Hardware",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
-     },
-     {
-      "key": "know_software",
-      "label": "Software",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
-     },
-     {
-      "key": "know_wetware",
-      "label": "Wetware",
-      "type": "number",
-      "min": 1,
-      "max": 20,
-      "size": "small"
-     },
-     {
       "key": "specialties",
-      "label": "Specialties",
+      "label": "Other Specialties",
       "type": "list",
       "columns": [
        {
@@ -160,6 +463,8 @@
    {
     "key": "status",
     "title": "Status",
+    "page": "Troubleshooter",
+    "width": "half",
     "fields": [
      {
       "key": "wounds",
@@ -174,43 +479,122 @@
        "Killed",
        "Vaporized"
       ],
-      "play": true
+      "play": true,
+      "cols": 3
      },
      {
       "key": "treason_points",
       "label": "Treason Points",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "play": true
      },
      {
       "key": "commendation_points",
       "label": "Commendation Points",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3
      },
      {
       "key": "xp_points",
       "label": "XP Points",
       "type": "number",
-      "play": true
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "secret",
+    "title": "Secret Identity",
+    "page": "Secret Side",
+    "fields": [
+     {
+      "key": "mutant_power",
+      "label": "Mutant Power",
+      "type": "text",
+      "cols": 6
      },
      {
-      "key": "credits",
-      "label": "Credits",
+      "key": "mutant_registered",
+      "label": "Registered?",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "power_rating",
+      "label": "Power",
       "type": "number",
-      "play": true
+      "cols": 2
+     },
+     {
+      "key": "secret_society",
+      "label": "Secret Society",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "society_degree",
+      "label": "Degree",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "access",
+      "label": "Access",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "society_mission",
+      "label": "Current Society Mission",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "secret_skills",
+    "title": "Secret Skills",
+    "page": "Secret Side",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_uncommon",
+      "label": "Uncommon",
+      "type": "longtext"
+     },
+     {
+      "key": "skills_unlikely",
+      "label": "Unlikely",
+      "type": "longtext"
+     },
+     {
+      "key": "skills_unhealthy",
+      "label": "Unhealthy",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "equipment",
     "title": "Equipment",
+    "page": "Secret Side",
+    "width": "two-thirds",
     "fields": [
      {
+      "key": "personal_gear",
+      "label": "Personal",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
       "key": "gear",
-      "label": "Assigned Equipment",
+      "label": "Assigned",
       "type": "list",
       "columns": [
        {
@@ -224,9 +608,21 @@
       ]
      },
      {
+      "key": "treasonous_gear",
+      "label": "Treasonous",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
       "key": "armor",
       "label": "Armor",
-      "type": "text"
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "weapons",
@@ -245,15 +641,37 @@
         "key": "notes",
         "label": "Notes"
        }
-      ]
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "other_stuff",
+    "title": "Other Stuff",
+    "page": "Secret Side",
+    "fields": [
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
-      "key": "access",
-      "label": "Access",
-      "type": "text"
+      "key": "perversity",
+      "label": "Perversity",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "treason_codes",
+      "label": "Treason Codes & Evidence Against Others",
+      "type": "longtext"
      }
     ]
    }
   ]
  }
-}
+}

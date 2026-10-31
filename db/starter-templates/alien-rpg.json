@@ -13,6 +13,7 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "career",
@@ -31,218 +32,385 @@
        "Wildcatter",
        "Synthetic"
       ],
+      "cols": 4,
       "summary": true
-     },
-     {
-      "key": "appearance",
-      "label": "Appearance",
-      "type": "text"
      },
      {
       "key": "personal_agenda",
       "label": "Personal Agenda",
       "type": "text",
+      "cols": 4,
       "summary": true
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "size": "full"
      },
      {
       "key": "buddy",
       "label": "Buddy",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "rival",
       "label": "Rival",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      },
      {
-      "key": "signature_item",
-      "label": "Signature Item",
-      "type": "text"
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "story_points",
+      "label": "Story Points",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "play": true
      }
     ]
    },
    {
-    "key": "attributes",
-    "title": "Attributes",
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "fields": [
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "strength",
+    "title": "Strength",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
       "label": "Strength",
       "type": "number",
       "min": 1,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": 1,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_wits",
-      "label": "Wits",
-      "type": "number",
-      "min": 1,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "attr_empathy",
-      "label": "Empathy",
-      "type": "number",
-      "min": 1,
-      "max": 5,
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "skills",
-    "title": "Skills",
-    "fields": [
-     {
-      "key": "sk_heavy_machinery",
-      "label": "Heavy Machinery",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_stamina",
-      "label": "Stamina",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      },
      {
       "key": "sk_close_combat",
       "label": "Close Combat",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
+     },
+     {
+      "key": "sk_heavy_machinery",
+      "label": "Heavy Machinery",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_stamina",
+      "label": "Stamina",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "agility",
+    "title": "Agility",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "number",
+      "min": 1,
+      "max": 5
      },
      {
       "key": "sk_mobility",
       "label": "Mobility",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
-     },
-     {
-      "key": "sk_ranged_combat",
-      "label": "Ranged Combat",
-      "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      },
      {
       "key": "sk_piloting",
       "label": "Piloting",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      },
      {
-      "key": "sk_observation",
-      "label": "Observation",
+      "key": "sk_ranged_combat",
+      "label": "Ranged Combat",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
-     },
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "wits",
+    "title": "Wits",
+    "width": "half",
+    "compact": true,
+    "fields": [
      {
-      "key": "sk_survival",
-      "label": "Survival",
+      "key": "attr_wits",
+      "label": "Wits",
       "type": "number",
-      "min": 0,
-      "max": 5,
-      "size": "small"
+      "min": 1,
+      "max": 5
      },
      {
       "key": "sk_comtech",
       "label": "Comtech",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
+     },
+     {
+      "key": "sk_observation",
+      "label": "Observation",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number",
+      "min": 0,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "empathy",
+    "title": "Empathy",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_empathy",
+      "label": "Empathy",
+      "type": "number",
+      "min": 1,
+      "max": 5
      },
      {
       "key": "sk_command",
       "label": "Command",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      },
      {
       "key": "sk_manipulation",
       "label": "Manipulation",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      },
      {
       "key": "sk_medical_aid",
       "label": "Medical Aid",
       "type": "number",
       "min": 0,
-      "max": 5,
-      "size": "small"
+      "max": 5
      }
     ]
    },
    {
     "key": "condition",
-    "title": "Health & Stress",
+    "title": "Stress & Health",
+    "width": "two-thirds",
     "fields": [
-     {
-      "key": "health",
-      "label": "Health",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
      {
       "key": "stress",
       "label": "Stress Level",
       "type": "pips",
       "count": 10,
+      "size": "full",
       "play": true
      },
      {
-      "key": "cond_starving",
-      "label": "Starving",
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "resolve",
+      "label": "Resolve",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "fatigued",
+      "label": "Fatigued",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "radiation",
+      "label": "Radiation",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "tiny",
+    "title": "Tiny Items",
+    "width": "third",
+    "fields": [
+     {
+      "key": "tiny_items",
+      "label": "Tiny Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
+      "key": "signature_item",
+      "label": "Signature Item",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "panic",
+    "title": "Stress & Panic Responses",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "panic_jumpy",
+      "label": "Jumpy",
       "type": "checkbox",
       "play": true
      },
      {
-      "key": "cond_dehydrated",
-      "label": "Dehydrated",
+      "key": "panic_tunnel_vision",
+      "label": "Tunnel Vision",
       "type": "checkbox",
       "play": true
      },
      {
-      "key": "cond_exhausted",
-      "label": "Exhausted",
+      "key": "panic_aggravated",
+      "label": "Aggravated",
       "type": "checkbox",
       "play": true
      },
      {
-      "key": "cond_freezing",
-      "label": "Freezing",
+      "key": "panic_shakes",
+      "label": "Shakes",
       "type": "checkbox",
       "play": true
      },
+     {
+      "key": "panic_frantic",
+      "label": "Frantic",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_deflated",
+      "label": "Deflated",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_paranoid",
+      "label": "Paranoid",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_hesitant",
+      "label": "Hesitant",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_freeze",
+      "label": "Freeze",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_seek_cover",
+      "label": "Seek Cover",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_scream",
+      "label": "Scream",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_flee",
+      "label": "Flee",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_frenzy",
+      "label": "Frenzy",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "panic_catatonic",
+      "label": "Catatonic",
+      "type": "checkbox",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "injuries",
+    "title": "Critical Injuries & Mental Trauma",
+    "width": "third",
+    "fields": [
      {
       "key": "critical_injuries",
       "label": "Critical Injuries",
@@ -265,7 +433,7 @@
      },
      {
       "key": "permanent_mental_trauma",
-      "label": "Permanent Mental Trauma",
+      "label": "Mental Trauma",
       "type": "list",
       "columns": [
        {
@@ -277,70 +445,66 @@
     ]
    },
    {
-    "key": "resources",
-    "title": "Consumables",
+    "key": "gear",
+    "title": "Gear",
+    "width": "third",
     "fields": [
      {
-      "key": "res_air",
-      "label": "Air",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "res_food",
-      "label": "Food",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "res_power",
-      "label": "Power",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "res_water",
-      "label": "Water",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "encumbrance",
-      "label": "Encumbrance",
-      "type": "number",
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "talents",
-    "title": "Talents",
-    "fields": [
-     {
-      "key": "talent_list",
-      "label": "Talents",
+      "key": "gear_list",
+      "label": "Gear",
       "type": "list",
       "columns": [
        {
-        "key": "talent",
-        "label": "Talent"
+        "key": "item",
+        "label": "Item"
        },
        {
-        "key": "notes",
-        "label": "Notes"
+        "key": "air_power",
+        "label": "Air / Power"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
        }
       ]
      }
     ]
    },
    {
-    "key": "gear",
-    "title": "Gear",
+    "key": "equipment",
+    "title": "Armor & Weapons",
     "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "armor_rating",
+      "label": "Level",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "armor_weight",
+      "label": "Weight",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cash",
+      "label": "Cash",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
      {
       "key": "weapons",
       "label": "Weapons",
@@ -352,7 +516,7 @@
        },
        {
         "key": "bonus",
-        "label": "Bonus"
+        "label": "Modifier"
        },
        {
         "key": "damage",
@@ -365,74 +529,16 @@
        {
         "key": "ammo",
         "label": "Ammo"
-       }
-      ],
-      "play": true
-     },
-     {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
-     },
-     {
-      "key": "armor_rating",
-      "label": "Armor Rating",
-      "type": "number"
-     },
-     {
-      "key": "gear_list",
-      "label": "Gear",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
        },
        {
         "key": "weight",
         "label": "Weight"
        }
-      ]
-     },
-     {
-      "key": "tiny_items",
-      "label": "Tiny Items",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       }
-      ]
-     },
-     {
-      "key": "cash",
-      "label": "Cash",
-      "type": "number",
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "progress",
-    "title": "Progress",
-    "fields": [
-     {
-      "key": "xp",
-      "label": "Experience",
-      "type": "pips",
-      "count": 10,
-      "play": true
-     },
-     {
-      "key": "story_points",
-      "label": "Story Points",
-      "type": "pips",
-      "count": 3,
+      ],
       "play": true
      }
     ]
    }
   ]
  }
-}
+}
