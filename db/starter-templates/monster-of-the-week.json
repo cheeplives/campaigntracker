@@ -13,6 +13,8 @@
    {
     "key": "hunter",
     "title": "Hunter",
+    "page": "Hunter",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "playbook",
@@ -40,84 +42,89 @@
        "The Something Borrowed",
        "The Undercover Agent"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 4
      },
      {
       "key": "pronouns",
       "label": "Pronouns",
-      "type": "text"
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "look",
       "label": "Look",
       "type": "text",
-      "summary": true
+      "size": "full"
+     },
+     {
+      "key": "playbook_special",
+      "label": "Playbook Special & Choices (area of study, etc.)",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "ratings",
     "title": "Ratings",
+    "page": "Hunter",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "rt_charm",
       "label": "Charm",
-      "type": "number",
-      "min": -1,
-      "max": 3
+      "type": "number"
      },
      {
       "key": "rt_cool",
       "label": "Cool",
-      "type": "number",
-      "min": -1,
-      "max": 3
+      "type": "number"
      },
      {
       "key": "rt_sharp",
       "label": "Sharp",
-      "type": "number",
-      "min": -1,
-      "max": 3
+      "type": "number"
      },
      {
       "key": "rt_tough",
       "label": "Tough",
-      "type": "number",
-      "min": -1,
-      "max": 3
+      "type": "number"
      },
      {
       "key": "rt_weird",
       "label": "Weird",
-      "type": "number",
-      "min": -1,
-      "max": 3
+      "type": "number"
      }
     ]
    },
    {
     "key": "tracks",
     "title": "Luck, Harm & Experience",
+    "page": "Hunter",
+    "width": "third",
     "fields": [
      {
       "key": "luck",
-      "label": "Luck",
+      "label": "Luck (okay to doomed)",
       "type": "pips",
       "count": 7,
+      "size": "full",
       "play": true
      },
      {
       "key": "harm",
-      "label": "Harm",
+      "label": "Harm (okay to dying)",
       "type": "pips",
       "count": 7,
+      "size": "full",
       "play": true
      },
      {
       "key": "unstable",
-      "label": "Unstable",
+      "label": "Unstable (harm 4+)",
       "type": "checkbox",
+      "size": "full",
       "play": true
      },
      {
@@ -125,6 +132,7 @@
       "label": "Experience",
       "type": "pips",
       "count": 5,
+      "size": "full",
       "play": true
      }
     ]
@@ -132,6 +140,8 @@
    {
     "key": "moves",
     "title": "Moves",
+    "page": "Hunter",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "move_list",
@@ -152,7 +162,9 @@
    },
    {
     "key": "gear_history",
-    "title": "Gear & History",
+    "title": "Gear",
+    "page": "Gear & History",
+    "width": "half",
     "fields": [
      {
       "key": "gear",
@@ -171,8 +183,17 @@
         "key": "tags",
         "label": "Tags"
        }
-      ]
-     },
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "history_sec",
+    "title": "History",
+    "page": "Gear & History",
+    "width": "half",
+    "fields": [
      {
       "key": "history",
       "label": "History",
@@ -193,6 +214,7 @@
    {
     "key": "improvements",
     "title": "Improvements",
+    "page": "Gear & History",
     "fields": [
      {
       "key": "improvement_list",
