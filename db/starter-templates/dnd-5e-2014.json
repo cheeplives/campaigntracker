@@ -13,96 +13,181 @@
    {
     "key": "identity",
     "title": "Character",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "class_level",
       "label": "Class & Level",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "race",
-      "label": "Race",
-      "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "background",
       "label": "Background",
       "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "alignment",
       "label": "Alignment",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "xp",
       "label": "Experience Points",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2
      },
      {
       "key": "inspiration",
       "label": "Inspiration",
       "type": "checkbox",
+      "cols": 2,
       "play": true
+     },
+     {
+      "key": "prof_bonus",
+      "label": "Proficiency Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "passive_perception",
+      "label": "Passive Wisdom (Perception)",
+      "type": "number",
+      "cols": 4
      }
     ]
    },
    {
     "key": "abilities",
     "title": "Ability Scores",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ab_strength",
       "label": "Strength",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "type": "number"
      },
      {
       "key": "ab_dexterity",
       "label": "Dexterity",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "type": "number"
      },
      {
       "key": "ab_constitution",
       "label": "Constitution",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "type": "number"
      },
      {
       "key": "ab_intelligence",
       "label": "Intelligence",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "type": "number"
      },
      {
       "key": "ab_wisdom",
       "label": "Wisdom",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "type": "number"
      },
      {
       "key": "ab_charisma",
       "label": "Charisma",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "ac",
+      "label": "Armor Class",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points (current / max)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "temp_hp",
+      "label": "Temporary HP",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_dice",
+      "label": "Hit Dice (remaining / total)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "death_successes",
+      "label": "Death Save Successes",
+      "type": "pips",
+      "count": 3,
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "death_failures",
+      "label": "Death Save Failures",
+      "type": "pips",
+      "count": 3,
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "exhaustion",
+      "label": "Exhaustion",
+      "type": "pips",
+      "count": 6,
+      "cols": 4,
+      "play": true
      }
     ]
    },
    {
     "key": "saves",
-    "title": "Saving Throw Proficiency",
+    "title": "Saving Throws",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "save_strength",
@@ -138,194 +223,112 @@
    },
    {
     "key": "skills",
-    "title": "Skill Proficiency",
+    "title": "Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "sk_acrobatics",
       "label": "Acrobatics (DEX)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_animal_handling",
       "label": "Animal Handling (WIS)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_arcana",
       "label": "Arcana (INT)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_athletics",
       "label": "Athletics (STR)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_deception",
       "label": "Deception (CHA)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_history",
       "label": "History (INT)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_insight",
       "label": "Insight (WIS)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_intimidation",
       "label": "Intimidation (CHA)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_investigation",
       "label": "Investigation (INT)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_medicine",
       "label": "Medicine (WIS)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_nature",
       "label": "Nature (INT)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_perception",
       "label": "Perception (WIS)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_performance",
       "label": "Performance (CHA)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_persuasion",
       "label": "Persuasion (CHA)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_religion",
       "label": "Religion (INT)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_sleight_of_hand",
       "label": "Sleight of Hand (DEX)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_stealth",
       "label": "Stealth (DEX)",
-      "type": "checkbox",
-      "size": "small"
+      "type": "checkbox"
      },
      {
       "key": "sk_survival",
       "label": "Survival (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "passive_perception",
-      "label": "Passive Perception",
-      "type": "number",
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "combat",
-    "title": "Combat",
-    "fields": [
-     {
-      "key": "ac",
-      "label": "Armor Class",
-      "type": "number"
-     },
-     {
-      "key": "initiative",
-      "label": "Initiative",
-      "type": "number"
-     },
-     {
-      "key": "speed",
-      "label": "Speed",
-      "type": "number"
-     },
-     {
-      "key": "hp",
-      "label": "Hit Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "temp_hp",
-      "label": "Temporary HP",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "hit_dice",
-      "label": "Hit Dice",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "death_successes",
-      "label": "Death Save Successes",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "death_failures",
-      "label": "Death Save Failures",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "exhaustion",
-      "label": "Exhaustion",
-      "type": "pips",
-      "count": 6,
-      "play": true
+      "type": "checkbox"
      }
     ]
    },
    {
     "key": "attacks",
-    "title": "Attacks",
+    "title": "Attacks & Personality",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "weapons",
-      "label": "Weapons & Cantrips",
+      "label": "Attacks & Spellcasting",
       "type": "list",
       "columns": [
        {
@@ -334,130 +337,46 @@
        },
        {
         "key": "attack_bonus",
-        "label": "Attack Bonus"
+        "label": "Atk Bonus"
        },
        {
         "key": "damage_type",
-        "label": "Damage & Type"
+        "label": "Damage / Type"
        },
        {
         "key": "notes",
         "label": "Notes"
        }
-      ]
-     }
-    ]
-   },
-   {
-    "key": "spellcasting",
-    "title": "Spellcasting",
-    "fields": [
-     {
-      "key": "spell_ability",
-      "label": "Spellcasting Ability",
-      "type": "text"
+      ],
+      "play": true
      },
      {
-      "key": "spell_dc",
-      "label": "Spell Save DC",
-      "type": "number"
+      "key": "traits",
+      "label": "Personality Traits",
+      "type": "longtext"
      },
      {
-      "key": "spell_attack",
-      "label": "Spell Attack Bonus",
-      "type": "number"
+      "key": "ideals",
+      "label": "Ideals",
+      "type": "longtext"
      },
      {
-      "key": "slots_1",
-      "label": "Level 1 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "key": "bonds",
+      "label": "Bonds",
+      "type": "longtext"
      },
      {
-      "key": "slots_2",
-      "label": "Level 2 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_3",
-      "label": "Level 3 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_4",
-      "label": "Level 4 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_5",
-      "label": "Level 5 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_6",
-      "label": "Level 6 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_7",
-      "label": "Level 7 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_8",
-      "label": "Level 8 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "slots_9",
-      "label": "Level 9 Slots",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "spells",
-      "label": "Spells",
-      "type": "list",
-      "columns": [
-       {
-        "key": "level",
-        "label": "Level"
-       },
-       {
-        "key": "name",
-        "label": "Name"
-       },
-       {
-        "key": "prepared",
-        "label": "Prepared"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "gear",
     "title": "Equipment",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "equipment",
@@ -482,42 +401,44 @@
       "key": "coin_cp",
       "label": "CP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_sp",
       "label": "SP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_ep",
       "label": "EP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_gp",
       "label": "GP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
       "key": "coin_pp",
       "label": "PP",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      }
     ]
    },
    {
     "key": "features",
     "title": "Features & Proficiencies",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "features_traits",
@@ -532,36 +453,221 @@
     ]
    },
    {
-    "key": "personality",
-    "title": "Personality",
+    "key": "details",
+    "title": "Details",
+    "page": "Details",
     "fields": [
      {
-      "key": "traits",
-      "label": "Personality Traits",
-      "type": "longtext"
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "ideals",
-      "label": "Ideals",
-      "type": "longtext"
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "bonds",
-      "label": "Bonds",
-      "type": "longtext"
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "flaws",
-      "label": "Flaws",
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "story",
+    "title": "Appearance & Backstory",
+    "page": "Details",
+    "width": "third",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Character Appearance",
       "type": "longtext"
      },
      {
       "key": "backstory",
-      "label": "Backstory",
+      "label": "Character Backstory",
       "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "allies_sec",
+    "title": "Allies, Features & Treasure",
+    "page": "Details",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "faction_name",
+      "label": "Faction / Organization",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "allies",
+      "label": "Allies & Organizations",
+      "type": "longtext"
+     },
+     {
+      "key": "additional_features",
+      "label": "Additional Features & Traits",
+      "type": "longtext"
+     },
+     {
+      "key": "treasure",
+      "label": "Treasure",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "spellcasting",
+    "title": "Spellcasting",
+    "page": "Spells",
+    "fields": [
+     {
+      "key": "spell_class",
+      "label": "Spellcasting Class",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "spell_ability",
+      "label": "Spellcasting Ability",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "spell_dc",
+      "label": "Spell Save DC",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "spell_attack",
+      "label": "Spell Attack Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "slots_1",
+      "label": "Level 1 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_2",
+      "label": "Level 2 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_3",
+      "label": "Level 3 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_4",
+      "label": "Level 4 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_5",
+      "label": "Level 5 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_6",
+      "label": "Level 6 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_7",
+      "label": "Level 7 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_8",
+      "label": "Level 8 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "slots_9",
+      "label": "Level 9 Slots",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "spells",
+      "label": "Spells (level 0 = cantrip)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "name",
+        "label": "Spell Name"
+       },
+       {
+        "key": "prepared",
+        "label": "Prepared"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
      }
     ]
    }
   ]
  }
-}
+}
