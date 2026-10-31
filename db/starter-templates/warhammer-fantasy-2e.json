@@ -13,6 +13,8 @@
    {
     "key": "character",
     "title": "Character",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "race",
@@ -24,101 +26,212 @@
        "Elf",
        "Halfling"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "current_career",
       "label": "Current Career",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
       "key": "previous_careers",
-      "label": "Previous Careers",
-      "type": "text"
+      "label": "Career Path",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "career_exits",
+      "label": "Career Exits",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "age",
       "label": "Age",
       "type": "number",
-      "summary": true
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
      },
      {
       "key": "star_sign",
       "label": "Star Sign",
-      "type": "text"
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "birthplace",
-      "label": "Birthplace",
-      "type": "text"
+      "label": "Place of Birth",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "description",
-      "label": "Distinguishing Marks",
-      "type": "text"
+      "label": "Description & Distinguishing Marks",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "secondary_profile",
+    "title": "Secondary Profile",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wounds (W)",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "fate_points",
+      "label": "Fate Points (FP)",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "attacks",
+      "label": "Attacks (A)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "movement",
+      "label": "Movement (M)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "strength_bonus",
+      "label": "Strength Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "toughness_bonus",
+      "label": "Toughness Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "magic",
+      "label": "Magic (Mag)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "insanity_points",
+      "label": "Insanity Points",
+      "type": "number",
+      "cols": 2,
+      "play": true
      }
     ]
    },
    {
     "key": "main_profile",
     "title": "Main Profile",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "main_ws",
-      "label": "WS",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Weapon Skill (WS)",
+      "type": "number"
      },
      {
       "key": "main_bs",
-      "label": "BS",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Ballistic Skill (BS)",
+      "type": "number"
      },
      {
       "key": "main_s",
-      "label": "S",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Strength (S)",
+      "type": "number"
      },
      {
       "key": "main_t",
-      "label": "T",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Toughness (T)",
+      "type": "number"
      },
      {
       "key": "main_ag",
-      "label": "Ag",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Agility (Ag)",
+      "type": "number"
      },
      {
       "key": "main_int",
-      "label": "Int",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Intelligence (Int)",
+      "type": "number"
      },
      {
       "key": "main_wp",
-      "label": "WP",
-      "type": "number",
-      "min": 0,
-      "max": 100
+      "label": "Will Power (WP)",
+      "type": "number"
      },
      {
       "key": "main_fel",
-      "label": "Fel",
+      "label": "Fellowship (Fel)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "advances_sec",
+    "title": "Advances & Experience",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "xp_current",
+      "label": "Current XP",
       "type": "number",
-      "min": 0,
-      "max": 100
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "xp_total",
+      "label": "Total XP",
+      "type": "number",
+      "cols": 4
      },
      {
       "key": "advances",
@@ -138,60 +251,10 @@
     ]
    },
    {
-    "key": "secondary_profile",
-    "title": "Secondary Profile",
-    "fields": [
-     {
-      "key": "attacks",
-      "label": "Attacks",
-      "type": "number"
-     },
-     {
-      "key": "wounds",
-      "label": "Wounds",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "strength_bonus",
-      "label": "Strength Bonus",
-      "type": "number"
-     },
-     {
-      "key": "toughness_bonus",
-      "label": "Toughness Bonus",
-      "type": "number"
-     },
-     {
-      "key": "movement",
-      "label": "Movement",
-      "type": "number"
-     },
-     {
-      "key": "magic",
-      "label": "Magic",
-      "type": "number"
-     },
-     {
-      "key": "insanity_points",
-      "label": "Insanity Points",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "fate_points",
-      "label": "Fate Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     }
-    ]
-   },
-   {
     "key": "skills",
     "title": "Skills & Talents",
+    "page": "Character",
+    "width": "half",
     "fields": [
      {
       "key": "skill_list",
@@ -238,8 +301,39 @@
     ]
    },
    {
+    "key": "critical",
+    "title": "Criticals & Insanities",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "critical_effects",
+      "label": "Critical Effects & Insanities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "psychology",
+      "label": "Psychology, Health & Insanity",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
     "key": "combat",
     "title": "Combat",
+    "page": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "weapons",
@@ -265,69 +359,126 @@
        {
         "key": "qualities",
         "label": "Qualities"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armour_worn",
+      "label": "Clothing & Armour",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armour",
+        "label": "Armour"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "armour_points",
+    "title": "Armour Points",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
      {
       "key": "ap_head_ap",
-      "label": "Head AP",
-      "type": "number"
-     },
-     {
-      "key": "ap_body_ap",
-      "label": "Body AP",
-      "type": "number"
-     },
-     {
-      "key": "ap_left_arm_ap",
-      "label": "Left Arm AP",
+      "label": "Head (01-15)",
       "type": "number"
      },
      {
       "key": "ap_right_arm_ap",
-      "label": "Right Arm AP",
+      "label": "Right Arm (16-35)",
       "type": "number"
      },
      {
-      "key": "ap_left_leg_ap",
-      "label": "Left Leg AP",
+      "key": "ap_left_arm_ap",
+      "label": "Left Arm (36-55)",
+      "type": "number"
+     },
+     {
+      "key": "ap_body_ap",
+      "label": "Body (56-80)",
       "type": "number"
      },
      {
       "key": "ap_right_leg_ap",
-      "label": "Right Leg AP",
+      "label": "Right Leg (81-90)",
       "type": "number"
      },
      {
-      "key": "critical_effects",
-      "label": "Critical Effects & Insanities",
+      "key": "ap_left_leg_ap",
+      "label": "Left Leg (91-00)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells",
+    "page": "Magic & Trappings",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells",
       "type": "list",
       "columns": [
        {
-        "key": "effect",
-        "label": "Effect"
+        "key": "spell",
+        "label": "Spell"
        },
        {
-        "key": "notes",
-        "label": "Notes"
+        "key": "casting_number",
+        "label": "Casting Number"
+       },
+       {
+        "key": "casting_time",
+        "label": "Casting Time"
+       },
+       {
+        "key": "ingredient",
+        "label": "Ingredient"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
        }
-      ],
-      "play": true
+      ]
      }
     ]
    },
    {
     "key": "trappings",
-    "title": "Trappings",
+    "title": "Trappings & Wealth",
+    "page": "Magic & Trappings",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "gear",
-      "label": "Trappings",
+      "label": "Equipment & Trappings",
       "type": "list",
       "columns": [
        {
         "key": "item",
         "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
        },
        {
         "key": "enc",
@@ -339,35 +490,132 @@
       "key": "money_gold_crowns",
       "label": "Gold Crowns",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "play": true
      },
      {
       "key": "money_silver_shillings",
       "label": "Silver Shillings",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "play": true
      },
      {
       "key": "money_brass_pennies",
       "label": "Brass Pennies",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
      },
      {
-      "key": "xp_current",
-      "label": "Current XP",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "wealth",
+      "label": "Other Wealth",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "movement_sec",
+    "title": "Move & Languages",
+    "page": "Magic & Trappings",
+    "width": "third",
+    "fields": [
+     {
+      "key": "move_cautious",
+      "label": "Cautious",
+      "type": "text",
+      "size": "full"
      },
      {
-      "key": "xp_total",
-      "label": "Total XP",
-      "type": "number",
-      "min": 0
+      "key": "move_standard",
+      "label": "Standard",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "move_running",
+      "label": "Running",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "language",
+        "label": "Language"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "background",
+    "title": "Background",
+    "page": "Magic & Trappings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "social_level",
+      "label": "Social Level",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "family_occupation",
+      "label": "Family Occupation",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "family_members",
+      "label": "Family Members",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "companions_sec",
+    "title": "Companions & Animals",
+    "page": "Magic & Trappings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "companions",
+      "label": "Companions & Animals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "profile",
+        "label": "Profile"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
      }
     ]
    }

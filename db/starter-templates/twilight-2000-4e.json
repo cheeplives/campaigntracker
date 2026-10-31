@@ -13,64 +13,107 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "nationality",
       "label": "Nationality",
-      "type": "text"
+      "type": "text",
+      "cols": 3,
+      "summary": true
      },
      {
       "key": "military_branch",
-      "label": "Military Branch",
-      "type": "text"
+      "label": "Branch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "rank",
-      "label": "Rank",
+      "label": "Military Rank",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "specialties_career",
       "label": "Careers",
       "type": "text",
-      "summary": true
-     },
-     {
-      "key": "age",
-      "label": "Age",
-      "type": "number"
-     },
-     {
-      "key": "moral_code",
-      "label": "Moral Code",
-      "type": "text"
-     },
-     {
-      "key": "big_dream",
-      "label": "Big Dream",
-      "type": "text"
-     },
-     {
-      "key": "buddy",
-      "label": "Buddy",
-      "type": "text"
-     },
-     {
-      "key": "how_met",
-      "label": "How You Met",
-      "type": "text"
+      "cols": 5
      },
      {
       "key": "appearance",
       "label": "Appearance",
-      "type": "text"
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "moral_code",
+      "label": "Moral Code",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "big_dream",
+      "label": "Big Dream",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "buddy",
+      "label": "Buddy",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "how_met",
+      "label": "How You Met the Group",
+      "type": "text",
+      "cols": 4
      }
     ]
    },
    {
-    "key": "attributes",
-    "title": "Attributes",
+    "key": "experience",
+    "title": "Experience & Morale",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "xp_current",
+      "label": "Experience (current)",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "xp_total",
+      "label": "Experience (total)",
+      "type": "number"
+     },
+     {
+      "key": "unit_morale",
+      "label": "Unit Morale",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "coolness",
+      "label": "Coolness Under Fire",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "grp_strength",
+    "title": "Strength",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
@@ -81,63 +124,7 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "attr_agility",
-      "label": "Agility",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "attr_intelligence",
-      "label": "Intelligence",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "attr_empathy",
-      "label": "Empathy",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "skills",
-    "title": "Skills",
-    "fields": [
-     {
-      "key": "sk_close_combat",
-      "label": "Close Combat",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)",
-       "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_heavy_weapons",
@@ -149,8 +136,19 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     },
+     {
+      "key": "sk_close_combat",
+      "label": "Close Combat",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
      },
      {
       "key": "sk_stamina",
@@ -162,8 +160,26 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "grp_agility",
+    "title": "Agility",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_driving",
@@ -175,8 +191,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_mobility",
@@ -188,8 +203,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_ranged_combat",
@@ -201,8 +215,26 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "grp_intelligence",
+    "title": "Intelligence",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_recon",
@@ -214,8 +246,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_survival",
@@ -227,8 +258,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_tech",
@@ -240,8 +270,26 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "grp_empathy",
+    "title": "Empathy",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_empathy",
+      "label": "Empathy",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_command",
@@ -253,8 +301,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_persuasion",
@@ -266,8 +313,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_medical_aid",
@@ -279,60 +325,127 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "specialties",
-      "label": "Specialties",
-      "type": "list",
-      "columns": [
-       {
-        "key": "specialty",
-        "label": "Specialty"
-       }
       ]
      }
     ]
    },
    {
-    "key": "condition",
-    "title": "Health & Stress",
+    "key": "combat",
+    "title": "Combat",
+    "width": "third",
+    "compact": true,
     "fields": [
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "count": 6,
+      "play": true
+     },
      {
       "key": "hit_capacity",
       "label": "Hit Capacity",
-      "type": "pips",
-      "count": 8,
-      "play": true
+      "type": "number"
      },
      {
       "key": "stress_capacity",
       "label": "Stress Capacity",
-      "type": "pips",
-      "count": 8,
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "armor_head",
+      "label": "Head",
+      "type": "number"
+     },
+     {
+      "key": "armor_arms",
+      "label": "Arms",
+      "type": "number"
+     },
+     {
+      "key": "armor_torso",
+      "label": "Torso",
+      "type": "number"
+     },
+     {
+      "key": "armor_legs",
+      "label": "Legs",
+      "type": "number"
+     },
+     {
+      "key": "armor",
+      "label": "Armor Worn",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Conditions & Radiation",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "cond_starving",
+      "label": "Starving",
+      "type": "checkbox",
       "play": true
      },
      {
-      "key": "coolness",
-      "label": "Coolness Under Fire",
-      "type": "number",
+      "key": "cond_dehydrated",
+      "label": "Dehydrated",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_exhausted",
+      "label": "Sleep Deprived",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_freezing",
+      "label": "Hypothermic",
+      "type": "checkbox",
       "play": true
      },
      {
       "key": "rad_points",
-      "label": "Radiation Points",
+      "label": "Radiation (temporary)",
       "type": "number",
-      "play": true,
-      "min": 0
+      "min": 0,
+      "max": 10,
+      "play": true
      },
      {
       "key": "permanent_rads",
-      "label": "Permanent Radiation",
+      "label": "Radiation (permanent)",
       "type": "number",
-      "play": true,
-      "min": 0
-     },
+      "min": 0,
+      "max": 10
+     }
+    ]
+   },
+   {
+    "key": "injuries",
+    "title": "Critical Injuries & Diseases",
+    "width": "third",
+    "fields": [
      {
       "key": "critical_injuries",
       "label": "Critical Injuries",
@@ -350,59 +463,13 @@
       "play": true
      },
      {
-      "key": "cond_starving",
-      "label": "Starving",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_dehydrated",
-      "label": "Dehydrated",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_exhausted",
-      "label": "Exhausted",
-      "type": "checkbox",
-      "play": true
-     },
-     {
-      "key": "cond_freezing",
-      "label": "Freezing",
-      "type": "checkbox",
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "gear",
-    "title": "Gear",
-    "fields": [
-     {
-      "key": "weapons",
-      "label": "Weapons",
+      "key": "diseases",
+      "label": "Diseases",
       "type": "list",
       "columns": [
        {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "ammo",
-        "label": "Ammo"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       },
-       {
-        "key": "range",
-        "label": "Range"
-       },
-       {
-        "key": "crit",
-        "label": "Crit"
+        "key": "disease",
+        "label": "Disease"
        },
        {
         "key": "notes",
@@ -410,15 +477,73 @@
        }
       ],
       "play": true
+     }
+    ]
+   },
+   {
+    "key": "specialties_sec",
+    "title": "Specialties",
+    "width": "third",
+    "fields": [
+     {
+      "key": "specialties",
+      "label": "Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "supplies",
+    "title": "Supplies",
+    "width": "third",
+    "fields": [
+     {
+      "key": "encumbrance",
+      "label": "Encumbrance",
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
+      "key": "rations",
+      "label": "Rations",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
+     {
+      "key": "water",
+      "label": "Water",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "tiny_items",
+      "label": "Tiny Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Combat Gear",
+    "width": "half",
+    "fields": [
      {
       "key": "gear_list",
-      "label": "Gear",
+      "label": "Combat Gear",
       "type": "list",
       "columns": [
        {
@@ -430,13 +555,89 @@
         "label": "Weight"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "backpack_sec",
+    "title": "Backpack",
+    "width": "half",
+    "fields": [
      {
-      "key": "encumbrance",
-      "label": "Encumbrance",
-      "type": "number",
-      "size": "small"
-     },
+      "key": "backpack",
+      "label": "Backpack",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "rof",
+        "label": "ROF"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "crit",
+        "label": "Crit"
+       },
+       {
+        "key": "blast",
+        "label": "Blast"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "ammo",
+        "label": "Mag / Ammo"
+       },
+       {
+        "key": "notes",
+        "label": "Notes (Rel)"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "vehicles_sec",
+    "title": "Vehicles",
+    "fields": [
      {
       "key": "vehicles",
       "label": "Vehicles",
@@ -451,21 +652,9 @@
         "label": "Notes"
        }
       ]
-     },
-     {
-      "key": "rations",
-      "label": "Rations",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "water",
-      "label": "Water",
-      "type": "number",
-      "play": true
      }
     ]
    }
   ]
  }
-}
+}
