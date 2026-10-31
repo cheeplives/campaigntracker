@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* preview.js — draw a template the way a character's sheet draws it (Sheets.renderSheetForm, with the site's CSS),
  * take a picture of each page of it at desktop and iPad (portrait) widths, and say what looks wrong: a page wider than the
- * screen, a box narrower than its label, or a label cut short.
+ * screen, a box narrower than its label, a label cut short, or boxes in a row that don't line up.
  *
  *   node tools/sheet-agent/preview.js <template.json> <out-dir> [--widths 1280,820]
  *
@@ -41,6 +41,20 @@ async function preview(file, outDir, widths = [1280, 820]) {
             const label = f.querySelector('.sheet-label span');
             if (label && label.scrollWidth > label.clientWidth + 1) out.push(`the label "${label.textContent}" is cut short`);
             if (f.getBoundingClientRect().right > window.innerWidth + 1) out.push(`the box for "${label?.textContent}" runs off the screen`);
+          }
+          // boxes side by side in a row should start at the same height, even when one label wraps to two lines
+          for (const grid of document.querySelectorAll('.sheet-sec:not([hidden]):not(.compact) .sheet-fields')) {
+            const rows = new Map();
+            for (const f of grid.querySelectorAll(':scope > .sheet-field:not(.wide)')) {
+              const top = Math.round(f.getBoundingClientRect().top), box = f.querySelector('.sheet-control')?.getBoundingClientRect();
+              if (!box?.height) continue;
+              if (!rows.has(top)) rows.set(top, []);
+              rows.get(top).push({ name: f.querySelector('.sheet-label span')?.textContent, top: box.top });
+            }
+            for (const row of rows.values()) {
+              const low = row.reduce((a, b) => (b.top > a.top ? b : a)), high = row.reduce((a, b) => (b.top < a.top ? b : a));
+              if (low.top - high.top > 2) out.push(`the box for "${low.name}" sits lower than the one for "${high.name}" beside it`);
+            }
           }
           return out;
         });
