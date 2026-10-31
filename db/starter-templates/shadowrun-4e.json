@@ -12,193 +12,210 @@
   "sections": [
    {
     "key": "runner",
-    "title": "Runner",
+    "title": "Personal Data",
+    "page": "Runner",
     "fields": [
      {
       "key": "street_name",
-      "label": "Street Name",
-      "type": "text"
+      "label": "Name / Alias",
+      "type": "text",
+      "cols": 4
      },
      {
       "key": "metatype",
       "label": "Metatype",
       "type": "text",
+      "cols": 2,
       "summary": true
      },
      {
       "key": "archetype",
       "label": "Archetype",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
-      "key": "karma",
-      "label": "Karma",
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "nuyen",
+      "label": "Nuyen",
       "type": "number",
+      "cols": 2,
       "play": true
      },
      {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text",
+      "cols": 2
+     },
+     {
       "key": "total_karma",
-      "label": "Career Karma",
-      "type": "number"
+      "label": "Total Karma",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "karma",
+      "label": "Current Karma",
+      "type": "number",
+      "cols": 2,
+      "play": true
      },
      {
       "key": "street_cred",
       "label": "Street Cred",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "notoriety",
       "label": "Notoriety",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "public_awareness",
       "label": "Public Awareness",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical Attributes",
+    "page": "Runner",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_body",
+      "label": "Body",
+      "type": "number"
+     },
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "attr_reaction",
+      "label": "Reaction",
+      "type": "number"
+     },
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental Attributes",
+    "page": "Runner",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "number"
+     },
+     {
+      "key": "attr_intuition",
+      "label": "Intuition",
+      "type": "number"
+     },
+     {
+      "key": "attr_logic",
+      "label": "Logic",
+      "type": "number"
+     },
+     {
+      "key": "attr_willpower",
+      "label": "Willpower",
       "type": "number"
      }
     ]
    },
    {
     "key": "attributes",
-    "title": "Attributes",
+    "title": "Special Attributes",
+    "page": "Runner",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
-      "key": "attr_body",
-      "label": "Body",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_agility",
-      "label": "Agility",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_reaction",
-      "label": "Reaction",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_strength",
-      "label": "Strength",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_charisma",
-      "label": "Charisma",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_intuition",
-      "label": "Intuition",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_logic",
-      "label": "Logic",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
-      "key": "attr_willpower",
-      "label": "Willpower",
-      "type": "number",
-      "min": 1,
-      "max": 10,
-      "size": "small"
-     },
-     {
       "key": "edge",
-      "label": "Edge",
+      "label": "Edge (current / rating)",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "min": 0,
+      "play": true
      },
      {
       "key": "essence",
       "label": "Essence",
-      "type": "number",
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "magic",
       "label": "Magic",
-      "type": "number",
-      "size": "small"
+      "type": "number"
      },
      {
       "key": "resonance",
       "label": "Resonance",
-      "type": "number",
-      "size": "small"
-     },
-     {
-      "key": "initiative",
-      "label": "Initiative",
-      "type": "number",
-      "size": "small"
-     },
-     {
-      "key": "init_passes",
-      "label": "Initiative Passes",
-      "type": "number",
-      "size": "small"
+      "type": "number"
      }
     ]
    },
    {
-    "key": "condition",
-    "title": "Condition Monitor",
+    "key": "initiative_sec",
+    "title": "Initiative",
+    "page": "Runner",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
-      "key": "physical_damage",
-      "label": "Physical Damage",
-      "type": "pips",
-      "count": 18,
-      "play": true
-     },
-     {
-      "key": "stun_damage",
-      "label": "Stun Damage",
-      "type": "pips",
-      "count": 12,
-      "play": true
-     },
-     {
-      "key": "ballistic",
-      "label": "Ballistic Armor",
+      "key": "initiative",
+      "label": "Initiative",
       "type": "number"
      },
      {
-      "key": "impact",
-      "label": "Impact Armor",
+      "key": "astral_init",
+      "label": "Astral Init",
+      "type": "number"
+     },
+     {
+      "key": "matrix_init",
+      "label": "Matrix Init",
+      "type": "number"
+     },
+     {
+      "key": "init_passes",
+      "label": "Init Passes",
       "type": "number"
      }
     ]
    },
    {
     "key": "skills",
-    "title": "Skills",
+    "title": "Active Skills",
+    "page": "Runner",
+    "width": "half",
     "fields": [
      {
       "key": "skill_list",
@@ -207,18 +224,30 @@
       "columns": [
        {
         "key": "skill",
-        "label": "Skill"
+        "label": "Skill Name"
        },
        {
         "key": "rating",
-        "label": "Rating"
+        "label": "Rtg."
+       },
+       {
+        "key": "attribute",
+        "label": "Att."
        },
        {
         "key": "specialization",
         "label": "Specialization"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "knowledge",
+    "title": "Knowledge Skills",
+    "page": "Runner",
+    "width": "half",
+    "fields": [
      {
       "key": "knowledge_skills",
       "label": "Knowledge & Language Skills",
@@ -226,11 +255,15 @@
       "columns": [
        {
         "key": "skill",
-        "label": "Skill"
+        "label": "Skill Name"
        },
        {
         "key": "rating",
-        "label": "Rating"
+        "label": "Rtg."
+       },
+       {
+        "key": "attribute",
+        "label": "Att."
        }
       ]
      }
@@ -238,7 +271,9 @@
    },
    {
     "key": "qualities",
-    "title": "Qualities & Contacts",
+    "title": "Qualities",
+    "page": "Runner",
+    "width": "half",
     "fields": [
      {
       "key": "quality_list",
@@ -247,14 +282,50 @@
       "columns": [
        {
         "key": "quality",
-        "label": "Quality"
+        "label": "Quality Name"
+       },
+       {
+        "key": "type",
+        "label": "Type"
        },
        {
         "key": "notes",
         "label": "Notes"
        }
       ]
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "page": "Runner",
+    "width": "half",
+    "fields": [
+     {
+      "key": "physical_damage",
+      "label": "Physical Damage Track",
+      "type": "pips",
+      "count": 18,
+      "size": "full",
+      "play": true
      },
+     {
+      "key": "stun_damage",
+      "label": "Stun Damage Track",
+      "type": "pips",
+      "count": 12,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "qualities_contacts",
+    "title": "Contacts",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
      {
       "key": "contacts",
       "label": "Contacts",
@@ -262,23 +333,25 @@
       "columns": [
        {
         "key": "name",
-        "label": "Name"
-       },
-       {
-        "key": "connection",
-        "label": "Connection"
+        "label": "Contact Name"
        },
        {
         "key": "loyalty",
-        "label": "Loyalty"
+        "label": "Loyalty Rtg."
+       },
+       {
+        "key": "connection",
+        "label": "Conn. Rtg."
        }
       ]
      }
     ]
    },
    {
-    "key": "gear",
-    "title": "Gear",
+    "key": "ranged_sec",
+    "title": "Ranged Weapons",
+    "page": "Gear & Magic",
+    "width": "half",
     "fields": [
      {
       "key": "ranged",
@@ -291,7 +364,7 @@
        },
        {
         "key": "dv",
-        "label": "DV"
+        "label": "Damage"
        },
        {
         "key": "ap",
@@ -303,7 +376,7 @@
        },
        {
         "key": "recoil",
-        "label": "Recoil"
+        "label": "RC"
        },
        {
         "key": "ammo",
@@ -311,7 +384,46 @@
        }
       ],
       "play": true
-     },
+     }
+    ]
+   },
+   {
+    "key": "augment",
+    "title": "Cyberware / Bioware",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "augmentations",
+      "label": "Cyberware & Bioware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Implant"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "essence",
+        "label": "Essence"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "melee_sec",
+    "title": "Melee Weapons",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
      {
       "key": "melee",
       "label": "Melee Weapons",
@@ -327,36 +439,234 @@
        },
        {
         "key": "dv",
-        "label": "DV"
+        "label": "Damage"
        },
        {
         "key": "ap",
         "label": "AP"
        }
-      ]
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "vehicle_sec",
+    "title": "Vehicle",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "vehicle",
+      "label": "Vehicle",
+      "type": "text",
+      "cols": 3
      },
      {
-      "key": "augmentations",
-      "label": "Cyberware & Bioware",
+      "key": "veh_handling",
+      "label": "Handling",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_accel",
+      "label": "Accel",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_pilot",
+      "label": "Pilot",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_body",
+      "label": "Body",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "veh_sensor",
+      "label": "Sensor",
+      "type": "number",
+      "cols": 1
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ballistic",
+      "label": "Ballistic",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "impact",
+      "label": "Impact",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_list",
+      "label": "Armor",
       "type": "list",
       "columns": [
        {
-        "key": "item",
-        "label": "Item"
+        "key": "armor",
+        "label": "Armor"
        },
        {
         "key": "rating",
-        "label": "Rating"
+        "label": "Ballistic / Impact"
        },
        {
-        "key": "essence",
-        "label": "Essence"
+        "key": "notes",
+        "label": "Notes"
        }
       ]
+     }
+    ]
+   },
+   {
+    "key": "commlink_sec",
+    "title": "Commlink / Programs",
+    "page": "Gear & Magic",
+    "width": "third",
+    "fields": [
+     {
+      "key": "commlink",
+      "label": "Commlink",
+      "type": "text",
+      "size": "full"
      },
      {
+      "key": "response",
+      "label": "Response",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "system",
+      "label": "System",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "firewall",
+      "label": "Firewall",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "signal",
+      "label": "Signal",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "programs",
+      "label": "Programs",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Spells",
+    "page": "Gear & Magic",
+    "width": "two-thirds",
+    "fields": [
+     {
       "key": "spells_powers",
-      "label": "Spells, Adept Powers & Complex Forms",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Spell"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "drain",
+        "label": "Drain Value"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spirits",
+    "title": "Spirits / Sprites",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "spirit_list",
+      "label": "Spirits / Sprites",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spirit",
+        "label": "Spirit [Sprite]"
+       },
+       {
+        "key": "force",
+        "label": "Force"
+       },
+       {
+        "key": "services",
+        "label": "Services"
+       },
+       {
+        "key": "bound",
+        "label": "Bound / Registered"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "adept",
+    "title": "Adept Powers / Complex Forms",
+    "page": "Gear & Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "adept_powers",
+      "label": "Adept Powers / Complex Forms",
       "type": "list",
       "columns": [
        {
@@ -364,15 +674,18 @@
         "label": "Name"
        },
        {
-        "key": "type",
-        "label": "Type"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
+        "key": "rating",
+        "label": "Rating"
        }
       ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "gear_ids",
+    "title": "Gear, IDs & Licenses",
+    "page": "Gear & Magic",
+    "fields": [
      {
       "key": "gear_list",
       "label": "Gear",
@@ -393,17 +706,6 @@
       ]
      },
      {
-      "key": "nuyen",
-      "label": "Nuyen",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "lifestyle",
-      "label": "Lifestyle",
-      "type": "text"
-     },
-     {
       "key": "ids",
       "label": "IDs & Licenses",
       "type": "list",
@@ -422,4 +724,4 @@
    }
   ]
  }
-}
+}
