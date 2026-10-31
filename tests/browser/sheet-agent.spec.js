@@ -74,6 +74,18 @@ test("Agent: preview takes a picture of each page of a template with pages", asy
   expect(shots.map(s => s.page)).toEqual(["Front", "Back"]);
 });
 
+test("Agent: preview finds boxes in a row line up when one label wraps to two lines", async ({}, info) => {
+  test.skip(info.project.name !== "chromium", "the scripts start their own browser");
+  const out = tmp(), file = path.join(out, "wrap.json");
+  fs.writeFileSync(file, JSON.stringify({ sections: [{ key: "h", title: "Health", fields: [
+    { key: "luck", label: "Luck", type: "counter", cols: 3 },
+    { key: "sw", label: "Seriously Wounded (-2 to all actions)", type: "number", cols: 3 },
+    { key: "ds", label: "Death Save", type: "number", cols: 3 },
+  ] }] }));
+  const { problems } = await preview(file, out, [820]);
+  expect(problems).toEqual([]);
+});
+
 test("Agent: check passes every starter file, and names what's wrong with a bad one", () => {
   for (const f of fs.readdirSync(STARTERS).filter(f => f.endsWith(".json"))) expect(check(path.join(STARTERS, f)), f).toEqual([]);
   const out = tmp(), bad = path.join(out, "Bad Name.json");

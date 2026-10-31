@@ -1178,6 +1178,14 @@ path.map-route-line.secret { stroke: var(--dim); }
 @container (max-width: 1079px) { .sheet-field[data-cols="12"] { grid-column: 1 / -1; } }
 @container (max-width: 169px) { .sheet-field { grid-column: 1 / -1; } }
 .sheet-field.wide { grid-column: 1 / -1; }
+/* Line up the boxes in a row when one label wraps to two lines: each field takes three rows of the section's grid
+   (label, box, conflict note) and shares their heights, so every label row is as tall as the tallest one in it,
+   and each label sits at the bottom of that row, right above its box. Compact sections lay fields out in rows instead. */
+.sheet-sec:not(.compact) .sheet-fields { row-gap: 0; }
+.sheet-sec:not(.compact) .sheet-field { display: grid; grid-row: span 3; grid-template-rows: subgrid; grid-template-columns: minmax(0, 1fr);
+  row-gap: 0; align-content: start; padding-bottom: 8px; }
+.sheet-sec:not(.compact) .sheet-field > .sheet-label { align-self: end; margin-bottom: 3px; }
+.sheet-sec:not(.compact) .sheet-field > .sheet-conflict { margin-top: 3px; }
 /* sections side by side on a wide sheet (half, third, two-thirds of it), one under another on a narrow one */
 .sheet-form { container: sheetform / inline-size; }
 .sheet-secs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 20px; align-items: start; }
