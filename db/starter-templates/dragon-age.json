@@ -13,6 +13,7 @@
    {
     "key": "character",
     "title": "Character",
+    "width": "third",
     "fields": [
      {
       "key": "race",
@@ -24,14 +25,52 @@
        "Human",
        "Qunari"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 2
      },
      {
       "key": "background",
       "label": "Background",
       "type": "text",
-      "summary": true
+      "cols": 2
      },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "features",
+      "label": "Distinguishing Features",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "class_sec",
+    "title": "Class & Weapons",
+    "width": "two-thirds",
+    "fields": [
      {
       "key": "class",
       "label": "Class",
@@ -41,84 +80,199 @@
        "Rogue",
        "Warrior"
       ],
-      "summary": true
+      "summary": true,
+      "cols": 3
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
+      "cols": 1,
       "min": 1,
-      "max": 20,
       "summary": true
      },
      {
       "key": "xp",
-      "label": "Experience",
+      "label": "Experience Points",
       "type": "number",
-      "play": true,
+      "cols": 3,
       "min": 0
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "weapon_groups",
+      "label": "Weapon Groups & Notes",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "width": "third",
+    "fields": [
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 1
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor (AP)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Class Powers & Spells",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "mana",
+      "label": "Mana",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "spell_list",
+      "label": "Class Powers & Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Power or Spell"
+       },
+       {
+        "key": "mana_cost",
+        "label": "Mana Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "talent_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "degree",
+        "label": "Degree"
+       }
+      ]
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "full"
      }
     ]
    },
    {
     "key": "abilities",
     "title": "Abilities",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "ab_communication",
       "label": "Communication",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_constitution",
       "label": "Constitution",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_cunning",
       "label": "Cunning",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_dexterity",
       "label": "Dexterity",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_magic",
       "label": "Magic",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_perception",
       "label": "Perception",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_strength",
       "label": "Strength",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "ab_willpower",
       "label": "Willpower",
       "type": "number",
-      "min": -2,
-      "max": 10
+      "min": -2
      },
      {
       "key": "focuses",
@@ -138,102 +292,9 @@
     ]
    },
    {
-    "key": "combat",
-    "title": "Combat",
-    "fields": [
-     {
-      "key": "health",
-      "label": "Health",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "mana",
-      "label": "Mana",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "defense",
-      "label": "Defense",
-      "type": "number"
-     },
-     {
-      "key": "armor_rating",
-      "label": "Armor Rating",
-      "type": "number"
-     },
-     {
-      "key": "speed",
-      "label": "Speed",
-      "type": "number"
-     },
-     {
-      "key": "weapons",
-      "label": "Weapons",
-      "type": "list",
-      "columns": [
-       {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "attack_roll",
-        "label": "Attack Roll"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "key": "talents",
-    "title": "Talents & Spells",
-    "fields": [
-     {
-      "key": "talent_list",
-      "label": "Talents",
-      "type": "list",
-      "columns": [
-       {
-        "key": "talent",
-        "label": "Talent"
-       },
-       {
-        "key": "degree",
-        "label": "Degree"
-       }
-      ]
-     },
-     {
-      "key": "spell_list",
-      "label": "Spells",
-      "type": "list",
-      "columns": [
-       {
-        "key": "spell",
-        "label": "Spell"
-       },
-       {
-        "key": "mana_cost",
-        "label": "Mana Cost"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     }
-    ]
-   },
-   {
     "key": "equipment",
-    "title": "Equipment",
+    "title": "Equipment & Money",
+    "width": "third",
     "fields": [
      {
       "key": "gear",
@@ -252,28 +313,35 @@
      },
      {
       "key": "coin_gold",
-      "label": "Gold",
+      "label": "GP",
       "type": "number",
-      "play": true,
+      "cols": 1,
       "min": 0
      },
      {
       "key": "coin_silver",
-      "label": "Silver",
+      "label": "SP",
       "type": "number",
-      "play": true,
+      "cols": 1,
       "min": 0
      },
      {
       "key": "coin_copper",
-      "label": "Copper",
+      "label": "CP",
       "type": "number",
-      "play": true,
+      "cols": 1,
       "min": 0
-     },
+     }
+    ]
+   },
+   {
+    "key": "goals",
+    "title": "Concept, Goals & Ties",
+    "width": "third",
+    "fields": [
      {
       "key": "goals_ties",
-      "label": "Goals & Ties",
+      "label": "Concept, Goals & Ties",
       "type": "longtext"
      }
     ]

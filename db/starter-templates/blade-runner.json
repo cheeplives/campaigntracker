@@ -12,18 +12,8 @@
   "sections": [
    {
     "key": "character",
-    "title": "Character",
+    "title": "LAPD Profile",
     "fields": [
-     {
-      "key": "nature",
-      "label": "Nature",
-      "type": "choice",
-      "options": [
-       "Human",
-       "Replicant"
-      ],
-      "summary": true
-     },
      {
       "key": "archetype",
       "label": "Archetype",
@@ -36,43 +26,70 @@
        "Fixer",
        "Inspector"
       ],
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "nature",
+      "label": "Human or Replicant",
+      "type": "choice",
+      "options": [
+       "Human",
+       "Replicant"
+      ],
+      "cols": 4,
       "summary": true
      },
      {
       "key": "years_on_force",
       "label": "Years on the Force",
-      "type": "number"
-     },
-     {
-      "key": "appearance",
-      "label": "Appearance",
-      "type": "text"
-     },
-     {
-      "key": "key_memory",
-      "label": "Key Memory",
-      "type": "text"
-     },
-     {
-      "key": "key_relationship",
-      "label": "Key Relationship",
-      "type": "text"
-     },
-     {
-      "key": "signature_item",
-      "label": "Signature Item",
-      "type": "text"
-     },
-     {
-      "key": "home",
-      "label": "Home",
-      "type": "text"
+      "type": "number",
+      "cols": 3,
+      "min": 0
      }
     ]
    },
    {
-    "key": "attributes",
-    "title": "Attributes",
+    "key": "memory",
+    "title": "Key Memory & Home",
+    "width": "half",
+    "fields": [
+     {
+      "key": "key_memory",
+      "label": "Key Memory",
+      "type": "longtext"
+     },
+     {
+      "key": "home",
+      "label": "Home",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "relationship",
+    "title": "Key Relationship & Appearance",
+    "width": "half",
+    "fields": [
+     {
+      "key": "key_relationship",
+      "label": "Key Relationship",
+      "type": "longtext"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "strength",
+    "title": "Strength",
+    "width": "half",
+    "compact": true,
     "fields": [
      {
       "key": "attr_strength",
@@ -83,51 +100,8 @@
        "B (D10)",
        "C (D8)",
        "D (D6)"
-      ],
-      "size": "small"
+      ]
      },
-     {
-      "key": "attr_agility",
-      "label": "Agility",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "attr_intelligence",
-      "label": "Intelligence",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     },
-     {
-      "key": "attr_empathy",
-      "label": "Empathy",
-      "type": "choice",
-      "options": [
-       "A (D12)",
-       "B (D10)",
-       "C (D8)",
-       "D (D6)"
-      ],
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "skills",
-    "title": "Skills",
-    "fields": [
      {
       "key": "sk_force",
       "label": "Force",
@@ -138,8 +112,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_hand_to_hand_combat",
@@ -151,8 +124,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_stamina",
@@ -164,8 +136,26 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "agility",
+    "title": "Agility",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_firearms",
@@ -177,8 +167,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_mobility",
@@ -190,8 +179,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_stealth",
@@ -203,8 +191,38 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     },
+     {
+      "key": "sk_driving",
+      "label": "Driving",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)",
+       "—"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "intelligence",
+    "title": "Intelligence",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_medical_aid",
@@ -216,8 +234,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_observation",
@@ -229,8 +246,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_tech",
@@ -242,8 +258,26 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "empathy",
+    "title": "Empathy",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_empathy",
+      "label": "Empathy",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      },
      {
       "key": "sk_connections",
@@ -255,8 +289,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_insight",
@@ -268,8 +301,7 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
+      ]
      },
      {
       "key": "sk_manipulation",
@@ -281,9 +313,15 @@
        "C (D8)",
        "D (D6)",
        "—"
-      ],
-      "size": "small"
-     },
+      ]
+     }
+    ]
+   },
+   {
+    "key": "specialties_sec",
+    "title": "Specialties & Armor",
+    "width": "third",
+    "fields": [
      {
       "key": "specialties",
       "label": "Specialties",
@@ -294,26 +332,57 @@
         "label": "Specialty"
        }
       ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "armor_rating",
+      "label": "Rating",
+      "type": "number",
+      "cols": 1
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Signature Item & Gear",
+    "width": "third",
+    "fields": [
+     {
+      "key": "signature_item",
+      "label": "Signature Item",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
      }
     ]
    },
    {
     "key": "condition",
     "title": "Health & Resolve",
+    "width": "third",
     "fields": [
      {
       "key": "health",
       "label": "Health",
       "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "resolve",
-      "label": "Resolve",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
       "key": "critical_injuries",
@@ -332,30 +401,25 @@
       "play": true
      },
      {
-      "key": "promotion_points",
-      "label": "Promotion Points",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "resolve",
+      "label": "Resolve",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
      },
      {
-      "key": "humanity_points",
-      "label": "Humanity Points",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "chinyen",
-      "label": "Chinyen",
-      "type": "number",
+      "key": "critical_stress",
+      "label": "Critical Stress Effects",
+      "type": "text",
+      "size": "full",
       "play": true
      }
     ]
    },
    {
-    "key": "gear",
-    "title": "Gear",
+    "key": "weapons_sec",
+    "title": "Weapons",
     "fields": [
      {
       "key": "weapons",
@@ -372,32 +436,53 @@
        },
        {
         "key": "crit",
-        "label": "Crit"
+        "label": "Crit Die"
+       },
+       {
+        "key": "type",
+        "label": "Type"
        },
        {
         "key": "range",
-        "label": "Range"
-       }
-      ]
-     },
-     {
-      "key": "armor",
-      "label": "Armor",
-      "type": "text"
-     },
-     {
-      "key": "gear_list",
-      "label": "Gear",
-      "type": "list",
-      "columns": [
+        "label": "Min. Range"
+       },
        {
-        "key": "item",
-        "label": "Item"
+        "key": "max_range",
+        "label": "Max. Range"
        }
-      ]
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Points",
+    "fields": [
+     {
+      "key": "promotion_points",
+      "label": "Promotion Points",
+      "type": "pips",
+      "count": 20,
+      "cols": 4
+     },
+     {
+      "key": "humanity_points",
+      "label": "Humanity Points",
+      "type": "pips",
+      "count": 20,
+      "cols": 4
+     },
+     {
+      "key": "chinyen",
+      "label": "Chinyen Points",
+      "type": "pips",
+      "count": 20,
+      "cols": 4,
+      "play": true
      }
     ]
    }
   ]
  }
-}
+}
