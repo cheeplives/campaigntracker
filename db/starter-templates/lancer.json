@@ -13,78 +13,112 @@
    {
     "key": "pilot",
     "title": "Pilot",
+    "page": "Pilot",
+    "width": "two-thirds",
     "fields": [
      {
       "key": "callsign",
       "label": "Callsign",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
-      "key": "background",
-      "label": "Background",
-      "type": "text"
-     },
-     {
       "key": "license_level",
-      "label": "License Level",
+      "label": "LL",
       "type": "number",
+      "cols": 1,
       "min": 0,
-      "max": 12,
       "summary": true
      },
      {
       "key": "grit",
       "label": "Grit",
-      "type": "number"
-     },
-     {
-      "key": "pilot_hp",
-      "label": "Pilot HP",
-      "type": "counter",
-      "play": true,
+      "type": "number",
+      "cols": 1,
       "min": 0
      },
      {
-      "key": "pilot_armor",
-      "label": "Pilot Armor",
-      "type": "number"
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "size": "full"
      },
      {
-      "key": "pilot_evasion",
-      "label": "Pilot Evasion",
-      "type": "number"
+      "key": "hase_hull",
+      "label": "Hull",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
+     {
+      "key": "hase_agility",
+      "label": "Agility",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
+     {
+      "key": "hase_systems",
+      "label": "Systems",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
+     {
+      "key": "hase_engineering",
+      "label": "Engineering",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "pilot_stats",
+    "title": "Pilot Stats",
+    "page": "Pilot",
+    "width": "third",
+    "fields": [
+     {
+      "key": "pilot_hp",
+      "label": "HP",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "pilot_armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "pilot_edef",
-      "label": "Pilot E-Defense",
-      "type": "number"
+      "label": "E-Def",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "pilot_evasion",
+      "label": "Evasion",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "pilot_speed",
-      "label": "Pilot Speed",
-      "type": "number"
-     },
-     {
-      "key": "pilot_gear",
-      "label": "Pilot Loadout",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
+      "label": "Speed",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "skills_talents",
-    "title": "Skill Triggers, Talents & Licenses",
+    "title": "Triggers",
+    "page": "Pilot",
+    "width": "half",
     "fields": [
      {
       "key": "triggers",
@@ -100,37 +134,15 @@
         "label": "Bonus"
        }
       ]
-     },
-     {
-      "key": "talents",
-      "label": "Talents",
-      "type": "list",
-      "columns": [
-       {
-        "key": "talent",
-        "label": "Talent"
-       },
-       {
-        "key": "rank",
-        "label": "Rank"
-       }
-      ]
-     },
-     {
-      "key": "licenses",
-      "label": "Licenses",
-      "type": "list",
-      "columns": [
-       {
-        "key": "license",
-        "label": "License"
-       },
-       {
-        "key": "rank",
-        "label": "Rank"
-       }
-      ]
-     },
+     }
+    ]
+   },
+   {
+    "key": "core_bonuses_sec",
+    "title": "Core Bonuses",
+    "page": "Pilot",
+    "width": "half",
+    "fields": [
      {
       "key": "core_bonuses",
       "label": "Core Bonuses",
@@ -145,138 +157,221 @@
     ]
    },
    {
+    "key": "talents_sec",
+    "title": "Talents",
+    "page": "Pilot",
+    "width": "half",
+    "fields": [
+     {
+      "key": "talents",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "licenses_sec",
+    "title": "Licenses",
+    "page": "Pilot",
+    "width": "half",
+    "fields": [
+     {
+      "key": "licenses",
+      "label": "Licenses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "license",
+        "label": "License"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "pilot_loadout",
+    "title": "Loadout",
+    "page": "Pilot",
+    "fields": [
+     {
+      "key": "pilot_armor_item",
+      "label": "Armor",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "pilot_weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "pilot_gear",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
     "key": "mech",
     "title": "Mech",
+    "page": "Mech",
+    "width": "two-thirds",
     "fields": [
+     {
+      "key": "mech_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
      {
       "key": "frame",
       "label": "Frame",
       "type": "text",
+      "cols": 4,
       "summary": true
      },
      {
-      "key": "mech_name",
-      "label": "Mech Name",
-      "type": "text"
-     },
-     {
-      "key": "hase_hull",
-      "label": "Hull",
+      "key": "attack_bonus",
+      "label": "Atk Bonus",
       "type": "number",
-      "min": 0,
-      "max": 6
+      "cols": 2
      },
      {
-      "key": "hase_agility",
-      "label": "Agility",
+      "key": "tech_attack",
+      "label": "Tech Atk",
       "type": "number",
-      "min": 0,
-      "max": 6
+      "cols": 2
      },
      {
-      "key": "hase_systems",
-      "label": "Systems",
+      "key": "save_target",
+      "label": "Save Tgt",
       "type": "number",
-      "min": 0,
-      "max": 6
-     },
-     {
-      "key": "hase_engineering",
-      "label": "Engineering",
-      "type": "number",
-      "min": 0,
-      "max": 6
-     },
-     {
-      "key": "size",
-      "label": "Size",
-      "type": "number"
-     },
-     {
-      "key": "mech_armor",
-      "label": "Armor",
-      "type": "number"
-     },
-     {
-      "key": "mech_evasion",
-      "label": "Evasion",
-      "type": "number"
-     },
-     {
-      "key": "mech_edef",
-      "label": "E-Defense",
-      "type": "number"
+      "cols": 2
      },
      {
       "key": "mech_speed",
       "label": "Speed",
-      "type": "number"
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "mech_edef",
+      "label": "E-Def",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "mech_evasion",
+      "label": "Evasion",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "sensors",
       "label": "Sensors",
-      "type": "number"
+      "type": "number",
+      "cols": 2
      },
      {
-      "key": "tech_attack",
-      "label": "Tech Attack",
-      "type": "number"
-     },
-     {
-      "key": "save_target",
-      "label": "Save Target",
-      "type": "number"
-     },
-     {
-      "key": "system_points",
-      "label": "System Points",
-      "type": "number"
+      "key": "size",
+      "label": "Size",
+      "type": "number",
+      "cols": 2
      }
     ]
    },
    {
     "key": "mech_status",
-    "title": "Mech Status",
+    "title": "Status",
+    "page": "Mech",
+    "width": "third",
     "fields": [
-     {
-      "key": "mech_hp",
-      "label": "HP",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
      {
       "key": "structure",
       "label": "Structure",
       "type": "pips",
       "count": 4,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "mech_hp",
+      "label": "HP",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "reactor_stress",
+      "label": "Stress",
+      "type": "pips",
+      "count": 4,
+      "cols": 2,
       "play": true
      },
      {
       "key": "heat",
       "label": "Heat",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "min": 0,
+      "play": true
      },
      {
-      "key": "reactor_stress",
-      "label": "Reactor Stress",
-      "type": "pips",
-      "count": 4,
+      "key": "overshield",
+      "label": "Overshield",
+      "type": "number",
+      "cols": 2,
+      "min": 0,
       "play": true
+     },
+     {
+      "key": "mech_armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 2
      },
      {
       "key": "repair_cap",
       "label": "Repair Capacity",
       "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "core_power",
-      "label": "Core Power Available",
-      "type": "checkbox",
+      "cols": 2,
+      "min": 0,
       "play": true
      },
      {
@@ -284,8 +379,113 @@
       "label": "Overcharge",
       "type": "pips",
       "count": 4,
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "frame_traits",
+    "title": "Frame Traits & Core",
+    "page": "Mech",
+    "fields": [
+     {
+      "key": "frame_traits_text",
+      "label": "Frame Traits",
+      "type": "longtext"
+     },
+     {
+      "key": "core_system",
+      "label": "Core System",
+      "type": "longtext"
+     },
+     {
+      "key": "core_power",
+      "label": "Core Power",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "loadout",
+    "title": "Weapons & Systems",
+    "page": "Mech",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Name"
+       },
+       {
+        "key": "mount",
+        "label": "Mount"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "effects",
+        "label": "Effects"
+       }
+      ],
       "play": true
      },
+     {
+      "key": "system_points",
+      "label": "Total SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "systems",
+      "label": "Systems",
+      "type": "list",
+      "columns": [
+       {
+        "key": "system",
+        "label": "Name"
+       },
+       {
+        "key": "sp",
+        "label": "SP"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       },
+       {
+        "key": "notes",
+        "label": "Effects"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "conditions_sec",
+    "title": "Conditions & Statuses",
+    "page": "Mech",
+    "width": "half",
+    "fields": [
      {
       "key": "conditions",
       "label": "Conditions & Statuses",
@@ -305,70 +505,10 @@
     ]
    },
    {
-    "key": "loadout",
-    "title": "Mech Loadout",
-    "fields": [
-     {
-      "key": "weapons",
-      "label": "Mounts & Weapons",
-      "type": "list",
-      "columns": [
-       {
-        "key": "mount",
-        "label": "Mount"
-       },
-       {
-        "key": "weapon",
-        "label": "Weapon"
-       },
-       {
-        "key": "range",
-        "label": "Range"
-       },
-       {
-        "key": "damage",
-        "label": "Damage"
-       },
-       {
-        "key": "tags",
-        "label": "Tags"
-       }
-      ]
-     },
-     {
-      "key": "systems",
-      "label": "Systems",
-      "type": "list",
-      "columns": [
-       {
-        "key": "system",
-        "label": "System"
-       },
-       {
-        "key": "sp",
-        "label": "SP"
-       },
-       {
-        "key": "uses",
-        "label": "Uses"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ],
-      "play": true
-     },
-     {
-      "key": "core_system",
-      "label": "Core System",
-      "type": "longtext"
-     }
-    ]
-   },
-   {
     "key": "reserves",
     "title": "Reserves & Notes",
+    "page": "Mech",
+    "width": "half",
     "fields": [
      {
       "key": "reserves_list",

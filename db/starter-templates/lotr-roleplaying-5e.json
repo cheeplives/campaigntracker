@@ -13,103 +13,259 @@
    {
     "key": "identity",
     "title": "Character",
+    "page": "Character",
     "fields": [
-     {
-      "key": "culture",
-      "label": "Heroic Culture",
-      "type": "text",
-      "summary": true
-     },
      {
       "key": "calling",
       "label": "Calling",
       "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "level",
       "label": "Level",
       "type": "number",
+      "cols": 1,
       "min": 1,
-      "max": 20,
       "summary": true
-     },
-     {
-      "key": "background",
-      "label": "Background",
-      "type": "text"
      },
      {
       "key": "distinctive_features",
       "label": "Distinctive Features",
-      "type": "text"
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "shadow_path",
+      "label": "Shadow Path",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "xp",
       "label": "Experience Points",
       "type": "number",
-      "play": true,
+      "cols": 2,
       "min": 0
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "ab_constitution",
+      "label": "Constitution",
+      "type": "number"
+     },
+     {
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "ab_wisdom",
+      "label": "Wisdom",
+      "type": "number"
+     },
+     {
+      "key": "ab_charisma",
+      "label": "Charisma",
+      "type": "number"
      },
      {
       "key": "inspiration",
       "label": "Inspiration",
       "type": "checkbox",
       "play": true
+     },
+     {
+      "key": "proficiency_bonus",
+      "label": "Proficiency Bonus",
+      "type": "number"
+     },
+     {
+      "key": "passive_perception",
+      "label": "Passive Wisdom (Perception)",
+      "type": "number"
      }
     ]
    },
    {
-    "key": "abilities",
-    "title": "Ability Scores",
+    "key": "combat",
+    "title": "Combat",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
-      "key": "ab_strength",
-      "label": "Strength",
+      "key": "ac",
+      "label": "Armor Class",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 1
      },
      {
-      "key": "ab_dexterity",
-      "label": "Dexterity",
+      "key": "initiative",
+      "label": "Initiative",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 1
      },
      {
-      "key": "ab_constitution",
-      "label": "Constitution",
+      "key": "speed",
+      "label": "Speed",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 2
      },
      {
-      "key": "ab_intelligence",
-      "label": "Intelligence",
-      "type": "number",
-      "min": 1,
-      "max": 30
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
-      "key": "ab_wisdom",
-      "label": "Wisdom",
+      "key": "temp_hp",
+      "label": "Temp HP",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 1,
+      "play": true
      },
      {
-      "key": "ab_charisma",
-      "label": "Charisma",
+      "key": "hit_dice",
+      "label": "Hit Dice",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "death_successes",
+      "label": "Death Save Successes",
+      "type": "pips",
+      "count": 3,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "death_failures",
+      "label": "Death Save Failures",
+      "type": "pips",
+      "count": 3,
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "exhaustion",
+      "label": "Exhaustion",
+      "type": "pips",
+      "count": 6,
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "shadow",
+    "title": "Encumbrance & Shadow",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "carried_weight",
+      "label": "Carried Weight",
       "type": "number",
-      "min": 1,
-      "max": 30
+      "cols": 2
+     },
+     {
+      "key": "encumbered",
+      "label": "Encumbered",
+      "type": "checkbox",
+      "cols": 1,
+      "play": true
+     },
+     {
+      "key": "heavily_encumbered",
+      "label": "Heavily Encumbered",
+      "type": "checkbox",
+      "cols": 1,
+      "play": true
+     },
+     {
+      "key": "shadow_points",
+      "label": "Shadow Score",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "shadow_scars",
+      "label": "Shadow Scars",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
+     {
+      "key": "miserable",
+      "label": "Miserable",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "anguished",
+      "label": "Anguished",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "flaws",
+      "label": "Shadow & Flaws",
+      "type": "list",
+      "columns": [
+       {
+        "key": "flaw",
+        "label": "Flaw"
+       }
+      ]
      }
     ]
    },
    {
     "key": "saves",
-    "title": "Saving Throw Proficiency",
+    "title": "Saving Throws",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
       "key": "save_strength",
@@ -144,285 +300,198 @@
     ]
    },
    {
-    "key": "skills",
-    "title": "Skill Proficiency",
-    "fields": [
-     {
-      "key": "sk_acrobatics",
-      "label": "Acrobatics (DEX)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_animal_handling",
-      "label": "Animal Handling (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_athletics",
-      "label": "Athletics (STR)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_deception",
-      "label": "Deception (CHA)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_explore",
-      "label": "Explore (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_hunting",
-      "label": "Hunting (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_insight",
-      "label": "Insight (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_intimidation",
-      "label": "Intimidation (CHA)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_investigation",
-      "label": "Investigation (INT)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_medicine",
-      "label": "Medicine (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_nature",
-      "label": "Nature (INT)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_old_lore",
-      "label": "Old Lore (INT)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_perception",
-      "label": "Perception (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_performance",
-      "label": "Performance (CHA)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_persuasion",
-      "label": "Persuasion (CHA)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_riddle",
-      "label": "Riddle (INT)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_sleight_of_hand",
-      "label": "Sleight of Hand (DEX)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_stealth",
-      "label": "Stealth (DEX)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "sk_travel",
-      "label": "Travel (WIS)",
-      "type": "checkbox",
-      "size": "small"
-     },
-     {
-      "key": "passive_perception",
-      "label": "Passive Perception",
-      "type": "number",
-      "size": "small"
-     }
-    ]
-   },
-   {
-    "key": "combat",
-    "title": "Combat",
-    "fields": [
-     {
-      "key": "ac",
-      "label": "Armor Class",
-      "type": "number"
-     },
-     {
-      "key": "initiative",
-      "label": "Initiative",
-      "type": "number"
-     },
-     {
-      "key": "speed",
-      "label": "Speed",
-      "type": "number"
-     },
-     {
-      "key": "hp",
-      "label": "Hit Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "temp_hp",
-      "label": "Temporary HP",
-      "type": "number",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "hit_dice",
-      "label": "Hit Dice",
-      "type": "counter",
-      "play": true,
-      "min": 0
-     },
-     {
-      "key": "death_successes",
-      "label": "Death Save Successes",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "death_failures",
-      "label": "Death Save Failures",
-      "type": "pips",
-      "count": 3,
-      "play": true
-     },
-     {
-      "key": "exhaustion",
-      "label": "Exhaustion",
-      "type": "pips",
-      "count": 6,
-      "play": true
-     }
-    ]
-   },
-   {
     "key": "attacks",
     "title": "Attacks",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
       "key": "weapons",
-      "label": "Weapons & Cantrips",
+      "label": "Weapons",
       "type": "list",
       "columns": [
        {
         "key": "name",
-        "label": "Name"
+        "label": "Weapon"
        },
        {
         "key": "attack_bonus",
-        "label": "Attack Bonus"
+        "label": "Atk Bonus"
        },
        {
         "key": "damage_type",
-        "label": "Damage & Type"
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
        },
        {
         "key": "notes",
         "label": "Notes"
        }
-      ]
+      ],
+      "play": true
      }
     ]
    },
    {
     "key": "features",
-    "title": "Features & Proficiencies",
+    "title": "Features, Traits & Virtues",
+    "page": "Character",
+    "width": "third",
     "fields": [
      {
       "key": "features_traits",
-      "label": "Features & Traits",
-      "type": "longtext"
-     },
-     {
-      "key": "other_prof",
-      "label": "Other Proficiencies & Languages",
+      "label": "Features, Traits & Virtues",
       "type": "longtext"
      }
     ]
    },
    {
-    "key": "shadow",
-    "title": "Shadow",
+    "key": "skills",
+    "title": "Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
     "fields": [
      {
-      "key": "shadow_points",
-      "label": "Shadow Points",
-      "type": "counter",
-      "play": true,
-      "min": 0
+      "key": "sk_acrobatics",
+      "label": "Acrobatics (DEX)",
+      "type": "checkbox"
      },
      {
-      "key": "shadow_scars",
-      "label": "Shadow Scars",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "sk_animal_handling",
+      "label": "Animal Handling (WIS)",
+      "type": "checkbox"
      },
      {
-      "key": "miserable",
-      "label": "Miserable",
-      "type": "checkbox",
-      "play": true
+      "key": "sk_athletics",
+      "label": "Athletics (STR)",
+      "type": "checkbox"
      },
      {
-      "key": "shadow_path",
-      "label": "Shadow Path",
-      "type": "text"
+      "key": "sk_deception",
+      "label": "Deception (CHA)",
+      "type": "checkbox"
      },
      {
-      "key": "flaws",
-      "label": "Flaws",
-      "type": "list",
-      "columns": [
-       {
-        "key": "flaw",
-        "label": "Flaw"
-       }
-      ]
+      "key": "sk_explore",
+      "label": "Explore (WIS)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_hunting",
+      "label": "Hunting (WIS)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight (WIS)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation (CHA)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation (INT)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine (WIS)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_nature",
+      "label": "Nature (INT)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_old_lore",
+      "label": "Old Lore (INT)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception (WIS)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance (CHA)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion (CHA)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_riddle",
+      "label": "Riddle (INT)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand (DEX)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth (DEX)",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_travel",
+      "label": "Travel (WIS)",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "rewards_sec",
+    "title": "Rewards & Magical Items",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "rewards",
+      "label": "Rewards & Magical Items",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "gear",
     "title": "Equipment",
+    "page": "Character",
+    "width": "third",
     "fields": [
+     {
+      "key": "coin_copper_pennies",
+      "label": "Copper Coins",
+      "type": "number",
+      "cols": 1,
+      "min": 0
+     },
+     {
+      "key": "coin_silver_pennies",
+      "label": "Silver Pennies",
+      "type": "number",
+      "cols": 1,
+      "min": 0
+     },
+     {
+      "key": "coin_gold_pieces",
+      "label": "Gold Pieces",
+      "type": "number",
+      "cols": 2,
+      "min": 0
+     },
      {
       "key": "equipment",
       "label": "Equipment",
@@ -445,54 +514,154 @@
      {
       "key": "standard_of_living",
       "label": "Standard of Living",
-      "type": "text"
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "features_prof",
+    "title": "Tool Proficiencies & Languages",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "other_prof",
+      "label": "Tool Proficiencies & Languages",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "page": "Background",
+    "fields": [
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "coin_copper_pennies",
-      "label": "Copper Pennies",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "coin_silver_pennies",
-      "label": "Silver Pennies",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
      },
      {
-      "key": "coin_gold_pieces",
-      "label": "Gold Pieces",
-      "type": "number",
-      "play": true,
-      "min": 0
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "appearance_sec",
+    "title": "Character Appearance",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Character Appearance",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "fellowship",
-    "title": "Fellowship",
+    "title": "Fellowship, Heir & Patrons",
+    "page": "Background",
+    "width": "two-thirds",
     "fields": [
-     {
-      "key": "patron",
-      "label": "Patron",
-      "type": "text"
-     },
      {
       "key": "fellowship_points",
       "label": "Fellowship Points",
       "type": "number",
-      "play": true,
-      "min": 0
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "patron",
+      "label": "Patron",
+      "type": "text",
+      "cols": 3
      },
      {
       "key": "fellowship_focus",
       "label": "Fellowship Focus",
-      "type": "text"
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fellowship_notes",
+      "label": "Fellowship Notes",
+      "type": "longtext"
+     },
+     {
+      "key": "heir_name",
+      "label": "Heir Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "heir_investment",
+      "label": "Investment",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "backstory_sec",
+    "title": "Character Backstory",
+    "page": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backstory",
+      "label": "Character Backstory",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "more",
+    "title": "Additional Features & Equipment",
+    "page": "Background",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "more_features",
+      "label": "Additional Features, Traits & Virtues",
+      "type": "longtext"
+     },
+     {
+      "key": "more_equipment",
+      "label": "Additional Equipment & Treasure",
+      "type": "longtext"
      }
     ]
    }
   ]
  }
-}
+}

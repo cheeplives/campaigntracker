@@ -12,19 +12,9 @@
   "sections": [
    {
     "key": "character",
-    "title": "Character",
+    "title": "Personal Details",
+    "width": "half",
     "fields": [
-     {
-      "key": "pronouns",
-      "label": "Pronouns",
-      "type": "text"
-     },
-     {
-      "key": "role",
-      "label": "Role / Job",
-      "type": "text",
-      "summary": true
-     },
      {
       "key": "class",
       "label": "Class",
@@ -35,170 +25,126 @@
        "Scientist",
        "Marine"
       ],
+      "summary": true,
+      "cols": 3
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "role",
+      "label": "Role / Job",
+      "type": "text",
+      "cols": 3,
       "summary": true
      },
      {
       "key": "high_score",
       "label": "High Score",
-      "type": "number"
-     },
-     {
-      "key": "trinket",
-      "label": "Trinket",
-      "type": "text"
-     },
-     {
-      "key": "patch",
-      "label": "Patch",
-      "type": "text"
-     },
-     {
-      "key": "credits",
-      "label": "Credits",
       "type": "number",
-      "play": true
+      "cols": 3
+     },
+     {
+      "key": "personal_notes",
+      "label": "Personal Notes",
+      "type": "longtext"
      }
     ]
    },
    {
     "key": "stats",
     "title": "Stats & Saves",
+    "width": "half",
     "fields": [
      {
       "key": "stat_strength",
       "label": "Strength",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "stat_speed",
       "label": "Speed",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "stat_intellect",
       "label": "Intellect",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "stat_combat",
       "label": "Combat",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 3
      },
      {
       "key": "save_sanity",
       "label": "Sanity",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 2
      },
      {
       "key": "save_fear",
       "label": "Fear",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 2
      },
      {
       "key": "save_body",
       "label": "Body",
       "type": "number",
-      "min": 0,
-      "max": 99,
-      "size": "small"
+      "cols": 2
      }
     ]
    },
    {
     "key": "vitals",
     "title": "Health, Wounds & Stress",
+    "width": "half",
     "fields": [
      {
       "key": "health",
       "label": "Health",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
       "key": "wounds",
       "label": "Wounds",
       "type": "counter",
-      "play": true,
-      "min": 0
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
       "key": "stress",
       "label": "Stress",
       "type": "counter",
-      "play": true,
-      "min": 2,
-      "max": 20
+      "cols": 3,
+      "min": 0,
+      "play": true
      },
      {
       "key": "armor_points",
       "label": "Armor Points",
-      "type": "number"
-     },
-     {
-      "key": "conditions",
-      "label": "Conditions",
-      "type": "list",
-      "columns": [
-       {
-        "key": "condition",
-        "label": "Condition"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ],
+      "type": "number",
+      "cols": 3,
       "play": true
      }
     ]
    },
    {
-    "key": "skills",
-    "title": "Skills",
-    "fields": [
-     {
-      "key": "skill_list",
-      "label": "Skills",
-      "type": "list",
-      "columns": [
-       {
-        "key": "skill",
-        "label": "Skill"
-       },
-       {
-        "key": "tier",
-        "label": "Tier"
-       },
-       {
-        "key": "bonus",
-        "label": "Bonus"
-       }
-      ]
-     }
-    ]
-   },
-   {
     "key": "loadout",
-    "title": "Loadout",
+    "title": "Loadout, Trinket & Patch",
+    "width": "half",
     "fields": [
      {
       "key": "weapons",
@@ -242,9 +188,323 @@
         "label": "Notes"
        }
       ]
+     },
+     {
+      "key": "trinket",
+      "label": "Trinket",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "patch",
+      "label": "Patch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "trained",
+    "title": "Trained Skills (+10)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_linguistics",
+      "label": "Linguistics",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_zoology",
+      "label": "Zoology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_botany",
+      "label": "Botany",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_geology",
+      "label": "Geology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_industrial_equipment",
+      "label": "Industrial Equipment",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_jury_rigging",
+      "label": "Jury-Rigging",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_chemistry",
+      "label": "Chemistry",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_computers",
+      "label": "Computers",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_zero_g",
+      "label": "Zero-G",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_mathematics",
+      "label": "Mathematics",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_art",
+      "label": "Art",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_archaeology",
+      "label": "Archaeology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_theology",
+      "label": "Theology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_military_training",
+      "label": "Military Training",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_rimwise",
+      "label": "Rimwise",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "expert",
+    "title": "Expert Skills (+15)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_psychology",
+      "label": "Psychology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_pathology",
+      "label": "Pathology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_field_medicine",
+      "label": "Field Medicine",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_ecology",
+      "label": "Ecology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_asteroid_mining",
+      "label": "Asteroid Mining",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_mechanical_repair",
+      "label": "Mechanical Repair",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_explosives",
+      "label": "Explosives",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_pharmacology",
+      "label": "Pharmacology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_hacking",
+      "label": "Hacking",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_piloting",
+      "label": "Piloting",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_physics",
+      "label": "Physics",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_mysticism",
+      "label": "Mysticism",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_wilderness_survival",
+      "label": "Wilderness Survival",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_hand_to_hand_combat",
+      "label": "Hand-to-Hand Combat",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "master",
+    "title": "Master Skills (+20)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_sophontology",
+      "label": "Sophontology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_exobiology",
+      "label": "Exobiology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_surgery",
+      "label": "Surgery",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_planetology",
+      "label": "Planetology",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_robotics",
+      "label": "Robotics",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_engineering",
+      "label": "Engineering",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_cybernetics",
+      "label": "Cybernetics",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_artificial_intelligence",
+      "label": "Artificial Intelligence",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_hyperspace",
+      "label": "Hyperspace",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_xenoesotericism",
+      "label": "Xenoesotericism",
+      "type": "checkbox"
+     },
+     {
+      "key": "sk_command",
+      "label": "Command",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skill Training",
+    "width": "half",
+    "fields": [
+     {
+      "key": "training_in_progress",
+      "label": "In Progress",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "training_time",
+      "label": "Time Remaining",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "skill_list",
+      "label": "Other Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "conditions_sec",
+    "title": "Conditions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "condition",
+        "label": "Condition"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
      }
     ]
    }
   ]
  }
-}
+}
