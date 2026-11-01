@@ -1,0 +1,403 @@
+{
+ "name": "Dungeons & Dragons (Basic Set, 1983)",
+ "game": "Dungeons & Dragons",
+ "edition": "Basic Set (1983)",
+ "source": {
+  "title": "Dungeons & Dragons Character Record Sheet (Basic Set)",
+  "owner": "TSR Hobbies (now Wizards of the Coast)",
+  "url": "https://web.archive.org/web/20101129195641id_/http://rpgsheets.com/sheets/033001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "player",
+      "label": "Player's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "dungeon_master",
+      "label": "Dungeon Master",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "name",
+      "label": "Character's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "armor_class",
+      "label": "Armor Class",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_points",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch or Symbol (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "strength_adj",
+      "label": "Strength adjustment",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "intelligence_adj",
+      "label": "Intelligence adjustment",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "wisdom",
+      "label": "Wisdom",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "wisdom_adj",
+      "label": "Wisdom adjustment",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "dexterity_adj",
+      "label": "Dexterity adjustment",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "constitution",
+      "label": "Constitution",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "constitution_adj",
+      "label": "Constitution adjustment",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "charisma_adj",
+      "label": "Charisma adjustment",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saving Throws",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "save_death",
+      "label": "Poison or Death Ray",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "save_wand",
+      "label": "Magic Wand",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "save_paralysis",
+      "label": "Turn to Stone or Paralysis",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "save_breath",
+      "label": "Dragon Breath",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "save_spells",
+      "label": "Spells or Magic Staff",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Languages & Special Skills",
+    "fields": [
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "special_skills",
+      "label": "Special Skills (spells, thief abilities, turning)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "hit_roll",
+    "title": "Hit Roll Needed",
+    "fields": [
+     {
+      "key": "hit_ac_9",
+      "label": "vs AC 9",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_8",
+      "label": "vs AC 8",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_7",
+      "label": "vs AC 7",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_6",
+      "label": "vs AC 6",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_5",
+      "label": "vs AC 5",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_4",
+      "label": "vs AC 4",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_3",
+      "label": "vs AC 3",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_2",
+      "label": "vs AC 2",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_1",
+      "label": "vs AC 1",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "hit_ac_0",
+      "label": "vs AC 0",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment Carried",
+    "page": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "magic_items",
+      "label": "Magic Items",
+      "type": "longtext"
+     },
+     {
+      "key": "normal_items",
+      "label": "Normal Items",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "treasure",
+    "title": "Money and Treasure",
+    "page": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "pp",
+      "label": "PP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gp",
+      "label": "GP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ep",
+      "label": "EP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sp",
+      "label": "SP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cp",
+      "label": "CP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gems",
+      "label": "Gems",
+      "type": "longtext"
+     },
+     {
+      "key": "total_value",
+      "label": "Total Value",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "experience",
+    "title": "Experience",
+    "page": "Equipment",
+    "fields": [
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "xp_bonus",
+      "label": "Bonus/Penalty",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "xp_next",
+      "label": "Needed for next level",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "notes",
+    "title": "Other Notes",
+    "page": "Equipment",
+    "fields": [
+     {
+      "key": "other_notes",
+      "label": "Other notes (places explored, people & monsters met)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

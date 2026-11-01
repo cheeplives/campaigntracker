@@ -1,0 +1,622 @@
+{
+ "name": "GURPS (3rd Edition)",
+ "game": "GURPS",
+ "edition": "3rd Edition (1988)",
+ "source": {
+  "title": "GURPS Character Sheet (3rd edition, front and back)",
+  "owner": "Steve Jackson Games",
+  "url": "https://web.archive.org/web/20101129175101id_/http://rpgsheets.com/sheets/040301.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Sheet",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "date_created",
+      "label": "Date Created",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "sequence",
+      "label": "Sequence",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "unspent_points",
+      "label": "Unspent Points",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "point_total",
+      "label": "Point Total",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "st",
+      "label": "ST",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "st_cost",
+      "label": "ST cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "counter",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "dx",
+      "label": "DX",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dx_cost",
+      "label": "DX cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "damage_thrust",
+      "label": "Damage: Thrust",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "damage_swing",
+      "label": "Swing",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "iq",
+      "label": "IQ",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "iq_cost",
+      "label": "IQ cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "damage_kick",
+      "label": "Kick",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ht",
+      "label": "HT",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ht_cost",
+      "label": "HT cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_taken",
+      "label": "Hits Taken",
+      "type": "counter",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "basic_speed",
+      "label": "Basic Speed",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "swim",
+      "label": "Swim",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "defense",
+    "title": "Encumbrance & Defenses",
+    "width": "half",
+    "fields": [
+     {
+      "key": "enc_none",
+      "label": "None (0)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_none_move",
+      "label": "None (0) move",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_light",
+      "label": "Light (1)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_light_move",
+      "label": "Light (1) move",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_medium",
+      "label": "Med (2)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_medium_move",
+      "label": "Med (2) move",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_heavy",
+      "label": "Hvy (3)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_heavy_move",
+      "label": "Hvy (3) move",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_xheavy",
+      "label": "X-hvy (4)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "enc_xheavy_move",
+      "label": "X-hvy (4) move",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "dodge",
+      "label": "Dodge",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "parry",
+      "label": "Parry",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "block",
+      "label": "Block",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "protection",
+    "title": "Body Protection",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body_protection",
+      "label": "Body Protection",
+      "type": "list",
+      "columns": [
+       {
+        "key": "row",
+        "label": "PD / DR"
+       },
+       {
+        "key": "head",
+        "label": "Head"
+       },
+       {
+        "key": "body",
+        "label": "Body"
+       },
+       {
+        "key": "arms",
+        "label": "Arms"
+       },
+       {
+        "key": "legs",
+        "label": "Legs"
+       },
+       {
+        "key": "hands",
+        "label": "Hands"
+       },
+       {
+        "key": "feet",
+        "label": "Feet"
+       },
+       {
+        "key": "all",
+        "label": "All"
+       }
+      ]
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "other_pd",
+      "label": "Other PD",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "other_dr",
+      "label": "Other DR",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "cost",
+        "label": "Pt. Cost"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages, Disadvantages and Quirks",
+    "width": "half",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Advantages, Disadvantages and Quirks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "sketch",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "summary",
+    "title": "Summary",
+    "width": "half",
+    "fields": [
+     {
+      "key": "sum_attributes",
+      "label": "Attributes",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sum_advantages",
+      "label": "Advantages",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sum_disadvantages",
+      "label": "Disadvantages",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sum_quirks",
+      "label": "Quirks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sum_skills",
+      "label": "Skills",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sum_total",
+      "label": "Total",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "hand_weapons",
+    "title": "Hand Weapons & Skills",
+    "page": "Weapons & Story",
+    "fields": [
+     {
+      "key": "hand_weapons_list",
+      "label": "Hand Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "amount",
+        "label": "Amount"
+       },
+       {
+        "key": "reach",
+        "label": "Reach"
+       },
+       {
+        "key": "st",
+        "label": "ST"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       },
+       {
+        "key": "parry",
+        "label": "Parry"
+       },
+       {
+        "key": "cost",
+        "label": "Pt. Cost"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "ranged_weapons",
+    "title": "Ranged Weapons & Skills",
+    "page": "Weapons & Story",
+    "fields": [
+     {
+      "key": "ranged_weapons_list",
+      "label": "Ranged Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "malf",
+        "label": "Malf"
+       },
+       {
+        "key": "damage",
+        "label": "Type / Amount"
+       },
+       {
+        "key": "ss",
+        "label": "SS"
+       },
+       {
+        "key": "acc",
+        "label": "Acc"
+       },
+       {
+        "key": "range",
+        "label": "1/2D / Max"
+       },
+       {
+        "key": "rof",
+        "label": "Rof"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "st_rcl",
+        "label": "ST / Rcl"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "reactions",
+    "title": "Reaction Modifiers",
+    "page": "Weapons & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "status",
+      "label": "Status",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "reputation",
+      "label": "Reputation",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "reaction_modifiers",
+      "label": "Reaction Modifiers",
+      "type": "longtext"
+     },
+     {
+      "key": "special_reactions",
+      "label": "Special Reaction Modifiers",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "possessions",
+    "title": "Weapons and Possessions",
+    "page": "Weapons & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "possessions_list",
+      "label": "Weapons and Possessions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "cost",
+        "label": "$"
+       },
+       {
+        "key": "weight",
+        "label": "Wt."
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "label": "Totals ($ / Lbs.)",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "story",
+    "title": "Character Story & Notes",
+    "page": "Weapons & Story",
+    "fields": [
+     {
+      "key": "character_story",
+      "label": "Character Story",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

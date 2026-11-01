@@ -1,0 +1,547 @@
+{
+ "name": "Call of Cthulhu (3rd Edition)",
+ "game": "Call of Cthulhu",
+ "edition": "3rd Edition (1983)",
+ "source": {
+  "title": "Call of Cthulhu investigator sheet (3rd edition)",
+  "owner": "Chaosium",
+  "url": "https://web.archive.org/web/20101129160408id_/http://rpgsheets.com/sheets/022001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "investigator",
+    "title": "Investigator",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "residence",
+      "label": "Residence",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Magic & Hit Points",
+    "width": "third",
+    "fields": [
+     {
+      "key": "mp",
+      "label": "Magic Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "statistics",
+    "title": "Investigator Statistics",
+    "fields": [
+     {
+      "key": "ch_str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_idea",
+      "label": "Idea",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_app",
+      "label": "APP",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_pow",
+      "label": "POW",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_luck",
+      "label": "Luck",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_siz",
+      "label": "SIZ",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_san",
+      "label": "SAN",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_edu",
+      "label": "EDU",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_know",
+      "label": "Know",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "schools",
+      "label": "Schools",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "degrees",
+      "label": "Degrees",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage Bonus/Penalty",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "sanity_sec",
+    "title": "Sanity Points",
+    "fields": [
+     {
+      "key": "sanity",
+      "label": "Sanity Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "max": 99,
+      "play": true
+     },
+     {
+      "key": "insanity",
+      "label": "Insanity",
+      "type": "text",
+      "cols": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Investigator Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_accounting",
+      "label": "Accounting (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_anthropology",
+      "label": "Anthropology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_archaeology",
+      "label": "Archaeology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_astronomy",
+      "label": "Astronomy (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_bargain",
+      "label": "Bargain (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_botany",
+      "label": "Botany (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_camouflage",
+      "label": "Camouflage (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_chemistry",
+      "label": "Chemistry (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb (40)",
+      "type": "number"
+     },
+     {
+      "key": "sk_credit_rating",
+      "label": "Credit Rating (15)",
+      "type": "number"
+     },
+     {
+      "key": "sk_cthulhu_mythos",
+      "label": "Cthulhu Mythos (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_debate",
+      "label": "Debate (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_diagnose_disease",
+      "label": "Diagnose Disease (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_dodge_dex_x2",
+      "label": "Dodge (DEX x2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_drive_automobile",
+      "label": "Drive Automobile (20)",
+      "type": "number"
+     },
+     {
+      "key": "sk_electrical_repair",
+      "label": "Electrical Repair (10)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills_2",
+    "title": "Investigator Skills (continued)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_fast_talk",
+      "label": "Fast Talk (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid (30)",
+      "type": "number"
+     },
+     {
+      "key": "sk_geology",
+      "label": "Geology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_hide",
+      "label": "Hide (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_history",
+      "label": "History (20)",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_law",
+      "label": "Law (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_library_use",
+      "label": "Library Use (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_linguist",
+      "label": "Linguist (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_make_maps",
+      "label": "Make Maps (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_mechanical_repair",
+      "label": "Mechanical Repair (20)",
+      "type": "number"
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_operate_hv_machine",
+      "label": "Operate Hv. Machine (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_oratory",
+      "label": "Oratory (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_pharmacy",
+      "label": "Pharmacy (00)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills_3",
+    "title": "Investigator Skills (continued)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_photography",
+      "label": "Photography (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_pick_pocket",
+      "label": "Pick Pocket (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot_aircraft",
+      "label": "Pilot Aircraft (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_psychoanalysis",
+      "label": "Psychoanalysis (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_psychology",
+      "label": "Psychology (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_read_write_english_edu_x5",
+      "label": "Read/Write English (EDU x5)",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_sing",
+      "label": "Sing (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_sneak",
+      "label": "Sneak (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_spot_hidden",
+      "label": "Spot Hidden (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_throw",
+      "label": "Throw (25)",
+      "type": "number"
+     },
+     {
+      "key": "sk_track",
+      "label": "Track (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_treat_disease",
+      "label": "Treat Disease (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_treat_poison",
+      "label": "Treat Poison (05)",
+      "type": "number"
+     },
+     {
+      "key": "sk_zoology",
+      "label": "Zoology (00)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Other Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_skills_list",
+      "label": "Read/Write, Speak and other skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "skill_checks",
+      "label": "Skill checks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attk",
+        "label": "Attk%"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "impale",
+        "label": "Impale"
+       },
+       {
+        "key": "parry",
+        "label": "Parry%"
+       },
+       {
+        "key": "hit_points",
+        "label": "Hit Points"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "notes",
+    "title": "Spells Known, Other Skills, Notes",
+    "fields": [
+     {
+      "key": "spells_notes",
+      "label": "Spells Known, Other Skills, Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
