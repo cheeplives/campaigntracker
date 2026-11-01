@@ -230,6 +230,7 @@
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
+    E.setTuning(S.camp.settings?.tuning);
     hideChangeBanner();
     if (isGM()) await ensureWeather(today(), today()).catch(() => {});
   }
@@ -5703,6 +5704,198 @@
     return c;
   }
 
+  // ------------------------------------------------------------ settings: weather tuning
+  /** Settings → Weather tuning: the app's own weather choices (see the About page), changed for this campaign only.
+   * The campaign stores just the values that differ from the built-in ones (settings.tuning). */
+  function tuningCard() {
+    const D = E.tuningDefaults();
+    let T = E.mergeTuning(settings().tuning);
+    const wxName = k => `${E.WEATHER[k]?.icon || ''} ${E.WEATHER[k]?.label || k}`.trim();
+    const regionClimates = S.regions.map(r => r.settings?.climate || 'temperate');
+    const pick = (path, obj) => path.reduce((o, k) => (o == null ? undefined : o[k]), obj);
+    const fmt = v => (v === undefined ? '' : String(Math.round(v * 1000) / 1000));
+    const countChanges = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.values(o).reduce((n, v) => n + countChanges(v), 0) : o === undefined ? 0 : 1);
+    const counters = {};
+    const recount = () => {
+      const ch = E.tuningChanges(T);
+      for (const [k, out] of Object.entries(counters)) { const n = countChanges(ch[k]); out.textContent = n ? ` · ${n} changed` : ''; }
+    };
+    /** A number box for the value at path in T. scale shows it ×scale (100 for a chance shown in %). An empty box
+     * goes back to the built-in value, or leaves the value out where there is none (blank = 0, or worked out). */
+    function numBox(path, { label, step = 'any', min, max, scale = 1, blank = '' } = {}) {
+      const def = pick(path, D);
+      const input = el('input', { type: 'number', inputmode: 'decimal', step, min, max, class: 'tune-num', 'aria-label': label, placeholder: blank,
+        value: fmt(pick(path, T) === undefined ? undefined : pick(path, T) * scale) });
+      const mark = () => {
+        const v = pick(path, T), changed = JSON.stringify(v) !== JSON.stringify(def);
+        input.classList.toggle('tuned', changed);
+        input.dataset.tip = changed ? `Built-in: ${def === undefined ? (blank || 'none') : fmt(def * scale)}` : '';
+      };
+      input.addEventListener('input', () => {
+        const parent = pick(path.slice(0, -1), T), key = path[path.length - 1];
+        const n = input.value === '' ? NaN : Number(input.value) / scale;
+        if (Number.isFinite(n)) parent[key] = n;
+        else if (def !== undefined) parent[key] = def;
+        else delete parent[key];
+        mark(); recount();
+      });
+      input.addEventListener('change', () => { input.value = fmt(pick(path, T) === undefined ? undefined : pick(path, T) * scale); });
+      mark();
+      return input;
+    }
+    const table = (head, rows) => el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl tune-tbl' },
+      el('tr', {}, head.map(h => el('th', {}, h))), rows.map(r => el('tr', {}, r.map((c, i) => el(i ? 'td' : 'th', { scope: i ? null : 'row' }, c))))));
+    /** One fold-out section: its body is drawn by draw(), again after "Reset this section". */
+    function section(key, title, intro, draw) {
+      const body = el('div', { class: 'tune-body' });
+      const count = el('span', { class: 'muted small' });
+      counters[key] = count;
+      const redraw = () => { body.replaceChildren(...clean([draw()].flat())); recount(); };
+      const reset = btn('Reset this section', () => { T[key] = JSON.parse(JSON.stringify(D[key])); redraw(); }, 'small',
+        'Put this section back to the built-in values. Save to keep it');
+      redraw();
+      return el('details', { class: 'tune-sec' }, el('summary', {}, title, count),
+        el('p', { class: 'muted small' }, intro), body, el('div', { class: 'row' }, reset));
+    }
+    const SEASON_LABEL = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', any: 'Any other time' };
+
+    // storms, fog and dust in each Köppen class
+    const kSel = select([], '', { 'aria-label': 'Köppen class' });
+    const firstK = regionClimates.find(c => String(c).startsWith('koppen:'));
+    let kCode = firstK ? firstK.slice(7) : 'Cfb';
+    const kOptions = () => {
+      const ch = E.tuningChanges(T).koppen || {};
+      kSel.replaceChildren(...Object.entries(E.KOPPEN_GROUPS).map(([g, name]) => el('optgroup', { label: name },
+        Object.entries(E.KOPPEN).filter(([code]) => code[0] === g).map(([code, k]) =>
+          el('option', { value: code, selected: code === kCode }, `${code} · ${k.label}${ch[code] ? ' (changed)' : ''}`)))));
+    };
+    const kTable = el('div');
+    const drawK = () => {
+      const f = (s, x, label) => numBox(['koppen', kCode, s, x], { label: `${kCode} ${s} ${label}`, step: 0.1, min: 0, max: 3 });
+      kTable.replaceChildren(table(['Season', 'Storms', 'Fog', 'Dust storms'],
+        E.KOPPEN_SEASONS.map(s => [SEASON_LABEL[s], f(s, 'storm', 'storms'), f(s, 'fog', 'fog'), f(s, 'dust', 'dust storms')])));
+    };
+    kSel.addEventListener('change', () => { kCode = kSel.value; drawK(); });
+    const koppenSec = section('koppen', 'Storms, fog and dust in each Köppen class',
+      'How often each turns up in a season, 0 (never) to 3 (often). Storms are thunderstorms, or blizzards when it is freezing. Highs and wetness come from weather stations and stay as they are. Used by regions with a Köppen class; a region\'s own custom climate keeps its own figures.',
+      () => { kOptions(); drawK(); return [field('Class', kSel), kTable]; });
+    kTable.addEventListener('input', kOptions);
+
+    // the simple climates' weather mix
+    const cSel = select(Object.entries(E.CLIMATES).map(([k, c]) => [k, c.label]), '', { 'aria-label': 'Climate' });
+    let cKey = regionClimates.find(c => E.CLIMATES[c]) || 'temperate';
+    cSel.value = cKey;
+    const cTable = el('div');
+    const drawC = () => {
+      const seasons = Object.keys(D.climates[cKey]);
+      const used = new Set(seasons.flatMap(s => Object.keys(D.climates[cKey][s])));
+      const outdoor = E.OUTDOOR_WEATHER.some(k => used.has(k));
+      const types = [...new Set([...(outdoor ? E.OUTDOOR_WEATHER : []), ...used])];
+      const total = s => Object.values(T.climates[cKey][s]).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+      const share = (s, k) => { const t = total(s), w = T.climates[cKey][s][k] || 0; return t && w ? `${Math.round(w / t * 100)}%` : ''; };
+      const rows = types.map(k => [wxName(k), ...seasons.map(s => {
+        const box = numBox(['climates', cKey, s, k], { label: `${SEASON_LABEL[s]} ${E.WEATHER[k].label}`, step: 0.1, min: 0, max: 100, blank: '0' });
+        const pct = el('small', { class: 'muted tune-pct', 'data-season': s, 'data-type': k }, share(s, k));
+        return el('span', { class: 'tune-cell' }, box, pct);
+      })]);
+      const tbl = table(['Weather', ...seasons.map(s => SEASON_LABEL[s])], rows);
+      tbl.addEventListener('input', () => tbl.querySelectorAll('.tune-pct').forEach(p => (p.textContent = share(p.dataset.season, p.dataset.type))));
+      cTable.replaceChildren(tbl);
+    };
+    cSel.addEventListener('change', () => { cKey = cSel.value; drawC(); });
+    const climateSec = section('climates', 'Weather mix of the simple climates',
+      'How likely each weather is in each season, against the others: a 6 comes up twice as often as a 3, and 0 or empty never. The share of days it works out to is shown beside each.',
+      () => { drawC(); return [field('Climate', cSel), cTable]; });
+
+    // visibility
+    const visSec = section('visibility', 'How weather changes visibility',
+      'Added to a shift\'s visibility (0–5) by day and at night: −2 takes Clear down to Dim. Moonlight is the share of the moons\' light that gets through at night, 0 to 1.',
+      () => table(['Weather', 'By day', 'At night', 'Moonlight'], Object.keys(E.WEATHER).map(k => [wxName(k),
+        numBox(['visibility', k, 'day'], { label: `${E.WEATHER[k].label} by day`, step: 1, min: -5, max: 5 }),
+        numBox(['visibility', k, 'night'], { label: `${E.WEATHER[k].label} at night`, step: 1, min: -5, max: 5 }),
+        numBox(['visibility', k, 'moon'], { label: `${E.WEATHER[k].label} moonlight`, step: 0.05, min: 0, max: 1 })])));
+
+    // shifts
+    const labelOf = k => E.WEATHER[k]?.label || k;
+    const byName = {};
+    for (const [k, w] of Object.entries(E.WEATHER)) { byName[k] = k; byName[w.label.toLowerCase()] = k; }
+    const variantBox = k => {
+      const input = el('input', { class: 'tune-list', 'aria-label': `${labelOf(k)} eases off to`, value: (T.shifts.variants[k] || []).map(labelOf).join(', ') });
+      const mark = () => {
+        const changed = JSON.stringify(T.shifts.variants[k] || []) !== JSON.stringify(D.shifts.variants[k] || []);
+        input.classList.toggle('tuned', changed);
+        input.dataset.tip = changed ? `Built-in: ${(D.shifts.variants[k] || []).map(labelOf).join(', ') || 'none'}` : '';
+      };
+      input.addEventListener('input', () => {
+        const names = input.value.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        const bad = names.filter(n => !byName[n]);
+        input.setCustomValidity(bad.length ? `Not a kind of weather: ${bad.join(', ')}` : '');
+        if (bad.length) return;
+        const list = [...new Set(names.map(n => byName[n]))].filter(x => x !== k);
+        if (list.length || D.shifts.variants[k]) T.shifts.variants[k] = list; else delete T.shifts.variants[k];
+        mark(); recount();
+      });
+      mark();
+      return input;
+    };
+    const pct = (key, label, tipText) => field(label, numBox(['shifts', key], { label, step: 1, min: 0, max: 100, scale: 100 }), null, tipText);
+    const shiftSec = section('shifts', 'How the shifts ease off from the forecast',
+      'The day\'s weather is the worst it gets. Walking out from the shift it peaks in, each shift may ease off a step to a milder neighbour, and stays eased once it has.',
+      () => [el('div', { class: 'grid2' },
+        pct('ease', 'Chance a shift eases off (%)', 'For each shift away from the peak, the chance it steps down to a milder weather from the list below'),
+        pct('fogLift', 'Chance fog lifts by Midday and after (%)', 'Fog is thickest at dawn, so it eases off faster later in the day'),
+        pct('calmNight', 'Chance the wind drops overnight (%)', 'The chance the overnight shift has one level less wind than the day\'s strongest'),
+        pct('calmDay', 'Chance the wind drops in other shifts (%)', 'The same for Dawn, Midday and Dusk, when they are not the peak')),
+      el('p', { class: 'muted small' }, 'What each weather eases off to, mildest last. Type the names separated by commas, e.g. "Light rain, Overcast".'),
+      table(['Weather', 'Eases off to'], Object.keys(E.WEATHER).map(k => [wxName(k), variantBox(k)]))]);
+
+    // ground
+    const groundTypes = [...E.OUTDOOR_WEATHER, 'damp'];
+    const gf = (path, label, opts, tipText, hint) => field(label, numBox(['ground', ...path], { label, ...opts }), hint, tipText);
+    const groundSec = section('ground', 'Ground conditions',
+      'Snow and rain build up over the days before, quarter by quarter (each of the four shifts). Snow melts in the warmth and the ground dries in sun, warmth and wind.',
+      () => [el('div', { class: 'grid3' },
+        gf(['melt'], 'Snow melt (cm a quarter per °C)', { step: 0.05, min: 0, max: 5 }, 'How much snow melts in a quarter for each degree above freezing'),
+        gf(['drying'], 'Drying rate', { step: 0.005, min: 0, max: 1 }, 'How fast warmth and sun dry damp ground. Twice the number dries it twice as fast'),
+        gf(['fieldCapacity'], 'Water the soil holds (mm)', { step: 1, min: 5, max: 55 }, 'Rain beyond this drains away over the following quarters instead of soaking in')),
+      table(['Weather', 'Snow (cm a quarter)', 'Rain (mm a quarter)', 'Sun drying'], groundTypes.map(k => [wxName(k),
+        numBox(['ground', 'snowfall', k], { label: `${labelOf(k)} snow`, step: 0.1, min: 0, max: 50, blank: '0' }),
+        numBox(['ground', 'rainfall', k], { label: `${labelOf(k)} rain`, step: 0.1, min: 0, max: 100, blank: '0' }),
+        numBox(['ground', 'sunshine', k], { label: `${labelOf(k)} sun drying`, step: 0.1, min: 0, max: 5, blank: 'auto' })])),
+      el('p', { class: 'muted small' }, 'Sun drying: 1 is an ordinary day. Left empty, it is 0.2 for weather that rains or snows and 0.8 otherwise.'),
+      el('h4', {}, 'Where the ground turns'),
+      el('p', { class: 'muted small' }, 'The water in the topsoil (mm, up to 60) each label starts at, and the snow depth (cm) for each snow label. Each must be higher than the one before. Below Firm the ground is Dry.'),
+      table(['', ...Object.values(E.GROUND_WET_STEPS)], [['Water (mm)', ...Object.keys(E.GROUND_WET_STEPS).map(k => numBox(['ground', 'wet', k], { label: `${E.GROUND_WET_STEPS[k]} from (mm)`, step: 1, min: 0, max: 59 }))]]),
+      table(['', ...Object.values(E.GROUND_SNOW_STEPS)], [['Snow (cm)', ...Object.keys(E.GROUND_SNOW_STEPS).map(k => numBox(['ground', 'snow', k], { label: `${E.GROUND_SNOW_STEPS[k]} from (cm)`, step: 0.5, min: 0.1, max: 1000 }))]]),
+      el('p', { class: 'muted small' }, 'Frozen ground with at least Soft\'s water in it shows as icy ruts.')]);
+
+    const save = async (tuning, msg) => {
+      const s = { ...settings() };
+      if (tuning && Object.keys(tuning).length) s.tuning = tuning; else delete s.tuning;
+      await post('campaign_update', { settings: s }, S.camp.id);
+      await loadCampaign(S.camp.id, true); toast(msg); route();
+    };
+    const form = el('form', { class: 'card tune-card', novalidate: true }, el('h2', {}, 'Weather tuning'),
+      el('p', { class: 'muted' }, 'The app\'s own choices behind the weather, for this campaign only: they aren\'t measurements (see About). Changed values are highlighted; hover or tap one to see the built-in value. ',
+        'Days that already have weather keep it. New days and re-rolls, and every day\'s shifts, visibility and ground, follow these straight away.'),
+      koppenSec, climateSec, visSec, shiftSec, groundSec,
+      el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save weather tuning'),
+        settings().tuning ? btn('Reset all to built-in', busy(null, async () => {
+          if (!await confirmDialog('Put all the weather tuning back to the built-in values for this campaign?')) return;
+          await save(null, 'Weather tuning reset');
+        }), 'small', 'Forget every change made here, so the campaign uses the app\'s built-in values again') : null));
+    form.addEventListener('submit', busy(null, async e => {
+      e.preventDefault();
+      const badList = form.querySelector('.tune-list:invalid');
+      if (badList) { badList.closest('details').open = true; badList.reportValidity(); return; }
+      const problem = E.tuningProblem(T);
+      if (problem) throw new Error(problem);
+      await save(E.tuningChanges(T), 'Weather tuning saved');
+    }));
+    recount();
+    return form;
+  }
+
   function viewSettings() {
     if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
     const st = settings(), c = cal(), t = calToText(c);
@@ -5965,7 +6158,7 @@
         if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
         try { await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/'; } catch (err) { toast(err.message, true); }
       }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
-    mount(...campaignHeader('settings'), general, calForm, danger);
+    mount(...campaignHeader('settings'), general, calForm, tuningCard(), danger);
   }
 
   // ------------------------------------------------------------ about: where the built-in figures come from
@@ -6046,7 +6239,7 @@
           'The rates the weather tooltips give for rain, snow and hail are the usual intensity bands, rounded: ', cite('rain'), ', ', cite('snowfall'), ' and ', cite('hail'), '.'),
         p('Game tuning, not measurements: how often thunderstorms, fog and dust storms turn up (0–3) in each class, the weather mix of the simple climates, ',
           'how each kind of weather changes visibility, how the four shifts ease off from the day\'s forecast, and the ground conditions model (how much snow and rain each kind of weather leaves, ',
-          'how fast it melts and dries, and where the ground turns soft, muddy or frozen). These are the app\'s own choices.')),
+          'how fast it melts and dries, and where the ground turns soft, muddy or frozen). These are the app\'s own choices, and a GM can change them for one campaign under Settings → Weather tuning.')),
       section('Calendars and holidays',
         list([
           ['Gregorian calendar months and leap years: ', cite('gregorian'), '. Season start dates (equinoxes and solstices): ', cite('usno'), '.'],
