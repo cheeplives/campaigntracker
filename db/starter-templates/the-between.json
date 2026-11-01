@@ -1,0 +1,223 @@
+{
+ "name": "The Between",
+ "game": "The Between",
+ "edition": "1st Edition (Carved from Brindlewood)",
+ "source": {
+  "title": "The Between playbooks",
+  "owner": "The Gauntlet",
+  "url": "https://www.gauntlet-rpg.com/uploads/7/7/8/1/77811662/the_between_playbooks.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "hunter",
+    "title": "Hunter",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "The American",
+       "The Explorer",
+       "The Factotum",
+       "The Mother",
+       "The Orphan",
+       "The Undeniable",
+       "The Vessel"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "vice",
+      "label": "Vice",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "vitality",
+      "label": "Vitality",
+      "type": "number"
+     },
+     {
+      "key": "composure",
+      "label": "Composure",
+      "type": "number"
+     },
+     {
+      "key": "reason",
+      "label": "Reason",
+      "type": "number"
+     },
+     {
+      "key": "presence",
+      "label": "Presence",
+      "type": "number"
+     },
+     {
+      "key": "sensitivity",
+      "label": "Sensitivity",
+      "type": "number"
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "moves_sec",
+    "title": "Playbook Moves",
+    "width": "half",
+    "fields": [
+     {
+      "key": "playbook_moves",
+      "label": "Playbook Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "conditions_sec",
+    "title": "Conditions & Dawn Questions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "dawn_questions",
+      "label": "Dawn Questions marked this session",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "quarters",
+    "title": "Personal Quarters",
+    "width": "half",
+    "fields": [
+     {
+      "key": "quarters_items",
+      "label": "Personal Quarters",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "marked",
+        "label": "Marked"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advancements",
+    "title": "Advancements",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "adv_ability_1",
+      "label": "Increase an ability modifier by 1 (1)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_ability_2",
+      "label": "Increase an ability modifier by 1 (2)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_ability_3",
+      "label": "Increase an ability modifier by 1 (3)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_move_1",
+      "label": "Choose an additional move from your playbook (1)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_move_2",
+      "label": "Choose an additional move from your playbook (2)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_custom",
+      "label": "Write a custom move for your character",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_unmark",
+      "label": "Unmark everything in your Personal Quarters",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "masks",
+    "title": "The Mask of the Past & Future",
+    "fields": [
+     {
+      "key": "mask_past",
+      "label": "The Mask of the Past (marked)",
+      "type": "longtext"
+     },
+     {
+      "key": "mask_future",
+      "label": "The Mask of the Future (marked)",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

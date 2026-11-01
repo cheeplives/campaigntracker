@@ -1,0 +1,695 @@
+{
+ "name": "The Riddle of Steel",
+ "game": "The Riddle of Steel",
+ "edition": "1st Edition (Driftwood Publishing)",
+ "source": {
+  "title": "The Riddle of Steel character sheet",
+  "owner": "Driftwood Publishing",
+  "url": "https://web.archive.org/web/20101129195050id_/http://rpgsheets.com/sheets/188001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "temporal",
+    "title": "Temporal",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "st",
+      "label": "Strength (ST)",
+      "type": "number"
+     },
+     {
+      "key": "ag",
+      "label": "Agility (AG)",
+      "type": "number"
+     },
+     {
+      "key": "to",
+      "label": "Toughness (TO)",
+      "type": "number"
+     },
+     {
+      "key": "en",
+      "label": "Endurance (EN)",
+      "type": "number"
+     },
+     {
+      "key": "ht",
+      "label": "Health (HT)",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "wp",
+      "label": "Will Power (WP)",
+      "type": "number"
+     },
+     {
+      "key": "wit",
+      "label": "Wit (Wit)",
+      "type": "number"
+     },
+     {
+      "key": "ma",
+      "label": "Mental Aptitude (MA)",
+      "type": "number"
+     },
+     {
+      "key": "soc",
+      "label": "Social (Soc)",
+      "type": "number"
+     },
+     {
+      "key": "per",
+      "label": "Perception (Per)",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "derived",
+    "title": "Derived",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "reflex",
+      "label": "Reflex",
+      "type": "number"
+     },
+     {
+      "key": "aim",
+      "label": "Aim",
+      "type": "number"
+     },
+     {
+      "key": "knockdown",
+      "label": "Knockdown",
+      "type": "number"
+     },
+     {
+      "key": "knockout",
+      "label": "Knockout",
+      "type": "number"
+     },
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "number"
+     },
+     {
+      "key": "insight_points",
+      "label": "Insight Points",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player's Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "philosophy",
+      "label": "Philosophy",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "liege",
+      "label": "Liege",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "allies",
+      "label": "Allies",
+      "type": "longtext"
+     },
+     {
+      "key": "enemies",
+      "label": "Enemies",
+      "type": "longtext"
+     },
+     {
+      "key": "faith",
+      "label": "Faith/Creed",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "schooling",
+      "label": "Schooling",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gifts",
+      "label": "Gifts",
+      "type": "longtext"
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Background & Notes",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_stuff",
+    "title": "Skills & Stuff",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "sr",
+        "label": "SR"
+       },
+       {
+        "key": "test",
+        "label": "Tests"
+       }
+      ]
+     },
+     {
+      "key": "stuff",
+      "label": "Stuff",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "spiritual",
+    "title": "Spiritual Attributes",
+    "page": "Combat & Sorcery",
+    "width": "half",
+    "fields": [
+     {
+      "key": "spiritual_attributes",
+      "label": "Spiritual Attributes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Attribute"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "sorcery",
+    "title": "Sorcery",
+    "page": "Combat & Sorcery",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "kaa",
+      "label": "Kaa",
+      "type": "number"
+     },
+     {
+      "key": "form",
+      "label": "Form",
+      "type": "number"
+     },
+     {
+      "key": "art",
+      "label": "Art",
+      "type": "number"
+     },
+     {
+      "key": "discipline",
+      "label": "Discipline",
+      "type": "number"
+     },
+     {
+      "key": "draw",
+      "label": "Draw",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "proficiencies_sec",
+    "title": "Proficiencies & Pools",
+    "page": "Combat & Sorcery",
+    "width": "third",
+    "fields": [
+     {
+      "key": "proficiencies",
+      "label": "Proficiencies",
+      "type": "list",
+      "columns": [
+       {
+        "key": "proficiency",
+        "label": "Proficiency"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     },
+     {
+      "key": "pools",
+      "label": "Pools",
+      "type": "list",
+      "columns": [
+       {
+        "key": "pool",
+        "label": "Pool"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Combat & Sorcery",
+    "width": "third",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "piece",
+        "label": "Armor"
+       },
+       {
+        "key": "av",
+        "label": "AV"
+       },
+       {
+        "key": "mp",
+        "label": "mp"
+       },
+       {
+        "key": "cpm",
+        "label": "cpm"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds",
+    "page": "Combat & Sorcery",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wound_list",
+      "label": "Wounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "locale",
+        "label": "Locale"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "pain",
+      "label": "Pain",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "bloodloss",
+      "label": "Bloodloss",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "zones",
+    "title": "Armor by Zone",
+    "page": "Combat & Sorcery",
+    "fields": [
+     {
+      "key": "zone_i",
+      "label": "Zone I",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_ii",
+      "label": "Zone II",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_iii",
+      "label": "Zone III",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_iv",
+      "label": "Zone IV",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_v",
+      "label": "Zone V",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_vi",
+      "label": "Zone VI",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_vii",
+      "label": "Zone VII",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_viii",
+      "label": "Zone VIII",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_ix",
+      "label": "Zone IX",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_x",
+      "label": "Zone X",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_xi",
+      "label": "Zone XI",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_xii",
+      "label": "Zone XII",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_xiii",
+      "label": "Zone XIII",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "zone_xiv",
+      "label": "Zone XIV",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "maneuvers_sec",
+    "title": "Maneuvers & Spells",
+    "page": "Combat & Sorcery",
+    "width": "third",
+    "fields": [
+     {
+      "key": "maneuvers",
+      "label": "Maneuvers & Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Maneuver or Spell"
+       },
+       {
+        "key": "cost",
+        "label": "Cost/CTN"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Combat & Sorcery",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "melee_weapons",
+      "label": "Melee Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "lth",
+        "label": "Lth"
+       },
+       {
+        "key": "cut_atn",
+        "label": "Cutting ATN"
+       },
+       {
+        "key": "cut_dmg",
+        "label": "Cutting Damage"
+       },
+       {
+        "key": "thr_atn",
+        "label": "Thrusting ATN"
+       },
+       {
+        "key": "thr_dmg",
+        "label": "Thrusting Damage"
+       },
+       {
+        "key": "dtn",
+        "label": "DTN"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "missile_weapons",
+      "label": "Missile Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "prep",
+        "label": "Prep Time"
+       },
+       {
+        "key": "atn",
+        "label": "ATN"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Effective ST/Damage"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "aging",
+      "label": "Aging",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   }
+  ]
+ }
+}

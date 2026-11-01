@@ -1,0 +1,189 @@
+{
+ "name": "Thousand Arrows",
+ "game": "Thousand Arrows",
+ "edition": "1st Edition (Evil Hat)",
+ "source": {
+  "title": "Thousand Arrows character sheet (Support Materials)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2026/07/Thousand-Arrows-Support-Materials.zip",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "role",
+      "label": "Role",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "allegiance",
+      "label": "Allegiance",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "rings",
+    "title": "Rings",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "earth",
+      "label": "Earth",
+      "type": "number"
+     },
+     {
+      "key": "water",
+      "label": "Water",
+      "type": "number"
+     },
+     {
+      "key": "fire",
+      "label": "Fire",
+      "type": "number"
+     },
+     {
+      "key": "wind",
+      "label": "Wind",
+      "type": "number"
+     },
+     {
+      "key": "void",
+      "label": "Void",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "materiel_sec",
+    "title": "Materiél & Section",
+    "width": "half",
+    "fields": [
+     {
+      "key": "materiel",
+      "label": "Materiél",
+      "type": "longtext"
+     },
+     {
+      "key": "section",
+      "label": "Section",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "attachments",
+    "title": "Attachments",
+    "width": "half",
+    "fields": [
+     {
+      "key": "att_self",
+      "label": "Self",
+      "type": "pips",
+      "count": 4,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "att_drive",
+      "label": "Drive Attachment",
+      "type": "pips",
+      "count": 4,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "bonds",
+      "label": "Bonds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bond",
+        "label": "Bond"
+       },
+       {
+        "key": "attachment",
+        "label": "Attachment (0–4)"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "advancements",
+    "title": "Advancements",
+    "width": "half",
+    "fields": [
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "advancements_taken",
+      "label": "Advancements Taken",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advancement",
+        "label": "Advancement"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "moves_sec",
+    "title": "Special Moves",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_moves",
+      "label": "Special Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
