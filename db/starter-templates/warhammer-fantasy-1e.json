@@ -1,0 +1,811 @@
+{
+ "name": "Warhammer Fantasy Roleplay 1st Edition",
+ "game": "Warhammer Fantasy Roleplay",
+ "edition": "1st Edition (1986)",
+ "source": {
+  "title": "WFRP 1st edition character sheet (2018 reissue)",
+  "owner": "Games Workshop / Cubicle 7",
+  "url": "https://cubicle7games.com/en_EU/blog/free-adventures-resources-for-wfrp",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "career_class",
+      "label": "Career Class",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "current_career",
+      "label": "Current Career",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "career_path",
+      "label": "Career Path",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "career_exits",
+      "label": "Career Exits",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "profile_starter",
+    "title": "Starter Profile",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "m_starter",
+      "label": "M Starter",
+      "type": "number"
+     },
+     {
+      "key": "ws_starter",
+      "label": "WS Starter",
+      "type": "number"
+     },
+     {
+      "key": "bs_starter",
+      "label": "BS Starter",
+      "type": "number"
+     },
+     {
+      "key": "s_starter",
+      "label": "S Starter",
+      "type": "number"
+     },
+     {
+      "key": "t_starter",
+      "label": "T Starter",
+      "type": "number"
+     },
+     {
+      "key": "w_starter",
+      "label": "W Starter",
+      "type": "number"
+     },
+     {
+      "key": "i_starter",
+      "label": "I Starter",
+      "type": "number"
+     },
+     {
+      "key": "a_starter",
+      "label": "A Starter",
+      "type": "number"
+     },
+     {
+      "key": "dex_starter",
+      "label": "Dex Starter",
+      "type": "number"
+     },
+     {
+      "key": "ld_starter",
+      "label": "Ld Starter",
+      "type": "number"
+     },
+     {
+      "key": "int_starter",
+      "label": "Int Starter",
+      "type": "number"
+     },
+     {
+      "key": "cl_starter",
+      "label": "Cl Starter",
+      "type": "number"
+     },
+     {
+      "key": "wp_starter",
+      "label": "WP Starter",
+      "type": "number"
+     },
+     {
+      "key": "fel_starter",
+      "label": "Fel Starter",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "profile_advance",
+    "title": "Advance Scheme",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "m_advance",
+      "label": "M Advance",
+      "type": "number"
+     },
+     {
+      "key": "ws_advance",
+      "label": "WS Advance",
+      "type": "number"
+     },
+     {
+      "key": "bs_advance",
+      "label": "BS Advance",
+      "type": "number"
+     },
+     {
+      "key": "s_advance",
+      "label": "S Advance",
+      "type": "number"
+     },
+     {
+      "key": "t_advance",
+      "label": "T Advance",
+      "type": "number"
+     },
+     {
+      "key": "w_advance",
+      "label": "W Advance",
+      "type": "number"
+     },
+     {
+      "key": "i_advance",
+      "label": "I Advance",
+      "type": "number"
+     },
+     {
+      "key": "a_advance",
+      "label": "A Advance",
+      "type": "number"
+     },
+     {
+      "key": "dex_advance",
+      "label": "Dex Advance",
+      "type": "number"
+     },
+     {
+      "key": "ld_advance",
+      "label": "Ld Advance",
+      "type": "number"
+     },
+     {
+      "key": "int_advance",
+      "label": "Int Advance",
+      "type": "number"
+     },
+     {
+      "key": "cl_advance",
+      "label": "Cl Advance",
+      "type": "number"
+     },
+     {
+      "key": "wp_advance",
+      "label": "WP Advance",
+      "type": "number"
+     },
+     {
+      "key": "fel_advance",
+      "label": "Fel Advance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "profile_current",
+    "title": "Current Profile",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "m_current",
+      "label": "M Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "ws_current",
+      "label": "WS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "bs_current",
+      "label": "BS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "s_current",
+      "label": "S Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "t_current",
+      "label": "T Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "w_current",
+      "label": "W Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "i_current",
+      "label": "I Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "a_current",
+      "label": "A Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "dex_current",
+      "label": "Dex Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "ld_current",
+      "label": "Ld Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "int_current",
+      "label": "Int Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "cl_current",
+      "label": "Cl Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "wp_current",
+      "label": "WP Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "fel_current",
+      "label": "Fel Current",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Fate, Magic & Experience",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wounds_remaining",
+      "label": "Wounds Remaining",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "fate_points",
+      "label": "Fate Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "magic_points",
+      "label": "Magic Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "power_level",
+      "label": "Power Level",
+      "type": "number",
+      "size": "full"
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "insanity_points",
+      "label": "Insanity Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Weapons & Armour",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "hand_weapons",
+      "label": "Hand to Hand Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "i",
+        "label": "I"
+       },
+       {
+        "key": "ws",
+        "label": "WS"
+       },
+       {
+        "key": "d",
+        "label": "D"
+       },
+       {
+        "key": "py",
+        "label": "PY"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "missile_weapons",
+      "label": "Missile Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "s",
+        "label": "S"
+       },
+       {
+        "key": "l",
+        "label": "L"
+       },
+       {
+        "key": "e",
+        "label": "E"
+       },
+       {
+        "key": "es",
+        "label": "ES"
+       },
+       {
+        "key": "load",
+        "label": "Load"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armour",
+      "label": "Armour",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armour",
+        "label": "Armour"
+       },
+       {
+        "key": "loc",
+        "label": "Loc"
+       },
+       {
+        "key": "enc",
+        "label": "ENC"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "armour_points",
+    "title": "Armour Points",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ap_head",
+      "label": "Head (01-15)",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_arm",
+      "label": "Right Arm (16-35)",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_arm",
+      "label": "Left Arm (36-55)",
+      "type": "number"
+     },
+     {
+      "key": "ap_body",
+      "label": "Body (56-80)",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_leg",
+      "label": "Right Leg (81-90)",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_leg",
+      "label": "Left Leg (91-00)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells",
+    "page": "Spells & Trappings",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "sl",
+        "label": "SL"
+       },
+       {
+        "key": "mp",
+        "label": "MP"
+       },
+       {
+        "key": "r",
+        "label": "R"
+       },
+       {
+        "key": "d",
+        "label": "D"
+       },
+       {
+        "key": "ingredients",
+        "label": "Ingredients"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "trappings",
+    "title": "Equipment & Wealth",
+    "page": "Spells & Trappings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment / Trappings",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "loc",
+        "label": "Loc"
+       },
+       {
+        "key": "enc",
+        "label": "ENC"
+       }
+      ]
+     },
+     {
+      "key": "equipment_total",
+      "label": "Equipment Total ENC",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wealth",
+      "label": "Wealth",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "loc",
+        "label": "Loc"
+       },
+       {
+        "key": "enc",
+        "label": "ENC"
+       }
+      ]
+     },
+     {
+      "key": "wealth_total",
+      "label": "Wealth Total ENC",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "movement",
+    "title": "Movement Rate",
+    "page": "Spells & Trappings",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "move_cautious_10s",
+      "label": "Cautious (yds / 10 secs)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_cautious_min",
+      "label": "Cautious (yds / min)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_cautious_mph",
+      "label": "Cautious (mph)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_standard_10s",
+      "label": "Standard (yds / 10 secs)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_standard_min",
+      "label": "Standard (yds / min)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_standard_mph",
+      "label": "Standard (mph)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_running_10s",
+      "label": "Running (yds / 10 secs)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_running_min",
+      "label": "Running (yds / min)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "move_running_mph",
+      "label": "Running (mph)",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "languages_sec",
+    "title": "Languages & Psychology",
+    "page": "Spells & Trappings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "language",
+        "label": "Language"
+       }
+      ]
+     },
+     {
+      "key": "psychology",
+      "label": "Psychology & Health",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "background",
+    "title": "Background",
+    "page": "Spells & Trappings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "place_of_birth",
+      "label": "Place of Birth",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "parents_occupation",
+      "label": "Parents Occupation",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "family_members",
+      "label": "Family Members",
+      "type": "longtext"
+     },
+     {
+      "key": "social_level",
+      "label": "Social Level",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "companions_sec",
+    "title": "Companions & Animals",
+    "page": "Spells & Trappings",
+    "fields": [
+     {
+      "key": "companions",
+      "label": "Companions & Animals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "profile",
+        "label": "Profile (M WS BS S T W I A Dex Ld Int Cl WP Fel)"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

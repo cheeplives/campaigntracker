@@ -1,7 +1,7 @@
 {
  "name": "Warhammer Fantasy Roleplay 2nd Edition",
  "game": "Warhammer Fantasy Roleplay",
- "edition": "2nd Edition",
+ "edition": "2nd Edition (2005)",
  "source": {
   "title": "Warhammer Fantasy 2nd Edition",
   "owner": "rpgsheets.com (Wayback copy)",
@@ -14,7 +14,6 @@
     "key": "character",
     "title": "Character",
     "page": "Character",
-    "width": "two-thirds",
     "fields": [
      {
       "key": "race",
@@ -105,8 +104,318 @@
     ]
    },
    {
-    "key": "secondary_profile",
-    "title": "Secondary Profile",
+    "key": "main_starting",
+    "title": "Main Profile: Starting",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_starting",
+      "label": "WS Starting",
+      "type": "number"
+     },
+     {
+      "key": "bs_starting",
+      "label": "BS Starting",
+      "type": "number"
+     },
+     {
+      "key": "s_starting",
+      "label": "S Starting",
+      "type": "number"
+     },
+     {
+      "key": "t_starting",
+      "label": "T Starting",
+      "type": "number"
+     },
+     {
+      "key": "ag_starting",
+      "label": "Ag Starting",
+      "type": "number"
+     },
+     {
+      "key": "int_starting",
+      "label": "Int Starting",
+      "type": "number"
+     },
+     {
+      "key": "wp_starting",
+      "label": "WP Starting",
+      "type": "number"
+     },
+     {
+      "key": "fel_starting",
+      "label": "Fel Starting",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "main_advance",
+    "title": "Main Profile: Advance",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_advance",
+      "label": "WS Advance",
+      "type": "number"
+     },
+     {
+      "key": "bs_advance",
+      "label": "BS Advance",
+      "type": "number"
+     },
+     {
+      "key": "s_advance",
+      "label": "S Advance",
+      "type": "number"
+     },
+     {
+      "key": "t_advance",
+      "label": "T Advance",
+      "type": "number"
+     },
+     {
+      "key": "ag_advance",
+      "label": "Ag Advance",
+      "type": "number"
+     },
+     {
+      "key": "int_advance",
+      "label": "Int Advance",
+      "type": "number"
+     },
+     {
+      "key": "wp_advance",
+      "label": "WP Advance",
+      "type": "number"
+     },
+     {
+      "key": "fel_advance",
+      "label": "Fel Advance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "main_current",
+    "title": "Main Profile: Current",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "main_ws",
+      "label": "WS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_bs",
+      "label": "BS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_s",
+      "label": "S Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_t",
+      "label": "T Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_ag",
+      "label": "Ag Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_int",
+      "label": "Int Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_wp",
+      "label": "WP Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "main_fel",
+      "label": "Fel Current",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "secondary_starting",
+    "title": "Secondary Profile: Starting",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "a_starting",
+      "label": "A Starting",
+      "type": "number"
+     },
+     {
+      "key": "w_starting",
+      "label": "W Starting",
+      "type": "number"
+     },
+     {
+      "key": "sb_starting",
+      "label": "SB Starting",
+      "type": "number"
+     },
+     {
+      "key": "tb_starting",
+      "label": "TB Starting",
+      "type": "number"
+     },
+     {
+      "key": "m_starting",
+      "label": "M Starting",
+      "type": "number"
+     },
+     {
+      "key": "mag_starting",
+      "label": "Mag Starting",
+      "type": "number"
+     },
+     {
+      "key": "ip_starting",
+      "label": "IP Starting",
+      "type": "number"
+     },
+     {
+      "key": "fp_starting",
+      "label": "FP Starting",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "secondary_advance",
+    "title": "Secondary Profile: Advance",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "a_advance",
+      "label": "A Advance",
+      "type": "number"
+     },
+     {
+      "key": "w_advance",
+      "label": "W Advance",
+      "type": "number"
+     },
+     {
+      "key": "sb_advance",
+      "label": "SB Advance",
+      "type": "number"
+     },
+     {
+      "key": "tb_advance",
+      "label": "TB Advance",
+      "type": "number"
+     },
+     {
+      "key": "m_advance",
+      "label": "M Advance",
+      "type": "number"
+     },
+     {
+      "key": "mag_advance",
+      "label": "Mag Advance",
+      "type": "number"
+     },
+     {
+      "key": "ip_advance",
+      "label": "IP Advance",
+      "type": "number"
+     },
+     {
+      "key": "fp_advance",
+      "label": "FP Advance",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "secondary_current",
+    "title": "Secondary Profile: Current",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attacks",
+      "label": "A Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "w_current",
+      "label": "W Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "strength_bonus",
+      "label": "SB Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "toughness_bonus",
+      "label": "TB Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "movement",
+      "label": "M Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "magic",
+      "label": "Mag Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "insanity_points",
+      "label": "IP Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "fp_current",
+      "label": "FP Current",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "wounds_fate",
+    "title": "Wounds & Fate",
     "page": "Character",
     "width": "third",
     "fields": [
@@ -125,92 +434,6 @@
       "size": "full",
       "min": 0,
       "play": true
-     },
-     {
-      "key": "attacks",
-      "label": "Attacks (A)",
-      "type": "number",
-      "cols": 2
-     },
-     {
-      "key": "movement",
-      "label": "Movement (M)",
-      "type": "number",
-      "cols": 2
-     },
-     {
-      "key": "strength_bonus",
-      "label": "Strength Bonus",
-      "type": "number",
-      "cols": 2
-     },
-     {
-      "key": "toughness_bonus",
-      "label": "Toughness Bonus",
-      "type": "number",
-      "cols": 2
-     },
-     {
-      "key": "magic",
-      "label": "Magic (Mag)",
-      "type": "number",
-      "cols": 2
-     },
-     {
-      "key": "insanity_points",
-      "label": "Insanity Points",
-      "type": "number",
-      "cols": 2,
-      "play": true
-     }
-    ]
-   },
-   {
-    "key": "main_profile",
-    "title": "Main Profile",
-    "page": "Character",
-    "width": "third",
-    "compact": true,
-    "fields": [
-     {
-      "key": "main_ws",
-      "label": "Weapon Skill (WS)",
-      "type": "number"
-     },
-     {
-      "key": "main_bs",
-      "label": "Ballistic Skill (BS)",
-      "type": "number"
-     },
-     {
-      "key": "main_s",
-      "label": "Strength (S)",
-      "type": "number"
-     },
-     {
-      "key": "main_t",
-      "label": "Toughness (T)",
-      "type": "number"
-     },
-     {
-      "key": "main_ag",
-      "label": "Agility (Ag)",
-      "type": "number"
-     },
-     {
-      "key": "main_int",
-      "label": "Intelligence (Int)",
-      "type": "number"
-     },
-     {
-      "key": "main_wp",
-      "label": "Will Power (WP)",
-      "type": "number"
-     },
-     {
-      "key": "main_fel",
-      "label": "Fellowship (Fel)",
-      "type": "number"
      }
     ]
    },

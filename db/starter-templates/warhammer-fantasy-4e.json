@@ -1,0 +1,1146 @@
+{
+ "name": "Warhammer Fantasy Roleplay 4th Edition",
+ "game": "Warhammer Fantasy Roleplay",
+ "edition": "4th Edition (2018)",
+ "source": {
+  "title": "WFRP 4th edition fillable character sheet",
+  "owner": "Cubicle 7 Entertainment",
+  "url": "https://cubicle7games.com/en_EU/blog/free-adventures-resources-for-wfrp",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "career_level",
+      "label": "Career Level",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "career_path",
+      "label": "Career Path",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "status",
+      "label": "Status",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "char_initial",
+    "title": "Initial",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_initial",
+      "label": "WS Initial",
+      "type": "number"
+     },
+     {
+      "key": "bs_initial",
+      "label": "BS Initial",
+      "type": "number"
+     },
+     {
+      "key": "s_initial",
+      "label": "S Initial",
+      "type": "number"
+     },
+     {
+      "key": "t_initial",
+      "label": "T Initial",
+      "type": "number"
+     },
+     {
+      "key": "i_initial",
+      "label": "I Initial",
+      "type": "number"
+     },
+     {
+      "key": "ag_initial",
+      "label": "Ag Initial",
+      "type": "number"
+     },
+     {
+      "key": "dex_initial",
+      "label": "Dex Initial",
+      "type": "number"
+     },
+     {
+      "key": "int_initial",
+      "label": "Int Initial",
+      "type": "number"
+     },
+     {
+      "key": "wp_initial",
+      "label": "WP Initial",
+      "type": "number"
+     },
+     {
+      "key": "fel_initial",
+      "label": "Fel Initial",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "char_advances",
+    "title": "Advances",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_advances",
+      "label": "WS Advances",
+      "type": "number"
+     },
+     {
+      "key": "bs_advances",
+      "label": "BS Advances",
+      "type": "number"
+     },
+     {
+      "key": "s_advances",
+      "label": "S Advances",
+      "type": "number"
+     },
+     {
+      "key": "t_advances",
+      "label": "T Advances",
+      "type": "number"
+     },
+     {
+      "key": "i_advances",
+      "label": "I Advances",
+      "type": "number"
+     },
+     {
+      "key": "ag_advances",
+      "label": "Ag Advances",
+      "type": "number"
+     },
+     {
+      "key": "dex_advances",
+      "label": "Dex Advances",
+      "type": "number"
+     },
+     {
+      "key": "int_advances",
+      "label": "Int Advances",
+      "type": "number"
+     },
+     {
+      "key": "wp_advances",
+      "label": "WP Advances",
+      "type": "number"
+     },
+     {
+      "key": "fel_advances",
+      "label": "Fel Advances",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "char_current",
+    "title": "Current",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_current",
+      "label": "WS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "bs_current",
+      "label": "BS Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "s_current",
+      "label": "S Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "t_current",
+      "label": "T Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "i_current",
+      "label": "I Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "ag_current",
+      "label": "Ag Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "dex_current",
+      "label": "Dex Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "int_current",
+      "label": "Int Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "wp_current",
+      "label": "WP Current",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "fel_current",
+      "label": "Fel Current",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "fate_sec",
+    "title": "Fate & Resilience",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "fate",
+      "label": "Fate",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "fortune",
+      "label": "Fortune",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "resilience",
+      "label": "Resilience",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "resolve",
+      "label": "Resolve",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "experience",
+    "title": "Experience",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "xp_current",
+      "label": "Current",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "xp_spent",
+      "label": "Spent",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "xp_total",
+      "label": "Total",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "movement_sec",
+    "title": "Movement",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "movement",
+      "label": "Movement",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "walk",
+      "label": "Walk",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "basic_skills_1",
+    "title": "Basic Skills",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_art_adv",
+      "label": "Art (Dex) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_art",
+      "label": "Art Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_athletics_adv",
+      "label": "Athletics (Ag) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_bribery_adv",
+      "label": "Bribery (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_bribery",
+      "label": "Bribery Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_charm_adv",
+      "label": "Charm (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_charm",
+      "label": "Charm Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_charm_animal_adv",
+      "label": "Charm Animal (WP) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_charm_animal",
+      "label": "Charm Animal Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_climb_adv",
+      "label": "Climb (S) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_cool_adv",
+      "label": "Cool (WP) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_cool",
+      "label": "Cool Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_consume_alcohol_adv",
+      "label": "Consume Alcohol (T) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_consume_alcohol",
+      "label": "Consume Alcohol Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_dodge_adv",
+      "label": "Dodge (Ag) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_drive_adv",
+      "label": "Drive (Ag) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_endurance_adv",
+      "label": "Endurance (T) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_endurance",
+      "label": "Endurance Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_entertain_adv",
+      "label": "Entertain (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_entertain",
+      "label": "Entertain Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_gamble_adv",
+      "label": "Gamble (Int) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_gamble",
+      "label": "Gamble Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "basic_skills_2",
+    "title": "Basic Skills (cont.)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_gossip_adv",
+      "label": "Gossip (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_gossip",
+      "label": "Gossip Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_haggle_adv",
+      "label": "Haggle (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_haggle",
+      "label": "Haggle Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_intimidate_adv",
+      "label": "Intimidate (S) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_intuition_adv",
+      "label": "Intuition (I) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_intuition",
+      "label": "Intuition Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_leadership_adv",
+      "label": "Leadership (Fel) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_melee_basic_adv",
+      "label": "Melee (Basic) (WS) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_melee_basic",
+      "label": "Melee (Basic) Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_melee_adv",
+      "label": "Melee (WS) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_navigation_adv",
+      "label": "Navigation (I) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_navigation",
+      "label": "Navigation Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_outdoor_survival_adv",
+      "label": "Outdoor Survival (Int) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_outdoor_survival",
+      "label": "Outdoor Survival Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_perception_adv",
+      "label": "Perception (I) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_ride_adv",
+      "label": "Ride (Ag) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_row_adv",
+      "label": "Row (S) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_row",
+      "label": "Row Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "sk_stealth_adv",
+      "label": "Stealth (Ag) Adv",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth Skill",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "advanced_skills",
+    "title": "Grouped & Advanced Skills",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "grouped_skills",
+      "label": "Grouped & Advanced Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "characteristic",
+        "label": "Characteristic"
+       },
+       {
+        "key": "adv",
+        "label": "Adv"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "talents_sec",
+    "title": "Talents",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "talents",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent Name"
+       },
+       {
+        "key": "times",
+        "label": "Times taken"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "ambitions",
+    "title": "Ambitions & Party",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ambition_short",
+      "label": "Short-term Ambition",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ambition_long",
+      "label": "Long-term Ambition",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "party_name",
+      "label": "Party Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "party_short",
+      "label": "Party Short-term Ambition",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "party_long",
+      "label": "Party Long-term Ambition",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "party_members",
+      "label": "Members",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "armour_sec",
+    "title": "Armour",
+    "page": "Gear & Spells",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "armour",
+      "label": "Armour",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "locations",
+        "label": "Locations"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       },
+       {
+        "key": "ap",
+        "label": "AP"
+       },
+       {
+        "key": "qualities",
+        "label": "Qualities"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "armour_points",
+    "title": "Armour Points",
+    "page": "Gear & Spells",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ap_head",
+      "label": "Head (01-09)",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_arm",
+      "label": "Left Arm (10-24)",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_arm",
+      "label": "Right Arm (25-44)",
+      "type": "number"
+     },
+     {
+      "key": "ap_body",
+      "label": "Body (45-79)",
+      "type": "number"
+     },
+     {
+      "key": "ap_left_leg",
+      "label": "Left Leg (80-89)",
+      "type": "number"
+     },
+     {
+      "key": "ap_right_leg",
+      "label": "Right Leg (90-00)",
+      "type": "number"
+     },
+     {
+      "key": "ap_shield",
+      "label": "Shield",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "trappings_sec",
+    "title": "Trappings",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "trappings",
+      "label": "Trappings",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "psychology_sec",
+    "title": "Psychology, Corruption & Mutation",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "psychology",
+      "label": "Psychology",
+      "type": "longtext"
+     },
+     {
+      "key": "corruption",
+      "label": "Corruption",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "mutations",
+      "label": "Corruption & Mutation",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds",
+    "page": "Gear & Spells",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "wounds_sb",
+      "label": "SB",
+      "type": "number"
+     },
+     {
+      "key": "wounds_tb2",
+      "label": "TB×2",
+      "type": "number"
+     },
+     {
+      "key": "wounds_wpb",
+      "label": "WPB",
+      "type": "number"
+     },
+     {
+      "key": "wounds_hardy",
+      "label": "Hardy",
+      "type": "number"
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "wealth",
+    "title": "Wealth",
+    "page": "Gear & Spells",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "money_d",
+      "label": "Brass Pennies (D)",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "money_ss",
+      "label": "Silver Shillings (SS)",
+      "type": "number",
+      "play": true
+     },
+     {
+      "key": "money_gc",
+      "label": "Gold Crowns (GC)",
+      "type": "number",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "encumbrance",
+    "title": "Encumbrance",
+    "page": "Gear & Spells",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "enc_weapons",
+      "label": "Weapons",
+      "type": "number"
+     },
+     {
+      "key": "enc_armour",
+      "label": "Armour",
+      "type": "number"
+     },
+     {
+      "key": "enc_trappings",
+      "label": "Trappings",
+      "type": "number"
+     },
+     {
+      "key": "enc_max",
+      "label": "Max Enc.",
+      "type": "number"
+     },
+     {
+      "key": "enc_total",
+      "label": "Total",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Gear & Spells",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "group",
+        "label": "Group"
+       },
+       {
+        "key": "enc",
+        "label": "Enc"
+       },
+       {
+        "key": "range",
+        "label": "Range/Reach"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "qualities",
+        "label": "Qualities"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells and Prayers",
+    "page": "Gear & Spells",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells and Prayers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "tn",
+        "label": "TN"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "target",
+        "label": "Target"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "sin",
+      "label": "Sin",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}
