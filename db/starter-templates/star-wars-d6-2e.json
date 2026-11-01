@@ -1,0 +1,387 @@
+{
+ "name": "Star Wars: The Roleplaying Game (D6, 2nd Edition)",
+ "game": "Star Wars Roleplaying Game",
+ "edition": "D6 (West End Games, 2nd Edition, 1992)",
+ "source": {
+  "title": "Star Wars Character Sheet (2nd edition)",
+  "owner": "West End Games; Star Wars is owned by Lucasfilm",
+  "url": "https://web.archive.org/web/20101129203218id_/http://rpgsheets.com/sheets/079002.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Star Wars Character Sheet",
+    "fields": [
+     {
+      "key": "template_type",
+      "label": "Template Type",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "physical_description",
+      "label": "Physical Description",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     },
+     {
+      "key": "objectives",
+      "label": "Objectives",
+      "type": "longtext"
+     },
+     {
+      "key": "quote",
+      "label": "A Quote",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "connections",
+      "label": "Connection With Other Characters",
+      "type": "longtext"
+     },
+     {
+      "key": "portrait",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "dexterity",
+    "title": "Dexterity",
+    "width": "third",
+    "fields": [
+     {
+      "key": "dexterity_dice",
+      "label": "Dexterity (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "dexterity_skills",
+      "label": "Dexterity skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "knowledge",
+    "title": "Knowledge",
+    "width": "third",
+    "fields": [
+     {
+      "key": "knowledge_dice",
+      "label": "Knowledge (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "knowledge_skills",
+      "label": "Knowledge skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mechanical",
+    "title": "Mechanical",
+    "width": "third",
+    "fields": [
+     {
+      "key": "mechanical_dice",
+      "label": "Mechanical (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "mechanical_skills",
+      "label": "Mechanical skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "perception",
+    "title": "Perception",
+    "width": "third",
+    "fields": [
+     {
+      "key": "perception_dice",
+      "label": "Perception (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "perception_skills",
+      "label": "Perception skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "strength",
+    "title": "Strength",
+    "width": "third",
+    "fields": [
+     {
+      "key": "strength_dice",
+      "label": "Strength (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "strength_skills",
+      "label": "Strength skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "technical",
+    "title": "Technical",
+    "width": "third",
+    "fields": [
+     {
+      "key": "technical_dice",
+      "label": "Technical (dice)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "technical_skills",
+      "label": "Technical skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "special",
+    "title": "Special Abilities & Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Points & Wounds",
+    "width": "half",
+    "fields": [
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "force_points",
+      "label": "Force Points",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "force_sensitive",
+      "label": "Force Sensitive",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "dark_side_points",
+      "label": "Dark Side Points",
+      "type": "pips",
+      "count": 6,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "character_points",
+      "label": "Character Points",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "choice",
+      "options": [
+       "Wounded",
+       "Incapacitated",
+       "Mortally Wounded"
+      ],
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "difficulty",
+        "label": "Difficulty"
+       },
+       {
+        "key": "short",
+        "label": "Short"
+       },
+       {
+        "key": "medium",
+        "label": "Medium"
+       },
+       {
+        "key": "long",
+        "label": "Long"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

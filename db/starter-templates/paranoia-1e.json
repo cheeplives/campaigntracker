@@ -1,0 +1,235 @@
+{
+ "name": "Paranoia (1st Edition)",
+ "game": "Paranoia",
+ "edition": "1st Edition (1984)",
+ "source": {
+  "title": "Paranoia Character Sheet (1st edition)",
+  "owner": "West End Games (game now published by Mongoose)",
+  "url": "https://web.archive.org/web/20101129162931id_/http://rpgsheets.com/sheets/062001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Paranoia Character Sheet",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "primary",
+    "title": "Primary Attributes",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "endurance",
+      "label": "Endurance",
+      "type": "number"
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "manual_dexterity",
+      "label": "Manual Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "moxie",
+      "label": "Moxie",
+      "type": "number"
+     },
+     {
+      "key": "chutzpah",
+      "label": "Chutzpah",
+      "type": "number"
+     },
+     {
+      "key": "mechanical_aptitude",
+      "label": "Mechanical Aptitude",
+      "type": "number"
+     },
+     {
+      "key": "power_index",
+      "label": "Power Index",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "secondary",
+    "title": "Secondary Attributes",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "carrying_capacity",
+      "label": "Carrying Capacity",
+      "type": "text"
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage Bonus",
+      "type": "text"
+     },
+     {
+      "key": "macho_bonus",
+      "label": "Macho Bonus",
+      "type": "text"
+     },
+     {
+      "key": "melee_bonus",
+      "label": "Melee Bonus",
+      "type": "text"
+     },
+     {
+      "key": "aimed_weapon_bonus",
+      "label": "Aimed Weapon Bonus",
+      "type": "text"
+     },
+     {
+      "key": "comprehension_bonus",
+      "label": "Comprehension Bonus",
+      "type": "text"
+     },
+     {
+      "key": "believability_bonus",
+      "label": "Believability Bonus",
+      "type": "text"
+     },
+     {
+      "key": "repair_bonus",
+      "label": "Repair Bonus",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Status",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Damage Status: Wounds",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "security_clearance",
+      "label": "Security Clearance",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "service_group",
+      "label": "Service Group",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "secret_society",
+      "label": "Secret Society",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "secret_society_rank",
+      "label": "Secret Society Rank",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mutant_powers",
+      "label": "Mutant Power(s)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "to_hit",
+        "label": "To Hit"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
