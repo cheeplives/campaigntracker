@@ -1,0 +1,283 @@
+{
+ "name": "Death in Space",
+ "game": "Death in Space",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Character Sheet (fillable beta)",
+  "owner": "Free League Publishing",
+  "url": "https://freeleaguepublishing.com/wp-content/uploads/2023/08/DiS_CharacterSheetFillableBETA.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "personal",
+    "title": "Personal Information",
+    "fields": [
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "choice",
+      "options": [
+       "Void",
+       "Punk",
+       "Solpod",
+       "Chrome",
+       "Carbon",
+       "Velocity Cursed"
+      ],
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nickname",
+      "label": "Nickname",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 8,
+      "summary": true
+     },
+     {
+      "key": "past_allegiance",
+      "label": "Past Allegiance",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "trait",
+      "label": "Trait",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "looks",
+      "label": "Looks",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "origin_benefit",
+      "label": "Origin Benefit",
+      "type": "longtext"
+     },
+     {
+      "key": "portrait",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Ability",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "savvy",
+      "label": "Savvy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tech",
+      "label": "Tech",
+      "type": "number",
+      "size": "small"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "defense",
+    "title": "Defense & Hit Points",
+    "width": "half",
+    "fields": [
+     {
+      "key": "defense_rating",
+      "label": "Defense Rating",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "hit_points",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "situation",
+    "title": "Current Situation",
+    "fields": [
+     {
+      "key": "void_points",
+      "label": "Void Points",
+      "type": "pips",
+      "count": 4,
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "life_support",
+      "label": "Life Support (%)",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "cosmic_mutations",
+      "label": "Cosmic Mutations",
+      "type": "longtext"
+     },
+     {
+      "key": "void_corruption",
+      "label": "Void Corruption",
+      "type": "longtext",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "belongings",
+    "title": "Personal Belongings",
+    "page": "Belongings",
+    "fields": [
+     {
+      "key": "items",
+      "label": "Items (slots = 12 + Body)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "condition",
+        "label": "Condition"
+       }
+      ]
+     },
+     {
+      "key": "small_items",
+      "label": "Small Items",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Weapons & Armor",
+    "page": "Belongings",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "condition",
+        "label": "Condition"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "protects_against",
+      "label": "Protects Against",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "dr_bonus",
+      "label": "DR Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "holos",
+      "label": "Holos",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "debt",
+      "label": "Debt",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Belongings",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

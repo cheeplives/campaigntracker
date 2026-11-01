@@ -1,0 +1,101 @@
+{
+ "name": "Trophy Dark",
+ "game": "Trophy",
+ "edition": "Trophy Dark",
+ "source": {
+  "title": "Trophy Dark Character Sheet",
+  "owner": "Hedgemaze Press",
+  "url": "https://www.trophyrpg.com/downloads/Trophy_Dark-Character_Sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "treasure_hunter",
+    "title": "Treasure-Hunter",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "occupation_skills",
+      "label": "Occupation Skills",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "background_skill",
+      "label": "Background Skill",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "rituals_sec",
+    "title": "Rituals, Ruin & Conditions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "rituals",
+      "label": "Rituals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ritual",
+        "label": "Ritual"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     },
+     {
+      "key": "ruin",
+      "label": "Ruin",
+      "type": "pips",
+      "count": 6,
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,356 @@
+{
+ "name": "Cyberpunk 2020",
+ "game": "Cyberpunk 2020",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Cyberpunk 2020 Quick Sheet",
+  "owner": "R. Talsorian Games",
+  "url": "https://rtalsoriangames.com/wp-content/uploads/2019/01/Cyberpunk2020QuickSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "role",
+      "label": "Role",
+      "type": "choice",
+      "options": [
+       "Cop",
+       "Corporate",
+       "Fixer",
+       "Media",
+       "Medtechie",
+       "Netrunner",
+       "Nomad",
+       "Rocker",
+       "Solo",
+       "Techie"
+      ],
+      "cols": 6,
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ref",
+      "label": "REF",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tech",
+      "label": "TECH",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cool",
+      "label": "COOL",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr",
+      "label": "ATTR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "luck",
+      "label": "LUCK",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ma",
+      "label": "MA",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "body",
+      "label": "BODY",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "emp",
+      "label": "EMP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ev",
+      "label": "EV",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rep",
+      "label": "REP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "leap",
+      "label": "Leap",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "lift",
+      "label": "Lift",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "armor",
+    "title": "Armor SP by Location",
+    "width": "half",
+    "fields": [
+     {
+      "key": "sp_head",
+      "label": "Head (1)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "sp_torso",
+      "label": "Torso (2-4)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "sp_r_arm",
+      "label": "R. Arm (5)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "sp_l_arm",
+      "label": "L. Arm (6)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "sp_r_leg",
+      "label": "R. Leg (7-8)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "sp_l_leg",
+      "label": "L. Leg (9-10)",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "rolls",
+    "title": "Rolls, Save & BTM",
+    "width": "half",
+    "fields": [
+     {
+      "key": "initiative",
+      "label": "Initiative Roll",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "awareness",
+      "label": "Awareness Roll",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "career_skill",
+      "label": "Career Skill",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save",
+      "label": "Save",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "btm",
+      "label": "BTM",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds",
+    "fields": [
+     {
+      "key": "wounds_1",
+      "label": "Light, Serious, Critical, Mortal 0, Mortal 1",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "wounds_2",
+      "label": "Mortal 2 to Mortal 6",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Weapons, Cybernetics & Skills",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Primary Weapon Data",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "wa",
+        "label": "WA"
+       },
+       {
+        "key": "dmg",
+        "label": "Damage"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "rof",
+        "label": "ROF"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "cybernetics",
+      "label": "Cybernetics",
+      "type": "list",
+      "columns": [
+       {
+        "key": "cyberware",
+        "label": "Cyberware"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "image_sec",
+    "title": "Image",
+    "width": "half",
+    "fields": [
+     {
+      "key": "image",
+      "label": "Image (description)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
