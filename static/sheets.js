@@ -265,7 +265,9 @@ const Sheets = (() => {
       groups.push(fresh);
     }
     const ed = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-    for (const g of groups) g.sort((a, b) => ed.compare(a.edition || '', b.edition || ''));
+    // oldest first: by the year in the edition, as in "Revised (1998)", then A to Z; an edition with no year goes last
+    const year = t => Number((t.edition || '').match(/\b(19|20)\d\d/)?.[0] || 9999);
+    for (const g of groups) g.sort((a, b) => year(a) - year(b) || ed.compare(a.edition || '', b.edition || ''));
     const title = g => (g.length > 1 ? g[0].game : g[0].name);
     return groups.sort((a, b) => ed.compare(title(a), title(b)));
   }
