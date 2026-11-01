@@ -1,0 +1,280 @@
+{
+ "name": "Apocalypse World (2nd Edition)",
+ "game": "Apocalypse World",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Apocalypse World 2nd Ed playbooks",
+  "owner": "Lumpley Games (D. Vincent Baker & Meguey Baker)",
+  "url": "https://lumpley.games/wp-content/uploads/2019/09/ApocalypseWorld2ndEd-PlaybooksEtc.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "The Angel",
+       "The Battlebabe",
+       "The Brainer",
+       "The Chopper",
+       "The Driver",
+       "The Gunlugger",
+       "The Hardholder",
+       "The Hocus",
+       "The Maestro D'",
+       "The Savvyhead",
+       "The Skinner"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stat_cool",
+      "label": "Cool",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "highlight_cool",
+      "label": "Cool highlighted",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "stat_hard",
+      "label": "Hard",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "highlight_hard",
+      "label": "Hard highlighted",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "stat_hot",
+      "label": "Hot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "highlight_hot",
+      "label": "Hot highlighted",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "stat_sharp",
+      "label": "Sharp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "highlight_sharp",
+      "label": "Sharp highlighted",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "stat_weird",
+      "label": "Weird",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "highlight_weird",
+      "label": "Weird highlighted",
+      "type": "checkbox",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "hx_sec",
+    "title": "Hx",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hx",
+      "label": "Hx",
+      "type": "list",
+      "columns": [
+       {
+        "key": "character",
+        "label": "Character"
+       },
+       {
+        "key": "hx",
+        "label": "Hx"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "harm",
+    "title": "Harm",
+    "width": "half",
+    "fields": [
+     {
+      "key": "harm_countdown",
+      "label": "Harm countdown (3, 6, 9, 10, 11, 12)",
+      "type": "pips",
+      "count": 6,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "stabilized",
+      "label": "Stabilized",
+      "type": "checkbox",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "untenable_hard",
+      "label": "Come back with -1hard",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "untenable_weird",
+      "label": "Come back with +1weird (max+3)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "untenable_playbook",
+      "label": "Change to a new playbook",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "untenable_die",
+      "label": "Die",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "improvement",
+    "title": "Improvement",
+    "width": "half",
+    "fields": [
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "pips",
+      "count": 5,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "improvements",
+      "label": "Improvements taken",
+      "type": "list",
+      "columns": [
+       {
+        "key": "improvement",
+        "label": "Improvement"
+       },
+       {
+        "key": "taken",
+        "label": "Taken"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "special_sec",
+    "title": "Special",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special",
+      "label": "Playbook Special",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "width": "half",
+    "fields": [
+     {
+      "key": "playbook_moves",
+      "label": "Playbook Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "other_moves",
+      "label": "Other Moves",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_sec",
+    "title": "Gear & Barter",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "longtext"
+     },
+     {
+      "key": "barter",
+      "label": "Barter",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "playbook_extras",
+      "label": "Playbook Extras (crew, holding, vehicle, workspace)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

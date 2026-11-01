@@ -1,0 +1,1072 @@
+{
+ "name": "Dungeons & Dragons (3rd Edition)",
+ "game": "Dungeons & Dragons",
+ "edition": "3rd Edition (3.0)",
+ "source": {
+  "title": "Character Record Sheets (3rd Edition)",
+  "owner": "Wizards of the Coast",
+  "url": "https://web.archive.org/web/20101129175139id_/http://rpgsheets.com/sheets/035001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_mod",
+      "label": "STR Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp",
+      "label": "STR Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp_mod",
+      "label": "STR Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp",
+      "label": "DEX Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp_mod",
+      "label": "DEX Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_mod",
+      "label": "CON Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp",
+      "label": "CON Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp_mod",
+      "label": "CON Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_mod",
+      "label": "INT Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp",
+      "label": "INT Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp_mod",
+      "label": "INT Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp",
+      "label": "WIS Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp_mod",
+      "label": "WIS Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp",
+      "label": "CHA Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp_mod",
+      "label": "CHA Temp. Modifier",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Hit Points, AC & Initiative",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "subdual",
+      "label": "Subdual Damage",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "damage_reduction",
+      "label": "Damage Reduction",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hit_die",
+      "label": "Hit Die Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ac",
+      "label": "AC",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "ac_armor",
+      "label": "Armor Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_shield",
+      "label": "Shield Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_dex",
+      "label": "Dex Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_size",
+      "label": "Size Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_natural",
+      "label": "Natural Armor",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_misc",
+      "label": "Misc Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "miss_chance",
+      "label": "Miss Chance",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "arcane_failure",
+      "label": "Arcane Spell Failure",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_check",
+      "label": "Armor Check Penalty",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "spell_resistance",
+      "label": "Spell Resistance",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "base_attack",
+      "label": "Base Attack Bonus",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saving Throws",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fortitude",
+      "label": "Fortitude",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflex",
+      "label": "Reflex",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "conditional_modifiers",
+      "label": "Conditional Modifiers",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attack",
+    "title": "Attack Bonus",
+    "width": "half",
+    "fields": [
+     {
+      "key": "melee",
+      "label": "Melee",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "ranged",
+      "label": "Ranged",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack",
+        "label": "Total Attack Bonus"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "critical",
+        "label": "Critical"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "special",
+        "label": "Special Properties"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor_shield",
+    "title": "Armor & Shield",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor/Protective Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "armor_type",
+      "label": "Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "armor_bonus",
+      "label": "Armor Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_max_dex",
+      "label": "Max Dex Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_check_penalty",
+      "label": "Check Penalty",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_spell_failure",
+      "label": "Spell Failure",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "armor_weight",
+      "label": "Weight",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_special",
+      "label": "Special Properties",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "shield",
+      "label": "Shield/Protective Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "shield_bonus",
+      "label": "Armor Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "shield_weight",
+      "label": "Weight",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "shield_check_penalty",
+      "label": "Check Penalty",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "shield_spell_failure",
+      "label": "Spell Failure",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "shield_special",
+      "label": "Special Properties",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ammunition",
+      "label": "Ammunition",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ammo",
+        "label": "Ammunition"
+       },
+       {
+        "key": "count",
+        "label": "Count"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills (ranks)",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "max_ranks",
+      "label": "Max Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "sk_alchemy",
+      "label": "Alchemy",
+      "type": "number"
+     },
+     {
+      "key": "sk_animal_empathy",
+      "label": "Animal Empathy",
+      "type": "number"
+     },
+     {
+      "key": "sk_appraise",
+      "label": "Appraise",
+      "type": "number"
+     },
+     {
+      "key": "sk_balance",
+      "label": "Balance",
+      "type": "number"
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_concentration",
+      "label": "Concentration",
+      "type": "number"
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "number"
+     },
+     {
+      "key": "sk_decipher_script",
+      "label": "Decipher Script",
+      "type": "number"
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number"
+     },
+     {
+      "key": "sk_disable_device",
+      "label": "Disable Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_escape_artist",
+      "label": "Escape Artist",
+      "type": "number"
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery",
+      "type": "number"
+     },
+     {
+      "key": "sk_gather_information",
+      "label": "Gather Information",
+      "type": "number"
+     },
+     {
+      "key": "sk_handle_animal",
+      "label": "Handle Animal",
+      "type": "number"
+     },
+     {
+      "key": "sk_heal",
+      "label": "Heal",
+      "type": "number"
+     },
+     {
+      "key": "sk_hide",
+      "label": "Hide",
+      "type": "number"
+     },
+     {
+      "key": "sk_innuendo",
+      "label": "Innuendo",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_intuit_direction",
+      "label": "Intuit Direction",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_arcana",
+      "label": "Knowledge (arcana)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_architecture_engineering",
+      "label": "Knowledge (architecture & engineering)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_geography",
+      "label": "Knowledge (geography)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_history",
+      "label": "Knowledge (history)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_local",
+      "label": "Knowledge (local)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_nature",
+      "label": "Knowledge (nature)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_nobility_royalty",
+      "label": "Knowledge (nobility & royalty)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_the_planes",
+      "label": "Knowledge (the planes)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_religion",
+      "label": "Knowledge (religion)",
+      "type": "number"
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen",
+      "type": "number"
+     },
+     {
+      "key": "sk_move_silently",
+      "label": "Move Silently",
+      "type": "number"
+     },
+     {
+      "key": "sk_open_lock",
+      "label": "Open Lock",
+      "type": "number"
+     },
+     {
+      "key": "sk_perform",
+      "label": "Perform",
+      "type": "number"
+     },
+     {
+      "key": "sk_pick_pocket",
+      "label": "Pick Pocket",
+      "type": "number"
+     },
+     {
+      "key": "sk_profession",
+      "label": "Profession",
+      "type": "number"
+     },
+     {
+      "key": "sk_read_lips",
+      "label": "Read Lips",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_scry",
+      "label": "Scry",
+      "type": "number"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_sense_motive",
+      "label": "Sense Motive",
+      "type": "number"
+     },
+     {
+      "key": "sk_spellcraft",
+      "label": "Spellcraft",
+      "type": "number"
+     },
+     {
+      "key": "sk_spot",
+      "label": "Spot",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "sk_tumble",
+      "label": "Tumble",
+      "type": "number"
+     },
+     {
+      "key": "sk_use_magic_device",
+      "label": "Use Magic Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_use_rope",
+      "label": "Use Rope",
+      "type": "number"
+     },
+     {
+      "key": "sk_wilderness_lore",
+      "label": "Wilderness Lore",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Other Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ability",
+        "label": "Key Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "modifier",
+        "label": "Modifier"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "campaign_sec",
+    "title": "Campaign",
+    "page": "Gear & Spells",
+    "fields": [
+     {
+      "key": "campaign",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear & Money",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Wt."
+       }
+      ]
+     },
+     {
+      "key": "total_weight",
+      "label": "Total Weight Carried",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cp",
+      "label": "cp",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sp",
+      "label": "sp",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gp",
+      "label": "gp",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pp",
+      "label": "pp",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "feats",
+    "title": "Special Abilities, Feats & Load",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities/Feats",
+      "type": "longtext"
+     },
+     {
+      "key": "light_load",
+      "label": "Light Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "medium_load",
+      "label": "Medium Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "heavy_load",
+      "label": "Heavy Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_over_head",
+      "label": "Lift Over Head",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_off_ground",
+      "label": "Lift Off Ground",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "push_drag",
+      "label": "Push or Drag",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "spells",
+    "title": "Spells",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "spells_list",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "prepared",
+        "label": "Prepared"
+       }
+      ]
+     },
+     {
+      "key": "spell_save_dc_mod",
+      "label": "Spell Save DC Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "spells_per_day",
+      "label": "Spells per Day",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "save_dc",
+        "label": "Spell Save DC"
+       },
+       {
+        "key": "per_day",
+        "label": "Spells per Day"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus Spells"
+       },
+       {
+        "key": "known",
+        "label": "Spells Known"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,483 @@
+{
+ "name": "Reign",
+ "game": "Reign",
+ "edition": "1st Edition (One Roll Engine)",
+ "source": {
+  "title": "REIGN Character Sheet (blank)",
+  "owner": "Greg Stolze",
+  "url": "https://www.gregstolze.com/reign/downloads/REIGN_Sheet_Blank.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "company",
+      "label": "Company",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "mission",
+      "label": "Mission",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "duty",
+      "label": "Duty",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "craving",
+      "label": "Craving",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "problems",
+      "label": "Problems",
+      "type": "longtext"
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "body",
+    "title": "Body",
+    "width": "third",
+    "fields": [
+     {
+      "key": "body_score",
+      "label": "Body",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "body_skills",
+      "label": "Body Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sense",
+    "title": "Sense",
+    "width": "third",
+    "fields": [
+     {
+      "key": "sense_score",
+      "label": "Sense",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "sense_skills",
+      "label": "Sense Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "charm",
+    "title": "Charm",
+    "width": "third",
+    "fields": [
+     {
+      "key": "charm_score",
+      "label": "Charm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "charm_skills",
+      "label": "Charm Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "coordination",
+    "title": "Coordination",
+    "width": "third",
+    "fields": [
+     {
+      "key": "coordination_score",
+      "label": "Coordination",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "coordination_skills",
+      "label": "Coordination Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "command",
+    "title": "Command",
+    "width": "third",
+    "fields": [
+     {
+      "key": "command_score",
+      "label": "Command",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "command_skills",
+      "label": "Command Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "knowledge",
+    "title": "Knowledge",
+    "width": "third",
+    "fields": [
+     {
+      "key": "knowledge_score",
+      "label": "Knowledge",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "knowledge_skills",
+      "label": "Knowledge Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "advantages_sec",
+    "title": "Advantages and Esoteric Disciplines",
+    "width": "half",
+    "fields": [
+     {
+      "key": "advantages",
+      "label": "Advantages and Esoteric Disciplines",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       }
+      ]
+     },
+     {
+      "key": "attunement_effects",
+      "label": "Attunement Effects",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds and Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wound_locations",
+      "label": "Hit Locations",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       },
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "shock",
+        "label": "Shock"
+       },
+       {
+        "key": "killing",
+        "label": "Killing"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sorcery",
+    "title": "Sorcery",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "pool",
+        "label": "Pool"
+       },
+       {
+        "key": "intensity",
+        "label": "Intensity"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "dmg",
+        "label": "Dmg."
+       },
+       {
+        "key": "attack_pool",
+        "label": "Attack Pool"
+       },
+       {
+        "key": "range_notes",
+        "label": "Range/Notes"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "personal",
+    "title": "Personal",
+    "page": "History & More",
+    "width": "third",
+    "fields": [
+     {
+      "key": "description_history",
+      "label": "Description/Personal History",
+      "type": "longtext"
+     },
+     {
+      "key": "grudges_enemies",
+      "label": "Grudges and Enemies",
+      "type": "longtext"
+     },
+     {
+      "key": "dirty_secrets",
+      "label": "Dirty Secrets (Own and Others)",
+      "type": "longtext"
+     },
+     {
+      "key": "property",
+      "label": "Property",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "moves_sec",
+    "title": "Preferred Moves & Martial Paths",
+    "page": "History & More",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "preferred_moves",
+      "label": "Preferred Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       }
+      ]
+     },
+     {
+      "key": "martial_paths",
+      "label": "Martial Paths",
+      "type": "list",
+      "columns": [
+       {
+        "key": "technique",
+        "label": "Technique"
+       },
+       {
+        "key": "path",
+        "label": "Path"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "page",
+        "label": "Page"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

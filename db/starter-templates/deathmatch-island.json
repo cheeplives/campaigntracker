@@ -1,0 +1,439 @@
+{
+ "name": "Deathmatch Island",
+ "game": "Deathmatch Island",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Competitor Kit (Competitor Registration sheet)",
+  "owner": "Evil Hat Productions",
+  "url": "https://evilhat.com/wp-content/uploads/2024/04/dmi_competitorkit_20Mar2024.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "registration",
+    "title": "Competitor Registration",
+    "width": "third",
+    "fields": [
+     {
+      "key": "competitor_number",
+      "label": "Competitor Number",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "initial_motivation",
+      "label": "Initial Motivation",
+      "type": "text",
+      "cols": 9,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Name / Pronouns",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "name_die",
+      "label": "Name Die",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 8,
+      "summary": true
+     },
+     {
+      "key": "occupation_die",
+      "label": "Occupation Die",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "nickname_unlocked",
+      "label": "Nickname (after first 400,000 followers)",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "nickname",
+      "label": "Nickname",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "distinguishing_features",
+      "label": "Distinguishing Features",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "capabilities",
+    "title": "Capabilities",
+    "width": "third",
+    "fields": [
+     {
+      "key": "cap_social_game",
+      "label": "Social Game",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "cap_snake_mode",
+      "label": "Snake Mode",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "cap_challenge_beast",
+      "label": "Challenge Beast",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "cap_deathmatch",
+      "label": "Deathmatch",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "cap_redacted",
+      "label": "Redacted Capability",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "cap_redacted_die",
+      "label": "Redacted Capability Die",
+      "type": "choice",
+      "options": [
+       "D4",
+       "D6",
+       "D8",
+       "D10",
+       "D12"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "pips",
+      "count": 4,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "injuries",
+      "label": "Injuries",
+      "type": "pips",
+      "count": 6,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "injury_notes",
+      "label": "Injury Notes",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "followers",
+    "title": "Followers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "new_followers",
+      "label": "New Followers (each = 10,000)",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "followers_400k",
+      "label": "400,000 (Name die D8)",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "followers_800k",
+      "label": "800,000 (D10)",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "followers_1600k",
+      "label": "1,600,000 (D12)",
+      "type": "checkbox",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "advantages_sec",
+    "title": "Advantages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "advantages",
+      "label": "Advantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advantage",
+        "label": "Advantage"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "trust_sec",
+    "title": "Trust",
+    "width": "third",
+    "fields": [
+     {
+      "key": "trust",
+      "label": "Trust",
+      "type": "list",
+      "columns": [
+       {
+        "key": "competitor",
+        "label": "Competitor"
+       },
+       {
+        "key": "trust",
+        "label": "Trust"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "acquisitions",
+    "title": "Acquisitions",
+    "width": "third",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       }
+      ]
+     },
+     {
+      "key": "other_acquisitions",
+      "label": "Other Acquisitions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "tier",
+        "label": "Tier"
+       },
+       {
+        "key": "die",
+        "label": "Die"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advancement",
+    "title": "Advancement",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "adv_d8_d10",
+      "label": "Advance a D8 Capability to D10",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_d6_d8_1",
+      "label": "Advance a D6 Capability to D8 (1)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_d6_d8_2",
+      "label": "Advance a D6 Capability to D8 (2)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_occupation_d8",
+      "label": "Advance your Occupation die to D8",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_add_occupation",
+      "label": "Add another Occupation",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "special_advancement",
+    "title": "Special Advancement",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sadv_support",
+      "label": "On Support or Bolster, they take +1 die size",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "sadv_heal_1",
+      "label": "Immediately heal one injury (1)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "sadv_capability",
+      "label": "Increase a capability die one size",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "sadv_heal_2",
+      "label": "Immediately heal one injury (2)",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "jury",
+    "title": "Jury Votes",
+    "fields": [
+     {
+      "key": "jury_outbrave",
+      "label": "Outbrave",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "jury_outsmart",
+      "label": "Outsmart",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "jury_outtalk",
+      "label": "Outtalk",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "jury_outlast",
+      "label": "Outlast",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   }
+  ]
+ }
+}

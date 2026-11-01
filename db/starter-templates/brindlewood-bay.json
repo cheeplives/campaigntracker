@@ -1,0 +1,228 @@
+{
+ "name": "Brindlewood Bay",
+ "game": "Brindlewood Bay",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Brindlewood Bay play sheets (Maven playbook)",
+  "owner": "The Gauntlet",
+  "url": "https://www.gauntlet-rpg.com/uploads/7/7/8/1/77811662/brindlewood_bay_play_sheets.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "maven",
+    "title": "Maven",
+    "width": "third",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "cozy_activity",
+      "label": "Cozy Activity",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "third",
+    "fields": [
+     {
+      "key": "vitality",
+      "label": "Vitality",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "composure",
+      "label": "Composure",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "reason",
+      "label": "Reason",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "presence",
+      "label": "Presence",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sensitivity",
+      "label": "Sensitivity",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "session",
+    "title": "End of Session & Advancements",
+    "width": "third",
+    "fields": [
+     {
+      "key": "end_of_session",
+      "label": "End of Session questions marked this session",
+      "type": "longtext"
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "pips",
+      "count": 5,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "adv_ability_1",
+      "label": "Increase an ability modifier by 1 (1)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_ability_2",
+      "label": "Increase an ability modifier by 1 (2)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_maven_move_1",
+      "label": "Choose an additional Maven move (1)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_maven_move_2",
+      "label": "Choose an additional Maven move (2)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "adv_unmark_cozy",
+      "label": "Unmark all the items in your Cozy Little Place",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "maven_moves_sec",
+    "title": "Maven Moves",
+    "width": "half",
+    "fields": [
+     {
+      "key": "maven_moves",
+      "label": "Maven Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "crowns",
+    "title": "Crowns",
+    "width": "half",
+    "fields": [
+     {
+      "key": "crown_queen",
+      "label": "The Crown of the Queen (marked)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "void_a_shadow_in_the_garden",
+      "label": "A Shadow in the Garden",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "void_the_chariot",
+      "label": "The Chariot",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "void_the_pallid_mask",
+      "label": "The Pallid Mask",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "void_the_pomegranate_kernel",
+      "label": "The Pomegranate Kernel",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "void_the_void",
+      "label": "The Void",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "cozy_place",
+    "title": "A Cozy Little Place",
+    "fields": [
+     {
+      "key": "cozy_little_place",
+      "label": "A Cozy Little Place",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "marked",
+        "label": "Marked"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

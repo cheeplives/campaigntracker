@@ -1,0 +1,476 @@
+{
+ "name": "Star Wars: The Roleplaying Game (D6)",
+ "game": "Star Wars: The Roleplaying Game",
+ "edition": "1st Edition (West End Games, D6)",
+ "source": {
+  "title": "Star Wars Character Template (1st Edition)",
+  "owner": "West End Games",
+  "url": "https://web.archive.org/web/20100326204230id_/http://www.rpgsheets.com:80/sheets/079001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "character_type",
+      "label": "Character Type",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "physical_description",
+      "label": "Physical Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Points & Wounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "force_points",
+      "label": "Force Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "dark_side_points",
+      "label": "Dark Side Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "wound_status",
+      "label": "Wound Status",
+      "type": "choice",
+      "options": [
+       "Healthy",
+       "Stunned",
+       "Wounded",
+       "Incapacitated",
+       "Mortally Wounded"
+      ],
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "skill_points",
+      "label": "Skill Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "dexterity_sec",
+    "title": "Dexterity",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dexterity",
+      "label": "Dexterity (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_blaster",
+      "label": "Blaster",
+      "type": "text"
+     },
+     {
+      "key": "sk_brawling_parry",
+      "label": "Brawling Parry",
+      "type": "text"
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "text"
+     },
+     {
+      "key": "sk_grenade",
+      "label": "Grenade",
+      "type": "text"
+     },
+     {
+      "key": "sk_heavy_weapons",
+      "label": "Heavy Weapons",
+      "type": "text"
+     },
+     {
+      "key": "sk_melee_parry",
+      "label": "Melee Parry",
+      "type": "text"
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "knowledge_sec",
+    "title": "Knowledge",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "knowledge",
+      "label": "Knowledge (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_alien_races",
+      "label": "Alien Races",
+      "type": "text"
+     },
+     {
+      "key": "sk_bureaucracy",
+      "label": "Bureaucracy",
+      "type": "text"
+     },
+     {
+      "key": "sk_cultures",
+      "label": "Cultures",
+      "type": "text"
+     },
+     {
+      "key": "sk_languages",
+      "label": "Languages",
+      "type": "text"
+     },
+     {
+      "key": "sk_planetary_systems",
+      "label": "Planetary Systems",
+      "type": "text"
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "text"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "text"
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "mechanical_sec",
+    "title": "Mechanical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "mechanical",
+      "label": "Mechanical (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_astrogation",
+      "label": "Astrogation",
+      "type": "text"
+     },
+     {
+      "key": "sk_beast_riding",
+      "label": "Beast Riding",
+      "type": "text"
+     },
+     {
+      "key": "sk_repulsorlift_op",
+      "label": "Repulsorlift Op.",
+      "type": "text"
+     },
+     {
+      "key": "sk_starship_gunnery",
+      "label": "Starship Gunnery",
+      "type": "text"
+     },
+     {
+      "key": "sk_starship_piloting",
+      "label": "Starship Piloting",
+      "type": "text"
+     },
+     {
+      "key": "sk_starship_shields",
+      "label": "Starship Shields",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "perception_sec",
+    "title": "Perception",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "perception",
+      "label": "Perception (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_bargain",
+      "label": "Bargain",
+      "type": "text"
+     },
+     {
+      "key": "sk_command",
+      "label": "Command",
+      "type": "text"
+     },
+     {
+      "key": "sk_con",
+      "label": "Con",
+      "type": "text"
+     },
+     {
+      "key": "sk_gambling",
+      "label": "Gambling",
+      "type": "text"
+     },
+     {
+      "key": "sk_hide_sneak",
+      "label": "Hide/Sneak",
+      "type": "text"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "strength_sec",
+    "title": "Strength",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_brawling",
+      "label": "Brawling",
+      "type": "text"
+     },
+     {
+      "key": "sk_climbing_jumping",
+      "label": "Climbing/Jumping",
+      "type": "text"
+     },
+     {
+      "key": "sk_lifting",
+      "label": "Lifting",
+      "type": "text"
+     },
+     {
+      "key": "sk_stamina",
+      "label": "Stamina",
+      "type": "text"
+     },
+     {
+      "key": "sk_swimming",
+      "label": "Swimming",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "technical_sec",
+    "title": "Technical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "technical",
+      "label": "Technical (dice)",
+      "type": "text"
+     },
+     {
+      "key": "sk_comp_prog_repair",
+      "label": "Comp. Prog./Repair",
+      "type": "text"
+     },
+     {
+      "key": "sk_demolition",
+      "label": "Demolition",
+      "type": "text"
+     },
+     {
+      "key": "sk_droid_prog_repair",
+      "label": "Droid Prog./Repair",
+      "type": "text"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "text"
+     },
+     {
+      "key": "sk_repulsorlift_repair",
+      "label": "Repulsorlift Repair",
+      "type": "text"
+     },
+     {
+      "key": "sk_security",
+      "label": "Security",
+      "type": "text"
+     },
+     {
+      "key": "sk_starship_repair",
+      "label": "Starship Repair",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "force",
+    "title": "The Force",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "control",
+      "label": "Control",
+      "type": "text"
+     },
+     {
+      "key": "sense",
+      "label": "Sense",
+      "type": "text"
+     },
+     {
+      "key": "alter",
+      "label": "Alter",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Other Skills",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "skills_other",
+      "label": "Other Skills & Specializations",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "third",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "background_sec",
+    "title": "Background & Personality",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     },
+     {
+      "key": "quote",
+      "label": "A Quote",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "connections",
+      "label": "Connection With Other Characters",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

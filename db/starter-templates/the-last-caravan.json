@@ -1,0 +1,246 @@
+{
+ "name": "The Last Caravan",
+ "game": "The Last Caravan",
+ "edition": "1st Edition",
+ "source": {
+  "title": "The Last Caravan Imprint and Vehicle Sheets",
+  "owner": "Ted Bushman / Carson Wright",
+  "url": "https://tedbushman.itch.io/the-last-caravan-free-character-sheets",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Traveler",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "imprint",
+      "label": "Imprint",
+      "type": "choice",
+      "options": [
+       "Bandage",
+       "Bruiser",
+       "Lookout",
+       "Stargazer",
+       "Talker",
+       "Wrench",
+       "Innocent",
+       "Good Boi",
+       "Unbound"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 9
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inadequacy",
+      "label": "Inadequacy",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Harm & Heroism",
+    "width": "third",
+    "fields": [
+     {
+      "key": "harm",
+      "label": "Harm (stable to worsening)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "heroism",
+      "label": "Heroism",
+      "type": "pips",
+      "count": 6,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "clock_1",
+      "label": "Clock 1",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "clock_2",
+      "label": "Clock 2",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gambits",
+    "title": "Gambits",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "gb_be_the_boss",
+      "label": "Be the Boss",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_do_science",
+      "label": "Do Science",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_drive_a_car",
+      "label": "Drive a Car",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_fight_under_pressure",
+      "label": "Fight Under Pressure",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_harmonize_with_alien_stuff",
+      "label": "Harmonize with Alien Stuff",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_lie_trick",
+      "label": "Lie & Trick",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_rig_repair_stuff",
+      "label": "Rig & Repair Stuff",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_search_survey",
+      "label": "Search & Survey",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_sneak_around",
+      "label": "Sneak Around",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_take_aim",
+      "label": "Take Aim",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gb_talk_it_out",
+      "label": "Talk It Out",
+      "type": "pips",
+      "count": 4
+     },
+     {
+      "key": "gambits_other",
+      "label": "Other Gambits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "gambit",
+        "label": "Gambit"
+       },
+       {
+        "key": "dots",
+        "label": "Dots"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "inventory_sec",
+    "title": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inventory",
+      "label": "Inventory",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Special Abilities & Advances",
+    "width": "third",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "advances",
+      "label": "Advances taken",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

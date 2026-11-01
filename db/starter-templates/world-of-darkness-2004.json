@@ -1,0 +1,661 @@
+{
+ "name": "The World of Darkness (2004)",
+ "game": "The World of Darkness (2004)",
+ "edition": "1st Edition (2004)",
+ "source": {
+  "title": "nWoD Mortal 2-page sheet (editable), by Mr. Gone",
+  "owner": "Mr. Gone (fan sheet); game by White Wolf Publishing",
+  "url": "http://mrgone.rocksolidshells.com/pdf/NWOD/NWoD2-Page_Editable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "virtue",
+      "label": "Virtue",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "vice",
+      "label": "Vice",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "faction",
+      "label": "Faction",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "group_name",
+      "label": "Group Name",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_resolve",
+      "label": "Resolve",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_social",
+    "title": "Social Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_presence",
+      "label": "Presence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_composure",
+      "label": "Composure",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_mental",
+    "title": "Mental Skills (-3 unskilled)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_politics",
+      "label": "Politics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_physical",
+    "title": "Physical Skills (-1 unskilled)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_larceny",
+      "label": "Larceny",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_weaponry",
+      "label": "Weaponry",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_social",
+    "title": "Social Skills (-1 unskilled)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_animal_ken",
+      "label": "Animal Ken",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_expression",
+      "label": "Expression",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_socialize",
+      "label": "Socialize",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "merits_flaws",
+    "title": "Merits & Flaws",
+    "width": "third",
+    "fields": [
+     {
+      "key": "merits",
+      "label": "Merits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "merit",
+        "label": "Merit"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "derived",
+    "title": "Size, Speed & Defense",
+    "width": "third",
+    "fields": [
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative_mod",
+      "label": "Initiative Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pools",
+    "title": "Health, Willpower & Morality",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "pips",
+      "count": 12,
+      "size": "full"
+     },
+     {
+      "key": "health_damage",
+      "label": "Health (damage)",
+      "type": "pips",
+      "count": 12,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "morality",
+      "label": "Morality",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons & Equipment",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons / Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon / Attack"
+       },
+       {
+        "key": "dice_mod",
+        "label": "Dice Mod."
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "clip",
+        "label": "Clip"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Equipment"
+       },
+       {
+        "key": "durability",
+        "label": "Durability"
+       },
+       {
+        "key": "structure",
+        "label": "Structure"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "other_traits",
+    "title": "Other Traits",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_traits_list",
+      "label": "Other Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Story & Gear"
+   },
+   {
+    "key": "history",
+    "title": "History & Goals",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "history_text",
+      "label": "History",
+      "type": "longtext"
+     },
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "longtext"
+     }
+    ],
+    "page": "Story & Gear"
+   },
+   {
+    "key": "derangements",
+    "title": "Derangements",
+    "width": "third",
+    "fields": [
+     {
+      "key": "derangements_list",
+      "label": "Derangements",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ],
+    "page": "Story & Gear"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "description_text",
+      "label": "Description",
+      "type": "longtext"
+     },
+     {
+      "key": "desc_age",
+      "label": "Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Story & Gear"
+   },
+   {
+    "key": "languages_sec",
+    "title": "Languages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "longtext"
+     }
+    ],
+    "page": "Story & Gear"
+   },
+   {
+    "key": "allies_sec",
+    "title": "Allies and Contacts",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "allies_contacts",
+      "label": "Allies and Contacts",
+      "type": "longtext"
+     }
+    ],
+    "page": "Story & Gear"
+   }
+  ]
+ }
+}

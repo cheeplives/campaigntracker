@@ -1,0 +1,192 @@
+{
+ "name": "Doctor Who: Adventures in Time and Space",
+ "game": "Doctor Who: Adventures in Time and Space",
+ "edition": "Eleventh Doctor Edition",
+ "source": {
+  "title": "AITAS Eleventh Doctor Edition blank character sheet",
+  "owner": "Cubicle 7 Entertainment",
+  "url": "https://web.archive.org/web/20130810213652id_/http://www.cubicle7.co.uk:80/wp-content/uploads/2012/12/DWAITASEleventhDoctorEditionCharacterBlankSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "biodata",
+    "title": "Biodata",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player_name",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "story_points",
+      "label": "Story Points",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "attr_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "attr_coordination",
+      "label": "Coordination",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "attr_ingenuity",
+      "label": "Ingenuity",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "attr_presence",
+      "label": "Presence",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "attr_resolve",
+      "label": "Resolve",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "number"
+     },
+     {
+      "key": "sk_convince",
+      "label": "Convince",
+      "type": "number"
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "number"
+     },
+     {
+      "key": "sk_fighting",
+      "label": "Fighting",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge",
+      "label": "Knowledge",
+      "type": "number"
+     },
+     {
+      "key": "sk_marksman",
+      "label": "Marksman",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "number"
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "number"
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "number"
+     },
+     {
+      "key": "sk_transport",
+      "label": "Transport",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "traits_sec",
+    "title": "Traits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stuff_sec",
+    "title": "Stuff",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stuff",
+      "label": "Stuff",
+      "type": "longtext"
+     },
+     {
+      "key": "tech_level",
+      "label": "TL",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   }
+  ]
+ }
+}

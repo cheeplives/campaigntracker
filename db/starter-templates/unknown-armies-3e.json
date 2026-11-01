@@ -1,0 +1,525 @@
+{
+ "name": "Unknown Armies",
+ "game": "Unknown Armies",
+ "edition": "3rd Edition",
+ "source": {
+  "title": "UA3 Character Sheets",
+  "owner": "Atlas Games",
+  "url": "https://www.atlas-games.com/atlas-cms/resources/pdfs/ua3charactersheets2019-10-25.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "cabal",
+      "label": "Cabal",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "objective",
+      "label": "Current Objective",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "distinguishing",
+      "label": "Distinguishing Characteristics",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "passions",
+    "title": "Passions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "rage",
+      "label": "Rage",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "noble",
+      "label": "Noble",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "fear",
+      "label": "Fear",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "relationships",
+    "title": "Stats & Relationships",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "favorite",
+      "label": "Favorite (Status)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "status",
+      "label": "Status %",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "guru",
+      "label": "Guru (Notice)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "notice",
+      "label": "Notice %",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mentor",
+      "label": "Mentor (Connect)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "connect",
+      "label": "Connect %",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "responsibility",
+      "label": "Responsibility (Knowledge)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "knowledge",
+      "label": "Knowledge %",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "protege",
+      "label": "Protégé (Fitness)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "fitness",
+      "label": "Fitness %",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wound_threshold",
+      "label": "Wound Threshold",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "helplessness",
+    "title": "Helplessness",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "helplessness_hardened",
+      "label": "Hardened",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "helplessness_failures",
+      "label": "Failures",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "dodge",
+      "label": "Dodge %",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "isolation",
+    "title": "Isolation",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "isolation_hardened",
+      "label": "Hardened",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "isolation_failures",
+      "label": "Failures",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "pursuit",
+      "label": "Pursuit %",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "self",
+    "title": "Self",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "self_hardened",
+      "label": "Hardened",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "self_failures",
+      "label": "Failures",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "lie",
+      "label": "Lie %",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "unnatural",
+    "title": "Unnatural",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "unnatural_hardened",
+      "label": "Hardened",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "unnatural_failures",
+      "label": "Failures",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "secrecy",
+      "label": "Secrecy %",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "violence",
+    "title": "Violence",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "violence_hardened",
+      "label": "Hardened",
+      "type": "pips",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "violence_failures",
+      "label": "Failures",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "struggle",
+      "label": "Struggle %",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "identities",
+    "title": "Identities",
+    "fields": [
+     {
+      "key": "identity_list",
+      "label": "Identities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "identity",
+        "label": "I'm a…"
+       },
+       {
+        "key": "can",
+        "label": "Of course I can…"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       },
+       {
+        "key": "substitutes",
+        "label": "Substitutes for Ability"
+       },
+       {
+        "key": "features",
+        "label": "Features"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "supernatural",
+    "title": "Supernatural Ability",
+    "page": "Supernatural",
+    "width": "half",
+    "fields": [
+     {
+      "key": "super_ability",
+      "label": "Supernatural Ability",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "super_percent",
+      "label": "Percentage",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "super_scope",
+      "label": "Scope",
+      "type": "choice",
+      "options": [
+       "Vague",
+       "Specific"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "super_type",
+      "label": "Type",
+      "type": "choice",
+      "options": [
+       "Harm",
+       "Information",
+       "Protection"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "super_kind",
+      "label": "Kind",
+      "type": "choice",
+      "options": [
+       "Influence",
+       "Versatility"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "super_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "avatar",
+    "title": "Avatar",
+    "page": "Supernatural",
+    "width": "half",
+    "fields": [
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "avatar_percent",
+      "label": "Percentage",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "avatar_taboos",
+      "label": "Taboos",
+      "type": "longtext"
+     },
+     {
+      "key": "symbols",
+      "label": "Symbols",
+      "type": "longtext"
+     },
+     {
+      "key": "channel_1",
+      "label": "Channels 1%–50%",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "channel_51",
+      "label": "Channels 51%–70%",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "channel_71",
+      "label": "Channels 71%–90%",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "channel_91",
+      "label": "Channels 91%+",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "avatar_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "adept",
+    "title": "Adept",
+    "page": "Supernatural",
+    "fields": [
+     {
+      "key": "adept_school",
+      "label": "Adept School",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "adept_percent",
+      "label": "Percentage",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "adept_taboos",
+      "label": "Taboos",
+      "type": "longtext"
+     },
+     {
+      "key": "domain",
+      "label": "Domain",
+      "type": "longtext"
+     },
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Spell Name"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     },
+     {
+      "key": "minor_charges",
+      "label": "Minor Charges",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "significant_charges",
+      "label": "Significant Charges",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "major_charges",
+      "label": "Major Charges",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

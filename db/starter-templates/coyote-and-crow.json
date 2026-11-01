@@ -1,0 +1,460 @@
+{
+ "name": "Coyote & Crow",
+ "game": "Coyote & Crow",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Form-fillable Character Sheet v1.01",
+  "owner": "Coyote & Crow LLC",
+  "url": "https://coyoteandcrow.net/wp-content/uploads/2021/12/CoyoteCrowFormFillableCharacterSheet-v1.01.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "names",
+      "label": "Name(s)",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "path",
+      "label": "Path of The",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "other_identifiers",
+      "label": "Other Identifiers",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "gifts_burdens",
+      "label": "Gifts & Burdens",
+      "type": "longtext"
+     },
+     {
+      "key": "short_term_goals",
+      "label": "Short Term Goals",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "short_term_goals_2",
+      "label": "Short Term Goals (2)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "long_term_goal",
+      "label": "Long Term Goal",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "agi",
+      "label": "AGI",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "end",
+      "label": "END",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "per",
+      "label": "PER",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spi",
+      "label": "SPI",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wll",
+      "label": "WLL",
+      "type": "number",
+      "size": "small"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "derived",
+    "title": "Derived Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "pd",
+      "label": "PD",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "md",
+      "label": "MD",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sd",
+      "label": "SD",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Abilities & States",
+    "fields": [
+     {
+      "key": "legendary_ranks",
+      "label": "Legendary Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "abilities",
+      "label": "Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "states_effects",
+      "label": "States & Effects",
+      "type": "longtext",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "General Skills (Rank)",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_art",
+      "label": "Art",
+      "type": "number"
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "number"
+     },
+     {
+      "key": "sk_ceremony",
+      "label": "Ceremony*",
+      "type": "number"
+     },
+     {
+      "key": "sk_charm",
+      "label": "Charm",
+      "type": "number"
+     },
+     {
+      "key": "sk_coercion",
+      "label": "Coercion",
+      "type": "number"
+     },
+     {
+      "key": "sk_computers",
+      "label": "Computers",
+      "type": "number"
+     },
+     {
+      "key": "sk_cooking",
+      "label": "Cooking",
+      "type": "number"
+     },
+     {
+      "key": "sk_crafting",
+      "label": "Crafting",
+      "type": "number"
+     },
+     {
+      "key": "sk_cybernetics",
+      "label": "Cybernetics*",
+      "type": "number"
+     },
+     {
+      "key": "sk_deception",
+      "label": "Deception",
+      "type": "number"
+     },
+     {
+      "key": "sk_farming",
+      "label": "Farming",
+      "type": "number"
+     },
+     {
+      "key": "sk_herbalism",
+      "label": "Herbalism*",
+      "type": "number"
+     },
+     {
+      "key": "sk_husbandry",
+      "label": "Husbandry",
+      "type": "number"
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge",
+      "label": "Knowledge",
+      "type": "number"
+     },
+     {
+      "key": "sk_language",
+      "label": "Language*",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine*",
+      "type": "number"
+     },
+     {
+      "key": "sk_melee_weapons",
+      "label": "Melee Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_music",
+      "label": "Music",
+      "type": "number"
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "number"
+     },
+     {
+      "key": "sk_piloting",
+      "label": "Piloting",
+      "type": "number"
+     },
+     {
+      "key": "sk_ranged_weapons",
+      "label": "Ranged Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_science",
+      "label": "Science*",
+      "type": "number"
+     },
+     {
+      "key": "sk_skulduggery",
+      "label": "Skulduggery",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_tracking",
+      "label": "Tracking",
+      "type": "number"
+     },
+     {
+      "key": "sk_unarmed_combat",
+      "label": "Unarmed Combat",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "specialized",
+    "title": "Specialized Skills",
+    "fields": [
+     {
+      "key": "specialized_skills",
+      "label": "Specialized Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Specialized Skill"
+       },
+       {
+        "key": "base",
+        "label": "Base Skill"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "belongings_sec",
+    "title": "Belongings",
+    "page": "Notes",
+    "fields": [
+     {
+      "key": "belongings",
+      "label": "Belongings",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Character Notes",
+    "page": "Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "character_notes",
+      "label": "Character Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "sketch_sec",
+    "title": "Character Sketch",
+    "page": "Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "character_sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

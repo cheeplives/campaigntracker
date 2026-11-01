@@ -1,0 +1,342 @@
+{
+ "name": "Big Eyes, Small Mouth",
+ "game": "Big Eyes, Small Mouth",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Big Eyes, Small Mouth 2nd Edition character sheet",
+  "owner": "Guardians of Order",
+  "url": "https://web.archive.org/web/20100215194400id_/http://www.rpgsheets.com:80/sheets/016004.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Identity",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "character_points",
+      "label": "Character Points",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "skill_points",
+      "label": "Skill Points",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "stats",
+    "title": "Character Stats & Derived Values",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "health_points",
+      "label": "Health Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "energy_points",
+      "label": "Energy Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "shock_value",
+      "label": "Shock Value",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "acv",
+      "label": "Attack Combat Value",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dcv",
+      "label": "Defense Combat Value",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "other_notes",
+    "title": "Other Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "unused_advancement",
+      "label": "Unused Advancement Points",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "total_advancement",
+      "label": "Total Advancement Points Earned",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "notes",
+      "label": "Other Notes and Details",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "defects_sec",
+    "title": "Normal Defects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "defects",
+      "label": "Normal Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "defect",
+        "label": "Defect"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus Points"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes_sec",
+    "title": "Normal Attributes & Skills",
+    "fields": [
+     {
+      "key": "attributes",
+      "label": "Attributes & Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attribute",
+        "label": "Attribute or Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "cost",
+        "label": "Point Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "special_attr_sec",
+    "title": "Special Attributes",
+    "page": "Special & Mecha",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_attributes",
+      "label": "Special Attributes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attribute",
+        "label": "Special Attribute"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "cost",
+        "label": "Point Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "special_def_sec",
+    "title": "Special Defects",
+    "page": "Special & Mecha",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_defects",
+      "label": "Special Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "defect",
+        "label": "Special Defect"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus Points"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mecha_attr_sec",
+    "title": "Mecha Attributes",
+    "page": "Special & Mecha",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mecha_attributes",
+      "label": "Mecha Attributes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attribute",
+        "label": "Mecha Attribute"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "cost",
+        "label": "Point Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mecha_def_sec",
+    "title": "Mecha Defects",
+    "page": "Special & Mecha",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mecha_defects",
+      "label": "Mecha Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "defect",
+        "label": "Mecha Defect"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus Points"
+       },
+       {
+        "key": "notes",
+        "label": "Notes/Description"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

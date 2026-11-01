@@ -1,0 +1,625 @@
+{
+ "name": "It Came From the Late, Late, Late Show",
+ "game": "It Came From the Late, Late, Late Show",
+ "edition": "1st Edition (Stellar Games)",
+ "source": {
+  "title": "Actor Control Sheet",
+  "owner": "Stellar Games",
+  "url": "https://web.archive.org/web/20101129193708id_/http://rpgsheets.com/sheets/161001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Actor",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Actor's Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "dress",
+      "label": "Typical Mode of Dress",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Basic Abilities",
+    "width": "third",
+    "fields": [
+     {
+      "key": "build",
+      "label": "Build (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "looks",
+      "label": "Looks (LKS)",
+      "type": "number"
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "fame",
+      "label": "Fame",
+      "type": "number"
+     },
+     {
+      "key": "brains",
+      "label": "Brains (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "survival_points",
+      "label": "Survival Pts (SP)",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "stunt_double_sp",
+      "label": "Stunt Double SP",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "combat_talents",
+    "title": "Combat Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "tal_unarmed_comb",
+      "label": "Unarmed Comb. (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_knife",
+      "label": "Knife (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_sword",
+      "label": "Sword (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_club",
+      "label": "Club (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_bow",
+      "label": "Bow (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_spear",
+      "label": "Spear (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_pistol",
+      "label": "Pistol (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_rifle",
+      "label": "Rifle (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_automatic_rifle",
+      "label": "Automatic Rifle (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_power_tools",
+      "label": "Power Tools (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_throwing",
+      "label": "Throwing (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_heavy_weapons",
+      "label": "Heavy Weapons (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_artillery",
+      "label": "Artillery (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_strategic_weap",
+      "label": "Strategic Weap. (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "combat_talents_other",
+      "label": "Other Combat Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "score",
+        "label": "Score"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "other_talents_1",
+    "title": "Other Talents (1 of 3)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "tal_acrobatics",
+      "label": "Acrobatics (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_acting",
+      "label": "Acting (LKS)",
+      "type": "number"
+     },
+     {
+      "key": "tal_administration",
+      "label": "Administration (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_agriculture",
+      "label": "Agriculture (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_aircraft",
+      "label": "Aircraft (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_alertness",
+      "label": "Alertness (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_ambidexterity",
+      "label": "Ambidexterity (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_an_husbandry",
+      "label": "An. Husbandry (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_an_training",
+      "label": "An. Training (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_archeology",
+      "label": "Archeology (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_astrology",
+      "label": "Astrology (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_astronomy",
+      "label": "Astronomy (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_biochemistry",
+      "label": "Biochemistry (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_biology",
+      "label": "Biology (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_bluffing",
+      "label": "Bluffing (FAME)",
+      "type": "number"
+     },
+     {
+      "key": "tal_business",
+      "label": "Business (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_carousing",
+      "label": "Carousing (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_cheerleading",
+      "label": "Cheerleading (LKS)",
+      "type": "number"
+     },
+     {
+      "key": "tal_computers",
+      "label": "Computers (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_construction",
+      "label": "Construction (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_cooking",
+      "label": "Cooking (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_driving",
+      "label": "Driving (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_electronics",
+      "label": "Electronics (DEX)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_talents_2",
+    "title": "Other Talents (2 of 3)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "tal_etiquette",
+      "label": "Etiquette (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_explosives",
+      "label": "Explosives (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_first_aid",
+      "label": "First Aid (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_fishing",
+      "label": "Fishing (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_gambling",
+      "label": "Gambling (FAME)",
+      "type": "number"
+     },
+     {
+      "key": "tal_geology",
+      "label": "Geology (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_heavy_equip",
+      "label": "Heavy Equip. (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_history",
+      "label": "History (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_hunting",
+      "label": "Hunting (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_intimidation",
+      "label": "Intimidation (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_leadership",
+      "label": "Leadership (FAME)",
+      "type": "number"
+     },
+     {
+      "key": "tal_lip_reading",
+      "label": "Lip Reading (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_locksmith",
+      "label": "Locksmith (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_lying",
+      "label": "Lying (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_mechanics",
+      "label": "Mechanics (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_medicine",
+      "label": "Medicine (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_mental_map",
+      "label": "Mental Map (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_military_intell",
+      "label": "Military Intell. (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_motorcycles",
+      "label": "Motorcycles (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_mount_climb",
+      "label": "Mount. Climb (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_music",
+      "label": "Music (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_nuclear_physics",
+      "label": "Nuclear Physics (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_occult_knowl",
+      "label": "Occult Knowl. (BRN)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_talents_3",
+    "title": "Other Talents (3 of 3)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "tal_parachuting",
+      "label": "Parachuting (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_persuasion",
+      "label": "Persuasion (FAME)",
+      "type": "number"
+     },
+     {
+      "key": "tal_photography",
+      "label": "Photography (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_plumbing",
+      "label": "Plumbing (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_psychology",
+      "label": "Psychology (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_radio_tech",
+      "label": "Radio Tech. (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_research",
+      "label": "Research (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_riding",
+      "label": "Riding (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_screaming",
+      "label": "Screaming (LKS)",
+      "type": "number"
+     },
+     {
+      "key": "tal_sign_language",
+      "label": "Sign Language (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_singing",
+      "label": "Singing (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_spaceships",
+      "label": "Spaceships (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_sports",
+      "label": "Sports (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_stealth",
+      "label": "Stealth (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_streetwise",
+      "label": "Streetwise (FAME)",
+      "type": "number"
+     },
+     {
+      "key": "tal_surgery",
+      "label": "Surgery (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_swimming",
+      "label": "Swimming (BLD)",
+      "type": "number"
+     },
+     {
+      "key": "tal_teaching",
+      "label": "Teaching (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_time_sense",
+      "label": "Time Sense (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_tracking",
+      "label": "Tracking (BRN)",
+      "type": "number"
+     },
+     {
+      "key": "tal_traps_tricks",
+      "label": "Traps & Tricks (DEX)",
+      "type": "number"
+     },
+     {
+      "key": "tal_water_vehicles",
+      "label": "Water Vehicles (DEX)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "extra_talents",
+    "title": "More Talents",
+    "width": "third",
+    "fields": [
+     {
+      "key": "talents_other",
+      "label": "More Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "score",
+        "label": "Score"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "props_sec",
+    "title": "Props",
+    "width": "half",
+    "fields": [
+     {
+      "key": "props",
+      "label": "Props",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "wardrobe_sec",
+    "title": "Wardrobe",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wardrobe",
+      "label": "Wardrobe",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

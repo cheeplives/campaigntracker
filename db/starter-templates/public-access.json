@@ -1,0 +1,232 @@
+{
+ "name": "Public Access",
+ "game": "Public Access",
+ "edition": "1st Edition (Carved from Brindlewood)",
+ "source": {
+  "title": "Public Access character sheet",
+  "owner": "The Gauntlet",
+  "url": "https://www.gauntlet-rpg.com/uploads/7/7/8/1/77811662/pa_character_sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "latchkey",
+    "title": "Latchkey",
+    "width": "third",
+    "fields": [
+     {
+      "key": "first_name",
+      "label": "First Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "surname",
+      "label": "Surname",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "takes_you_back",
+      "label": "Takes You Back",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "vitality",
+      "label": "Vitality",
+      "type": "number"
+     },
+     {
+      "key": "composure",
+      "label": "Composure",
+      "type": "number"
+     },
+     {
+      "key": "reason",
+      "label": "Reason",
+      "type": "number"
+     },
+     {
+      "key": "presence",
+      "label": "Presence",
+      "type": "number"
+     },
+     {
+      "key": "sensitivity",
+      "label": "Sensitivity",
+      "type": "number"
+     },
+     {
+      "key": "xp",
+      "label": "XP Track",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "conditions_sec",
+    "title": "Conditions & Dawn Questions",
+    "width": "third",
+    "fields": [
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "dawn_questions",
+      "label": "Dawn Questions marked this session",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "moves_sec",
+    "title": "Latchkey Moves",
+    "width": "half",
+    "fields": [
+     {
+      "key": "latchkey_moves",
+      "label": "Latchkey Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "corner",
+    "title": "Your Corner of the House",
+    "width": "half",
+    "fields": [
+     {
+      "key": "corner_items",
+      "label": "Your Corner of the House",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "marked",
+        "label": "Marked"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advancements",
+    "title": "Advancements",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "adv_ability_1",
+      "label": "Increase an ability by 1 (1)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_ability_2",
+      "label": "Increase an ability by 1 (2)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_move_1",
+      "label": "Choose an additional Latchkey move (1)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_move_2",
+      "label": "Choose an additional Latchkey move (2)",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_custom",
+      "label": "Write a custom Latchkey move",
+      "type": "checkbox"
+     },
+     {
+      "key": "adv_unmark",
+      "label": "Unmark all the items in Your Corner of the House",
+      "type": "checkbox"
+     }
+    ]
+   },
+   {
+    "key": "key_child",
+    "title": "The Key of the Child",
+    "width": "third",
+    "fields": [
+     {
+      "key": "key_child_flashbacks",
+      "label": "Flashbacks marked",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "key_desolation",
+    "title": "The Key of Desolation",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "des_the_sandstone_arch",
+      "label": "The Sandstone Arch",
+      "type": "checkbox"
+     },
+     {
+      "key": "des_the_fathomless_well",
+      "label": "The Fathomless Well",
+      "type": "checkbox"
+     },
+     {
+      "key": "des_the_wandering_monolith",
+      "label": "The Wandering Monolith",
+      "type": "checkbox"
+     },
+     {
+      "key": "des_the_chromatic_desert",
+      "label": "The Chromatic Desert",
+      "type": "checkbox"
+     },
+     {
+      "key": "des_the_pure_white_signal",
+      "label": "The Pure-White Signal",
+      "type": "checkbox"
+     }
+    ]
+   }
+  ]
+ }
+}

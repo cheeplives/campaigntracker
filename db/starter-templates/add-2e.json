@@ -1,0 +1,872 @@
+{
+ "name": "Advanced Dungeons & Dragons (2nd Edition)",
+ "game": "Advanced Dungeons & Dragons",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "AD&D 2nd Edition Player Character Record",
+  "owner": "TSR / Wizards of the Coast",
+  "url": "https://web.archive.org/web/20101129202110id_/http://rpgsheets.com/sheets/034001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "pc_record",
+    "title": "Player Character Record",
+    "fields": [
+     {
+      "key": "character",
+      "label": "Character",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alignment",
+      "label": "Align.",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "player_name",
+      "label": "Player's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "family",
+      "label": "Family",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "liege_patron",
+      "label": "Liege/Patron",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race_clan",
+      "label": "Race/Clan",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Ht.",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Wt.",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "birth_rank",
+      "label": "Birth Rank",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "status",
+      "label": "Status",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "siblings",
+      "label": "# Siblings",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "honor",
+      "label": "Honor",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "base_honor",
+      "label": "Base Honor",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "reaction_adjustment",
+      "label": "Reaction Adjustment",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_str",
+    "title": "Strength (STR)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "str_hit_prob",
+      "label": "Hit Prob",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "str_dmg_adj",
+      "label": "Dmg Adj",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "str_wgt_allow",
+      "label": "Wgt Allow",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "str_max_press",
+      "label": "Max Press",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "str_open_doors",
+      "label": "Open Doors",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "str_bb_lg",
+      "label": "BB/LG",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_dex",
+    "title": "Dexterity (DEX)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "dex_reaction_adj",
+      "label": "Reaction Adj",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "dex_missile_att_adj",
+      "label": "Missile Att Adj",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "dex_def_adj",
+      "label": "Def Adj",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_con",
+    "title": "Constitution (CON)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "con_hp_adj",
+      "label": "HP Adj",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "con_system_shock",
+      "label": "System Shock",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "con_res_survival",
+      "label": "Res Survival",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "con_poison_save",
+      "label": "Poison Save",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "con_regen",
+      "label": "Regen",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_int",
+    "title": "Intelligence (INT)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "int_no_of_lang",
+      "label": "No. of Lang",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "int_spell_lvl",
+      "label": "Spell Lvl",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "int_learn_spell",
+      "label": "Learn Spell",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "int_spells_level",
+      "label": "Spells/Level",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "int_spell_immun",
+      "label": "Spell Immun",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_wis",
+    "title": "Wisdom (WIS)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wis_mag_def_adjust",
+      "label": "Mag Def Adjust",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "wis_bonus_spells",
+      "label": "Bonus Spells",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "wis_spell_fail",
+      "label": "Spell Fail",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "wis_spell_immun",
+      "label": "Spell Immun",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ab_chr",
+    "title": "Charisma (CHR)",
+    "width": "third",
+    "fields": [
+     {
+      "key": "chr",
+      "label": "CHR",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "chr_max_no_hench",
+      "label": "Max No Hench",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "chr_loyalty_base",
+      "label": "Loyalty Base",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "chr_reaction_adj",
+      "label": "Reaction Adj",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saving_throws",
+    "title": "Saving Throws",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "save_paralyze",
+      "label": "Paralyze/Poison",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save_rod",
+      "label": "Rod, Staff, or Wand",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save_petrify",
+      "label": "Petrify/Polymorph",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save_breath",
+      "label": "Breath Weapon",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save_spells",
+      "label": "Spells",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save_modifier",
+      "label": "Modifier",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "movement",
+    "title": "Movement",
+    "width": "third",
+    "fields": [
+     {
+      "key": "move_base",
+      "label": "Base Rate",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_light",
+      "label": "Light",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_mod",
+      "label": "Mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_hvy",
+      "label": "Hvy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_svr",
+      "label": "Svr",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_jog",
+      "label": "Jog (x2)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_run3",
+      "label": "Run (x3)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_run4",
+      "label": "Run (x4)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_run5",
+      "label": "Run (x5)",
+      "type": "number",
+      "size": "small"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor",
+    "title": "Armor",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ac",
+      "label": "AC",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "ac_surprised",
+      "label": "Surprised",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ac_shieldless",
+      "label": "Shieldless",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ac_rear",
+      "label": "Rear",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type (Pieces)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "defenses",
+      "label": "Defenses",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "hit_points",
+    "title": "Hit Points",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "longtext",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Weapon Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "at",
+        "label": "#AT"
+       },
+       {
+        "key": "adj",
+        "label": "Attack/Dmg Adj"
+       },
+       {
+        "key": "thac0",
+        "label": "THAC0"
+       },
+       {
+        "key": "damage",
+        "label": "Damage (SM/L)"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "speed",
+        "label": "Speed"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "special_attacks",
+      "label": "Special Attacks",
+      "type": "longtext"
+     },
+     {
+      "key": "ammunition",
+      "label": "Ammunition",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ammo",
+        "label": "Ammunition"
+       },
+       {
+        "key": "count",
+        "label": "Count"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "special_abilities_sec",
+    "title": "Special Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "proficiencies_sec",
+    "title": "Proficiencies, Skills & Languages",
+    "width": "half",
+    "fields": [
+     {
+      "key": "proficiencies",
+      "label": "Proficiencies / Skills / Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "slots",
+        "label": "Slots"
+       },
+       {
+        "key": "check",
+        "label": "Check"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "page": "Gear & Treasure",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "weight",
+        "label": "Wt."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "supplies",
+    "title": "Supplies",
+    "page": "Gear & Treasure",
+    "width": "third",
+    "fields": [
+     {
+      "key": "water_wine",
+      "label": "Water/Wine",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "rations",
+      "label": "Rations",
+      "type": "pips",
+      "count": 30,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "feed",
+      "label": "Feed",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "experience_sec",
+    "title": "Experience",
+    "page": "Gear & Treasure",
+    "width": "third",
+    "fields": [
+     {
+      "key": "xp",
+      "label": "Experience",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "xp_notes",
+      "label": "Experience notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "treasure",
+    "title": "Treasure",
+    "page": "Gear & Treasure",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "coins",
+      "label": "Coins",
+      "type": "longtext"
+     },
+     {
+      "key": "gems",
+      "label": "Gems",
+      "type": "longtext"
+     },
+     {
+      "key": "other_valuables",
+      "label": "Other Valuables",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "misc",
+    "title": "Miscellaneous Information",
+    "page": "Gear & Treasure",
+    "fields": [
+     {
+      "key": "misc_info",
+      "label": "Magical Items, Command Words, Small Maps, etc.",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "henchmen",
+    "title": "Henchmen / Animal Companions",
+    "page": "Gear & Treasure",
+    "fields": [
+     {
+      "key": "henchmen_list",
+      "label": "Henchmen / Animal Companions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "ac",
+        "label": "AC"
+       },
+       {
+        "key": "race_class",
+        "label": "Race/Class"
+       },
+       {
+        "key": "hd",
+        "label": "HD/Lvl"
+       },
+       {
+        "key": "at",
+        "label": "#AT"
+       },
+       {
+        "key": "thac0",
+        "label": "THAC0"
+       },
+       {
+        "key": "dmg",
+        "label": "Dmg/Effects"
+       },
+       {
+        "key": "hp",
+        "label": "hp"
+       },
+       {
+        "key": "skills",
+        "label": "Skills/Abilities"
+       },
+       {
+        "key": "background",
+        "label": "Background"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

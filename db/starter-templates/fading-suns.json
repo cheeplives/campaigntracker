@@ -1,0 +1,574 @@
+{
+ "name": "Fading Suns",
+ "game": "Fading Suns",
+ "edition": "1st Edition (Holistic Design, 1996)",
+ "source": {
+  "title": "Fading Suns character sheet",
+  "owner": "Holistic Design",
+  "url": "https://web.archive.org/web/20101129184302id_/http://rpgsheets.com/sheets/038001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "native_planet",
+      "label": "Native Planet",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "alliance",
+      "label": "Alliance",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "body_mind",
+    "title": "Body & Mind",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "endurance",
+      "label": "Endurance",
+      "type": "number"
+     },
+     {
+      "key": "wits",
+      "label": "Wits",
+      "type": "number"
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "tech",
+      "label": "Tech",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "spirit",
+    "title": "Spirit",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "extrovert",
+      "label": "Extrovert",
+      "type": "number"
+     },
+     {
+      "key": "introvert",
+      "label": "Introvert",
+      "type": "number"
+     },
+     {
+      "key": "passion",
+      "label": "Passion",
+      "type": "number"
+     },
+     {
+      "key": "calm",
+      "label": "Calm",
+      "type": "number"
+     },
+     {
+      "key": "faith",
+      "label": "Faith",
+      "type": "number"
+     },
+     {
+      "key": "ego",
+      "label": "Ego",
+      "type": "number"
+     },
+     {
+      "key": "human",
+      "label": "Human",
+      "type": "number"
+     },
+     {
+      "key": "alien",
+      "label": "Alien",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "natural_skills",
+    "title": "Natural Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_charm",
+      "label": "Charm",
+      "type": "number"
+     },
+     {
+      "key": "skill_dodge",
+      "label": "Dodge",
+      "type": "number"
+     },
+     {
+      "key": "skill_fight",
+      "label": "Fight",
+      "type": "number"
+     },
+     {
+      "key": "skill_impress",
+      "label": "Impress",
+      "type": "number"
+     },
+     {
+      "key": "skill_melee",
+      "label": "Melee",
+      "type": "number"
+     },
+     {
+      "key": "skill_observe",
+      "label": "Observe",
+      "type": "number"
+     },
+     {
+      "key": "skill_shoot",
+      "label": "Shoot",
+      "type": "number"
+     },
+     {
+      "key": "skill_sneak",
+      "label": "Sneak",
+      "type": "number"
+     },
+     {
+      "key": "skill_vigor",
+      "label": "Vigor",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "learned_sec",
+    "title": "Learned Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "learned_skills",
+      "label": "Learned Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "lvl",
+        "label": "LVL"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "blessings_sec",
+    "title": "Blessings/Curses",
+    "width": "third",
+    "fields": [
+     {
+      "key": "blessings",
+      "label": "Blessings/Curses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "pm",
+        "label": "+/-"
+       },
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "situation",
+        "label": "Situation"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "benefits_sec",
+    "title": "Benefits/Afflictions",
+    "width": "third",
+    "fields": [
+     {
+      "key": "benefits",
+      "label": "Benefits/Afflictions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "pts",
+        "label": "Pts"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "occult",
+    "title": "Occult",
+    "width": "third",
+    "fields": [
+     {
+      "key": "psi",
+      "label": "Psi",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "urge",
+      "label": "Urge",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "theurgy",
+      "label": "Theurgy",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "hubris",
+      "label": "Hubris",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "powers",
+      "label": "Powers/Rites",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power/Rite"
+       },
+       {
+        "key": "lvl",
+        "label": "LVL"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       }
+      ]
+     },
+     {
+      "key": "stigma",
+      "label": "Stigma",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat_sec",
+    "title": "Combat",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "combat_actions",
+      "label": "Combat Actions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       },
+       {
+        "key": "init",
+        "label": "Init"
+       },
+       {
+        "key": "goal",
+        "label": "Goal"
+       },
+       {
+        "key": "dmg",
+        "label": "DMG"
+       },
+       {
+        "key": "str_rng",
+        "label": "STR/RNG"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "siz",
+        "label": "SIZ"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "vitals",
+    "title": "Vitality, Wyrd & Armor",
+    "fields": [
+     {
+      "key": "vitality",
+      "label": "Vitality",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "wyrd",
+      "label": "Wyrd",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor (+ d)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "energy_shield",
+      "label": "Energy Shield (hits)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "page": "Description & Possessions",
+    "width": "third",
+    "fields": [
+     {
+      "key": "birthdate",
+      "label": "Birthdate",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "complexion",
+      "label": "Complexion",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "image",
+      "label": "Image",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history_sec",
+    "title": "History",
+    "page": "Description & Possessions",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "history",
+      "label": "History",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "traits_sec",
+    "title": "Traits",
+    "page": "Description & Possessions",
+    "width": "third",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "lvl",
+        "label": "LVL"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions & Money",
+    "page": "Description & Possessions",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "carried",
+      "label": "Carried",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "siz",
+        "label": "SIZ"
+       }
+      ]
+     },
+     {
+      "key": "owned",
+      "label": "Owned",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       }
+      ]
+     },
+     {
+      "key": "cash",
+      "label": "Cash",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "credit",
+      "label": "Credit",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   }
+  ]
+ }
+}

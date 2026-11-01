@@ -1,0 +1,356 @@
+{
+ "name": "Chill",
+ "game": "Chill",
+ "edition": "1st Edition (Pacesetter, 1984)",
+ "source": {
+  "title": "Chill Character Record Sheet",
+  "owner": "Pacesetter Ltd.",
+  "url": "https://web.archive.org/web/20101129173156id_/http://rpgsheets.com/sheets/195001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "character",
+      "label": "Character",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Basic Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "number"
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "number"
+     },
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "number"
+     },
+     {
+      "key": "unskilled_melee",
+      "label": "Unskilled Melee",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "background",
+    "title": "Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "education",
+      "label": "Education",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Ht.",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "weight",
+      "label": "Wt.",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds & Condition",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "wound_scratches",
+      "label": "Scratches",
+      "type": "pips",
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "wound_light",
+      "label": "Light",
+      "type": "pips",
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "wound_medium",
+      "label": "Medium",
+      "type": "pips",
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "wound_heavy",
+      "label": "Heavy",
+      "type": "pips",
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "wound_critical",
+      "label": "Critical",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "stamina_lost",
+      "label": "Stamina lost to wounds",
+      "type": "number"
+     },
+     {
+      "key": "regen_rate",
+      "label": "Regen. rate/round",
+      "type": "text"
+     },
+     {
+      "key": "rehab_rate",
+      "label": "Rehab. rate/day",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Name and rank"
+       },
+       {
+        "key": "base",
+        "label": "Base"
+       },
+       {
+        "key": "score",
+        "label": "Score"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "disciplines_sec",
+    "title": "Disciplines of the Art",
+    "width": "half",
+    "fields": [
+     {
+      "key": "sensing_unknown",
+      "label": "Sensing Unknown",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "disciplines",
+      "label": "Disciplines",
+      "type": "list",
+      "columns": [
+       {
+        "key": "discipline",
+        "label": "Discipline"
+       },
+       {
+        "key": "base",
+        "label": "Base"
+       },
+       {
+        "key": "score",
+        "label": "Score"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "ranges",
+        "label": "Ranges"
+       },
+       {
+        "key": "base",
+        "label": "Base"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "insight",
+    "title": "Current Scores & Insight Points",
+    "width": "half",
+    "fields": [
+     {
+      "key": "current_sta",
+      "label": "Current STA",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "current_wpr",
+      "label": "Current WPR",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "insight_previous",
+      "label": "Previous",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "insight_earned",
+      "label": "Earned",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "insight_spent",
+      "label": "Spent",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "insight_balance",
+      "label": "Balance",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "creatures",
+    "title": "Creatures from the Unknown",
+    "fields": [
+     {
+      "key": "creatures_list",
+      "label": "Creatures from the Unknown",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "encountered",
+        "label": "Date Encountered"
+       },
+       {
+        "key": "defeated",
+        "label": "Date Defeated"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

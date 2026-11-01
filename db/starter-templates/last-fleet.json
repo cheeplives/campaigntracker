@@ -1,0 +1,266 @@
+{
+ "name": "Last Fleet",
+ "game": "Last Fleet",
+ "edition": "1st Edition (Black Armada)",
+ "source": {
+  "title": "Last Fleet playbooks and reference sheets",
+  "owner": "Black Armada (Joshua Fox)",
+  "url": "https://blackarmada.com/wp-content/uploads/2020/10/Last-Fleet-playbooks-and-reference-sheets.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "options": [
+       "Aries",
+       "Taurus",
+       "Gemini",
+       "Cancer",
+       "Leo",
+       "Virgo",
+       "Libra",
+       "Scorpio",
+       "Sagittarius",
+       "Capricorn",
+       "Aquarius",
+       "Pisces"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "raw",
+      "label": "Raw",
+      "type": "number"
+     },
+     {
+      "key": "hard",
+      "label": "Hard",
+      "type": "number"
+     },
+     {
+      "key": "warm",
+      "label": "Warm",
+      "type": "number"
+     },
+     {
+      "key": "sharp",
+      "label": "Sharp",
+      "type": "number"
+     },
+     {
+      "key": "smooth",
+      "label": "Smooth",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pressure_sec",
+    "title": "Pressure & XP",
+    "width": "third",
+    "fields": [
+     {
+      "key": "pressure",
+      "label": "Pressure",
+      "type": "pips",
+      "count": 5,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "pips",
+      "count": 5,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "hold_injuries",
+      "label": "Hold, Injuries, etc.",
+      "type": "longtext",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "relationships_sec",
+    "title": "Relationships",
+    "width": "half",
+    "fields": [
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Relationship level"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "breaking_sec",
+    "title": "Breaking Point Actions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "breaking_points",
+      "label": "Breaking Point Actions Taken",
+      "type": "list",
+      "columns": [
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "moves_sec",
+    "title": "Playbook Moves",
+    "page": "Moves & Advances",
+    "width": "half",
+    "fields": [
+     {
+      "key": "moves",
+      "label": "Playbook Moves",
+      "type": "list",
+      "columns": [
+       {
+        "key": "move",
+        "label": "Move"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "role_moves",
+    "title": "Role Moves",
+    "page": "Moves & Advances",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "role_tactician",
+      "label": "Tactician",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "role_engineer_scientist",
+      "label": "Engineer/scientist",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "role_marine",
+      "label": "Marine",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "role_pilot",
+      "label": "Pilot",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "role_influencer",
+      "label": "Influencer",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "role_investigator",
+      "label": "Investigator",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "advances_sec",
+    "title": "Advances",
+    "page": "Moves & Advances",
+    "fields": [
+     {
+      "key": "advances",
+      "label": "Advances",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advance",
+        "label": "Advance"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,904 @@
+{
+ "name": "Rolemaster",
+ "game": "Rolemaster",
+ "edition": "Rolemaster Standard System / Player's Guide (1995)",
+ "source": {
+  "title": "Character Record Sheets T-6.1 to T-6.4",
+  "owner": "Iron Crown Enterprises",
+  "url": "https://web.archive.org/web/20101129164154id_/http://rpgsheets.com/sheets/128001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "campaign",
+      "label": "Campaign (GM)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "training_packages",
+      "label": "Training Packages",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "realm",
+      "label": "Realm of Power",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "two-thirds",
+    "compact": true,
+    "fields": [
+     {
+      "key": "temp_agility",
+      "label": "Agility Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_agility",
+      "label": "Agility Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_agility",
+      "label": "Agility Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_constitution",
+      "label": "Constitution Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_constitution",
+      "label": "Constitution Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_constitution",
+      "label": "Constitution Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_memory",
+      "label": "Memory Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_memory",
+      "label": "Memory Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_memory",
+      "label": "Memory Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_reasoning",
+      "label": "Reasoning Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_reasoning",
+      "label": "Reasoning Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_reasoning",
+      "label": "Reasoning Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_self_discipline",
+      "label": "Self Discipline Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_self_discipline",
+      "label": "Self Discipline Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_self_discipline",
+      "label": "Self Discipline Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_empathy",
+      "label": "Empathy Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_empathy",
+      "label": "Empathy Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_empathy",
+      "label": "Empathy Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_intuition",
+      "label": "Intuition Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_intuition",
+      "label": "Intuition Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_intuition",
+      "label": "Intuition Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_presence",
+      "label": "Presence Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_presence",
+      "label": "Presence Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_presence",
+      "label": "Presence Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_quickness",
+      "label": "Quickness Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_quickness",
+      "label": "Quickness Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_quickness",
+      "label": "Quickness Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "temp_strength",
+      "label": "Strength Temp",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "pot_strength",
+      "label": "Strength Pot",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bonus_strength",
+      "label": "Strength Bonus",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "defense",
+    "title": "Armor & Defense",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text"
+     },
+     {
+      "key": "weight_penalty",
+      "label": "Weight Penalty",
+      "type": "text"
+     },
+     {
+      "key": "bmr",
+      "label": "Base Movement Rate",
+      "type": "text"
+     },
+     {
+      "key": "mm_penalty",
+      "label": "Moving Maneuver Penalty",
+      "type": "text"
+     },
+     {
+      "key": "missile_penalty",
+      "label": "Missile Penalty",
+      "type": "text"
+     },
+     {
+      "key": "qu_bonus",
+      "label": "Quickness Bonus (3 x Qu)",
+      "type": "number"
+     },
+     {
+      "key": "armor_qu_penalty",
+      "label": "Armor Quickness Penalty",
+      "type": "number"
+     },
+     {
+      "key": "shield_bonus",
+      "label": "Shield Bonus",
+      "type": "number"
+     },
+     {
+      "key": "magic_db",
+      "label": "Magic (Spells, Items, etc.)",
+      "type": "number"
+     },
+     {
+      "key": "special_db",
+      "label": "Special",
+      "type": "number"
+     },
+     {
+      "key": "total_db",
+      "label": "Total Normal DB",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "resistance",
+    "title": "Resistance Rolls",
+    "width": "third",
+    "fields": [
+     {
+      "key": "resistance_rolls",
+      "label": "Resistance Rolls",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "race",
+        "label": "Race Bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat Bonus"
+       },
+       {
+        "key": "total",
+        "label": "Total Bonus"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "hits_pp",
+    "title": "Hits & Power Points",
+    "width": "third",
+    "fields": [
+     {
+      "key": "hits",
+      "label": "Hits",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "power_points",
+      "label": "Power Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "misc_info",
+      "label": "Miscellaneous Information",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "fixed",
+    "title": "Race/Stat Fixed Info",
+    "width": "third",
+    "fields": [
+     {
+      "key": "soul_departure",
+      "label": "Soul Departure (rounds)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "recovery_multiplier",
+      "label": "Recovery Multiplier",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "body_dev_prog",
+      "label": "Body Development Progression",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "pp_dev_prog",
+      "label": "PP Development Progression",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "common_skills",
+    "title": "Commonly Used Skills & Attacks",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "common_skill_list",
+      "label": "Commonly Used Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     },
+     {
+      "key": "attacks",
+      "label": "Commonly Used Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attack",
+        "label": "Attack/Weapon"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       },
+       {
+        "key": "fumble",
+        "label": "Fumble"
+       },
+       {
+        "key": "range",
+        "label": "Range Modifications"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "role",
+    "title": "Role Traits",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "actual_age",
+      "label": "Actual Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "demeanor",
+      "label": "Demeanor",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "background",
+    "title": "Background Information",
+    "width": "half",
+    "fields": [
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "home_town",
+      "label": "Home Town/City",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "patron",
+      "label": "Patron/Lord",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "parents",
+      "label": "Parents",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "spouse",
+      "label": "Spouse",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "children",
+      "label": "Children",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "background_other",
+      "label": "Other",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "categories",
+    "title": "Skill Categories",
+    "page": "Skills",
+    "fields": [
+     {
+      "key": "skill_categories",
+      "label": "Skill Categories",
+      "type": "list",
+      "columns": [
+       {
+        "key": "category",
+        "label": "Skill Category"
+       },
+       {
+        "key": "stats",
+        "label": "Applicable Stats"
+       },
+       {
+        "key": "cost",
+        "label": "Dev. Cost"
+       },
+       {
+        "key": "ranks",
+        "label": "# of Ranks"
+       },
+       {
+        "key": "rank_bonus",
+        "label": "Rank"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "prof",
+        "label": "Prof."
+       },
+       {
+        "key": "special",
+        "label": "Special"
+       },
+       {
+        "key": "special2",
+        "label": "Special 2"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Skills",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill Name"
+       },
+       {
+        "key": "ranks",
+        "label": "#Ranks"
+       },
+       {
+        "key": "rank_bonus",
+        "label": "Rank"
+       },
+       {
+        "key": "category",
+        "label": "Category"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "special",
+        "label": "Special"
+       },
+       {
+        "key": "special2",
+        "label": "Special 2"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "money",
+    "title": "Coins & Other Wealth",
+    "page": "Money & Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mithril",
+      "label": "Mithril",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "platinum",
+      "label": "Platinum",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gold",
+      "label": "Gold",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "silver",
+      "label": "Silver",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bronze",
+      "label": "Bronze",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "copper",
+      "label": "Copper",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "tin",
+      "label": "Tin",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "iron",
+      "label": "Iron",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gems",
+      "label": "Gems",
+      "type": "longtext"
+     },
+     {
+      "key": "jewelry",
+      "label": "Jewelry",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "magic_items",
+    "title": "Magic Items",
+    "page": "Money & Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonus_items",
+      "label": "Bonus Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     },
+     {
+      "key": "potions",
+      "label": "Potions/Runes (Spells In/On)",
+      "type": "longtext"
+     },
+     {
+      "key": "wands",
+      "label": "Wands, Staves, and Rods",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "charges",
+        "label": "Charges"
+       }
+      ]
+     },
+     {
+      "key": "constant_items",
+      "label": "Constant Items",
+      "type": "longtext"
+     },
+     {
+      "key": "daily_items",
+      "label": "Daily Items",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment and Gear",
+    "page": "Money & Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment and Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item (Description)"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       }
+      ]
+     },
+     {
+      "key": "total_weight",
+      "label": "Total Weight",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "illustration_sec",
+    "title": "Character Illustration",
+    "page": "Money & Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "illustration",
+      "label": "Character Illustration",
+      "type": "longtext"
+     },
+     {
+      "key": "body_size",
+      "label": "Body Size",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "head_size",
+      "label": "Head Size",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "hand_size",
+      "label": "Hand/Foot Size",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   }
+  ]
+ }
+}
