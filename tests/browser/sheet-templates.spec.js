@@ -251,6 +251,31 @@ test("Templates: the library lists templates by name, A to Z, whatever is used m
   await expect(page.locator(".template-card .template-name")).toHaveText([`${tag} Alpha`, `${tag} beta`, `${tag} gamma`]);
 });
 
+test("Templates: editions of one game by one author share a card, with an Edition dropdown", async ({ page, browser }) => {
+  const who = await ready(page, browser, "Editions");
+  const layout = { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] };
+  const game = `Ed Game ${who.id}`;
+  const made = {};
+  for (const [name, edition] of [[`${game} Second`, "2nd Edition"], [`${game} First`, "1st Edition"], [`${game} Loose`, ""]])
+    made[name] = (await api(page, "template_save", { name, game, edition, layout })).json.template;
+  await page.goto("index.html#/templates");
+  await page.getByLabel("Search templates").fill(game);
+  // the two with editions share one card; the one with no edition keeps its own
+  await expect(page.locator(".template-card")).toHaveCount(2);
+  const card = page.locator(".template-editions");
+  await expect(card.locator(".template-name")).toHaveText(game);
+  await expect(card.getByText("2 editions")).toBeVisible();
+  const pick = card.getByLabel(`${game} edition`);
+  await expect(pick.locator("option")).toHaveText(["1st Edition", "2nd Edition"]);
+  // nothing used yet, so it opens on the last edition
+  await expect(card.getByText(`${game} Second`)).toBeVisible();
+  await pick.selectOption({ label: "1st Edition" });
+  await expect(card.getByText(`${game} First`)).toBeVisible();
+  await expect(card.locator(".template-name")).toHaveAttribute("href", `#/templates/${made[`${game} First`].id}`);
+  await card.getByRole("button", { name: "Edit" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/templates/${made[`${game} First`].id}/edit$`));
+});
+
 test("Templates: sections sit side by side, a compact section puts labels beside their boxes, and a box can be any width", async ({ page, browser }) => {
   const who = await ready(page, browser, "Layout");
   await page.setViewportSize({ width: 1200, height: 900 });

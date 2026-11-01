@@ -1,0 +1,584 @@
+{
+ "name": "Mage: The Ascension (Revised)",
+ "game": "Mage: The Ascension",
+ "edition": "3rd Edition (Revised, 2000)",
+ "source": {
+  "title": "Mage: The Ascension Revised character sheet",
+  "owner": "White Wolf",
+  "url": "https://web.archive.org/web/20101129163836id_/http://rpgsheets.com/sheets/052101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Mage",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "tradition",
+      "label": "Tradition",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "essence",
+      "label": "Essence",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "demeanor",
+      "label": "Demeanor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "cabal",
+      "label": "Cabal",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_social",
+    "title": "Social",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_alertness",
+      "label": "Alertness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_expression",
+      "label": "Expression",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_meditation",
+      "label": "Meditation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "knowledges",
+    "title": "Knowledges",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_cosmology",
+      "label": "Cosmology",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_enigmas",
+      "label": "Enigmas",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_linguistics",
+      "label": "Linguistics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "spheres_1",
+    "title": "Spheres",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sphere_correspondence",
+      "label": "Correspondence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_entropy",
+      "label": "Entropy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_forces",
+      "label": "Forces",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "spheres_2",
+    "title": "Spheres",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sphere_life",
+      "label": "Life",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_matter",
+      "label": "Matter",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_mind",
+      "label": "Mind",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "spheres_3",
+    "title": "Spheres",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sphere_prime",
+      "label": "Prime",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_spirit",
+      "label": "Spirit",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sphere_time",
+      "label": "Time",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "backgrounds",
+    "title": "Backgrounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backgrounds_list",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "pools",
+    "title": "Arete, Willpower, Quintessence & Paradox",
+    "width": "third",
+    "fields": [
+     {
+      "key": "arete",
+      "label": "Arete",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "quintessence",
+      "label": "Quintessence",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "paradox",
+      "label": "Paradox",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "health_sec",
+    "title": "Health",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health (Bruised to Incapacitated)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "resonance",
+    "title": "Resonance",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "resonance_dynamic",
+      "label": "Dynamic",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "resonance_entropic",
+      "label": "Entropic",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "resonance_static",
+      "label": "Static",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "experience_sec",
+    "title": "Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "width": "third",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "difficulty",
+        "label": "Difficulty"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,1031 @@
+{
+ "name": "King Arthur Pendragon (5th Edition)",
+ "game": "King Arthur Pendragon",
+ "edition": "5th Edition (Arthaus, 2005)",
+ "source": {
+  "title": "King Arthur Pendragon Knight's Character Sheet (5th edition)",
+  "owner": "Arthaus (game now published by Chaosium)",
+  "url": "https://web.archive.org/web/20101129183206id_/http://rpgsheets.com/sheets/063101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "personal",
+    "title": "Personal Data",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "son_number",
+      "label": "Son Number",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "lord",
+      "label": "Lord",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "current_class",
+      "label": "Current Class",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "current_home",
+      "label": "Current Home",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "coat_of_arms",
+      "label": "Coat of Arms (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "statistics",
+    "title": "Statistics",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "siz",
+      "label": "SIZ",
+      "type": "number"
+     },
+     {
+      "key": "knockdown",
+      "label": "Knockdown",
+      "type": "number"
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number"
+     },
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number"
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number"
+     },
+     {
+      "key": "major_wound",
+      "label": "Major Wound",
+      "type": "number"
+     },
+     {
+      "key": "app",
+      "label": "APP",
+      "type": "number"
+     },
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "text"
+     },
+     {
+      "key": "healing_rate",
+      "label": "Healing Rate",
+      "type": "number"
+     },
+     {
+      "key": "movement_rate",
+      "label": "Movement Rate",
+      "type": "number"
+     },
+     {
+      "key": "total_hp",
+      "label": "Total Hit Points",
+      "type": "number"
+     },
+     {
+      "key": "unconscious",
+      "label": "Unconscious",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "traits",
+    "title": "Personality Traits",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "chivalry_bonus",
+      "label": "Chivalry Bonus (total)",
+      "type": "number"
+     },
+     {
+      "key": "religious_bonus",
+      "label": "Religious Bonus",
+      "type": "number"
+     },
+     {
+      "key": "tr_chaste",
+      "label": "Chaste",
+      "type": "number"
+     },
+     {
+      "key": "tr_lustful",
+      "label": "Lustful",
+      "type": "number"
+     },
+     {
+      "key": "tr_energetic",
+      "label": "Energetic",
+      "type": "number"
+     },
+     {
+      "key": "tr_lazy",
+      "label": "Lazy",
+      "type": "number"
+     },
+     {
+      "key": "tr_forgiving",
+      "label": "Forgiving",
+      "type": "number"
+     },
+     {
+      "key": "tr_vengeful",
+      "label": "Vengeful",
+      "type": "number"
+     },
+     {
+      "key": "tr_generous",
+      "label": "Generous",
+      "type": "number"
+     },
+     {
+      "key": "tr_selfish",
+      "label": "Selfish",
+      "type": "number"
+     },
+     {
+      "key": "tr_honest",
+      "label": "Honest",
+      "type": "number"
+     },
+     {
+      "key": "tr_deceitful",
+      "label": "Deceitful",
+      "type": "number"
+     },
+     {
+      "key": "tr_just",
+      "label": "Just",
+      "type": "number"
+     },
+     {
+      "key": "tr_arbitrary",
+      "label": "Arbitrary",
+      "type": "number"
+     },
+     {
+      "key": "tr_merciful",
+      "label": "Merciful",
+      "type": "number"
+     },
+     {
+      "key": "tr_cruel",
+      "label": "Cruel",
+      "type": "number"
+     },
+     {
+      "key": "tr_modest",
+      "label": "Modest",
+      "type": "number"
+     },
+     {
+      "key": "tr_proud",
+      "label": "Proud",
+      "type": "number"
+     },
+     {
+      "key": "tr_pious",
+      "label": "Pious",
+      "type": "number"
+     },
+     {
+      "key": "tr_worldly",
+      "label": "Worldly",
+      "type": "number"
+     },
+     {
+      "key": "tr_prudent",
+      "label": "Prudent",
+      "type": "number"
+     },
+     {
+      "key": "tr_reckless",
+      "label": "Reckless",
+      "type": "number"
+     },
+     {
+      "key": "tr_temperate",
+      "label": "Temperate",
+      "type": "number"
+     },
+     {
+      "key": "tr_indulgent",
+      "label": "Indulgent",
+      "type": "number"
+     },
+     {
+      "key": "tr_trusting",
+      "label": "Trusting",
+      "type": "number"
+     },
+     {
+      "key": "tr_suspicious",
+      "label": "Suspicious",
+      "type": "number"
+     },
+     {
+      "key": "tr_valorous",
+      "label": "Valorous",
+      "type": "number"
+     },
+     {
+      "key": "tr_cowardly",
+      "label": "Cowardly",
+      "type": "number"
+     },
+     {
+      "key": "directed_traits",
+      "label": "Directed Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "passions",
+    "title": "Passions & Features",
+    "width": "third",
+    "fields": [
+     {
+      "key": "pa_loyalty_lord",
+      "label": "Loyalty (Lord)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "pa_love_family",
+      "label": "Love (Family)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "pa_hospitality",
+      "label": "Hospitality",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "pa_honor",
+      "label": "Honor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "passions_other",
+      "label": "Other Passions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "passion",
+        "label": "Passion"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
+     },
+     {
+      "key": "distinctive_features",
+      "label": "Distinctive Features",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_awareness",
+      "label": "Awareness (5)",
+      "type": "number"
+     },
+     {
+      "key": "sk_boating",
+      "label": "Boating (1)",
+      "type": "number"
+     },
+     {
+      "key": "sk_compose",
+      "label": "Compose (1)",
+      "type": "number"
+     },
+     {
+      "key": "sk_courtesy",
+      "label": "Courtesy (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_dancing",
+      "label": "Dancing (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_faerie_lore",
+      "label": "Faerie Lore (1)",
+      "type": "number"
+     },
+     {
+      "key": "sk_falconry",
+      "label": "Falconry (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_flirting",
+      "label": "Flirting (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_folklore",
+      "label": "Folklore (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_gaming",
+      "label": "Gaming (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_heraldry",
+      "label": "Heraldry (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_hunting",
+      "label": "Hunting (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_intrigue",
+      "label": "Intrigue (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_orate",
+      "label": "Orate (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_recognize",
+      "label": "Recognize (3)",
+      "type": "number"
+     },
+     {
+      "key": "sk_romance",
+      "label": "Romance (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_singing",
+      "label": "Singing (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_stewardship",
+      "label": "Stewardship (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_swimming",
+      "label": "Swimming (2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_tourney",
+      "label": "Tourney (2)",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Play, Read, Religion and other skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "glory_hp",
+    "title": "Glory & Hit Points",
+    "width": "third",
+    "fields": [
+     {
+      "key": "glory_this_game",
+      "label": "Glory This Game",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "glory_total",
+      "label": "Glory Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "hp",
+      "label": "Current Hit Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "chirurgery_needed",
+      "label": "Chirurgery Needed",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat_skills",
+    "title": "Combat Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_battle",
+      "label": "Battle (10)",
+      "type": "number"
+     },
+     {
+      "key": "sk_horsemanship",
+      "label": "Horsemanship (10)",
+      "type": "number"
+     },
+     {
+      "key": "ws_sword",
+      "label": "Sword (10)",
+      "type": "number"
+     },
+     {
+      "key": "ws_lance",
+      "label": "Lance (10)",
+      "type": "number"
+     },
+     {
+      "key": "ws_spear",
+      "label": "Spear (6)",
+      "type": "number"
+     },
+     {
+      "key": "ws_dagger",
+      "label": "Dagger (5)",
+      "type": "number"
+     },
+     {
+      "key": "weapon_skills_other",
+      "label": "Other Weapon Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "value",
+        "label": "Value"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment Carried",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor_type",
+      "label": "Armor Type (points)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "clothing",
+      "label": "Clothing (libra value)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "personal_gear",
+      "label": "Personal Gear (on horse #)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "travel_gear",
+      "label": "Travel Gear (on horse #)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "war_gear",
+      "label": "War Gear (on horse #)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "equipment_other",
+      "label": "Other Equipment",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "squire",
+    "title": "Squire & Joust",
+    "width": "half",
+    "fields": [
+     {
+      "key": "squire_name",
+      "label": "Squire Name",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "squire_age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "squire_first_aid",
+      "label": "First Aid (6)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "squire_battle",
+      "label": "Battle (1)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "squire_horsemanship",
+      "label": "Horsemanship (6)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "squire_other",
+      "label": "Other Squire Skills",
+      "type": "longtext"
+     },
+     {
+      "key": "joust_wins",
+      "label": "Joust Wins",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "joust_losses",
+      "label": "Joust Losses",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "horses",
+    "title": "Horses",
+    "fields": [
+     {
+      "key": "warhorse_type",
+      "label": "Best Warhorse (#1): Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "warhorse_damage",
+      "label": "Damage",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_move",
+      "label": "Move",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_armor",
+      "label": "Armor",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_hp",
+      "label": "HP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_siz",
+      "label": "SIZ",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_con",
+      "label": "CON",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "warhorse_breed",
+      "label": "Breed",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "other_horses",
+      "label": "Other Horses (Riding #2, Squire's #3, #4, #5)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "horse",
+        "label": "Horse"
+       },
+       {
+        "key": "move",
+        "label": "Move"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "glory_rewards",
+    "title": "Annual Glory Rewards",
+    "page": "History & Holdings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gr_traits",
+      "label": "Traits",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gr_chivalry",
+      "label": "Chivalry",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gr_holdings",
+      "label": "Holdings",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gr_passions",
+      "label": "Passions",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gr_religion",
+      "label": "Religion",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gr_total",
+      "label": "Total",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "holdings",
+    "title": "Holdings & Home",
+    "page": "History & Holdings",
+    "width": "half",
+    "fields": [
+     {
+      "key": "holdings_text",
+      "label": "Holdings",
+      "type": "longtext"
+     },
+     {
+      "key": "denarii",
+      "label": "Denarii",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "libra",
+      "label": "Libra",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "equipment_at_home",
+      "label": "Equipment at Home",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "army",
+    "title": "Army",
+    "page": "History & Holdings",
+    "fields": [
+     {
+      "key": "old_knights",
+      "label": "Old Knights",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "middle_aged_knights",
+      "label": "Middle-Aged Knights",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "young_knights",
+      "label": "Young Knights",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "total_family_knights",
+      "label": "Total Family Knights",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "vassal_knights",
+      "label": "Vassal Knights",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "other_lineage_men",
+      "label": "Other Lineage Men",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "levy",
+      "label": "Levy",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "history",
+    "title": "Character History",
+    "page": "History & Holdings",
+    "fields": [
+     {
+      "key": "history_list",
+      "label": "Character History",
+      "type": "list",
+      "columns": [
+       {
+        "key": "date",
+        "label": "Date"
+       },
+       {
+        "key": "event",
+        "label": "Important Event"
+       },
+       {
+        "key": "glory_new",
+        "label": "Glory New"
+       },
+       {
+        "key": "glory_total",
+        "label": "Glory Total"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "family",
+    "title": "Family History and Events",
+    "page": "History & Holdings",
+    "fields": [
+     {
+      "key": "year_born",
+      "label": "Year Born",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "knighted",
+      "label": "Knighted",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "squired",
+      "label": "Squired",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "round_table",
+      "label": "Member of the Round Table",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "ennobled",
+      "label": "Ennobled",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "landed",
+      "label": "Landed",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "wed",
+      "label": "Wed",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "died",
+      "label": "Died",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fathers_name",
+      "label": "Father's Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "fathers_class",
+      "label": "Class",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "glory_to_sons",
+      "label": "Glory to Sons",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "family_characteristic",
+      "label": "Family Characteristic",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "wife",
+      "label": "Wife",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "lover",
+      "label": "Lover",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "children",
+      "label": "Children",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

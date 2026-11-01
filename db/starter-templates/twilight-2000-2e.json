@@ -1,0 +1,581 @@
+{
+ "name": "Twilight: 2000 (2nd Edition)",
+ "game": "Twilight: 2000",
+ "edition": "2nd Edition (1990s)",
+ "source": {
+  "title": "Twilight: 2000 Character Record Sheet (2nd edition)",
+  "owner": "Game Designers' Workshop (game now published by Free League)",
+  "url": "https://web.archive.org/web/20101129165253id_/http://rpgsheets.com/sheets/049001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "character",
+      "label": "Character",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "service_branch",
+      "label": "Service Branch",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "rads",
+      "label": "Rads",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "throw_range",
+      "label": "Throw Range",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "grp_strength",
+    "title": "Strength",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "sk_aircraft_mechanic",
+      "label": "Aircraft Mechanic",
+      "type": "number"
+     },
+     {
+      "key": "sk_hunting_bow",
+      "label": "Hunting Bow",
+      "type": "number"
+     },
+     {
+      "key": "sk_heavy_weapons",
+      "label": "Heavy Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_melee_combat_armed",
+      "label": "Melee Combat (Armed)",
+      "type": "number"
+     },
+     {
+      "key": "sk_melee_combat_unarmed",
+      "label": "Melee Combat (Unarmed)",
+      "type": "number"
+     },
+     {
+      "key": "sk_mechanic",
+      "label": "Mechanic",
+      "type": "number"
+     },
+     {
+      "key": "sk_small_arms_pistol",
+      "label": "Small Arms (Pistol)",
+      "type": "number"
+     },
+     {
+      "key": "sk_small_arms_rifle",
+      "label": "Small Arms (Rifle)",
+      "type": "number"
+     },
+     {
+      "key": "sk_thrown_weapon",
+      "label": "Thrown Weapon",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "grp_constitution",
+    "title": "Constitution",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_constitution",
+      "label": "Constitution",
+      "type": "number"
+     },
+     {
+      "key": "sk_combat_engineer",
+      "label": "Combat Engineer",
+      "type": "number"
+     },
+     {
+      "key": "sk_horsemanship",
+      "label": "Horsemanship",
+      "type": "number"
+     },
+     {
+      "key": "sk_motorcycle",
+      "label": "Motorcycle",
+      "type": "number"
+     },
+     {
+      "key": "sk_mountaineering",
+      "label": "Mountaineering",
+      "type": "number"
+     },
+     {
+      "key": "sk_parachute",
+      "label": "Parachute",
+      "type": "number"
+     },
+     {
+      "key": "sk_scuba",
+      "label": "Scuba",
+      "type": "number"
+     },
+     {
+      "key": "sk_swimming",
+      "label": "Swimming",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "grp_agility",
+    "title": "Agility",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "sk_electronics",
+      "label": "Electronics",
+      "type": "number"
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery",
+      "type": "number"
+     },
+     {
+      "key": "sk_gunsmith",
+      "label": "Gunsmith",
+      "type": "number"
+     },
+     {
+      "key": "sk_lockpick",
+      "label": "Lockpick",
+      "type": "number"
+     },
+     {
+      "key": "sk_machinist",
+      "label": "Machinist",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot_fixed_wing",
+      "label": "Pilot (Fixed Wing)",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot_rotary_wing",
+      "label": "Pilot (Rotary Wing)",
+      "type": "number"
+     },
+     {
+      "key": "sk_small_boat",
+      "label": "Small Boat",
+      "type": "number"
+     },
+     {
+      "key": "sk_snow_skiing",
+      "label": "Snow Skiing",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_tracked_vehicle",
+      "label": "Tracked Vehicle",
+      "type": "number"
+     },
+     {
+      "key": "sk_warhead",
+      "label": "Warhead",
+      "type": "number"
+     },
+     {
+      "key": "sk_wheeled_vehicle",
+      "label": "Wheeled Vehicle",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "grp_education",
+    "title": "Education",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_education",
+      "label": "Education",
+      "type": "number"
+     },
+     {
+      "key": "sk_biology",
+      "label": "Biology",
+      "type": "number"
+     },
+     {
+      "key": "sk_chemistry",
+      "label": "Chemistry",
+      "type": "number"
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "number"
+     },
+     {
+      "key": "sk_civil_engineer",
+      "label": "Civil Engineer",
+      "type": "number"
+     },
+     {
+      "key": "sk_geology",
+      "label": "Geology",
+      "type": "number"
+     },
+     {
+      "key": "sk_medical",
+      "label": "Medical",
+      "type": "number"
+     },
+     {
+      "key": "sk_meteorology",
+      "label": "Meteorology",
+      "type": "number"
+     },
+     {
+      "key": "sk_mining_engineer",
+      "label": "Mining Engineer",
+      "type": "number"
+     },
+     {
+      "key": "sk_metallurgy",
+      "label": "Metallurgy",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "grp_charisma",
+    "title": "Charisma",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_instruction",
+      "label": "Instruction",
+      "type": "number"
+     },
+     {
+      "key": "sk_interrogation",
+      "label": "Interrogation",
+      "type": "number"
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "number"
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "number"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "language",
+        "label": "Language"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "grp_intelligence",
+    "title": "Intelligence",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "sk_forward_observer",
+      "label": "Forward Observer",
+      "type": "number"
+     },
+     {
+      "key": "sk_foraging",
+      "label": "Foraging",
+      "type": "number"
+     },
+     {
+      "key": "sk_farming",
+      "label": "Farming",
+      "type": "number"
+     },
+     {
+      "key": "sk_fishing",
+      "label": "Fishing",
+      "type": "number"
+     },
+     {
+      "key": "sk_navigation",
+      "label": "Navigation",
+      "type": "number"
+     },
+     {
+      "key": "sk_observation",
+      "label": "Observation",
+      "type": "number"
+     },
+     {
+      "key": "sk_scrounging",
+      "label": "Scrounging",
+      "type": "number"
+     },
+     {
+      "key": "sk_tracking",
+      "label": "Tracking",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Other Skills & Contacts",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_skills_list",
+      "label": "Other Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     },
+     {
+      "key": "contacts",
+      "label": "Contacts",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "hit_capacity",
+    "title": "Hit Capacity",
+    "width": "third",
+    "fields": [
+     {
+      "key": "hc_head",
+      "label": "Head",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_chest",
+      "label": "Chest",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_r_arm",
+      "label": "R. arm",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_l_arm",
+      "label": "L. arm",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_abdomen",
+      "label": "Abdomen",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_r_leg",
+      "label": "R. leg",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hc_l_leg",
+      "label": "L. leg",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "base_hit",
+    "title": "Base Hit Numbers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "base_hit_numbers",
+      "label": "Base Hit Numbers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "close",
+        "label": "Close"
+       },
+       {
+        "key": "medium",
+        "label": "Medium"
+       },
+       {
+        "key": "long",
+        "label": "Long"
+       },
+       {
+        "key": "extreme",
+        "label": "Extreme"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "unarmed_damage",
+      "label": "Unarmed combat damage",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

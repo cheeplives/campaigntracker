@@ -1,0 +1,328 @@
+{
+ "name": "Fantasy AGE (1st Edition)",
+ "game": "Fantasy AGE",
+ "edition": "1st Edition (2015)",
+ "source": {
+  "title": "Fantasy AGE character sheet (1st edition core rulebook)",
+  "owner": "Green Ronin Publishing",
+  "url": "https://freeronin.com/fantasy-age-rpg/GRR6001e_FantasyAGECoreRulebook_CharacterSheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ab_accuracy",
+      "label": "Accuracy",
+      "type": "number"
+     },
+     {
+      "key": "focus_accuracy",
+      "label": "Accuracy focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_communication",
+      "label": "Communication",
+      "type": "number"
+     },
+     {
+      "key": "focus_communication",
+      "label": "Communication focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_constitution",
+      "label": "Constitution",
+      "type": "number"
+     },
+     {
+      "key": "focus_constitution",
+      "label": "Constitution focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "focus_dexterity",
+      "label": "Dexterity focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_fighting",
+      "label": "Fighting",
+      "type": "number"
+     },
+     {
+      "key": "focus_fighting",
+      "label": "Fighting focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "focus_intelligence",
+      "label": "Intelligence focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "focus_perception",
+      "label": "Perception focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "focus_strength",
+      "label": "Strength focuses",
+      "type": "text"
+     },
+     {
+      "key": "ab_willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "focus_willpower",
+      "label": "Willpower focuses",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "combat_stats",
+    "title": "Speed, Defense & Health",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_penalty",
+      "label": "Penalty",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "move",
+      "label": "Move (yards)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "charge",
+      "label": "Charge",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "powers_talents",
+      "label": "Powers, Talents, and Specializations",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "melee_weapons",
+      "label": "Melee Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Melee Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "weapon_groups",
+      "label": "Weapon Groups & Notes",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ranged_weapons",
+      "label": "Ranged Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Ranged Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "short",
+        "label": "Short Range"
+       },
+       {
+        "key": "long",
+        "label": "Long Range"
+       },
+       {
+        "key": "reload",
+        "label": "Reload Time"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "spells",
+    "title": "Spells",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mp",
+      "label": "MP",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "spellpower",
+      "label": "Spellpower",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "spells_text",
+      "label": "Spells",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment and Money",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment and Money",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

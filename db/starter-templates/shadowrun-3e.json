@@ -1,0 +1,446 @@
+{
+ "name": "Shadowrun (3rd Edition)",
+ "game": "Shadowrun",
+ "edition": "3rd Edition (1998)",
+ "source": {
+  "title": "Shadowrun Character Record Sheet (3rd edition)",
+  "owner": "FASA Corporation (now Catalyst Game Labs)",
+  "url": "https://web.archive.org/web/20101129140809id_/http://rpgsheets.com/sheets/073101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number"
+     },
+     {
+      "key": "quickness",
+      "label": "Quickness",
+      "type": "number"
+     },
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number"
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "essence",
+      "label": "Essence",
+      "type": "number"
+     },
+     {
+      "key": "magic",
+      "label": "(Magic)",
+      "type": "number"
+     },
+     {
+      "key": "reaction",
+      "label": "Reaction",
+      "type": "number"
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "text",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "width": "third",
+    "fields": [
+     {
+      "key": "stun_damage",
+      "label": "Stun (Light, Moderate, Serious, Deadly)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "physical_damage",
+      "label": "Physical (Light, Moderate, Serious, Deadly)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "physical_overflow",
+      "label": "Physical Damage Overflow",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "karma",
+    "title": "Karma & Dice Pools",
+    "width": "third",
+    "fields": [
+     {
+      "key": "karma_pool",
+      "label": "Karma Pool",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "good_karma",
+      "label": "Good Karma",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "combat_pool",
+      "label": "Combat Pool",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "other_pools",
+      "label": "Other Pools",
+      "type": "list",
+      "columns": [
+       {
+        "key": "pool",
+        "label": "Pool"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor_gear",
+    "title": "Armor/Gear",
+    "width": "third",
+    "fields": [
+     {
+      "key": "armor_list",
+      "label": "Armor/Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "cyber_spells",
+    "title": "Cyberware & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "cyberware",
+      "label": "Cyberware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     },
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "force",
+        "label": "Force"
+       },
+       {
+        "key": "drain",
+        "label": "Drain"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Weapons & Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "conceal",
+        "label": "Concealability"
+       },
+       {
+        "key": "reach",
+        "label": "Reach"
+       },
+       {
+        "key": "mode",
+        "label": "Mode"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "ranges",
+        "label": "Short / Medium / Long / Extreme"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "modifiers",
+        "label": "Modifiers"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment & Gear",
+    "page": "Weapons & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment & Gear",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "contacts",
+    "title": "Contacts & Information",
+    "page": "Weapons & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "contacts_text",
+      "label": "Contacts & Information",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "character_notes",
+    "title": "Character Notes",
+    "page": "Weapons & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "character_notes_text",
+      "label": "Character Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "vehicle",
+    "title": "Vehicle",
+    "page": "Weapons & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "vehicle_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "handling",
+      "label": "Handling",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "vehicle_body",
+      "label": "Body",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "signature",
+      "label": "Signature",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "autopilot",
+      "label": "Autopilot",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "firmpoints",
+      "label": "Firmpoints",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "hardpoints",
+      "label": "Hardpoints",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "vehicle_damage",
+      "label": "Damage (Light, Moderate, Serious, Destroyed)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "vehicle_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,887 @@
+{
+ "name": "Star Wars Roleplaying Game (d20, Revised)",
+ "game": "Star Wars Roleplaying Game",
+ "edition": "d20 (Wizards of the Coast, Revised, 2002)",
+ "source": {
+  "title": "Star Wars Roleplaying Game Character Record Sheet (Revised Core Rules)",
+  "owner": "Wizards of the Coast; Star Wars is owned by Lucasfilm",
+  "url": "https://web.archive.org/web/20101129203051id_/http://rpgsheets.com/sheets/079101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "character_level",
+      "label": "Character Level",
+      "type": "number",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "class_level",
+      "label": "Class Level",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 1
+     },
+     {
+      "key": "skin",
+      "label": "Skin",
+      "type": "text",
+      "cols": 1
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_mod",
+      "label": "STR Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp",
+      "label": "STR Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp_mod",
+      "label": "STR Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp",
+      "label": "DEX Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp_mod",
+      "label": "DEX Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_mod",
+      "label": "CON Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp",
+      "label": "CON Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp_mod",
+      "label": "CON Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_mod",
+      "label": "INT Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp",
+      "label": "INT Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp_mod",
+      "label": "INT Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp",
+      "label": "WIS Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp_mod",
+      "label": "WIS Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp",
+      "label": "CHA Temp Score",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp_mod",
+      "label": "CHA Temp Modifier",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Vitality, Wounds & Defense",
+    "width": "half",
+    "fields": [
+     {
+      "key": "vitality_total",
+      "label": "Vitality (total)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "vitality",
+      "label": "Vitality (current)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "vitality_die",
+      "label": "Vitality Die",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "wounds_total",
+      "label": "Wounds (total)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds (current)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "def_class",
+      "label": "Class Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "def_dex",
+      "label": "Dex Mod",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "def_size",
+      "label": "Size Mod",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_check",
+      "label": "Armor Check Penalty",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "base_attack",
+      "label": "Base Attack Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reputation",
+      "label": "Reputation Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "force_points",
+      "label": "Force Points",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "dark_side_points",
+      "label": "Dark Side Points",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saving Throws & Attack",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fortitude",
+      "label": "Fortitude",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflex",
+      "label": "Reflex",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "melee",
+      "label": "Melee Attack Bonus",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "ranged",
+      "label": "Ranged Attack Bonus",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons & Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack",
+        "label": "Total Attack Bonus"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "critical",
+        "label": "Critical"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "special",
+        "label": "Special Properties"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor/Protective Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "armor_type",
+      "label": "Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "armor_max_dex",
+      "label": "Max Dex",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_dr",
+      "label": "Damage Reduction",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_check_penalty",
+      "label": "Check Penalty",
+      "type": "number",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills (skill modifier)",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "max_ranks",
+      "label": "Max Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "sk_appraise",
+      "label": "Appraise",
+      "type": "number"
+     },
+     {
+      "key": "sk_astrogate",
+      "label": "Astrogate",
+      "type": "number"
+     },
+     {
+      "key": "sk_balance",
+      "label": "Balance",
+      "type": "number"
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_computer_use",
+      "label": "Computer Use",
+      "type": "number"
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions",
+      "type": "number"
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number"
+     },
+     {
+      "key": "sk_disable_device",
+      "label": "Disable Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_escape_artist",
+      "label": "Escape Artist",
+      "type": "number"
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery",
+      "type": "number"
+     },
+     {
+      "key": "sk_gamble",
+      "label": "Gamble",
+      "type": "number"
+     },
+     {
+      "key": "sk_gather_information",
+      "label": "Gather Information",
+      "type": "number"
+     },
+     {
+      "key": "sk_handle_animal",
+      "label": "Handle Animal",
+      "type": "number"
+     },
+     {
+      "key": "sk_hide",
+      "label": "Hide",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump",
+      "type": "number"
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen",
+      "type": "number"
+     },
+     {
+      "key": "sk_move_silently",
+      "label": "Move Silently",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "number"
+     },
+     {
+      "key": "sk_repair",
+      "label": "Repair",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_sense_motive",
+      "label": "Sense Motive",
+      "type": "number"
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number"
+     },
+     {
+      "key": "sk_spot",
+      "label": "Spot",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "sk_treat_injury",
+      "label": "Treat Injury",
+      "type": "number"
+     },
+     {
+      "key": "sk_tumble",
+      "label": "Tumble",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Craft, Entertain, Knowledge, Profession, Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ability",
+        "label": "Key Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "modifier",
+        "label": "Skill Modifier"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "campaign",
+    "title": "Campaign",
+    "page": "Gear, Feats & Force",
+    "fields": [
+     {
+      "key": "campaign_name",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear, Credits & Languages",
+    "page": "Gear, Feats & Force",
+    "width": "third",
+    "fields": [
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Wt."
+       }
+      ]
+     },
+     {
+      "key": "total_weight",
+      "label": "Total Weight Carried",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "language",
+        "label": "Language"
+       },
+       {
+        "key": "literate",
+        "label": "Literate"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "feats",
+    "title": "Feats & Force Feats",
+    "page": "Gear, Feats & Force",
+    "width": "third",
+    "fields": [
+     {
+      "key": "feats_text",
+      "label": "Feats",
+      "type": "longtext"
+     },
+     {
+      "key": "force_feats",
+      "label": "Force Feats",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "force_skills",
+    "title": "Force Skills (skill modifier)",
+    "page": "Gear, Feats & Force",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "force_max_ranks",
+      "label": "Max Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "fs_affect_mind",
+      "label": "Affect Mind",
+      "type": "number"
+     },
+     {
+      "key": "fs_battlemind",
+      "label": "Battlemind",
+      "type": "number"
+     },
+     {
+      "key": "fs_drain_energy",
+      "label": "Drain Energy",
+      "type": "number"
+     },
+     {
+      "key": "fs_empathy",
+      "label": "Empathy",
+      "type": "number"
+     },
+     {
+      "key": "fs_enhance_ability",
+      "label": "Enhance Ability",
+      "type": "number"
+     },
+     {
+      "key": "fs_enhance_senses",
+      "label": "Enhance Senses",
+      "type": "number"
+     },
+     {
+      "key": "fs_farseeing",
+      "label": "Farseeing",
+      "type": "number"
+     },
+     {
+      "key": "fs_fear",
+      "label": "Fear",
+      "type": "number"
+     },
+     {
+      "key": "fs_force_defense",
+      "label": "Force Defense",
+      "type": "number"
+     },
+     {
+      "key": "fs_force_grip",
+      "label": "Force Grip",
+      "type": "number"
+     },
+     {
+      "key": "fs_force_lightning",
+      "label": "Force Lightning",
+      "type": "number"
+     },
+     {
+      "key": "fs_force_stealth",
+      "label": "Force Stealth",
+      "type": "number"
+     },
+     {
+      "key": "fs_force_strike",
+      "label": "Force Strike",
+      "type": "number"
+     },
+     {
+      "key": "fs_friendship",
+      "label": "Friendship",
+      "type": "number"
+     },
+     {
+      "key": "fs_heal_another",
+      "label": "Heal Another",
+      "type": "number"
+     },
+     {
+      "key": "fs_heal_self",
+      "label": "Heal Self",
+      "type": "number"
+     },
+     {
+      "key": "fs_illusion",
+      "label": "Illusion",
+      "type": "number"
+     },
+     {
+      "key": "fs_move_object",
+      "label": "Move Object",
+      "type": "number"
+     },
+     {
+      "key": "fs_see_force",
+      "label": "See Force",
+      "type": "number"
+     },
+     {
+      "key": "fs_telepathy",
+      "label": "Telepathy",
+      "type": "number"
+     }
+    ]
+   }
+  ]
+ }
+}

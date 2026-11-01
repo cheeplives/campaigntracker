@@ -1,0 +1,856 @@
+{
+ "name": "Dungeons & Dragons (4th Edition)",
+ "game": "Dungeons & Dragons",
+ "edition": "4th Edition (2008)",
+ "source": {
+  "title": "Character Sheet (4th edition)",
+  "owner": "Wizards of the Coast",
+  "url": "https://web.archive.org/web/20091117111040id_/http://www.rpgsheets.com:80/sheets/255001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Sheet",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "paragon_path",
+      "label": "Paragon Path",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "epic_destiny",
+      "label": "Epic Destiny",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "xp",
+      "label": "Total XP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "affiliations",
+      "label": "Adventuring Company or Other Affiliations",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Ability Scores",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "str_mod",
+      "label": "STR Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "str_mod_half",
+      "label": "STR Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "con_mod",
+      "label": "CON Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "con_mod_half",
+      "label": "CON Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex_mod_half",
+      "label": "DEX Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int_mod",
+      "label": "INT Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int_mod_half",
+      "label": "INT Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wis_mod_half",
+      "label": "WIS Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA Mod",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cha_mod_half",
+      "label": "CHA Mod + 1/2 Lvl",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "defenses",
+    "title": "Defenses & Initiative",
+    "width": "third",
+    "fields": [
+     {
+      "key": "ac",
+      "label": "AC",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "fort",
+      "label": "FORT",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "ref",
+      "label": "REF",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "will",
+      "label": "WILL",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "defense_bonuses",
+      "label": "Conditional Bonuses",
+      "type": "longtext"
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "initiative_mods",
+      "label": "Conditional Modifiers",
+      "type": "text",
+      "cols": 8
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "movement",
+    "title": "Movement & Senses",
+    "width": "third",
+    "fields": [
+     {
+      "key": "speed",
+      "label": "Speed (squares)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "special_movement",
+      "label": "Special Movement",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "passive_insight",
+      "label": "Passive Insight",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "passive_perception",
+      "label": "Passive Perception",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "special_senses",
+      "label": "Special Senses",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "hit_points",
+    "title": "Hit Points",
+    "fields": [
+     {
+      "key": "max_hp",
+      "label": "Max HP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bloodied",
+      "label": "Bloodied",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "surge_value",
+      "label": "Surge Value",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "surges_per_day",
+      "label": "Surges/Day",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hp",
+      "label": "Current Hit Points",
+      "type": "counter",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "surges_used",
+      "label": "Current Surge Uses",
+      "type": "counter",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "temp_hp",
+      "label": "Temporary Hit Points",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "second_wind",
+      "label": "Second Wind Used",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "death_saves",
+      "label": "Death Saving Throw Failures",
+      "type": "pips",
+      "count": 3,
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "saving_throw_mods",
+      "label": "Saving Throw Mods",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "resistances",
+      "label": "Resistances",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "conditions",
+      "label": "Current Conditions and Effects",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "action_points_sec",
+    "title": "Action Points",
+    "fields": [
+     {
+      "key": "action_points",
+      "label": "Action Points",
+      "type": "counter",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "milestones",
+      "label": "Milestones",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "action_point_effects",
+      "label": "Additional Effects for Spending Action Points",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attacks",
+    "title": "Attack & Damage Workspace",
+    "fields": [
+     {
+      "key": "attack_workspace",
+      "label": "Attack Workspace",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "att_bonus",
+        "label": "Att Bonus"
+       },
+       {
+        "key": "mods",
+        "label": "1/2 Lvl, Abil, Class, Prof, Feat, Enh, Misc"
+       }
+      ]
+     },
+     {
+      "key": "damage_workspace",
+      "label": "Damage Workspace",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "mods",
+        "label": "Abil, Feat, Enh, Misc"
+       }
+      ]
+     },
+     {
+      "key": "basic_attacks",
+      "label": "Basic Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "defense",
+        "label": "vs Defense"
+       },
+       {
+        "key": "weapon",
+        "label": "Weapon or Power"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_acrobatics",
+      "label": "Acrobatics",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_arcana",
+      "label": "Arcana",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_dungeoneering",
+      "label": "Dungeoneering",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_endurance",
+      "label": "Endurance",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_heal",
+      "label": "Heal",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_history",
+      "label": "History",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_nature",
+      "label": "Nature",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_religion",
+      "label": "Religion",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sk_thievery",
+      "label": "Thievery",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "skills_trained",
+      "label": "Trained skills and armor penalties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "trained",
+        "label": "Trained"
+       },
+       {
+        "key": "penalty",
+        "label": "Armor Penalty"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "features",
+    "title": "Features & Languages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "race_features",
+      "label": "Race Features",
+      "type": "longtext"
+     },
+     {
+      "key": "class_features",
+      "label": "Class / Path / Destiny Features",
+      "type": "longtext"
+     },
+     {
+      "key": "languages",
+      "label": "Languages Known",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "feats",
+    "title": "Feats",
+    "width": "third",
+    "fields": [
+     {
+      "key": "feats_text",
+      "label": "Feats",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "powers",
+    "title": "Powers",
+    "page": "Powers & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "at_will",
+      "label": "At-Will Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "encounter",
+      "label": "Encounter Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "daily",
+      "label": "Daily Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "utility",
+      "label": "Utility Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "magic_items",
+    "title": "Magic Items",
+    "page": "Powers & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "magic_items_list",
+      "label": "Magic Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "slot",
+        "label": "Slot"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ]
+     },
+     {
+      "key": "daily_item_powers",
+      "label": "Daily Item Powers per Day",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "item_milestones",
+      "label": "Milestones",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment, Rituals & Wealth",
+    "page": "Powers & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "other_equipment",
+      "label": "Other Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "rituals",
+      "label": "Rituals",
+      "type": "longtext"
+     },
+     {
+      "key": "wealth",
+      "label": "Coins and Other Wealth",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "story",
+    "title": "Character",
+    "page": "Powers & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "portrait",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality Traits",
+      "type": "longtext"
+     },
+     {
+      "key": "mannerisms",
+      "label": "Mannerisms and Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Character Background",
+      "type": "longtext"
+     },
+     {
+      "key": "companions",
+      "label": "Companions and Allies",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "notes",
+      "label": "Session and Campaign Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

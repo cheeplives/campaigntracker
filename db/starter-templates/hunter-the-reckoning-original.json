@@ -1,0 +1,551 @@
+{
+ "name": "Hunter: The Reckoning (original edition)",
+ "game": "Hunter: The Reckoning",
+ "edition": "Original edition (1999)",
+ "source": {
+  "title": "Hunter: The Reckoning character sheet (original edition)",
+  "owner": "White Wolf",
+  "url": "https://web.archive.org/web/20101129152814id_/http://rpgsheets.com/sheets/043001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Hunter",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "primary_virtue",
+      "label": "Primary Virtue",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "demeanor",
+      "label": "Demeanor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "creed",
+      "label": "Creed",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "starting_conviction",
+      "label": "Starting Conviction",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_social",
+    "title": "Social",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_alertness",
+      "label": "Alertness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_expression",
+      "label": "Expression",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intuition",
+      "label": "Intuition",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_animal_ken",
+      "label": "Animal Ken",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_security",
+      "label": "Security",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "knowledges",
+    "title": "Knowledges",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_bureaucracy",
+      "label": "Bureaucracy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_finance",
+      "label": "Finance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_linguistics",
+      "label": "Linguistics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_politics",
+      "label": "Politics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_research",
+      "label": "Research",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "backgrounds",
+    "title": "Backgrounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backgrounds_list",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "edges",
+    "title": "Edges",
+    "width": "third",
+    "fields": [
+     {
+      "key": "edges_list",
+      "label": "Edges",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "creed",
+        "label": "Creed"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "trigger",
+        "label": "Trigger"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "virtues",
+    "title": "Virtues",
+    "width": "third",
+    "fields": [
+     {
+      "key": "virtue_mercy",
+      "label": "Mercy",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "virtue_vision",
+      "label": "Vision",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "virtue_zeal",
+      "label": "Zeal",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "virtues_spent",
+      "label": "Virtue points spent",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "derangements",
+    "title": "Derangements",
+    "width": "third",
+    "fields": [
+     {
+      "key": "derangements_text",
+      "label": "Derangements",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "pools",
+    "title": "Conviction, Willpower & Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "conviction",
+      "label": "Conviction",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "conviction_spent",
+      "label": "Conviction (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "health_sec",
+    "title": "Health",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health (Bruised to Incapacitated)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

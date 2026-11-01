@@ -224,12 +224,52 @@ const Sheets = (() => {
     button('Fork', () => fork(t), 'small', { 'data-tip': 'Make your own copy to change. The original stays as it is' }),
     t.can_edit ? button('Edit', () => (location.hash = `#/templates/${t.id}/edit`), 'small') : null);
   const forkLine = t => t.forked_from ? el('span', { class: 'small muted' }, 'Forked from ', el('a', { href: `#/templates/${t.forked_from.id}` }, t.forked_from.name)) : null;
-  function card(t) {
-    return el('div', { class: 'card template-card' },
-      el('div', { class: 'row spread' }, el('a', { href: `#/templates/${t.id}`, class: 'template-name' }, t.name), t.is_listed ? null : el('span', { class: 'small muted' }, 'Unlisted')),
-      el('div', { class: 'small' }, metaLine(t)),
-      el('div', { class: 'small muted' }, `by ${t.author} · Used by ${t.uses} · ${plural(t.forks, 'fork')}`),
-      forkLine(t), actions(t));
+  const byline = t => el('div', { class: 'small muted' }, `by ${t.author} · Used by ${t.uses} · ${plural(t.forks, 'fork')}`);
+  const unlisted = t => t.is_listed ? null : el('span', { class: 'small muted' }, 'Unlisted');
+  /** One card per template, except that editions of one game by one author share a card with an Edition dropdown. */
+  function card(group) {
+    if (group.length === 1) {
+      const t = group[0];
+      return el('div', { class: 'card template-card' },
+        el('div', { class: 'row spread' }, el('a', { href: `#/templates/${t.id}`, class: 'template-name' }, t.name), unlisted(t)),
+        el('div', { class: 'small' }, metaLine(t)), byline(t), forkLine(t), actions(t));
+    }
+    const box = el('div', { class: 'card template-card template-editions' });
+    const pick = el('select', { 'aria-label': `${group[0].game} edition` }, group.map((t, i) => el('option', { value: i }, t.edition)));
+    const body = el('div', { class: 'template-edition-body' });
+    const title = el('a', { class: 'template-name' }, group[0].game);
+    const show = () => {
+      const t = group[Number(pick.value)];
+      title.href = `#/templates/${t.id}`;
+      fill(body, el('div', { class: 'small' }, t.name), byline(t), forkLine(t), actions(t));
+    };
+    pick.addEventListener('change', show);
+    // open on the most used edition; on a tie, the last in the list, which is usually the newest
+    pick.value = String(group.reduce((best, t, i) => (t.uses >= group[best].uses ? i : best), 0));
+    show();
+    box.append(
+      el('div', { class: 'row spread' }, title, el('span', { class: 'small muted' }, `${group.length} editions`)),
+      el('label', { class: 'template-edition small' }, 'Edition ', pick), body);
+    return box;
+  }
+  /** Gather the editions of a game: same game (any case) and same author, each with its own edition. A template with no
+   *  edition, or one of two with the same edition, keeps its own card. Cards go A to Z by what they show first: the game for a shared card, else the name. */
+  function editionGroups(templates) {
+    const groups = [], byKey = new Map();
+    for (const t of templates) {
+      const key = t.game && t.edition ? `${t.starter ? "" : t.author}\u0000${t.game.trim().toLowerCase()}` : null;
+      const g = key && byKey.get(key);
+      if (g && !g.some(o => o.edition.trim().toLowerCase() === t.edition.trim().toLowerCase())) { g.push(t); continue; }
+      const fresh = [t];
+      if (key && !g) byKey.set(key, fresh);
+      groups.push(fresh);
+    }
+    const ed = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    // oldest first: by the year in the edition, as in "Revised (1998)", then A to Z; an edition with no year goes last
+    const year = t => Number((t.edition || '').match(/\b(19|20)\d\d/)?.[0] || 9999);
+    for (const g of groups) g.sort((a, b) => year(a) - year(b) || ed.compare(a.edition || '', b.edition || ''));
+    const title = g => (g.length > 1 ? g[0].game : g[0].name);
+    return groups.sort((a, b) => ed.compare(title(a), title(b)));
   }
   async function renderLibrary() {
     closePdf();
@@ -240,7 +280,7 @@ const Sheets = (() => {
       const n = ++seq;
       const { templates } = await ctx.api('templates', { query: search.value.trim() ? { q: search.value.trim() } : {} });
       if (n !== seq) return;
-      list.replaceChildren(...(templates.length ? templates.map(card) : [el('p', { class: 'muted' }, search.value ? 'No template matches that.' : 'No templates yet.')]));
+      list.replaceChildren(...(templates.length ? editionGroups(templates).map(card) : [el('p', { class: 'muted' }, search.value ? 'No template matches that.' : 'No templates yet.')]));
     };
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load().catch(err => toast(err.message, true)), 250); });
     ctx.mount(el('div', { class: 'card' },

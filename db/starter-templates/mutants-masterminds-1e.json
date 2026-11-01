@@ -1,0 +1,834 @@
+{
+ "name": "Mutants & Masterminds (1st Edition)",
+ "game": "Mutants & Masterminds",
+ "edition": "1st Edition (2002)",
+ "source": {
+  "title": "Mutants & Masterminds Character Record Sheet (1st edition)",
+  "owner": "Green Ronin Publishing",
+  "url": "https://web.archive.org/web/20101129172108id_/http://rpgsheets.com/sheets/202001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alternate_identity",
+      "label": "Alternate Identity",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "group",
+      "label": "Group Affiliation",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "identity_type",
+      "label": "Identity",
+      "type": "choice",
+      "options": [
+       "Secret",
+       "Public"
+      ],
+      "cols": 3
+     },
+     {
+      "key": "base",
+      "label": "Base of Operations",
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "first_appearance",
+      "label": "First Appearance",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "power_level",
+      "label": "Power Level/Max Power Rank",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Game Statistics",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_mod",
+      "label": "STR Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_power",
+      "label": "STR Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp",
+      "label": "STR Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_power",
+      "label": "DEX Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp",
+      "label": "DEX Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_mod",
+      "label": "CON Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_power",
+      "label": "CON Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp",
+      "label": "CON Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_mod",
+      "label": "INT Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_power",
+      "label": "INT Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp",
+      "label": "INT Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_power",
+      "label": "WIS Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp",
+      "label": "WIS Temporary",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_power",
+      "label": "CHA Power Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp",
+      "label": "CHA Temporary",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saves & Defense",
+    "width": "half",
+    "fields": [
+     {
+      "key": "save_damage",
+      "label": "Damage",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "save_fortitude",
+      "label": "Fortitude",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "save_reflex",
+      "label": "Reflex",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "save_will",
+      "label": "Will",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "defense_flat",
+      "label": "Flat-Footed",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "base_attack",
+      "label": "Base Attack Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "melee",
+      "label": "Melee Attack Bonus",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ranged",
+      "label": "Ranged Attack Bonus",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "damage",
+    "title": "Damage Conditions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stun_hits",
+      "label": "Stun hits",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "lethal_hits",
+      "label": "Lethal hits",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "condition",
+      "label": "Condition",
+      "type": "choice",
+      "options": [
+       "Stunned",
+       "Disabled",
+       "Unconscious",
+       "Dying",
+       "Dead"
+      ],
+      "cols": 6,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "feats",
+    "title": "Feats & Super-Feats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "feats_text",
+      "label": "Feats & Super-Feats",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "powers",
+    "title": "Super-Powers",
+    "fields": [
+     {
+      "key": "super_powers",
+      "label": "Super-Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "save_dc",
+        "label": "Save DC"
+       },
+       {
+        "key": "damage_bonus",
+        "label": "Damage Bonus"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "extras",
+        "label": "Power Stunts, Extras & Flaws"
+       },
+       {
+        "key": "special_effect",
+        "label": "Special Effect"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "devices",
+    "title": "Devices",
+    "fields": [
+     {
+      "key": "devices_list",
+      "label": "Devices",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "save_dc",
+        "label": "Save DC"
+       },
+       {
+        "key": "damage_bonus",
+        "label": "Damage Bonus"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "extras",
+        "label": "Power Stunts, Extras & Flaws"
+       },
+       {
+        "key": "special_effect",
+        "label": "Special Effect"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills (total)",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "max_ranks",
+      "label": "Max Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "sk_acrobatics",
+      "label": "Acrobatics",
+      "type": "number"
+     },
+     {
+      "key": "sk_balance",
+      "label": "Balance",
+      "type": "number"
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_computers",
+      "label": "Computers",
+      "type": "number"
+     },
+     {
+      "key": "sk_concentration",
+      "label": "Concentration",
+      "type": "number"
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions",
+      "type": "number"
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number"
+     },
+     {
+      "key": "sk_disable_device",
+      "label": "Disable Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "number"
+     },
+     {
+      "key": "sk_escape_artist",
+      "label": "Escape Artist",
+      "type": "number"
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery",
+      "type": "number"
+     },
+     {
+      "key": "sk_gather_information",
+      "label": "Gather Information",
+      "type": "number"
+     },
+     {
+      "key": "sk_handle_animal",
+      "label": "Handle Animal",
+      "type": "number"
+     },
+     {
+      "key": "sk_hide",
+      "label": "Hide",
+      "type": "number"
+     },
+     {
+      "key": "sk_innuendo",
+      "label": "Innuendo",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump",
+      "type": "number"
+     },
+     {
+      "key": "sk_language",
+      "label": "Language",
+      "type": "number"
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "number"
+     },
+     {
+      "key": "sk_move_silently",
+      "label": "Move Silently",
+      "type": "number"
+     },
+     {
+      "key": "sk_open_lock",
+      "label": "Open Lock",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "number"
+     },
+     {
+      "key": "sk_read_lips",
+      "label": "Read Lips",
+      "type": "number"
+     },
+     {
+      "key": "sk_repair",
+      "label": "Repair",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_sense_motive",
+      "label": "Sense Motive",
+      "type": "number"
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number"
+     },
+     {
+      "key": "sk_spot",
+      "label": "Spot",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "sk_taunt",
+      "label": "Taunt",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Craft, Knowledge, Perform, Profession, Science",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ability",
+        "label": "Key Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "campaign",
+    "title": "Campaign Information",
+    "page": "Campaign & Story",
+    "fields": [
+     {
+      "key": "campaign_name",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gamemaster",
+      "label": "Gamemaster",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "power_points",
+      "label": "Power Points",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "fellow_heroes",
+      "label": "Fellow Heroes",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "sidekicks",
+      "label": "Sidekicks or Minions",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "arch_enemy",
+      "label": "Arch Enemy",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear & Load",
+    "page": "Campaign & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_text",
+      "label": "Gear",
+      "type": "longtext"
+     },
+     {
+      "key": "light_load",
+      "label": "Light Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "medium_load",
+      "label": "Medium Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "heavy_load",
+      "label": "Heavy Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_over_head",
+      "label": "Lift Over Head",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_off_ground",
+      "label": "Lift Off Ground",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "push_drag",
+      "label": "Push or Drag",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "story",
+    "title": "Origin, Weaknesses & Sketch",
+    "page": "Campaign & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "longtext"
+     },
+     {
+      "key": "weaknesses",
+      "label": "Weaknesses",
+      "type": "longtext"
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

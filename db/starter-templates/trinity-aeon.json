@@ -1,0 +1,591 @@
+{
+ "name": "Trinity (Aeon, 1st Edition)",
+ "game": "Trinity Continuum",
+ "edition": "Aeon / Trinity, 1st Edition (1997)",
+ "source": {
+  "title": "Aeon character sheet (Trinity, 1st edition)",
+  "owner": "White Wolf",
+  "url": "https://web.archive.org/web/20101129162124id_/http://rpgsheets.com/sheets/088001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "aptitude",
+      "label": "Aptitude",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "series",
+      "label": "Series",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "allegiance",
+      "label": "Allegiance",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "grp_strength",
+    "title": "Strength",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_might",
+      "label": "Might",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_perception",
+    "title": "Perception",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_appearance",
+    "title": "Appearance",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_style",
+      "label": "Style",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_dexterity",
+    "title": "Dexterity",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_legerdemain",
+      "label": "Legerdemain",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_martial_arts",
+      "label": "Martial Arts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_pilot",
+      "label": "Pilot",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_intelligence",
+    "title": "Intelligence",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_bureaucracy",
+      "label": "Bureaucracy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_engineering",
+      "label": "Engineering",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_intrusion",
+      "label": "Intrusion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_linguistics",
+      "label": "Linguistics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_manipulation",
+    "title": "Manipulation",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_command",
+      "label": "Command",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_interrogation",
+      "label": "Interrogation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_stamina",
+    "title": "Stamina",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_endurance",
+      "label": "Endurance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_resistance",
+      "label": "Resistance",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_wits",
+    "title": "Wits",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_arts",
+      "label": "Arts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_meditation",
+      "label": "Meditation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_rapport",
+      "label": "Rapport",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "grp_charisma",
+    "title": "Charisma",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_perform",
+      "label": "Perform",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "ab_savvy",
+      "label": "Savvy",
+      "type": "pips",
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "specialties",
+    "title": "Specialties",
+    "width": "third",
+    "fields": [
+     {
+      "key": "specialties_list",
+      "label": "Specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "psi",
+      "label": "Psi",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "psi_spent",
+      "label": "Psi (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "aptitude_rating",
+      "label": "Aptitude",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "auxiliary_modes",
+      "label": "Auxiliary Modes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "mode",
+        "label": "Mode"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     },
+     {
+      "key": "backgrounds",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "background",
+        "label": "Background"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "health_sec",
+    "title": "Health & Movement",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health (Bruised to Dead)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "walk",
+      "label": "Walk",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "sprint",
+      "label": "Sprint",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "attacks",
+      "label": "Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "acc",
+        "label": "Acc"
+       },
+       {
+        "key": "dmg",
+        "label": "Dmg"
+       },
+       {
+        "key": "rof",
+        "label": "Rof"
+       },
+       {
+        "key": "ft",
+        "label": "FT"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "rtg_b",
+        "label": "Rtg B"
+       },
+       {
+        "key": "rtg_l",
+        "label": "Rtg L"
+       },
+       {
+        "key": "bulk",
+        "label": "Bulk"
+       },
+       {
+        "key": "ft",
+        "label": "FT"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

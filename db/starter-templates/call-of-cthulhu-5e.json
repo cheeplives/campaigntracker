@@ -1,0 +1,632 @@
+{
+ "name": "Call of Cthulhu (5th Edition)",
+ "game": "Call of Cthulhu",
+ "edition": "5th Edition (1992)",
+ "source": {
+  "title": "Call of Cthulhu 1920s investigator sheet (5th edition), PostScript version by Jonathan Sari",
+  "owner": "Jonathan Sari (fan version); game by Chaosium",
+  "url": "https://web.archive.org/web/20101129160332id_/http://rpgsheets.com/sheets/022004.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "investigator",
+    "title": "Investigator",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Investigator Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player's Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "birthplace",
+      "label": "Birthplace",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "degrees",
+      "label": "Colleges, Degrees",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mental_disorders",
+      "label": "Mental Disorders",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics & Rolls",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ch_str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_idea",
+      "label": "Idea",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_app",
+      "label": "APP",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_pow",
+      "label": "POW",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_luck",
+      "label": "Luck",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_siz",
+      "label": "SIZ",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_san",
+      "label": "SAN",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_edu",
+      "label": "EDU",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ch_know",
+      "label": "Know",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cthulhu_mythos_max",
+      "label": "99-Cthulhu Mythos",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage Bonus",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Sanity, Magic & Hit Points",
+    "fields": [
+     {
+      "key": "sanity",
+      "label": "Sanity Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "max": 99,
+      "play": true
+     },
+     {
+      "key": "mp",
+      "label": "Magic Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "min": -2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Investigator Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_accounting",
+      "label": "Accounting (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_anthropology",
+      "label": "Anthropology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_archaeology",
+      "label": "Archaeology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_astronomy",
+      "label": "Astronomy (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_bargain",
+      "label": "Bargain (05%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_biology",
+      "label": "Biology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_chemistry",
+      "label": "Chemistry (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb (40%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_conceal",
+      "label": "Conceal (15%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_credit_rating",
+      "label": "Credit Rating (15%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_cthulhu_mythos",
+      "label": "Cthulhu Mythos (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_dodge_dex_x2",
+      "label": "Dodge (DEX x2)",
+      "type": "number"
+     },
+     {
+      "key": "sk_drive_auto",
+      "label": "Drive Auto (20%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_electrical_repair",
+      "label": "Electrical Repair (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_fast_talk",
+      "label": "Fast Talk (05%)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills_2",
+    "title": "Investigator Skills (continued)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid (30%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_geology",
+      "label": "Geology (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_hide",
+      "label": "Hide (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_history",
+      "label": "History (20%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_law",
+      "label": "Law (05%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_library_use",
+      "label": "Library Use (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_listen",
+      "label": "Listen (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_locksmith",
+      "label": "Locksmith (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_martial_arts",
+      "label": "Martial Arts (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_mechanical_repair",
+      "label": "Mechanical Repair (20%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine (05%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_natural_history",
+      "label": "Natural History (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_navigate",
+      "label": "Navigate (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult (05%)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "skills_3",
+    "title": "Investigator Skills (continued)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_operate_hvy_machine",
+      "label": "Operate Hvy. Machine (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_own_language_edu_x5",
+      "label": "Own Language (EDU x5)",
+      "type": "number"
+     },
+     {
+      "key": "sk_persuade",
+      "label": "Persuade (15%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_pharmacy",
+      "label": "Pharmacy (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_photography",
+      "label": "Photography (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_physics",
+      "label": "Physics (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_psychoanalysis",
+      "label": "Psychoanalysis (00)",
+      "type": "number"
+     },
+     {
+      "key": "sk_psychology",
+      "label": "Psychology (05%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride (05%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_sneak",
+      "label": "Sneak (10%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_spot_hidden",
+      "label": "Spot Hidden (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_throw",
+      "label": "Throw (25%)",
+      "type": "number"
+     },
+     {
+      "key": "sk_track",
+      "label": "Track (10%)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Art, Languages, Pilot & Other Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_skills_list",
+      "label": "Other skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "value",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "skill_checks",
+      "label": "Skill checks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapon_skills",
+    "title": "Weapon Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ws_axe",
+      "label": "Axe (20%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_blackjack",
+      "label": "Blackjack (40%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_club",
+      "label": "Club (25%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_knife",
+      "label": "Knife (25%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_sabre",
+      "label": "Sabre (15%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_sword",
+      "label": "Sword (20%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_handgun",
+      "label": "Handgun (20%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_machine_gun",
+      "label": "Machine Gun (15%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_rifle",
+      "label": "Rifle (25%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_shotgun",
+      "label": "Shotgun (30%)",
+      "type": "number"
+     },
+     {
+      "key": "ws_submachine_gun",
+      "label": "Submachine Gun (15%)",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "portrait",
+    "title": "Portrait",
+    "width": "third",
+    "fields": [
+     {
+      "key": "portrait_text",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "hand_to_hand",
+    "title": "Hand-To-Hand Weapons",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hth_weapons",
+      "label": "Hand-to-hand attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Attack or Weapon Type"
+       },
+       {
+        "key": "skill",
+        "label": "Current Skill %"
+       },
+       {
+        "key": "damage",
+        "label": "Attack Damage"
+       },
+       {
+        "key": "attacks",
+        "label": "Attacks/Round"
+       },
+       {
+        "key": "hp",
+        "label": "Hit Points"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "firearms",
+    "title": "Firearms",
+    "width": "half",
+    "fields": [
+     {
+      "key": "firearms_list",
+      "label": "Firearms",
+      "type": "list",
+      "columns": [
+       {
+        "key": "firearm",
+        "label": "Firearm"
+       },
+       {
+        "key": "skill",
+        "label": "Current Skill %"
+       },
+       {
+        "key": "damage",
+        "label": "Attack Damage"
+       },
+       {
+        "key": "range",
+        "label": "Base Range"
+       },
+       {
+        "key": "shots",
+        "label": "Shots/Round"
+       },
+       {
+        "key": "in_gun",
+        "label": "Shots in Gun"
+       },
+       {
+        "key": "malfunction",
+        "label": "Malfunc. Number"
+       },
+       {
+        "key": "hp",
+        "label": "Hit Points"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

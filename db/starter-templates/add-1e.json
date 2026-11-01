@@ -1,0 +1,673 @@
+{
+ "name": "Advanced Dungeons & Dragons (1st Edition)",
+ "game": "Dungeons & Dragons",
+ "edition": "1st Edition (AD&D, 1979)",
+ "source": {
+  "title": "Advanced D&D Permanent Character Record",
+  "owner": "TSR (now Wizards of the Coast)",
+  "url": "https://web.archive.org/web/20101129202153id_/http://rpgsheets.com/sheets/034016.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Permanent Character Record",
+    "fields": [
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "campaign",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "place_of_origin",
+      "label": "Place of Origin",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "religion",
+      "label": "Religion",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "patron_deity",
+      "label": "Patron Deity(s)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alignment_of",
+      "label": "Alignment of",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "str",
+    "title": "Strength",
+    "width": "half",
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "strength_pct",
+      "label": "Exceptional %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "str_hit",
+      "label": "Hit Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "str_dam",
+      "label": "Dam. Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "str_wt",
+      "label": "Wt. Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "str_open_door",
+      "label": "Open Door",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "str_bend_bars",
+      "label": "Bend Bars",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "int",
+    "title": "Intelligence",
+    "width": "half",
+    "fields": [
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_lang",
+      "label": "Add. Lang.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "int_know_spell",
+      "label": "% Know Spell",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "int_min_spells",
+      "label": "Minimum # Spells/Lvl",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "int_max_spells",
+      "label": "Maximum # Spells/Lvl",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "wis",
+    "title": "Wisdom",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wisdom",
+      "label": "Wisdom",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_magic_adj",
+      "label": "Magical Atk. Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "wis_spell_bonus",
+      "label": "Spell Bonus",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "wis_spell_failure",
+      "label": "% Spell Failure",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "dex",
+    "title": "Dexterity",
+    "width": "half",
+    "fields": [
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_reaction",
+      "label": "Reaction Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "dex_missile",
+      "label": "Missile Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "dex_defense",
+      "label": "Defense Adj.",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "con",
+    "title": "Constitution",
+    "width": "half",
+    "fields": [
+     {
+      "key": "constitution",
+      "label": "Constitution",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_hp",
+      "label": "Hit Point Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "con_system_shock",
+      "label": "System Shock",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "con_resurrect",
+      "label": "Resurrect Survival",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "con_times_resurrected",
+      "label": "# of Times Resurrected",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "cha",
+    "title": "Charisma",
+    "width": "half",
+    "fields": [
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_henchmen",
+      "label": "Maximum # Henchmen",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "cha_loyalty",
+      "label": "Loyalty Base",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "cha_reaction",
+      "label": "Reaction Adj.",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "saves_move",
+    "title": "Saving Throws & Movement",
+    "fields": [
+     {
+      "key": "save_adjustments",
+      "label": "Saving Throw Adjustments",
+      "type": "list",
+      "columns": [
+       {
+        "key": "adj",
+        "label": "+/-"
+       },
+       {
+        "key": "condition",
+        "label": "Condition"
+       }
+      ]
+     },
+     {
+      "key": "move_normal",
+      "label": "Movement: Normal",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "move_heavy",
+      "label": "Heavy (x3/4)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "move_loaded",
+      "label": "Loaded (x1/2)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "move_maximum",
+      "label": "Maximum (x1/4)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "vision",
+      "label": "Vision",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "resistances",
+      "label": "Resistances",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "psionics",
+    "title": "Psionics, Detection & Languages",
+    "fields": [
+     {
+      "key": "psionic_strength",
+      "label": "Psionics: Atk. Str./Def. Str.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "attack_modes",
+      "label": "Attack Modes",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "defense_mode",
+      "label": "Defense Mode",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "major_disciplines",
+      "label": "Major Disciplines",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "minor_disciplines",
+      "label": "Minor Disciplines",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "detection",
+      "label": "Detection",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "proficiencies",
+      "label": "Weapons of Proficiency",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       }
+      ]
+     },
+     {
+      "key": "non_prof_penalty",
+      "label": "Non-Proficiency Penalty",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "surprise",
+      "label": "Surprise / Dex. Adj.",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "defensive_adj",
+      "label": "Defensive Adj. (Dex. / Magical)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "combat_adjustments",
+      "label": "Combat Adjustments",
+      "type": "list",
+      "columns": [
+       {
+        "key": "to_hit",
+        "label": "\"To Hit\" Adj."
+       },
+       {
+        "key": "damage",
+        "label": "Damage Adj."
+       },
+       {
+        "key": "condition",
+        "label": "Condition"
+       }
+      ]
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "mag_adj",
+        "label": "Mag. Adj."
+       },
+       {
+        "key": "space",
+        "label": "Space Required"
+       },
+       {
+        "key": "speed",
+        "label": "Speed"
+       },
+       {
+        "key": "vs_ac",
+        "label": "Adj. vs AC 10 to 2"
+       },
+       {
+        "key": "damage",
+        "label": "Damage vs Size S-M/L"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "hit_points",
+    "title": "Hit Points",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "const_adj",
+      "label": "Const. Adj.",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hit_die",
+      "label": "Hit Die Type",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hp_per_level",
+      "label": "Hit Points Gained per Level (1 to 11+)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "scarring",
+      "label": "Scarring and Maiming",
+      "type": "list",
+      "columns": [
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "date",
+        "label": "Date"
+       },
+       {
+        "key": "explanation",
+        "label": "Explanation"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "fields": [
+     {
+      "key": "birthday",
+      "label": "Birthday",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class (if any)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "standing",
+      "label": "Standing (if any)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "general_appearance",
+      "label": "General Appearance",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "distinguishing_marks",
+      "label": "Distinguishing Marks",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "mannerisms",
+      "label": "Mannerisms",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "thieving",
+    "title": "Thieving Skills Adjustments",
+    "fields": [
+     {
+      "key": "pick_pockets",
+      "label": "Pick Pockets %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "open_locks",
+      "label": "Open Locks %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "find_traps",
+      "label": "Remove/Find Trap %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "move_silently",
+      "label": "Move Silently %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hide_in_shadows",
+      "label": "Hide in Shadows %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hear_noise",
+      "label": "Hear Noise %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "climb_walls",
+      "label": "Climb Walls %",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "read_languages",
+      "label": "Read Language %",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   }
+  ]
+ }
+}

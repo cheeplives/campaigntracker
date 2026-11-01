@@ -1,0 +1,566 @@
+{
+ "name": "Paranoia (5th Edition)",
+ "game": "Paranoia",
+ "edition": "5th Edition (1995)",
+ "source": {
+  "title": "Paranoia Character Sheet (5th edition)",
+  "owner": "West End Games (game now published by Mongoose)",
+  "url": "https://web.archive.org/web/20101129163122id_/http://rpgsheets.com/sheets/062201.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Paranoia Character Sheet",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "security_clearance",
+      "label": "Security Clearance",
+      "type": "choice",
+      "options": [
+       "IR",
+       "R",
+       "O",
+       "Y",
+       "G",
+       "B",
+       "I",
+       "V",
+       "UV"
+      ],
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "clone_number",
+      "label": "Clone Number",
+      "type": "pips",
+      "count": 6,
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "service_group",
+      "label": "Service Group",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "mandatory_bonus_duty",
+      "label": "Mandatory Bonus Duty",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "endurance",
+      "label": "Endurance",
+      "type": "number"
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number"
+     },
+     {
+      "key": "moxie",
+      "label": "Moxie",
+      "type": "number"
+     },
+     {
+      "key": "chutzpah",
+      "label": "Chutzpah",
+      "type": "number"
+     },
+     {
+      "key": "mechanical",
+      "label": "Mechanical Aptitude",
+      "type": "number"
+     },
+     {
+      "key": "power",
+      "label": "Power",
+      "type": "number"
+     },
+     {
+      "key": "carrying_capacity",
+      "label": "Carrying Capacity",
+      "type": "text"
+     },
+     {
+      "key": "hth_damage",
+      "label": "HTH Damage",
+      "type": "text"
+     },
+     {
+      "key": "macho",
+      "label": "Macho",
+      "type": "text"
+     },
+     {
+      "key": "wound_levels",
+      "label": "Wound Levels",
+      "type": "text"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "equipment_list",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "value",
+        "label": "Game Value"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sk_agility",
+    "title": "Agility Skill Base",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "agility_base",
+      "label": "Agility Skill Base",
+      "type": "number"
+     },
+     {
+      "key": "sk_brawling",
+      "label": "Brawling",
+      "type": "number"
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "number"
+     },
+     {
+      "key": "sk_force_weapons",
+      "label": "Force Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_melee_weapons",
+      "label": "Melee Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_sneak",
+      "label": "Sneak",
+      "type": "number"
+     },
+     {
+      "key": "sk_thrown_weapons",
+      "label": "Thrown Weapons",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sk_dexterity",
+    "title": "Dexterity Skill Base",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dexterity_base",
+      "label": "Dexterity Skill Base",
+      "type": "number"
+     },
+     {
+      "key": "sk_energy_weapons",
+      "label": "Energy Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_field_weapons",
+      "label": "Field Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_laser_weapons",
+      "label": "Laser Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_missile_weapons",
+      "label": "Missile Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_projectile_weapons",
+      "label": "Projectile Weapons",
+      "type": "number"
+     },
+     {
+      "key": "sk_vehicle_weapons",
+      "label": "Vehicle Weapons",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sk_moxie",
+    "title": "Moxie Skill Base",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "moxie_base",
+      "label": "Moxie Skill Base",
+      "type": "number"
+     },
+     {
+      "key": "sk_biochem_therapy",
+      "label": "Biochem Therapy",
+      "type": "number"
+     },
+     {
+      "key": "sk_biosciences",
+      "label": "Biosciences",
+      "type": "number"
+     },
+     {
+      "key": "sk_chemistry",
+      "label": "Chemistry",
+      "type": "number"
+     },
+     {
+      "key": "sk_computer_programming",
+      "label": "Computer Programming*",
+      "type": "number"
+     },
+     {
+      "key": "sk_data_analysis",
+      "label": "Data Analysis",
+      "type": "number"
+     },
+     {
+      "key": "sk_data_search",
+      "label": "Data Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions",
+      "type": "number"
+     },
+     {
+      "key": "sk_electronics",
+      "label": "Electronics",
+      "type": "number"
+     },
+     {
+      "key": "sk_first_aid",
+      "label": "First Aid",
+      "type": "number"
+     },
+     {
+      "key": "sk_mechanics",
+      "label": "Mechanics",
+      "type": "number"
+     },
+     {
+      "key": "sk_nuclear_engineering",
+      "label": "Nuclear Engineering",
+      "type": "number"
+     },
+     {
+      "key": "sk_old_reckoning_cultures",
+      "label": "Old Reckoning Cultures*",
+      "type": "number"
+     },
+     {
+      "key": "sk_security",
+      "label": "Security",
+      "type": "number"
+     },
+     {
+      "key": "sk_surveillance",
+      "label": "Surveillance",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sk_chutzpah",
+    "title": "Chutzpah Skill Base",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "chutzpah_base",
+      "label": "Chutzpah Skill Base",
+      "type": "number"
+     },
+     {
+      "key": "sk_bootlicking",
+      "label": "Bootlicking",
+      "type": "number"
+     },
+     {
+      "key": "sk_bribery",
+      "label": "Bribery",
+      "type": "number"
+     },
+     {
+      "key": "sk_communist_propaganda",
+      "label": "Communist Propaganda*",
+      "type": "number"
+     },
+     {
+      "key": "sk_con",
+      "label": "Con",
+      "type": "number"
+     },
+     {
+      "key": "sk_fast_talk",
+      "label": "Fast Talk",
+      "type": "number"
+     },
+     {
+      "key": "sk_forgery",
+      "label": "Forgery",
+      "type": "number"
+     },
+     {
+      "key": "sk_interrogation",
+      "label": "Interrogation",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "number"
+     },
+     {
+      "key": "sk_motivation",
+      "label": "Motivation",
+      "type": "number"
+     },
+     {
+      "key": "sk_oratory",
+      "label": "Oratory",
+      "type": "number"
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "sk_spurious_logic",
+      "label": "Spurious Logic",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "sk_mechanical",
+    "title": "Mechanical Aptitude Skill Base",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "mechanical_base",
+      "label": "Mechanical Aptitude Skill Base",
+      "type": "number"
+     },
+     {
+      "key": "sk_habitat_engineering",
+      "label": "Habitat Engineering",
+      "type": "number"
+     },
+     {
+      "key": "sk_juryrigging",
+      "label": "Juryrigging",
+      "type": "number"
+     },
+     {
+      "key": "sk_docbot",
+      "label": "Docbot",
+      "type": "number"
+     },
+     {
+      "key": "sk_jackobot",
+      "label": "Jackobot",
+      "type": "number"
+     },
+     {
+      "key": "sk_scrubot",
+      "label": "Scrubot",
+      "type": "number"
+     },
+     {
+      "key": "sk_transbot",
+      "label": "Transbot",
+      "type": "number"
+     },
+     {
+      "key": "sk_warbot",
+      "label": "Warbot",
+      "type": "number"
+     },
+     {
+      "key": "sk_autocar",
+      "label": "Autocar",
+      "type": "number"
+     },
+     {
+      "key": "sk_copter",
+      "label": "Copter",
+      "type": "number"
+     },
+     {
+      "key": "sk_crawler",
+      "label": "Crawler",
+      "type": "number"
+     },
+     {
+      "key": "sk_flybot",
+      "label": "Flybot",
+      "type": "number"
+     },
+     {
+      "key": "sk_hover",
+      "label": "Hover",
+      "type": "number"
+     },
+     {
+      "key": "sk_transbot_vehicle",
+      "label": "Transbot (vehicle)",
+      "type": "number"
+     },
+     {
+      "key": "sk_vulturecraft",
+      "label": "Vulturecraft",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "secret",
+    "title": "Secret Stuff",
+    "page": "Secret Stuff",
+    "fields": [
+     {
+      "key": "secret_society",
+      "label": "Secret Society",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "current_mission",
+      "label": "Current Mission",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "mutant_powers",
+      "label": "Mutant Power(s)",
+      "type": "longtext"
+     },
+     {
+      "key": "damage_status",
+      "label": "Damage Status",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "personal_equipment",
+      "label": "Personal Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "power_attributes",
+      "label": "Power Attribute(s)",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

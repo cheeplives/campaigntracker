@@ -1,0 +1,914 @@
+{
+ "name": "Pathfinder (1st Edition)",
+ "game": "Pathfinder",
+ "edition": "1st Edition (2009)",
+ "source": {
+  "title": "Pathfinder RPG Character Sheet (from the Record Sheets pack)",
+  "owner": "Paizo Publishing",
+  "url": "https://downloads.paizo.com/PZOCUP009E_PathfinderRPG_RecordSheets.zip",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Sheet",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "class_level",
+      "label": "Character Class and Level",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_mod",
+      "label": "STR Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp",
+      "label": "STR Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_temp_mod",
+      "label": "STR Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp",
+      "label": "DEX Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_temp_mod",
+      "label": "DEX Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con",
+      "label": "CON",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_mod",
+      "label": "CON Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp",
+      "label": "CON Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_temp_mod",
+      "label": "CON Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int",
+      "label": "INT",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_mod",
+      "label": "INT Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp",
+      "label": "INT Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_temp_mod",
+      "label": "INT Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp",
+      "label": "WIS Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_temp_mod",
+      "label": "WIS Temp Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp",
+      "label": "CHA Temp Adjustment",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_temp_mod",
+      "label": "CHA Temp Modifier",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Hit Points, Speed & AC",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hp_total",
+      "label": "HP Total",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dr",
+      "label": "DR",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hp",
+      "label": "Wounds/Current HP",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "nonlethal",
+      "label": "Nonlethal Damage",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "speed",
+      "label": "Speed (base / with armor)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "speed_other",
+      "label": "Fly, Swim, Climb, Burrow",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ac",
+      "label": "AC",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "ac_touch",
+      "label": "Touch AC",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "ac_flat_footed",
+      "label": "Flat-Footed AC",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "ac_armor",
+      "label": "Armor Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_shield",
+      "label": "Shield Bonus",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_dex",
+      "label": "Dex Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_size",
+      "label": "Size Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_natural",
+      "label": "Natural Armor",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_deflection",
+      "label": "Deflection Modifier",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ac_modifiers",
+      "label": "AC Modifiers",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saving Throws",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fortitude",
+      "label": "Fortitude",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflex",
+      "label": "Reflex",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "save_modifiers",
+      "label": "Modifiers",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attack",
+    "title": "Attack",
+    "width": "half",
+    "fields": [
+     {
+      "key": "base_attack",
+      "label": "Base Attack Bonus",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "spell_resistance",
+      "label": "Spell Resistance",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cmb",
+      "label": "CMB",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cmd",
+      "label": "CMD",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cm_modifiers",
+      "label": "Modifiers",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack",
+        "label": "Attack Bonus"
+       },
+       {
+        "key": "critical",
+        "label": "Critical"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "ammunition",
+        "label": "Ammunition"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills (total bonus)",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_acrobatics",
+      "label": "Acrobatics",
+      "type": "number"
+     },
+     {
+      "key": "sk_appraise",
+      "label": "Appraise",
+      "type": "number"
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number"
+     },
+     {
+      "key": "sk_disable_device",
+      "label": "Disable Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_escape_artist",
+      "label": "Escape Artist",
+      "type": "number"
+     },
+     {
+      "key": "sk_fly",
+      "label": "Fly",
+      "type": "number"
+     },
+     {
+      "key": "sk_handle_animal",
+      "label": "Handle Animal",
+      "type": "number"
+     },
+     {
+      "key": "sk_heal",
+      "label": "Heal",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_arcana",
+      "label": "Knowledge (arcana)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_dungeoneering",
+      "label": "Knowledge (dungeoneering)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_engineering",
+      "label": "Knowledge (engineering)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_geography",
+      "label": "Knowledge (geography)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_history",
+      "label": "Knowledge (history)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_local",
+      "label": "Knowledge (local)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_nature",
+      "label": "Knowledge (nature)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_nobility",
+      "label": "Knowledge (nobility)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_planes",
+      "label": "Knowledge (planes)",
+      "type": "number"
+     },
+     {
+      "key": "sk_knowledge_religion",
+      "label": "Knowledge (religion)",
+      "type": "number"
+     },
+     {
+      "key": "sk_linguistics",
+      "label": "Linguistics",
+      "type": "number"
+     },
+     {
+      "key": "sk_perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_sense_motive",
+      "label": "Sense Motive",
+      "type": "number"
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number"
+     },
+     {
+      "key": "sk_spellcraft",
+      "label": "Spellcraft",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "sk_use_magic_device",
+      "label": "Use Magic Device",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Craft, Perform, Profession",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "total",
+        "label": "Total Bonus"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       }
+      ]
+     },
+     {
+      "key": "skill_modifiers",
+      "label": "Conditional Modifiers",
+      "type": "longtext"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "ac_items",
+    "title": "AC Items",
+    "page": "Gear & Spells",
+    "fields": [
+     {
+      "key": "ac_items_list",
+      "label": "AC Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "check_penalty",
+        "label": "Check Penalty"
+       },
+       {
+        "key": "spell_failure",
+        "label": "Spell Failure"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "properties",
+        "label": "Properties"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear & Money",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "gear_list",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Wt."
+       }
+      ]
+     },
+     {
+      "key": "total_weight",
+      "label": "Total Weight",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "light_load",
+      "label": "Light Load",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "medium_load",
+      "label": "Medium Load",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "heavy_load",
+      "label": "Heavy Load",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "lift_over_head",
+      "label": "Lift Over Head",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "lift_off_ground",
+      "label": "Lift Off Ground",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "drag_push",
+      "label": "Drag or Push",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cp",
+      "label": "CP",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sp",
+      "label": "SP",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "gp",
+      "label": "GP",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "pp",
+      "label": "PP",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "feats",
+    "title": "Feats, Special Abilities & XP",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "feats_text",
+      "label": "Feats",
+      "type": "longtext"
+     },
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "xp_next",
+      "label": "Next Level",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "spells",
+    "title": "Spells",
+    "page": "Gear & Spells",
+    "width": "third",
+    "fields": [
+     {
+      "key": "spells_per_day",
+      "label": "Spells per Day",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "known",
+        "label": "Spells Known"
+       },
+       {
+        "key": "save_dc",
+        "label": "Spell Save DC"
+       },
+       {
+        "key": "per_day",
+        "label": "Spells per Day"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus Spells"
+       }
+      ]
+     },
+     {
+      "key": "spell_modifiers",
+      "label": "Conditional Modifiers",
+      "type": "longtext"
+     },
+     {
+      "key": "domains",
+      "label": "Domains/Specialty School",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "spells_list",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "spell",
+        "label": "Spell"
+       },
+       {
+        "key": "used",
+        "label": "Used"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

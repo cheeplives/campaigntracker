@@ -1,0 +1,726 @@
+{
+ "name": "Mutants & Masterminds (2nd Edition)",
+ "game": "Mutants & Masterminds",
+ "edition": "2nd Edition (2005)",
+ "source": {
+  "title": "Mutants & Masterminds character sheet (2nd edition)",
+  "owner": "Green Ronin Publishing",
+  "url": "https://web.archive.org/web/20100821030349id_/http://www.rpgsheets.com:80/sheets/202101.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alternate_identity",
+      "label": "Alternate Identity",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "group",
+      "label": "Group Affiliation",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "identity_type",
+      "label": "Identity",
+      "type": "choice",
+      "options": [
+       "Secret",
+       "Public"
+      ],
+      "cols": 3
+     },
+     {
+      "key": "base",
+      "label": "Base of Operations",
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "first_appearance",
+      "label": "First Appearance",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "power_level",
+      "label": "Power Level",
+      "type": "number",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "power_point_total",
+      "label": "Power Point Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str",
+      "label": "Strength",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_mod",
+      "label": "Strength Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_base",
+      "label": "Strength Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "str_enhanced",
+      "label": "Strength Enhanced",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_mod",
+      "label": "Dexterity Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_base",
+      "label": "Dexterity Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dex_enhanced",
+      "label": "Dexterity Enhanced",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con",
+      "label": "Constitution",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_mod",
+      "label": "Constitution Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_base",
+      "label": "Constitution Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "con_enhanced",
+      "label": "Constitution Enhanced",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_mod",
+      "label": "Intelligence Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_base",
+      "label": "Intelligence Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "int_enhanced",
+      "label": "Intelligence Enhanced",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis",
+      "label": "Wisdom",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_mod",
+      "label": "Wisdom Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_base",
+      "label": "Wisdom Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wis_enhanced",
+      "label": "Wisdom Enhanced",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha",
+      "label": "Charisma",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_mod",
+      "label": "Charisma Modifier",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_base",
+      "label": "Charisma Base",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cha_enhanced",
+      "label": "Charisma Enhanced",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saves",
+    "title": "Saving Throws & Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "toughness",
+      "label": "Toughness",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "fortitude",
+      "label": "Fortitude",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "reflex",
+      "label": "Reflex",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "defense_flat",
+      "label": "Flat-Footed",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "attack",
+      "label": "Attack Bonus",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "ranged",
+      "label": "Ranged Attack Bonus",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "melee",
+      "label": "Melee Attack Bonus",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "conditions",
+    "title": "Damage & Fatigue Conditions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bruised",
+      "label": "Bruised",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "injured",
+      "label": "Injured",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "damage_condition",
+      "label": "Damage Condition",
+      "type": "choice",
+      "options": [
+       "Staggered",
+       "Disabled",
+       "Unconscious",
+       "Dying"
+      ],
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "fatigue_condition",
+      "label": "Fatigue Condition",
+      "type": "choice",
+      "options": [
+       "Fatigued",
+       "Exhausted",
+       "Unconscious"
+      ],
+      "cols": 6,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "powers",
+    "title": "Powers/Devices",
+    "width": "half",
+    "fields": [
+     {
+      "key": "powers_list",
+      "label": "Powers/Devices",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "action",
+        "label": "Action"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "feats",
+    "title": "Feats",
+    "fields": [
+     {
+      "key": "feats_list",
+      "label": "Feats",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "benefit",
+        "label": "Benefit"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "campaign",
+    "title": "Campaign Information",
+    "page": "Campaign & Story",
+    "fields": [
+     {
+      "key": "campaign_name",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gamemaster",
+      "label": "Gamemaster",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "power_points",
+      "label": "Power Points",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "fellow_heroes",
+      "label": "Fellow Heroes",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "sidekicks",
+      "label": "Sidekicks or Minions",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "arch_enemy",
+      "label": "Arch Enemy",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment & Load",
+    "page": "Campaign & Story",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "light_load",
+      "label": "Light Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "medium_load",
+      "label": "Medium Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "heavy_load",
+      "label": "Heavy Load",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_over_head",
+      "label": "Lift Over Head",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "lift_off_ground",
+      "label": "Lift Off Ground",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "push_drag",
+      "label": "Push or Drag",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "longtext"
+     },
+     {
+      "key": "drawbacks",
+      "label": "Drawbacks & Complications",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills (skill bonus)",
+    "page": "Campaign & Story",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "max_ranks",
+      "label": "Max Ranks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "sk_acrobatics",
+      "label": "Acrobatics",
+      "type": "number"
+     },
+     {
+      "key": "sk_bluff",
+      "label": "Bluff",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_computers",
+      "label": "Computers",
+      "type": "number"
+     },
+     {
+      "key": "sk_concentration",
+      "label": "Concentration",
+      "type": "number"
+     },
+     {
+      "key": "sk_diplomacy",
+      "label": "Diplomacy",
+      "type": "number"
+     },
+     {
+      "key": "sk_disable_device",
+      "label": "Disable Device",
+      "type": "number"
+     },
+     {
+      "key": "sk_disguise",
+      "label": "Disguise",
+      "type": "number"
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "number"
+     },
+     {
+      "key": "sk_escape_artist",
+      "label": "Escape Artist",
+      "type": "number"
+     },
+     {
+      "key": "sk_gather_information",
+      "label": "Gather Information",
+      "type": "number"
+     },
+     {
+      "key": "sk_handle_animal",
+      "label": "Handle Animal",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_investigate",
+      "label": "Investigate",
+      "type": "number"
+     },
+     {
+      "key": "sk_language",
+      "label": "Language",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "number"
+     },
+     {
+      "key": "sk_notice",
+      "label": "Notice",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_sense_motive",
+      "label": "Sense Motive",
+      "type": "number"
+     },
+     {
+      "key": "sk_sleight_of_hand",
+      "label": "Sleight of Hand",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "skills_other",
+      "label": "Craft, Knowledge, Perform, Profession",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ability",
+        "label": "Key Ability"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "bonus",
+        "label": "Skill Bonus"
+       }
+      ]
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

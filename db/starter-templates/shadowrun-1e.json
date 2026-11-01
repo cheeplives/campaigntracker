@@ -1,0 +1,542 @@
+{
+ "name": "Shadowrun (1st Edition)",
+ "game": "Shadowrun",
+ "edition": "1st Edition (1989)",
+ "source": {
+  "title": "Shadowrun character sheet (1st edition)",
+  "owner": "FASA Corporation (now Catalyst Game Labs)",
+  "url": "https://web.archive.org/web/20101129141135id_/http://rpgsheets.com/sheets/073001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Shadowrunner",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "street_name",
+      "label": "Street Name",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "karma",
+      "label": "Karma",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "money",
+      "label": "Money",
+      "type": "text",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills & Languages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills & Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number"
+     },
+     {
+      "key": "quickness",
+      "label": "Quickness",
+      "type": "number"
+     },
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number"
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "essence",
+      "label": "Essence",
+      "type": "number"
+     },
+     {
+      "key": "magic",
+      "label": "(Magic)",
+      "type": "number"
+     },
+     {
+      "key": "reaction",
+      "label": "Reaction",
+      "type": "number"
+     },
+     {
+      "key": "allergy_substance",
+      "label": "Allergy: Substance",
+      "type": "text"
+     },
+     {
+      "key": "allergy_severity",
+      "label": "Allergy: Severity",
+      "type": "text"
+     },
+     {
+      "key": "racial_adv",
+      "label": "Racial Adv.",
+      "type": "text"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "width": "third",
+    "fields": [
+     {
+      "key": "physical_damage",
+      "label": "Physical (Light, Moderate, Serious, Deadly)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "mental_damage",
+      "label": "Mental (Light, Moderate, Serious, Unconscious)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "cyberware",
+    "title": "Cyberware",
+    "width": "third",
+    "fields": [
+     {
+      "key": "cyberware_list",
+      "label": "Cyberware",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_spells",
+    "title": "Weapons & Spells",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "short",
+        "label": "Short"
+       },
+       {
+        "key": "medium",
+        "label": "Medium"
+       },
+       {
+        "key": "long",
+        "label": "Long"
+       },
+       {
+        "key": "extreme",
+        "label": "Extreme"
+       },
+       {
+        "key": "damage",
+        "label": "Dmg. Code"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "max_force",
+        "label": "Max Force"
+       },
+       {
+        "key": "staging",
+        "label": "Staging"
+       },
+       {
+        "key": "drain",
+        "label": "Drain Code"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pools",
+    "title": "Dice Pools",
+    "fields": [
+     {
+      "key": "astral_pool",
+      "label": "Astral Pool",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "defense_pool",
+      "label": "Defense Pool",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "dodge_pool",
+      "label": "Dodge Pool",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "magic_pool",
+      "label": "Magic Pool",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "hacking_pool",
+      "label": "Hacking Pool",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "cyberdeck",
+    "title": "Cyberdeck",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "deck_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "persona",
+      "label": "Persona",
+      "type": "number"
+     },
+     {
+      "key": "hardening",
+      "label": "Hardening",
+      "type": "number"
+     },
+     {
+      "key": "memory",
+      "label": "Memory",
+      "type": "number"
+     },
+     {
+      "key": "storage",
+      "label": "Storage",
+      "type": "number"
+     },
+     {
+      "key": "load",
+      "label": "Load",
+      "type": "number"
+     },
+     {
+      "key": "io",
+      "label": "I/O",
+      "type": "number"
+     },
+     {
+      "key": "response",
+      "label": "Response",
+      "type": "number"
+     },
+     {
+      "key": "hitcher_jacks",
+      "label": "Hitcher Jacks",
+      "type": "number"
+     },
+     {
+      "key": "vidscreen",
+      "label": "Vidscreen",
+      "type": "number"
+     },
+     {
+      "key": "deck_condition",
+      "label": "Program Condition Monitor",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "programs_in_memory",
+      "label": "Programs in Memory",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "programs",
+    "title": "Programs",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "programs_list",
+      "label": "Programs (Bod, Evasion, Masking, Sensors and others)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "program",
+        "label": "Program"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "drawing_sec",
+    "title": "Character Drawing",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "drawing",
+      "label": "Character Drawing (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "vehicle",
+    "title": "Vehicle",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "vehicle_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "handling",
+      "label": "Handling",
+      "type": "number"
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number"
+     },
+     {
+      "key": "vehicle_body",
+      "label": "Body",
+      "type": "number"
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number"
+     },
+     {
+      "key": "signature",
+      "label": "Signature",
+      "type": "number"
+     },
+     {
+      "key": "pilot",
+      "label": "Pilot",
+      "type": "number"
+     },
+     {
+      "key": "firmpoints",
+      "label": "Firmpoints",
+      "type": "number"
+     },
+     {
+      "key": "hardpoints",
+      "label": "Hardpoints",
+      "type": "number"
+     },
+     {
+      "key": "vehicle_condition",
+      "label": "Condition Monitor",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "vehicle_items",
+      "label": "Other Items",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "other_gear",
+    "title": "Other Gear",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_gear_text",
+      "label": "Other Gear",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "contacts",
+    "title": "Contacts",
+    "page": "Matrix, Gear & Notes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "contacts_list",
+      "label": "Contacts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "contact",
+        "label": "Contact"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes",
+    "title": "Character Notes",
+    "page": "Matrix, Gear & Notes",
+    "fields": [
+     {
+      "key": "character_notes",
+      "label": "Character Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

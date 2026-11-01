@@ -1,0 +1,567 @@
+{
+ "name": "MegaTraveller",
+ "game": "Traveller",
+ "edition": "MegaTraveller (1987)",
+ "source": {
+  "title": "Mad Irishman's MegaTraveller Character Sheet 1.0 (Imperium version)",
+  "owner": "Patrick M. Murphy, A Mad Irishman Production (fan sheet); game by Game Designers' Workshop",
+  "url": "https://web.archive.org/web/20101129203344id_/http://rpgsheets.com/sheets/086501.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Sheet",
+    "fields": [
+     {
+      "key": "date_of_preparation",
+      "label": "Date of Preparation",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "campaign",
+      "label": "Campaign",
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "player_name",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "noble_title",
+      "label": "Noble Title",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "upp",
+    "title": "UPP",
+    "fields": [
+     {
+      "key": "upp_str",
+      "label": "Str (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "upp_dex",
+      "label": "Dex (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "upp_end",
+      "label": "End (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "upp_int",
+      "label": "Int (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "upp_edu",
+      "label": "Edu (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "upp_soc",
+      "label": "Soc (original)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wounded_str",
+      "label": "Str (wounded)",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "wounded_dex",
+      "label": "Dex (wounded)",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "wounded_end",
+      "label": "End (wounded)",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "modified_str",
+      "label": "Str (modified)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "modified_dex",
+      "label": "Dex (modified)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "modified_end",
+      "label": "End (modified)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "modified_soc",
+      "label": "Soc (modified)",
+      "type": "number",
+      "cols": 2
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "homeworld_sec",
+    "title": "Homeworld",
+    "fields": [
+     {
+      "key": "homeworld",
+      "label": "Homeworld and Location",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "uwp",
+      "label": "UWP",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "starport",
+      "label": "Starport",
+      "type": "choice",
+      "options": [
+       "A",
+       "B",
+       "C/F",
+       "D/G",
+       "E/H",
+       "X/Y"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "choice",
+      "options": [
+       "Asteroid",
+       "Small",
+       "Medium",
+       "Large"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "atmosphere",
+      "label": "Atmosphere",
+      "type": "choice",
+      "options": [
+       "Vacuum",
+       "Thin",
+       "Standard",
+       "Dense",
+       "Exotic"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "hydrosphere",
+      "label": "Hydrosphere",
+      "type": "choice",
+      "options": [
+       "Desert World",
+       "Dry",
+       "Wet",
+       "Water World",
+       "Exotic"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "population",
+      "label": "Population",
+      "type": "choice",
+      "options": [
+       "Low",
+       "Moderate",
+       "High"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "law_level",
+      "label": "Law Level",
+      "type": "choice",
+      "options": [
+       "No Law",
+       "Low",
+       "Moderate",
+       "High",
+       "Extreme"
+      ],
+      "cols": 4
+     },
+     {
+      "key": "tech_level",
+      "label": "Tech Level",
+      "type": "choice",
+      "options": [
+       "Pre-Industrial",
+       "Industrial",
+       "Pre-Stellar",
+       "Early Stellar",
+       "Average Stellar",
+       "High Stellar"
+      ],
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "protection",
+    "title": "Hits & Armor",
+    "fields": [
+     {
+      "key": "hits",
+      "label": "Hits",
+      "type": "text",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "armor_value",
+      "label": "Armor Value",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "armor_description",
+      "label": "Armor Description",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "career_sec",
+    "title": "Career History",
+    "fields": [
+     {
+      "key": "career",
+      "label": "Career",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "terms",
+      "label": "Terms",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "final_rank",
+      "label": "Final Rank/Position",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "retired",
+      "label": "Retired?",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "retirement_pay",
+      "label": "Retirement Pay",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "tas_member",
+      "label": "TAS Member?",
+      "type": "checkbox",
+      "cols": 3
+     },
+     {
+      "key": "discharge_world",
+      "label": "Name and Location of Discharge World",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "awards",
+      "label": "Awards and Decorations",
+      "type": "longtext"
+     },
+     {
+      "key": "special_assignments",
+      "label": "Special Assignments",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "psionics",
+    "title": "Skills and Psionics",
+    "fields": [
+     {
+      "key": "int_edu",
+      "label": "Sum of Int + Edu",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "psionics_test_date",
+      "label": "Date of Psionics Test",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "psi_strength",
+      "label": "Psi Strength",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "psi_trained",
+      "label": "Trained?",
+      "type": "checkbox",
+      "cols": 2
+     },
+     {
+      "key": "training_completed",
+      "label": "Date Training Completed",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill and Level"
+       },
+       {
+        "key": "aps",
+        "label": "APs"
+       },
+       {
+        "key": "date",
+        "label": "Date"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "page": "Description & Possessions",
+    "fields": [
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "birthdate",
+      "label": "Birthdate",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "actual_age",
+      "label": "Actual Age",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "mass",
+      "label": "Mass",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Background and Personal History",
+      "type": "longtext"
+     },
+     {
+      "key": "portrait",
+      "label": "Character Portrait (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions",
+    "page": "Description & Possessions",
+    "fields": [
+     {
+      "key": "cash_on_person",
+      "label": "Cash on Person",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "cash_balance",
+      "label": "Cash Balance",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "monthly_upkeep",
+      "label": "Monthly Upkeep",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "rounds",
+        "label": "Rounds"
+       },
+       {
+        "key": "penetration",
+        "label": "Penetration"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "max_range",
+        "label": "Max Range"
+       },
+       {
+        "key": "autofire",
+        "label": "Autofire"
+       },
+       {
+        "key": "danger_sp",
+        "label": "Danger Sp"
+       },
+       {
+        "key": "recoil",
+        "label": "Sign / Recoil"
+       },
+       {
+        "key": "difficulty",
+        "label": "Difficulty As"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "other_possessions",
+      "label": "Other Possessions",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

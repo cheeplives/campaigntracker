@@ -1,0 +1,362 @@
+{
+ "name": "Legend of the Five Rings (1st Edition)",
+ "game": "Legend of the Five Rings",
+ "edition": "1st Edition (1997)",
+ "source": {
+  "title": "Legend of the Five Rings character sheet (1st edition)",
+  "owner": "Alderac Entertainment Group",
+  "url": "https://web.archive.org/web/20101008173537id_/http://www.rpgsheets.com:80/sheets/048001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Samurai",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "clan",
+      "label": "Clan",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "school",
+      "label": "School",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "insight",
+      "label": "Insight",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "home_province",
+      "label": "Home Province",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "fire",
+    "title": "Fire",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "fire_ring",
+      "label": "Fire Ring",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "air",
+    "title": "Air",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "air_ring",
+      "label": "Air Ring",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflexes",
+      "label": "Reflexes",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "awareness",
+      "label": "Awareness",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "earth",
+    "title": "Earth",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "earth_ring",
+      "label": "Earth Ring",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "water",
+    "title": "Water",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "water_ring",
+      "label": "Water Ring",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "void",
+    "title": "Void",
+    "width": "third",
+    "fields": [
+     {
+      "key": "void_ring",
+      "label": "Void Ring",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "void_spent",
+      "label": "Void Points Spent",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "width": "third",
+    "fields": [
+     {
+      "key": "primary_weapon",
+      "label": "Primary Weapon",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "primary_armor",
+      "label": "Primary Armor",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "tn_to_be_hit",
+      "label": "TN to be Hit",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "techniques",
+    "title": "Techniques & Advantages",
+    "width": "third",
+    "fields": [
+     {
+      "key": "techniques_text",
+      "label": "Techniques",
+      "type": "longtext"
+     },
+     {
+      "key": "advantages",
+      "label": "Advantages/Disadvantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds, Glory & Honor",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wound_levels",
+      "label": "Wound levels (-0 to Dead)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "wounds",
+        "label": "Wounds"
+       }
+      ]
+     },
+     {
+      "key": "wounds_marked",
+      "label": "Wound levels marked",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "glory",
+      "label": "Glory",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "honor",
+      "label": "Honor",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "allies_gear",
+    "title": "Allies, Gear & Gifts",
+    "page": "History & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "allies_enemies",
+      "label": "Allies and Enemies",
+      "type": "longtext"
+     },
+     {
+      "key": "weapons_equipment",
+      "label": "Weapons & Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "gifts",
+      "label": "Gifts, Bestowments and Recognitions",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history",
+    "title": "History and Glorious Deeds",
+    "page": "History & Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "history_text",
+      "label": "History and Glorious Deeds",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

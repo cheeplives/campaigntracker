@@ -1,0 +1,677 @@
+{
+ "name": "Changeling: The Dreaming (original edition)",
+ "game": "Changeling: The Dreaming",
+ "edition": "Original edition (1990s)",
+ "source": {
+  "title": "Changeling: The Dreaming character sheet and history sheet (original edition)",
+  "owner": "White Wolf",
+  "url": "https://web.archive.org/web/20101129151603id_/http://rpgsheets.com/sheets/024001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Changeling",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "court",
+      "label": "Court",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "seeming",
+      "label": "Seeming",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "legacies",
+      "label": "Legacies",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kith",
+      "label": "Kith",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "house",
+      "label": "House",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "motley",
+      "label": "Motley",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_social",
+    "title": "Social",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_alertness",
+      "label": "Alertness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_dodge",
+      "label": "Dodge",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_kenning",
+      "label": "Kenning",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_persuasion",
+      "label": "Persuasion",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_security",
+      "label": "Security",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "knowledges",
+    "title": "Knowledges",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_enigmas",
+      "label": "Enigmas",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_gremayre",
+      "label": "Gremayre",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_linguistics",
+      "label": "Linguistics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_lore",
+      "label": "Lore",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_politics",
+      "label": "Politics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "backgrounds",
+    "title": "Backgrounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backgrounds_list",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "arts",
+    "title": "Arts",
+    "width": "third",
+    "fields": [
+     {
+      "key": "arts_list",
+      "label": "Arts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "realms",
+    "title": "Realms",
+    "width": "third",
+    "fields": [
+     {
+      "key": "realms_list",
+      "label": "Realms",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "other_traits",
+    "title": "Other Traits",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_traits_list",
+      "label": "Other Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       }
+      ]
+     },
+     {
+      "key": "ravaging_musing_threshold",
+      "label": "Ravaging/Musing Threshold",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pools",
+    "title": "Glamour, Willpower & Banality",
+    "width": "third",
+    "fields": [
+     {
+      "key": "glamour",
+      "label": "Glamour",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "glamour_spent",
+      "label": "Glamour (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "banality",
+      "label": "Banality",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "banality_temporary",
+      "label": "Banality (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "health_sec",
+    "title": "Health & Birthrights",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health_real",
+      "label": "Health (real)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "health_chimerical",
+      "label": "Health (chimerical)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "birthrights_frailties",
+      "label": "Birthrights/Frailties",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "history",
+    "title": "Character History",
+    "page": "History",
+    "fields": [
+     {
+      "key": "mortal_name",
+      "label": "Mortal Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "faerie_name",
+      "label": "Faerie Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mortal_age",
+      "label": "Mortal Age",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mortal_profession",
+      "label": "Mortal Profession (if any)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "chimera",
+      "label": "Chimera/Companions/Treasures",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "desc_mortal",
+      "label": "Mortal",
+      "type": "longtext"
+     },
+     {
+      "key": "desc_changeling",
+      "label": "Changeling",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "identity_story",
+    "title": "Identity",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "identity_mortal",
+      "label": "Mortal",
+      "type": "longtext"
+     },
+     {
+      "key": "identity_changeling",
+      "label": "Changeling",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "personality",
+    "title": "Personality",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "quirks",
+      "label": "Quirks",
+      "type": "longtext"
+     },
+     {
+      "key": "motivations_goals",
+      "label": "Motivations & Goals",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_text",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "oathcircle",
+    "title": "Oathcircle",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "oathcircle_text",
+      "label": "Oathcircle",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "other_notes",
+    "title": "Other Notes",
+    "page": "History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "other_notes_text",
+      "label": "Other Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
