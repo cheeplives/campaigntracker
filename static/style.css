@@ -1293,3 +1293,18 @@ path.map-route-line.secret { stroke: var(--dim); }
 .panel-overlay .tv-card { background: transparent; }
 .panel-page .topbar { display: none; }
 .tv-entry h3 .chip { background: var(--panel-2); color: var(--text); font-size: 12px; }
+/* Settings → Weather tuning: fold-out sections of small number boxes; a value changed from the built-in one is highlighted. */
+.tune-card > details.tune-sec { border-top: 1px solid var(--line); padding: 2px 0 8px; }
+.tune-card > details.tune-sec > summary { font-weight: 700; }
+.tune-tbl { width: auto; }
+.tune-tbl th, .tune-tbl td { padding: 3px 6px; white-space: nowrap; }
+.tune-tbl th[scope=row] { font-weight: normal; }
+.tune-num { width: 5.5em; padding: 4px 6px; }
+.tune-list { width: 18em; padding: 4px 6px; }
+.tune-list:invalid { border-color: var(--bad, #c0392b); }
+.tune-num.tuned, .tune-list.tuned { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); font-weight: 700; }
+.tune-cell { display: inline-flex; align-items: center; gap: 4px; }
+.tune-pct { display: inline-block; min-width: 2.6em; }
+.tune-card .field select { max-width: 100%; }
+.tune-cell .tune-num { width: 4.4em; }
+@media (max-width: 900px) { .tune-tbl th, .tune-tbl td { padding: 3px 3px; } .tune-pct { min-width: 2.2em; } }

@@ -251,6 +251,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   room), leaving a rail down the window that brings it back from a click anywhere
   on it, as left after a reload.
 - **install**: the page links a manifest with the name, start page and 192/512 and maskable icons Chrome needs to offer *Install app*, and every icon loads; the installed window's title bar colour follows the theme and light/dark mode; the service worker (Chromium only) takes control without serving any script or API call itself, caches only the offline page, and shows it when the app is opened with no connection.
+- **weather-tuning**: a campaign's weather tuning (storm, fog and dust per Köppen class, the simple climates' weather mix,
+  visibility by weather, how shifts ease off, the ground model) lays over the built-in values and comes off again; out-of-range
+  values are pulled in and only real changes are stored; Settings → Weather tuning highlights changed values, refuses ground
+  steps out of order, saves, changes the day page's ground, and Reset all puts the built-in values back.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility, travel and star-distance results in the browser as under Node.
 

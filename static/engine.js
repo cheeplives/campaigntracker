@@ -859,6 +859,9 @@
   const SHIFT_PEAK = { storm: [2, 3], hail: [2], haze: [2], sandstorm: [2, 3], fog: [1] };
   // Temperature at each shift as a share of the day's high-to-low swing below the high (Midday holds the high).
   const SHIFT_COOL = [0.9, 0.5, 0, 0.35];
+  // Chance each shift away from the peak eases off a step (fog lifting by Midday and after), and that the wind
+  // drops a level overnight or in the other shifts away from the peak.
+  const SHIFT_EASE = { ease: 0.4, fogLift: 0.85, calmNight: 0.6, calmDay: 0.35 };
 
   /** Typical difference between the daytime high and the overnight low, in °C, before cloud cover. */
   function diurnalRange(clim, sea) {
@@ -908,7 +911,7 @@
     for (const dir of [-1, 1]) {
       let cur = w.type;
       for (let i = peak + dir; i >= 0 && i < 4; i += dir) {
-        const ease = fogLifts && i >= 2 ? 0.85 : 0.4;
+        const ease = fogLifts && i >= 2 ? SHIFT_EASE.fogLift : SHIFT_EASE.ease;
         if (variants.length && rng() < ease) {
           const pool = cur === w.type ? variants : variants.slice(variants.indexOf(cur));
           cur = pool[Math.min(pool.length - 1, Math.floor(rng() * rng() * pool.length))] || cur;
@@ -928,7 +931,7 @@
       if (temp !== null && def.precip === 'rain' && temp <= 0 && def.snowAs) type = type === 'storm' ? 'heavysnow' : def.snowAs;
       if (temp !== null && def.precip === 'snow' && temp >= 3 && def.rainAs) type = def.rainAs;
       let wind = w.wind || 0;
-      if (i !== peak && wind > 0 && rng() < (i === 0 ? 0.6 : 0.35)) wind -= 1; // nights are calmer
+      if (i !== peak && wind > 0 && rng() < (i === 0 ? SHIFT_EASE.calmNight : SHIFT_EASE.calmDay)) wind -= 1; // nights are calmer
       if ((WEATHER[type] || {}).wind) wind = Math.max(wind, WEATHER[type].wind);
       return { type, temp, wind: Math.min(wind, Math.max(w.wind || 0, (WEATHER[type] || {}).wind || 0)) };
     });
@@ -946,7 +949,8 @@
   const RAINFALL = { drizzle: 1, rain: 5, storm: 8, hail: 2, damp: 0.3 }; // mm of water a quarter
   const SUNSHINE = { clear: 1.5, haze: 1.6, partly: 1.2, overcast: 0.6, fog: 0.3, sandstorm: 1.3, hail: 0.3 };
   const QUARTER_SUN = [0.6, 1, 0.8, 0.3]; // Dawn, Midday, Dusk, Overnight: how much each dries the ground
-  const FIELD_CAPACITY = 30, DRYING = 0.035;
+  // How fast snow melts (cm a quarter per °C above freezing), how fast the ground dries, and the water (mm) the topsoil holds.
+  const GROUND_RATES = { melt: 0.35, drying: 0.035, fieldCapacity: 30 };
   // Wetness (mm of water held in the topsoil, 0–60) -> label and the going, worst first.
   const GROUND_WET = [
     [48, 'Waterlogged', 'Standing water and deep mud: wheeled travel off the roads is close to impossible and low ground floods.'],
@@ -998,15 +1002,16 @@
         if (fresh) { snow += fresh; lastSnow = day; }
         const sun = SUNSHINE[q.type] ?? (rain || fresh ? 0.2 : 0.8);
         let melt = 0;
-        if (snow > 0 && t > 0) melt = Math.min(snow, t * 0.35 + rain * 0.15 + (i === 1 ? 0.2 * sun : 0));
+        if (snow > 0 && t > 0) melt = Math.min(snow, t * GROUND_RATES.melt + rain * 0.15 + (i === 1 ? 0.2 * sun : 0));
         snow -= melt;
         if (snow < 0.05) snow = 0;
         const water = rain + melt * 2; // settled snow holds about 2 mm of water per cm
         if (water >= 1) wetToday = true;
         // water above what the soil holds drains away; below it, sun, warmth and wind dry it, slower as it dries out
         const covered = snow > 1;
-        const drain = frozen ? 0 : Math.max(0, wet - FIELD_CAPACITY) * 0.06;
-        const dry = frozen || covered ? 0 : Math.max(0, t) * DRYING * sun * QUARTER_SUN[i] * (1 + 0.2 * (q.wind || 0)) * Math.min(1, wet / FIELD_CAPACITY);
+        const cap = GROUND_RATES.fieldCapacity;
+        const drain = frozen ? 0 : Math.max(0, wet - cap) * 0.06;
+        const dry = frozen || covered ? 0 : Math.max(0, t) * GROUND_RATES.drying * sun * QUARTER_SUN[i] * (1 + 0.2 * (q.wind || 0)) * Math.min(1, wet / cap);
         wet = Math.min(60, Math.max(0, wet + water - drain - dry));
         return { snow: Math.round(snow * 10) / 10, wet: Math.round(wet * 10) / 10, frozen, melting: melt > 0.3, temp: t, lastSnow };
       });
@@ -1025,7 +1030,8 @@
       return { icon: '⛄', label: `${label}, ${depth}${g.melting ? ', melting' : ''}`, going: g.melting ? `${going} Slush and meltwater make it slippery.` : going };
     }
     const [, wl, wgo] = GROUND_WET.find(([min]) => g.wet >= min);
-    if (g.frozen) return { icon: '🧊', label: g.wet >= 25 ? 'Frozen, icy ruts' : 'Frozen hard', going: g.wet >= 25 ? 'Hard going over frozen ruts and ice; slippery. It turns to mud when it thaws.' : 'Hard, fast going.' };
+    const soft = GROUND_WET.find(r => r[1] === 'Soft')[0]; // past this, frozen ground is ruts and ice
+    if (g.frozen) return { icon: '🧊', label: g.wet >= soft ? 'Frozen, icy ruts' : 'Frozen hard', going: g.wet >= soft ? 'Hard going over frozen ruts and ice; slippery. It turns to mud when it thaws.' : 'Hard, fast going.' };
     return { icon: '🥾', label: wl, going: wgo };
   }
 
@@ -1112,6 +1118,156 @@
     return { score, label: VIS_LABELS[score], parts };
   }
 
+
+  // ---------------------------------------------------------------- per-campaign tuning
+  // The game tuning above (storm, fog and dust in each Köppen class, the simple climates' weather mix, how weather
+  // changes visibility, how the shifts ease off, and the ground model) can be changed for one campaign under
+  // Settings. A campaign stores only what it changed (settings.tuning), so values it leaves alone follow the
+  // built-in ones. setTuning() puts the built-in values back and lays a campaign's changes over them.
+  // The steps of GROUND_WET (all but Dry, which starts at nothing) and GROUND_SNOW by their labels, mildest first.
+  const GROUND_WET_STEPS = { firm: 'Firm', damp: 'Damp', soft: 'Soft', muddy: 'Muddy', waterlogged: 'Waterlogged' };
+  const GROUND_SNOW_STEPS = { dusting: 'Dusting of snow', thin: 'Thin snow cover', cover: 'Snow cover', deep: 'Deep snow', veryDeep: 'Very deep snow' };
+  const GROUND_WET_KEYS = Object.keys(GROUND_WET_STEPS), GROUND_SNOW_KEYS = Object.keys(GROUND_SNOW_STEPS);
+  const groundRow = (rows, label) => rows.find(r => r[1] === label);
+  const OUTDOOR_WEATHER = ['clear', 'partly', 'overcast', 'drizzle', 'rain', 'storm', 'fog', 'snow', 'heavysnow', 'blizzard', 'hail', 'haze', 'sandstorm'];
+  /** The built-in tuning, as one plain object (a fresh copy each call). */
+  function readTuning() {
+    const koppen = {}, climates = {}, visibility = {};
+    for (const [code, k] of Object.entries(KOPPEN)) {
+      koppen[code] = {};
+      KOPPEN_SEASONS.forEach((s, i) => { const p = k.s[i]; koppen[code][s] = { storm: p.storm, fog: p.fog, dust: p.dust }; });
+    }
+    for (const [key, c] of Object.entries(CLIMATES)) {
+      climates[key] = {};
+      for (const [s, sd] of Object.entries(c.seasons)) climates[key][s] = { ...sd.w };
+    }
+    for (const [type, w] of Object.entries(WEATHER)) visibility[type] = { day: w.day, night: w.night, moon: w.moon };
+    const variants = {};
+    for (const [k, v] of Object.entries(SHIFT_VARIANTS)) variants[k] = v.slice();
+    const wet = {}, snow = {};
+    for (const k of GROUND_WET_KEYS) wet[k] = groundRow(GROUND_WET, GROUND_WET_STEPS[k])[0];
+    for (const k of GROUND_SNOW_KEYS) snow[k] = groundRow(GROUND_SNOW, GROUND_SNOW_STEPS[k])[0];
+    return {
+      koppen, climates, visibility,
+      shifts: { ...SHIFT_EASE, variants },
+      ground: { snowfall: { ...SNOWFALL }, rainfall: { ...RAINFALL }, sunshine: { ...SUNSHINE }, ...GROUND_RATES, wet, snow },
+    };
+  }
+  let TUNING_DEFAULTS = null; // taken on first use, before any campaign's changes
+  const tuningDefaults = () => JSON.parse(JSON.stringify(TUNING_DEFAULTS || (TUNING_DEFAULTS = readTuning())));
+  // Allowed range for each kind of value; anything outside is pulled back in, anything not a number is ignored.
+  const TUNING_RANGES = {
+    koppen: [0, 3], weight: [0, 100], vis: [-5, 5], moon: [0, 1], chance: [0, 1],
+    snowfall: [0, 50], rainfall: [0, 100], sunshine: [0, 5], melt: [0, 5], drying: [0, 1], fieldCapacity: [5, 55],
+    wet: [0, 59], snow: [0.1, 1000],
+  };
+  const num = (v, kind) => {
+    if (v === null || v === undefined || v === '' || typeof v === 'boolean') return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return undefined;
+    const [lo, hi] = TUNING_RANGES[kind];
+    return clamp(n, lo, hi);
+  };
+  const isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+
+  /** Built-in tuning with a campaign's changes laid over it, every value checked (see TUNING_RANGES). */
+  function mergeTuning(over) {
+    const t = tuningDefaults();
+    if (!isObj(over)) return t;
+    if (isObj(over.koppen)) for (const [code, ss] of Object.entries(over.koppen)) {
+      if (!t.koppen[code] || !isObj(ss)) continue;
+      for (const [s, p] of Object.entries(ss)) {
+        if (!t.koppen[code][s] || !isObj(p)) continue;
+        for (const f of ['storm', 'fog', 'dust']) { const n = num(p[f], 'koppen'); if (n !== undefined) t.koppen[code][s][f] = n; }
+      }
+    }
+    if (isObj(over.climates)) for (const [key, ss] of Object.entries(over.climates)) {
+      if (!t.climates[key] || !isObj(ss)) continue;
+      for (const [s, w] of Object.entries(ss)) {
+        if (!t.climates[key][s] || !isObj(w)) continue;
+        for (const [type, v] of Object.entries(w)) {
+          if (!WEATHER[type]) continue;
+          const n = num(v, 'weight'); if (n !== undefined) t.climates[key][s][type] = n;
+        }
+      }
+    }
+    if (isObj(over.visibility)) for (const [type, v] of Object.entries(over.visibility)) {
+      if (!t.visibility[type] || !isObj(v)) continue;
+      for (const f of ['day', 'night']) { const n = num(v[f], 'vis'); if (n !== undefined) t.visibility[type][f] = n; }
+      const m = num(v.moon, 'moon'); if (m !== undefined) t.visibility[type].moon = m;
+    }
+    if (isObj(over.shifts)) {
+      for (const f of ['ease', 'fogLift', 'calmNight', 'calmDay']) { const n = num(over.shifts[f], 'chance'); if (n !== undefined) t.shifts[f] = n; }
+      if (isObj(over.shifts.variants)) for (const [type, list] of Object.entries(over.shifts.variants)) {
+        if (!WEATHER[type] || !Array.isArray(list)) continue;
+        t.shifts.variants[type] = [...new Set(list.filter(k => typeof k === 'string' && WEATHER[k] && k !== type))];
+      }
+    }
+    if (isObj(over.ground)) {
+      const g = over.ground;
+      for (const table of ['snowfall', 'rainfall', 'sunshine']) {
+        if (!isObj(g[table])) continue;
+        for (const [type, v] of Object.entries(g[table])) {
+          if (!WEATHER[type]) continue;
+          const n = num(v, table); if (n !== undefined) t.ground[table][type] = n;
+        }
+      }
+      for (const f of ['melt', 'drying', 'fieldCapacity']) { const n = num(g[f], f); if (n !== undefined) t.ground[f] = n; }
+      for (const [keys, table] of [[GROUND_WET_KEYS, 'wet'], [GROUND_SNOW_KEYS, 'snow']]) {
+        if (!isObj(g[table])) continue;
+        for (const k of keys) { const n = num(g[table][k], table); if (n !== undefined) t.ground[table][k] = n; }
+      }
+    }
+    return t;
+  }
+
+  /** What in a full tuning object differs from the built-in values: the part a campaign stores. Empty means none. */
+  function tuningChanges(full) {
+    const t = mergeTuning(full), d = tuningDefaults();
+    const diff = (a, b) => {
+      if (Array.isArray(a) || !isObj(a)) return JSON.stringify(a) === JSON.stringify(b) ? undefined : a;
+      const out = {};
+      for (const k of Object.keys(a)) { const v = diff(a[k], b ? b[k] : undefined); if (v !== undefined) out[k] = v; }
+      return Object.keys(out).length ? out : undefined;
+    };
+    return diff(t, d) || {};
+  }
+  /** Does the tuning (as stored) put the steps between ground labels in the wrong order? Returns a message or ''. */
+  function tuningProblem(over) {
+    const g = mergeTuning(over).ground;
+    for (const [keys, table, what] of [[GROUND_WET_KEYS, 'wet', 'wetness'], [GROUND_SNOW_KEYS, 'snow', 'snow depth']]) {
+      for (let i = 1; i < keys.length; i++) if (!(g[table][keys[i]] > g[table][keys[i - 1]])) return `The ground's ${what} steps must each be higher than the one before`;
+    }
+    return '';
+  }
+
+  let tuningKey = '';
+  /** Use a campaign's tuning (settings.tuning) from now on, or the built-in tuning for none. */
+  function setTuning(over) {
+    const key = JSON.stringify(over || {});
+    if (key === tuningKey) return;
+    const t = mergeTuning(over);
+    tuningKey = key;
+    for (const [code, ss] of Object.entries(t.koppen)) KOPPEN_SEASONS.forEach((s, i) => Object.assign(KOPPEN[code].s[i], ss[s]));
+    for (const [key, ss] of Object.entries(t.climates)) for (const [s, w] of Object.entries(ss)) CLIMATES[key].seasons[s].w = { ...w };
+    for (const [type, v] of Object.entries(t.visibility)) Object.assign(WEATHER[type], v);
+    const { variants, ...ease } = t.shifts;
+    Object.assign(SHIFT_EASE, ease);
+    for (const k of Object.keys(SHIFT_VARIANTS)) delete SHIFT_VARIANTS[k];
+    Object.assign(SHIFT_VARIANTS, variants);
+    const g = t.ground;
+    for (const [live, vals] of [[SNOWFALL, g.snowfall], [RAINFALL, g.rainfall], [SUNSHINE, g.sunshine]]) {
+      for (const k of Object.keys(live)) delete live[k];
+      Object.assign(live, vals);
+    }
+    Object.assign(GROUND_RATES, { melt: g.melt, drying: g.drying, fieldCapacity: g.fieldCapacity });
+    for (const k of GROUND_WET_KEYS) groundRow(GROUND_WET, GROUND_WET_STEPS[k])[0] = g.wet[k];
+    for (const k of GROUND_SNOW_KEYS) groundRow(GROUND_SNOW, GROUND_SNOW_STEPS[k])[0] = g.snow[k];
+    // label lookups take the first row the value reaches, so keep the rows worst first
+    GROUND_WET.sort((a, b) => b[0] - a[0]);
+    GROUND_SNOW.sort((a, b) => b[0] - a[0]);
+    for (const k of Object.keys(_kCache)) delete _kCache[k];
+  }
 
   // ---------------------------------------------------------------- sources
   // Where the app's reference figures come from, shown on the About page. Data entries below name their source
@@ -2384,6 +2540,7 @@
     eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, RED_MOON_BANDS, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
+    tuningDefaults, mergeTuning, tuningChanges, tuningProblem, setTuning, OUTDOOR_WEATHER, GROUND_WET_STEPS, GROUND_SNOW_STEPS,
     travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, AU, LY, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
