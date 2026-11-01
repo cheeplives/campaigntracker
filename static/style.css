@@ -1119,6 +1119,9 @@ path.map-route-line.secret { stroke: var(--dim); }
 .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
 .template-card { display: flex; flex-direction: column; gap: 4px; }
 .template-card .template-name { font: 700 1.2rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.template-edition { display: flex; align-items: center; gap: 8px; }
+.template-edition select { flex: 1; min-width: 0; }
+.template-edition-body { display: flex; flex-direction: column; gap: 4px; }
 .template-forks ul { margin: 0; padding-left: 1.2em; }
 .sheet-ed { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
 @media (max-width: 760px) { .sheet-ed { grid-template-columns: 1fr; } }
