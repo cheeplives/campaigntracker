@@ -1,0 +1,956 @@
+{
+ "name": "Werewolf: The Apocalypse (20th Anniversary)",
+ "game": "Werewolf: The Apocalypse",
+ "edition": "20th Anniversary Edition",
+ "source": {
+  "title": "W20 4-page sheet, official layout (interactive), by Mr. Gone",
+  "owner": "Mr. Gone (fan sheet); game by Onyx Path / White Wolf",
+  "url": "http://mrgone.rocksolidshells.com/pdf/W20/W20_4-Page_Official_Interactive.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Werewolf",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "breed",
+      "label": "Breed",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "pack_name",
+      "label": "Pack Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "auspice",
+      "label": "Auspice",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "pack_totem",
+      "label": "Pack Totem",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "tribe",
+      "label": "Tribe",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_social",
+    "title": "Social",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_alertness",
+      "label": "Alertness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_expression",
+      "label": "Expression",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_primal_urge",
+      "label": "Primal-Urge",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_animal_ken",
+      "label": "Animal Ken",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_larceny",
+      "label": "Larceny",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "knowledges",
+    "title": "Knowledges",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_enigmas",
+      "label": "Enigmas",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_rituals",
+      "label": "Rituals",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "backgrounds",
+    "title": "Backgrounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backgrounds_list",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "gifts",
+    "title": "Gifts",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "gifts_list",
+      "label": "Gifts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "gift",
+        "label": "Gift"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "renown",
+    "title": "Renown & Rank",
+    "width": "third",
+    "fields": [
+     {
+      "key": "glory",
+      "label": "Glory",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "glory_temporary",
+      "label": "Glory (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "honor",
+      "label": "Honor",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "honor_temporary",
+      "label": "Honor (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "wisdom",
+      "label": "Wisdom",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "wisdom_temporary",
+      "label": "Wisdom (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pools",
+    "title": "Rage, Gnosis & Willpower",
+    "width": "third",
+    "fields": [
+     {
+      "key": "rage",
+      "label": "Rage",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "rage_temporary",
+      "label": "Rage (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "gnosis",
+      "label": "Gnosis",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "gnosis_temporary",
+      "label": "Gnosis (temporary)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "health_sec",
+    "title": "Health & Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health (Bruised to Incapacitated)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "experience_box",
+      "label": "Experience",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "other_traits",
+    "title": "Other Traits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "other_traits_list",
+      "label": "Other Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "fetishes",
+    "title": "Fetishes & Rites",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fetishes_list",
+      "label": "Fetishes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "gnosis",
+        "label": "Gnosis"
+       },
+       {
+        "key": "power",
+        "label": "Power"
+       }
+      ]
+     },
+     {
+      "key": "rites",
+      "label": "Rites",
+      "type": "list",
+      "columns": [
+       {
+        "key": "rite",
+        "label": "Rite"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons / Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon / Attack"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       },
+       {
+        "key": "diff",
+        "label": "Diff."
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "rate",
+        "label": "Rate"
+       },
+       {
+        "key": "clip",
+        "label": "Clip"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "form",
+      "label": "Current Form",
+      "type": "choice",
+      "options": [
+       "Homid",
+       "Glabro",
+       "Crinos",
+       "Hispo",
+       "Lupus"
+      ],
+      "cols": 4,
+      "play": true
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "merits_flaws",
+    "title": "Merits & Flaws",
+    "width": "half",
+    "fields": [
+     {
+      "key": "merits",
+      "label": "Merits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "merit",
+        "label": "Merit"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "list",
+      "columns": [
+       {
+        "key": "flaw",
+        "label": "Flaw"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "expanded_backgrounds",
+    "title": "Expanded Backgrounds",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bg_allies",
+      "label": "Allies",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_ancestors",
+      "label": "Ancestors",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_contacts",
+      "label": "Contacts",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_kinfolk",
+      "label": "Kinfolk",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_mentor",
+      "label": "Mentor",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_pack_totem",
+      "label": "Pack Totem",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_pure_breed",
+      "label": "Pure Breed",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_resources",
+      "label": "Resources",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_other",
+      "label": "Other",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_carried",
+      "label": "Gear (Carried)",
+      "type": "longtext"
+     },
+     {
+      "key": "equipment_owned",
+      "label": "Equipment (Owned)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "sept",
+    "title": "Sept",
+    "width": "half",
+    "fields": [
+     {
+      "key": "sept_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "caern_location",
+      "label": "Caern Location",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "caern_type",
+      "label": "Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "caern_level",
+      "label": "Level",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "caern_totem",
+      "label": "Totem",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "sept_leader",
+      "label": "Leader",
+      "type": "text",
+      "cols": 5
+     },
+     {
+      "key": "sept_details",
+      "label": "Details",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "history",
+    "title": "History",
+    "fields": [
+     {
+      "key": "history_text",
+      "label": "History",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "fields": [
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "date_of_birth",
+      "label": "Date of Birth",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "forms",
+      "label": "Homid, Glabro, Crinos, Hispo and Lupus forms",
+      "type": "longtext"
+     },
+     {
+      "key": "metis_deformity",
+      "label": "Metis Deformity",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "battle_scars",
+      "label": "Battle Scars",
+      "type": "longtext"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "visuals",
+    "title": "Visuals",
+    "fields": [
+     {
+      "key": "chart",
+      "label": "Pack Chart",
+      "type": "longtext"
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   }
+  ]
+ }
+}

@@ -1,0 +1,894 @@
+{
+ "name": "Rifts",
+ "game": "Rifts",
+ "edition": "1st Edition / Ultimate Edition",
+ "source": {
+  "title": "Rifts Character Sheet (fillable)",
+  "owner": "Palladium Books",
+  "url": "https://palladiumbooks.com/wp-content/uploads/sheets/rifts/Rifts-Character-Sheet-fillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "true_name",
+      "label": "True Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "occ",
+      "label": "O.C.C.",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Experience Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "xp_points",
+      "label": "Points",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "life_span",
+      "label": "Life Span",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "family_origin",
+      "label": "Family Origin",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "environment",
+      "label": "Environment",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "native_language",
+      "label": "Native Language(s)",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "sentiments",
+      "label": "Sentiments Toward",
+      "type": "longtext"
+     },
+     {
+      "key": "insanity",
+      "label": "Insanity (if any)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "trust_intimidate",
+      "label": "Invoke Trust/Intimidate %",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "charm_impress",
+      "label": "Charm/Impress %",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "iq",
+      "label": "I.Q.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "me",
+      "label": "M.E.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ma",
+      "label": "M.A.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ps",
+      "label": "P.S.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pp",
+      "label": "P.P.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pe",
+      "label": "P.E.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pb",
+      "label": "P.B.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd",
+      "label": "Spd",
+      "type": "number",
+      "size": "small"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "vitals",
+    "title": "Hit Points, S.D.C. & Energy",
+    "width": "third",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sdc",
+      "label": "S.D.C. (Physical)",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "mdc",
+      "label": "M.D.C.",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "ppe",
+      "label": "P.P.E.",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "isp",
+      "label": "I.S.P.",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "chi",
+      "label": "Chi",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "saving_throws",
+    "title": "Saving Throws",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "save_spell_magic",
+      "label": "Spell Magic",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_ritual_magic",
+      "label": "Ritual Magic",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_psionics",
+      "label": "Psionics",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_toxins_poisons",
+      "label": "Toxins/Poisons",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_harmful_drugs",
+      "label": "Harmful Drugs",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_insanity",
+      "label": "Insanity",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_possession",
+      "label": "Possession",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_horror_factor",
+      "label": "Horror Factor",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_coma_death",
+      "label": "Coma/Death",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "save_pain",
+      "label": "Pain",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Combat Skill",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "combat_skill",
+      "label": "Combat Skill",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "attacks",
+      "label": "# of Attacks",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "strike",
+      "label": "Strike",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "parry",
+      "label": "Parry",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dodge",
+      "label": "Dodge",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "roll",
+      "label": "Roll",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pull_punch",
+      "label": "Restr. Punch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "punch",
+      "label": "Punch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "power_punch",
+      "label": "Power Punch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "kick",
+      "label": "Kick",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "leap_kick",
+      "label": "Leap Kick",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "knock_out",
+      "label": "Knock Out",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "critical",
+      "label": "Critical",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "death_blow",
+      "label": "Death",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "flip",
+      "label": "Flip",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "leap",
+      "label": "Leap",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "lift",
+      "label": "Lift",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "carry",
+      "label": "Carry",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "throw",
+      "label": "Throw (Max)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "swim",
+      "label": "Swim",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "damage_record",
+    "title": "Damage Record",
+    "width": "third",
+    "fields": [
+     {
+      "key": "damage_record_text",
+      "label": "Damage Record",
+      "type": "longtext",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "occ_skills",
+      "label": "O.C.C. Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "bonus",
+        "label": "+%/Lvl"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "related_skills",
+      "label": "Related Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "bonus",
+        "label": "+%/Lvl"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "secondary_sec",
+    "title": "Secondary Skills & Special Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "secondary_skills",
+      "label": "Secondary Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "bonus",
+        "label": "+%/Lvl"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities/Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "bonus",
+        "label": "+%/Lvl"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons & Proficiencies",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "payload",
+        "label": "Payload"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "wp",
+      "label": "Weapon Proficiencies",
+      "type": "list",
+      "columns": [
+       {
+        "key": "wp",
+        "label": "Proficiency"
+       },
+       {
+        "key": "strike",
+        "label": "Str/Thr Aim/Burst"
+       },
+       {
+        "key": "parry",
+        "label": "Parry/Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage/Rate"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor",
+    "title": "Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor_list",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "ar",
+        "label": "A.R."
+       },
+       {
+        "key": "dc",
+        "label": "D.C."
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "prowl",
+        "label": "Prowl Penalty"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment, Money & Outfits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "salary",
+      "label": "Salary",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "black_market",
+      "label": "Black Market Items",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "outfits",
+      "label": "Outfits",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "vehicle",
+    "title": "Robot Combat/Vehicle Log",
+    "page": "Vehicles & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "veh_type",
+      "label": "Type",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "veh_attacks",
+      "label": "# of Attacks",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "veh_strike",
+      "label": "Strike",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "veh_parry",
+      "label": "Parry",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "veh_dodge",
+      "label": "Dodge",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "veh_speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "veh_range",
+      "label": "Range",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "veh_power",
+      "label": "Power System",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "veh_cargo",
+      "label": "Cargo",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "veh_size",
+      "label": "Height / Width / Length / Weight",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "veh_weapons",
+      "label": "Weapon Systems",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ]
+     },
+     {
+      "key": "veh_mdc",
+      "label": "M.D.C. by Location",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "mdc",
+        "label": "M.D.C."
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "history",
+    "title": "Character History & Contacts",
+    "page": "Vehicles & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "character_history",
+      "label": "Character History",
+      "type": "longtext"
+     },
+     {
+      "key": "contacts",
+      "label": "Contacts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "occupation",
+        "label": "Occupation"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "psionics",
+    "title": "Psionics/Magic",
+    "page": "Vehicles & Powers",
+    "fields": [
+     {
+      "key": "powers",
+      "label": "Psionics/Magic",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Psionic/Spell"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "save",
+        "label": "Saving Throw"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       },
+       {
+        "key": "cost",
+        "label": "I.S.P./P.P.E."
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

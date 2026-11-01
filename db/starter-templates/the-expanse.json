@@ -1,0 +1,525 @@
+{
+ "name": "The Expanse Roleplaying Game",
+ "game": "The Expanse Roleplaying Game",
+ "edition": "1st Edition (AGE)",
+ "source": {
+  "title": "Character Record Sheet (fillable)",
+  "owner": "Green Ronin Publishing",
+  "url": "https://freeronin.com/the-expanse-rpg/Expanse-Character-Record-Sheet-fillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "social_class",
+      "label": "Social Class",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "physical_appearance",
+      "label": "Physical Appearance",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "derived",
+    "title": "Speed, Defense & Toughness",
+    "width": "half",
+    "fields": [
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "defense",
+      "label": "Defense",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "toughness",
+      "label": "Toughness",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "penalty",
+      "label": "Penalty",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_type",
+      "label": "Armor Type",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "fortune",
+      "label": "Fortune",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ab_accuracy",
+      "label": "Accuracy",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_accuracy",
+      "label": "Accuracy focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_communication",
+      "label": "Communication",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_communication",
+      "label": "Communication focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_constitution",
+      "label": "Constitution",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_constitution",
+      "label": "Constitution focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_dexterity",
+      "label": "Dexterity focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_fighting",
+      "label": "Fighting",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_fighting",
+      "label": "Fighting focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_intelligence",
+      "label": "Intelligence focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_perception",
+      "label": "Perception",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_perception",
+      "label": "Perception focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_strength",
+      "label": "Strength focuses",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_willpower",
+      "label": "Willpower",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "focus_willpower",
+      "label": "Willpower focuses",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "talents_rel",
+    "title": "Talents & Relationships",
+    "width": "half",
+    "fields": [
+     {
+      "key": "talents_specializations",
+      "label": "Talents & Specializations",
+      "type": "longtext"
+     },
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "conditions",
+    "title": "Conditions",
+    "compact": true,
+    "fields": [
+     {
+      "key": "cond_blinded",
+      "label": "Blinded",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_deafened",
+      "label": "Deafened",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_dying",
+      "label": "Dying",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_exhausted",
+      "label": "Exhausted",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_fatigued",
+      "label": "Fatigued",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_free_falling",
+      "label": "Free-Falling",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_helpless",
+      "label": "Helpless",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_hindered",
+      "label": "Hindered",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_injured",
+      "label": "Injured",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_prone",
+      "label": "Prone",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_restrained",
+      "label": "Restrained",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_unconscious",
+      "label": "Unconscious",
+      "type": "checkbox",
+      "play": true
+     },
+     {
+      "key": "cond_wounded",
+      "label": "Wounded",
+      "type": "checkbox",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment & Goals",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "income",
+      "label": "Income",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons & Stunts",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack_roll",
+        "label": "Attack Roll"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "weapon_groups",
+      "label": "Weapon Groups",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "preferred_stunts",
+      "label": "Preferred Stunts",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "page": "Talents & Ship",
+    "fields": [
+     {
+      "key": "talents_list",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent Name"
+       },
+       {
+        "key": "degree",
+        "label": "Degree"
+       },
+       {
+        "key": "effect",
+        "label": "Talent Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "ship",
+    "title": "Spaceship Statistics",
+    "page": "Talents & Ship",
+    "fields": [
+     {
+      "key": "ship_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ship_type",
+      "label": "Type",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "ship_drive",
+      "label": "Drive",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "ship_sensors",
+      "label": "Sensors",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ship_hull",
+      "label": "Hull",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ship_crew",
+      "label": "Crew",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "ship_weapons",
+      "label": "Weapons",
+      "type": "longtext"
+     },
+     {
+      "key": "ship_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ship_flaws",
+      "label": "Flaws",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "crew_role",
+      "label": "Crew Role",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "role_test",
+      "label": "Role Test",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   }
+  ]
+ }
+}

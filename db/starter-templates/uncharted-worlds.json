@@ -1,0 +1,213 @@
+{
+ "name": "Uncharted Worlds",
+ "game": "Uncharted Worlds",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Character Sheet (blank, fillable)",
+  "owner": "Sean Gomes",
+  "url": "https://uncharted-worlds.com/wp-content/uploads/2021/04/CharacterSheet_Blank_Fillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     },
+     {
+      "key": "mettle",
+      "label": "Mettle",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "physique",
+      "label": "Physique",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "influence",
+      "label": "Influence",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "expertise",
+      "label": "Expertise",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "interface",
+      "label": "Interface",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "origin",
+      "label": "Origin",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "career",
+      "label": "Careers",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "assets_sec",
+    "title": "Assets & Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "assets",
+      "label": "Assets",
+      "type": "list",
+      "columns": [
+       {
+        "key": "asset",
+        "label": "Asset"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "data_points_sec",
+    "title": "Data Points & Advancement",
+    "width": "half",
+    "fields": [
+     {
+      "key": "data_points",
+      "label": "Data Points",
+      "type": "list",
+      "columns": [
+       {
+        "key": "data_point",
+        "label": "Data Point"
+       },
+       {
+        "key": "spent",
+        "label": "Spent"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "pips",
+      "count": 5,
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "advancement",
+      "label": "Advancement",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "factions_sec",
+    "title": "Factions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "factions",
+      "label": "Factions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "faction",
+        "label": "Faction"
+       },
+       {
+        "key": "debt",
+        "label": "Debt"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "injuries_sec",
+    "title": "Injuries",
+    "width": "half",
+    "fields": [
+     {
+      "key": "injuries",
+      "label": "Injuries (Minor / Major / Severe / Critical / Fatal)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "injury",
+        "label": "Injury"
+       },
+       {
+        "key": "severity",
+        "label": "Severity"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,891 @@
+{
+ "name": "Teenage Mutant Ninja Turtles & Other Strangeness",
+ "game": "Teenage Mutant Ninja Turtles & Other Strangeness",
+ "edition": "Redux",
+ "source": {
+  "title": "TMNT & Other Strangeness Redux Character Sheet (fillable)",
+  "owner": "Palladium Books",
+  "url": "https://palladiumbooks.com/wp-content/uploads/sheets/tmntredux/TMNTOS%20Redux%20Character%20Sheet%20Fillable.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "animal",
+      "label": "Animal",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "disposition",
+      "label": "Disposition",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Wt",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Ht",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 2,
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sdc",
+      "label": "SDC",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mental",
+    "title": "Mental Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "iq",
+      "label": "IQ",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "iq_bonus",
+      "label": "IQ Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "me",
+      "label": "ME",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "me_bonus",
+      "label": "ME Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ma",
+      "label": "MA",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ma_bonus",
+      "label": "MA Bonus",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "physical",
+    "title": "Physical Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "ps",
+      "label": "PS",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ps_bonus",
+      "label": "PS Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pp",
+      "label": "PP",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pp_bonus",
+      "label": "PP Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pe",
+      "label": "PE",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pe_bonus",
+      "label": "PE Bonus",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pb",
+      "label": "PB",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pb_bonus",
+      "label": "PB Bonus",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "speed_sec",
+    "title": "Speed",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "spd",
+      "label": "Speed",
+      "type": "number",
+      "size": "full"
+     },
+     {
+      "key": "move_action",
+      "label": "Move Action (yds/m, inches)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "full_round",
+      "label": "Full Round (yds/m, inches)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "minute_sprint",
+      "label": "Minute Sprint (yds/m, inches)",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat_style",
+    "title": "Combat Style",
+    "width": "half",
+    "fields": [
+     {
+      "key": "combat_style_name",
+      "label": "Combat Style",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "actions",
+      "label": "Actions",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "strike",
+      "label": "Strike",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "parry",
+      "label": "Parry",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dodge",
+      "label": "Dodge",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "roll",
+      "label": "Roll",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "damage_bonus",
+      "label": "Damage",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "critical",
+      "label": "Critical",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "combat_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat_options",
+    "title": "Combat Actions & Reactions",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "act_throw",
+      "label": "Throw",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "act_hold",
+      "label": "Hold",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "act_leap",
+      "label": "Leap Attack",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "react_auto_parry",
+      "label": "Auto Parry",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "react_entangle",
+      "label": "Entangle",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "react_disarm",
+      "label": "Disarm",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "react_throw",
+      "label": "Throw (reaction)",
+      "type": "checkbox",
+      "cols": 4
+     },
+     {
+      "key": "crit_sneak",
+      "label": "Critical or Stun with Sneak Attack",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "crit_all",
+      "label": "Critical Strike (all attacks)",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "crit_melee",
+      "label": "Critical or Stun with Melee",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "death_blow",
+      "label": "Death Blow on Natural 20",
+      "type": "checkbox",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor",
+    "title": "Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor_name",
+      "label": "Armor",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "armor_ar",
+      "label": "AR",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_sdc",
+      "label": "SDC",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "armor_wt",
+      "label": "WT",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "armor_properties",
+      "label": "Properties",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment & Valuables",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "valuables",
+      "label": "Valuables",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "professional_skills",
+      "label": "Professional Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "amateur_skills",
+      "label": "Amateur Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wp",
+      "label": "Weapon Proficiency",
+      "type": "list",
+      "columns": [
+       {
+        "key": "wp",
+        "label": "Proficiency"
+       },
+       {
+        "key": "ranged",
+        "label": "Ranged Strike"
+       },
+       {
+        "key": "melee",
+        "label": "Melee Strike"
+       },
+       {
+        "key": "parry",
+        "label": "Parry"
+       }
+      ]
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mutant",
+    "title": "Mutant Origins & Traits",
+    "page": "Mutant & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mutant_origin",
+      "label": "Mutant Origin",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "natural_weapons",
+      "label": "Natural Weapons",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "natural_damage",
+      "label": "Damage",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "attribute_bonuses",
+      "label": "Attribute Bonuses",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "animal_abilities",
+      "label": "Animal Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "hands",
+      "label": "Hands",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "biped",
+      "label": "Biped",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "speech",
+      "label": "Speech",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "looks",
+      "label": "Looks",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "image_notes",
+    "title": "Image & Notes",
+    "page": "Mutant & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Image",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "saves_strangeness",
+    "title": "Saves vs Strangeness",
+    "page": "Mutant & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "save_spell",
+      "label": "Spell Magic",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "save_circle",
+      "label": "Circle Magic",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "save_psionics",
+      "label": "Psionics",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "spell_combat",
+    "title": "Spell Combat",
+    "page": "Mutant & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "spells_day",
+      "label": "Spells per Day",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "spells_round",
+      "label": "Spells per Round",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "spell_strength",
+      "label": "Spell Strength",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "powers_sec",
+    "title": "Abilities, Psionics & Spells",
+    "page": "Mutant & Powers",
+    "fields": [
+     {
+      "key": "powers",
+      "label": "Abilities, Psionics & Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "save",
+        "label": "Saving Throw"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bio_animal",
+    "title": "Original Animal",
+    "page": "Bio-E Worksheet",
+    "width": "half",
+    "fields": [
+     {
+      "key": "original_animal",
+      "label": "Original Animal",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "original_size",
+      "label": "Original Animal Size",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "size_level",
+      "label": "Size Level",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "starting_bioe",
+      "label": "Starting Bio-E",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "size_cost",
+      "label": "Size Bio-E Cost",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "human_features",
+    "title": "Human Features",
+    "page": "Bio-E Worksheet",
+    "width": "half",
+    "fields": [
+     {
+      "key": "human_feature_list",
+      "label": "Human Features",
+      "type": "list",
+      "columns": [
+       {
+        "key": "feature",
+        "label": "Feature"
+       },
+       {
+        "key": "original",
+        "label": "Original Animal"
+       },
+       {
+        "key": "mutant",
+        "label": "Mutant Form"
+       },
+       {
+        "key": "cost",
+        "label": "Bio-E Cost"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bio_abilities",
+    "title": "Animal & Other Abilities",
+    "page": "Bio-E Worksheet",
+    "width": "half",
+    "fields": [
+     {
+      "key": "animal_ability_list",
+      "label": "Animal Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "cost",
+        "label": "Bio-E Cost"
+       }
+      ]
+     },
+     {
+      "key": "other_ability_list",
+      "label": "Other Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "cost",
+        "label": "Bio-E Cost"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bio_powers",
+    "title": "Mutant Powers & Abilities Bought",
+    "page": "Bio-E Worksheet",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mutant_power_list",
+      "label": "Powers & Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power or Ability"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "cost",
+        "label": "Bio-E Cost"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bio_worksheet",
+    "title": "Bio-E Worksheet",
+    "page": "Bio-E Worksheet",
+    "fields": [
+     {
+      "key": "ws_starting",
+      "label": "Starting Bio-E",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_human",
+      "label": "Human Features",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_animal",
+      "label": "Animal Abilities",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_mutant",
+      "label": "Mutant Abilities",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_size",
+      "label": "Size Costs",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_psionic",
+      "label": "Mutant Psionic Powers",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ws_final",
+      "label": "Final Bio-E",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "build_notes",
+      "label": "Build Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

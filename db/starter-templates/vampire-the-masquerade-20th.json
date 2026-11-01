@@ -1,0 +1,988 @@
+{
+ "name": "Vampire: The Masquerade (20th Anniversary)",
+ "game": "Vampire: The Masquerade",
+ "edition": "20th Anniversary Edition",
+ "source": {
+  "title": "V20 4-page sheet (Neonate, interactive), by Mr. Gone",
+  "owner": "Mr. Gone (fan sheet); game by Onyx Path / White Wolf",
+  "url": "http://mrgone.rocksolidshells.com/pdf/V20/V20_4-Page_Neonate_Interactive.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Vampire",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "clan",
+      "label": "Clan",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "demeanor",
+      "label": "Demeanor",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "generation",
+      "label": "Generation",
+      "type": "number",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "sire",
+      "label": "Sire",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_stamina",
+      "label": "Stamina",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_social",
+    "title": "Social",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_charisma",
+      "label": "Charisma",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_manipulation",
+      "label": "Manipulation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_appearance",
+      "label": "Appearance",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attr_mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_intelligence",
+      "label": "Intelligence",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "talents",
+    "title": "Talents",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_alertness",
+      "label": "Alertness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_brawl",
+      "label": "Brawl",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_expression",
+      "label": "Expression",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_subterfuge",
+      "label": "Subterfuge",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_animal_ken",
+      "label": "Animal Ken",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_crafts",
+      "label": "Crafts",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_etiquette",
+      "label": "Etiquette",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_larceny",
+      "label": "Larceny",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_melee",
+      "label": "Melee",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_performance",
+      "label": "Performance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "knowledges",
+    "title": "Knowledges",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_academics",
+      "label": "Academics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_computer",
+      "label": "Computer",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_finance",
+      "label": "Finance",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_investigation",
+      "label": "Investigation",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_law",
+      "label": "Law",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_occult",
+      "label": "Occult",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_politics",
+      "label": "Politics",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_science",
+      "label": "Science",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "sk_technology",
+      "label": "Technology",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "disciplines",
+    "title": "Disciplines",
+    "width": "third",
+    "fields": [
+     {
+      "key": "disciplines_list",
+      "label": "Disciplines",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "backgrounds",
+    "title": "Backgrounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "backgrounds_list",
+      "label": "Backgrounds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "virtues",
+    "title": "Virtues",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "virtue_conscience_conviction",
+      "label": "Conscience/Conviction",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "virtue_self_control_instinct",
+      "label": "Self-Control/Instinct",
+      "type": "pips",
+      "count": 5
+     },
+     {
+      "key": "virtue_courage",
+      "label": "Courage",
+      "type": "pips",
+      "count": 5
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "pools",
+    "title": "Humanity/Path, Willpower & Blood Pool",
+    "width": "third",
+    "fields": [
+     {
+      "key": "humanity",
+      "label": "Humanity/Path",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "bearing",
+      "label": "Bearing",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "pips",
+      "count": 10,
+      "size": "full"
+     },
+     {
+      "key": "willpower_spent",
+      "label": "Willpower (spent)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "blood_pool",
+      "label": "Blood Pool",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "blood_per_turn",
+      "label": "Blood Per Turn",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "health_sec",
+    "title": "Health, Weakness & Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "health",
+      "label": "Health (Bruised to Incapacitated)",
+      "type": "pips",
+      "count": 7,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "weakness",
+      "label": "Weakness",
+      "type": "longtext"
+     },
+     {
+      "key": "experience_box",
+      "label": "Experience",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "merits_flaws",
+    "title": "Merits & Flaws",
+    "width": "half",
+    "fields": [
+     {
+      "key": "merits",
+      "label": "Merits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "merit",
+        "label": "Merit"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "list",
+      "columns": [
+       {
+        "key": "flaw",
+        "label": "Flaw"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "other_traits",
+    "title": "Other Traits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "other_traits_list",
+      "label": "Other Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "rituals",
+    "title": "Rituals",
+    "width": "half",
+    "fields": [
+     {
+      "key": "rituals_list",
+      "label": "Rituals",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "paths",
+    "title": "Paths",
+    "width": "half",
+    "fields": [
+     {
+      "key": "paths_list",
+      "label": "Paths",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "experience_sec",
+    "title": "Experience",
+    "width": "half",
+    "fields": [
+     {
+      "key": "xp_total",
+      "label": "Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "xp_spent",
+      "label": "Total Spent",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "xp_gained_from",
+      "label": "Gained From",
+      "type": "longtext"
+     },
+     {
+      "key": "xp_spent_on",
+      "label": "Spent On",
+      "type": "longtext"
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "derangements",
+    "title": "Derangements",
+    "width": "half",
+    "fields": [
+     {
+      "key": "derangements_text",
+      "label": "Derangements",
+      "type": "longtext"
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons / Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon / Attack"
+       },
+       {
+        "key": "diff",
+        "label": "Diff."
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "rate",
+        "label": "Rate"
+       },
+       {
+        "key": "clip",
+        "label": "Clip"
+       },
+       {
+        "key": "conceal",
+        "label": "Conceal"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "armor_class",
+      "label": "Armor Class",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "armor_rating",
+      "label": "Armor Rating",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_penalty",
+      "label": "Armor Penalty",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "armor_description",
+      "label": "Armor Description",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Traits & Gear"
+   },
+   {
+    "key": "expanded_backgrounds",
+    "title": "Expanded Backgrounds",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bg_allies",
+      "label": "Allies",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_contacts",
+      "label": "Contacts",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_fame",
+      "label": "Fame",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_herd",
+      "label": "Herd",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_influence",
+      "label": "Influence",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_mentor",
+      "label": "Mentor",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_resources",
+      "label": "Resources",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_retainers",
+      "label": "Retainers",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_status",
+      "label": "Status",
+      "type": "longtext"
+     },
+     {
+      "key": "bg_other",
+      "label": "Other",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_carried",
+      "label": "Gear (Carried)",
+      "type": "longtext"
+     },
+     {
+      "key": "equipment_owned",
+      "label": "Equipment (Owned)",
+      "type": "longtext"
+     },
+     {
+      "key": "feeding_grounds",
+      "label": "Feeding Grounds",
+      "type": "longtext"
+     },
+     {
+      "key": "vehicles",
+      "label": "Vehicles",
+      "type": "longtext"
+     },
+     {
+      "key": "blood_bonds",
+      "label": "Blood Bonds/Vinculi",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bound_to",
+        "label": "Bound To"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     },
+     {
+      "key": "havens",
+      "label": "Havens",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "history",
+    "title": "History",
+    "fields": [
+     {
+      "key": "history_text",
+      "label": "History",
+      "type": "longtext"
+     },
+     {
+      "key": "prelude",
+      "label": "Prelude",
+      "type": "longtext"
+     },
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "fields": [
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "date_of_birth",
+      "label": "Date of Birth",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "rip",
+      "label": "R.I.P.",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   },
+   {
+    "key": "visuals",
+    "title": "Visuals",
+    "fields": [
+     {
+      "key": "chart",
+      "label": "Coterie Chart",
+      "type": "longtext"
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ],
+    "page": "Backgrounds & Story"
+   }
+  ]
+ }
+}
