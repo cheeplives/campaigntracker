@@ -1,0 +1,339 @@
+{
+ "name": "James Bond 007",
+ "game": "James Bond 007 Role-Playing Game",
+ "edition": "Victory Games (1983)",
+ "source": {
+  "title": "James Bond 007 Character Record Sheet",
+  "owner": "Victory Games / Eon Productions",
+  "url": "https://web.archive.org/web/20101129171741id_/http://rpgsheets.com/sheets/124001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "cover",
+      "label": "Current Cover",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Character Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "fame_points",
+      "label": "Fame Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0
+     },
+     {
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "fields_sec",
+    "title": "Fields of Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "fields",
+      "label": "Fields of Experience",
+      "type": "list",
+      "columns": [
+       {
+        "key": "field",
+        "label": "Field"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "str",
+      "label": "STR (Strength)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex",
+      "label": "DEX (Dexterity)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wil",
+      "label": "WIL (Willpower)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "per",
+      "label": "PER (Perception)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int",
+      "label": "INT (Intelligence)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "running",
+      "label": "Running",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "carry",
+      "label": "Carry",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hth_class",
+      "label": "Hand-to-Hand Combat Class",
+      "type": "text",
+      "cols": 8
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "pc",
+        "label": "Primary Chance"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Abilities & Weaknesses",
+    "width": "half",
+    "fields": [
+     {
+      "key": "abilities",
+      "label": "Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "pc",
+        "label": "PC"
+       }
+      ]
+     },
+     {
+      "key": "weaknesses",
+      "label": "Weaknesses",
+      "type": "longtext"
+     },
+     {
+      "key": "scars",
+      "label": "Scars",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Special Equipment & Experience",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_equipment",
+      "label": "Special Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "experience_points",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "pm",
+        "label": "PM"
+       },
+       {
+        "key": "sr",
+        "label": "S/R"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "dc",
+        "label": "DC"
+       },
+       {
+        "key": "range",
+        "label": "Close / Long"
+       },
+       {
+        "key": "con",
+        "label": "Con"
+       },
+       {
+        "key": "jam",
+        "label": "Jam"
+       },
+       {
+        "key": "draw",
+        "label": "Draw"
+       },
+       {
+        "key": "rl",
+        "label": "RL"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wound Status",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "wound_lw",
+      "label": "LW",
+      "type": "checkbox",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "wound_mw",
+      "label": "MW",
+      "type": "checkbox",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "wound_hw",
+      "label": "HW",
+      "type": "checkbox",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "wound_inc",
+      "label": "INC",
+      "type": "checkbox",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "date_wounded",
+      "label": "Date Wounded",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   }
+  ]
+ }
+}

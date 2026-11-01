@@ -1,0 +1,289 @@
+{
+ "name": "Kids on Bikes",
+ "game": "Kids on Bikes",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "Kids on Bikes Universal Character Sheet (fillable)",
+  "owner": "Hunters Entertainment",
+  "url": "https://www.huntersentertainment.com/_files/ugd/3e98ae_966e7764922e45a79127ced1b9fb0d7b.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "fear",
+      "label": "Fear",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "longtext"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "third",
+    "fields": [
+     {
+      "key": "fight",
+      "label": "Fight",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "flight",
+      "label": "Flight",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "brains",
+      "label": "Brains",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "brawn",
+      "label": "Brawn",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "charm",
+      "label": "Charm",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "grit",
+      "label": "Grit",
+      "type": "choice",
+      "options": [
+       "d4",
+       "d6",
+       "d8",
+       "d10",
+       "d12",
+       "d20"
+      ],
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "strengths",
+    "title": "Strengths",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "str_cool_under_pressure",
+      "label": "Cool Under Pressure",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_easygoing",
+      "label": "Easygoing",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_gross",
+      "label": "Gross",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_heroic",
+      "label": "Heroic",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_intuitive",
+      "label": "Intuitive",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_loyal",
+      "label": "Loyal",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_lucky",
+      "label": "Lucky",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_prepared",
+      "label": "Prepared",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_protective",
+      "label": "Protective",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_quick_healing",
+      "label": "Quick Healing",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_rebellious",
+      "label": "Rebellious",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_skilled_at",
+      "label": "Skilled At",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_tough",
+      "label": "Tough",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_treasure_hunter",
+      "label": "Treasure Hunter",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_unassuming",
+      "label": "Unassuming",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "str_wealthy",
+      "label": "Wealthy",
+      "type": "checkbox",
+      "cols": 6
+     },
+     {
+      "key": "skilled_at",
+      "label": "Skilled At (what)",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "backpack",
+    "title": "Backpack & Adversity",
+    "width": "half",
+    "fields": [
+     {
+      "key": "backpack_items",
+      "label": "Backpack",
+      "type": "longtext"
+     },
+     {
+      "key": "adversity_tokens",
+      "label": "Adversity Tokens",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

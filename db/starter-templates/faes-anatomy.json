@@ -1,0 +1,137 @@
+{
+ "name": "Fae's Anatomy",
+ "game": "Fae's Anatomy: A Melodramatic Medical Mystery",
+ "edition": "1st Edition",
+ "source": {
+  "title": "FAMMM Sheets",
+  "owner": "Hebanon Games",
+  "url": "https://hebanon-games.itch.io/faes-anatomy-a-melodramatic-medical-mystery",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "provider",
+    "title": "Provider",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "rival",
+      "label": "Rival",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "crush",
+      "label": "Crush",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "bestee",
+      "label": "Bestee",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "state",
+    "title": "Specializations & Burnout",
+    "width": "half",
+    "fields": [
+     {
+      "key": "super_specialization",
+      "label": "Super- Specialization",
+      "type": "choice",
+      "options": [
+       "Necro",
+       "Demi-",
+       "Psionic",
+       "Angelic",
+       "Chosen",
+       "Alchemical",
+       "Blessed",
+       "Sorcerous",
+       "Shamanic",
+       "Time"
+      ],
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "super_used",
+      "label": "Super- power used",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "natural_specialization",
+      "label": "-Natural Specialization",
+      "type": "choice",
+      "options": [
+       "Primary Care Physician",
+       "Psychiatrist",
+       "Internist",
+       "Administrator",
+       "Lab Tech",
+       "Nurse",
+       "Anesthesiologist",
+       "Pathologist",
+       "Diagnostician",
+       "Surgeon"
+      ],
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "natural_used",
+      "label": "-Natural power used",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "burnout",
+      "label": "Burnout",
+      "type": "checkbox",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "expertise",
+      "label": "Expertise",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

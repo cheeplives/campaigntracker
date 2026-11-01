@@ -1,0 +1,339 @@
+{
+ "name": "All Flesh Must Be Eaten",
+ "game": "All Flesh Must Be Eaten",
+ "edition": "1st Edition (Unisystem)",
+ "source": {
+  "title": "All Flesh Must Be Eaten character sheet",
+  "owner": "Eden Studios",
+  "url": "https://web.archive.org/web/20101129173127id_/http://rpgsheets.com/sheets/114001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "character_type",
+      "label": "Character Type",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "character_points",
+      "label": "Character Points",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "points_spent",
+      "label": "Spent",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "points_unspent",
+      "label": "Unspent",
+      "type": "number",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "primary",
+    "title": "Primary Attributes",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "constitution",
+      "label": "Constitution",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "secondary",
+    "title": "Secondary Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "life_points",
+      "label": "Life Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "endurance_points",
+      "label": "Endurance Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "speed",
+      "label": "Speed",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "essence_pool",
+      "label": "Essence Pool",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "qualities_sec",
+    "title": "Qualities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "qualities",
+      "label": "Qualities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "quality",
+        "label": "Quality"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "drawbacks_sec",
+    "title": "Drawbacks",
+    "width": "half",
+    "fields": [
+     {
+      "key": "drawbacks",
+      "label": "Drawbacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "drawback",
+        "label": "Drawback"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "powers_sec",
+    "title": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "powers",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "description",
+    "title": "Description",
+    "page": "Gear & History",
+    "width": "third",
+    "fields": [
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons/Hand to Hand",
+    "page": "Gear & History",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons/Hand to Hand",
+      "type": "list",
+      "columns": [
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "rof",
+        "label": "Rate of Fire / # of Attacks"
+       },
+       {
+        "key": "attack",
+        "label": "Attack Bonus"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "damage_bonus",
+        "label": "Damage Bonus"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "possessions_sec",
+    "title": "Possessions & Allies",
+    "page": "Gear & History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "possessions",
+      "label": "Possessions",
+      "type": "longtext"
+     },
+     {
+      "key": "allies",
+      "label": "Allies/Contacts",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history_sec",
+    "title": "Character History",
+    "page": "Gear & History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "history",
+      "label": "Character History",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

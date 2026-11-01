@@ -1,0 +1,159 @@
+{
+ "name": "Hong Kong Action Theatre!",
+ "game": "Hong Kong Action Theatre!",
+ "edition": "2nd Edition",
+ "source": {
+  "title": "HKAT! 2nd Edition character sheet",
+  "owner": "Guardians of Order",
+  "url": "https://web.archive.org/web/20101129165020id_/http://rpgsheets.com/sheets/160001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Actor & Role",
+    "width": "half",
+    "fields": [
+     {
+      "key": "actor_name",
+      "label": "Actor Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "role_name",
+      "label": "Role Name",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats & Derived Values",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "health_points",
+      "label": "Health Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "energy_points",
+      "label": "Energy Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "star_power",
+      "label": "Star Power",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "acv",
+      "label": "Attack Combat Value",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dcv",
+      "label": "Defense Combat Value",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "actor_sec",
+    "title": "Actor's Attributes, Skills and Defects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "actor_attributes",
+      "label": "Actor's Attributes, Skills and Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Attribute/Skill/Defect"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "role_sec",
+    "title": "Role's Attributes, Skills and Defects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "role_attributes",
+      "label": "Role's Attributes, Skills and Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Attribute/Skill/Defect"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

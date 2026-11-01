@@ -1,0 +1,421 @@
+{
+ "name": "Aliens",
+ "game": "Aliens Adventure Game",
+ "edition": "Leading Edge Games (1991)",
+ "source": {
+  "title": "Aliens character sheet",
+  "owner": "Leading Edge Games",
+  "url": "https://web.archive.org/web/20101105162534id_/http://www.rpgsheets.com:80/sheets/191001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "education",
+      "label": "Education",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "social_status",
+      "label": "Social Status",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "merit_points",
+      "label": "Merit Points",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "specialty",
+      "label": "Specialty",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "character_point_total",
+      "label": "Character Point Total",
+      "type": "number"
+     },
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number"
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "number"
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number"
+     },
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number"
+     },
+     {
+      "key": "leadership",
+      "label": "Leadership",
+      "type": "number"
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "number"
+     },
+     {
+      "key": "combat_actions",
+      "label": "Combat Actions",
+      "type": "number"
+     },
+     {
+      "key": "knockout_value",
+      "label": "Knockout Value",
+      "type": "number"
+     },
+     {
+      "key": "learning_roll",
+      "label": "Learning Roll",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "general_skills",
+    "title": "General Skills",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_gun_combat",
+      "label": "Gun Combat",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_balance",
+      "label": "Balance",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_hand_to_hand",
+      "label": "Hand to Hand",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_climbing",
+      "label": "Climbing",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_scouting",
+      "label": "Scouting",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_survival",
+      "label": "Survival",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_espionage",
+      "label": "Espionage",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_infiltration",
+      "label": "Infiltration",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_diplomacy",
+      "label": "Diplomacy",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     },
+     {
+      "key": "skill_awareness",
+      "label": "Awareness",
+      "type": "choice",
+      "options": [
+       "N",
+       "C",
+       "P",
+       "E",
+       "M",
+       "G"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment",
+    "width": "third",
+    "fields": [
+     {
+      "key": "clothing_armor",
+      "label": "Clothing or Armor",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "combat_load",
+      "label": "Combat Load",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "combat_equipment",
+      "label": "Combat Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       }
+      ]
+     },
+     {
+      "key": "combat_weight",
+      "label": "Combat Weight",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "status",
+    "title": "Personal Status",
+    "width": "half",
+    "fields": [
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "money",
+      "label": "Money",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "physical_damage",
+      "label": "Physical Damage",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "disabling_injuries",
+      "label": "Disabling Injuries",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "support_skills",
+    "title": "Support Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "support_skill_list",
+      "label": "Support Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating (N/C/P/E/M/G)"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapon Data",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo Capacity"
+       },
+       {
+        "key": "rof",
+        "label": "Rate of Fire"
+       },
+       {
+        "key": "acc1",
+        "label": "Shot 1"
+       },
+       {
+        "key": "acc2",
+        "label": "Shot 2"
+       },
+       {
+        "key": "acc3",
+        "label": "Shot 3"
+       },
+       {
+        "key": "acc4",
+        "label": "Shot 4"
+       },
+       {
+        "key": "acc6",
+        "label": "Shot 6"
+       },
+       {
+        "key": "acc8",
+        "label": "Shot 8"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

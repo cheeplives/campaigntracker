@@ -1,0 +1,365 @@
+{
+ "name": "Blood of Heroes (DC Heroes)",
+ "game": "Blood of Heroes",
+ "edition": "Special Edition (MEGS, the DC Heroes system)",
+ "source": {
+  "title": "Blood of Heroes character sheet",
+  "owner": "Pulsar Games",
+  "url": "https://web.archive.org/web/20101129182946id_/http://rpgsheets.com/sheets/018001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "character_type",
+      "label": "Character Type",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "hero_points",
+      "label": "Hero Points",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "alter_ego",
+      "label": "Alter Ego",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "physical",
+    "title": "Physical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dex",
+      "label": "DEXterity",
+      "type": "number"
+     },
+     {
+      "key": "str",
+      "label": "STRength",
+      "type": "number"
+     },
+     {
+      "key": "body",
+      "label": "BODY",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mental",
+    "title": "Mental",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "int",
+      "label": "INTelligence",
+      "type": "number"
+     },
+     {
+      "key": "will",
+      "label": "WILLpower",
+      "type": "number"
+     },
+     {
+      "key": "mind",
+      "label": "MIND",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mystical",
+    "title": "Mystical",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "infl",
+      "label": "INFLuence",
+      "type": "number"
+     },
+     {
+      "key": "aura",
+      "label": "AURA",
+      "type": "number"
+     },
+     {
+      "key": "spirit",
+      "label": "SPIRIT",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "current",
+    "title": "Current",
+    "fields": [
+     {
+      "key": "current_body",
+      "label": "Current BODY",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "current_mind",
+      "label": "Current MIND",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "current_spirit",
+      "label": "Current SPIRIT",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "powers_sec",
+    "title": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "powers",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "aps",
+        "label": "APs"
+       },
+       {
+        "key": "link",
+        "label": "Link Type"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "aps",
+        "label": "APs"
+       },
+       {
+        "key": "linked",
+        "label": "Linked"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "advantages_sec",
+    "title": "Advantages",
+    "width": "half",
+    "fields": [
+     {
+      "key": "advantages",
+      "label": "Advantages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advantage",
+        "label": "Advantage"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "drawbacks_sec",
+    "title": "Drawbacks",
+    "width": "half",
+    "fields": [
+     {
+      "key": "drawbacks",
+      "label": "Drawbacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "drawback",
+        "label": "Drawback"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "details",
+    "title": "Details",
+    "fields": [
+     {
+      "key": "wealth_aps",
+      "label": "Wealth (in APs)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "wealth_dollars",
+      "label": "Wealth (in Dollars)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "group",
+      "label": "Group Affiliation",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "base",
+      "label": "Base of Operations",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "marital_status",
+      "label": "Marital Status",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "relatives",
+      "label": "Known Relatives",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eye_color",
+      "label": "Eye Color",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair_color",
+      "label": "Hair Color",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "personality_sec",
+    "title": "Personality",
+    "page": "Personality & History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "portrait",
+      "label": "Portrait",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "history_sec",
+    "title": "History & Description",
+    "page": "Personality & History",
+    "width": "half",
+    "fields": [
+     {
+      "key": "history",
+      "label": "History",
+      "type": "longtext"
+     },
+     {
+      "key": "physical_description",
+      "label": "Physical Description",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,274 @@
+{
+ "name": "In Nomine",
+ "game": "In Nomine",
+ "edition": "1st Edition (Steve Jackson Games, 1997)",
+ "source": {
+  "title": "In Nomine character sheets (Angel and Demon)",
+  "owner": "Steve Jackson Games",
+  "url": "https://web.archive.org/web/20101129174436id_/http://rpgsheets.com/sheets/045001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "kind",
+      "label": "Angel or Demon",
+      "type": "choice",
+      "options": [
+       "Angel",
+       "Demon"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "choir_band",
+      "label": "Choir / Band",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "superior",
+      "label": "Archangel / Prince",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "word",
+      "label": "Word",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "corporeal",
+    "title": "Corporeal",
+    "width": "third",
+    "fields": [
+     {
+      "key": "corporeal_forces",
+      "label": "Forces",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "agility",
+      "label": "Agility",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "vessels",
+      "label": "Vessels",
+      "type": "list",
+      "columns": [
+       {
+        "key": "vessel",
+        "label": "Vessel"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "body_hits",
+        "label": "Body Hits"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "corporeal_list",
+      "label": "Corporeal Skills & Songs",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "ethereal",
+    "title": "Ethereal",
+    "width": "third",
+    "fields": [
+     {
+      "key": "ethereal_forces",
+      "label": "Forces",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "precision",
+      "label": "Precision",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mind_hits",
+      "label": "Mind Hits",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "essence",
+      "label": "Essence",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "ethereal_list",
+      "label": "Ethereal Skills & Songs",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "celestial",
+    "title": "Celestial",
+    "width": "third",
+    "fields": [
+     {
+      "key": "celestial_forces",
+      "label": "Forces",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "soul_hits",
+      "label": "Soul Hits",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "dissonance",
+      "label": "Dissonance",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "celestial_list",
+      "label": "Celestial Skills & Songs",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "attunements_sec",
+    "title": "Attunements & Distinctions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "attunements",
+      "label": "Attunements & Distinctions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Attunement or Distinction"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "discord_sec",
+    "title": "Discord",
+    "width": "half",
+    "fields": [
+     {
+      "key": "discord",
+      "label": "Discord",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Discord"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
