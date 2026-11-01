@@ -1,0 +1,333 @@
+{
+ "name": "MechWarrior (2nd Edition)",
+ "game": "BattleTech (MechWarrior RPG)",
+ "edition": "MechWarrior 2nd Edition (1991)",
+ "source": {
+  "title": "MechWarrior character sheet (2nd edition)",
+  "owner": "FASA Corporation (BattleTech now owned by Topps / Catalyst Game Labs)",
+  "url": "https://web.archive.org/web/20101129200236id_/http://rpgsheets.com/sheets/011200.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "MechWarrior",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "bld",
+      "label": "Build",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "bld_save",
+      "label": "Build save",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "ref",
+      "label": "Reflexes",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "ref_save",
+      "label": "Reflexes save",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "itn",
+      "label": "Intuition",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "itn_save",
+      "label": "Intuition save",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "lrn",
+      "label": "Learn",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "lrn_save",
+      "label": "Learn save",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cha",
+      "label": "Charisma",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "cha_save",
+      "label": "Charisma save",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "characteristics",
+    "title": "Characteristics",
+    "width": "third",
+    "fields": [
+     {
+      "key": "athletic",
+      "label": "Athletic",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "physical",
+      "label": "Physical",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "mental",
+      "label": "Mental",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "social",
+      "label": "Social",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "misc",
+    "title": "Miscellaneous",
+    "width": "third",
+    "fields": [
+     {
+      "key": "edge",
+      "label": "Edge",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "edge_used",
+      "label": "Edge Used",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "aps_earned",
+      "label": "APs Earned",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "aps_spent",
+      "label": "APs Spent",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Lvl"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       },
+       {
+        "key": "points",
+        "label": "Pts."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advantages",
+    "title": "Advantages, Equipment & Sketch",
+    "width": "half",
+    "fields": [
+     {
+      "key": "advantages_text",
+      "label": "Advantages",
+      "type": "longtext"
+     },
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "sketch",
+      "label": "Character Sketch (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon Type"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "damage",
+        "label": "Dmg"
+       },
+       {
+        "key": "ranges",
+        "label": "Sht / Med / Lng"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "damage",
+    "title": "Damage Thresholds & Effects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "threshold_head",
+      "label": "Head",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "threshold_torso",
+      "label": "Torso",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "threshold_arm",
+      "label": "Arm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "threshold_leg",
+      "label": "Leg",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "damage_effects",
+      "label": "Damage Effects",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "condition",
+    "title": "Condition Monitor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "cond_good",
+      "label": "Good (WF 1)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "cond_fair",
+      "label": "Fair (WF 2)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "cond_poor",
+      "label": "Poor (WF 3)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "cond_serious",
+      "label": "Serious (WF 4)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "cond_critical",
+      "label": "Critical (WF 5)",
+      "type": "pips",
+      "count": 8,
+      "size": "full",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

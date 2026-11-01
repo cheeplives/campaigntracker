@@ -1,0 +1,405 @@
+{
+ "name": "MechWarrior (3rd Edition)",
+ "game": "BattleTech (MechWarrior RPG)",
+ "edition": "MechWarrior 3rd Edition (1999)",
+ "source": {
+  "title": "MechWarrior Character Record Sheet (3rd edition)",
+  "owner": "FASA Corporation (BattleTech now owned by Topps / Catalyst Game Labs)",
+  "url": "https://web.archive.org/web/20101129200250id_/http://rpgsheets.com/sheets/011300.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record Sheet",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "affiliation",
+      "label": "Affiliation",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "strength_mod",
+      "label": "Strength Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "strength_max",
+      "label": "Strength Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "body_mod",
+      "label": "Body Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "body_max",
+      "label": "Body Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dexterity_mod",
+      "label": "Dexterity Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dexterity_max",
+      "label": "Dexterity Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflexes",
+      "label": "Reflexes",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflexes_mod",
+      "label": "Reflexes Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "reflexes_max",
+      "label": "Reflexes Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "intelligence_mod",
+      "label": "Intelligence Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "intelligence_max",
+      "label": "Intelligence Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "willpower_mod",
+      "label": "Willpower Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "willpower_max",
+      "label": "Willpower Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "charisma",
+      "label": "Charisma",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "charisma_mod",
+      "label": "Charisma Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "charisma_max",
+      "label": "Charisma Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "edge",
+      "label": "Edge",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "edge_mod",
+      "label": "Edge Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "edge_max",
+      "label": "Edge Max.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "social_standing",
+      "label": "Social Standing",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "social_standing_mod",
+      "label": "Social Standing Mod.",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "social_standing_max",
+      "label": "Social Standing Max.",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "traits_text",
+      "label": "Traits",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "bonus",
+        "label": "Bonus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat Information",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "slot",
+        "label": "Type (A to D)"
+       },
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "av",
+        "label": "AV (M/B/E/X)"
+       }
+      ]
+     },
+     {
+      "key": "fatigue",
+      "label": "Fatigue",
+      "type": "pips",
+      "count": 20,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "wounds_grazing",
+      "label": "Grazing Wounds (WV 1)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wounds_minor",
+      "label": "Minor Wounds (WV 2)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wounds_serious",
+      "label": "Serious Wounds (WV 4)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wounds_critical",
+      "label": "Critical Wounds (WV 8)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wounds_deadly",
+      "label": "Deadly Wounds (WV 16)",
+      "type": "text",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "wound_total",
+      "label": "Total Wound Value of all Wounds",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hit_locations",
+      "label": "Hit Locations (armor type and wounds)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "armor",
+        "label": "Armor Type"
+       },
+       {
+        "key": "wounds",
+        "label": "Wounds"
+       }
+      ]
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "ap_dmg",
+        "label": "AP / Dmg"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "misc",
+    "title": "Miscellaneous Equipment and Information",
+    "fields": [
+     {
+      "key": "misc_equipment",
+      "label": "Miscellaneous Equipment and Information",
+      "type": "longtext"
+     },
+     {
+      "key": "movement",
+      "label": "Movement (W/R/S)",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   }
+  ]
+ }
+}

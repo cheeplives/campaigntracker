@@ -1,0 +1,353 @@
+{
+ "name": "Doctor Who Role Playing Game (FASA)",
+ "game": "Doctor Who Roleplaying Game",
+ "edition": "FASA (1985)",
+ "source": {
+  "title": "Doctor Who Character Data Record",
+  "owner": "FASA Corporation; Doctor Who is owned by the BBC",
+  "url": "https://web.archive.org/web/20101129165614id_/http://rpgsheets.com/sheets/198001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Data Record",
+    "fields": [
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "nick_name",
+      "label": "Nick Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "apparent_age",
+      "label": "Apparent Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "actual_age",
+      "label": "Actual Age",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "recog_handle",
+      "label": "Recog. Handle",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "looks",
+      "label": "Looks",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "appearance_notes",
+      "label": "Appearance Notes",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "str_level",
+      "label": "STR Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "str",
+      "label": "STR Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "str_skill_points",
+      "label": "STR Skill Points",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "end_level",
+      "label": "END Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "end",
+      "label": "END Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "end_skill_points",
+      "label": "END Skill Points",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "dex_level",
+      "label": "DEX Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex",
+      "label": "DEX Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dex_skill_points",
+      "label": "DEX Skill Points",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "cha_level",
+      "label": "CHA Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cha",
+      "label": "CHA Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cha_skill_points",
+      "label": "CHA Skill Points",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "mnt_level",
+      "label": "MNT Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mnt",
+      "label": "MNT Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mnt_skill_points",
+      "label": "MNT Skill Points",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "int_level",
+      "label": "INT Level",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int",
+      "label": "INT Score",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "int_skill_points",
+      "label": "INT Skill Points",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "operation",
+    "title": "Endurance & Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "max_op_end",
+      "label": "Max Op End",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "curr_op_end",
+      "label": "Curr Op End",
+      "type": "counter",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "wound_heal",
+      "label": "Wound Heal",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "fatigue_heal",
+      "label": "Fatigue Heal",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "inact_save",
+      "label": "Inact Save (Lvl III)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "unc_thresh",
+      "label": "Unc Thresh (Lvl II)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "armed_contact",
+      "label": "Armed Combat Contact: Weapon",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "armed_ranged",
+      "label": "Armed Combat Ranged: Weapon",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "unarmed",
+      "label": "Unarmed Combat: Type",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "ap",
+      "label": "AP",
+      "type": "pips",
+      "count": 14,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "special",
+    "title": "Special Abilities & Personality",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "end_cost",
+        "label": "End Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "personality_trait",
+      "label": "Personality Trait",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skill List",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "type",
+        "label": "m / s / d / c"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rtg"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

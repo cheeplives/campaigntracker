@@ -1,0 +1,165 @@
+{
+ "name": "Big Eyes, Small Mouth (1st Edition)",
+ "game": "Big Eyes, Small Mouth",
+ "edition": "1st Edition (1997)",
+ "source": {
+  "title": "Big Eyes, Small Mouth character sheet (1st edition)",
+  "owner": "Guardians of Order (game now published by Dyskami)",
+  "url": "https://web.archive.org/web/20101129184359id_/http://rpgsheets.com/sheets/016001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "attack",
+      "label": "Combat Value: Attack",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "defense",
+      "label": "Combat Value: Defense",
+      "type": "number",
+      "cols": 3,
+      "play": true
+     },
+     {
+      "key": "health_points",
+      "label": "Health Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "energy_points",
+      "label": "Energy Points",
+      "type": "counter",
+      "cols": 3,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "physical_description",
+      "label": "Physical Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Character Attributes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "attributes_list",
+      "label": "Character Attributes",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "points",
+        "label": "Points/Level"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute and Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "defects",
+    "title": "Character Defects",
+    "width": "half",
+    "fields": [
+     {
+      "key": "defects_list",
+      "label": "Character Defects",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bonus",
+        "label": "Bonus Points"
+       },
+       {
+        "key": "defect",
+        "label": "Defect and Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes",
+    "title": "Weapons, Possessions and Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes_text",
+      "label": "Weapons, Possessions and Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

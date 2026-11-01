@@ -1,0 +1,655 @@
+{
+ "name": "The Lord of the Rings Roleplaying Game (Decipher)",
+ "game": "The Lord of the Rings Roleplaying",
+ "edition": "Decipher (CODA, 2002)",
+ "source": {
+  "title": "The Lord of the Rings Roleplaying Game character sheet",
+  "owner": "Decipher, Inc.; Middle-earth is owned by Middle-earth Enterprises",
+  "url": "https://web.archive.org/web/20101129195330id_/http://rpgsheets.com/sheets/187001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "character_name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player_name",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "chronicle",
+      "label": "Chronicle",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "orders",
+      "label": "Orders",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "elite_orders",
+      "label": "Elite Orders",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "advancements",
+      "label": "Advancements",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "attr_bearing",
+      "label": "Bearing",
+      "type": "number"
+     },
+     {
+      "key": "attr_bearing_mod",
+      "label": "Bearing modifier",
+      "type": "number"
+     },
+     {
+      "key": "attr_nimbleness",
+      "label": "Nimbleness",
+      "type": "number"
+     },
+     {
+      "key": "attr_nimbleness_mod",
+      "label": "Nimbleness modifier",
+      "type": "number"
+     },
+     {
+      "key": "attr_perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "attr_perception_mod",
+      "label": "Perception modifier",
+      "type": "number"
+     },
+     {
+      "key": "attr_strength",
+      "label": "Strength",
+      "type": "number"
+     },
+     {
+      "key": "attr_strength_mod",
+      "label": "Strength modifier",
+      "type": "number"
+     },
+     {
+      "key": "attr_vitality",
+      "label": "Vitality",
+      "type": "number"
+     },
+     {
+      "key": "attr_vitality_mod",
+      "label": "Vitality modifier",
+      "type": "number"
+     },
+     {
+      "key": "attr_wits",
+      "label": "Wits",
+      "type": "number"
+     },
+     {
+      "key": "attr_wits_mod",
+      "label": "Wits modifier",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "reactions",
+    "title": "Reactions",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "number"
+     },
+     {
+      "key": "swiftness",
+      "label": "Swiftness",
+      "type": "number"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number"
+     },
+     {
+      "key": "wisdom",
+      "label": "Wisdom",
+      "type": "number"
+     },
+     {
+      "key": "corruption",
+      "label": "Corruption",
+      "type": "number",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat",
+    "title": "Initiative, Defence & Renown",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number"
+     },
+     {
+      "key": "defence",
+      "label": "Defence",
+      "type": "number"
+     },
+     {
+      "key": "renown",
+      "label": "Renown",
+      "type": "number"
+     },
+     {
+      "key": "courage",
+      "label": "Courage",
+      "type": "number",
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities, Edges & Flaws",
+    "width": "third",
+    "fields": [
+     {
+      "key": "racial_abilities",
+      "label": "Racial Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "order_abilities",
+      "label": "Order Abilities",
+      "type": "longtext"
+     },
+     {
+      "key": "edges",
+      "label": "Edges",
+      "type": "longtext"
+     },
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "longtext"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills",
+    "title": "Skills (total rank)",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_acrobatics",
+      "label": "Acrobatics",
+      "type": "number"
+     },
+     {
+      "key": "sk_appraise",
+      "label": "Appraise",
+      "type": "number"
+     },
+     {
+      "key": "sk_armed_combat",
+      "label": "Armed Combat",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_conceal",
+      "label": "Conceal",
+      "type": "number"
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "number"
+     },
+     {
+      "key": "sk_debate",
+      "label": "Debate",
+      "type": "number"
+     },
+     {
+      "key": "sk_games",
+      "label": "Games",
+      "type": "number"
+     },
+     {
+      "key": "sk_guise",
+      "label": "Guise",
+      "type": "number"
+     },
+     {
+      "key": "sk_healing",
+      "label": "Healing",
+      "type": "number"
+     },
+     {
+      "key": "sk_inquire",
+      "label": "Inquire",
+      "type": "number"
+     },
+     {
+      "key": "sk_insight",
+      "label": "Insight",
+      "type": "number"
+     },
+     {
+      "key": "sk_inspire",
+      "label": "Inspire",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidate",
+      "label": "Intimidate",
+      "type": "number"
+     },
+     {
+      "key": "sk_jump",
+      "label": "Jump",
+      "type": "number"
+     },
+     {
+      "key": "sk_language",
+      "label": "Language",
+      "type": "number"
+     },
+     {
+      "key": "sk_legerdemain",
+      "label": "Legerdemain",
+      "type": "number"
+     },
+     {
+      "key": "sk_lore",
+      "label": "Lore",
+      "type": "number"
+     },
+     {
+      "key": "sk_mimicry",
+      "label": "Mimicry",
+      "type": "number"
+     },
+     {
+      "key": "sk_observe",
+      "label": "Observe",
+      "type": "number"
+     },
+     {
+      "key": "sk_perform",
+      "label": "Perform",
+      "type": "number"
+     },
+     {
+      "key": "sk_persuade",
+      "label": "Persuade",
+      "type": "number"
+     },
+     {
+      "key": "sk_ranged_combat",
+      "label": "Ranged Combat",
+      "type": "number"
+     },
+     {
+      "key": "sk_ride",
+      "label": "Ride",
+      "type": "number"
+     },
+     {
+      "key": "sk_run",
+      "label": "Run",
+      "type": "number"
+     },
+     {
+      "key": "sk_sea_craft",
+      "label": "Sea-craft",
+      "type": "number"
+     },
+     {
+      "key": "sk_search",
+      "label": "Search",
+      "type": "number"
+     },
+     {
+      "key": "sk_siegecraft",
+      "label": "Siegecraft",
+      "type": "number"
+     },
+     {
+      "key": "sk_smithcraft",
+      "label": "Smithcraft",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_stonecraft",
+      "label": "Stonecraft",
+      "type": "number"
+     },
+     {
+      "key": "sk_survival",
+      "label": "Survival",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     },
+     {
+      "key": "sk_teamster",
+      "label": "Teamster",
+      "type": "number"
+     },
+     {
+      "key": "sk_track",
+      "label": "Track",
+      "type": "number"
+     },
+     {
+      "key": "sk_unarmed_combat",
+      "label": "Unarmed Combat",
+      "type": "number"
+     },
+     {
+      "key": "sk_weather_sense",
+      "label": "Weather-sense",
+      "type": "number"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skill_notes",
+    "title": "Skill Specialties",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skill_specialties",
+      "label": "Craft, Language, Lore, Perform and other specialties",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rank",
+        "label": "Total Rank"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "equipment",
+    "title": "Equipment, Background & Notes",
+    "page": "Gear & Health",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment_gear",
+      "label": "Equipment & Gear",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     },
+     {
+      "key": "symbol",
+      "label": "Symbol or Device (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Health, Wealth & Weariness",
+    "page": "Gear & Health",
+    "width": "half",
+    "fields": [
+     {
+      "key": "health_total",
+      "label": "Health (total per level)",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "hl_healthy",
+      "label": "Healthy (0)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hl_dazed",
+      "label": "Dazed (-1)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hl_injured",
+      "label": "Injured (-3)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hl_wounded",
+      "label": "Wounded (-5)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hl_incapacitated",
+      "label": "Incapacitated (-7)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "hl_near_death",
+      "label": "Near Death (-9)",
+      "type": "number",
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "weariness",
+      "label": "Weariness",
+      "type": "choice",
+      "options": [
+       "Hale (0)",
+       "Winded (-1)",
+       "Tired (-2)",
+       "Weary (-4)",
+       "Spent (-8)",
+       "Exhausted"
+      ],
+      "cols": 6,
+      "play": true
+     },
+     {
+      "key": "copper_pennies",
+      "label": "Copper Pennies",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "silver_pennies",
+      "label": "Silver Pennies",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "silver_pieces",
+      "label": "Silver Pieces",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "gold_pennies",
+      "label": "Gold Pennies",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "gold_pieces",
+      "label": "Gold Pieces",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Gear & Health",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "ranges",
+        "label": "Ranges"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "parry",
+        "label": "Parry Bonus"
+       },
+       {
+        "key": "size",
+        "label": "Size"
+       },
+       {
+        "key": "special",
+        "label": "Special"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

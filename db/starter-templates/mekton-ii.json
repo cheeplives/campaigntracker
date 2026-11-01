@@ -1,0 +1,280 @@
+{
+ "name": "Mekton II",
+ "game": "Mekton",
+ "edition": "Mekton II (1987)",
+ "source": {
+  "title": "Mekton II character sheet",
+  "owner": "R. Talsorian Games",
+  "url": "https://web.archive.org/web/20101129170831id_/http://rpgsheets.com/sheets/056001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "portrait",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "intelligence",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "reflexes",
+      "label": "Reflexes",
+      "type": "number"
+     },
+     {
+      "key": "cool",
+      "label": "Cool",
+      "type": "number"
+     },
+     {
+      "key": "technical_ability",
+      "label": "Technical Ability",
+      "type": "number"
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "number"
+     },
+     {
+      "key": "attractiveness",
+      "label": "Attractiveness",
+      "type": "number"
+     },
+     {
+      "key": "ma",
+      "label": "MA",
+      "type": "number"
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "number"
+     },
+     {
+      "key": "leap",
+      "label": "Leap",
+      "type": "number"
+     },
+     {
+      "key": "body_type",
+      "label": "Body Type",
+      "type": "text"
+     },
+     {
+      "key": "stun_shock",
+      "label": "Stun/Shock",
+      "type": "number"
+     },
+     {
+      "key": "lift",
+      "label": "Lift",
+      "type": "number"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number"
+     },
+     {
+      "key": "ev",
+      "label": "EV",
+      "type": "number"
+     },
+     {
+      "key": "add",
+      "label": "+Add",
+      "type": "number"
+     },
+     {
+      "key": "throw",
+      "label": "Throw",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "locations",
+    "title": "Hit Locations",
+    "width": "third",
+    "fields": [
+     {
+      "key": "armor_head",
+      "label": "Head armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_head",
+      "label": "Head damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor_torso",
+      "label": "Torso armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_torso",
+      "label": "Torso damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor_l_arm",
+      "label": "L.Arm armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_l_arm",
+      "label": "L.Arm damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor_r_arm",
+      "label": "R.Arm armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_r_arm",
+      "label": "R.Arm damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor_r_leg",
+      "label": "R.Leg armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_r_leg",
+      "label": "R.Leg damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "armor_l_leg",
+      "label": "L.Leg armor",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "damage_l_leg",
+      "label": "L.Leg damage",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "wa",
+        "label": "WA"
+       },
+       {
+        "key": "rng",
+        "label": "RNG"
+       },
+       {
+        "key": "hits",
+        "label": "Hits"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes",
+    "title": "Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes_text",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

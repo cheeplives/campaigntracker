@@ -1,0 +1,429 @@
+{
+ "name": "Cyberpunk v3",
+ "game": "Cyberpunk",
+ "edition": "v3 / 203X (2005)",
+ "source": {
+  "title": "Cyberpunk v3 Character Record",
+  "owner": "R. Talsorian Games",
+  "url": "https://web.archive.org/web/20101129183635id_/http://rpgsheets.com/sheets/026002.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character Record",
+    "width": "third",
+    "fields": [
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rep",
+      "label": "REP",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ip",
+      "label": "IP",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "character",
+      "label": "Character",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "portrait",
+      "label": "Portrait (description)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "lifepath",
+    "title": "Lifepath",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Motivations: Traits",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "feel_about_people",
+      "label": "Feel About People",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "value_most",
+      "label": "You Value Most",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "valued_person",
+      "label": "Valued Person",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "valued_possession",
+      "label": "Valued Possession",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "clothes",
+      "label": "Style: Clothes",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "affectations",
+      "label": "Affectations",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "origins",
+      "label": "Origins",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "st_int",
+      "label": "INT",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_ref",
+      "label": "REF",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_tech",
+      "label": "TECH",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_cool",
+      "label": "COOL",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_will",
+      "label": "WILL",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_str",
+      "label": "STR",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_con",
+      "label": "CON",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_move",
+      "label": "MOVE",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "st_body",
+      "label": "BODY",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "derived",
+    "title": "Derived Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ds_luck",
+      "label": "LUCK",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_hum",
+      "label": "HUM",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "ds_rec",
+      "label": "REC",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_end",
+      "label": "END",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_run",
+      "label": "RUN",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_spr",
+      "label": "SPR",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_swm",
+      "label": "SWM",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_leap",
+      "label": "LEAP",
+      "type": "number",
+      "cols": 2,
+      "play": false
+     },
+     {
+      "key": "ds_hits",
+      "label": "HITS",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "ds_stun",
+      "label": "STUN",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "perks",
+    "title": "Perks & Talents",
+    "width": "third",
+    "fields": [
+     {
+      "key": "perks_list",
+      "label": "Perks & Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "perk",
+        "label": "Perk or Talent"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "perk_cost",
+      "label": "Total Perk/Talent Cost",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "width": "third",
+    "fields": [
+     {
+      "key": "skills_list",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "soft",
+        "label": "Soft?"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "skills_cost",
+      "label": "Total Skills Cost",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "outfit",
+    "title": "Outfit & Core Cybertech",
+    "width": "third",
+    "fields": [
+     {
+      "key": "outfit_list",
+      "label": "Outfit & Core Cybertech",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     },
+     {
+      "key": "outfit_cost",
+      "label": "Total Outfit Cost",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons or Attacks",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons or Attacks",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon or Attack"
+       },
+       {
+        "key": "wa",
+        "label": "WA"
+       },
+       {
+        "key": "con",
+        "label": "Con"
+       },
+       {
+        "key": "av",
+        "label": "AV"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "shts",
+        "label": "Shts"
+       },
+       {
+        "key": "rof",
+        "label": "ROF"
+       },
+       {
+        "key": "rel",
+        "label": "Rel"
+       },
+       {
+        "key": "rng",
+        "label": "Rng"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ],
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}
