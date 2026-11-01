@@ -1,0 +1,514 @@
+{
+ "name": "Outgunned",
+ "game": "Outgunned",
+ "edition": "1st Edition",
+ "source": {
+  "title": "Outgunned Hero Sheet (fillable)",
+  "owner": "Two Little Mice",
+  "url": "https://twolittlemice.net/wp-content/uploads/2024/01/OG_Sheets.zip",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Hero",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "role",
+      "label": "Role",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "trope",
+      "label": "Trope",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "job",
+      "label": "Job",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "flaw",
+      "label": "Flaw",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "catchphrase",
+      "label": "Catchphrase",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mission",
+      "label": "Mission",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "experiences_sec",
+    "title": "Experiences",
+    "width": "third",
+    "fields": [
+     {
+      "key": "experiences",
+      "label": "Achievements, Scars, Bonds & Reputations",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "brawn",
+    "title": "Brawn",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "brawn_rating",
+      "label": "Brawn",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "endure",
+      "label": "Endure",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "fight",
+      "label": "Fight",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "force",
+      "label": "Force",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "stunt",
+      "label": "Stunt",
+      "type": "pips",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "key": "nerves",
+    "title": "Nerves",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "nerves_rating",
+      "label": "Nerves",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "cool",
+      "label": "Cool",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "shoot",
+      "label": "Shoot",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "survival",
+      "label": "Survival",
+      "type": "pips",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "key": "smooth",
+    "title": "Smooth",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "smooth_rating",
+      "label": "Smooth",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "flirt",
+      "label": "Flirt",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "leadership",
+      "label": "Leadership",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "speech",
+      "label": "Speech",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "pips",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "key": "focus",
+    "title": "Focus",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "focus_rating",
+      "label": "Focus",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "detect",
+      "label": "Detect",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "fix",
+      "label": "Fix",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "heal",
+      "label": "Heal",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "know",
+      "label": "Know",
+      "type": "pips",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "key": "crime",
+    "title": "Crime",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "crime_rating",
+      "label": "Crime",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "awareness",
+      "label": "Awareness",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "dexterity",
+      "label": "Dexterity",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "stealth",
+      "label": "Stealth",
+      "type": "pips",
+      "count": 3
+     },
+     {
+      "key": "streetwise",
+      "label": "Streetwise",
+      "type": "pips",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "key": "tracks",
+    "title": "Grit & Adrenaline",
+    "width": "third",
+    "fields": [
+     {
+      "key": "grit",
+      "label": "Grit",
+      "type": "pips",
+      "count": 12,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "adrenaline",
+      "label": "Adrenaline",
+      "type": "pips",
+      "count": 6,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "spotlight",
+      "label": "Spotlight",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "death_roulette",
+      "label": "Death Roulette",
+      "type": "pips",
+      "count": 6,
+      "cols": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "conditions",
+    "title": "You Look",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "cond_hurt",
+      "label": "Hurt",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_nervous",
+      "label": "Nervous",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_like_a_fool",
+      "label": "Like a Fool",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_distracted",
+      "label": "Distracted",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_scared",
+      "label": "Scared",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_tired",
+      "label": "Tired",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_other_1",
+      "label": "Other Condition",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_other_2",
+      "label": "Other Condition 2",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_other_3",
+      "label": "Other Condition 3",
+      "type": "text",
+      "cols": 4,
+      "play": true
+     },
+     {
+      "key": "cond_broken",
+      "label": "Broken",
+      "type": "checkbox",
+      "cols": 4,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "feats_sec",
+    "title": "Feats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "feats",
+      "label": "Feats",
+      "type": "list",
+      "columns": [
+       {
+        "key": "feat",
+        "label": "Feat"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "guns_gear",
+    "title": "Guns & Gear",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "guns",
+      "label": "Guns",
+      "type": "list",
+      "columns": [
+       {
+        "key": "gun",
+        "label": "Gun"
+       },
+       {
+        "key": "melee",
+        "label": "Melee"
+       },
+       {
+        "key": "close",
+        "label": "Close"
+       },
+       {
+        "key": "medium",
+        "label": "Medium"
+       },
+       {
+        "key": "long",
+        "label": "Long"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "cash_storage",
+    "title": "Cash & Storage",
+    "width": "third",
+    "fields": [
+     {
+      "key": "cash",
+      "label": "Cash",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "storage",
+      "label": "Storage",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "ride",
+    "title": "Ride",
+    "fields": [
+     {
+      "key": "ride_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ride_type",
+      "label": "Type",
+      "type": "choice",
+      "options": [
+       "Bike",
+       "Car",
+       "Boat",
+       "Helicopter",
+       "Tank"
+      ],
+      "cols": 6
+     },
+     {
+      "key": "ride_grit",
+      "label": "Ride Grit",
+      "type": "pips",
+      "count": 6,
+      "cols": 6,
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

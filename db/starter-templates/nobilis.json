@@ -1,0 +1,307 @@
+{
+ "name": "Nobilis",
+ "game": "Nobilis",
+ "edition": "2nd Edition (Great White Book)",
+ "source": {
+  "title": "Nobilis character sheet",
+  "owner": "Hogshead Publishing / Eos Press",
+  "url": "https://web.archive.org/web/20101129171623id_/http://rpgsheets.com/sheets/277001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Basic Information",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "imperator",
+      "label": "Imperator",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "code",
+      "label": "Code",
+      "type": "choice",
+      "options": [
+       "Heaven",
+       "Hell",
+       "Light",
+       "Dark",
+       "Wild",
+       "Other"
+      ],
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "principles",
+      "label": "Principles",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "physical",
+    "title": "Physical Description & Estate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "looks",
+      "label": "Looks",
+      "type": "longtext"
+     },
+     {
+      "key": "estate",
+      "label": "Estate (primary and secondary domains)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "fields": [
+     {
+      "key": "aspect",
+      "label": "Aspect Level",
+      "type": "pips",
+      "count": 5,
+      "cols": 4
+     },
+     {
+      "key": "aspect_mp",
+      "label": "Aspect Miracle Points",
+      "type": "pips",
+      "count": 15,
+      "cols": 8,
+      "play": true
+     },
+     {
+      "key": "domain",
+      "label": "Domain Level",
+      "type": "pips",
+      "count": 5,
+      "cols": 4
+     },
+     {
+      "key": "domain_mp",
+      "label": "Domain Miracle Points",
+      "type": "pips",
+      "count": 15,
+      "cols": 8,
+      "play": true
+     },
+     {
+      "key": "realm",
+      "label": "Realm Level",
+      "type": "pips",
+      "count": 5,
+      "cols": 4
+     },
+     {
+      "key": "realm_mp",
+      "label": "Realm Miracle Points",
+      "type": "pips",
+      "count": 15,
+      "cols": 8,
+      "play": true
+     },
+     {
+      "key": "spirit",
+      "label": "Spirit Level",
+      "type": "pips",
+      "count": 5,
+      "cols": 4
+     },
+     {
+      "key": "spirit_mp",
+      "label": "Spirit Miracle Points",
+      "type": "pips",
+      "count": 15,
+      "cols": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gifts_sec",
+    "title": "Gifts",
+    "fields": [
+     {
+      "key": "gifts",
+      "label": "Gifts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "gift",
+        "label": "Gift"
+       },
+       {
+        "key": "level",
+        "label": "Miracle Level"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "invocation",
+        "label": "Invocation"
+       },
+       {
+        "key": "area",
+        "label": "Area"
+       },
+       {
+        "key": "flexibility",
+        "label": "Flexibility"
+       },
+       {
+        "key": "common",
+        "label": "Common?"
+       },
+       {
+        "key": "cost",
+        "label": "Final Cost"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "handicaps_sec",
+    "title": "Handicaps",
+    "width": "half",
+    "fields": [
+     {
+      "key": "handicaps",
+      "label": "Handicaps",
+      "type": "list",
+      "columns": [
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "bonds_sec",
+    "title": "Bonds & Anchors",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonds",
+      "label": "Bonds & Anchors",
+      "type": "list",
+      "columns": [
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "design_sec",
+    "title": "Design",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "design",
+      "label": "Design (traits, petals, leaves, thorns and background)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wound Levels",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "surface_temp",
+      "label": "Surface (temp.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "surface_perm",
+      "label": "Surface (perm.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "serious_temp",
+      "label": "Serious (temp.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "serious_perm",
+      "label": "Serious (perm.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "deadly_temp",
+      "label": "Deadly (temp.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "deadly_perm",
+      "label": "Deadly (perm.)",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

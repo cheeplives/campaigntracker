@@ -1,0 +1,645 @@
+{
+ "name": "Robotech: The Shadow Chronicles",
+ "game": "Robotech: The Shadow Chronicles RPG",
+ "edition": "Palladium (2008)",
+ "source": {
+  "title": "Robotech Shadow Chronicles Character Sheet",
+  "owner": "Palladium Books",
+  "url": "https://palladiumbooks.com/wp-content/uploads/sheets/robotech/Shadow-Chronicles-Character-Sheet.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "occ",
+      "label": "O.C.C.",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "level",
+      "label": "Level of Experience",
+      "type": "number",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "place_of_birth",
+      "label": "Place of Birth",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "birth_order",
+      "label": "Birth Order",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "family_ties",
+      "label": "Family Ties",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "outlook",
+      "label": "Outlook on Earth",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "disposition",
+      "label": "Disposition",
+      "type": "text",
+      "size": "full"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "fields": [
+     {
+      "key": "iq",
+      "label": "I.Q.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "me",
+      "label": "M.E.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ma",
+      "label": "M.A.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ps",
+      "label": "P.S.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pp",
+      "label": "P.P.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pe",
+      "label": "P.E.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "pb",
+      "label": "P.B.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd",
+      "label": "Spd",
+      "type": "number",
+      "size": "small"
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "vitals",
+    "title": "Hit Points & Armor",
+    "width": "third",
+    "fields": [
+     {
+      "key": "hp",
+      "label": "Hit Points",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sdc",
+      "label": "S.D.C.",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "armor_mdc",
+      "label": "Armor M.D.C.",
+      "type": "counter",
+      "min": 0,
+      "play": true
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "mos_sec",
+    "title": "M.O.S.",
+    "width": "third",
+    "fields": [
+     {
+      "key": "mos",
+      "label": "M.O.S.",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "mos_skills",
+      "label": "M.O.S. Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "skills_sec",
+    "title": "Common & O.C.C. Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "common_skills",
+      "label": "Common Skill Set",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "occ_skills",
+      "label": "O.C.C. Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "more_skills",
+    "title": "Related & Secondary Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "related_skills",
+      "label": "O.C.C. Related Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     },
+     {
+      "key": "secondary_skills",
+      "label": "Secondary Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "percent",
+        "label": "%"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "combat_mods",
+    "title": "Combat Modifiers",
+    "page": "Combat",
+    "fields": [
+     {
+      "key": "combat_modifiers",
+      "label": "Combat Modifiers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "k",
+        "label": "Attributes, H to H, Mecha…"
+       },
+       {
+        "key": "attacks",
+        "label": "Attacks"
+       },
+       {
+        "key": "initiative",
+        "label": "Initiative"
+       },
+       {
+        "key": "strike_melee",
+        "label": "Strike Melee"
+       },
+       {
+        "key": "strike_ranged",
+        "label": "Strike Ranged"
+       },
+       {
+        "key": "strike_missile",
+        "label": "Strike Missile"
+       },
+       {
+        "key": "parry",
+        "label": "Parry"
+       },
+       {
+        "key": "dodge",
+        "label": "Dodge"
+       },
+       {
+        "key": "pull_punch",
+        "label": "Pull Punch"
+       },
+       {
+        "key": "roll",
+        "label": "Roll"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "damage",
+    "title": "Damage",
+    "page": "Combat",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dmg_punch",
+      "label": "Punch",
+      "type": "text"
+     },
+     {
+      "key": "dmg_power_punch",
+      "label": "Power Punch",
+      "type": "text"
+     },
+     {
+      "key": "dmg_tear_or_pry",
+      "label": "Tear or Pry",
+      "type": "text"
+     },
+     {
+      "key": "dmg_kick_normal",
+      "label": "Kick (normal)",
+      "type": "text"
+     },
+     {
+      "key": "dmg_karate_kick",
+      "label": "Karate Kick",
+      "type": "text"
+     },
+     {
+      "key": "dmg_jump_kick",
+      "label": "Jump Kick",
+      "type": "text"
+     },
+     {
+      "key": "dmg_leap_kick",
+      "label": "Leap Kick",
+      "type": "text"
+     },
+     {
+      "key": "dmg_stomp",
+      "label": "Stomp",
+      "type": "text"
+     },
+     {
+      "key": "dmg_body_block",
+      "label": "Body Block",
+      "type": "text"
+     },
+     {
+      "key": "dmg_flip_throw",
+      "label": "Flip/Throw",
+      "type": "text"
+     },
+     {
+      "key": "dmg_crush_squeeze",
+      "label": "Crush/Squeeze",
+      "type": "text"
+     },
+     {
+      "key": "running",
+      "label": "Running",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Combat Moves",
+    "page": "Combat",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "perception",
+      "label": "Perception",
+      "type": "number"
+     },
+     {
+      "key": "disarm",
+      "label": "Disarm",
+      "type": "text"
+     },
+     {
+      "key": "entangle",
+      "label": "Entangle",
+      "type": "text"
+     },
+     {
+      "key": "pin",
+      "label": "Pin/Incap.",
+      "type": "text"
+     },
+     {
+      "key": "critical",
+      "label": "Critical",
+      "type": "text"
+     },
+     {
+      "key": "knockout",
+      "label": "Knockout",
+      "type": "text"
+     },
+     {
+      "key": "death_blow",
+      "label": "Death Blow",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "saving_throws",
+    "title": "Saving Throws",
+    "page": "Combat",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "save_acid",
+      "label": "Acid",
+      "type": "text"
+     },
+     {
+      "key": "save_coma_death",
+      "label": "Coma/Death",
+      "type": "text"
+     },
+     {
+      "key": "save_disease",
+      "label": "Disease",
+      "type": "text"
+     },
+     {
+      "key": "save_harmful_drugs",
+      "label": "Harmful Drugs",
+      "type": "text"
+     },
+     {
+      "key": "save_horror_factor",
+      "label": "Horror Factor",
+      "type": "text"
+     },
+     {
+      "key": "save_insanity",
+      "label": "Insanity",
+      "type": "text"
+     },
+     {
+      "key": "save_lethal_poison",
+      "label": "Lethal Poison",
+      "type": "text"
+     },
+     {
+      "key": "save_non_lethal_poison",
+      "label": "Non-Lethal Poison",
+      "type": "text"
+     },
+     {
+      "key": "save_pain",
+      "label": "Pain",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "modifiers",
+        "label": "Modifiers"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "payload",
+        "label": "Payload"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "mecha",
+    "title": "Mecha Combat Data",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "mecha_type",
+      "label": "Type of Mecha",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "mecha_speed",
+      "label": "Speed",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "mecha_flying",
+      "label": "Flying",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "main_body",
+      "label": "Main Body M.D.C.",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "mecha_mdc",
+      "label": "M.D.C. by Location",
+      "type": "list",
+      "columns": [
+       {
+        "key": "location",
+        "label": "Location"
+       },
+       {
+        "key": "mdc",
+        "label": "M.D.C."
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "mecha_weapons",
+      "label": "Weapon Systems",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon System"
+       },
+       {
+        "key": "modifiers",
+        "label": "Modifiers"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "payload",
+        "label": "Payload"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

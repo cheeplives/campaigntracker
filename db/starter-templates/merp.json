@@ -1,0 +1,784 @@
+{
+ "name": "Middle-earth Role Playing",
+ "game": "Middle-earth Role Playing (MERP)",
+ "edition": "1st/2nd Edition (Iron Crown)",
+ "source": {
+  "title": "RS-1 Character Record Sheet",
+  "owner": "Iron Crown Enterprises",
+  "url": "https://web.archive.org/web/20101129191926id_/http://rpgsheets.com/sheets/126001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "cols": 6,
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "demeanor",
+      "label": "Demeanor",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "special",
+      "label": "Special",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "fields": [
+     {
+      "key": "st",
+      "label": "Strength (ST)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "st_norm",
+      "label": "ST Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "st_race",
+      "label": "ST Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "st_total",
+      "label": "ST Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ag",
+      "label": "Agility (AG)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ag_norm",
+      "label": "AG Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ag_race",
+      "label": "AG Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ag_total",
+      "label": "AG Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "co",
+      "label": "Constitution (CO)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "co_norm",
+      "label": "CO Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "co_race",
+      "label": "CO Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "co_total",
+      "label": "CO Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ig",
+      "label": "Intelligence (IG)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ig_norm",
+      "label": "IG Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ig_race",
+      "label": "IG Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ig_total",
+      "label": "IG Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "it",
+      "label": "Intuition (IT)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "it_norm",
+      "label": "IT Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "it_race",
+      "label": "IT Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "it_total",
+      "label": "IT Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pr",
+      "label": "Presence (PR)",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pr_norm",
+      "label": "PR Norm",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pr_race",
+      "label": "PR Race",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "pr_total",
+      "label": "PR Total",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "ap",
+      "label": "Appearance (AP)",
+      "type": "number",
+      "cols": 3
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "magic",
+    "title": "Realm & Points",
+    "width": "half",
+    "fields": [
+     {
+      "key": "realm",
+      "label": "Realm",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "power_points",
+      "label": "Power Points",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "experience_points",
+      "label": "Experience Points",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "encumbrance_penalty",
+      "label": "Encumbrance Penalty",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "helm",
+      "label": "Helm",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "arm_greaves",
+      "label": "Arm Greaves",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "leg_greaves",
+      "label": "Leg Greaves",
+      "type": "text",
+      "cols": 4
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "languages_sec",
+    "title": "Languages",
+    "width": "half",
+    "fields": [
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "list",
+      "columns": [
+       {
+        "key": "language",
+        "label": "Language"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spell Lists",
+    "width": "half",
+    "fields": [
+     {
+      "key": "spell_lists",
+      "label": "Spell Lists",
+      "type": "list",
+      "columns": [
+       {
+        "key": "list",
+        "label": "Spell List"
+       },
+       {
+        "key": "chance",
+        "label": "Chance"
+       }
+      ]
+     }
+    ],
+    "page": "Character"
+   },
+   {
+    "key": "movement",
+    "title": "Movement and Maneuver",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_no_armor_ranks",
+      "label": "No Armor Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_no_armor_total",
+      "label": "No Armor Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_soft_leather_ranks",
+      "label": "Soft Leather Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_soft_leather_total",
+      "label": "Soft Leather Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_rigid_leather_ranks",
+      "label": "Rigid Leather Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_rigid_leather_total",
+      "label": "Rigid Leather Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_chain_ranks",
+      "label": "Chain Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_chain_total",
+      "label": "Chain Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_plate_ranks",
+      "label": "Plate Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_plate_total",
+      "label": "Plate Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "weapon_skills",
+    "title": "Weapon Skills",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_1_h_edged_ranks",
+      "label": "1-H Edged Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_1_h_edged_total",
+      "label": "1-H Edged Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_1_h_concussion_ranks",
+      "label": "1-H Concussion Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_1_h_concussion_total",
+      "label": "1-H Concussion Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_2_handed_ranks",
+      "label": "2-Handed Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_2_handed_total",
+      "label": "2-Handed Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_thrown_ranks",
+      "label": "Thrown Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_thrown_total",
+      "label": "Thrown Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_missile_ranks",
+      "label": "Missile Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_missile_total",
+      "label": "Missile Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_pole_arms_ranks",
+      "label": "Pole-arms Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_pole_arms_total",
+      "label": "Pole-arms Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "general",
+    "title": "General Skills",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_climb_ranks",
+      "label": "Climb Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_climb_total",
+      "label": "Climb Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_ride_ranks",
+      "label": "Ride Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_ride_total",
+      "label": "Ride Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_swim_ranks",
+      "label": "Swim Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_swim_total",
+      "label": "Swim Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_track_ranks",
+      "label": "Track Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_track_total",
+      "label": "Track Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "subterfuge",
+    "title": "Subterfuge Skills",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_ambush_ranks",
+      "label": "Ambush Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_ambush_total",
+      "label": "Ambush Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_stalk_hide_ranks",
+      "label": "Stalk/Hide Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_stalk_hide_total",
+      "label": "Stalk/Hide Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_pick_lock_ranks",
+      "label": "Pick Lock Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_pick_lock_total",
+      "label": "Pick Lock Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_disarm_trap_ranks",
+      "label": "Disarm Trap Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_disarm_trap_total",
+      "label": "Disarm Trap Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "magical",
+    "title": "Magical Skills",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_read_runes_ranks",
+      "label": "Read Runes Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_read_runes_total",
+      "label": "Read Runes Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_use_items_ranks",
+      "label": "Use Items Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_use_items_total",
+      "label": "Use Items Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_directed_spells_ranks",
+      "label": "Directed Spells Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_directed_spells_total",
+      "label": "Directed Spells Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "misc",
+    "title": "Misc. Skills",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sk_perception_ranks",
+      "label": "Perception Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_perception_total",
+      "label": "Perception Total",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_body_devel_ranks",
+      "label": "Body Devel. Ranks",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "sk_body_devel_total",
+      "label": "Body Devel. Total",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "bonuses",
+    "title": "Bonuses",
+    "page": "Skills",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "base_spells",
+      "label": "Base Spells",
+      "type": "number"
+     },
+     {
+      "key": "leadership",
+      "label": "Leadership and Influence",
+      "type": "number"
+     },
+     {
+      "key": "defensive_bonus",
+      "label": "Defensive Bonus",
+      "type": "number"
+     },
+     {
+      "key": "essence_rr",
+      "label": "Essence RR",
+      "type": "number"
+     },
+     {
+      "key": "channeling_rr",
+      "label": "Channeling RR",
+      "type": "number"
+     },
+     {
+      "key": "poison_rr",
+      "label": "Poison RR",
+      "type": "number"
+     },
+     {
+      "key": "disease_rr",
+      "label": "Disease RR",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "secondary_sec",
+    "title": "Secondary Skills",
+    "page": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "secondary_skills",
+      "label": "Secondary Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "Ranks"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "spec",
+        "label": "Spec"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,325 @@
+{
+ "name": "Little Fears",
+ "game": "Little Fears",
+ "edition": "1st Edition (2001)",
+ "source": {
+  "title": "Little Fears character sheet",
+  "owner": "Jason L. Blair",
+  "url": "https://web.archive.org/web/20101129171036id_/http://rpgsheets.com/sheets/275001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Me",
+    "fields": [
+     {
+      "key": "name",
+      "label": "My name is",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "nickname",
+      "label": "My friends call me",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "age",
+      "label": "Years old",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "gender",
+      "label": "I am a (boy/girl)",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 6
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "this_is_me",
+    "title": "This Is Me",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "muscle",
+      "label": "Muscle",
+      "type": "number"
+     },
+     {
+      "key": "smarts",
+      "label": "Smarts",
+      "type": "number"
+     },
+     {
+      "key": "feet",
+      "label": "Feet",
+      "type": "number"
+     },
+     {
+      "key": "hands",
+      "label": "Hands",
+      "type": "number"
+     },
+     {
+      "key": "spirit",
+      "label": "Spirit",
+      "type": "number"
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "important",
+    "title": "These Are Important!",
+    "width": "third",
+    "fields": [
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "innocence",
+      "label": "Innocence",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "innocence_lost",
+      "label": "Innocence (lost)",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "fear",
+      "label": "Fear",
+      "type": "pips",
+      "count": 10,
+      "size": "full",
+      "play": true
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "i_feel",
+    "title": "I Feel",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "feel_fine",
+      "label": "Fine",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "feel_sore",
+      "label": "Sore",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "feel_bad",
+      "label": "Bad",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "feel_dizzy",
+      "label": "Dizzy",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "feel_nothing",
+      "label": "Nothing",
+      "type": "pips",
+      "count": 5,
+      "play": true
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "about",
+    "title": "About Myself",
+    "width": "half",
+    "fields": [
+     {
+      "key": "likes",
+      "label": "Things I Like",
+      "type": "list",
+      "columns": [
+       {
+        "key": "thing",
+        "label": "Thing"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     },
+     {
+      "key": "dislikes",
+      "label": "Things I Don't Like",
+      "type": "list",
+      "columns": [
+       {
+        "key": "thing",
+        "label": "Thing"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "stuff",
+    "title": "My Stuff",
+    "width": "half",
+    "fields": [
+     {
+      "key": "my_stuff",
+      "label": "This is my stuff!",
+      "type": "longtext"
+     },
+     {
+      "key": "best_stuff",
+      "label": "But I like these best",
+      "type": "longtext"
+     }
+    ],
+    "page": "Me"
+   },
+   {
+    "key": "friends",
+    "title": "Friends & Family",
+    "page": "All About Me",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hang_out_with",
+      "label": "I hang out with",
+      "type": "longtext"
+     },
+     {
+      "key": "best_friend",
+      "label": "My best friend",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "favorite_person",
+      "label": "My favorite person is",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "talk_to",
+      "label": "No matter what, I can always talk to",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "homelife",
+      "label": "What's your homelife like?",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "dreams",
+    "title": "Dreams & Fears",
+    "page": "All About Me",
+    "width": "half",
+    "fields": [
+     {
+      "key": "grow_up",
+      "label": "When I grow up I wanna be a",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "grow_up_because",
+      "label": "Because",
+      "type": "longtext"
+     },
+     {
+      "key": "special_thing",
+      "label": "I have a",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "special_because",
+      "label": "And it's special because",
+      "type": "longtext"
+     },
+     {
+      "key": "biggest_fear",
+      "label": "My biggest fear is",
+      "type": "longtext"
+     },
+     {
+      "key": "when_scared",
+      "label": "When I get scared, I",
+      "type": "longtext"
+     },
+     {
+      "key": "monsters_around",
+      "label": "When I know monsters are around, I",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

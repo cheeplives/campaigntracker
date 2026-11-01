@@ -1,0 +1,537 @@
+{
+ "name": "Red Dwarf",
+ "game": "Red Dwarf: The Roleplaying Game",
+ "edition": "1st Edition (Deep7, 2002)",
+ "source": {
+  "title": "Space Corps Personnel File",
+  "owner": "Deep7",
+  "url": "https://web.archive.org/web/20101129153139id_/http://rpgsheets.com/sheets/205001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Space Corps Personnel File",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "text",
+      "cols": 3,
+      "summary": true
+     },
+     {
+      "key": "serial",
+      "label": "Serial No.",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "choice",
+      "options": [
+       "M",
+       "F",
+       "Other"
+      ],
+      "cols": 2
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "smoker",
+      "label": "Smoker?",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "cols": 2
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "place_of_birth",
+      "label": "Place of Birth",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "marks",
+      "label": "Distinguishing Marks",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "history",
+      "label": "Brief History",
+      "type": "longtext"
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "connections",
+      "label": "Connections",
+      "type": "text",
+      "cols": 8
+     }
+    ]
+   },
+   {
+    "key": "psych",
+    "title": "Psych Profile",
+    "width": "third",
+    "fields": [
+     {
+      "key": "goals",
+      "label": "Goals",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "assets",
+      "label": "Assets",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "liabilities",
+      "label": "Liabilities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "behavior_tags",
+      "label": "Behavior Tags",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "remembered_for",
+      "label": "I Want to Be Remembered For",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "tagline",
+      "label": "Tagline",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "health",
+    "title": "Health",
+    "width": "third",
+    "fields": [
+     {
+      "key": "medical_condition",
+      "label": "Current Medical Condition",
+      "type": "choice",
+      "options": [
+       "A Bit Wonky",
+       "Roughed Up",
+       "Worse for Wear",
+       "Sorry State",
+       "Nearly Dead",
+       "Fleshy Lump",
+       "Smoldering Hole"
+      ],
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "outer_wear",
+      "label": "Protective Outer Wear",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "av",
+      "label": "AV",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "save",
+      "label": "Save",
+      "type": "number",
+      "cols": 6
+     },
+     {
+      "key": "destiny",
+      "label": "Destiny",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "shrug",
+      "label": "Shrug",
+      "type": "number",
+      "cols": 6
+     }
+    ]
+   },
+   {
+    "key": "agility_sec",
+    "title": "Agility",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "agility",
+      "label": "Agility (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_athletics",
+      "label": "Athletics",
+      "type": "number"
+     },
+     {
+      "key": "sk_dance",
+      "label": "Dance",
+      "type": "number"
+     },
+     {
+      "key": "sk_gunnery",
+      "label": "Gunnery",
+      "type": "number"
+     },
+     {
+      "key": "sk_self_defense",
+      "label": "Self Defense",
+      "type": "number"
+     },
+     {
+      "key": "sk_stealth",
+      "label": "Stealth",
+      "type": "number"
+     },
+     {
+      "key": "sk_pilot",
+      "label": "Pilot",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "dexterity_sec",
+    "title": "Dexterity",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "dexterity",
+      "label": "Dexterity (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_active_games",
+      "label": "Active Games",
+      "type": "number"
+     },
+     {
+      "key": "sk_craft",
+      "label": "Craft",
+      "type": "number"
+     },
+     {
+      "key": "sk_demolitions",
+      "label": "Demolitions",
+      "type": "number"
+     },
+     {
+      "key": "sk_firearms",
+      "label": "Firearms",
+      "type": "number"
+     },
+     {
+      "key": "sk_instrument",
+      "label": "Instrument",
+      "type": "number"
+     },
+     {
+      "key": "sk_repair",
+      "label": "Repair",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "strength_sec",
+    "title": "Strength",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "strength",
+      "label": "Strength (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_climb",
+      "label": "Climb",
+      "type": "number"
+     },
+     {
+      "key": "sk_endurance",
+      "label": "Endurance",
+      "type": "number"
+     },
+     {
+      "key": "sk_strength_feat",
+      "label": "Strength Feat",
+      "type": "number"
+     },
+     {
+      "key": "sk_swim",
+      "label": "Swim",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "perception_sec",
+    "title": "Perception",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "perception",
+      "label": "Perception (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_aesthetics",
+      "label": "Aesthetics",
+      "type": "number"
+     },
+     {
+      "key": "sk_awareness",
+      "label": "Awareness",
+      "type": "number"
+     },
+     {
+      "key": "sk_con",
+      "label": "Con",
+      "type": "number"
+     },
+     {
+      "key": "sk_empathy",
+      "label": "Empathy",
+      "type": "number"
+     },
+     {
+      "key": "sk_passive_games",
+      "label": "Passive Games",
+      "type": "number"
+     },
+     {
+      "key": "sk_seduction",
+      "label": "Seduction",
+      "type": "number"
+     },
+     {
+      "key": "sk_social",
+      "label": "Social",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "intelligence_sec",
+    "title": "Intelligence",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "intelligence",
+      "label": "Intelligence (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_anthropology",
+      "label": "Anthropology",
+      "type": "number"
+     },
+     {
+      "key": "sk_astronavigation",
+      "label": "Astronavigation",
+      "type": "number"
+     },
+     {
+      "key": "sk_computer_ops",
+      "label": "Computer Ops.",
+      "type": "number"
+     },
+     {
+      "key": "sk_culinary_arts",
+      "label": "Culinary Arts",
+      "type": "number"
+     },
+     {
+      "key": "sk_history",
+      "label": "History",
+      "type": "number"
+     },
+     {
+      "key": "sk_language",
+      "label": "Language",
+      "type": "number"
+     },
+     {
+      "key": "sk_life_sciences",
+      "label": "Life Sciences",
+      "type": "number"
+     },
+     {
+      "key": "sk_mathematics",
+      "label": "Mathematics",
+      "type": "number"
+     },
+     {
+      "key": "sk_medicine",
+      "label": "Medicine",
+      "type": "number"
+     },
+     {
+      "key": "sk_philosophy",
+      "label": "Philosophy",
+      "type": "number"
+     },
+     {
+      "key": "sk_theoretical_physics",
+      "label": "Theoretical Physics",
+      "type": "number"
+     },
+     {
+      "key": "sk_security",
+      "label": "Security",
+      "type": "number"
+     },
+     {
+      "key": "sk_trivia",
+      "label": "Trivia",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "willpower_sec",
+    "title": "Willpower",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "willpower",
+      "label": "Willpower (rating)",
+      "type": "number"
+     },
+     {
+      "key": "sk_cool",
+      "label": "Cool",
+      "type": "number"
+     },
+     {
+      "key": "sk_intimidation",
+      "label": "Intimidation",
+      "type": "number"
+     },
+     {
+      "key": "sk_resist",
+      "label": "Resist",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Other Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills_other",
+      "label": "Other Skills (Pilot, Craft, Language…)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear_sec",
+    "title": "Gear & Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

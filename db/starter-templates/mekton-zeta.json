@@ -1,0 +1,342 @@
+{
+ "name": "Mekton Zeta",
+ "game": "Mekton Zeta",
+ "edition": "Mekton Zeta (R. Talsorian)",
+ "source": {
+  "title": "Mekton Zeta character sheet",
+  "owner": "R. Talsorian Games",
+  "url": "https://rtalsoriangames.com/wp-content/uploads/2013/01/zcharacter156.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "profile",
+    "title": "Character Profile",
+    "width": "third",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "portrait",
+      "label": "Portrait",
+      "type": "longtext"
+     },
+     {
+      "key": "profession",
+      "label": "Profession/Template",
+      "type": "text",
+      "cols": 8,
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Character Stats",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "int",
+      "label": "Intelligence",
+      "type": "number"
+     },
+     {
+      "key": "edu",
+      "label": "Education",
+      "type": "number"
+     },
+     {
+      "key": "ref",
+      "label": "Reflexes",
+      "type": "number"
+     },
+     {
+      "key": "cool",
+      "label": "Cool",
+      "type": "number"
+     },
+     {
+      "key": "emp",
+      "label": "Empathy",
+      "type": "number"
+     },
+     {
+      "key": "tech",
+      "label": "Tech Ability",
+      "type": "number"
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "number"
+     },
+     {
+      "key": "ma",
+      "label": "Move Allowance",
+      "type": "number"
+     },
+     {
+      "key": "body",
+      "label": "Body Type",
+      "type": "number"
+     }
+    ]
+   },
+   {
+    "key": "derived",
+    "title": "Derived Stats",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stability",
+      "label": "Stability",
+      "type": "number"
+     },
+     {
+      "key": "run",
+      "label": "Run",
+      "type": "text"
+     },
+     {
+      "key": "jump",
+      "label": "Jump",
+      "type": "text"
+     },
+     {
+      "key": "running_jump",
+      "label": "Running Jump",
+      "type": "text"
+     },
+     {
+      "key": "anime_leap",
+      "label": "Anime Leap",
+      "type": "text"
+     },
+     {
+      "key": "stun",
+      "label": "Stun",
+      "type": "number"
+     },
+     {
+      "key": "lift",
+      "label": "Lift",
+      "type": "text"
+     },
+     {
+      "key": "ev",
+      "label": "EV",
+      "type": "number"
+     },
+     {
+      "key": "throw",
+      "label": "Throw",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "locations",
+    "title": "Hit Locations",
+    "fields": [
+     {
+      "key": "sp_head",
+      "label": "Head SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_head",
+      "label": "Head Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_torso",
+      "label": "Torso SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_torso",
+      "label": "Torso Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_rarm",
+      "label": "R. Arm SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_rarm",
+      "label": "R. Arm Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_larm",
+      "label": "L. Arm SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_larm",
+      "label": "L. Arm Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_rleg",
+      "label": "R. Leg SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_rleg",
+      "label": "R. Leg Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "sp_lleg",
+      "label": "L. Leg SP",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "hits_lleg",
+      "label": "L. Leg Hits",
+      "type": "counter",
+      "cols": 2,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "third",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "wt",
+        "label": "Wt."
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_skills",
+    "title": "Weapons & Skills",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "wa",
+        "label": "WA"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "shots",
+        "label": "Shots"
+       },
+       {
+        "key": "bv",
+        "label": "BV"
+       },
+       {
+        "key": "conc",
+        "label": "Conc"
+       },
+       {
+        "key": "weight",
+        "label": "Weight"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "lvl",
+        "label": "Lvl"
+       },
+       {
+        "key": "ip",
+        "label": "IP"
+       },
+       {
+        "key": "tot",
+        "label": "Tot"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

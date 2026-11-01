@@ -1,0 +1,182 @@
+{
+ "name": "Sorcerer",
+ "game": "Sorcerer",
+ "edition": "1st Edition (Adept Press, 2001)",
+ "source": {
+  "title": "Sorcerer character sheet",
+  "owner": "Adept Press",
+  "url": "https://web.archive.org/web/20101129164140id_/http://rpgsheets.com/sheets/186001.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "telltale",
+      "label": "Telltale",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "kicker",
+      "label": "Kicker",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "scores",
+    "title": "Scores & Descriptors",
+    "width": "half",
+    "fields": [
+     {
+      "key": "humanity",
+      "label": "Humanity",
+      "type": "counter",
+      "cols": 6,
+      "min": 0,
+      "max": 10,
+      "play": true
+     },
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "stamina_desc",
+      "label": "Stamina Descriptor",
+      "type": "text",
+      "cols": 9
+     },
+     {
+      "key": "will",
+      "label": "Will",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "will_desc",
+      "label": "Will Descriptor",
+      "type": "text",
+      "cols": 9
+     },
+     {
+      "key": "lore",
+      "label": "Lore",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "lore_desc",
+      "label": "Lore Descriptor",
+      "type": "text",
+      "cols": 9
+     },
+     {
+      "key": "cover",
+      "label": "Cover",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "cover_desc",
+      "label": "Cover Descriptor",
+      "type": "text",
+      "cols": 9
+     },
+     {
+      "key": "price",
+      "label": "Price",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "price_desc",
+      "label": "Price Descriptor",
+      "type": "text",
+      "cols": 9
+     }
+    ]
+   },
+   {
+    "key": "demons_sec",
+    "title": "Bound Demons",
+    "fields": [
+     {
+      "key": "bound_demons",
+      "label": "Bound Demons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "telltale",
+        "label": "Telltale"
+       },
+       {
+        "key": "need",
+        "label": "Need"
+       }
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "diagram",
+    "title": "Relationship Map",
+    "fields": [
+     {
+      "key": "map_lore",
+      "label": "Lore",
+      "type": "longtext"
+     },
+     {
+      "key": "map_price",
+      "label": "Price",
+      "type": "longtext"
+     },
+     {
+      "key": "map_cover",
+      "label": "Cover",
+      "type": "longtext"
+     },
+     {
+      "key": "map_kicker",
+      "label": "Kicker",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

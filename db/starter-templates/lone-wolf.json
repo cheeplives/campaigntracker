@@ -1,0 +1,271 @@
+{
+ "name": "Lone Wolf Adventure Game",
+ "game": "Lone Wolf Adventure Game",
+ "edition": "Cubicle 7 (2015)",
+ "source": {
+  "title": "Kai Action Chart (Lone Wolf character sheet)",
+  "owner": "Cubicle 7",
+  "url": "https://web.archive.org/web/20140911114820id_/http://www.cubicle7.co.uk/wp-content/uploads/2014/08/Lone-Wolf-Character-Sheet-update.pdf",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Kai Action Chart",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 8
+     },
+     {
+      "key": "rank",
+      "label": "Character Rank",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "cs",
+    "title": "Combat Skill",
+    "width": "third",
+    "fields": [
+     {
+      "key": "cs_basic",
+      "label": "Basic",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cs_mod",
+      "label": "Modifiers",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "cs_total",
+      "label": "Total",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "endurance",
+    "title": "Endurance",
+    "width": "third",
+    "fields": [
+     {
+      "key": "ep_basic",
+      "label": "Basic",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ep_mod",
+      "label": "Modifiers",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "ep_total",
+      "label": "Total EP",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "willpower",
+    "title": "Willpower",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wp_basic",
+      "label": "Basic",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wp_mod",
+      "label": "Modifiers",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wp_total",
+      "label": "Total WP",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "defense_sec",
+    "title": "Armour, Defense & Shield",
+    "fields": [
+     {
+      "key": "armour",
+      "label": "Armour",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "defense",
+      "label": "Defense (End loss)",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "shield",
+      "label": "Shield",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kais_favour",
+      "label": "Kai's Favour",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "disciplines_sec",
+    "title": "Disciplines",
+    "width": "half",
+    "fields": [
+     {
+      "key": "disciplines",
+      "label": "Disciplines",
+      "type": "list",
+      "columns": [
+       {
+        "key": "discipline",
+        "label": "Discipline"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       },
+       {
+        "key": "adv",
+        "label": "Adv."
+       },
+       {
+        "key": "mas",
+        "label": "Mas."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "traits_skills",
+    "title": "Traits & Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       }
+      ]
+     },
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons & Backpack",
+    "width": "half",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "backpack",
+      "label": "Backpack",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
+      "key": "meals",
+      "label": "Meals",
+      "type": "counter",
+      "cols": 4,
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "belt_pouch",
+      "label": "Belt Pouch (GC)",
+      "type": "number",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "special_sec",
+    "title": "Special Items & Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_items",
+      "label": "Special Items",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
