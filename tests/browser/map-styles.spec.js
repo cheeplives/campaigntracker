@@ -37,7 +37,12 @@ test("Map pins: a GM's new pin starts as an Encyclopedia entry, with an icon and
   await pinForm(page).getByRole("button", { name: "Castle" }).click();
   await pinForm(page).getByRole("button", { name: "Red" }).click();
   await pinForm(page).getByLabel("Entry name").fill("Boldhome");
+  await expect(pinForm(page).getByRole("button", { name: "Castle" })).toHaveAttribute("aria-pressed", "true");
+  await expect(pinForm(page).getByRole("button", { name: "Red" })).toHaveAttribute("aria-pressed", "true");
+  const sent = page.waitForRequest(r => r.url().includes("a=pin_save"));
   await pinForm(page).getByRole("button", { name: "New entry here" }).click();
+  const body = (await sent).postDataJSON();
+  expect([body.kind, body.icon, body.color]).toEqual(["entry", "🏰", "#d64541"]);
   const pin = page.locator(".map-pin", { hasText: "Boldhome" });
   await expect(pin.locator(".map-marker-icon")).toHaveText("🏰");
   await expect(pin).toHaveClass(/has-colour/);
