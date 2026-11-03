@@ -43,7 +43,7 @@ test("a GM adds eras in Settings, and the calendar labels and date picker use th
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Eras ${gm.id}`); // now: year 1
 
-  await page.goto(`./#/c/${cid}/settings`);
+  await page.goto(`./#/c/${cid}/settings/calendar`);
   await page.locator('textarea[name="eras"]').fill("Old Age, OA, -50\nNew Age, NA, 1, restart\nBefore Time, BT, -50, before");
   await page.getByRole("button", { name: "Save calendar" }).click();
   await expect(page.getByText("Calendar saved")).toBeVisible();
@@ -74,7 +74,7 @@ test("a GM adds eras in Settings, and the calendar labels and date picker use th
   await expect(page.locator(".calbar h2")).toHaveText("Firstmonth 3 BT");
 
   // a second "before" era is refused
-  await page.goto(`./#/c/${cid}/settings`);
+  await page.goto(`./#/c/${cid}/settings/calendar`);
   await page.locator('textarea[name="eras"]').fill("A, A, 1, before\nB, B, 5, before");
   await page.getByRole("button", { name: "Save calendar" }).click();
   await expect(page.getByText("Only one era can count the years before")).toBeVisible();

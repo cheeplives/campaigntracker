@@ -155,7 +155,7 @@ test("a GM deletes a campaign from the list after typing DELETE (any case); play
   await pp.goto("index.html#/");
   const prow = pp.locator(".camp-row").filter({ hasText: "Doomed Run" });
   await expect(prow).toBeVisible();
-  await expect(prow.getByRole("button")).toHaveCount(0);
+  await expect(prow.getByRole("button", { name: /^(Copy|Delete)$/ })).toHaveCount(0);   // only the star
   expect((await api(pp, "campaign_copy", { name: "Mine now" }, cid)).status).toBe(403);
   expect((await api(pp, "campaign_delete", { confirm: "DELETE" }, cid)).status).toBe(403);
 

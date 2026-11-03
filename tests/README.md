@@ -39,6 +39,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only its setup (calendar, date, settings, regions, holidays, tag and relationship lists); every table with a
   campaign_id must be in the copy, so a new one fails here until it is added; a GM deletes a campaign from the list
   only after typing DELETE; players get neither button, and the API refuses them both.
+- **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
+  person's own, kept in their preferences across reloads, and only on a campaign they belong to.
 - **account**: the account page lists only the campaigns you belong to, each with your role, and a
   character name typed there is the one the Members tab shows; the None / Imperial / Metric units choice
   sets the travel planner and temperatures, None follows the campaign, an older temperature-only choice
@@ -172,6 +174,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
+- **map-styles**: a GM's new pin starts as an Encyclopedia entry and can have its own icon and colour; pins are listed
+  under Locations in the side panel, which folds away (and its sections fold) and stays as it was left; a locked pin can't
+  be dragged or moved until unlocked; a route has its own colour and line and is drawn on to the pins it starts and ends
+  at; a GM places the party anywhere and pins a new location where it stands; the grid's opacity is each person's own;
+  picture, rename and delete sit in the ⚙ menu (migration 024).
 - **maps**: the Maps tab sits after Generators; a GM adds a map with its picture (uploaded or from Find Image), scales
   it by two points or grid squares (a `30x20` file name fills in the square size, the Roll20 button 70 px = 5 ft, and the
   grid offset is the first click's position modulo the square), and measures; an unscaled map says so; a 6000 × 4000
@@ -254,7 +261,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **weather-tuning**: a campaign's weather tuning (storm, fog and dust per Köppen class, the simple climates' weather mix,
   visibility by weather, how shifts ease off, the ground model) lays over the built-in values and comes off again; out-of-range
   values are pulled in and only real changes are stored; Settings → Weather tuning highlights changed values, refuses ground
-  steps out of order, saves, changes the day page's ground, and Reset all puts the built-in values back.
+  steps out of order, saves, changes the day page's ground, and Reset all puts the built-in values back; the ground rates
+  are shown a shift, or an hour in a campaign kept in hours, and stored a quarter of the day; Settings is split into
+  Campaign, Calendar, Weather tuning and Tools tabs, each with its own address.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility, travel and star-distance results in the browser as under Node.
 

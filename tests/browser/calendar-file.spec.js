@@ -27,7 +27,7 @@ test("a calendar exports to JSON and imports into Settings and a new campaign", 
   await api(page, "holiday_save", { name: "Founding Day", rule: { type: "fixed", month: 1, day: 5 }, color: "#336699", description: "The city's birthday" }, cid);
 
   // Export: the calendar, its holidays and the date reached (shift 8 is day 2, the 3rd of Firstmonth).
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/tools`);
   const file = await exportCalendar(page);
   expect(file.format).toBe("campaign-chronicle-calendar");
   expect(file.version).toBe(1);
@@ -42,7 +42,7 @@ test("a calendar exports to JSON and imports into Settings and a new campaign", 
   const other = await makeCampaign(page, `Other ${gm.id}`);
   // Only the hash changes, so goto returns before the new campaign's Settings replace the old ones. A click while the page
   // is being swapped can land half on each and open no file picker, so wait for the new campaign's name first.
-  await page.goto(`index.html#/c/${other}/settings`);
+  await page.goto(`index.html#/c/${other}/settings/tools`);
   await expect(page.getByRole("heading", { name: `Other ${gm.id}` })).toBeVisible();
   await importFile(page, "Import calendar…", "not json");
   await expect(page.locator("#toast")).toHaveText("That file is not JSON.");

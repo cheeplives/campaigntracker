@@ -623,6 +623,8 @@ test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser
   const up = await upload(page, cid, "map", id);
   await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
   await page.goto(`#/c/${cid}/maps/${id}`);
+  await expect(page.getByRole("button", { name: "Rename" })).toBeHidden();   // in the ⚙ menu
+  await page.getByLabel("Map settings").click();
   await page.getByRole("button", { name: "Rename" }).click();
   await page.getByLabel("New name").fill("Fresh name");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -635,6 +637,7 @@ test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser
   await expect(page.getByRole("button", { name: "GM only" })).toHaveAttribute("aria-pressed", "true");
   await pp.reload();
   await expect(pp.getByText("No maps yet.", { exact: true })).toBeVisible();
+  await page.getByLabel("Map settings").click();
   await page.getByRole("button", { name: "Delete map" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page).toHaveURL(new RegExp(`#/c/${cid}/maps$`));

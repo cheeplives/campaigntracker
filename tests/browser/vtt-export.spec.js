@@ -136,7 +136,7 @@ test("Settings downloads the calendar for Seasons & Stars and says what date to 
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Calendar ${gm.id}`);
   const camp = (await api(page, "campaign", undefined, cid)).json.campaign;
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/tools`);
   await page.getByRole("button", { name: "⬇ For Foundry…" }).click();
   const d = page.getByRole("dialog", { name: "Calendar for Foundry" });
   await expect(d).toContainText("Then set Foundry's date to");

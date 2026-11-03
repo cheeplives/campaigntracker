@@ -18,6 +18,26 @@ function has_map_grid(): bool {
     static $has = null;
     return $has ??= (bool)db()->query("SHOW COLUMNS FROM maps LIKE 'grid_type'")->fetchColumn();
 }
+/** Whether migration 024 has been run: before it, pins and routes have no icon, colour, line or lock of their own. */
+function has_map_styles(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW COLUMNS FROM map_pins LIKE 'icon'")->fetchColumn();
+}
+/** The lines a route can be drawn with (MapsTab's DASHES). */
+const MAP_DASHES = ['solid', 'dashed', 'dotted', 'dashdot'];
+/** A colour from a request: #rrggbb, or null for none. */
+function map_colour($v): ?string {
+    if ($v === null || $v === '') return null;
+    if (!is_string($v) || !preg_match('/^#[0-9a-f]{6}$/i', $v)) fail('A colour is #rrggbb');
+    return strtolower($v);
+}
+/** A pin's icon from a request: a short emoji or symbol (any text up to 16 characters, shown as text), or null for its kind's own. */
+function map_icon($v): ?string {
+    if ($v === null || $v === '') return null;
+    if (!is_string($v) || mb_strlen($v) > 16 || preg_match('/[\x00-\x1f<>]/', $v)) fail('Pick an icon from the list');
+    return trim($v) === '' ? null : trim($v);
+}
+
 /** The shapes a map's grid can be, as MapGeo draws them. */
 const MAP_GRID_TYPES = ['square', 'hex_flat', 'hex_pointy'];
 
@@ -142,6 +162,7 @@ function pin_out(array $p): array {
     return ['id' => (int)$p['id'], 'map_id' => (int)$p['map_id'], 'x' => (float)$p['x'], 'y' => (float)$p['y'], 'kind' => $p['kind'],
         'entry_id' => $p['entry_id'] !== null ? (int)$p['entry_id'] : null, 'event_id' => $p['event_id'] !== null ? (int)$p['event_id'] : null,
         'label' => $p['label'], 'note' => $p['note'], 'is_secret' => (bool)(int)$p['is_secret'],
+        'icon' => $p['icon'] ?? null, 'color' => $p['color'] ?? null, 'is_locked' => (bool)(int)($p['is_locked'] ?? 0),
         'created_by' => $p['created_by'] !== null ? (int)$p['created_by'] : null, 'author' => $p['author'], 'entry' => $entry, 'event' => $event];
 }
 /** The pins of campaign $cid matching $where (SQL on aliases p, e, ev), with their entry, event and author joined, oldest first. */
@@ -188,6 +209,13 @@ function pin_save(int $cid, bool $isGm): array {
     if ($map['width'] === null || $map['height'] === null) fail('Give the map a picture before pinning it');
     $x = map_coord($has('x') || !$old ? $body['x'] ?? null : $old['x'], $map['width']);   // kept coordinates are checked against the map it is on now
     $y = map_coord($has('y') || !$old ? $body['y'] ?? null : $old['y'], $map['height']);
+    $styles = has_map_styles();
+    $locked = $styles ? ($has('is_locked') ? (!empty($body['is_locked']) ? 1 : 0) : (int)($old['is_locked'] ?? 0)) : 0;
+    // a locked pin stays put: moving it (or onto another map) needs unlocking first, in the same save or before
+    if ($old && (int)($old['is_locked'] ?? 0) && $locked && ((float)$old['x'] !== $x || (float)$old['y'] !== $y || (int)$old['map_id'] !== (int)$map['id']))
+        fail('That pin is locked. Unlock it to move it', 409);
+    $icon = $styles ? ($has('icon') ? map_icon($body['icon']) : ($old['icon'] ?? null)) : null;
+    $colour = $styles ? ($has('color') ? map_colour($body['color']) : ($old['color'] ?? null)) : null;
     $kind = $isGm && $has('kind') ? $body['kind'] : ($old['kind'] ?? 'note');
     if (!in_array($kind, ['note', 'entry', 'event'], true)) fail('Pick a note, an entry or an event');
     $label = $has('label') ? trim((string)str_in($body['label'], 150)) : ($old['label'] ?? '');
@@ -212,6 +240,7 @@ function pin_save(int $cid, bool $isGm): array {
             ->execute([...$cols, $cid, $u]);
         $id = (int)db()->lastInsertId();
     }
+    if ($styles) db()->prepare('UPDATE map_pins SET icon=?, color=?, is_locked=? WHERE id=?')->execute([$icon, $colour, $locked, $id]);
     if ($isGm) touch_campaign($cid);   // players' pins are like their notes: they don't count as a campaign change
     return pin_out(pin_row($cid, $id, true));
 }
@@ -271,7 +300,8 @@ function pin_to_entry(int $cid, int $id, ?int $entryId): array {
 
 /** A route as the browser gets it. */
 function route_out(array $r): array {
-    return ['id' => (int)$r['id'], 'map_id' => (int)$r['map_id'], 'name' => $r['name'], 'points' => dec($r['points_json']) ?: [], 'is_secret' => (bool)(int)$r['is_secret']];
+    return ['id' => (int)$r['id'], 'map_id' => (int)$r['map_id'], 'name' => $r['name'], 'points' => dec($r['points_json']) ?: [], 'is_secret' => (bool)(int)$r['is_secret'],
+        'color' => $r['color'] ?? null, 'dash' => $r['dash'] ?? null];
 }
 /** The routes on map $mapId that this member may see, oldest first. */
 function map_routes_visible(int $cid, int $mapId, bool $isGm): array {
@@ -310,6 +340,13 @@ function route_save(int $cid): array {
         db()->prepare('INSERT INTO map_routes (map_id, name, points_json, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?)')
             ->execute([$map['id'], $name, $json, $secret, $cid, me()['id']]);
         $id = (int)db()->lastInsertId();
+    }
+    if (has_map_styles()) {
+        $colour = $has('color') ? map_colour($body['color']) : ($old['color'] ?? null);
+        $dash = $has('dash') ? $body['dash'] : ($old['dash'] ?? null);
+        if ($dash === '') $dash = null;
+        if ($dash !== null && !in_array($dash, MAP_DASHES, true)) fail('Pick a solid, dashed, dotted or dash-dot line');
+        db()->prepare('UPDATE map_routes SET color=?, dash=? WHERE id=?')->execute([$colour, $dash, $id]);
     }
     touch_campaign($cid);
     $st = db()->prepare('SELECT * FROM map_routes WHERE id=?');

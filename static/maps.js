@@ -11,6 +11,19 @@ const MapsTab = (() => {
   const UNITS = [['ft', 'Feet'], ['m', 'Metres'], ['mi', 'Miles'], ['km', 'Kilometres'], ['au', 'Astronomical units'], ['ly', 'Light-years']];
   const PICTURES = 'image/png,image/jpeg,image/gif,image/webp';
   const VTT_FILES = '.uvtt,.dd2vtt,.df2vtt,.json,' + PICTURES;
+  /** Icons a pin can have, with a name each for screen readers and the picker's tips. */
+  const PIN_ICONS = [['📍', 'Pin'], ['🏰', 'Castle'], ['🏯', 'Fortress'], ['🏛️', 'Temple or hall'], ['⛪', 'Church'], ['🏠', 'House'], ['🏘️', 'Village'],
+    ['🏙️', 'City'], ['🍺', 'Tavern or inn'], ['🛖', 'Hut'], ['⛺', 'Camp'], ['🗼', 'Tower'], ['🗿', 'Monument'], ['🏚️', 'Ruin'], ['⚓', 'Port'],
+    ['⛵', 'Ship'], ['🌉', 'Bridge'], ['🚪', 'Door or gate'], ['🕳️', 'Cave or pit'], ['⛏️', 'Mine'], ['🌲', 'Forest'], ['⛰️', 'Hill'],
+    ['🏔️', 'Mountain'], ['🌋', 'Volcano'], ['🏝️', 'Island'], ['🌊', 'Water'], ['💧', 'Spring or well'], ['🔥', 'Fire'], ['⚔️', 'Battle'],
+    ['🛡️', 'Guard post'], ['💀', 'Danger'], ['☠️', 'Death'], ['🐉', 'Monster'], ['👑', 'Royal seat'], ['💰', 'Treasure'], ['💎', 'Gem'],
+    ['🗝️', 'Key'], ['📜', 'Clue'], ['❓', 'Unknown'], ['❗', 'Important'], ['⭐', 'Star'], ['🚩', 'Flag'], ['✨', 'Magic'], ['🌀', 'Portal'],
+    ['🪐', 'Planet'], ['🚀', 'Starship'], ['🛰️', 'Station'], ['☢️', 'Hazard']];
+  /** Colours for pins and routes, picked to read on light and dark maps. */
+  const COLOURS = [['#d64541', 'Red'], ['#f08c2e', 'Orange'], ['#f4c430', 'Yellow'], ['#3fae4b', 'Green'], ['#1fa5a0', 'Teal'], ['#3a7bd5', 'Blue'],
+    ['#8a5cd1', 'Purple'], ['#e05aa6', 'Pink'], ['#8b5a2b', 'Brown'], ['#222222', 'Black'], ['#f5f5f5', 'White']];
+  /** Route lines: name -> [label, SVG dash pattern (null: solid), round ends]. */
+  const DASHES = { dashed: ['Dashed', '8 6', false], solid: ['Solid', null, false], dotted: ['Dotted', '1 7', true], dashdot: ['Dash-dot', '12 6 1 6', true] };
 
   /** A map's pixel position <-> Leaflet's. */
   const toLatLng = (x, y) => [-y, x];
@@ -20,10 +33,11 @@ const MapsTab = (() => {
 
   /** A marker on `layer`: the picture, or the emoji, with its label under it. It keeps its size as the map zooms. onMove
    * runs after a drag and, if it fails, the marker goes back; onOpen's node fills the card a click opens. */
-  function marker(layer, { x, y, icon, image, label, className, sizePx = 28, draggable = false, onMove, onOpen }) {
+  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen }) {
     const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' }) : el('span', { class: 'map-marker-icon', 'aria-hidden': 'true' }, icon || '');
-    const node = el('div', { class: `map-marker ${className || ''}`.trim() }, face, label ? el('span', { class: 'map-marker-label' }, label) : null);
+    const node = el('div', { class: `map-marker ${color ? 'has-colour ' : ''}${className || ''}`.trim() }, face, label ? el('span', { class: 'map-marker-label' }, label) : null);
     node.style.setProperty('--marker-size', sizePx + 'px');
+    if (color) node.style.setProperty('--pin-colour', color);
     const m = L.marker(toLatLng(x, y), { icon: L.divIcon({ html: node, className: 'map-marker-box', iconSize: [sizePx, sizePx], iconAnchor: [sizePx / 2, sizePx / 2] }),
       draggable, title: label || '', keyboard: true, riseOnHover: true });
     if (onOpen) m.bindPopup(() => onOpen(), { className: 'map-card-popup', minWidth: 160 });
@@ -175,6 +189,7 @@ const MapsTab = (() => {
     }
     let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
     let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
+    let styles = !!data.styles;   // icons, colours, lines and locks need the database upgrade (migration 024)
     const loadGroups = async () => { if (gm) groups = (await api('groups', { query: { cid } })).groups; };
     const gm = ctx.isGM();
     const system = () => ctx.unitSystem();
@@ -189,7 +204,7 @@ const MapsTab = (() => {
     const toolbar = el('div', { class: 'map-toolbar' });
     const panelBox = el('div', { class: 'map-panel-box' });
 
-    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | null
+    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
 
     // ---- measuring
@@ -222,6 +237,11 @@ const MapsTab = (() => {
       try { const v = localStorage.getItem(gridKey); if (v !== null) return v === '1'; } catch { /* storage may be off */ }
       return !!map.grid_shown;
     };
+    const opacityKey = gridKey + '-opacity';
+    const gridOpacity = () => {
+      try { const v = Number(localStorage.getItem(opacityKey)); if (v >= 0.1 && v <= 1) return v; } catch { /* storage may be off */ }
+      return 1;
+    };
     const gridWidth = () => {   // lines one screen pixel wide (with a light edge) at every zoom
       const k = lf ? 1 / lf.map.getZoomScale(lf.map.getZoom(), 0) : 1;
       gridLines.forEach((l, i) => l.setAttribute('stroke-width', String((i ? 1 : 3) * k)));
@@ -231,6 +251,7 @@ const MapsTab = (() => {
       const has = map.grid_px > 0;
       gridBtn.hidden = !has || !map.image_url;
       gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
+      opacityBox.hidden = !has || !map.image_url || !gridWanted();
       if (!lf || !has || !gridWanted()) return;
       const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
       const t = G.gridTile(map.grid_type, map.grid_px), pid = `map-grid-${id}`;
@@ -241,7 +262,7 @@ const MapsTab = (() => {
       root.append(svg('defs', {}), svg('rect', { width: map.width, height: map.height, fill: `url(#${pid})` }));
       root.firstChild.append(pattern);
       gridWidth();
-      gridLayer = L.svgOverlay(root, bounds(), { pane: 'mapGrid', interactive: false, className: 'map-grid' }).addTo(lf.map);
+      gridLayer = L.svgOverlay(root, bounds(), { pane: 'mapGrid', interactive: false, className: 'map-grid', opacity: gridOpacity() }).addTo(lf.map);
     }
     const gridBtn = btn('Grid', () => {
       const on = !gridWanted();
@@ -249,6 +270,14 @@ const MapsTab = (() => {
       drawGrid();
     }, '', 'Show or hide the map\'s grid (just for you)');
     gridBtn.hidden = true;
+    const opacityIn = el('input', { type: 'range', min: 10, max: 100, step: 5, value: String(Math.round(gridOpacity() * 100)), 'aria-label': 'Grid opacity' });
+    opacityIn.addEventListener('input', () => {
+      const v = Number(opacityIn.value) / 100;
+      try { localStorage.setItem(opacityKey, String(v)); } catch { /* this visit only */ }
+      gridLayer?.setOpacity(v);
+    });
+    const opacityBox = el('label', { class: 'map-grid-opacity small', 'data-tip': 'How strongly the grid is drawn (just for you)' }, 'Opacity ', opacityIn);
+    opacityBox.hidden = true;
 
     // ---- the scale panel
     let picks = [], pickLayer = null, panel = null;
@@ -329,16 +358,20 @@ const MapsTab = (() => {
     const mine = p => gm || (p.kind === 'note' && p.created_by === S.user.id);
     const entryNamed = name => S.encyclopedia.find(e => [e.name, ...(e.aliases || [])].some(n => G.nameKey(n) === G.nameKey(name))) || null;   // nameKey ignores case, accents and a leading "The"
     const pinTitle = p => (p.kind === 'entry' && p.entry ? p.entry.name : p.kind === 'event' && p.event ? p.event.title : p.label) || 'Pin';
-    const pinIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
+    const kindIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
+    const pinIcon = p => p.icon || kindIcon(p);
     function drawPins() {
       pinLayer.clearLayers(); pinMarkers.clear();
-      for (const p of pins) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), className: 'map-pin' + (p.is_secret ? ' secret' : ''),
-        draggable: mine(p), onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p) }));
+      for (const p of pins) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
+        className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : ''),
+        draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p) }));
     }
+    /** Centre the map on pin p and open its card. */
+    const showPin = p => { const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
-      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || [];
+      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || []; styles = !!d.styles;
       await loadGroups().catch(() => {});
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
@@ -352,7 +385,9 @@ const MapsTab = (() => {
         MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28,
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
-            el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet')) });
+            el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
+            gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
+              'Pin a place where the party is now, as a new Encyclopedia entry or a note')) : null) });
       }
     };
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
@@ -395,8 +430,13 @@ const MapsTab = (() => {
         gm && p.kind === 'note' ? el('div', { class: 'row' }, match
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), 'small', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), 'small', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
+        p.is_locked ? el('small', { class: 'muted' }, 'Locked in place') : null,
         mine(p) ? el('div', { class: 'row' },
           btn('Edit', () => { lmap_close(); pinForm(p, p); }, 'small'),
+          styles ? btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
+            try { await post('pin_save', { id: p.id, is_locked: !p.is_locked }, cid); lmap_close(); await refresh(); toast(p.is_locked ? 'Pin unlocked' : 'Pin locked in place'); }
+            catch (err) { toast(err.message, true); }
+          }, 'small', p.is_locked ? 'Let this pin be dragged again' : 'Stop this pin being dragged by accident') : null,
           btn('Delete', async () => {
             if (!await ctx.confirmDialog(`Delete the pin "${pinTitle(p)}"?`, { ok: 'Delete', danger: true })) return;
             try { await post('pin_delete', { id: p.id }, cid); await refresh(); toast('Pin deleted'); } catch (err) { toast(err.message, true); }
@@ -407,7 +447,7 @@ const MapsTab = (() => {
     /** The pin form, in the panel above the map: a new pin at xy, or pin `old` being changed. */
     function pinForm(old, xy) {
       closePanel();
-      let kind = old?.kind || 'note', entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : null, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
+      let kind = old?.kind || (gm && S.encReady ? 'entry' : 'note'), entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : null, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
       let events = null, working = false;
       const label = el('input', { maxlength: 150, autocomplete: 'off', value: old?.kind === 'note' ? old.label : '' });
       const noteIn = el('textarea', { rows: 2, maxlength: 1000, placeholder: 'A short note, if you like' }, old?.kind === 'note' ? old.note || '' : '');
@@ -431,7 +471,29 @@ const MapsTab = (() => {
       };
       qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) entry = null; drawEntries(); });
       qEvent.addEventListener('input', () => { if (event && qEvent.value !== event.title) event = null; drawEvents(); });
-      const kinds = [['note', 'Note'], ...(S.encReady ? [['entry', 'Encyclopedia entry']] : []), ['event', 'Event']];
+      const kinds = [...(S.encReady ? [['entry', 'Encyclopedia entry']] : []), ['note', 'Note'], ['event', 'Event']];
+      // its icon (none: the kind's own) and colour, once the database has them
+      let icon = old?.icon || null, colour = old?.color || null;
+      const iconBox = el('div', { class: 'map-icon-pick', role: 'group', 'aria-label': 'Icon' });
+      const colourBox = el('div', { class: 'map-colour-pick', role: 'group', 'aria-label': 'Colour' });
+      const drawStyle = () => {
+        const fake = { kind, entry: entry ? { category: S.encyclopedia.find(e => e.id === entry.id)?.category || (entry.blank ? 'location' : null) } : null };
+        const opt = (v, face, name, on) => el('button', { type: 'button', class: 'map-icon-opt' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,
+          onclick: () => { icon = v; drawStyle(); } }, face);
+        iconBox.replaceChildren(opt(null, kindIcon(fake), 'The kind\'s own icon', !icon), ...PIN_ICONS.map(([e, name]) => opt(e, e, name, icon === e)));
+        const sw = (v, name) => {
+          const on = (colour || null) === v;
+          const b = el('button', { type: 'button', class: 'map-swatch' + (v ? '' : ' none') + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,
+            onclick: () => { colour = v; drawStyle(); } }, v ? '' : '∅');
+          if (v) b.style.setProperty('--swatch', v);
+          return b;
+        };
+        colourBox.replaceChildren(sw(null, 'No colour'), ...COLOURS.map(([v, name]) => sw(v, name)));
+      };
+      // not field(): its <label> would pass a click on one of these buttons to the first of them once the click has
+      // redrawn the buttons (older Chrome does), putting the choice straight back
+      const group = (name, box) => el('div', { class: 'field' }, el('span', { class: 'lbl', 'aria-hidden': 'true' }, name), box);
+      const styleFields = styles ? el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), group('Icon', iconBox), group('Colour', colourBox)) : null;
       const kindBtns = kinds.map(([k, l]) => btn(l, () => { kind = k; show(); }, '', k === 'note' ? 'A label and a note' : k === 'entry' ? 'Pin an Encyclopedia entry' : 'Pin an event'));
       const body = el('div', { class: 'map-form-body' });
       const warn = (name, what) => toast(`"${name}" is GM only, so players won't see this pin until the ${what} is shown to them`);
@@ -440,6 +502,7 @@ const MapsTab = (() => {
         const b = { map_id: map.id, x: xy.x, y: xy.y };
         if (old) b.id = old.id;
         if (gm) { b.kind = kind; b.is_secret = secret.checked; }
+        if (styles) { b.icon = icon; b.color = colour; }
         let hidden = null;
         if (kind === 'note') {
           if (!label.value.trim()) return toast('Give the pin a label', true);
@@ -495,10 +558,11 @@ const MapsTab = (() => {
           : kind === 'entry' ? [field('Entry name', qEntry), entryList, el('div', { class: 'row' }, btn('New entry here', newEntry, 'small', 'Add an Encyclopedia entry of this name (a Location) and pin it'))]
           : [field('Event title', qEvent), eventList, el('div', { class: 'row' }, btn('New event here', newEvent, 'small', 'Add an all-day event of this title on the campaign\'s current day, and pin it'))]));
         if (kind === 'entry') drawEntries(); else if (kind === 'event') drawEvents();
+        if (styles) drawStyle();
       }
       const form = el('form', { class: 'map-panel card', role: 'dialog', 'aria-label': old ? 'Edit pin' : 'Add pin' },
-        el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
-        body,
+        el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
+        body, styleFields,
         gm ? el('label', { class: 'check' }, secret, ' GM only') : null,
         el('div', { class: 'row' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
       form.addEventListener('submit', ev => { ev.preventDefault(); save(); });
@@ -518,59 +582,128 @@ const MapsTab = (() => {
       routeLayer.clearLayers(); routeLines.clear();
       for (const r of routes) {
         const at = r.points.map(([x, y]) => toLatLng(x, y));
-        const line = L.polyline(at, { weight: 3, dashArray: '8 6', interactive: false, className: 'map-route-line' + (r.is_secret ? ' secret' : '') }).addTo(routeLayer);
+        const [, dash, round] = DASHES[r.dash] || DASHES.dashed;
+        const line = L.polyline(at, { weight: 3, dashArray: dash, lineCap: round ? 'round' : 'butt', interactive: false,
+          ...(r.color ? { color: r.color } : {}), className: 'map-route-line' + (r.color ? ' coloured' : '') + (r.is_secret ? ' secret' : '') }).addTo(routeLayer);
         // a thin dashed line is hard to hit with a finger (and a tap between dashes misses it), so an unseen wide one takes the taps
         L.polyline(at, { weight: 18, opacity: 0, className: 'map-route-hit' }).bindTooltip(el('span', {}, r.name), { sticky: true, className: 'map-tip' }).addTo(routeLayer);
         routeLines.set(r.id, line);
       }
     }
-    /** A name (and, when `secret` is a boolean, a GM only box) asked for in a small dialog: resolves { name, secret }, or null if cancelled. */
-    function routeDialog(title, name, secret, ok) {
+    const reach = () => Math.max(map.width || 0, map.height || 0) * 0.03 + 10;   // a pin this close to a route's end is where it starts or stops
+    const endPin = pt => G.nearestPin(pins, { x: pt[0], y: pt[1] }, reach());
+    /** The route dialog: its name, colour and line, and (once saved, with pins on the map) the pins it starts and ends at.
+     * `r` is the route being changed, or a new one { points }; `secret` a boolean asks GM only too. Resolves the changes, or null. */
+    function routeDialog(title, r, secret, ok) {
       return new Promise(resolve => {
-        const d = el('dialog', { class: 'kit-dialog', 'aria-label': title });
-        const nameIn = el('input', { value: name, maxlength: 150, required: true, 'aria-label': 'Route name', autocomplete: 'off' });
+        const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': title });
+        const nameIn = el('input', { value: r.name || '', maxlength: 150, required: true, 'aria-label': 'Route name', autocomplete: 'off' });
         const box = typeof secret === 'boolean' ? el('input', { type: 'checkbox', checked: secret }) : null;
+        const colour = select([['', 'The usual green'], ...COLOURS], r.color || '', { 'aria-label': 'Route colour' });
+        const dash = select(Object.entries(DASHES).map(([k, [l]]) => [k, l]), r.dash || 'dashed', { 'aria-label': 'Line' });
+        const named = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b)));
+        const pinSel = (label, pt) => select([['', '— none —'], ...named.map(p => [String(p.id), `${pinIcon(p)} ${pinTitle(p)}`])], String(pt ? endPin(pt)?.id || '' : ''), { 'aria-label': label });
+        const from = pinSel('Starts at', r.points[0]), to = pinSel('Ends at', r.points[r.points.length - 1]);
+        const was = [from.value, to.value];
         let out = null;
-        const form = el('form', {}, el('h3', {}, title), field('Route name', nameIn), box ? el('label', { class: 'check' }, box, ' GM only') : null,
+        const form = el('form', {}, el('h3', {}, title), field('Route name', nameIn),
+          styles ? el('div', { class: 'row' }, field('Colour', colour), field('Line', dash)) : null,
+          named.length ? el('div', { class: 'row' }, field('Starts at', from, null, 'A pin on this map: the route is drawn on to it, and the Travel tab starts the trip there'),
+            field('Ends at', to, null, 'A pin on this map: the route is drawn on to it, and the Travel tab ends the trip there')) : null,
+          box ? el('label', { class: 'check' }, box, ' GM only') : null,
           el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, ok), btn('Cancel', () => d.close())));
-        form.addEventListener('submit', ev => { ev.preventDefault(); if (!nameIn.value.trim()) return; out = { name: nameIn.value.trim(), secret: box ? box.checked : null }; d.close(); });
+        form.addEventListener('submit', ev => {
+          ev.preventDefault();
+          if (!nameIn.value.trim()) return;
+          // a new start or end pin: the route's end moves onto it, or is drawn on to it when it is further off
+          let points = r.points.map(p => [...p]);
+          const snap = (sel, at, i) => {
+            if (sel.value === at) return;
+            const p = pins.find(q => String(q.id) === sel.value);
+            if (!p) return;
+            const end = points[i === 0 ? 0 : points.length - 1];
+            const near = Math.hypot(end[0] - p.x, end[1] - p.y) <= reach();
+            if (near) end.splice(0, 2, p.x, p.y);
+            else if (i === 0) points.unshift([p.x, p.y]); else points.push([p.x, p.y]);
+          };
+          snap(from, was[0], 0); snap(to, was[1], 1);
+          out = { name: nameIn.value.trim(), secret: box ? box.checked : null, points, moved: JSON.stringify(points) !== JSON.stringify(r.points),
+            ...(styles ? { color: colour.value || null, dash: dash.value === 'dashed' ? null : dash.value } : {}) };
+          d.close();
+        });
         d.addEventListener('close', () => { d.remove(); resolve(out); });
         d.append(form); document.body.append(d); d.showModal();
       });
     }
     async function saveRoute() {
       if (pts.length < 2) return;
-      const got = await routeDialog('Save route', '', false, 'Save route');
+      const got = await routeDialog('Save route', { name: '', points: pts.map(p => [p.x, p.y]) }, false, 'Save route');
       if (!got) return;
       try {
-        await post('route_save', { map_id: map.id, name: got.name, points: pts.map(p => [p.x, p.y]), is_secret: got.secret }, cid);
+        await post('route_save', { map_id: map.id, name: got.name, points: got.points, is_secret: got.secret, ...(styles ? { color: got.color, dash: got.dash } : {}) }, cid);
         mode = null; pts = []; drawMeasure(); note.textContent = ''; syncTools();
         await refresh(); toast('Route saved');
       } catch (err) { toast(err.message, true); }
     }
+    /** The side panel: Routes and Locations (every pin), each folding up, and the whole panel folding away to the right.
+     * How it was left is remembered on this device. */
+    const sideKey = `chronicle-map-side-${cid}`;
+    const sideState = () => { try { return JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { return {}; } };
+    const keepSide = patch => { try { localStorage.setItem(sideKey, JSON.stringify({ ...sideState(), ...patch })); } catch { /* this visit only */ } };
     function renderRoutes() {
-      routeBox.hidden = !routes.length;
-      routeBox.replaceChildren(...(routes.length ? [el('h3', {}, 'Routes'), ...routes.map(r => el('div', { class: 'map-route' + (r.is_secret ? ' secret' : '') },
-        el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)) }, r.is_secret ? '🔒 ' : '', r.name),
-        el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
-        gm ? el('div', { class: 'row' },
-          hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
-          btn('Rename', async () => {
-            const got = await routeDialog('Rename the route', r.name, null, 'Save');
-            if (!got) return;
-            try { await post('route_save', { id: r.id, name: got.name }, cid); await refresh(); } catch (err) { toast(err.message, true); }
-          }, 'small'),
-          (() => {
-            const b = btn('GM only', async () => {
-              try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
-            }, 'small', 'Players never see a GM only route');
-            b.setAttribute('aria-pressed', String(r.is_secret));
-            return b;
-          })(),
-          btn('Delete', async () => {
-            if (!await ctx.confirmDialog(`Delete the route "${r.name}"?`, { ok: 'Delete', danger: true })) return;
-            try { await post('route_delete', { id: r.id }, cid); await refresh(); toast('Route deleted'); } catch (err) { toast(err.message, true); }
-          }, 'small danger')) : null))] : []));
+      const st = sideState();
+      routeBox.hidden = !routes.length && !pins.length;
+      routeBox.classList.toggle('collapsed', !!st.collapsed);
+      host.closest('.map-body')?.classList.toggle('side-collapsed', !!st.collapsed);
+      const fold = btn(st.collapsed ? '⟨' : '⟩', () => { keepSide({ collapsed: !st.collapsed }); renderRoutes(); lf?.map.invalidateSize({ animate: false }); }, 'small map-side-fold',
+        st.collapsed ? 'Show the routes and locations' : 'Fold the routes and locations away');
+      fold.setAttribute('aria-label', st.collapsed ? 'Show routes and locations' : 'Hide routes and locations');
+      fold.setAttribute('aria-expanded', String(!st.collapsed));
+      if (st.collapsed) return routeBox.replaceChildren(fold, el('span', { class: 'map-side-label', 'aria-hidden': 'true' }, 'Routes · Locations'));
+      const section = (key, title, kids) => {
+        const d = el('details', { class: 'map-side-sec', open: st[key] !== false }, el('summary', {}, el('h3', {}, title, el('span', { class: 'muted small' }, ` ${kids.length}`))), ...kids);
+        d.addEventListener('toggle', () => keepSide({ [key]: d.open }));
+        return d;
+      };
+      const routeRows = routes.map(r => {
+        const a = endPin(r.points[0]), z = endPin(r.points[r.points.length - 1]);
+        const swatch = el('span', { class: 'map-route-swatch' + (r.color ? '' : ' plain') + ' ' + (r.dash || 'dashed'), 'aria-hidden': 'true' });
+        if (r.color) swatch.style.setProperty('--swatch', r.color);
+        return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : '') },
+          el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)) }, swatch, r.is_secret ? '🔒 ' : '', r.name),
+          a || z ? el('span', { class: 'small map-route-ends' }, a ? pinTitle(a) : '…', ' → ', z ? pinTitle(z) : '…') : null,
+          el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
+          gm ? el('div', { class: 'row' },
+            hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
+            btn('Edit', async () => {
+              const got = await routeDialog('Edit the route', r, null, 'Save');
+              if (!got) return;
+              try {
+                await post('route_save', { id: r.id, name: got.name, ...(got.moved ? { points: got.points } : {}), ...(styles ? { color: got.color, dash: got.dash } : {}) }, cid);
+                await refresh();
+              } catch (err) { toast(err.message, true); }
+            }, 'small', 'Its name, colour and line, and the pins it starts and ends at'),
+            (() => {
+              const b = btn('GM only', async () => {
+                try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
+              }, 'small', 'Players never see a GM only route');
+              b.setAttribute('aria-pressed', String(r.is_secret));
+              return b;
+            })(),
+            btn('Delete', async () => {
+              if (!await ctx.confirmDialog(`Delete the route "${r.name}"?`, { ok: 'Delete', danger: true })) return;
+              try { await post('route_delete', { id: r.id }, cid); await refresh(); toast('Route deleted'); } catch (err) { toast(err.message, true); }
+            }, 'small danger')) : null);
+      });
+      const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
+        const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour' : ''), 'aria-hidden': 'true' }, pinIcon(p));
+        if (p.color) face.style.setProperty('--pin-colour', p.color);
+        return el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
+          face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null);
+      });
+      routeBox.replaceChildren(...[el('div', { class: 'map-side-head' }, fold),
+        routes.length ? section('routes', 'Routes', routeRows) : null,
+        pins.length ? section('places', 'Locations', placeRows) : null].filter(Boolean));
     }
 
     function onClick(ev) {
@@ -580,22 +713,38 @@ const MapsTab = (() => {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         mode = null; note.textContent = ''; syncTools(); pinForm(null, p);
       }
+      else if (mode === 'party') {
+        if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
+        const g = groups.find(q => q.id === Number(partyWhich.value)) || groups[0];
+        mode = null; note.textContent = ''; syncTools();
+        post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid).then(() => refresh()).then(() => toast(`${g.name} moved`)).catch(err => toast(err.message, true));
+      }
       else if (mode === 'scale') { picks = picks.length >= 2 ? [p] : [...picks, p]; drawPicks(); if (picks.length === 2) panelBox.querySelector('input[aria-label="How many squares"]')?.dispatchEvent(new Event('input')); }
     }
 
     // ---- the toolbar
-    const measureBtn = btn('Measure', () => {
+    const measureBtn = btn('Measure/Route', () => {
       if (mode === 'measure') { mode = null; pts = []; drawMeasure(); note.textContent = ''; return syncTools(); }
       if (!hasScale()) { note.textContent = gm ? 'Set the scale to measure' : 'The GM hasn\'t set this map\'s scale yet'; return; }
       if (mode === 'scale' || mode === 'pin') closePanel();
-      mode = 'measure'; note.textContent = 'Click the map to lay down points'; syncTools();
-    }, '', 'Click along a path to add up its length');
+      mode = 'measure'; note.textContent = gm ? 'Click the map to lay down points, then Save route… to keep it' : 'Click the map to lay down points'; syncTools();
+    }, '', gm ? 'Click along a path to add up its length, and keep it as a route' : 'Click along a path to add up its length');
     const addPinBtn = btn('Add pin', () => {
       if (mode === 'pin') { closePanel(); note.textContent = ''; return; }
       if (mode === 'scale' || mode === 'measure') { if (mode === 'measure') { pts = []; drawMeasure(); } closePanel(); }
       panelBox.replaceChildren(); mode = 'pin'; note.textContent = 'Click the map to place the pin'; syncTools();
     }, '', 'Click the map to leave a pin there');
     addPinBtn.hidden = !map.image_url;
+    // GMs: put a group of the party anywhere on the map (a pin isn't needed), with a select when there is more than one group
+    const partyWhich = select(groups.map(g => [g.id, g.name]), groups[0]?.id ?? '', { 'aria-label': 'Which group', class: 'small' });
+    const partyBtn = gm ? btn('Place party', () => {
+      if (mode === 'party') { mode = null; note.textContent = ''; return syncTools(); }
+      if (mode === 'measure') { pts = []; drawMeasure(); }
+      if (mode) closePanel();
+      if (!groups.length) { note.textContent = 'The party has no group yet: add players on the Members tab'; return; }
+      mode = 'party'; note.textContent = 'Click the map where the party is'; syncTools();
+    }, '', 'Put the party\'s marker anywhere on this map') : null;
+    if (partyBtn) partyBtn.hidden = !map.image_url;
     const saveRouteBtn = btn('Save route…', () => saveRoute(), '', 'Keep the path you measured as a named route on this map');
     saveRouteBtn.hidden = true;
     // Plan this trip: the Travel tab, with the path's length and the pins at its ends filled in
@@ -609,14 +758,17 @@ const MapsTab = (() => {
       const m = mode === 'measure';
       measureBtn.setAttribute('aria-pressed', String(m));
       addPinBtn.setAttribute('aria-pressed', String(mode === 'pin'));
+      partyBtn?.setAttribute('aria-pressed', String(mode === 'party'));
+      partyWhich.hidden = !(mode === 'party' && groups.length > 1);
+      if (!groups.some(g => String(g.id) === partyWhich.value)) partyWhich.replaceChildren(...groups.map(g => el('option', { value: g.id }, g.name)));
       saveRouteBtn.hidden = !(gm && m && pts.length > 1);
       planBtn.hidden = !(gm && m && pts.length > 1 && hasScale());
       undoBtn.hidden = clearBtn.hidden = !m;
       total.hidden = !m;
       if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
-      host.classList.toggle('picking', m || mode === 'scale' || mode === 'pin');
+      host.classList.toggle('picking', !!mode);
       // two quick taps while laying down points are two points, not a zoom
-      lf?.map.doubleClickZoom[m || mode === 'scale' || mode === 'pin' ? 'disable' : 'enable']();
+      lf?.map.doubleClickZoom[mode ? 'disable' : 'enable']();
     }
     const scaleBtn = gm ? btn('Scale', () => (mode === 'scale' ? closePanel() : openScale()), '', 'Tell the map how far apart things are') : null;
     const rename = () => {
@@ -675,7 +827,7 @@ const MapsTab = (() => {
       if (!await ctx.confirmDialog(`Delete the map "${map.name}", with its pins and routes?`, { ok: 'Delete', danger: true })) return;
       try { await post('map_delete', { id: map.id }, cid); toast('Map deleted'); await ctx.reloadCampaign(); location.hash = `#/c/${cid}/maps`; } catch (err) { toast(err.message, true); }
     }, 'danger') : null;
-    const swap = gm ? el('label', { class: 'button file-add small', 'data-tip': 'Replace the map\'s picture' }, el('input', { type: 'file', accept: PICTURES, class: 'file-input', 'aria-label': 'Change the map picture',
+    const swap = gm ? el('label', { class: 'button file-add', 'data-tip': 'Replace the map\'s picture' }, el('input', { type: 'file', accept: PICTURES, class: 'file-input', 'aria-label': 'Change the map picture',
       onchange: async ev => {
         const f = ev.target.files[0];
         if (!f) return;
@@ -683,8 +835,18 @@ const MapsTab = (() => {
         try { file = await ctx.uploadFile('map', map.id, f); await post('map_save', { id: map.id, image_id: file.id }, cid); toast('Picture changed'); location.hash = `${base}?scale=1&file=${encodeURIComponent(f.name)}`; }
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
+    // ⚙: the map's own changes, kept out of the toolbar so they aren't pressed by accident
+    const gear = gm ? el('details', { class: 'map-gear' }, el('summary', { class: 'button', 'aria-label': 'Map settings', title: 'Change the picture, rename or delete this map' }, '⚙'),
+      el('div', { class: 'map-gear-menu' }, swap, btn('Rename', rename), del)) : null;
+    if (gear) {
+      gear.querySelector('.map-gear-menu').addEventListener('click', ev => { if (ev.target.closest('button')) gear.open = false; });
+      gear.querySelector('input[type=file]').addEventListener('change', () => { gear.open = false; });
+      const off = new AbortController();   // a click anywhere else closes it, until the page is left
+      document.addEventListener('click', ev => { if (gear.open && !gear.contains(ev.target)) gear.open = false; }, { signal: off.signal });
+      window.addEventListener('hashchange', () => off.abort(), { once: true });
+    }
     tools.append(saveRouteBtn, planBtn);
-    toolbar.append(addPinBtn, measureBtn, gridBtn, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, swap, exportBtn, gm ? btn('Rename', rename) : null, secretBtn, del);
+    toolbar.append(...[addPinBtn, measureBtn, partyBtn, partyWhich, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
@@ -692,7 +854,7 @@ const MapsTab = (() => {
       el('div', { class: 'map-body' }, host, routeBox)));
 
     if (!map.image_url || !map.width) {
-      host.replaceChildren(el('p', { class: 'muted map-empty' }, gm ? 'This map has no picture yet. Use Change picture.' : 'This map has no picture yet.'));
+      host.replaceChildren(el('p', { class: 'muted map-empty' }, gm ? 'This map has no picture yet. Use ⚙ → Change picture.' : 'This map has no picture yet.'));
       syncTools();
       return;
     }
@@ -743,5 +905,5 @@ const MapsTab = (() => {
     return sel ? one(ctx, Number(sel), query) : list(ctx);
   }
 
-  return { view, marker, toLatLng, toXY, scaleControl };
+  return { view, marker, toLatLng, toXY, scaleControl, PIN_ICONS, COLOURS, DASHES };
 })();

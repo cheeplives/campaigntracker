@@ -553,6 +553,9 @@ CREATE TABLE IF NOT EXISTS map_pins (
   event_id INT UNSIGNED NULL,
   label VARCHAR(150) NOT NULL DEFAULT '',
   note VARCHAR(1000) NULL,
+  icon VARCHAR(16) NULL,                         -- an emoji from MapsTab's PIN_ICONS; null: the kind's own
+  color VARCHAR(7) NULL,                         -- #rrggbb from MapsTab's COLOURS; null: no colour
+  is_locked TINYINT(1) NOT NULL DEFAULT 0,       -- 1: can't be dragged until unlocked
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -571,6 +574,8 @@ CREATE TABLE IF NOT EXISTS map_routes (
   campaign_id INT UNSIGNED NOT NULL,
   name VARCHAR(150) NOT NULL,
   points_json TEXT NOT NULL,
+  color VARCHAR(7) NULL,                         -- #rrggbb; null: the theme's route colour
+  dash VARCHAR(8) NULL,                          -- solid, dashed, dotted or dashdot; null: dashed
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

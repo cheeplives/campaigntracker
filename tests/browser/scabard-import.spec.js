@@ -62,7 +62,7 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   expect((await api(page, "entries_add", { entries: [{ name: "Durendal", category: "item" }] }, cid)).status).toBe(200);
   // A tome's secret aside has nothing to do with it; a kept entry with notes stays as it is.
   expect((await api(page, "entry_save", { name: "Order of the Silver Flame", notes: "<p>Our own notes on the Order.</p>" }, cid)).status).toBe(200);
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/tools`);
   await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
 
   // Not an export: refused before anything is sent.
