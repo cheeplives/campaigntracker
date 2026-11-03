@@ -74,6 +74,8 @@ function upgrade_steps(): array {
             'Added panel links, for showing At the Table inside a virtual tabletop or on a stream.'],
         ['023_character_sheets.sql', fn(PDO $p) => !db_has_column($p, 'campaign_members', 'active_character_id'),
             'Added character sheets and the template library.'],
+        ['024_map_styles.sql', fn(PDO $p) => db_has_table($p, 'map_pins') && !db_has_column($p, 'map_pins', 'icon'),
+            'Map pins can now have their own icon and colour and be locked, and routes their own colour and line.'],
     ];
 }
 

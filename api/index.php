@@ -3199,7 +3199,7 @@ try {
         need_maps();
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
         out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
-            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id']))]);
+            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])), 'styles' => has_map_styles()]);
 
     case 'groups': // every member: the party's groups, main first
         $cid = cid();

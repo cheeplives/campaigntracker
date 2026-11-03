@@ -174,6 +174,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
+- **map-styles**: a GM's new pin starts as an Encyclopedia entry and can have its own icon and colour; pins are listed
+  under Locations in the side panel, which folds away (and its sections fold) and stays as it was left; a locked pin can't
+  be dragged or moved until unlocked; a route has its own colour and line and is drawn on to the pins it starts and ends
+  at; a GM places the party anywhere and pins a new location where it stands; the grid's opacity is each person's own;
+  picture, rename and delete sit in the ⚙ menu (migration 024).
 - **maps**: the Maps tab sits after Generators; a GM adds a map with its picture (uploaded or from Find Image), scales
   it by two points or grid squares (a `30x20` file name fills in the square size, the Roll20 button 70 px = 5 ft, and the
   grid offset is the first click's position modulo the square), and measures; an unscaled map says so; a 6000 × 4000
