@@ -126,7 +126,7 @@ test("a custom calendar gets leap days in the month and on the rule it is given"
   expect(E).toEqual({ y5: 92, y4: 90, y50: 90, feb: 32, wd: (5 * 90 + 2) % 4 });
 
   // Settings shows what the rule does, as it is typed
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/calendar`);
   await expect(page.locator(".leap-note")).toContainText("A leap year has 92 days instead of 90 (Month 2 +2)");
   await page.locator("[name=leap_every]").fill("0");
   await expect(page.locator(".leap-note")).toContainText("no leap years are set");

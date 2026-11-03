@@ -256,7 +256,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **weather-tuning**: a campaign's weather tuning (storm, fog and dust per Köppen class, the simple climates' weather mix,
   visibility by weather, how shifts ease off, the ground model) lays over the built-in values and comes off again; out-of-range
   values are pulled in and only real changes are stored; Settings → Weather tuning highlights changed values, refuses ground
-  steps out of order, saves, changes the day page's ground, and Reset all puts the built-in values back.
+  steps out of order, saves, changes the day page's ground, and Reset all puts the built-in values back; the ground rates
+  are shown a shift, or an hour in a campaign kept in hours, and stored a quarter of the day; Settings is split into
+  Campaign, Calendar, Weather tuning and Tools tabs, each with its own address.
 - **engine-parity**: `static/engine.js` gives exactly the same calendar, moon,
   season, weather, visibility, travel and star-distance results in the browser as under Node.
 

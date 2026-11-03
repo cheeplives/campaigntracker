@@ -45,7 +45,7 @@ test("a GM tunes the ground in Settings, the day page follows, and Reset puts it
   await page.goto(`index.html#/c/${cid}/today`);
   await expect(page.locator(".kv .ground")).toContainText(/Muddy|Waterlogged/); // twelve days of heavy rain
 
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/weather`);
   const card = page.locator(".tune-card");
   await expect(card.locator("h2")).toHaveText("Weather tuning");
   await card.locator("summary", { hasText: "Ground conditions" }).click();
@@ -77,12 +77,68 @@ test("a GM tunes the ground in Settings, the day page follows, and Reset puts it
   await expect(page.locator(".kv .ground")).not.toContainText(/Muddy|Waterlogged/);
 
   // reset everything
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/weather`);
   await page.locator(".tune-card").getByRole("button", { name: "Reset all to built-in" }).click();
   await page.locator("dialog[open]").getByRole("button", { name: "OK" }).click();
   await expect(page.locator("#toast")).toContainText("Weather tuning reset");
   expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.tuning).toBeUndefined();
   await page.goto(`index.html#/c/${cid}/today`);
   await expect(page.locator(".kv .ground")).toContainText(/Muddy|Waterlogged/);
+  expectNoErrors(errors);
+});
+
+test("Settings is split into tabs, each with an address of its own", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Tabitha");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Tabs ${gm.id}`);
+  await page.goto(`index.html#/c/${cid}/settings`);
+  const tabs = page.getByRole("navigation", { name: "Settings" });
+  await expect(tabs.getByRole("link")).toHaveText(["Campaign", "Calendar", "Weather tuning", "Tools"]);
+  await expect(tabs.getByRole("link", { name: "Campaign" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "Save campaign settings" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save calendar" })).toHaveCount(0);
+
+  await tabs.getByRole("link", { name: "Calendar" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/settings/calendar$`));
+  await expect(page.getByRole("button", { name: "Save calendar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save campaign settings" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Calendar" })).toHaveAttribute("aria-current", "page");
+
+  await page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Tools" }).click();
+  await expect(page.getByRole("button", { name: "Import calendar…" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Weather tuning" }).click();
+  await expect(page.locator(".tune-card")).toBeVisible();
+  expectNoErrors(errors);
+});
+
+test("Weather tuning shows the ground rates a shift, or an hour in a campaign kept in hours, and keeps them a quarter", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Hollis");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Hours ${gm.id}`);
+  await page.goto(`index.html#/c/${cid}/settings/weather`);
+  const card = page.locator(".tune-card");
+  await card.locator("summary", { hasText: "Ground conditions" }).click();
+  await expect(card.getByText("Drying rate (mm a shift per °C)")).toBeVisible();
+  await expect(card.locator("th", { hasText: "Rain (mm a shift)" })).toBeVisible();
+  await expect(card.locator("th", { hasText: "Sun drying (× drying rate)" })).toBeVisible();
+  await expect(card.getByLabel("Heavy rain rain", { exact: true })).toHaveValue("5");
+
+  const camp = (await api(page, "campaign", undefined, cid)).json.campaign;
+  expect((await api(page, "campaign_update", { calendar: { ...camp.calendar, timeMode: "hours" } }, cid)).status).toBe(200);
+  await page.reload();
+  await card.locator("summary", { hasText: "Ground conditions" }).click();
+  await expect(card.getByText("Drying rate (mm an hour per °C)")).toBeVisible();
+  await expect(card.locator("th", { hasText: "Rain (mm an hour)" })).toBeVisible();
+  const rain = card.getByLabel("Heavy rain rain", { exact: true });
+  await expect(rain).toHaveValue("0.8333");   // 5 mm a quarter of a 24-hour day
+  await rain.fill("1");
+  await card.getByRole("button", { name: "Save weather tuning" }).click();
+  await expect(page.locator("#toast")).toContainText("Weather tuning saved");
+  expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.tuning).toEqual({ ground: { rainfall: { rain: 6 } } });
   expectNoErrors(errors);
 });

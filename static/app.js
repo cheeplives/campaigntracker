@@ -5726,6 +5726,16 @@
   }
 
   // ------------------------------------------------------------ settings: weather tuning
+  /** The step the ground rates are shown in on Weather tuning: the engine keeps them a quarter of the day (Dawn, Midday,
+   * Dusk, Overnight), so a campaign in two shifts sees them a shift (two quarters) and one in hours sees them an hour.
+   * k is what a quarter's figure is multiplied by to show it. */
+  function groundStep(c) {
+    const mode = E.timeMode(c), hpd = Number(c.hoursPerDay) || 24;
+    if (mode === 'hours') return { k: 4 / hpd, a: 'an hour', one: 'an hour', many: 'hours', walk: 'hour by hour' };
+    if (mode === 'shifts2') return { k: 2, a: 'a shift', one: 'a shift (Day or Night)', many: 'shifts', walk: 'shift by shift (Day and Night)' };
+    return { k: 1, a: 'a shift', one: 'a shift', many: 'shifts', walk: 'shift by shift' };
+  }
+
   /** Settings → Weather tuning: the app's own weather choices (see the About page), changed for this campaign only.
    * The campaign stores just the values that differ from the built-in ones (settings.tuning). */
   function tuningCard() {
@@ -5734,7 +5744,7 @@
     const wxName = k => `${E.WEATHER[k]?.icon || ''} ${E.WEATHER[k]?.label || k}`.trim();
     const regionClimates = S.regions.map(r => r.settings?.climate || 'temperate');
     const pick = (path, obj) => path.reduce((o, k) => (o == null ? undefined : o[k]), obj);
-    const fmt = v => (v === undefined ? '' : String(Math.round(v * 1000) / 1000));
+    const fmt = v => (v === undefined ? '' : String(+(+v).toPrecision(4)));   // 4 figures: a rate shown an hour can be small
     const countChanges = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.values(o).reduce((n, v) => n + countChanges(v), 0) : o === undefined ? 0 : 1);
     const counters = {};
     const recount = () => {
@@ -5870,20 +5880,25 @@
       el('p', { class: 'muted small' }, 'What each weather eases off to, mildest last. Type the names separated by commas, e.g. "Light rain, Overcast".'),
       table(['Weather', 'Eases off to'], Object.keys(E.WEATHER).map(k => [wxName(k), variantBox(k)]))]);
 
-    // ground
+    // ground. The engine works it out a quarter of the day at a time; the rates are shown in the campaign's own step
+    // (a shift, or an hour), scaled from the quarter they are kept in.
     const groundTypes = [...E.OUTDOOR_WEATHER, 'damp'];
+    const step = groundStep(cal());
     const gf = (path, label, opts, tipText, hint) => field(label, numBox(['ground', ...path], { label, ...opts }), hint, tipText);
+    const perStep = { scale: step.k, ...(step.k === 1 ? {} : { step: 'any' }) };
     const groundSec = section('ground', 'Ground conditions',
-      'Snow and rain build up over the days before, quarter by quarter (each of the four shifts). Snow melts in the warmth and the ground dries in sun, warmth and wind.',
+      `Snow and rain build up over the days before, ${step.walk}. Snow melts in the warmth and the ground dries in sun, warmth and wind.`,
       () => [el('div', { class: 'grid3' },
-        gf(['melt'], 'Snow melt (cm a quarter per °C)', { step: 0.05, min: 0, max: 5 }, 'How much snow melts in a quarter for each degree above freezing'),
-        gf(['drying'], 'Drying rate', { step: 0.005, min: 0, max: 1 }, 'How fast warmth and sun dry damp ground. Twice the number dries it twice as fast'),
-        gf(['fieldCapacity'], 'Water the soil holds (mm)', { step: 1, min: 5, max: 55 }, 'Rain beyond this drains away over the following quarters instead of soaking in')),
-      table(['Weather', 'Snow (cm a quarter)', 'Rain (mm a quarter)', 'Sun drying'], groundTypes.map(k => [wxName(k),
-        numBox(['ground', 'snowfall', k], { label: `${labelOf(k)} snow`, step: 0.1, min: 0, max: 50, blank: '0' }),
-        numBox(['ground', 'rainfall', k], { label: `${labelOf(k)} rain`, step: 0.1, min: 0, max: 100, blank: '0' }),
+        gf(['melt'], `Snow melt (cm ${step.a} per °C)`, { step: 0.05, min: 0, max: 5, ...perStep }, `How much snow melts in ${step.one} for each degree above freezing`),
+        gf(['drying'], `Drying rate (mm ${step.a} per °C)`, { step: 0.005, min: 0, max: 1, ...perStep },
+          `How much water warmth dries out of damp ground in ${step.one}, for each degree above freezing, on an ordinary sunny day. Sun drying below makes it faster or slower in each weather, and wind speeds it up. Twice the number dries it twice as fast`),
+        gf(['fieldCapacity'], 'Water the soil holds (mm)', { step: 1, min: 5, max: 55 }, `Rain beyond this drains away over the following ${step.many} instead of soaking in`)),
+      table(['Weather', `Snow (cm ${step.a})`, `Rain (mm ${step.a})`, 'Sun drying (× drying rate)'], groundTypes.map(k => [wxName(k),
+        numBox(['ground', 'snowfall', k], { label: `${labelOf(k)} snow`, step: 0.1, min: 0, max: 50, blank: '0', ...perStep }),
+        numBox(['ground', 'rainfall', k], { label: `${labelOf(k)} rain`, step: 0.1, min: 0, max: 100, blank: '0', ...perStep }),
         numBox(['ground', 'sunshine', k], { label: `${labelOf(k)} sun drying`, step: 0.1, min: 0, max: 5, blank: 'auto' })])),
-      el('p', { class: 'muted small' }, 'Sun drying: 1 is an ordinary day. Left empty, it is 0.2 for weather that rains or snows and 0.8 otherwise.'),
+      el('p', { class: 'muted small' }, 'Sun drying multiplies the drying rate in that weather: 1 is an ordinary day, 1.5 dries half as fast again, 0.3 hardly dries at all. ',
+        'Left empty, it is 0.2 for weather that rains or snows and 0.8 otherwise. The ground also dries most at midday and least overnight.'),
       el('h4', {}, 'Where the ground turns'),
       el('p', { class: 'muted small' }, 'The water in the topsoil (mm, up to 60) each label starts at, and the snow depth (cm) for each snow label. Each must be higher than the one before. Below Firm the ground is Dry.'),
       table(['', ...Object.values(E.GROUND_WET_STEPS)], [['Water (mm)', ...Object.keys(E.GROUND_WET_STEPS).map(k => numBox(['ground', 'wet', k], { label: `${E.GROUND_WET_STEPS[k]} from (mm)`, step: 1, min: 0, max: 59 }))]]),
@@ -5917,8 +5932,11 @@
     return form;
   }
 
-  function viewSettings() {
+  /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
+  const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
+  function viewSettings(sub) {
     if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
+    const at = SETTINGS_TABS.some(([k]) => k === sub) ? sub : 'campaign';
     const st = settings(), c = cal(), t = calToText(c);
     const ta = (name, value, rows) => el('textarea', { name, rows: rows || 4, value, class: 'mono' });
     const general = el('form', { class: 'card' }, el('h2', {}, 'Campaign'),
@@ -6179,7 +6197,11 @@
         if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
         try { await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/'; } catch (err) { toast(err.message, true); }
       }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
-    mount(...campaignHeader('settings'), general, calForm, tuningCard(), danger);
+    const tabs = el('nav', { class: 'settings-tabs', 'aria-label': 'Settings' }, SETTINGS_TABS.map(([k, label]) =>
+      el('a', { href: `#/c/${S.camp.id}/settings${k === 'campaign' ? '' : '/' + k}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
+    const card = { campaign: () => general, calendar: () => calForm, weather: tuningCard, tools: () => danger }[at]();
+    card.prepend(tabs);
+    mount(...campaignHeader('settings'), card);
   }
 
   // ------------------------------------------------------------ about: where the built-in figures come from
@@ -6784,7 +6806,7 @@
         else if (tab === 'characters' && S.sheetsReady && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
-        else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: viewSettings }[tab] || viewToday)();
+        else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }

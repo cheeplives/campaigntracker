@@ -69,7 +69,7 @@ test("a GM sets sunrise and sunset on the seasons and the day page shows them", 
   await expect(page.getByText("Moons")).toBeVisible();
   await expect(page.locator(".kv .sun")).toHaveCount(0);
 
-  await page.goto(`index.html#/c/${cid}/settings`);
+  await page.goto(`index.html#/c/${cid}/settings/calendar`);
   const rows = page.locator(".seasonrow");
   await expect(rows).toHaveCount(2);
   // one time without the other is refused
