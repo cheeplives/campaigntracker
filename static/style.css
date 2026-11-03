@@ -1363,13 +1363,3 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
   font: 600 1.05rem var(--disp); letter-spacing: .05em; text-transform: uppercase; }
 .settings-tabs a:hover { color: var(--text); }
 .settings-tabs a.on { color: var(--accent); border-bottom-color: var(--accent); }
-/* the map text scanner's review */
-.map-scan-dialog { width: min(640px, calc(100vw - 32px)); }
-.map-scan-dialog progress { width: 100%; accent-color: var(--accent); }
-.map-scan-list { display: flex; flex-direction: column; gap: 6px; max-height: min(55vh, 520px); overflow-y: auto; margin: 8px 0; }
-.map-scan-row { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: center; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
-.map-scan-row.already { opacity: .6; }
-.map-scan-row input[type=checkbox] { width: 20px; height: 20px; }
-.map-scan-crop { max-width: 140px; max-height: 50px; border-radius: 3px; background: #fff; }
-.map-scan-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.map-scan-name input { width: 100%; }
