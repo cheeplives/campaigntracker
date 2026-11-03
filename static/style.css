@@ -1132,7 +1132,7 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-gear > summary { list-style: none; font-size: 1.1rem; padding: 4px 10px; }
 .map-gear > summary::-webkit-details-marker { display: none; }
 .map-gear[open] > summary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.map-gear-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1000; display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem;
+.map-gear-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1100;   /* above Leaflet's zoom buttons (1000), which come later on the page */ display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem;
   padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5); }
 .map-gear-menu > * { text-align: left; }
 .map-route { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
