@@ -6320,6 +6320,7 @@
         list([
           ['The notes editor: ', cite('quill'), '.'],
           ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
+          ['Scan for names on a map (in your browser; the picture is never sent anywhere): ', cite('tesseract'), ', reading with ', cite('tessdata'), '.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',

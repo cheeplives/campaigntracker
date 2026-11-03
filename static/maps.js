@@ -843,6 +843,86 @@ const MapsTab = (() => {
         try { file = await ctx.uploadFile('map', map.id, f); await post('map_save', { id: map.id, image_id: file.id }, cid); toast('Picture changed'); location.hash = `${base}?scale=1&file=${encodeURIComponent(f.name)}`; }
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
+    /** Scan for place names: the scanner reads the words on the picture, and the GM approves or skips each one. An
+     * approved name is pinned where it was read, as its Encyclopedia entry (the entry of that name, or a new Location). */
+    function scanNames() {
+      const d = el('dialog', { class: 'kit-dialog map-scan-dialog', 'aria-label': 'Scan for place names' });
+      const bar = el('progress', { max: 1, value: 0, 'aria-label': 'Scanning' });
+      const said = el('p', { class: 'small', role: 'status' }, 'Loading the scanner…');
+      let stop = false;
+      d.append(el('h3', {}, `Scan ${map.name} for place names`),
+        el('p', { class: 'small muted' }, 'The picture is read here on your device and isn\'t sent anywhere. The first scan downloads the scanner (about 7 MB), which your browser keeps for next time.'),
+        bar, said, el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
+      d.addEventListener('close', () => { stop = true; d.remove(); });
+      document.body.append(d); d.showModal();
+      MapScan.scan(map.image_url, (share, what) => { bar.value = share; said.textContent = what; })
+        .then(({ found, canvas, k }) => { if (!stop) review(found, canvas, k); })
+        .catch(err => { if (stop) return; said.textContent = err.message; bar.remove(); });
+
+      function review(found, canvas, k) {
+        const pinned = new Set(pins.map(p => G.nameKey(pinTitle(p))));
+        if (!found.length) {
+          d.replaceChildren(el('h3', {}, 'No place names found'), el('p', {}, 'The scanner found no words it was sure of. It reads straight, printed labels best: curved, faint or handwritten ones are often missed.'),
+            el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
+          return;
+        }
+        const rows = found.map(c => {
+          const already = pinned.has(G.nameKey(c.name));
+          const box = el('input', { type: 'checkbox', checked: !already && c.conf >= 70, 'aria-label': `Add ${c.name}` });
+          const name = el('input', { value: c.name, maxlength: 150, autocomplete: 'off', 'aria-label': 'Place name' });
+          const what = el('small', { class: 'muted' });
+          const say = () => {
+            const e = entryNamed(name.value);
+            what.textContent = pinned.has(G.nameKey(name.value)) ? 'Already pinned on this map'
+              : e ? `Pins the entry ${e.name}${e.is_secret ? ' (GM only)' : ''}` : 'A new Location in the Encyclopedia';
+          };
+          name.addEventListener('input', () => { say(); box.checked = !!name.value.trim(); count(); });
+          box.addEventListener('change', () => count());
+          say();
+          const row = el('div', { class: 'map-scan-row' + (already ? ' already' : '') }, box,
+            el('img', { src: MapScan.crop(canvas, k, c.box), alt: `Where "${c.name}" was read`, class: 'map-scan-crop' }),
+            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
+          return { c, box, name, row };
+        });
+        const go = el('button', { class: 'primary', type: 'button' });
+        const count = () => { const n = rows.filter(r => r.box.checked && r.name.value.trim()).length; go.textContent = n === 1 ? 'Add 1 pin' : `Add ${n} pins`; go.disabled = !n; };
+        const all = on => () => { rows.forEach(r => { r.box.checked = on && !r.row.classList.contains('already'); }); count(); };
+        go.addEventListener('click', async () => {
+          const pick = rows.filter(r => r.box.checked && r.name.value.trim());
+          go.disabled = true;
+          let added = 0, made = 0;
+          try {
+            for (const r of pick) {
+              const n = r.name.value.trim();
+              go.textContent = `Adding ${added + 1} of ${pick.length}…`;
+              let e = entryNamed(n);
+              if (!e) {
+                const id = (await post('entry_save', { name: n, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+                e = { id, name: n, aliases: [], is_secret: false, blank: true, preview: '' };
+                S.encyclopedia = [...S.encyclopedia, e];
+                made++;
+              }
+              const x = Math.min(map.width, Math.max(0, r.c.x)), y = Math.min(map.height, Math.max(0, r.c.y));
+              await post('pin_save', { map_id: map.id, x, y, kind: 'entry', entry_id: e.id, label: '', note: '' }, cid);
+              added++;
+              r.box.checked = false; r.row.classList.add('already');
+            }
+          } catch (err) { toast(err.message, true); }
+          d.close();
+          await refresh().catch(() => {});
+          if (added) toast(`Added ${added === 1 ? '1 pin' : `${added} pins`}${made ? `, with ${made === 1 ? '1 new Location' : `${made} new Locations`} in the Encyclopedia` : ''}`);
+        });
+        count();
+        d.replaceChildren(el('h3', {}, `Found ${found.length === 1 ? '1 name' : `${found.length} names`} on ${map.name}`),
+          el('p', { class: 'small muted' }, 'Tick the ones to pin, and fix any the scanner misread. Each is pinned where it was read, as the Encyclopedia entry of that name, or a new Location.'),
+          el('div', { class: 'row' }, btn('Select all', all(true), 'small'), btn('Select none', all(false), 'small')),
+          el('div', { class: 'map-scan-list' }, rows.map(r => r.row)),
+          el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
+      }
+    }
+    const scanBtn = gm && map.image_url && S.encReady && typeof MapScan !== 'undefined'
+      ? btn('Scan for names…', scanNames, '', 'Read the place names printed on the map, then pick which to pin as Encyclopedia locations') : null;
+
     // ⚙: the map's own changes, kept out of the toolbar so they aren't pressed by accident
     const gear = gm ? el('details', { class: 'map-gear' }, el('summary', { class: 'button', 'aria-label': 'Map settings', title: 'Change the picture, rename or delete this map' }, '⚙'),
       el('div', { class: 'map-gear-menu' }, swap, btn('Rename', rename), del)) : null;
@@ -854,7 +934,7 @@ const MapsTab = (() => {
       window.addEventListener('hashchange', () => off.abort(), { once: true });
     }
     tools.append(saveRouteBtn, planBtn);
-    toolbar.append(...[addPinBtn, measureBtn, partyBtn, partyWhich, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
+    toolbar.append(...[addPinBtn, measureBtn, partyBtn, partyWhich, scanBtn, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
