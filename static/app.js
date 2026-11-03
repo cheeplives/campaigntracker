@@ -640,7 +640,7 @@
       try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
     // The campaigns they belong to (not every campaign an admin can open), each with their character there. A box saves when you leave it.
-    const mine = campaigns.filter(c => c.member);
+    const mine = byStarThenName(campaigns.filter(c => c.member));
     const list = el('div', { class: 'card narrow' }, el('h2', {}, 'Your campaigns'),
       mine.length ? el('ul', { class: 'camplist account-camps' }, mine.map(c => {
         const name = el('input', { value: c.character_name || '', maxlength: 150, placeholder: 'Your own name', 'aria-label': `Your character in ${c.name}` });
@@ -725,21 +725,42 @@
   }
 
   // ------------------------------------------------------------ campaign list / create
+  /** The campaigns this person starred (kept in their preferences), and a list sorted starred first, then by name. */
+  const starredIds = () => new Set((S.user?.prefs?.starred || []).map(Number));
+  const byStarThenName = list => {
+    const st = starredIds();
+    return [...list].sort((a, b) => (st.has(Number(b.id)) - st.has(Number(a.id))) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+  };
+  /** The star by a campaign's name: pressing it stars or unstars the campaign for this person, then `after` redraws. */
+  function starButton(c, after) {
+    const on = starredIds().has(Number(c.id));
+    const b = el('button', { type: 'button', class: 'camp-star' + (on ? ' on' : ''), 'aria-pressed': String(on),
+      'aria-label': on ? `Unstar ${c.name}` : `Star ${c.name}`, 'data-tip': on ? 'Unstar: sort it by name again' : 'Star: keep it at the top of your list' }, on ? '★' : '☆');
+    b.addEventListener('click', async () => {
+      const st = starredIds();
+      if (on) st.delete(Number(c.id)); else st.add(Number(c.id));
+      b.disabled = true;
+      try { S.user.prefs = (await post('prefs_save', { starred: [...st] })).prefs; after(); }
+      catch (err) { toast(err.message, true); b.disabled = false; }
+    });
+    return b;
+  }
   async function viewCampaigns() {
     const { campaigns } = await api('campaigns');
     S.camp = null;
-    const list = el('div', { class: 'card' },
+    const draw = () => mount(el('div', { class: 'card' },
       el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary')),
-      campaigns.length ? el('ul', { class: 'camplist' }, campaigns.map(c =>
-        el('li', { class: 'camp-row' },
+      campaigns.length ? el('ul', { class: 'camplist' }, byStarThenName(campaigns).map(c =>
+        el('li', { class: 'camp-row' + (starredIds().has(Number(c.id)) ? ' starred' : '') },
+          starButton(c, draw),
           el('div', { class: 'camp-main' }, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
             c.description ? el('p', { class: 'muted' }, c.description) : null),
           // Only a GM can copy (a copy holds the secrets) or delete one.
           c.role === 'gm' ? el('div', { class: 'camp-actions' },
             btn('Copy', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
             btn('Delete', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')) : null)))
-        : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.'));
-    mount(list);
+        : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.')));
+    draw();
   }
   async function deleteCampaign(c) {
     const typed = await promptDialog(`Type DELETE to permanently delete "${c.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });

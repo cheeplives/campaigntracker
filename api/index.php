@@ -1367,6 +1367,20 @@ try {
             if ($scheme !== null && !in_array($scheme, SCHEMES, true)) fail('Unknown theme');
             if ($scheme === null) unset($prefs['scheme']); else $prefs['scheme'] = $scheme;
         }
+        // starred: the campaigns they starred, listed first on the campaign list. Ids of campaigns they can't open are kept
+        // out, so it never says which other campaigns exist.
+        if (array_key_exists('starred', body())) {
+            $ids = p('starred');
+            if (!is_array($ids) || count($ids) > 1000) fail('Starred must be a list of campaigns');
+            $ids = array_values(array_unique(array_map('intval', array_filter($ids, fn($v) => is_int($v) || (is_string($v) && ctype_digit($v))))));
+            if ($ids && !$u['is_admin']) {
+                $st = db()->prepare('SELECT campaign_id FROM campaign_members WHERE user_id=? AND campaign_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')');
+                $st->execute([$u['id'], ...$ids]);
+                $ok = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+                $ids = array_values(array_filter($ids, fn($i) => in_array($i, $ok, true)));
+            }
+            if ($ids) $prefs['starred'] = $ids; else unset($prefs['starred']);
+        }
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);
