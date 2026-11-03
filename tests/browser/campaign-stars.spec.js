@@ -18,19 +18,19 @@ test("Campaign list: sorted by name, starred campaigns first, and stars are kept
   await expect(page.locator(".camp-row")).toHaveCount(3);
   expect(await names(page)).toEqual(["Amber Coast", "Mire of Bones", "zephyr road"]);   // by name, ignoring case
 
-  await page.getByRole("button", { name: "Star zephyr road" }).click();
-  await expect(page.getByRole("button", { name: "Unstar zephyr road" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Star zephyr road", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Unstar zephyr road", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await names(page)).toEqual(["zephyr road", "Amber Coast", "Mire of Bones"]);
-  await page.getByRole("button", { name: "Star Mire of Bones" }).click();
-  await expect(page.getByRole("button", { name: "Unstar Mire of Bones" })).toBeVisible();
+  await page.getByRole("button", { name: "Star Mire of Bones", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Unstar Mire of Bones", exact: true })).toBeVisible();
   expect(await names(page)).toEqual(["Mire of Bones", "zephyr road", "Amber Coast"]);   // starred ones by name too
 
   await page.reload();
   await expect(page.locator(".camp-row")).toHaveCount(3);
   expect(await names(page)).toEqual(["Mire of Bones", "zephyr road", "Amber Coast"]);
 
-  await page.getByRole("button", { name: "Unstar Mire of Bones" }).click();
-  await expect(page.getByRole("button", { name: "Star Mire of Bones" })).toBeVisible();
+  await page.getByRole("button", { name: "Unstar Mire of Bones", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Star Mire of Bones", exact: true })).toBeVisible();
   expect(await names(page)).toEqual(["zephyr road", "Amber Coast", "Mire of Bones"]);
 
   // Another member of the same campaign has stars of their own.
