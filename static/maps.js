@@ -33,9 +33,17 @@ const MapsTab = (() => {
 
   /** A marker on `layer`: the picture, or the emoji, with its label under it. It keeps its size as the map zooms. onMove
    * runs after a drag and, if it fails, the marker goes back; onOpen's node fills the card a click opens. */
+  // GM only switches: the 🔒 button the rich text editor marks GM-only paragraphs with (app.js has the same lockBox)
+  function lockBox(input, tipText) {
+    if (!input.getAttribute('aria-label')) input.setAttribute('aria-label', 'GM only');
+    return el('label', { class: 'lock-toggle', 'data-tip': `GM only: ${tipText}` }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
+  }
+  const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
   function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen }) {
-    const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' }) : el('span', { class: 'map-marker-icon', 'aria-hidden': 'true' }, icon || '');
-    const node = el('div', { class: `map-marker ${color ? 'has-colour ' : ''}${className || ''}`.trim() }, face, label ? el('span', { class: 'map-marker-label' }, label) : null);
+    const tint = color && !image;
+    const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' })
+      : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
+    const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, label ? el('span', { class: 'map-marker-label' }, label) : null);
     node.style.setProperty('--marker-size', sizePx + 'px');
     if (color) node.style.setProperty('--pin-colour', color);
     const m = L.marker(toLatLng(x, y), { icon: L.divIcon({ html: node, className: 'map-marker-box', iconSize: [sizePx, sizePx], iconAnchor: [sizePx / 2, sizePx / 2] }),
@@ -91,7 +99,7 @@ const MapsTab = (() => {
     const cards = maps.map(m => el('a', { class: 'map-card' + (m.is_secret ? ' secret' : ''), href: `#/c/${cid}/maps/${m.id}` },
       m.image_url ? el('img', { src: m.image_url, alt: '', loading: 'lazy' }) : el('span', { class: 'map-card-blank muted small' }, 'No picture'),
       el('strong', {}, m.is_secret ? '🔒 ' : '', m.name),
-      el('span', { class: 'small muted' }, m.is_secret ? 'GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : '')));
+      el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : '')));
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' },
       el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary') : null),
       cards.length ? el('div', { class: 'map-grid' }, cards) : el('p', { class: 'muted' }, ctx.isGM() ? 'No maps yet. Add one with + New map.' : 'No maps yet.')));
@@ -424,7 +432,7 @@ const MapsTab = (() => {
         p.kind === 'entry' && p.entry?.first_line ? el('p', { class: 'small' }, p.entry.first_line) : null,
         p.kind === 'event' && p.event ? el('p', { class: 'small' }, el('a', { href: `#/c/${cid}/day/${p.event.abs_day}`, 'data-tip': 'Open this day' }, ctx.fmtDay(p.event.abs_day))) : null,
         p.kind === 'note' && p.note ? el('p', { class: 'small pre' }, p.note) : null,
-        p.is_secret ? el('small', { class: 'muted' }, 'GM only') : null,
+        p.is_secret ? el('span', { 'data-tip': 'GM only: players don\'t see this pin' }, '🔒') : null,
         p.author ? el('small', { class: 'muted' }, `Added by ${p.author}`) : null,
         partyHere(p),
         gm && p.kind === 'note' ? el('div', { class: 'row' }, match
@@ -563,7 +571,7 @@ const MapsTab = (() => {
       const form = el('form', { class: 'map-panel card', role: 'dialog', 'aria-label': old ? 'Edit pin' : 'Add pin' },
         el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
         body, styleFields,
-        gm ? el('label', { class: 'check' }, secret, ' GM only') : null,
+        gm ? lockBox(secret, 'players won\'t see this pin') : null,
         el('div', { class: 'row' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
       form.addEventListener('submit', ev => { ev.preventDefault(); save(); });
       panelBox.replaceChildren(form);
@@ -610,7 +618,7 @@ const MapsTab = (() => {
           styles ? el('div', { class: 'row' }, field('Colour', colour), field('Line', dash)) : null,
           named.length ? el('div', { class: 'row' }, field('Starts at', from, null, 'A pin on this map: the route is drawn on to it, and the Travel tab starts the trip there'),
             field('Ends at', to, null, 'A pin on this map: the route is drawn on to it, and the Travel tab ends the trip there')) : null,
-          box ? el('label', { class: 'check' }, box, ' GM only') : null,
+          box ? lockBox(box, 'players never see a GM only route') : null,
           el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, ok), btn('Cancel', () => d.close())));
         form.addEventListener('submit', ev => {
           ev.preventDefault();
@@ -684,9 +692,9 @@ const MapsTab = (() => {
               } catch (err) { toast(err.message, true); }
             }, 'small', 'Its name, colour and line, and the pins it starts and ends at'),
             (() => {
-              const b = btn('GM only', async () => {
+              const b = lockBtn(async () => {
                 try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
-              }, 'small', 'Players never see a GM only route');
+              }, 'players never see a GM only route', 'small');
               b.setAttribute('aria-pressed', String(r.is_secret));
               return b;
             })(),
@@ -696,7 +704,7 @@ const MapsTab = (() => {
             }, 'small danger')) : null);
       });
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
-        const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour' : ''), 'aria-hidden': 'true' }, pinIcon(p));
+        const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
         if (p.color) face.style.setProperty('--pin-colour', p.color);
         return el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
           face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null);
@@ -816,12 +824,12 @@ const MapsTab = (() => {
       document.body.append(d); d.showModal();
     };
     const exportBtn = gm && map.image_url ? btn('Export…', exportMap, '', 'Download the picture, or the map for another virtual tabletop') : null;
-    const secretBtn = gm ? btn('GM only', async () => {
+    const secretBtn = gm ? lockBtn(async () => {
       try {
         map = (await post('map_save', { id: map.id, is_secret: !map.is_secret }, cid)).map;
         secretBtn.setAttribute('aria-pressed', String(map.is_secret)); ctx.reloadCampaign().catch(() => {});
       } catch (err) { toast(err.message, true); }
-    }, '', 'Players never see a GM only map') : null;
+    }, 'players never see a GM only map') : null;
     secretBtn?.setAttribute('aria-pressed', String(map.is_secret));
     const del = gm ? btn('Delete map', async () => {
       if (!await ctx.confirmDialog(`Delete the map "${map.name}", with its pins and routes?`, { ok: 'Delete', danger: true })) return;

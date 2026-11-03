@@ -46,6 +46,7 @@ test("Map pins: a GM's new pin starts as an Encyclopedia entry, with an icon and
   const pin = page.locator(".map-pin", { hasText: "Boldhome" });
   await expect(pin.locator(".map-marker-icon")).toHaveText("🏰");
   await expect(pin).toHaveClass(/has-colour/);
+  await expect(pin.locator(".map-marker-icon")).toHaveClass(/tinted/);   // the icon itself takes the colour, no disc behind it
   const p = (await (await page.request.get(`api/index.php?a=map&cid=${cid}&id=${mapId}`)).json()).pins[0];
   expect([p.kind, p.icon, p.color, p.is_locked]).toEqual(["entry", "🏰", "#d64541", false]);
 

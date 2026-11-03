@@ -116,7 +116,7 @@ const TokensTab = (() => {
       const size = select([1, 2, 3, 4].map(n => [n, n === 1 ? '1 square' : `${n} × ${n} squares`]), t.size_squares, { 'aria-label': 'Size' });
       const member = select([['', 'Nobody'], ...S.members.map(m => [m.id, memberName(m)])], t.member_id ?? '', { 'aria-label': 'Character' });
       const entry = select([['', 'No entry'], ...S.encyclopedia.map(e => [e.id, e.name])], t.entry_id ?? '', { 'aria-label': 'Entry' });
-      const secret = el('input', { type: 'checkbox', checked: t.is_secret });
+      const secret = el('input', { type: 'checkbox', checked: t.is_secret, 'aria-label': 'GM only' });
       const boxes = groups.map(g => ({ g, box: el('input', { type: 'checkbox', checked: t.groups.includes(g.id) }) }));
       const pic = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp', class: 'file-input', 'aria-label': 'Change the picture' });
       const form = el('form', {}, el('h3', {}, `Token: ${t.name}`),
@@ -128,7 +128,7 @@ const TokensTab = (() => {
         field('Entry', entry, 'An Encyclopedia entry it stands for, shown on the entry\'s page'),
         el('fieldset', { class: 'token-uses-box' }, el('legend', {}, 'Use for'),
           boxes.length ? boxes.map(({ g, box }) => el('label', { class: 'inline' }, box, ` ${g.name}`)) : el('span', { class: 'muted small' }, 'No party groups yet.')),
-        el('label', { class: 'inline small', 'data-tip': 'Players are never shown a GM-only token\'s picture' }, secret, ' 🔒 GM only'),
+        el('label', { class: 'lock-toggle', 'data-tip': 'GM only: players are never shown a GM-only token\'s picture' }, secret, el('span', { 'aria-hidden': 'true' }, '🔒')),
         el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, 'Save'),
           btn('Delete', async () => {
             d.close();

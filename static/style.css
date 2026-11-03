@@ -1110,11 +1110,14 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-place.secret { border-style: dashed; }
 .map-place + .map-place { margin-top: 4px; }
 .map-place-icon { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
-.map-place-icon.has-colour { background: var(--pin-colour); box-shadow: 0 0 0 1px rgb(0 0 0 / .35); }
 .map-body.side-collapsed .map-stage { flex-basis: 30rem; }
-/* a pin's colour: a disc behind its icon */
-.map-marker.has-colour::before { content: ''; position: absolute; inset: -3px; border-radius: 50%; background: var(--pin-colour); border: 2px solid #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .5); }
-.map-marker.has-colour .map-marker-icon { position: relative; font-size: calc(var(--marker-size) * .62); display: flex; align-items: center; justify-content: center; }
+/* a pin's colour tints its icon itself (no disc behind it, which would hide more of the map): a grey copy of the
+   icon keeps its shading, and a copy filled with the colour is multiplied over it */
+.tinted { position: relative; display: inline-flex; align-items: center; justify-content: center; color: transparent;
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / .9)) drop-shadow(0 1px 1px rgb(0 0 0 / .45)); }
+.tinted::before, .tinted::after { content: attr(data-icon); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.tinted::before { color: initial; filter: grayscale(1) brightness(1.4) contrast(1.05); }
+.tinted::after { background: var(--pin-colour); -webkit-background-clip: text; background-clip: text; color: transparent; mix-blend-mode: multiply; }
 .map-icon-pick { display: flex; flex-wrap: wrap; gap: 4px; max-height: 9.5rem; overflow-y: auto; }
 .map-icon-opt { width: 36px; height: 36px; padding: 0; font-size: 1.2rem; line-height: 1; }
 .map-icon-opt.on, .map-swatch.on { outline: 3px solid var(--accent); outline-offset: 1px; }
@@ -1363,3 +1366,17 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
   font: 600 1.05rem var(--disp); letter-spacing: .05em; text-transform: uppercase; }
 .settings-tabs a:hover { color: var(--text); }
 .settings-tabs a.on { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* GM only switches: the 🔒 button the rich text editor marks GM-only paragraphs with, everywhere. A checkbox sits over
+   it, unseen, so forms read it as they always have; a button one has aria-pressed. Off is a grey lock, on a bright one. */
+.lock-toggle { position: relative; flex: none; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); font-size: 1.05rem; line-height: 1; cursor: pointer; vertical-align: middle; }
+.lock-toggle.small { width: 30px; height: 30px; font-size: .95rem; }
+.lock-toggle > input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.lock-toggle > span, button.lock-toggle { transition: filter .15s, opacity .15s; }
+.lock-toggle:not(:has(input:checked)) > span, button.lock-toggle[aria-pressed="false"] { filter: grayscale(.7); opacity: .75; }
+.map-toolbar .lock-toggle { width: 40px; height: 38px; align-self: center; }
+.lock-toggle:has(input:checked), .map-toolbar button.lock-toggle[aria-pressed="true"], button.lock-toggle[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--panel)); color: inherit; }
+.lock-toggle:hover { border-color: var(--accent); }
+.lock-toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lock-toggle:has(input:disabled) { cursor: default; opacity: .7; }
