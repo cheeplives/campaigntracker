@@ -490,7 +490,10 @@ const MapsTab = (() => {
         };
         colourBox.replaceChildren(sw(null, 'No colour'), ...COLOURS.map(([v, name]) => sw(v, name)));
       };
-      const styleFields = styles ? el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), field('Icon', iconBox), field('Colour', colourBox)) : null;
+      // not field(): its <label> would pass a click on one of these buttons to the first of them once the click has
+      // redrawn the buttons (older Chrome does), putting the choice straight back
+      const group = (name, box) => el('div', { class: 'field' }, el('span', { class: 'lbl', 'aria-hidden': 'true' }, name), box);
+      const styleFields = styles ? el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), group('Icon', iconBox), group('Colour', colourBox)) : null;
       const kindBtns = kinds.map(([k, l]) => btn(l, () => { kind = k; show(); }, '', k === 'note' ? 'A label and a note' : k === 'entry' ? 'Pin an Encyclopedia entry' : 'Pin an event'));
       const body = el('div', { class: 'map-form-body' });
       const warn = (name, what) => toast(`"${name}" is GM only, so players won't see this pin until the ${what} is shown to them`);
