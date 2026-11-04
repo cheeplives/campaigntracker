@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { DOWNTIME_KINDS, E, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, lockBox, mapLinks, mount, multiPick, post, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
+    const { DOWNTIME_KINDS, E, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
@@ -338,7 +338,7 @@
       ctx.draw = draw;
       search.addEventListener('input', () => { st.q = search.value; draw(); });
       draw();
-      const scanBtn = btn('🔍 Scan campaign', null, 'small', 'Run the Proper Noun Detector over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
+      const scanBtn = btn('🔍 Scan campaign', null, '', 'Run the Proper Noun Detector over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
       scanBtn.addEventListener('click', busy(scanBtn, () => fullScan()));
       const ignored = S.encIgnored.length ? el('details', { class: 'enc-ignored' },
         el('summary', { class: 'small' }, `Ignored words (${S.encIgnored.length})`),
@@ -348,40 +348,22 @@
           btn('Restore', async () => {
             try { await post('term_restore', { term: t }, S.camp.id); S.encIgnored = S.encIgnored.filter(x => x !== t); route(); } catch (err) { toast(err.message, true); }
           }, 'link small', `Have the detector offer "${t}" again`))))) : null;
-      // The list and the entry swap widths at the press of a button, remembered in this browser.
-      let wide = encWide();
-      const page = el('div', { class: 'enc-page' + (current ? ' has-sel' : '') + (wide ? ' wide' : '') });
-      const wideBtn = btn('', () => { wide = !wide; rememberEncWide(wide); setWide(); }, 'small enc-widebtn');
-      const setWide = () => {
-        page.classList.toggle('wide', wide);
-        wideBtn.textContent = wide ? '⇤ Narrow view' : '⇥ Wide view';
-        wideBtn.setAttribute('aria-pressed', String(wide));
-        wideBtn.dataset.tip = wide ? 'Give the entry its room back and narrow the list' : 'Widen the list to see more of the Encyclopedia at once, and narrow the entry';
-      };
-      setWide();
-      const left = el('section', { class: 'card enc-index' },
-        el('div', { class: 'row spread' }, el('h2', {}, 'Encyclopedia', tip('The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only')),
-          el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn,
-            btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), 'small', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here'),
-            wideBtn)),
-        search, filters, nearRow, lists, ignored, isGM() ? relationKinds(rel) : null);
-
-      // --- the entry picked
-      const right = el('section', { class: 'card enc-detail' });
-      if (!current) right.append(el('p', { class: 'muted' }, entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.'),
-        el('p', { class: 'small muted' }, 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".'));
-      else if (!current.id || entryBlank(current)) right.append(entryForm(current));
-      else right.append(...entryView(current, ctx));
-      page.append(left, right);
-      mount(...campaignHeader('encyclopedia'), page);
-    }
-
-    const ENC_WIDE_KEY = 'chronicle:encwide';
-    function encWide() {
-      try { return localStorage.getItem(ENC_WIDE_KEY) === '1'; } catch { return false; }
-    }
-    function rememberEncWide(on) {
-      try { on ? localStorage.setItem(ENC_WIDE_KEY, '1') : localStorage.removeItem(ENC_WIDE_KEY); } catch { /* private mode: just this page */ }
+      // --- the entry picked, or the newest ones to start from
+      const reader = el('section', {});
+      if (!current) readerEmpty(reader, { lead: entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.',
+        title: 'Newest', start: entries.filter(e => !entryBlank(e)).sort((a, b) => b.id - a.id).slice(0, 5)
+          .map(e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
+            encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null)),
+        help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
+      else if (!current.id || entryBlank(current)) reader.append(entryForm(current));
+      else reader.append(...entryView(current, ctx));
+      // The list and the entry swap widths with Wide view, remembered in this browser.
+      mount(...campaignHeader('encyclopedia'), listPage({ title: 'Encyclopedia', picked: !!current,
+        tipText: 'The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only',
+        add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'),
+        more: [scanBtn, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
+        wide: { key: 'chronicle:encwide', tips: ['Widen the list to see more of the Encyclopedia at once, and narrow the entry', 'Give the entry its room back and narrow the list'] },
+        top: [search, filters, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
     }
 
     /** The campaign's text that names entry e (encyclopedia_sources with names: only the sources containing one), asked

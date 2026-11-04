@@ -1,7 +1,7 @@
 // The shared UI kit: in-page dialogs instead of confirm()/prompt(), and the
 // light/dark toggle and colour themes, which are remembered like Sinless's.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("deleting asks in an in-page dialog, and Cancel keeps the item", async ({ page, browser }) => {
@@ -112,5 +112,36 @@ test("on an iPad in portrait the tabs are a drawer: » slides them out over the 
   await page.locator("nav.tabs .legend-tuck").click();
   await page.mouse.click(700, 700);   // the page beside the drawer
   await expect(page.locator("nav.tabs")).toHaveClass(/\btucked\b/);
+  expectNoErrors(errors);
+});
+
+test("Encyclopedia, Library and Sessions share one list-and-reader layout, and with nothing picked offer a few to start from", async ({ page, browser, viewport }) => {
+  const errors = watchErrors(page);
+  const gm = person("Lister");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page);
+  await api(page, "entry_save", { name: "Altdorf", notes: "<p>A city.</p>" }, cid);
+  await api(page, "tome_save", { kind: "book", title: "Ledger", body: "<p>Ale.</p>" }, cid);
+  await api(page, "session_save", {}, cid);
+  const oneColumn = viewport.width <= 900;
+  for (const [tab, title, add, start] of [["encyclopedia", "Encyclopedia", "+ New entry", "Altdorf"], ["library", "Library", "+ New tome", "Ledger"], ["sessions", "Sessions", "+ New session", "Session 1"]]) {
+    await page.goto(`index.html#/c/${cid}/${tab}`);
+    const head = page.locator(".enc-index .lp-head");
+    await expect(head.locator("h2")).toHaveText(new RegExp(title));
+    await expect(head.locator(".lp-actions").getByText(add)).toBeVisible();
+    const startItem = page.locator(".lp-empty .lp-start-item", { hasText: start });
+    if (oneColumn) { await expect(page.locator(".lp-empty")).toBeHidden(); continue; }
+    // the reader offers it, and following it opens it there
+    await startItem.click();
+    await expect(page).toHaveURL(new RegExp(`/${tab}/\\d+$`));
+    await expect(page.locator(".enc-index .enc-item.on")).toContainText(start);
+  }
+  // the Encyclopedia's rarer actions wait behind its ⋯
+  await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  await expect(page.getByRole("button", { name: "🔍 Scan campaign" })).toBeHidden();
+  await page.getByLabel("More for Encyclopedia", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "🔍 Scan campaign" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "⬇ Export…" })).toBeVisible();
   expectNoErrors(errors);
 });

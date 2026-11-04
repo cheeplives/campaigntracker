@@ -2,7 +2,7 @@
 // new names in it (capitalized, emphasized or set apart), each to Add, Ignore or Skip; added names become entries with
 // Public notes for everyone and GM notes for GMs, tags of their own, and links wherever the name is written.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
@@ -179,7 +179,7 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   expect((await api(page, "reminder_save", { title: "Pay the toll", body: "At the Kemperbad bridge", due_shift: 20, audience: "gm" }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
   await expect(page.locator(".enc-detail")).toContainText("Nothing here yet");
-  await page.getByRole("button", { name: "🔍 Scan campaign" }).click();
+  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
   const dlg = page.locator("dialog.noun-dialog");
   await expect(dlg).toBeVisible();
   for (const n of ["Captain Rolf", "Rolf", "Marienburg", "Kemperbad bridge"]) await expect(nounRow(page, n)).toBeVisible();
@@ -192,7 +192,7 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   await dlg.getByRole("button", { name: "Save choices" }).click();
   await expect(page.locator(".enc-blank .enc-item")).toHaveText([/Captain Rolf/, /Marienburg/]);
   // "Rolf" overlaps the new Captain Rolf entry, so the next scan offers it as another name for him.
-  await page.getByRole("button", { name: "🔍 Scan campaign" }).click();
+  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
   await expect(nounRow(page, "Rolf").locator("input[value=alias]")).toHaveCount(1);
   await expect(nounRow(page, "Marienburg")).toHaveCount(0);
   await nounRow(page, "Rolf").getByText("Alias").click();

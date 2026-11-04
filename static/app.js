@@ -3359,6 +3359,49 @@
     return f;
   }
 
+  // ------------------------------------------------------------ list and reader
+  // Encyclopedia, Library and Sessions share one layout: a list card with its title, + New, a ⋯ menu for the rarer
+  // actions and Wide view, then search and filters above the list; the reader card beside it with the item picked.
+  /** wide: { key, tips: [off, on] } lets the page swap widths, remembered in this browser under key. */
+  function listPage({ cls = '', title, tipText, add = null, more = [], wide = null, top = [], list, reader, picked }) {
+    const page = el('div', { class: `enc-page ${cls}`.trim() + (picked ? ' has-sel' : '') });
+    let wideBtn = null;
+    if (wide) {
+      let on = false;
+      try { on = localStorage.getItem(wide.key) === '1'; } catch { /* private mode */ }
+      const set = () => {
+        page.classList.toggle('wide', on);
+        wideBtn.textContent = on ? '⇤ Narrow view' : '⇥ Wide view';
+        wideBtn.setAttribute('aria-pressed', String(on));
+        wideBtn.dataset.tip = wide.tips[on ? 1 : 0];
+      };
+      wideBtn = btn('', () => {
+        on = !on;
+        try { on ? localStorage.setItem(wide.key, '1') : localStorage.removeItem(wide.key); } catch { /* private mode: just this page */ }
+        set();
+      }, 'small enc-widebtn');
+      set();
+    }
+    const items = more.filter(Boolean);
+    const menu = items.length ? KIT.menu({ ariaLabel: `More for ${title}`, tip: 'More: scan, export and the like', items, cls: 'more-menu' }) : null;
+    const left = el('section', { class: 'card enc-index' },
+      el('div', { class: 'lp-head' }, el('h2', {}, title, tipText ? tip(tipText) : null), el('div', { class: 'lp-actions' }, add, menu, wideBtn)),
+      ...clean(top), list);
+    list.classList.add('lp-list');
+    reader.classList.add('card', 'enc-detail');
+    page.append(left, reader);
+    return page;
+  }
+  /** The reader with nothing picked: a line, then a few items to start from (the open session, the newest entries, the
+   * tomes last changed) as links, then the help. On one column (a phone, an iPad upright) it's left out, as the list is enough. */
+  function readerEmpty(reader, { lead, title = '', start = [], help = '' }) {
+    reader.classList.add('lp-empty');
+    reader.append(...clean([el('p', { class: 'muted lp-lead' }, lead),
+      start.length ? el('div', { class: 'lp-start' }, el('h3', {}, title), start) : null,
+      help ? el('p', { class: 'small muted' }, help) : null]));
+    return reader;
+  }
+
   // ------------------------------------------------------------ library tab
   // The campaign's books, journals and notes ("tomes"): a title, a short description and a long body in the same
   // word-processor editor as the day notes. Every member, GM or player, can add a tome and change any of them.
@@ -3378,14 +3421,14 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and descriptions', 'aria-label': 'Search the Library' });
     const kindRow = el('div', { class: 'tagpick' });
     const list = el('div', { class: 'lib-list' });
-    const item = t => el('a', { class: 'enc-item lib-item' + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
       el('span', { class: 'enc-name' }, el('span', { 'aria-hidden': 'true' }, `${tomeKind(t.kind)[2]} `), t.title),
       t.description ? el('small', { class: 'lib-desc' }, t.description) : null);
     const draw = () => {
       const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
       const shown = tomes.filter(t => (!st.kinds.size || st.kinds.has(t.kind)) && words.every(w => `${t.title}\n${t.description}`.toLowerCase().includes(w)));
       list.replaceChildren(el('h3', {}, `Tomes (${shown.length}${shown.length !== tomes.length ? ` of ${tomes.length}` : ''})`),
-        ...(shown.length ? shown.map(item) : [el('p', { class: 'muted small' }, tomes.length ? 'Nothing matches. Clear the search or the kinds to see more.'
+        ...(shown.length ? shown.map(t => item(t)) : [el('p', { class: 'muted small' }, tomes.length ? 'Nothing matches. Clear the search or the kinds to see more.'
           : 'The shelves are empty. Add a book, a journal or a note.')]));
       kindRow.replaceChildren(...TOME_KINDS.map(([k, label, icon]) => {
         const on = st.kinds.has(k), n = tomes.filter(t => t.kind === k).length;
@@ -3396,19 +3439,20 @@
     };
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     draw();
-    const left = el('section', { class: 'card enc-index' },
-      el('div', { class: 'row spread' }, el('h2', {}, 'Library', tip('The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them')),
-        el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome')),
-      search, kindRow, list);
 
-    // --- the tome picked
-    const right = el('section', { class: 'card enc-detail lib-detail' });
-    if (sel && sel !== 'new' && !current) right.append(el('p', { class: 'muted' }, 'That tome isn\'t in the Library any more.'));
-    else if (!current) right.append(el('p', { class: 'muted' }, tomes.length ? 'Pick a tome to read it.' : 'Nothing on the shelves yet.'),
-      el('p', { class: 'small muted' }, 'A tome is a book the party found, a character\'s journal, or a note passed across the table. Give it a title and a line about it, then write it out in full.'));
-    else if (!current.id) right.append(tomeForm(current));
-    else right.append(...tomeView(current));
-    mount(...campaignHeader('library'), el('div', { class: 'enc-page' + (current || sel ? ' has-sel' : '') }, left, right));
+    // --- the tome picked, or the ones last changed to start from
+    const reader = el('section', { class: 'lib-detail' });
+    if (sel && sel !== 'new' && !current) reader.append(el('p', { class: 'muted' }, 'That tome isn\'t in the Library any more.'));
+    else if (!current) readerEmpty(reader, { lead: tomes.length ? 'Pick a tome to read it.' : 'Nothing on the shelves yet.',
+      title: 'Last changed', start: [...tomes].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)) || b.id - a.id).slice(0, 5).map(t => item(t, 'lp-start-item')),
+      help: 'A tome is a book the party found, a character\'s journal, or a note passed across the table. Give it a title and a line about it, then write it out in full.' });
+    else if (!current.id) reader.append(tomeForm(current));
+    else reader.append(...tomeView(current));
+    mount(...campaignHeader('library'), listPage({ cls: 'lib-page', title: 'Library', picked: !!(current || sel),
+      tipText: 'The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them',
+      add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
+      wide: { key: 'chronicle:libwide', tips: ['Widen the list to see more of the Library at once, and narrow the tome', 'Give the tome its room back and narrow the list'] },
+      top: [search, el('div', { class: 'enc-filters' }, kindRow)], list, reader }));
   }
 
   function tomeView(t) {
@@ -5377,8 +5421,8 @@
     DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, api, attachmentsCard, btn, busy, byline,
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
-    leapSummary, get linkedNote() { return linkedNote; }, loadCampaign, lockBox, mapLinks, mount, multiPick,
-    notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, relationKinds, route,
+    leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
+    notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, settings, shiftNames, snoteList, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };

@@ -1,7 +1,7 @@
 // The Library tab: books, journals and notes ("tomes") with a title, a description and a long rich-text body. Every
 // member, GM or player, adds tomes and changes any of them; a save from a copy someone else has saved over is refused.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 // A 2×1 PNG, inline so the test needs no image files.
@@ -142,7 +142,7 @@ test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector
   expect((await api(page, "holding_save", { name: "The Wandering Goose", kind: "vehicle", location: "Kemperbad docks", description: "Bought from Old Hilde.", amount: 1, stats: {}, tags: [] }, cid)).status).toBe(200);
   expect((await api(page, "downtime_save", { kind: "long_rest", slots: 2, title: "", notes: "Resting at Ubersreik." }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
-  await page.getByRole("button", { name: "🔍 Scan campaign" }).click();
+  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
   await expect(page.locator("dialog.noun-dialog")).toBeVisible();
   for (const n of ["Nuln", "Countess of Averheim", "Sword of Teclis", "Wandering Goose", "Kemperbad docks", "Old Hilde", "Ubersreik"]) await expect(row(page, n)).toBeVisible();
   await expect(row(page, "Long Rest")).toHaveCount(0); // the label a rest writes into the shifts
