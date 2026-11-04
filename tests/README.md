@@ -25,6 +25,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **chronicle-access**: Chronicle approves its own users apart from Sinless: an account approved for Sinless asks
   for Chronicle on its first sign-in here and waits; approving, revoking or removing someone in Chronicle leaves
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
+- **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
+  outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only
+  from the config's `trusted_proxies`, and only its nearest hop that isn't one of them.
 - **quotas**: an Encyclopedia entry or a day's notes saved from an older copy is refused (`stale`) instead of
   overwriting someone else's save, and a line added from At the Table counts as a save; the weather saves unchecked; an
   account has room for 50 campaigns of its own, a campaign for 40,000 days, and an account for 50 MB of saves a day.

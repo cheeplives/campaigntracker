@@ -183,6 +183,11 @@ return [
     'shifts_per_campaign'   => 200000, // shifts with an activity
     'events_per_campaign'   => 20000,
   ],
+  // Only behind a CDN or reverse proxy (Cloudflare, a load balancer): the addresses or CIDR ranges it connects from.
+  // Requests from those addresses are limited by the X-Forwarded-For address they pass on; everyone else by their own
+  // address, as the header is easy to fake. Leave empty when PHP is reached directly (DreamHost without Cloudflare).
+  // See docs/DEPLOY.md, "Behind a CDN or proxy".
+  'trusted_proxies' => [],
 
   // Set true only while debugging locally — leaks errors to the client. Keep
   // false in production (errors go to the PHP error log instead).

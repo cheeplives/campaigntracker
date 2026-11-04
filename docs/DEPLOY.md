@@ -70,6 +70,20 @@ blocks the config, `db/`, `docs/`, `tests/`, `.claude/`, `.git` and `.md/.sql/.s
 needs `mod_rewrite`, `mod_headers` and `mod_alias`. On nginx, copy the rules from
 Sinless's DEPLOY.md and add `location ~ /(db|tests|docs|\.claude)/ { return 404; }`.
 
+### Behind a CDN or proxy
+
+Sign-in starts are limited per IP address (20 per 5 minutes). Behind Cloudflare or any other proxy, every visitor
+reaches PHP from the proxy's few addresses, so that limit would soon lock a whole table of players out. List the
+proxy's addresses in the config and the app uses the address the proxy passes on in `X-Forwarded-For` instead:
+
+```php
+'trusted_proxies' => ['173.245.48.0/20', '103.21.244.0/22', /* ... */],
+```
+
+For Cloudflare, copy its published ranges from <https://www.cloudflare.com/ips/> (both IPv4 and IPv6). The header is
+read only from those addresses, and only its last hop that isn't one of them, so a visitor can't pick their own address
+by sending the header themselves. Leave the list empty when PHP is reached directly.
+
 ### Installable app
 
 Chrome and Edge offer *Install app* only over HTTPS, which the `.htaccess` above

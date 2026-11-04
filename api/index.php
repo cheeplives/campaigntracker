@@ -1388,6 +1388,9 @@ $readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sourc
     ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
 if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
 if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
+// A read changes nothing in the session, so let go of its file lock now (PHP writes last_seen as it does): otherwise
+// every open tab's poll, an upload and a campaign copy all queue behind one another for the whole request.
+if ($method === 'GET' && session_status() === PHP_SESSION_ACTIVE) session_write_close();
 
 // A GM's change to a campaign bumps campaigns.updated_at, which open pages poll ('changed') to tell
 // players the calendar has changed. days_save is left out: it is the GM's browser storing generated
@@ -1409,6 +1412,8 @@ if ($method === 'POST' && in_array($action, $touchActions, true)) {
 }
 
 try {
+    // tests/browser/hardening.spec.js: an exception that isn't a database one still answers JSON. Test configs only.
+    if (cfg('test_login') && ($_SERVER['HTTP_X_TEST_THROW'] ?? '') === '1') throw new RuntimeException('test exception');
     switch ($action) {
 
     // ===== account =====
@@ -3445,6 +3450,7 @@ try {
     case 'scabard_import': // GMs: pages and/or connections from a Scabard JSON export, in batches (api/scabard.php)
         $cid = cid();
         need_gm($cid);
+        rate_limit('scabard_import', (string)me()['id'], 30, 60);   // each batch is one transaction over up to 300 pages
         out(scabard_import($cid, body()));
 
     case 'scabard_picture': // GMs: one imported entry's picture, fetched from scabard.com
@@ -3462,4 +3468,10 @@ try {
     if ($e->getCode() === '23000') fail('That conflicts with existing data (duplicate name?)', 409);
     error_log('campaign-chronicle: ' . $e->getMessage());
     fail('Database error', 500);
+} catch (Throwable $e) {
+    // Anything else (a RuntimeException from a helper, a TypeError from an unexpected shape): undo any half-made change
+    // and answer JSON like every other error, never PHP's own HTML 500 page.
+    try { if (db()->inTransaction()) db()->rollBack(); } catch (Throwable $_) { /* the connection itself is gone */ }
+    error_log('campaign-chronicle: ' . get_class($e) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+    fail('Server error', 500);
 }

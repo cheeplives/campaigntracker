@@ -23,7 +23,10 @@ function installer_locked(): bool {
     $pdo = db();
     if (!$pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn()) return false;
     if (!$pdo->query("SHOW COLUMNS FROM users LIKE 'provider'")->fetchColumn()) return false;
-    if (!$pdo->query("SELECT 1 FROM users WHERE is_admin=1 AND status='approved' AND provider<>'legacy' LIMIT 1")->fetchColumn()) return false;
+    // Chronicle's own approvals (chronicle_access, migration 020) once they exist; the shared users.status before.
+    $approved = $pdo->query("SHOW TABLES LIKE 'chronicle_access'")->fetchColumn()
+        ? "id IN (SELECT user_id FROM chronicle_access WHERE status='approved')" : "status='approved'";
+    if (!$pdo->query("SELECT 1 FROM users WHERE is_admin=1 AND $approved AND provider<>'legacy' LIMIT 1")->fetchColumn()) return false;
     $u = current_user();
     return !$u || !(int)$u['is_admin'] || $u['status'] !== 'approved';
 }
