@@ -5378,9 +5378,9 @@
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, loadCampaign, lockBox, mapLinks, mount, multiPick,
-    notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, relationKinds, route, get saveFile() {
-    return saveFile; }, secretTag, select, sessionName, settings, shiftNames, snoteList, tagChip, tagsOf, tip,
-    tipped, toast, today, vs
+    notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, relationKinds, route,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, settings, shiftNames, snoteList, tagChip,
+    tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   ({ viewSessions } = SessionsTab.make(tabCtx));
