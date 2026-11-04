@@ -1,36 +1,29 @@
 // Every API action, held to who may use it: signed out and waiting-for-approval accounts get nothing, someone outside a
-// campaign can't touch it, a player can't use the GMs' actions, and only site admins manage accounts. The list of
-// actions is read from api/index.php and api/fanwikis.php, so a new action fails here until it is put in one of the
-// groups below, which is the moment to decide who may use it.
+// campaign can't touch it, a player can't use the GMs' actions, and only site admins manage accounts. The actions and
+// who may use each are read from api/actions.php, the table the router itself runs on, and every action the code
+// answers must be in it.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
 const { person, signIn, approve, makeCampaign, api, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 const root = path.join(__dirname, "..", "..");
-const index = fs.readFileSync(path.join(root, "api", "index.php"), "utf8");
-const dispatch = index.slice(index.indexOf("switch ($action) {"));
-const fanwikis = fs.readFileSync(path.join(root, "api", "fanwikis.php"), "utf8");
-const ACTIONS = [
-  ...[...dispatch.matchAll(/^    case '(\w+)'/gm)].map(m => m[1]),
-  ...fanwikis.match(/const FANWIKI_ACTIONS = \[([^\]]*)\]/)[1].match(/\w+/g),
-];
-
+const read = f => fs.readFileSync(path.join(root, "api", f), "utf8");
+/** api/actions.php, one row per action: { name: { who, get, touch, panel, key } }. */
+const TABLE = Object.fromEntries([...read("actions.php").matchAll(/^    '(\w+)' => \[(.*)\],$/gm)].map(([, name, row]) =>
+  [name, Object.fromEntries([...row.matchAll(/'(\w+)' => ('(\w+)'|true)/g)].map(m => [m[1], m[3] ?? true]))]));
+const ACTIONS = Object.keys(TABLE);
+const who = w => ACTIONS.filter(a => TABLE[a].who === w);
 /** Open to anyone, signed in or not. */
-const PUBLIC = ["fanwiki_wikis", "starter_sources", "owlbear_manifest"];
+const PUBLIC = who("public");
 /** Need an approved account, and no campaign. */
-const ACCOUNT = ["prefs_save", "campaigns", "campaign_create", "fanwiki_thumb", "templates", "template", "template_save", "template_fork", "template_delete", "sheet_import_fetch"];
+const ACCOUNT = who("account");
 /** Site admins only. */
-const ADMIN_ONLY = ["users", "user_status", "user_email", "user_delete", "starter_templates_load"];
+const ADMIN_ONLY = who("admin");
 /** A campaign's GMs only, refused to its players before anything else is looked at. */
-const GM_ONLY = ["campaign_update", "campaign_delete", "campaign_copy", "set_time", "member_candidates", "member_add", "member_remove",
-  "region_save", "region_delete", "holiday_save", "holiday_delete", "days_save", "day_update", "shift_save", "shifts_fill",
-  "downtime_delete", "secret_reveal", "relation_type_save", "relation_type_delete", "session_save", "session_summary_save",
-  "session_end", "session_delete", "snote_add", "snote_bulk", "snote_save", "snote_move", "snote_delete",
-  "scabard_import", "scabard_picture", "map_save", "map_delete", "route_save", "route_delete", "pin_to_entry",
-  "group_split", "group_save", "group_move", "group_merge", "tokens", "token_upload", "token_save", "token_delete"];
+const GM_ONLY = who("gm");
 /** Everything else works on one campaign and needs its members: players and GMs, each action checking the rest. */
-const MEMBER = ACTIONS.filter(a => ![...PUBLIC, ...ACCOUNT, ...ADMIN_ONLY, ...GM_ONLY].includes(a));
+const MEMBER = who("member");
 const CAMPAIGN = [...MEMBER, ...GM_ONLY];
 
 /** Call $action as whoever $page is, with the method it takes: a read is a GET, a change a POST with the CSRF token. */
@@ -43,12 +36,13 @@ async function call(page, action, cid) {
 test.describe("who may use each API action", () => {
   test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "chromium", "the server answers the same whatever the browser"));
 
-  test("every action is in exactly one group", () => {
-    const groups = [...PUBLIC, ...ACCOUNT, ...ADMIN_ONLY, ...GM_ONLY, ...MEMBER];
-    expect(new Set(groups).size, "an action is listed twice").toBe(groups.length);
-    for (const a of [...PUBLIC, ...ACCOUNT, ...ADMIN_ONLY, ...GM_ONLY]) expect(ACTIONS, `${a} is not an action any more`).toContain(a);
-    expect(ACTIONS.length).toBeGreaterThan(80);
-    // A new action lands in MEMBER by default; it must use one of the campaign's checks to pass the tests below.
+  test("the table lists every action the code answers, and nothing else", () => {
+    const index = read("index.php"), dispatch = index.slice(index.indexOf("switch ($action) {"));
+    const answered = [...new Set([...dispatch.matchAll(/^    case '(\w+)'/gm)].map(m => m[1])),
+      ...read("fanwikis.php").match(/const FANWIKI_ACTIONS = \[([^\]]*)\]/)[1].match(/\w+/g)];
+    expect([...answered].sort()).toEqual([...ACTIONS].sort());
+    for (const a of ACTIONS) expect(["public", "account", "admin", "gm", "member"], a).toContain(TABLE[a].who);
+    expect(PUBLIC.sort()).toEqual(["fanwiki_wikis", "owlbear_manifest", "starter_sources"]);   // a new public action is a choice
   });
 
   test("signed out, every action but the public ones is refused", async ({ page }) => {

@@ -34,9 +34,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **quotas**: an Encyclopedia entry or a day's notes saved from an older copy is refused (`stale`) instead of
   overwriting someone else's save, and a line added from At the Table counts as a save; the weather saves unchecked; an
   account has room for 50 campaigns of its own, a campaign for 40,000 days, and an account for 50 MB of saves a day.
-- **access**: every API action (read from api/index.php and api/fanwikis.php, so a new one fails until it is
-  given a group) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
+- **access**: every API action (read from api/actions.php, the table the router runs on, which must list every action
+  the code answers) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
   GMs' actions; only site admins manage accounts.
+- **cross-campaign**: a GM of two campaigns calls every campaign action on one with every id parameter (read from the
+  code) pointing at the other's rows; nothing of the other campaign comes back and none of its rows change.
 - **signin**: the signed-out screen shows the Google and GitHub buttons and
   keeps the page you were going to; the API refuses anyone signed out; a new
   account waits for approval and gets in once approved; a revoked account is
