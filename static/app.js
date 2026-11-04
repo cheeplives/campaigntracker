@@ -43,6 +43,13 @@
   function select(options, value, attrs) {
     return el('select', attrs || {}, options.map(([v, l]) => el('option', { value: v, selected: String(v) === String(value) }, l)));
   }
+  /** A GM only switch: the checkbox given (its aria-label is "GM only" unless it has one), shown as the 🔒 button the
+   * rich text editor marks GM-only paragraphs with. lockField puts it where a form's other fields are. */
+  function lockBox(input, tipText) {
+    if (!input.getAttribute('aria-label')) input.setAttribute('aria-label', 'GM only');
+    return el('label', { class: 'lock-toggle', 'data-tip': tipText ? `GM only: ${tipText}` : 'GM only' }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
+  }
+  const lockField = (input, tipText) => el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'GM only'), lockBox(input, tipText));
   const btn = (label, onclick, cls, tipText) => el('button', { type: 'button', class: cls || '', onclick, 'data-tip': tipText }, label);
   function formData(form) {
     const o = {};
@@ -2193,7 +2200,7 @@
         field('All day', allDay, null, `For things that fill the whole day. Untick to pick the ${word()}s it starts and ends in`),
         startField, endField,
         field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
-        isGM() ? field('Secret (GM only)', el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), null, 'Players won\'t see this event or its notes') : null),
+        isGM() ? lockField(el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), 'players won\'t see this event or its notes') : null),
       tags.node,
       field('Details', el('textarea', { name: 'body', rows: 4, value: e.body || '' })),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
@@ -2750,7 +2757,7 @@
         const choice = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': `What to do with ${f.term}` },
           choices.map(([v, l, t]) => el('label', { 'data-tip': t }, el('input', { type: 'radio', name: `noun-${i}`, value: v, checked: v === (scan ? 'skip' : 'add') }), el('span', {}, l))));
         const asEntry = el('div', { class: 'row' }, name, tag,
-          secret ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see this entry. Ticked when the name was found only in GM-only text' }, secret, ' 🔒 GM only') : null);
+          secret ? lockBox(secret, 'only GMs will see this entry. On when the name was found only in GM-only text') : null);
         const asAlias = aliasOf ? el('div', { class: 'row', hidden: true }, el('span', { class: 'small' }, 'Another name for'), aliasOf) : null;
         const row = el('div', { class: 'noun-row', 'data-term': f.term }, choice,
           el('div', { class: 'noun-what' }, asEntry, asAlias,
@@ -3304,7 +3311,7 @@
     const box = el('section', { class: 'enc-files' },
       el('div', { class: 'row spread' }, el('h4', {}, 'Pictures and files', tip(opts.secret ? 'GM only, like the entry. Pictures show here; other files download'
           : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
-        el('div', { class: 'row' }, gmOnly ? el('label', { class: 'inline small', 'data-tip': 'Only GMs will see what you add' }, gmOnly, ' 🔒 GM only') : null, findBtn, addBtn)),
+        el('div', { class: 'row' }, gmOnly ? lockBox(gmOnly, 'only GMs will see what you add') : null, findBtn, addBtn)),
       findSlot, gallery, docList,
       !files.length ? el('p', { class: 'muted small' }, up.ready ? opts.empty || 'No pictures or files yet. Add a portrait, a map or a handout.' : isGM() && up.problem ? up.problem : 'No pictures or files yet.') : null,
       status);
@@ -3325,7 +3332,7 @@
     const caption = el('input', { value: f.caption || '', maxlength: 200, placeholder: 'e.g. Gunther, sketched by Ilse', 'aria-label': 'Caption' });
     const secret = isGM() ? el('input', { type: 'checkbox', checked: f.is_secret || opts.secret, disabled: !!opts.secret }) : null;
     const form = el('form', {}, el('h3', {}, `✎ ${f.name}`), field('Caption', caption),
-      secret ? el('label', { class: 'inline small', 'data-tip': opts.secret ? 'Everything on a GM-only entry is GM only' : 'Only GMs will see this file' }, secret, ' 🔒 GM only') : null,
+      secret ? lockBox(secret, opts.secret ? 'everything on a GM-only entry is GM only' : 'only GMs will see this file') : null,
       el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, 'Save'),
         el('button', { type: 'button', onclick: () => d.close() }, 'Cancel')));
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': `Change ${f.name}` }, form);
@@ -3582,7 +3589,7 @@
       el('div', { class: 'conn-list' }, others.length ? rows.map(r => r.row) : el('p', { class: 'muted small' }, 'There are no other entries yet.')),
       count,
       field('Note (optional)', note, null, 'A few words shown beside each new connection, on both pages'),
-      secret ? el('label', { class: 'inline small', 'data-tip': e.is_secret ? `${e.name} is GM only, so its connections are too` : 'Only GMs will see these connections. Connections to a GM-only entry always are' }, secret, ' 🔒 GM only') : null,
+      secret ? lockBox(secret, e.is_secret ? `${e.name} is GM only, so its connections are too` : 'only GMs will see these connections. Connections to a GM-only entry always are') : null,
       el('div', { class: 'kit-dialog-actions' },
         el('button', { class: 'primary', type: 'submit' }, 'Save connections'),
         el('button', { type: 'button', value: 'cancel', onclick: () => d.close() }, 'Cancel')));
@@ -3772,7 +3779,7 @@
         field('Name', name),
         category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
-        secret ? field('GM only', secret, null, 'Players won\'t see this entry at all, or have its name linked') : null),
+        secret ? lockField(secret, 'players won\'t see this entry at all, or have its name linked') : null),
       // the notes straight under the name, where the writing is; tags, the quotes found elsewhere and Generate Summary after
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
@@ -4839,7 +4846,7 @@
         ...Object.values(parts),
         field('Lasts (days)', el('input', { type: 'number', min: 1, name: 'span', value: r.span || 1 }), null, 'For festivals that run over several days'),
         field('Color', el('input', { type: 'color', name: 'color', value: /^#[0-9a-f]{6}$/i.test(x.color) ? x.color : '#b8860b' }), null, 'The holiday\'s label color on the calendar'),
-        field('Secret (GM only)', el('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }), null, 'Players won\'t see this holiday on the calendar')),
+        lockField(el('input', { type: 'checkbox', name: 'is_secret', checked: !!x.is_secret }), 'players won\'t see this holiday on the calendar')),
       field('Description', el('textarea', { name: 'description', rows: 2, value: x.description || '' })),
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save holiday'), btn('Cancel', () => f.remove(), 'small')));
     sync();
@@ -5517,8 +5524,8 @@
     const towns = genCard('Towns', 'A whole settlement: who runs it, what pays for it, a few places and people, and trouble for the party to walk into. 📖 Add puts the town, or any place or person in it, in the Encyclopedia',
       [field('Size', size)], () => genTown(Gen.town(g, size.value)), 'gen-town');
 
-    const secret = isGM() ? el('label', { class: 'inline small', 'data-tip': 'What you add with 📖 stays hidden from players until you untick GM only on its entry' },
-      el('input', { type: 'checkbox', checked: pref.secret !== false, onchange: e => setGenPrefs({ secret: e.target.checked }) }), 'Add to the Encyclopedia as GM only') : null;
+    const secret = isGM() ? lockBox(el('input', { type: 'checkbox', checked: pref.secret !== false, 'aria-label': 'Add to the Encyclopedia as GM only', onchange: e => setGenPrefs({ secret: e.target.checked }) }),
+      'what you add with 📖 stays hidden from players until you turn GM only off on its entry') : null;
     mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
       el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
         el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
