@@ -1392,3 +1392,9 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .map-scan-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .map-scan-name input { width: 100%; }
 @media (max-width: 560px) { .map-scan-row { grid-template-columns: auto 90px 1fr; } .map-scan-crop { max-width: 90px; } }
+.map-scan-way { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
+.map-scan-way p { margin: 2px 0 0; }
+.map-scan-way > :last-child { flex: none; }
+.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.map-label-form input { flex: 1 1 14rem; min-width: 0; }
+.map-label-form small { flex-basis: 100%; }
