@@ -500,6 +500,23 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 .shiftcard > .row.spread:first-child { flex-wrap: nowrap; }
 .shiftcard > .row.spread:first-child > h4 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shiftcard > .row.spread:first-child > :last-child { flex: none; }
+/* the GM's editor folds to a summary of what's recorded; it saves box by box, with Saved ✓ under it */
+.shift-edit > :not(summary) { display: block; width: 100%; margin-top: 6px; box-sizing: border-box; }
+.shift-edit > .row { display: flex; }
+.shift-edit > summary { list-style: none; cursor: pointer; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px dashed var(--line); border-radius: 4px; }
+.shift-edit > summary::-webkit-details-marker { display: none; }
+.shift-edit > summary:hover { background: var(--panel-2); border-style: solid; }
+.shift-edit[open] > summary { border-color: transparent; padding: 0; }
+.shift-edit[open] > summary:hover { background: none; }
+.shift-edit[open] .shift-preview { display: none; }
+.shift-edit > select { width: auto; max-width: 100%; }
+.shift-preview { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.shift-gmn { color: var(--secret); font-size: .9em; }
+.shift-edit-label { flex: none; font-size: .8rem; color: var(--accent); white-space: nowrap; }
+.shift-edit[open] .when-closed, .shift-edit:not([open]) .when-open { display: none; }
+.shift-edit[open] > summary { justify-content: flex-end; }
+.shift-status { min-height: 1em; font-size: .78rem; color: var(--dim); }
+.shift-status.ok { color: var(--accent); } .shift-status.bad { color: var(--bad); }
 .dh-strip.hours .nowtag { font-size: .55rem; padding: 0 2px; letter-spacing: 0; }
 .shiftcard .actpick { align-self: flex-start; max-width: 100%; }
 .shiftcard .actpick + textarea + small:empty { display: none; }

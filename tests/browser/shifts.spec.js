@@ -10,10 +10,14 @@ test("shift actions are picked into the activity alongside free text", async ({ 
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Actions ${gm.id}`);
-  await page.goto(`index.html#/c/${cid}/day/2`);
+  await page.goto(`index.html#/c/${cid}/day/3`);
 
+  // a shift that isn't now starts folded to its summary; opening it shows the editor
   const card = page.locator(".shiftcard").first();
-  const activity = card.locator("textarea").first();
+  await expect(card.locator(".shift-edit")).not.toHaveAttribute("open");
+  await expect(card.locator(".shift-preview")).toHaveText("Nothing recorded yet.");
+  await card.locator(".shift-edit > summary").click();
+  const activity = card.getByLabel("What the party does this Dawn");
   await activity.fill("Ana and Bo");
   await card.getByLabel("Add an action").selectOption("Scout ahead");
   await expect(activity).toHaveValue("Ana and Bo; Scout ahead");
@@ -21,12 +25,24 @@ test("shift actions are picked into the activity alongside free text", async ({ 
   await card.getByLabel("Add an action").selectOption("Keep watch");
   await expect(activity).toHaveValue("Ana and Bo; Scout ahead; Keep watch");
   await expect(card.getByLabel("Add an action")).toHaveValue("");
-  await card.getByRole("button", { name: "Save" }).click();
-
-  await expect(page.getByText("Dawn saved")).toBeVisible();
-  const r = await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`);
-  const s = (await r.json()).shifts.find(x => Number(x.shift) === 0);
-  expect(s.activity).toBe("Ana and Bo; Scout ahead; Keep watch");
+  // no Save button: each pick, and leaving a box, saves it
+  await expect(card.getByRole("button", { name: "Save" })).toHaveCount(0);
+  const saved = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=3`)).json()).shifts.find(x => Number(x.shift) === 0) || {};
+  await expect.poll(async () => (await saved()).activity).toBe("Ana and Bo; Scout ahead; Keep watch");
+  await expect(card.locator(".shift-status")).toHaveText("Saved ✓");
+  const gmNotes = card.getByLabel("GM-only notes for Dawn");
+  await gmNotes.fill("They are being followed");
+  await gmNotes.blur();
+  await expect.poll(async () => (await saved()).gm_notes).toBe("They are being followed");
+  // leaving the editor offers the new names once, for both boxes
+  const names = page.getByRole("dialog", { name: "New names for the Encyclopedia" });
+  await expect(names).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(names).toHaveCount(0);
+  // folded again, the summary shows what was written
+  await card.locator(".shift-edit > summary").click();
+  await expect(card.locator(".shift-preview")).toContainText("Ana and Bo; Scout ahead; Keep watch");
+  await expect(card.locator(".shift-preview")).toContainText("They are being followed");
 
   expectNoErrors(errors);
 });
@@ -133,6 +149,7 @@ test("players and GMs add shift notes, signed with their character name", async 
   // The player adds a note to the first shift; it is signed with the character name.
   await pp.goto(`index.html#/c/${cid}/day/2`);
   const card = pp.locator(".shiftcard").first();
+  await card.getByRole("button", { name: "+ Note" }).click();
   await card.locator(".shiftnotes textarea").fill("Heard wolves to the north");
   await card.getByRole("button", { name: "Add note" }).click();
   await expect(pp.locator(".shiftcard").first().locator(".shiftnotes")).toContainText("Heard wolves to the north");
@@ -142,6 +159,7 @@ test("players and GMs add shift notes, signed with their character name", async 
   await page.goto(`index.html#/c/${cid}/day/2`);
   const gcard = page.locator(".shiftcard").first();
   await expect(gcard.locator(".shiftnotes")).toContainText("Sir Maximus");
+  await gcard.getByRole("button", { name: "+ Note" }).click();
   await gcard.locator(".shiftnotes textarea").fill("The wolves are a warg pack");
   await gcard.getByRole("button", { name: "Add note" }).click();
   await expect(page.locator(".shiftcard").first().locator(".shiftnotes")).toContainText("— Lou");

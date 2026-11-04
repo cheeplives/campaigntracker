@@ -2010,24 +2010,57 @@
       card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), shiftNotes(d, i, notes));
       return fold(card);
     }
-    const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'data-tip': 'Players can see this' });
+    // The GM's editor folds to a summary of what's recorded (the shift that's now starts open), and each box saves as you
+    // leave it, with Saved ✓ beside the summary: no Save button.
+    const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
     const hint = el('small', { class: 'muted' });
+    const gmn = el('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
+    const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
+    ov.setAttribute('aria-label', `Visibility for ${names[i]}`);
+    const status = el('small', { class: 'shift-status', role: 'status' });
+    const preview = el('span', { class: 'shift-preview' });
+    const drawPreview = () => preview.replaceChildren(...clean([
+      act.value.trim() ? el('span', { class: 'pre' }, linked(act.value)) : el('span', { class: 'muted' }, 'Nothing recorded yet.'),
+      gmn.value.trim() ? el('span', { class: 'shift-gmn' }, '🔒 ', linked(gmn.value)) : null]));
+    drawPreview();
+    let saved = { a: act.value, g: gmn.value, o: String(ov.value) }, queue = Promise.resolve();
+    // the Proper Noun Detector asks once the GM is done with the shift (focus leaves its editor), not after every box
+    const nouns = {};
+    const offer = () => queue.then(() => {
+      const list = [nouns.a ? { text: saved.a, label: `${names[i]} activity` } : null, nouns.g ? { text: saved.g, secret: true, label: `${names[i]} GM notes` } : null].filter(Boolean);
+      nouns.a = nouns.g = false;
+      if (list.length) offerNouns(list);
+    });
+    const save = () => queue = queue.then(async () => {
+      const now = { a: act.value, g: gmn.value, o: String(ov.value) };
+      if (now.a === saved.a && now.g === saved.g && now.o === saved.o) return;
+      status.textContent = 'Saving…'; status.className = 'shift-status';
+      try {
+        await post('shift_save', { abs_day: d, shift: i, activity: now.a, gm_notes: now.g, visibility_override: now.o, transit: E.isOnTheMove(now.a) }, S.camp.id);
+        const was = saved; saved = now;
+        status.textContent = 'Saved ✓'; status.className = 'shift-status ok';
+        drawPreview();
+        if (now.o !== was.o) card.querySelector('.vis')?.replaceWith(visPill(E.visibility(c, region, sw, d, i, now.o === '' ? null : Number(now.o))));
+        if (now.a !== was.a) nouns.a = true;
+        if (now.g !== was.g) nouns.g = true;
+      } catch (err) { status.textContent = 'Not saved'; status.className = 'shift-status bad'; toast(err.message, true); }
+    });
     const pick = actionPicker(a => {
       act.value = E.addShiftAction(act.value, a.name);
       hint.textContent = `${a.icon} ${a.name}: ${a.desc}`;
       act.focus();
+      save();
     });
-    const gmn = el('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
-    const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
-    const save = btn('Save', null, 'small primary', `Save this ${word()}'s activity, notes and visibility`);
-    save.addEventListener('click', busy(save, async () => {
-      await post('shift_save', { abs_day: d, shift: i, activity: act.value, gm_notes: gmn.value, visibility_override: ov.value, transit: E.isOnTheMove(act.value) }, S.camp.id);
-      toast(`${names[i]} saved`); route();
-      offerNouns([{ text: act.value, label: `${names[i]} activity` }, { text: gmn.value, secret: true, label: `${names[i]} GM notes` }]);
-    }));
-    card.append(pick, act, hint, gmn, mentionRow(s.activity, s.gm_notes) || '', el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
-      tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)), save),
-      shiftNotes(d, i, notes));
+    for (const x of [act, gmn, ov]) x.addEventListener('change', save);
+    const editor = el('details', { class: 'shift-edit', open: isNow || null },
+      el('summary', { 'data-tip': `Open to write what the party does, GM-only notes and the visibility. Each box saves as you leave it` },
+        preview, el('span', { class: 'shift-edit-label' }, el('span', { class: 'when-closed' }, '✎ Edit'), el('span', { class: 'when-open' }, 'Done'))),
+      pick, act, hint, gmn, mentionRow(s.activity, s.gm_notes) || '',
+      el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
+        tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`))));
+    editor.addEventListener('focusout', e => { if (!editor.contains(e.relatedTarget)) { save(); offer(); } });
+    editor.addEventListener('toggle', () => { if (!editor.open) { save(); offer(); } });
+    card.append(editor, status, shiftNotes(d, i, notes));
     return fold(card);
   }
 
@@ -2046,14 +2079,16 @@
           if (!await confirmDialog('Delete this note?')) return;
           try { await post('shift_note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'link small'), 'Delete this note') : null)));
-    const input = el('textarea', { rows: 4, placeholder: 'Notes', 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
-    const add = btn('Add note', null, 'small', `Add your note to this ${word()}, signed with your character name`);
+    // the box stays closed behind + Note until it's wanted
+    const input = el('textarea', { rows: 3, placeholder: 'Your note', hidden: true, 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
+    const add = btn('+ Note', null, 'small', `Add your note to this ${word()}, signed with your character name`);
     add.addEventListener('click', busy(add, async () => {
+      if (input.hidden) { input.hidden = false; add.textContent = 'Add note'; input.focus(); return; }
       if (!input.value.trim()) return;
       await post('shift_note_add', { abs_day: d, shift: i, body: input.value }, S.camp.id); route();
       offerNouns([{ text: input.value, label: `a ${shiftNames()[i]} note` }]);
     }));
-    return el('div', { class: 'shiftnotes' }, el('span', { class: 'lbl' }, 'Notes'), el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
+    return el('div', { class: 'shiftnotes' }, list.length ? el('span', { class: 'lbl' }, 'Notes') : null, el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
 
   /** "📍 On the map: <map>" links, one per pin this member can see that points at entry or event `id` (key: 'entry_id' or 'event_id'). */
