@@ -1,6 +1,6 @@
 # api/.htaccess — only the entry points run from the web. index.php answers every data request; the sign-in pages
 # have their own folder (api/auth/.htaccess lets them through). Every other .php here only defines functions for
-# index.php (lib.php, images.php, richtext.php, scabard.php, fanwikis*.php) or holds secrets (config.php), so it is
+# index.php (lib.php, actions.php, a feature's own file like maps.php, fanwikis*.php) or holds secrets (config.php), so it is
 # refused, and so is any new one, until it is listed here on purpose.
 <FilesMatch "\.php">
   Require all denied
