@@ -27,11 +27,12 @@
   # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
   # STYLE attributes produced by el() need 'unsafe-inline' in style-src. Fonts
   # are self-hosted in static/fonts/. Generate Summary on an Encyclopedia entry
-  # asks Wikipedia from the browser, so connect-src allows en.wikipedia.org.
+  # asks Wikipedia from the browser, so connect-src allows en.wikipedia.org. Scan for names on a map can send the
+  # picture from the browser to Anthropic's API (with the GM's own key), so connect-src allows api.anthropic.com.
   # 'wasm-unsafe-eval' lets the map text scanner (static/vendor/tesseract) compile its WebAssembly OCR engine; it
   # allows WebAssembly only, never eval() or inline scripts.
   # Keep this in step with the meta tag in index.html: a browser applies both.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org https://api.anthropic.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
 # --- The At the Table panel may be framed ----------------------------------
@@ -41,7 +42,7 @@
 <IfModule mod_headers.c>
   <Files "panel.html">
     Header always unset X-Frame-Options
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org; object-src 'none'; base-uri 'none'; frame-ancestors *; form-action 'self'"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org https://api.anthropic.com; object-src 'none'; base-uri 'none'; frame-ancestors *; form-action 'self'"
   </Files>
   # Owlbear Rodeo's toolbar icon is drawn on owlbear.rodeo's own page, which only shows another site's picture when
   # that site says it may (CORS, and Cross-Origin-Resource-Policy for a page that is cross-origin isolated).
