@@ -143,9 +143,12 @@ async function tokenUpload(page, cid, name) {
 async function openLegend(page) {
   const nav = page.locator("nav.tabs"), tuck = nav.locator(".legend-tuck");
   await nav.waitFor();
-  if (!await tuck.isVisible() || !await nav.evaluate(n => n.classList.contains("tucked"))) return;
-  await tuck.click();
-  await expect(nav).not.toHaveClass(/\btucked\b/);
+  // a page that draws itself again once its data is in draws a closed drawer: wait for that, and open it again if so
+  await page.waitForLoadState("networkidle").catch(() => {});
+  await expect(async () => {
+    if (await tuck.isVisible() && await nav.evaluate(n => n.classList.contains("tucked"))) await tuck.click();
+    await expect(page.locator("nav.tabs")).not.toHaveClass(/\btucked\b/, { timeout: 1000 });
+  }).toPass({ timeout: 10000 });
 }
 /** Open a campaign tab by name from the Legend (out of its drawer, and out of a folded group, when it has to be). */
 async function goTab(page, name) {
