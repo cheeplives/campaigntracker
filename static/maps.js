@@ -230,7 +230,7 @@ const MapsTab = (() => {
     };
     const panelBox = el('div', { class: 'map-panel-box' });
 
-    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
+    let lf = null, mode = null, toolMode = null, sheetAway = false;   // sheetAway: on a phone the sheet folds away while a tool is in use, without changing how it was left   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
     /** The whole picture in view. While the scale panel is open it floats over the map's left side, and its two points
      * are picked on the picture, so the picture is fitted beside it (when there is room). */
@@ -721,7 +721,10 @@ const MapsTab = (() => {
       return 'collapsed' in st ? st : { ...st, collapsed: window.matchMedia('(max-width: 720px)').matches };
     };
     const keepSide = patch => { try { localStorage.setItem(sideKey, JSON.stringify({ ...sideState(), ...patch })); } catch { /* this visit only */ } };
-    const fold = btn('', () => { keepSide({ collapsed: !sideState().collapsed }); syncDrawer(); }, 'small map-side-fold');
+    const fold = btn('', () => {
+      if (sheetAway) { sheetAway = false; keepSide({ collapsed: false }); } else keepSide({ collapsed: !sideState().collapsed });
+      syncDrawer();
+    }, 'small map-side-fold');
     const sideList = el('div', { class: 'map-side-list' });
     const finder = el('input', { type: 'search', class: 'map-side-find', 'aria-label': 'Find on this map', placeholder: 'Find on this map', autocomplete: 'off' });
     /** Hide the rows whose name doesn't hold what is typed in the search box (matched as names are: case, accents, "The"). */
@@ -742,7 +745,7 @@ const MapsTab = (() => {
       cardPad.br[1] = sheet ? (open ? Math.round(stage.clientHeight * 0.45) : 0) + 70 : 16;
     };
     function syncDrawer() {
-      const shut = !!sideState().collapsed;
+      const shut = !!sideState().collapsed || sheetAway;
       routeBox.hidden = !routes.length && !pins.length;
       routeBox.className = 'map-routes ' + (shut ? 'closed' : 'open');
       stage.classList.toggle('drawer-open', !shut && !routeBox.hidden);
@@ -930,6 +933,8 @@ const MapsTab = (() => {
       stage.classList.toggle('measuring', m);   // the measure bar takes the legend's place along the bottom
       // two quick taps while laying down points are two points, not a zoom
       lf?.map.doubleClickZoom[mode ? 'disable' : 'enable']();
+      // on a phone the sheet would cover half of the map a tool is used on, so it folds away until the tool is put down
+      if (mode !== toolMode) { toolMode = mode; sheetAway = !!mode && window.matchMedia('(max-width: 720px)').matches; syncDrawer(); }
     }
     const scaleBtn = gm ? btn('Set scale…', () => (mode === 'scale' ? closePanel() : openScale()), '', 'Tell the map how far apart things are') : null;
     scaleBtn?.setAttribute('aria-label', 'Scale');

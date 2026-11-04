@@ -1127,7 +1127,8 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-routes { position: absolute; top: 56px; right: 0; bottom: 0; z-index: 1001; width: 300px; display: flex; flex-direction: column;
   border-right: 0; border-radius: var(--radius) 0 0 var(--radius); transition: transform .2s ease; }
 .map-routes[hidden] { display: none; }
-.map-routes.closed { transform: translateX(100%); box-shadow: none; }
+.map-routes.closed { transform: translateX(100%); box-shadow: none; pointer-events: none; }   /* only its tab takes a click once it has slid away */
+.map-routes.closed .map-side-fold { pointer-events: auto; }
 .map-routes h3 { margin: 0; display: inline; font-size: 1.05rem; }
 .map-side-fold { position: absolute; top: 16px; right: 100%; width: 28px; min-width: 0; height: 88px; padding: 0; border-right: 0; border-radius: var(--radius) 0 0 var(--radius);
   background: color-mix(in srgb, var(--panel) 92%, transparent); }
@@ -1440,6 +1441,10 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
    drawer a sheet over the bottom of the map that starts closed, no legend */
 @media (max-width: 720px) {
   .map-tool-word { display: none; }
+  /* tall enough for the toolbar, a hint and the measure bar to leave room on the picture; on a short phone it runs
+     past the screen and the page scrolls to it */
+  .map-stage { height: max(460px, calc(100vh - var(--map-top, 260px) - 16px)); }
+  .map-note { font-size: .875rem; padding: 4px 10px; }
   .map-toolbar { top: auto; bottom: 10px; left: 12px; max-width: calc(100% - 84px); gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
   .map-toolbar .small { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 1.1rem; }
   .map-tool-group + .map-tool-group { margin-left: 2px; padding-left: 4px; }
@@ -1456,10 +1461,9 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
   .map-stage .leaflet-bottom.leaflet-left { margin-bottom: 64px; }
   .map-stage.measuring .leaflet-bottom.leaflet-left { margin-bottom: 120px; }
   .map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: 50%; max-width: calc(100% - 24px); }
-  .map-stage.drawer-open .map-measure-bar { bottom: calc(45% + 12px); }
+  .map-stage.drawer-open .map-measure-bar { bottom: calc(45% + 70px); }   /* over the toolbar, which sits on the sheet */
   .map-stage.drawer-open .map-toolbar { bottom: calc(45% + 10px); }
   .map-stage.drawer-open .leaflet-bottom { bottom: 45%; }
-}
 }
 .map-scan-dialog { width: min(640px, calc(100vw - 32px)); overflow-wrap: anywhere; }
 .map-scan-dialog progress { width: 100%; accent-color: var(--accent); }

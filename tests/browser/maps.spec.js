@@ -1193,4 +1193,11 @@ test("Map page: on a phone the toolbar is icons only and the drawer is a bottom 
   const card = page.locator(".leaflet-popup");
   await expect(card).toBeVisible();
   await expect.poll(async () => { const c = await card.boundingBox(), d = await page.locator(".map-routes").boundingBox(); return c.y + c.height - d.y; }).toBeLessThanOrEqual(1);
+  // a tool wants the whole map, so the sheet folds away while it is in use and comes back after
+  await page.locator(".leaflet-popup-close-button").tap();
+  const addPin = page.getByRole("button", { name: "Add pin", exact: true });
+  await addPin.tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);
+  await addPin.tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
 });

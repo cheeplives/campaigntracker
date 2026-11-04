@@ -304,10 +304,10 @@ test("Travel: Plan this trip brings a map route's length and ends to the planner
   await page.getByRole("button", { name: "Measure" }).click();
   await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();
   const pic = await settledBox(page.locator(".map-view img.leaflet-image-layer"));   // the picture, clear of the routes drawer
-  await page.mouse.click(pic.x + pic.width * 0.3, pic.y + pic.height * 0.5);
+  await page.mouse.click(pic.x + pic.width * 0.4, pic.y + pic.height * 0.85);   // below the pins and the route, at y 60 of 200
   const plan = page.locator(".map-measure-bar").getByRole("button", { name: "Plan this trip" });
   await expect(plan).toBeHidden();   // one point is no trip
-  await page.mouse.click(pic.x + pic.width * 0.7, pic.y + pic.height * 0.5);
+  await page.mouse.click(pic.x + pic.width * 0.6, pic.y + pic.height * 0.85);
   await plan.click();
   await expect(page).toHaveURL(new RegExp(`/travel\\?map=${mapId}&path=\\d+,\\d+;\\d+,\\d+$`));
   await expect(page.locator(".travel-trip")).toContainText("Planning the trip along a measured path on Sartar.");
