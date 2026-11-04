@@ -353,10 +353,41 @@ function safe_return_path(?string $p): string {
 }
 
 // --- rate limiting (DB-backed fixed window) --------------------------------
-/** Best-effort client IP. Uses REMOTE_ADDR only — X-Forwarded-For is spoofable. */
+/** Whether $ip is in one of the CIDR ranges (or plain addresses) in $ranges. IPv4 and IPv6. */
+function ip_in_ranges(string $ip, array $ranges): bool {
+  $bin = @inet_pton($ip);
+  if ($bin === false) return false;
+  foreach ($ranges as $r) {
+    $r = trim((string) $r);
+    if ($r === '') continue;
+    [$net, $bits] = str_contains($r, '/') ? explode('/', $r, 2) : [$r, null];
+    $netBin = @inet_pton($net);
+    if ($netBin === false || strlen($netBin) !== strlen($bin)) continue;
+    $bits = $bits === null ? strlen($bin) * 8 : max(0, min(strlen($bin) * 8, (int) $bits));
+    $bytes = intdiv($bits, 8); $rest = $bits % 8;
+    if (substr($bin, 0, $bytes) !== substr($netBin, 0, $bytes)) continue;
+    if ($rest && ((ord($bin[$bytes]) ^ ord($netBin[$bytes])) & (0xFF << (8 - $rest)) & 0xFF)) continue;
+    return true;
+  }
+  return false;
+}
+
+/** Best-effort client IP. REMOTE_ADDR, unless it is one of the config's 'trusted_proxies' (a CDN such as Cloudflare,
+ * or a reverse proxy in front of PHP): then the nearest X-Forwarded-For hop that isn't itself a trusted proxy. The
+ * header is never read from anyone else, as any client can send it. See docs/DEPLOY.md. */
 function client_ip(): string {
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-  return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
+  if (!filter_var($ip, FILTER_VALIDATE_IP)) return '0.0.0.0';
+  $trusted = (array) cfg('trusted_proxies', []);
+  if (!$trusted || !ip_in_ranges($ip, $trusted)) return $ip;
+  $hops = array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')));
+  // Walk from the hop nearest us outwards: each one was appended by the proxy in front of it.
+  for ($i = count($hops) - 1; $i >= 0; $i--) {
+    $hop = $hops[$i];
+    if (!filter_var($hop, FILTER_VALIDATE_IP)) break;
+    if (!ip_in_ranges($hop, $trusted)) return $hop;
+  }
+  return $ip;
 }
 
 /** Fixed-window limiter: allow up to $max hits per $windowSec for (bucket,id);
@@ -476,24 +507,44 @@ function configured_providers(): array {
 }
 
 // --- outbound HTTP (TLS-verified) -----------------------------------------
+/** Default ceiling on an outbound reply's body. A misbehaving or hostile upstream could otherwise send hundreds of MB
+ * and exhaust this worker's memory; callers that expect more pass 'max_bytes'. */
+const HTTP_MAX_BYTES = 4_000_000;
+
+/** One outbound request: ['status', 'body', 'error']. The body is read through a write callback and refused once it
+ * passes $opts['max_bytes'] (HTTP_MAX_BYTES by default): the transfer stops there, status is 0 and error says why,
+ * so every caller's "status !== 200" check already treats it as a failure. */
 function http_request(string $method, string $url, array $opts = []): array {
+  $max = (int) ($opts['max_bytes'] ?? HTTP_MAX_BYTES);
+  $body = '';
+  $tooLarge = false;
   $ch = curl_init($url);
   curl_setopt_array($ch, [
     CURLOPT_CUSTOMREQUEST  => $method,
-    CURLOPT_RETURNTRANSFER => true,
     CURLOPT_SSL_VERIFYPEER => true,     // never disable — MITM of the token exchange = full compromise
     CURLOPT_SSL_VERIFYHOST => 2,
     CURLOPT_CONNECTTIMEOUT => (int) ($opts['connect_timeout'] ?? 5),
     CURLOPT_TIMEOUT        => (int) ($opts['timeout'] ?? 10),
     CURLOPT_HTTPHEADER     => $opts['headers'] ?? [],
+    CURLOPT_WRITEFUNCTION  => function ($ch, string $chunk) use (&$body, &$tooLarge, $max): int {
+      if (strlen($body) + strlen($chunk) > $max) { $tooLarge = true; return -1; }   // -1 aborts the transfer
+      $body .= $chunk;
+      return strlen($chunk);
+    },
   ]);
+  // A declared Content-Length over the cap is refused before any of the body is read.
+  if (defined('CURLOPT_MAXFILESIZE_LARGE')) curl_setopt($ch, CURLOPT_MAXFILESIZE_LARGE, $max);
   if (isset($opts['post_fields'])) curl_setopt($ch, CURLOPT_POSTFIELDS, $opts['post_fields']);
   if (!empty($opts['compress'])) curl_setopt($ch, CURLOPT_ENCODING, '');   // accept gzip and the like
-  $body = curl_exec($ch);
+  curl_exec($ch);
   $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err = curl_error($ch);
+  if ($tooLarge || curl_errno($ch) === 63 /* CURLE_FILESIZE_EXCEEDED */) {
+    error_log('http_request: reply from ' . (string) parse_url($url, PHP_URL_HOST) . " passed $max bytes; refused");
+    return ['status' => 0, 'body' => '', 'error' => 'Response too large'];
+  }
   // No curl_close(): it has done nothing since PHP 8.0 (the handle is freed when $ch goes) and 8.5 deprecates it.
-  return ['status' => $status, 'body' => (string) $body, 'error' => $err];
+  return ['status' => $status, 'body' => $body, 'error' => $err];
 }
 
 /** Email a user that an admin approved ('approved') or removed ('revoked') their
