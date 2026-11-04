@@ -3,7 +3,7 @@
 const { test, expect } = require("@playwright/test");
 const path = require("path");
 const Engine = require(path.join(__dirname, "..", "..", "static", "engine.js"));
-const { watchErrors, expectNoErrors, person, signIn, api, approve } = require("./helpers");
+const { goTab, watchErrors, expectNoErrors, person, signIn, api, approve } = require("./helpers");
 
 const calOf = key => Engine.prep(JSON.parse(JSON.stringify(Engine.PRESETS[key].calendar)));
 const names = (key, cal, d) => Engine.holidaysOn(cal, Engine.PRESETS[key].holidays, d).map(h => h.name);
@@ -83,12 +83,9 @@ test("a GM starts a Forgotten Realms campaign, and About & sources cites the fou
   const { json } = await api(page, "campaign", undefined, cid);
   expect(json.campaign.calendar.name).toBe("Calendar of Harptos");
   expect(json.campaign.calendar.months.filter(m => !m.intercalary)).toHaveLength(12);
-  // the Legend's Setup group starts folded
-  const setup = page.locator("nav.tabs .tab-group button", { hasText: "Setup" });
-  if (await setup.isVisible()) await setup.click();
-  await page.getByRole("navigation").getByRole("link", { name: "Holidays", exact: true }).click();
+  await goTab(page, "Holidays");   // out of the Setup group, which starts folded
   await expect(page.getByText("Shieldmeet").first()).toBeVisible();
-  await page.getByRole("navigation").getByRole("link", { name: "Regions", exact: true }).click();
+  await goTab(page, "Regions");
   await expect(page.getByText("Waterdeep").first()).toBeVisible();
   // a fresh tab, so a campaign view still loading can't draw over the About page
   const about = await page.context().newPage();

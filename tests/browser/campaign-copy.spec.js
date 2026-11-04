@@ -72,7 +72,8 @@ test("a GM copies a campaign from the list, with everything in it, into a new on
 
   await page.goto("index.html#/");
   const row = page.locator(".camp-row").filter({ hasText: "Enemy Within" });
-  await row.getByRole("button", { name: "Copy" }).click();
+  await row.getByLabel(/^More for /).click();
+  await row.getByRole("button", { name: "Copy…" }).click();
   const dlg = page.locator("dialog.kit-dialog");
   await expect(dlg.getByLabel("Name of the copy")).toHaveValue("Enemy Within (copy)");
   await dlg.getByRole("button", { name: "Copy" }).click();
@@ -126,7 +127,9 @@ test("copying only the setup brings the calendar, regions, holidays and tag list
   await fill(page, cid, uid);
 
   await page.goto("index.html#/");
-  await page.locator(".camp-row").filter({ hasText: "Old World" }).getByRole("button", { name: "Copy" }).click();
+  const old = page.locator(".camp-row").filter({ hasText: "Old World" });
+  await old.getByLabel(/^More for /).click();
+  await old.getByRole("button", { name: "Copy…" }).click();
   const dlg = page.locator("dialog.kit-dialog");
   await dlg.getByLabel("Name of the copy").fill("New World");
   await dlg.getByLabel("What to copy").selectOption("setup");
@@ -156,19 +159,22 @@ test("a GM deletes a campaign from the list after typing DELETE (any case); play
   await pp.goto("index.html#/");
   const prow = pp.locator(".camp-row").filter({ hasText: "Doomed Run" });
   await expect(prow).toBeVisible();
-  await expect(prow.getByRole("button", { name: /^(Copy|Delete)$/ })).toHaveCount(0);   // only the star
+  await expect(prow.getByLabel(/^More for /)).toHaveCount(0);   // only the star: no ⋯ with Copy and Delete
+  await expect(prow.getByRole("button", { name: /^(Copy|Delete)…?$/ })).toHaveCount(0);
   expect((await api(pp, "campaign_copy", { name: "Mine now" }, cid)).status).toBe(403);
   expect((await api(pp, "campaign_delete", { confirm: "DELETE" }, cid)).status).toBe(403);
 
   await page.goto("index.html#/");
   const row = page.locator(".camp-row").filter({ hasText: "Doomed Run" });
   // Anything but DELETE (in any case) keeps it.
-  await row.getByRole("button", { name: "Delete" }).click();
+  await row.getByLabel(/^More for /).click();
+  await row.getByRole("button", { name: "Delete…" }).click();
   await page.locator("dialog.kit-dialog input").fill("delet");
   await page.locator("dialog.kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Not deleted: type DELETE to confirm")).toBeVisible();
   await expect(row).toBeVisible();
-  await row.getByRole("button", { name: "Delete" }).click();
+  await row.getByLabel(/^More for /).click();
+  await row.getByRole("button", { name: "Delete…" }).click();
   await page.locator("dialog.kit-dialog input").fill("delete ");
   await page.locator("dialog.kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(row).toHaveCount(0);

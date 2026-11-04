@@ -2,7 +2,7 @@
 // notes and tags, filterable by tag and by past or upcoming, and never shows
 // players a secret event.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { goTab, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("the Events tab searches every event and filters by tag", async ({ page, browser }) => {
@@ -19,7 +19,7 @@ test("the Events tab searches every event and filters by tag", async ({ page, br
   await api(page, "note_add", { event_id: fair, body: "Pip won the pie contest" }, cid);
 
   await page.goto(`index.html#/c/${cid}/today`);
-  await page.getByRole("link", { name: "Events", exact: true }).click();
+  await goTab(page, "Events");
   await expect(page).toHaveURL(/#\/c\/\d+\/events$/);
   const rows = page.locator(".evrow");
   await expect(rows.locator("h4")).toHaveText(["Ambush on the road", "Harvest fair", "Duel at noon", /The baron's plot/]);

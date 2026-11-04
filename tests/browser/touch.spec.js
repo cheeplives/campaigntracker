@@ -1,7 +1,9 @@
 // Tablets and touch screens: everything a mouse user reads in a tooltip can be
 // tapped open, menus close on a tap elsewhere, and no tab hides off the edge.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, makeCampaign } = require("./helpers");
+const { openLegend, watchErrors, expectNoErrors, person, signIn, approve, makeCampaign } = require("./helpers");
+// An iPad in portrait (and anything else from 561 to 1000px wide) has the Legend as a drawer, closed until its » is pressed
+const isDrawer = viewport => viewport.width > 560 && viewport.width <= 1000;
 
 async function gmCampaign(page, browser, name) {
   const gm = person(name);
@@ -57,8 +59,9 @@ test("the campaign tabs stay on screen as the page scrolls", async ({ page, brow
   const errors = watchErrors(page);
   const cid = await gmCampaign(page, browser, "Pinned");
   await page.goto(`index.html#/c/${cid}/today`);
-  const on = page.locator("nav.tabs a.on");
-  await expect(on).toHaveText("Current Day");
+  await expect(page.locator("nav.tabs a.on")).toHaveText("Current Day");
+  // in a drawer, what stays on screen is its » rail
+  const on = isDrawer(viewport) ? page.locator("nav.tabs .legend-tuck") : page.locator("nav.tabs a.on");
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
   const box = await on.boundingBox();
@@ -74,6 +77,7 @@ test("every campaign tab is on screen at tablet and desktop widths", async ({ pa
   const errors = watchErrors(page);
   const cid = await gmCampaign(page, browser, "Tab");
   await page.goto(`index.html#/c/${cid}/today`);
+  await openLegend(page);
   const tabs = page.locator("nav.tabs a");
   await expect(tabs.last()).toHaveText("Settings");
   for (const box of await tabs.evaluateAll(as => as.map(a => a.getBoundingClientRect().right)))
@@ -90,9 +94,10 @@ test("the Legend groups its tabs under Play, Party, World and Setup", async ({ p
   const order = await page.locator("nav.tabs > *").allTextContents();
   for (const [g, first] of [["Play", "Current Day"], ["Party", "At the Table"], ["World", "Encyclopedia"], ["Setup", "Regions"]])
     expect(order[order.indexOf(g) + 1]).toBe(first);
-  // headings show in the side Legend; across the top they are a thin divider
+  // headings show in the side Legend (and its drawer); across the top on a phone they are a thin divider
   const heading = page.locator("nav.tabs .tab-group", { hasText: "World" });
-  if (viewport.width > 1000) await expect(heading).toBeVisible();
+  await openLegend(page);
+  if (viewport.width > 560) await expect(heading).toBeVisible();
   else expect((await heading.boundingBox()).width).toBeLessThanOrEqual(2);
   expectNoErrors(errors);
 });
@@ -102,15 +107,17 @@ test("the Legend's groups fold, Setup starts folded, and they stay as left", asy
   const cid = await gmCampaign(page, browser, "Fold");
   await page.goto(`index.html#/c/${cid}/today`);
   const tab = name => page.locator("nav.tabs a", { hasText: name });
-  if (viewport.width <= 1000) {
+  if (viewport.width <= 560) {
     // across the top nothing folds: every tab is there
     await expect(tab("Settings")).toHaveCount(1);
-    if (viewport.width > 560) await expect(tab("Settings")).toBeVisible();
     await expect(page.locator(".tab-group button").first()).toBeHidden();
     expectNoErrors(errors);
     return;
   }
+  // in a drawer the groups fold the same way, once it is open; picking a tab closes it again
   const toggle = g => page.locator("nav.tabs .tab-group button", { hasText: g });
+  const show = () => openLegend(page);
+  await show();
   await expect(tab("Calendar")).toBeVisible();
   await expect(tab("Regions")).toBeHidden();
   await expect(toggle("Setup")).toHaveAttribute("aria-expanded", "false");
@@ -123,15 +130,18 @@ test("the Legend's groups fold, Setup starts folded, and they stay as left", asy
   await expect(tab("Calendar")).toBeHidden();
   // remembered after a reload, and on another page
   await page.reload();
+  await show();
   await expect(tab("Regions")).toBeVisible();
   await expect(tab("Current Day")).toBeVisible();
   await expect(tab("Events")).toBeHidden();
   await tab("Encyclopedia").click();
+  await show();
   await expect(tab("Current Day")).toBeHidden();
   await expect(tab("Regions")).toBeVisible();
   await toggle("Setup").click();
   await expect(tab("Regions")).toBeHidden();
   await page.goto(`index.html#/c/${cid}/settings`);
+  await show();
   await expect(tab("Settings")).toBeVisible();
   await expect(tab("Regions")).toBeHidden();
   expectNoErrors(errors);
@@ -144,8 +154,22 @@ test("the Legend has no heading and tucks away to the left, and stays as left", 
   const nav = page.locator("nav.tabs"), tuck = page.locator("nav.tabs .legend-tuck"), today = page.locator("nav.tabs a.on");
   await expect(today).toHaveText("Current Day");
   expect(await nav.evaluate(n => getComputedStyle(n, "::before").content)).toBe("none");
-  if (viewport.width <= 1000) {
+  if (viewport.width <= 560) {
     await expect(tuck).toBeHidden();
+    expectNoErrors(errors);
+    return;
+  }
+  if (isDrawer(viewport)) {
+    // a drawer: closed on every page, » opens it over the page (which stays where it is), and nothing is remembered
+    const pageLeft = () => page.locator(".nowbar").evaluate(n => n.getBoundingClientRect().left);
+    const before = await pageLeft();
+    await expect(tuck).toHaveAttribute("aria-expanded", "false");
+    await expect(today).toBeHidden();
+    await tuck.click();
+    await expect(today).toBeVisible();
+    expect(await pageLeft()).toBe(before);
+    await page.reload();
+    await expect(page.locator("nav.tabs .legend-tuck")).toHaveAttribute("aria-expanded", "false");
     expectNoErrors(errors);
     return;
   }
