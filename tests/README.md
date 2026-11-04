@@ -182,10 +182,17 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   be dragged or moved until unlocked; a route has its own colour and line and is drawn on to the pins it starts and ends
   at; a GM places the party anywhere and pins a new location where it stands; the grid's opacity is each person's own;
   picture, rename and delete sit in the ⚙ menu (migration 024).
-- **map-scan**: the text scanner's names from Tesseract's words (a line's words joined, labels side by side split,
-  noise and unsure words dropped, the surest of a repeated name kept, boxes back in the map's pixels); a GM scans a
-  printed map in the browser, fixes a name, pins the approved ones as entries (reusing one of the same name, else a new
-  Location), and a second scan shows them already pinned; players get no Scan button.
+- **map-scan**: Scan for names offers two readers. Read with Claude sends the picture (as a JPEG, with its size in the
+  prompt) to Anthropic with the GM's own API key, in the headers a browser call needs, and asks for JSON by schema;
+  the names come back in the map's own pixels, are checked with no confidence shown and pinned; a key Anthropic
+  refuses says so; with no key the dialog points to the account page, where the key is checked, saved in the browser
+  only (never sent to the server), not shown again, and removable. Read here (Tesseract) joins a line's words into names,
+  splits labels side by side, drops noise and unsure words, keeps the surest of a repeated name, and puts boxes back in
+  the map's pixels; a GM scans a printed map in the browser, fixes a name, pins the approved ones as entries (reusing one
+  of the same name, else a new Location), and a second scan shows them already pinned; players get no Scan button;
+  .htaccess serves every scanner file and deploy.sh's security check calls none of them a leftover to delete (none ends
+  in .gz), and a file the server refuses ends the scan with a message instead of loading for ever. Quick label pins a
+  place per click (its name typed, an entry of that name reused, else a new Location) until the GM presses it again.
 - **maps**: the Maps tab sits after Generators; a GM adds a map with its picture (uploaded or from Find Image), scales
   it by two points or grid squares (a `30x20` file name fills in the square size, the Roll20 button 70 px = 5 ft, and the
   grid offset is the first click's position modulo the square), and measures; an unscaled map says so; a 6000 × 4000

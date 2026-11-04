@@ -33,7 +33,7 @@ test("the account page lists your campaigns with your role, and sets your charac
   const box = pp.getByLabel("Your character in Rowan's Table");
   await box.fill("Brannoc the Bold");
   await box.press("Tab");
-  await expect(pp.getByText("Saved")).toBeVisible();
+  await expect(pp.getByText("Saved", { exact: true })).toBeVisible();
 
   // It is the same name the Members tab shows and edits.
   await page.goto(`index.html#/c/${mine}/members`);
@@ -56,7 +56,7 @@ test("one units choice sets temperatures, distances and speeds, and None follows
   const save = async v => {
     await page.goto("index.html#/account");
     await units.selectOption(v);
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Preferences saved")).toBeVisible();
   };
 

@@ -682,7 +682,34 @@
         return el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
           field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'), pickField);
       })) : el('p', { class: 'muted' }, 'You aren\'t in any campaigns yet.'));
-    mount(prefs, list);
+    // The GM's own Anthropic API key, for Scan for names on a map. Kept in this browser only: never sent to this site's
+    // server, only from the browser straight to Anthropic when they scan.
+    let scanner = null;
+    if (typeof MapScan !== 'undefined') {
+      const has = () => !!MapScan.apiKey.get();
+      const keyIn = el('input', { type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: has() ? 'Saved. Paste a new key to replace it' : 'sk-ant-…', 'aria-label': 'Anthropic API key' });
+      const state = el('p', { class: 'small', role: 'status' });
+      const forget = btn('Remove key', () => {
+        MapScan.apiKey.set(null); keyIn.placeholder = 'sk-ant-…'; show(); toast('Key removed from this browser');
+      });
+      const show = () => { state.textContent = has() ? 'A key is saved in this browser.' : 'No key saved in this browser.'; forget.style.display = has() ? '' : 'none'; };
+      scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Map scanner'),
+        el('p', { class: 'muted' }, 'Scan for names on a map can have Claude read the place names, using your own Anthropic API key, so the scans are billed to your Anthropic account (a few cents each). Create a key at ',
+          el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'),
+        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you scan from. When you scan, your browser sends the map\'s picture and the key straight to Anthropic.'),
+        field('Anthropic API key', keyIn), state,
+        el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save key'), forget));
+      scanner.addEventListener('submit', e => {
+        e.preventDefault();
+        const v = keyIn.value.trim();
+        if (!v) return toast('Paste your API key first', true);
+        if (!/^sk-ant-[\w-]{20,}$/.test(v)) return toast('That doesn\'t look like an Anthropic API key (they start with sk-ant-)', true);
+        if (!MapScan.apiKey.set(v)) return toast('This browser won\'t store it (private browsing, or site data blocked)', true);
+        keyIn.value = ''; keyIn.placeholder = 'Saved. Paste a new key to replace it'; show(); toast('Key saved in this browser');
+      });
+      show();
+    }
+    mount(prefs, scanner, list);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -6320,7 +6347,10 @@
         list([
           ['The notes editor: ', cite('quill'), '.'],
           ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
-          ['Scan for names on a map (in your browser; the picture is never sent anywhere): ', cite('tesseract'), ', reading with ', cite('tessdata'), '.'],
+          ['Scan for names on a map, Read here (in your browser; the picture is never sent anywhere): ', cite('tesseract'), ', reading with ', cite('tessdata'), '.'],
+          ['Scan for names on a map, Read with Claude: only when a GM picks it, their browser sends the map\'s picture to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
+            '\'s API with the GM\'s own API key, and Claude (', (typeof MapScan !== 'undefined' ? MapScan.MODEL : 'claude-opus-5-5'), ') reads the place names on it. Under ',
+            extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',

@@ -1382,7 +1382,7 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .lock-toggle:has(input:disabled) { cursor: default; opacity: .7; }
 
 /* the map text scanner's review */
-.map-scan-dialog { width: min(640px, calc(100vw - 32px)); }
+.map-scan-dialog { width: min(640px, calc(100vw - 32px)); overflow-wrap: anywhere; }
 .map-scan-dialog progress { width: 100%; accent-color: var(--accent); }
 .map-scan-list { display: flex; flex-direction: column; gap: 6px; max-height: min(55vh, 520px); overflow-y: auto; margin: 8px 0; }
 .map-scan-row { display: grid; grid-template-columns: auto 140px 1fr; gap: 10px; align-items: center; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
@@ -1392,3 +1392,9 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .map-scan-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .map-scan-name input { width: 100%; }
 @media (max-width: 560px) { .map-scan-row { grid-template-columns: auto 90px 1fr; } .map-scan-crop { max-width: 90px; } }
+.map-scan-way { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
+.map-scan-way p { margin: 2px 0 0; }
+.map-scan-way > :last-child { flex: none; }
+.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.map-label-form input { flex: 1 1 14rem; min-width: 0; }
+.map-label-form small { flex-basis: 100%; }

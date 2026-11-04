@@ -212,7 +212,7 @@ const MapsTab = (() => {
     const toolbar = el('div', { class: 'map-toolbar' });
     const panelBox = el('div', { class: 'map-panel-box' });
 
-    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | null
+    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
 
     // ---- measuring
@@ -291,10 +291,14 @@ const MapsTab = (() => {
     let picks = [], pickLayer = null, panel = null;
     const drawPicks = () => {
       pickLayer.clearLayers();
-      picks.forEach((p, i) => L.circleMarker(toLatLng(p.x, p.y), { radius: 5, className: 'map-dot pick', interactive: false }).bindTooltip(i ? 'B' : 'A', { permanent: true, direction: 'top', className: 'map-tip' }).addTo(pickLayer));
+      picks.forEach((p, i) => {
+        const dot = L.circleMarker(toLatLng(p.x, p.y), { radius: 5, className: 'map-dot pick', interactive: false });
+        if (mode === 'scale') dot.bindTooltip(i ? 'B' : 'A', { permanent: true, direction: 'top', className: 'map-tip' });   // Quick label's spot needs no letter
+        dot.addTo(pickLayer);
+      });
       if (picks.length === 2) L.polyline(picks.map(p => toLatLng(p.x, p.y)), { weight: 2, dashArray: '4 4', className: 'map-line', interactive: false }).addTo(pickLayer);
     };
-    function closePanel() { panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin') mode = null; syncTools(); }
+    function closePanel() { panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools(); }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
       mode = 'scale'; picks = []; drawPicks(); note.textContent = '';
@@ -721,6 +725,10 @@ const MapsTab = (() => {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         mode = null; note.textContent = ''; syncTools(); pinForm(null, p);
       }
+      else if (mode === 'label') {
+        if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
+        labelAt(p);
+      }
       else if (mode === 'party') {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         const g = groups.find(q => q.id === Number(partyWhich.value)) || groups[0];
@@ -734,15 +742,59 @@ const MapsTab = (() => {
     const measureBtn = btn('Measure/Route', () => {
       if (mode === 'measure') { mode = null; pts = []; drawMeasure(); note.textContent = ''; return syncTools(); }
       if (!hasScale()) { note.textContent = gm ? 'Set the scale to measure' : 'The GM hasn\'t set this map\'s scale yet'; return; }
-      if (mode === 'scale' || mode === 'pin') closePanel();
+      if (mode === 'scale' || mode === 'pin' || mode === 'label') closePanel();
       mode = 'measure'; note.textContent = gm ? 'Click the map to lay down points, then Save route… to keep it' : 'Click the map to lay down points'; syncTools();
     }, '', gm ? 'Click along a path to add up its length, and keep it as a route' : 'Click along a path to add up its length');
     const addPinBtn = btn('Add pin', () => {
       if (mode === 'pin') { closePanel(); note.textContent = ''; return; }
+      if (mode === 'label') closePanel();
       if (mode === 'scale' || mode === 'measure') { if (mode === 'measure') { pts = []; drawMeasure(); } closePanel(); }
       panelBox.replaceChildren(); mode = 'pin'; note.textContent = 'Click the map to place the pin'; syncTools();
     }, '', 'Click the map to leave a pin there');
     addPinBtn.hidden = !map.image_url;
+    // Quick label (GMs): each click on the map asks for the name of the place there, and pins it as that Encyclopedia
+    // entry (or a new Location), staying in this mode for the next one: a map's labels pinned by hand, fast.
+    const labelBtn = gm && S.encReady ? btn('Quick label', () => {
+      if (mode === 'label') { closePanel(); note.textContent = ''; return; }
+      if (mode === 'measure') { pts = []; drawMeasure(); }
+      if (mode) closePanel();
+      mode = 'label'; note.textContent = 'Click a place on the map, then type its name. Press Quick label again when you\'re done'; syncTools();
+    }, '', 'Click each place on the map and type its name: each becomes a pin and an Encyclopedia location') : null;
+    if (labelBtn) labelBtn.hidden = !map.image_url;
+    function labelAt(xy) {
+      picks = [xy]; drawPicks();
+      const name = el('input', { maxlength: 150, autocomplete: 'off', required: true, 'aria-label': 'Name of this place', placeholder: 'Name of this place' });
+      const what = el('small', { class: 'muted' }, 'A new Location in the Encyclopedia');
+      name.addEventListener('input', () => {
+        const e = entryNamed(name.value);
+        what.textContent = e ? `Pins the entry ${e.name}${e.is_secret ? ' (GM only)' : ''}` : 'A new Location in the Encyclopedia';
+      });
+      const go = el('button', { class: 'primary', type: 'submit' }, 'Pin it');
+      const form = el('form', { class: 'map-label-form' }, name, go, btn('Skip', () => { picks = []; drawPicks(); panelBox.replaceChildren(); }), what);
+      name.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.preventDefault(); picks = []; drawPicks(); panelBox.replaceChildren(); } });
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const n = name.value.trim();
+        if (!n || go.disabled) return;
+        go.disabled = true;
+        try {
+          let e = entryNamed(n), made = false;
+          if (!e) {
+            const id = (await post('entry_save', { name: n, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+            e = { id, name: n, aliases: [], is_secret: false, blank: true, preview: '' };
+            S.encyclopedia = [...S.encyclopedia, e];
+            made = true;
+          }
+          await post('pin_save', { map_id: map.id, x: xy.x, y: xy.y, kind: 'entry', entry_id: e.id, label: '', note: '' }, cid);
+          picks = []; panelBox.replaceChildren();
+          await refresh();
+          drawPicks();
+          note.textContent = `Pinned ${e.name}${made ? ' (a new Location)' : ''}. Click the next place, or press Quick label when you're done`;
+        } catch (err) { toast(err.message, true); go.disabled = false; }
+      });
+      panelBox.replaceChildren(form);
+      name.focus();
+    }
     // GMs: put a group of the party anywhere on the map (a pin isn't needed), with a select when there is more than one group
     const partyWhich = select(groups.map(g => [g.id, g.name]), groups[0]?.id ?? '', { 'aria-label': 'Which group', class: 'small' });
     const partyBtn = gm ? btn('Place party', () => {
@@ -766,6 +818,7 @@ const MapsTab = (() => {
       const m = mode === 'measure';
       measureBtn.setAttribute('aria-pressed', String(m));
       addPinBtn.setAttribute('aria-pressed', String(mode === 'pin'));
+      labelBtn?.setAttribute('aria-pressed', String(mode === 'label'));
       partyBtn?.setAttribute('aria-pressed', String(mode === 'party'));
       partyWhich.hidden = !(mode === 'party' && groups.length > 1);
       if (!groups.some(g => String(g.id) === partyWhich.value)) partyWhich.replaceChildren(...groups.map(g => el('option', { value: g.id }, g.name)));
@@ -843,32 +896,51 @@ const MapsTab = (() => {
         try { file = await ctx.uploadFile('map', map.id, f); await post('map_save', { id: map.id, image_id: file.id }, cid); toast('Picture changed'); location.hash = `${base}?scale=1&file=${encodeURIComponent(f.name)}`; }
         catch (err) { if (file) await post('file_delete', { id: file.id }, cid).catch(() => {}); toast(err.message, true); }
       } }), 'Change picture') : null;
-    /** Scan for place names: the scanner reads the words on the picture, and the GM approves or skips each one. An
-     * approved name is pinned where it was read, as its Encyclopedia entry (the entry of that name, or a new Location). */
+    /** Scan for place names: Claude (with the GM's own Anthropic key) or Tesseract (on this device) reads the labels on
+     * the picture, and the GM approves or skips each one. An approved name is pinned where it was read, as its
+     * Encyclopedia entry (the entry of that name, or a new Location). */
     function scanNames() {
       const d = el('dialog', { class: 'kit-dialog map-scan-dialog', 'aria-label': 'Scan for place names' });
-      const bar = el('progress', { max: 1, value: 0, 'aria-label': 'Scanning' });
-      const said = el('p', { class: 'small', role: 'status' }, 'Loading the scanner…');
-      let stop = false;
+      let stop = false, abort = null;
+      d.addEventListener('close', () => { stop = true; abort?.abort(); d.remove(); });
+      const key = MapScan.apiKey.get();
+      const way = (title, text, action) => el('div', { class: 'map-scan-way' }, el('div', {}, el('strong', {}, title), el('p', { class: 'small muted' }, text)), action);
       d.append(el('h3', {}, `Scan ${map.name} for place names`),
-        el('p', { class: 'small muted' }, 'The picture is read here on your device and isn\'t sent anywhere. The first scan downloads the scanner (about 7 MB), which your browser keeps for next time.'),
-        bar, said, el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
-      d.addEventListener('close', () => { stop = true; d.remove(); });
+        way('Read with Claude', key
+          ? 'Sends the picture to Anthropic, where Claude reads it with your own API key. Reads fancy and slanted lettering well. Costs your Anthropic account a few cents a scan.'
+          : 'Claude reads fancy and slanted lettering well, using your own Anthropic API key. Add your key on your account page to use it.',
+        key ? btn('Read with Claude', () => run('claude'), 'primary') : el('a', { class: 'button', href: '#/account', onclick: () => d.close() }, 'Add your key')),
+        way('Read on this device', 'Free, and the picture stays on your device, but it only reads plain printed lettering. The first scan downloads the scanner (about 7 MB), which your browser keeps.',
+          btn('Read here', () => run('here'))),
+        el('p', { class: 'small muted' }, 'To label a map by hand instead, use Quick label: click a spot and type its name.'),
+        el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
       document.body.append(d); d.showModal();
-      MapScan.scan(map.image_url, (share, what) => { bar.value = share; said.textContent = what; })
-        .then(({ found, canvas, k }) => { if (!stop) review(found, canvas, k); })
-        .catch(err => { if (stop) return; said.textContent = err.message; bar.remove(); });
 
-      function review(found, canvas, k) {
+      function run(how) {
+        const bar = el('progress', { max: 1, value: 0, 'aria-label': 'Scanning' });
+        const said = el('p', { class: 'small', role: 'status' }, how === 'claude' ? 'Getting the picture ready…' : 'Loading the scanner…');
+        d.replaceChildren(el('h3', {}, `Scan ${map.name} for place names`),
+          el('p', { class: 'small muted' }, how === 'claude' ? 'Claude is reading the picture, with your own Anthropic API key.'
+            : 'The picture is read here on your device and isn\'t sent anywhere. The first scan downloads the scanner (about 7 MB), which your browser keeps for next time.'),
+          bar, said, el('div', { class: 'kit-dialog-actions' }, btn('Cancel', () => d.close())));
+        const progress = (share, what) => { if (share === null) bar.removeAttribute('value'); else bar.value = share; said.textContent = what; };
+        abort = new AbortController();
+        (how === 'claude' ? MapScan.claude(map.image_url, key, progress, abort.signal) : MapScan.scan(map.image_url, progress))
+          .then(({ found, canvas, k }) => { if (!stop) review(found, canvas, k, how); })
+          .catch(err => { if (stop) return; said.textContent = err.message; bar.remove(); });
+      }
+
+      function review(found, canvas, k, how) {
         const pinned = new Set(pins.map(p => G.nameKey(pinTitle(p))));
         if (!found.length) {
-          d.replaceChildren(el('h3', {}, 'No place names found'), el('p', {}, 'The scanner found no words it was sure of. It reads straight, printed labels best: curved, faint or handwritten ones are often missed.'),
+          d.replaceChildren(el('h3', {}, 'No place names found'), el('p', {}, how === 'claude' ? 'Claude found no place names on this picture.'
+            : 'The scanner found no words it was sure of. It reads straight, printed labels best: curved, faint, fancy or handwritten ones are often missed. Read with Claude does much better on those.'),
             el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
           return;
         }
         const rows = found.map(c => {
           const already = pinned.has(G.nameKey(c.name));
-          const box = el('input', { type: 'checkbox', checked: !already && c.conf >= 70, 'aria-label': `Add ${c.name}` });
+          const box = el('input', { type: 'checkbox', checked: !already && (c.conf === null || c.conf >= 70), 'aria-label': `Add ${c.name}` });
           const name = el('input', { value: c.name, maxlength: 150, autocomplete: 'off', 'aria-label': 'Place name' });
           const what = el('small', { class: 'muted' });
           const say = () => {
@@ -881,7 +953,7 @@ const MapsTab = (() => {
           say();
           const row = el('div', { class: 'map-scan-row' + (already ? ' already' : '') }, box,
             el('img', { src: MapScan.crop(canvas, k, c.box), alt: `Where "${c.name}" was read`, class: 'map-scan-crop' }),
-            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
+            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, c.conf === null ? null : el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
           return { c, box, name, row };
         });
         const go = el('button', { class: 'primary', type: 'button' });
@@ -934,7 +1006,7 @@ const MapsTab = (() => {
       window.addEventListener('hashchange', () => off.abort(), { once: true });
     }
     tools.append(saveRouteBtn, planBtn);
-    toolbar.append(...[addPinBtn, measureBtn, partyBtn, partyWhich, scanBtn, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
+    toolbar.append(...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich, scanBtn, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
     const title = el('h2', {}, map.name);
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
