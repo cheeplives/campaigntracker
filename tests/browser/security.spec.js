@@ -75,19 +75,18 @@ test("the server's Content-Security-Policy header and index.html's meta tag allo
   expect(directives(meta)).toEqual(directives(header));
 });
 
-test("the page's CSP keeps inline style attributes but refuses an injected <style> element", async ({ page }) => {
+test("the page's CSP keeps the inline style attributes el() writes", async ({ page }) => {
+  // style-src stays 'self' 'unsafe-inline': a split into style-src-elem 'self' and style-src-attr made WebKit refuse
+  // stylesheets on ordinary pages, which a real iPad would show as broken styling
+  const errors = [];
+  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   await page.goto("index.html#/about");
-  const r = await page.evaluate(() => {
-    const s = document.createElement("style");
-    s.textContent = "#csp-probe { color: rgb(1, 2, 3); }";
-    document.head.append(s);
+  const bg = await page.evaluate(() => {
     const p = document.createElement("span");
-    p.id = "csp-probe";
     p.setAttribute("style", "background-color: rgb(4, 5, 6)");
     document.body.append(p);
-    const cs = getComputedStyle(p);
-    return { color: cs.color, bg: cs.backgroundColor };
+    return getComputedStyle(p).backgroundColor;
   });
-  expect(r.color).not.toBe("rgb(1, 2, 3)");      // style-src-elem 'self'
-  expect(r.bg).toBe("rgb(4, 5, 6)");             // style-src-attr 'unsafe-inline', which el() needs
+  expect(bg).toBe("rgb(4, 5, 6)");
+  expect(errors.filter(e => /Content Security Policy/.test(e))).toEqual([]);
 });
