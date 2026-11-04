@@ -93,6 +93,18 @@ test.describe("API keys", () => {
     const pid = Number(sql(`SELECT user_id FROM connection_keys WHERE token_hash=SHA2('${p}', 256)`).trim());
     expect((await api(page, "member_remove", { user_id: pid }, cid)).status).toBe(200);
     expect((await keyCall(bare, p, "campaign")).status).toBe(401);
+    // and writes stop with it, mid-session too: nothing is kept from the key's earlier calls
+    expect((await keyCall(bare, p, "shift_note_add", { body: { abs_day: 5, shift: 1, body: "After leaving" } })).status).toBe(401);
+    expect((await keyCall(bare, p, "entry_note_add", { body: { id: entry, body: "After leaving" } })).status).toBe(401);
+    expect(sql(`SELECT COUNT(*) FROM shift_notes WHERE body='After leaving'`).trim()).toBe("0");
+    // a GM's key sent with "View as player" is answered as a player, and changes nothing
+    const asPlayer = { "X-Chronicle-Key": g, "X-View-As": "player" };
+    const seen = await bare.get(`api/index.php?a=campaign`, { headers: asPlayer });
+    expect((await seen.json()).role).toBe("player");
+    const w = await bare.post(`api/index.php?a=set_time`, { headers: asPlayer, data: { current_shift: 30 } });
+    expect(w.status()).toBe(403);
+    expect((await w.json()).error).toBe("viewing_as_player");
+    expect((await keyCall(bare, g, "campaign")).json.campaign.current_shift).toBe(21);
     await bare.dispose();
   });
 

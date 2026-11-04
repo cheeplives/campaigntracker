@@ -25,7 +25,8 @@
   Header always unset X-Powered-By
   # CSP: everything from same origin, the same policy as Sinless. No
   # 'unsafe-inline' for scripts (there are no inline <script> blocks). Inline
-  # STYLE attributes produced by el() need 'unsafe-inline' in style-src. Fonts
+  # STYLE attributes produced by el() need 'unsafe-inline'. (Splitting it into style-src-elem 'self' and
+  # style-src-attr 'unsafe-inline' made WebKit refuse stylesheets on ordinary pages, so it stays whole.) Fonts
   # are self-hosted in static/fonts/. Generate Summary on an Encyclopedia entry
   # asks Wikipedia from the browser, so connect-src allows en.wikipedia.org. Scan for names on a map can send the
   # picture from the browser to Anthropic's API (with the GM's own key), so connect-src allows api.anthropic.com.
@@ -57,7 +58,7 @@
 # this a browser can keep running last week's app.js (missing new tabs, say)
 # for days. no-cache still lets it reuse its copy when the server says it's unchanged.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|js|css)$">
+  <FilesMatch "\.(html|m?js|css)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
@@ -68,6 +69,8 @@
   AddType application/manifest+json .webmanifest
   # The map text scanner's language model (static/vendor/tesseract/eng.traineddata).
   AddType application/octet-stream .traineddata
+  # pdf.js (static/vendor/pdfjs) is an ES module, which a browser only runs when it comes as JavaScript.
+  AddType text/javascript .mjs
 </IfModule>
 
 # --- Don't serve secrets / SQL / docs / tooling / dotfiles -----------------

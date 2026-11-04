@@ -75,11 +75,10 @@ async function extract(pdf, outDir, scale = 1.5) {
   try {
     const page = await b.newPage();
     await page.goto(`${site.url}/tools/sheet-agent/blank.html`);
-    await page.addScriptTag({ url: '/static/vendor/pdfjs/pdf.min.js' });
     await page.addScriptTag({ url: '/static/sheetlayout.js' });
     const read = await page.evaluate(async scale => {
-      const pdfjs = window.pdfjsLib;
-      pdfjs.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.js';
+      const pdfjs = await import('/static/vendor/pdfjs/pdf.min.mjs');   // an ES module since pdf.js 4
+      pdfjs.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
       const doc = await pdfjs.getDocument({ url: '/__sheet.pdf', isEvalSupported: false, enableXfa: false }).promise;
       const pages = [], all = [], allTexts = [], radios = new Map();
       for (let n = 1; n <= doc.numPages; n++) {

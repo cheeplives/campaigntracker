@@ -158,6 +158,15 @@ function template_row(int $id): array {
 function template_full(int $id): array {
     return (templates_query('t.id=?', [$id])[0] ?? fail('Template not found', 404)) + ['layout' => template_row($id)['layout']];
 }
+/** Refuse an unlisted template (404, as if there were none) to anyone but its author, a site admin, or a member of a
+ * campaign where a character uses it: unlisting keeps it private, not only out of the library's list. */
+function need_template_visible(array $t): void {
+    $me = me();
+    if ((int)$t['is_listed'] || $me['is_admin'] || ($t['author_id'] !== null && (int)$t['author_id'] === $me['id'])) return;
+    $st = db()->prepare('SELECT 1 FROM sheet_characters c JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=? WHERE c.template_id=? LIMIT 1');
+    $st->execute([$me['id'], $t['id']]);
+    if (!$st->fetchColumn()) fail('Template not found', 404);
+}
 function need_template_editor(array $t): void {
     $me = me();
     if (!$me['is_admin'] && ($t['author_id'] === null || (int)$t['author_id'] !== $me['id']))
@@ -181,6 +190,7 @@ function templates_action(string $action): void {
             out(['templates' => templates_query($where, $args)]);
         case 'template':
             $id = int_in($_GET['id'] ?? null, 1);
+            need_template_visible(template_row($id));
             out(['template' => template_full($id), 'forks' => templates_query('t.forked_from_id=? AND (t.is_listed=1 OR t.author_id=?)', [$id, $me['id']])]);
         case 'template_save':
             $name = trim(preg_replace('/\s+/u', ' ', (string)str_in(p('name'), 150, false)));
@@ -205,6 +215,7 @@ function templates_action(string $action): void {
             out(['ok' => true, 'template' => template_full($id)]);
         case 'template_fork':
             $t = template_row(int_in(p('id'), 1));
+            need_template_visible($t);
             db()->prepare('INSERT INTO sheet_templates (name, game, edition, author_id, forked_from_id, layout) VALUES (?,?,?,?,?,?)')
                 ->execute([$t['name'], $t['game'], $t['edition'], $me['id'], $t['id'], json_encode($t['layout'], JSON_UNESCAPED_UNICODE)]);
             out(['ok' => true, 'template' => template_full((int)db()->lastInsertId())]);
