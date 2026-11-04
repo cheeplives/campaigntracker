@@ -7,6 +7,8 @@ const path = require("path");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, settledBox } = require("./helpers");
 const MapScan = require(path.join(__dirname, "..", "..", "static", "mapscan.js"));
 test.afterEach(closeContexts);
+// The service worker would see the scanner's and the page's requests first, and in WebKit page.route() then never fakes them.
+test.use({ serviceWorkers: "block" });
 
 const word = (text, x0, y0, x1, y1, confidence = 90) => ({ text, confidence, bbox: { x0, y0, x1, y1 } });
 const blocks = (...lines) => [{ paragraphs: [{ lines: lines.map(words => ({ words })) }] }];
