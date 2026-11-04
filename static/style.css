@@ -363,6 +363,8 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .richtext h1, .richtext h2, .richtext h3 { color: var(--accent); }
 .richtext > :first-child { margin-top: 0; } .richtext > :last-child { margin-bottom: 0; }
 .richtext p { margin: 0 0 .6em; }
+/* a link someone wrote into a note leaves the app: say so, so a GM can spot one */
+.richtext a.rt-external::after { content: "\2197"; font-size: .8em; margin-left: .15em; text-decoration: none; display: inline-block; }
 .richtext h1, .richtext h2, .richtext h3, .rt-editor .ql-editor h1, .rt-editor .ql-editor h2, .rt-editor .ql-editor h3 { margin: .8em 0 .3em; }
 .richtext h1, .rt-editor .ql-snow .ql-editor h1 { font-size: 1.45rem; }
 .richtext h2, .rt-editor .ql-snow .ql-editor h2 { font-size: 1.25rem; }

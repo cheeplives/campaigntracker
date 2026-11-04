@@ -74,3 +74,19 @@ test("the server's Content-Security-Policy header and index.html's meta tag allo
   const directives = csp => csp.split(";").map(d => d.trim()).filter(d => d && !d.startsWith("frame-ancestors")).sort();
   expect(directives(meta)).toEqual(directives(header));
 });
+
+test("the page's CSP keeps the inline style attributes el() writes", async ({ page }) => {
+  // style-src stays 'self' 'unsafe-inline': a split into style-src-elem 'self' and style-src-attr made WebKit refuse
+  // stylesheets on ordinary pages, which a real iPad would show as broken styling
+  const errors = [];
+  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
+  await page.goto("index.html#/about");
+  const bg = await page.evaluate(() => {
+    const p = document.createElement("span");
+    p.setAttribute("style", "background-color: rgb(4, 5, 6)");
+    document.body.append(p);
+    return getComputedStyle(p).backgroundColor;
+  });
+  expect(bg).toBe("rgb(4, 5, 6)");
+  expect(errors.filter(e => /Content Security Policy/.test(e))).toEqual([]);
+});

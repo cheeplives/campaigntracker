@@ -74,8 +74,13 @@
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
-    if (PANEL) opt.headers['X-Chronicle-Panel'] = panelCodeNow;
-    else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
+    if (PANEL) {
+      // In another site's frame, a change needs this panel's own "Allow changes here" first (panelFooter), so a page
+      // that frames it can't trick a click into passing time or adding a note. The weather a GM's panel stores is no change.
+      if (body && action !== 'days_save' && panelFramed() && !panelWritesAllowed())
+        throw Object.assign(new Error(`Changes are off while ${panelEmbedder()} shows this panel. Turn on Allow changes here, at the bottom, to make them.`), { status: 403 });
+      opt.headers['X-Chronicle-Panel'] = panelCodeNow;
+    } else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
     if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
     const res = await fetch('api/index.php?' + qs, opt);
     let data;
@@ -6756,6 +6761,26 @@
     }
     try { return localStorage.getItem(PANEL_KEY) || ''; } catch { return ''; }
   }
+  // Framed by another site (Owlbear Rodeo, Foundry, a page you don't know): which one, and whether its frames may change
+  // things, remembered per site in this frame's own storage.
+  const PANEL_WRITES_KEY = 'chronicle-panel-writes';
+  const panelFramed = () => { try { return window.top !== window.self; } catch { return true; } };
+  /** The site showing this panel in its frame, as an origin, or '' when the browser won't say. */
+  function panelEmbedderOrigin() {
+    const anc = location.ancestorOrigins;
+    if (anc && anc.length) return anc[anc.length - 1];
+    try { return document.referrer ? new URL(document.referrer).origin : ''; } catch { return ''; }
+  }
+  const panelEmbedder = () => { const o = panelEmbedderOrigin(); try { return o ? new URL(o).host : 'another site'; } catch { return 'another site'; } };
+  function panelWriteSites() { try { return JSON.parse(localStorage.getItem(PANEL_WRITES_KEY) || '[]'); } catch { return []; } }
+  const panelWritesAllowed = () => !!panelEmbedderOrigin() && panelWriteSites().includes(panelEmbedderOrigin());
+  function setPanelWrites(on) {
+    const o = panelEmbedderOrigin();
+    if (!o) return;
+    const list = panelWriteSites().filter(x => x !== o);
+    if (on) list.push(o);
+    try { localStorage.setItem(PANEL_WRITES_KEY, JSON.stringify(list)); } catch { /* this page only */ }
+  }
   function forgetPanelCode() {
     panelCodeNow = '';
     try { localStorage.removeItem(PANEL_KEY); } catch { /* nothing kept */ }
@@ -6800,7 +6825,18 @@
   function panelFooter() {
     const who = S.panel?.link?.scope === 'public_panel' ? 'Public panel' : `Signed in as ${S.user.display_name}${isGM() ? ' (GM)' : ''}`;
     const ago = el('span', { class: 'panel-ago' }, '↻ just now');
-    return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago,
+    // public panels change nothing anyway; a member's own link in a frame starts with changes off
+    const writes = S.panel?.link?.scope !== 'public_panel' && panelFramed()
+      ? (panelWritesAllowed()
+        ? btn(`Changes allowed on ${panelEmbedder()} · turn off`, () => { setPanelWrites(false); viewTable(); }, 'link small', 'Stop this panel making changes while this site shows it')
+        : panelEmbedderOrigin()
+          ? btn('Allow changes here', async () => {
+            if (!await confirmDialog(`Let this panel pass time and add notes while ${panelEmbedder()} shows it? Only allow a site you use, such as your VTT.`, { ok: 'Allow changes' })) return;
+            setPanelWrites(true); viewTable();
+          }, 'link small', `Changes are off while ${panelEmbedder()} shows this panel`)
+          : el('span', {}, 'Read only here: this browser doesn\'t say which site shows the panel'))
+      : null;
+    return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago, writes,
       btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'link small'));
   }
   /** The panel follows the campaign: when a GM changes it (passes time, say), it redraws, unless a note is being typed. */
