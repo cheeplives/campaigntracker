@@ -27,11 +27,7 @@ const MAP_UNITS = ['ft', 'm', 'mi', 'km', 'au', 'ly'];
 
 /** A map of campaign $cid, or fail as not found: a GM-only map is not found for a player. */
 function map_row(int $cid, int $id, bool $isGm): array {
-    $st = db()->prepare('SELECT * FROM maps WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    $m = $st->fetch();
-    if (!$m || (!$isGm && (int)$m['is_secret'])) fail('Map not found', 404);
-    return $m;
+    return row_of('maps', $cid, $id, 'Map not found', fn($m) => !$isGm && (int)$m['is_secret']);
 }
 /** A map as the browser gets it; image_url is the picture's address, null until it has one. */
 function map_out(array $m): array {
@@ -291,10 +287,7 @@ function route_save(int $cid): array {
     $has = fn($k) => array_key_exists($k, $body);
     $old = null;
     if (isset($body['id'])) {
-        $st = db()->prepare('SELECT * FROM map_routes WHERE id=? AND campaign_id=?');
-        $st->execute([int_in($body['id'], 1), $cid]);
-        $old = $st->fetch() ?: null;
-        if (!$old) fail('Route not found', 404);
+        $old = row_of('map_routes', $cid, int_in($body['id'], 1), 'Route not found');
     }
     $map = map_row($cid, $has('map_id') || !$old ? int_in($body['map_id'] ?? null, 1) : (int)$old['map_id'], true);
     $name = $has('name') || !$old ? trim((string)str_in($body['name'] ?? null, 150)) : $old['name'];
@@ -385,11 +378,7 @@ function party_lock(int $cid): void {
 }
 /** Inside a transaction, after party_lock: group $id of campaign $cid as it is now, or fail as not found. */
 function party_reread(int $cid, $id): array {
-    $st = db()->prepare('SELECT * FROM party_groups WHERE id=? AND campaign_id=?');
-    $st->execute([(int)$id, $cid]);
-    $g = $st->fetch();
-    if (!$g) fail('Group not found', 404);
-    return $g;
+    return row_of('party_groups', $cid, (int)$id, 'Group not found');
 }
 /** The user ids of campaign $cid's players. */
 function party_players(int $cid): array {
@@ -473,11 +462,7 @@ function party_groups(int $cid, bool $isGm = true): array {
 /** Group $id of campaign $cid as a row, or fail as not found. */
 function group_row(int $cid, $id): array {
     party_rows($cid);
-    $st = db()->prepare('SELECT * FROM party_groups WHERE id=? AND campaign_id=?');
-    $st->execute([int_in($id, 1), $cid]);
-    $g = $st->fetch();
-    if (!$g) fail('Group not found', 404);
-    return $g;
+    return row_of('party_groups', $cid, int_in($id, 1), 'Group not found');
 }
 /** Make group $g the only main one, and the campaign's current region its region. */
 function party_make_main(int $cid, int $id): void {
