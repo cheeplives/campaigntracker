@@ -1151,6 +1151,9 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-toolbar { position: absolute; top: 10px; left: 56px; z-index: 1001; display: flex; align-items: center; gap: 2px; padding: 4px; max-width: calc(100% - 180px); flex-wrap: wrap; }
 .map-tool-group { display: flex; align-items: center; gap: 2px; }
 .map-tool-group + .map-tool-group { margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
+.map-tools-fold { margin-left: 4px; }
+.map-toolbar.folded .map-tool-group { display: none; }
+.map-toolbar.folded .map-tools-fold { margin-left: 0; }
 .map-toolbar .small { white-space: nowrap; }
 .map-toolbar button[aria-pressed="true"], .map-kinds > button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .map-measure-total { font-weight: 700; color: var(--accent); min-width: 4ch; }
@@ -1202,8 +1205,9 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .72rem/1.3 var(--body);
   color: var(--text); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 4px;
   opacity: 0; pointer-events: none; transition: opacity .12s; }
-/* a pin's name, always in the page, is shown close up, with Labels on, on hover or focus, while its card is open, and always for the party */
-.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in .map-marker-label, .map-marker:hover .map-marker-label,
+/* a pin's name, always in the page, is shown close up (unless Labels was turned off), with Labels on, on hover or focus, while its card
+   is open, and always for the party */
+.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in:not(.labels-off) .map-marker-label, .map-marker:hover .map-marker-label,
 .map-marker-box:focus-visible .map-marker-label, .map-marker.selected .map-marker-label, .map-party .map-marker-label { opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }

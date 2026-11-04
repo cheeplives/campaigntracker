@@ -1086,6 +1086,71 @@ test("Map page: the drawer slides over the map without resizing it, and its sear
   await expect(page.locator(".map-routes")).toHaveClass(/open/);
 });
 
+test("Map page: the drawer has a solid background, and a tick on each group hides or shows all of it at once", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Group ticks");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford", "Mirewood", "Old Mill"]);
+  await api(page, "route_save", { map_id: mid, name: "East Road", points: [[20, 20], [200, 20]] }, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await openDrawer(page);
+  const bg = await page.locator(".map-routes").evaluate(n => getComputedStyle(n).backgroundColor);
+  expect(bg).not.toBe("rgba(0, 0, 0, 0)");   // the map's picture doesn't show through the rows
+  const all = page.getByRole("checkbox", { name: "Show all locations" });
+  await expect(all).toBeChecked();
+  await expect(page.locator(".map-pin")).toHaveCount(3);
+  await all.uncheck();
+  await expect(page.locator(".map-pin")).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "Show Mirewood on the map" })).not.toBeChecked();
+  await expect(page.locator(".map-side-sec").filter({ hasText: "Locations" })).toHaveAttribute("open", "");   // the tick doesn't fold the group
+  await expect(page.locator(".map-route-line")).not.toHaveCount(0);   // routes are a group of their own
+  await page.getByRole("checkbox", { name: "Show Mirewood on the map" }).check();
+  await expect(page.locator(".map-pin")).toHaveCount(1);
+  await expect(all).not.toBeChecked();
+  await all.check();
+  await expect(page.locator(".map-pin")).toHaveCount(3);
+  await page.getByRole("checkbox", { name: "Show all routes" }).uncheck();
+  await expect(page.getByRole("checkbox", { name: "Show East Road on the map" })).not.toBeChecked();
+});
+
+test("Map page: the toolbar folds away to one button, and stays as left", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Fold tools");
+  const mid = await mapWithPicture(page, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const pin = page.getByRole("button", { name: "Add pin", exact: true });
+  await expect(pin).toBeVisible();
+  await page.getByRole("button", { name: "Hide the toolbar" }).click();
+  await expect(pin).toBeHidden();
+  await expect(page.getByRole("button", { name: "Labels" })).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Show the toolbar" })).toBeVisible();
+  await expect(pin).toBeHidden();
+  await page.keyboard.press("p");   // its keys still work while it is folded
+  await expect(page.locator('button[aria-label="Add pin"]')).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Show the toolbar" }).click();
+  await expect(pin).toBeVisible();
+});
+
+test("Map page: measuring, a click on a pin lays the point on it, so a route starts and ends at locations", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Snap");
+  const mid = await mapWithPicture(page, cid, { scale_per_px: 0.1, scale_unit: "mi" });
+  await notePins(page, cid, mid, ["Burnt Ford", "Mirewood"]);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await page.getByRole("button", { name: "Measure" }).click();
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.locator(".map-pin", { hasText: "Mirewood" }).click();
+  await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // no card opens while measuring
+  await page.getByRole("button", { name: "Save route…" }).click();
+  await page.getByLabel("Route name").fill("Ford road");
+  await page.getByRole("dialog", { name: "Save route" }).getByRole("button", { name: "Save route" }).click();
+  await openDrawer(page);
+  await expect(page.locator(".map-route", { hasText: "Ford road" }).locator(".map-route-ends")).toHaveText("Burnt Ford → Mirewood");
+  const route = (await getMap(page, cid, mid)).json.routes[0];
+  expect(route.points).toEqual([[60, 60], [140, 130]]);   // exactly the pins' points
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();   // out of measuring, a click opens the card again
+  await expect(page.locator(".leaflet-popup")).toBeVisible();
+});
+
 test("Map page: pin labels show by zoom, hover, selection and the Labels toggle; the party is always labelled", async ({ page, browser }) => {
   const { cid } = await setup(page, browser, "Labels");
   const mid = await mapWithPicture(page, cid);
@@ -1120,6 +1185,15 @@ test("Map page: pin labels show by zoom, hover, selection and the Labels toggle;
   await page.reload();
   await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".map-pin", { hasText: "Mirewood" }).locator(".map-marker-label")).toHaveCSS("opacity", "1");
+  // Labels turned off stays off close up too, and after a reload
+  await page.getByRole("button", { name: "Labels" }).click();
+  await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "false");
+  await zoomIn(); await zoomIn();
+  await expect(page.locator(".map-stage")).toHaveClass(/zoomed-in/);
+  await expect(label).toHaveCSS("opacity", "0");
+  await page.reload();
+  await zoomIn(); await zoomIn();
+  await expect(page.locator(".map-pin", { hasText: "Mirewood" }).locator(".map-marker-label")).toHaveCSS("opacity", "0");
 });
 
 test("Map page: a legend sits bottom-left, and P, L, M, T and Escape drive the modes except while typing", async ({ page, browser }) => {
