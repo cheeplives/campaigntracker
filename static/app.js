@@ -3421,7 +3421,7 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and descriptions', 'aria-label': 'Search the Library' });
     const kindRow = el('div', { class: 'tagpick' });
     const list = el('div', { class: 'lib-list' });
-    const item = (t, cls = 'lib-item') => el('a', { class: `enc-item enc-card ${cls}` + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
       el('span', { class: 'enc-name' }, el('span', { 'aria-hidden': 'true' }, `${tomeKind(t.kind)[2]} `), t.title),
       t.description ? el('small', { class: 'lib-desc' }, t.description) : null);
     const draw = () => {

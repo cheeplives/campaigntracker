@@ -17,7 +17,7 @@
         sel ? api('session', { query: { cid, id: sel } }).catch(() => null) : null]);
       if (one) S.sessUploads = one.uploads;
       const href = id => `#/c/${cid}/sessions${id ? `/${id}` : ''}`;
-      const item = (x, cls = 'sess-item') => el('a', { class: `enc-item enc-card ${cls}` + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
+      const item = (x, cls = 'sess-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
         el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'Not ended yet: its last day is still open' }, 'open') : null),
         el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
           isGM() ? `${x.covered} of ${x.notes} notes covered` : null, isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));

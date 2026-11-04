@@ -352,7 +352,7 @@
       const reader = el('section', {});
       if (!current) readerEmpty(reader, { lead: entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.',
         title: 'Newest', start: entries.filter(e => !entryBlank(e)).sort((a, b) => b.id - a.id).slice(0, 5)
-          .map(e => el('a', { class: 'enc-item enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
+          .map(e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
             encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null)),
         help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
       else if (!current.id || entryBlank(current)) reader.append(entryForm(current));
