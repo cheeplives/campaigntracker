@@ -98,17 +98,23 @@
     onProgress(0, 'Loading the scanner…');
     const T = await lib();
     const { canvas, k } = await picture(url);
-    const worker = await T.createWorker('eng', 1, {   // 1: the LSTM engine only, the one these files hold
+    // A file the worker can't fetch (a server refusing it, say) is reported only to errorHandler, and the worker
+    // never answers; without this the dialog would sit on "Loading the scanner…" for ever.
+    let fail;
+    const failed = new Promise((_, reject) => { fail = err => reject(new Error(`The text scanner couldn't load its files (${String((err && err.message) || err).replace(/^Error: /, '')}). If this keeps happening, the server may be refusing them.`)); });
+    failed.catch(() => {});
+    const worker = await Promise.race([failed, T.createWorker('eng', 1, {   // 1: the LSTM engine only, the one these files hold
       workerPath: BASE + 'worker.min.js', corePath: BASE.replace(/\/$/, ''), langPath: BASE.replace(/\/$/, ''), workerBlobURL: false,
       logger: m => {
         if (m.status === 'recognizing text') onProgress(0.2 + 0.8 * (m.progress || 0), 'Reading the map…');
         else onProgress(0.2 * (m.progress || 0), 'Loading the scanner…');
       },
-    });
+      errorHandler: err => fail(err),
+    })]);
     try {
       // 11: sparse text, as labels on a map are. A set DPI stops Tesseract guessing one (and saying so in the console).
       await worker.setParameters({ tessedit_pageseg_mode: '11', preserve_interword_spaces: '1', user_defined_dpi: '150' });
-      const { data } = await worker.recognize(canvas, {}, { blocks: true, text: false });
+      const { data } = await Promise.race([failed, worker.recognize(canvas, {}, { blocks: true, text: false })]);
       return { found: candidates(data.blocks, k), canvas, k };
     } finally {
       worker.terminate().catch(() => {});
