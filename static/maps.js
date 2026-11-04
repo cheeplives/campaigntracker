@@ -42,7 +42,7 @@ const MapsTab = (() => {
     return el('label', { class: 'lock-toggle', 'data-tip': `GM only: ${tipText}` }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
   }
   const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
-  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad }) {
+  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick }) {
     const tint = color && !image;
     const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' })
       : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
@@ -55,6 +55,8 @@ const MapsTab = (() => {
       // pad: { tl, br }, the room a card keeps from the map's edges ([x, y] arrays, read each time a card opens)
       m.bindPopup(() => onOpen(), { className: 'map-card-popup', minWidth: 160, ...(pad ? { autoPanPaddingTopLeft: pad.tl, autoPanPaddingBottomRight: pad.br } : {}) });
       m.on('popupopen', () => node.classList.add('selected')).on('popupclose', () => node.classList.remove('selected'));   // its label shows while its card is open
+      // onPick: a click the page takes for itself (true) opens no card
+      if (onPick) { m.off('click', m._openPopup, m); m.on('click', e => { if (!onPick()) m._openPopup(e); }); }
     }
     let was = m.getLatLng();
     if (onMove) m.on('dragend', async () => {
@@ -415,6 +417,20 @@ const MapsTab = (() => {
       try { localStorage.setItem(`chronicle-map-hidden-${map.id}`, JSON.stringify([...ids])); } catch { /* hidden for this visit only */ }
       drawPins(); drawRoutes(); renderRoutes();
     }
+    /** A group's tick in the side panel: off hides every row of the group, on shows them all; part shown is "mixed". */
+    function groupTick(title, ids, hid) {
+      const shown = ids.filter(i => !hid.has(i)).length;
+      const box = el('input', { type: 'checkbox', checked: shown === ids.length, 'aria-label': `Show all ${title.toLowerCase()}` });
+      box.indeterminate = shown > 0 && shown < ids.length;
+      box.addEventListener('click', e => e.stopPropagation());   // ticking it doesn't fold the group
+      box.addEventListener('change', () => {
+        const now = hiddenIds();
+        for (const i of ids) { if (box.checked) now.delete(i); else now.add(i); }
+        try { localStorage.setItem(`chronicle-map-hidden-${map.id}`, JSON.stringify([...now])); } catch { /* hidden for this visit only */ }
+        drawPins(); drawRoutes(); renderRoutes();
+      });
+      return el('label', { class: 'map-show', 'data-tip': `Show or hide all the ${title.toLowerCase()} on the map` }, box);
+    }
     /** The "show on the map" tick of a route or location in the side panel: id is 'r' + route id or 'p' + pin id. */
     function showTick(id, name, hid) {
       const box = el('input', { type: 'checkbox', checked: !hid.has(id), 'aria-label': `Show ${name} on the map` });
@@ -426,7 +442,8 @@ const MapsTab = (() => {
       const hid = hiddenIds();
       for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
         className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : ''),
-        draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p), pad: cardPad }));
+        draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p), pad: cardPad,
+        onPick: () => pickAt(p) }));
     }
     /** Centre the map on pin p and open its card. */
     const showPin = p => { if (hiddenIds().has('p' + p.id)) setHidden('p' + p.id, false); const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
@@ -445,7 +462,7 @@ const MapsTab = (() => {
     const drawGroups = () => {
       groupLayer.clearLayers();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
-        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad,
+        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
@@ -746,7 +763,7 @@ const MapsTab = (() => {
     function syncDrawer() {
       const shut = !!sideState().collapsed || sheetAway;
       routeBox.hidden = !routes.length && !pins.length;
-      routeBox.className = 'map-routes ' + (shut ? 'closed' : 'open');
+      routeBox.className = 'map-routes surface-float ' + (shut ? 'closed' : 'open');
       stage.classList.toggle('drawer-open', !shut && !routeBox.hidden);
       syncPad();
       fold.textContent = shut ? '⟨' : '⟩';
@@ -757,8 +774,9 @@ const MapsTab = (() => {
     function renderRoutes() {
       const st = sideState();
       syncDrawer();
-      const section = (key, title, kids) => {
-        const d = el('details', { class: 'map-side-sec', open: st[key] !== false }, el('summary', {}, el('h3', {}, title, el('span', { class: 'muted small' }, ` ${kids.length}`))), ...kids);
+      const section = (key, title, kids, ids) => {
+        const d = el('details', { class: 'map-side-sec', open: st[key] !== false },
+          el('summary', {}, groupTick(title, ids, hid), el('h3', {}, title, el('span', { class: 'muted small' }, ` ${kids.length}`))), ...kids);
         d.addEventListener('toggle', () => keepSide({ [key]: d.open }));
         return d;
       };
@@ -801,11 +819,18 @@ const MapsTab = (() => {
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
             face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
-      sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows) : null,
-        pins.length ? section('places', 'Locations', placeRows) : null].filter(Boolean));
+      sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows, routes.map(r => 'r' + r.id)) : null,
+        pins.length ? section('places', 'Locations', placeRows, pins.map(p => 'p' + p.id)) : null].filter(Boolean));
       filterRows();
     }
 
+    /** Measuring, a click on a pin or the party lays the next point exactly on it (so a route starts and ends there)
+     * instead of opening its card. */
+    function pickAt(at) {
+      if (mode !== 'measure') return false;
+      pts.push({ x: at.x, y: at.y }); drawMeasure();
+      return true;
+    }
     function onClick(ev) {
       const p = toXY(ev.latlng);
       if (mode === 'measure') { pts.push(p); drawMeasure(); }
@@ -1137,8 +1162,25 @@ const MapsTab = (() => {
       }
     }, { signal: off.signal });
     // the toolbar: the modes used all the time, then what is only seen; the measure bar while measuring; GM only and ⚙ top-right
+    // it folds away to one button, remembered on this device; its keys still work while it is folded
+    const toolsKey = `chronicle-map-tools-${cid}`;
+    let toolsFolded = (() => { try { return localStorage.getItem(toolsKey) === 'folded'; } catch { return false; } })();
+    const toolsFold = btn('', () => {
+      toolsFolded = !toolsFolded;
+      try { localStorage.setItem(toolsKey, toolsFolded ? 'folded' : 'open'); } catch { /* this visit only */ }
+      syncToolsFold();
+    }, 'small map-tools-fold');
+    const syncToolsFold = () => {
+      toolbar.classList.toggle('folded', toolsFolded);
+      toolsFold.textContent = toolsFolded ? '🧰' : '⟨';
+      toolsFold.setAttribute('aria-label', toolsFolded ? 'Show the toolbar' : 'Hide the toolbar');
+      toolsFold.setAttribute('aria-expanded', String(!toolsFolded));
+      toolsFold.dataset.tip = toolsFolded ? 'Show the map tools' : 'Fold the map tools away';
+      if (lf) syncPad();
+    };
     toolbar.append(el('div', { class: 'map-tool-group' }, ...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich].filter(Boolean)),
-      el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn));
+      el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn), toolsFold);
+    syncToolsFold();
     const measureBar = el('div', { class: 'map-measure-bar surface-float' }, total, undoBtn, clearBtn, saveRouteBtn, planBtn);
     measureBar.hidden = true;
     stage.append(toolbar, panelBox, note, measureBar, routeBox);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
