@@ -37,6 +37,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **access**: every API action (read from api/actions.php, the table the router runs on, which must list every action
   the code answers) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
   GMs' actions; only site admins manage accounts.
+- **calendar-text** (under Node): the Settings tab's calendar boxes read back as the same calendar (festival months,
+  leap days, moons, eras, a month's week names), and a box that can't be read says why.
 - **cross-campaign**: a GM of two campaigns calls every campaign action on one with every id parameter (read from the
   code) pointing at the other's rows; nothing of the other campaign comes back and none of its rows change.
 - **signin**: the signed-out screen shows the Google and GitHub buttons and
