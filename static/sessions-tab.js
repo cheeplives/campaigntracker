@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, mount, notesEntry, offerNouns, post, route, sessionName, snoteList, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, snoteList, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -17,18 +17,7 @@
         sel ? api('session', { query: { cid, id: sel } }).catch(() => null) : null]);
       if (one) S.sessUploads = one.uploads;
       const href = id => `#/c/${cid}/sessions${id ? `/${id}` : ''}`;
-      // The page can take the whole width: the sessions run across the top and the session picked gets the room, remembered in this browser.
-      let wide = sessWide();
-      const page = el('div', { class: 'enc-page sess-page' + (sel ? ' has-sel' : '') + (wide ? ' wide' : '') });
-      const wideBtn = btn('', () => { wide = !wide; rememberSessWide(wide); setWide(); }, 'small enc-widebtn');
-      const setWide = () => {
-        page.classList.toggle('wide', wide);
-        wideBtn.textContent = wide ? '⇤ Narrow view' : '⇥ Wide view';
-        wideBtn.setAttribute('aria-pressed', String(wide));
-        wideBtn.dataset.tip = wide ? 'Back to the list beside the session' : 'Give the session the whole width, with the list of sessions along the top';
-      };
-      setWide();
-      const item = x => el('a', { class: 'enc-item sess-item' + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
+      const item = (x, cls = 'sess-item') => el('a', { class: `enc-item enc-card ${cls}` + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
         el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'Not ended yet: its last day is still open' }, 'open') : null),
         el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
           isGM() ? `${x.covered} of ${x.notes} notes covered` : null, isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
@@ -37,26 +26,31 @@
         S.openSession = r.session;
         location.hash = href(r.session.id);
       }), 'primary small', 'Start a session on the campaign\'s current day, then take your notes in it') : null;
-      const left = el('section', { class: 'card enc-index' },
-        el('div', { class: 'row spread' }, el('h2', {}, 'Sessions', tip(isGM()
-          ? 'Each game night: your running notes, and the summary you write from them afterwards. Players read a summary once you publish it'
-          : 'A summary of each game night, as the GM writes it up')), el('div', { class: 'row' }, add, wideBtn)),
-        el('div', { class: 'lib-list' }, sessions.length ? sessions.map(item)
-          : el('p', { class: 'muted small' }, isGM() ? 'No sessions yet. Press + New session, then take your notes in it.' : 'No session summaries published yet.')));
-      const right = el('section', { class: 'card enc-detail sess-detail' });
-      if (sel && !one) right.append(el('p', { class: 'muted' }, 'That session isn\'t here any more.'));
-      else if (!one) right.append(el('p', { class: 'muted' }, sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.'));
-      else right.append(...clean(sessionPage(one.session, one.notes || [], sessions)));
-      page.append(left, right);
-      mount(...campaignHeader('sessions'), page);
+      // the list, and a search over the sessions' names and dates once there are a few
+      const list = el('div', { class: 'lib-list' });
+      const search = sessions.length > 4 ? el('input', { type: 'search', value: sessQuery, placeholder: 'Search names and dates', 'aria-label': 'Search the sessions' }) : null;
+      const draw = () => {
+        const words = (search ? sessQuery : '').toLowerCase().split(/\s+/).filter(Boolean);
+        const shown = sessions.filter(x => words.every(w => `${sessionName(x)}\n${x.played_on || ''}\n${Sessions.daysCovered(cal(), x)}`.toLowerCase().includes(w)));
+        list.replaceChildren(...(shown.length ? shown.map(x => item(x))
+          : [el('p', { class: 'muted small' }, sessions.length ? 'Nothing matches. Clear the search to see every session.'
+            : isGM() ? 'No sessions yet. Press + New session, then take your notes in it.' : 'No session summaries published yet.')]));
+      };
+      search?.addEventListener('input', () => { sessQuery = search.value; draw(); });
+      draw();
+      // the session picked, or the open one and the latest to start from
+      const reader = el('section', { class: 'sess-detail' });
+      if (sel && !one) reader.append(el('p', { class: 'muted' }, 'That session isn\'t here any more.'));
+      else if (!one) readerEmpty(reader, { lead: sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.',
+        title: 'Latest', start: [...sessions.filter(x => x.last_day === null && isGM()), ...sessions.filter(x => !(x.last_day === null && isGM()))].slice(0, 4).map(x => item(x, 'lp-start-item')) });
+      else reader.append(...clean(sessionPage(one.session, one.notes || [], sessions)));
+      // Wide view: the sessions run across the top and the session picked gets the room, remembered in this browser.
+      mount(...campaignHeader('sessions'), listPage({ cls: 'sess-page', title: 'Sessions', picked: !!sel, add, top: [search], list, reader,
+        tipText: isGM() ? 'Each game night: your running notes, and the summary you write from them afterwards. Players read a summary once you publish it'
+          : 'A summary of each game night, as the GM writes it up',
+        wide: { key: 'chronicle:sesswide', tips: ['Give the session the whole width, with the list of sessions along the top', 'Back to the list beside the session'] } }));
     }
-    const SESS_WIDE_KEY = 'chronicle:sesswide';
-    function sessWide() {
-      try { return localStorage.getItem(SESS_WIDE_KEY) === '1'; } catch { return false; }
-    }
-    function rememberSessWide(on) {
-      try { on ? localStorage.setItem(SESS_WIDE_KEY, '1') : localStorage.removeItem(SESS_WIDE_KEY); } catch { /* private mode: just this page */ }
-    }
+    let sessQuery = '';
 
     function sessionPage(s, notes, sessions) {
       const cid = S.camp.id, gm = isGM();

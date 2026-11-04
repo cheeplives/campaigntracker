@@ -3,7 +3,7 @@
 // player can see, and a GM's leaves out GM-only things unless asked.
 const fs = require("fs");
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64");
@@ -22,7 +22,7 @@ function unzip(buf) {
   return out;
 }
 async function exportZip(page, { format, gmOnly } = {}) {
-  await page.getByRole("button", { name: "⬇ Export…" }).click();
+  await pressMore(page, "Encyclopedia", "⬇ Export…");
   const d = page.getByRole("dialog", { name: "Export the Encyclopedia" });
   if (format) await d.getByLabel("Format").selectOption(format);
   if (gmOnly) await d.getByLabel(/Include GM-only/).check();
@@ -78,7 +78,7 @@ test("the Encyclopedia exports as linked Markdown pages with their pictures, and
   // a player never had them, so has no box to tick
   const perrors = watchErrors(pp);
   await pp.goto(`index.html#/c/${cid}/encyclopedia`);
-  await pp.getByRole("button", { name: "⬇ Export…" }).click();
+  await pressMore(pp, "Encyclopedia", "⬇ Export…");
   await expect(pp.getByRole("dialog").getByLabel(/Include GM-only/)).toHaveCount(0);
   await pp.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   ({ files } = await exportZip(pp));
