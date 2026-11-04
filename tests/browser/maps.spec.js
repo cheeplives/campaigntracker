@@ -1061,6 +1061,14 @@ test("Map page: the pin form opens on the map under the toolbar and scrolls insi
   expect(f.x).toBeGreaterThanOrEqual(s.x);
   expect(f.y + f.height).toBeLessThanOrEqual(s.y + s.height + 1);   // it scrolls inside the stage rather than growing past it
   expect(f.width).toBeLessThanOrEqual(420);
+  // with Icon and colour open it is taller than the stage, and its Add pin and Cancel stay in sight at its foot
+  await form.getByText("Icon and colour").click();
+  const save = form.getByRole("button", { name: "Add pin" });
+  const b = await save.boundingBox(), f2 = await form.boundingBox();
+  expect(b.y + b.height).toBeLessThanOrEqual(f2.y + f2.height + 1);
+  expect(b.y).toBeGreaterThanOrEqual(f2.y);
+  expect(b.y + b.height).toBeLessThanOrEqual(600);   // on the screen, not under its foot
+  await save.click({ trial: true });   // nothing lies over it
 });
 
 test("Map page: the drawer slides over the map without resizing it, and its search filters the rows", async ({ page, browser }) => {
@@ -1108,6 +1116,11 @@ test("Map page: the drawer has a solid background, and a tick on each group hide
   await expect(all).not.toBeChecked();
   await all.check();
   await expect(page.locator(".map-pin")).toHaveCount(3);
+  // every tick sits at the right, clear of the group's fold arrow at the left
+  const sum = await page.locator(".map-side-sec").filter({ hasText: "Locations" }).locator("summary").boundingBox(), t = await all.boundingBox();
+  expect(t.x).toBeGreaterThan(sum.x + sum.width / 2);
+  const row = await page.locator(".map-place-row", { hasText: "Mirewood" }).boundingBox(), rt = await page.getByRole("checkbox", { name: "Show Mirewood on the map" }).boundingBox();
+  expect(rt.x).toBeGreaterThan(row.x + row.width / 2);
   await page.getByRole("checkbox", { name: "Show all routes" }).uncheck();
   await expect(page.getByRole("checkbox", { name: "Show East Road on the map" })).not.toBeChecked();
 });
@@ -1149,6 +1162,26 @@ test("Map page: measuring, a click on a pin lays the point on it, so a route sta
   expect(route.points).toEqual([[60, 60], [140, 130]]);   // exactly the pins' points
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();   // out of measuring, a click opens the card again
   await expect(page.locator(".leaflet-popup")).toBeVisible();
+});
+
+test("Map page: the mode hint never covers the form open under the toolbar", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Hint");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await page.getByRole("button", { name: "Quick label" }).click();
+  await expect(page.locator(".map-note")).toContainText("Click a place on the map");
+  const pic = await settledBox(page.locator(".map-view img.leaflet-image-layer"));
+  await page.mouse.click(pic.x + pic.width * 0.6, pic.y + pic.height * 0.7);
+  const form = page.locator(".map-label-form");
+  await expect(form).toBeVisible();
+  await expect(page.locator(".map-note")).toBeVisible();   // the hint still says how to finish
+  const f = await settledBox(page.locator(".map-panel-box")), n = await settledBox(page.locator(".map-note"));
+  const overlap = !(n.y >= f.y + f.height || n.y + n.height <= f.y || n.x >= f.x + f.width || n.x + n.width <= f.x);
+  expect(overlap).toBe(false);
+  await expect(form.getByRole("button", { name: "Pin it" })).toBeVisible();
+  await form.getByRole("button", { name: "Skip" }).click();   // its buttons take a click, nothing over them
+  await expect(form).toHaveCount(0);
 });
 
 test("Map page: pin labels show by zoom, hover, selection and the Labels toggle; the party is always labelled", async ({ page, browser }) => {
