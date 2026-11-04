@@ -1061,6 +1061,14 @@ test("Map page: the pin form opens on the map under the toolbar and scrolls insi
   expect(f.x).toBeGreaterThanOrEqual(s.x);
   expect(f.y + f.height).toBeLessThanOrEqual(s.y + s.height + 1);   // it scrolls inside the stage rather than growing past it
   expect(f.width).toBeLessThanOrEqual(420);
+  // with Icon and colour open it is taller than the stage, and its Add pin and Cancel stay in sight at its foot
+  await form.getByText("Icon and colour").click();
+  const save = form.getByRole("button", { name: "Add pin" });
+  const b = await save.boundingBox(), f2 = await form.boundingBox();
+  expect(b.y + b.height).toBeLessThanOrEqual(f2.y + f2.height + 1);
+  expect(b.y).toBeGreaterThanOrEqual(f2.y);
+  expect(b.y + b.height).toBeLessThanOrEqual(600);   // on the screen, not under its foot
+  await save.click({ trial: true });   // nothing lies over it
 });
 
 test("Map page: the drawer slides over the map without resizing it, and its search filters the rows", async ({ page, browser }) => {
@@ -1108,6 +1116,11 @@ test("Map page: the drawer has a solid background, and a tick on each group hide
   await expect(all).not.toBeChecked();
   await all.check();
   await expect(page.locator(".map-pin")).toHaveCount(3);
+  // every tick sits at the right, clear of the group's fold arrow at the left
+  const sum = await page.locator(".map-side-sec").filter({ hasText: "Locations" }).locator("summary").boundingBox(), t = await all.boundingBox();
+  expect(t.x).toBeGreaterThan(sum.x + sum.width / 2);
+  const row = await page.locator(".map-place-row", { hasText: "Mirewood" }).boundingBox(), rt = await page.getByRole("checkbox", { name: "Show Mirewood on the map" }).boundingBox();
+  expect(rt.x).toBeGreaterThan(row.x + row.width / 2);
   await page.getByRole("checkbox", { name: "Show all routes" }).uncheck();
   await expect(page.getByRole("checkbox", { name: "Show East Road on the map" })).not.toBeChecked();
 });

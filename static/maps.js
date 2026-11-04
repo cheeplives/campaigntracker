@@ -646,7 +646,7 @@ const MapsTab = (() => {
         el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
         body, styleFields,
         gm ? lockBox(secret, 'players won\'t see this pin') : null,
-        el('div', { class: 'row' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
+        el('div', { class: 'row map-panel-actions' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
       form.addEventListener('submit', ev => { ev.preventDefault(); save(); });
       panelBox.replaceChildren(form);
       panel = form;
