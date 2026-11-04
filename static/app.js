@@ -1109,15 +1109,21 @@
               hol.map(holidayChip)))),
         isGM() ? passTime() : null]));
     };
-    // Pass time is a row on Current Day and the calendar, where time moves; elsewhere a button opens the same row, so the
-    // bar stays one line and the page below gets the room
+    // Pass time is the same on every page: a ⏩ button at the end of the bar that opens its row. The button is just the
+    // arrows until the mouse is over it (or it has focus, or its row is open), so the bar stays one line and the page
+    // below gets the room. Once opened, the row stays open as you move between pages, until you close it.
     const passTime = () => {
       const w = passTimeWidget();
-      if (active === 'today' || active === 'calendar') return w;
-      w.hidden = true;
-      const open = btn('⏩ Pass time', () => { w.hidden = !w.hidden; open.setAttribute('aria-expanded', String(!w.hidden)); if (!w.hidden) w.querySelector('input')?.focus(); },
-        'small primary now-passbtn', 'Open the Pass time row to move the campaign clock');
-      open.setAttribute('aria-expanded', 'false');
+      w.hidden = !passTimeOpen;
+      const open = el('button', { type: 'button', class: 'small primary now-passbtn', 'aria-expanded': String(passTimeOpen),
+        'data-tip': 'Open the Pass time row to move the campaign clock' },
+        el('span', { class: 'pt-icon' }, '⏩'), el('span', { class: 'pt-label' }, ' Pass time'));
+      open.addEventListener('click', () => {
+        passTimeOpen = w.hidden;
+        w.hidden = !passTimeOpen;
+        open.setAttribute('aria-expanded', String(passTimeOpen));
+        if (passTimeOpen) w.querySelector('input')?.focus();
+      });
       return [open, w];
     };
     draw();
@@ -1213,6 +1219,7 @@
     box.focus();
   });
 
+  let passTimeOpen = false;   // the Pass time row, open or closed, for this visit
   function passTimeWidget() {
     const def = { day: 'shift', week: 'day', month: 'week' }[settings().time_unit || 'day'] || 'shift';
     const amt = el('input', { type: 'number', value: 1, min: -9999, class: 'w-num', 'aria-label': 'Amount', 'data-tip': 'How much time to pass. A negative number winds the clock back' });

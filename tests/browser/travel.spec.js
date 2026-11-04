@@ -2,7 +2,7 @@
 // shifts (a quarter of the calendar's day), and the campaign's genre limits the
 // modes and samples on offer.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture, settledBox, openDrawer } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, openPassTime, mapWithPicture, settledBox, openDrawer } = require("./helpers");
 
 test("samples fill the planner, trips count shifts, and the genre limits the modes", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -223,6 +223,7 @@ test("an On the move action on a shift, or in Pass time, tags the events running
   // Passing time with Travel tags what runs in the passed shifts.
   await page.goto(`index.html#/c/${cid}/calendar`);
   await expect(page.locator("a.daycell").first()).toBeVisible();   // the day page, still redrawing after its save, is gone
+  await openPassTime(page);
   await page.locator(".passtime input[type=number]").fill(String(4 * (day + 2) - now));
   await page.locator(".passtime").getByLabel("Activity").fill("Travel");
   await page.getByRole("button", { name: "Pass time ▶" }).click();

@@ -177,4 +177,12 @@ async function openDrawer(page) {
   if (/closed/.test(await page.locator(".map-routes").getAttribute("class"))) await page.getByRole("button", { name: "Show routes and locations" }).click();
   await expect(page.locator(".map-routes")).toHaveClass(/open/);
 }
-module.exports = { openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+/** Opens the Pass time row from the ⏩ button in the bar at the top, unless it is open already. */
+async function openPassTime(page) {
+  const row = page.locator(".passtime");
+  if (await row.isVisible()) return;
+  await page.locator(".now-passbtn").click();
+  await row.waitFor({ state: "visible" });
+}
+
+module.exports = { openPassTime, openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

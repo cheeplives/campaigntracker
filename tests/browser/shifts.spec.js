@@ -1,7 +1,7 @@
 // A GM picks baseline actions into a shift's activity and can still type freely;
 // players and GMs add notes to a shift, signed with their character name.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, openPassTime, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("shift actions are picked into the activity alongside free text", async ({ page, browser }) => {
@@ -62,6 +62,7 @@ test("the pass-time activity box drops down a list of actions that works by tap,
   await expect(list).toBeHidden();
 
   // The ▾ opens every action, grouped, and a pick fills the box and closes the list.
+  await openPassTime(page);
   const arrow = page.locator(".passtime .combo-btn");
   hasTouch ? await arrow.tap() : await arrow.click();
   await expect(list).toBeVisible();
