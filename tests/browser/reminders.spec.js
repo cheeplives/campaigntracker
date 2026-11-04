@@ -1,7 +1,7 @@
 // Calendar reminders: set on a day and shift from the day page, they pop up once the campaign
 // clock reaches them, for whoever they are meant for, until each person dismisses them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign , notNow, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign , notNow, newContext, closeContexts, goTab } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("a GM's reminder pops up for the GM and an open player page when time passes to it", async ({ page, browser }) => {
@@ -65,7 +65,7 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   // Remind me later: gone until the clock moves again.
   await pdlg.getByRole("button", { name: "Remind me later" }).click();
   await expect(pdlg).toHaveCount(0);
-  await pp.locator(".tabs a", { hasText: "Current Day" }).click();
+  await goTab(pp, "Current Day");
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
   await expect(pp.locator(".event.reminder")).toContainText("Midday · Due");
   await expect(pdlg).toHaveCount(0);

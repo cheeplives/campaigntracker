@@ -51,6 +51,10 @@
   }
   const lockField = (input, tipText) => el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'GM only'), lockBox(input, tipText));
   const btn = (label, onclick, cls, tipText) => el('button', { type: 'button', class: cls || '', onclick, 'data-tip': tipText }, label);
+  /** The ⋯ beside a row's everyday buttons: the rarer and riskier actions (Copy, Delete) wait behind it, as on a map's ⚙ */
+  /** A row of choice buttons (Month / Week / Year): the one with class "on" is also aria-pressed, as on the map's toolbar */
+  const pressedSeg = seg => { seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on')))); return seg; };
+  const moreMenu = (name, ...items) => KIT.menu({ label: '⋯', ariaLabel: `More for ${name}`, tip: 'More: copy, delete and the like', items, cls: 'more-menu' });
   function formData(form) {
     const o = {};
     for (const f of form.elements) {
@@ -536,11 +540,16 @@
     n.replaceChildren(...clean([
       S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
       S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
-      S.user?.is_admin ? el('a', { href: '#/admin', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
-      S.user ? el('a', { href: '#/account', 'data-tip': `Signed in as ${S.user.email}. Your display preferences` }, S.user.name || S.user.email) : null,
       schemePicker(),
       themeToggle(),
-      S.user || S.pending ? btn('Sign out', signOut, 'link') : null,
+      // Your name opens a menu of what is yours: the account page, the admin's Users, and signing out
+      S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
+        tip: `Signed in as ${S.user.email}`, items: [
+          el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your units, your character names and the map scanner key' }, 'Account'),
+          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
+          el('hr'),
+          btn('Sign out', signOut, 'small')] })
+        : S.pending ? btn('Sign out', signOut, 'link') : null,
     ]));
   }
 
@@ -795,9 +804,10 @@
           el('div', { class: 'camp-main' }, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
             c.description ? el('p', { class: 'muted' }, c.description) : null),
           // Only a GM can copy (a copy holds the secrets) or delete one.
-          c.role === 'gm' ? el('div', { class: 'camp-actions' },
-            btn('Copy', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
-            btn('Delete', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')) : null)))
+          c.role === 'gm' ? el('div', { class: 'camp-actions' }, moreMenu(c.name,
+            btn('Copy…', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
+            el('hr'),
+            btn('Delete…', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first'))) : null)))
         : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.')));
     draw();
   }
@@ -1143,9 +1153,13 @@
   }
   // The whole Legend tucks away to a thin strip on the left, also remembered in this browser for each account
   function legendHidden() {
+    if (legendIsDrawer()) return true;   // an iPad in portrait: the Legend is a drawer, closed until wanted
     try { return localStorage.getItem(`${LEGEND_KEY}:tucked:${S.user?.id}`) === '1'; } catch { return false; }
   }
-  /** The « / » button at the top of the Legend that tucks it away to the left and brings it back. Across the top it is hidden. */
+  /** Between a phone and a desktop (an iPad in portrait) the Legend is a drawer: a thin rail with » that slides the tabs out
+   * over the page, and slides them back once a tab is picked, on a tap outside or on Escape. Nothing is remembered there. */
+  const legendIsDrawer = () => matchMedia('(min-width: 561px) and (max-width: 1000px)').matches;
+  /** The « / » button at the top of the Legend that tucks it away to the left and brings it back. On a phone, where the tabs are a row, it is hidden. */
   function legendTuck() {
     const btn = el('button', { type: 'button', class: 'legend-tuck' });
     const show = tucked => {
@@ -1155,11 +1169,22 @@
       btn.dataset.tip = tucked ? 'Show the tabs down the left' : 'Tuck the tabs away to the left, to give the page more room. It stays as you leave it in this browser';
     };
     show(legendHidden());
+    const setTucked = tucked => { btn.closest('nav').classList.toggle('tucked', tucked); show(tucked); };
     btn.addEventListener('click', () => {
-      const tucked = btn.closest('nav').classList.toggle('tucked');
-      show(tucked);
+      const tucked = !btn.closest('nav').classList.contains('tucked');
+      setTucked(tucked);
+      if (legendIsDrawer()) {
+        if (!tucked) btn.closest('nav').querySelector('a.on, a')?.focus();
+        return;
+      }
       try { tucked ? localStorage.setItem(`${LEGEND_KEY}:tucked:${S.user?.id}`, '1') : localStorage.removeItem(`${LEGEND_KEY}:tucked:${S.user?.id}`); } catch { /* private mode: just this page */ }
     });
+    // The drawer closes on a tap outside it, on Escape, and when a tab is picked; these go with the page
+    const off = new AbortController();
+    window.addEventListener('hashchange', () => off.abort(), { once: true });
+    const closeDrawer = () => { if (legendIsDrawer() && !btn.closest('nav')?.classList.contains('tucked')) setTucked(true); };
+    document.addEventListener('click', ev => { if (!btn.closest('nav')?.contains(ev.target) || ev.target.closest('nav a')) closeDrawer(); }, { signal: off.signal });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeDrawer(); }, { signal: off.signal });
     return btn;
   }
 
@@ -1180,7 +1205,10 @@
   document.addEventListener('keydown', ev => {
     if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.target.closest?.('input, textarea, select, [contenteditable]')) return;
     const box = $('.tab-search input');
-    if (!box || !box.offsetParent) return;
+    if (!box) return;
+    // in the iPad's drawer the box is tucked away with the tabs: bring them out first
+    if (!box.offsetParent && legendIsDrawer() && $('nav.tabs.tucked .legend-tuck')) $('nav.tabs .legend-tuck').click();
+    if (!box.offsetParent) return;
     ev.preventDefault();
     box.focus();
   });
@@ -1263,10 +1291,10 @@
     const toolbar = el('div', { class: 'calbar' },
       btn('◀', () => step(-1), 'small', `Previous ${st.mode}`), el('h2', { 'data-tip': titleTip }, title), btn('▶', () => step(1), 'small', `Next ${st.mode}`),
       btn('Today', () => { st.anchor = today(); route(); }, 'small', 'Jump back to the current day'),
-      el('span', { class: 'seg' },
+      pressedSeg(el('span', { class: 'seg', role: 'group', 'aria-label': 'Calendar view' },
         btn('Month', () => { st.mode = 'month'; route(); }, st.mode === 'month' ? 'small on' : 'small', 'A month grid with weather, moon phases and events'),
         btn('Week', () => { st.mode = 'week'; route(); }, st.mode === 'week' ? 'small on' : 'small', hourMode() ? 'One row per day showing the hours with an activity, their visibility and activity' : 'One row per day showing every shift, its visibility and activity'),
-        btn('Year', () => { st.mode = 'year'; route(); }, st.mode === 'year' ? 'small on' : 'small', 'Every month of the year on one page. Click a month\'s name to open it, or a day to open the day')),
+        btn('Year', () => { st.mode = 'year'; route(); }, st.mode === 'year' ? 'small on' : 'small', 'Every month of the year on one page. Click a month\'s name to open it, or a day to open the day'))),
       el('span', { class: 'jump' }, jump, btn('Go', () => { st.anchor = jump.getAbs(); route(); }, 'small', 'Show the date picked on the left')));
 
     mount(...campaignHeader('calendar'), toolbar, seasonLine, body);
@@ -4567,10 +4595,10 @@
           r.id !== Number(cur) ? btn('Party is here', async () => { await setCurrentRegion(r.id); await ensureWeather(today(), today()); toast(`Party moved to ${r.name}`); await loadCampaign(S.camp.id, true); route(); }, 'small',
             'Move the party here. Days from now on use this region\'s climate, light and terrain') : null,
           btn('Edit', () => list.after(regionForm(r)), 'small', 'Change this region\'s climate, light and terrain'),
-          btn('Delete', async () => {
+          moreMenu(r.name, btn('Delete…', async () => {
             if (!await confirmDialog(`Delete region ${r.name}? Days recorded there keep their weather.`)) return;
             await post('region_delete', { id: r.id }, S.camp.id); await loadCampaign(S.camp.id, true); route();
-          }, 'small danger', 'Delete this region. Days already recorded there keep their weather')) : null)));
+          }, 'small danger', 'Delete this region. Days already recorded there keep their weather'))) : null)));
     mount(...campaignHeader('regions'), list,
       el('p', { class: 'muted pad' }, 'A region sets the climate (weather odds by season), the light source (sun and moons, artificial lighting, or none), and a terrain modifier to visibility — e.g. −1 under forest canopy.'));
   }
@@ -4802,7 +4830,7 @@
         el('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
           el('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? el('div', { class: 'small pre' }, x.description) : null),
         isGM() ? el('div', { class: 'actions' }, btn('Edit', () => list.after(holidayForm(x)), 'small', 'Change this holiday'),
-          btn('Delete', async () => { if (!await confirmDialog(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger', 'Remove this holiday from the calendar')) : null))
+          moreMenu(x.name, btn('Delete…', async () => { if (!await confirmDialog(`Delete ${x.name}?`)) return; await post('holiday_delete', { id: x.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }, 'small danger', 'Remove this holiday from the calendar'))) : null))
         : el('p', { class: 'muted' }, 'No holidays yet.'));
     mount(...campaignHeader('holidays'), list);
   }
@@ -5271,10 +5299,10 @@
       storageBox(h),
       el('div', { class: 'row' },
         btn('Edit', () => holdingDialog(h), 'small', 'Change this holding'),
-        btn('Delete', async () => {
+        moreMenu(h.name, btn('Delete…', async () => {
           if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
           try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Delete this holding')));
+        }, 'small danger', 'Delete this holding'))));
   }
 
   /** The first number in a text such as "1,200 lb" or "2.5 tons", or null. */

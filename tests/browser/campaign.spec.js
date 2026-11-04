@@ -1,7 +1,7 @@
 // Every campaign screen renders for a GM with no script errors, members are
 // picked from the registered accounts or added by sign-in email, and players never receive secret events.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { goTab, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("a GM creates a campaign and every tab renders", async ({ page, browser }) => {
@@ -15,11 +15,9 @@ test("a GM creates a campaign and every tab renders", async ({ page, browser }) 
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("heading", { name: "The Long Road" })).toBeVisible();
   await expect(page.locator(".tabs a.on")).toHaveText("Current Day");
-  // the Legend's Setup group starts folded
-  const setup = page.locator("nav.tabs .tab-group button", { hasText: "Setup" });
-  if (await setup.isVisible()) await setup.click();
+  // goTab unfolds the Legend's Setup group (it starts folded) and opens the iPad's drawer when it has to
   for (const tab of ["Calendar", "Travel", "Party Holdings", "Regions", "Holidays", "Members", "Settings", "Current Day"]) {
-    await page.getByRole("navigation").getByRole("link", { name: tab, exact: true }).click();
+    await goTab(page, tab);
     await expect(page.locator(".tabs a.on")).toHaveText(tab);
   }
   await page.goto(page.url().replace(/#.*/, "") + "#/account");
@@ -83,7 +81,7 @@ test("a custom calendar gets its own number of months, each with its own length"
   expect(json.campaign.calendar.months.map(m => [m.name, m.days])).toEqual([["Month 1", 10], ["Longmonth", 40], ["Month 3", 5]]);
   for (const s of json.campaign.calendar.seasons) expect(s.day).toBeLessThanOrEqual([10, 40, 5][s.month]);
   expect(json.campaign.calendar.weekdays).toEqual(["Firstday", "Seconday", "Thirdday", "Fourthday", "Restday"]);
-  await page.getByRole("navigation").getByRole("link", { name: "Calendar", exact: true }).click();
+  await goTab(page, "Calendar");
   await expect(page.locator(".tabs a.on")).toHaveText("Calendar");
   expectNoErrors(errors);
 });

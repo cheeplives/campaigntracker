@@ -73,7 +73,8 @@ const KIT = (() => {
     tipBox.style.left = `${x}px`; tipBox.style.top = `${y}px`;
   }
   function hideTip() { tipEl = null; if (tipBox) tipBox.className = ''; }
-  const tipTarget = e => (e.target instanceof Element ? e.target.closest('[data-tip]') : null);
+  // an open menu's button says nothing more: its tooltip would sit over the menu
+  const tipTarget = e => { const t = e.target instanceof Element ? e.target.closest('[data-tip]') : null; return t && t.matches('.kit-menu[open] > summary') ? null : t; };
   const canHover = matchMedia('(hover: hover)');
   const INTERACTIVE = 'a[href], button, input, select, textarea, label, summary, [role=button]';
   document.addEventListener('mouseover', e => {
@@ -142,5 +143,24 @@ const KIT = (() => {
     await dialog({ title, message, buttons: [{ value: 'ok', label: ok, cls: 'primary', focus: true }] });
   }
 
-  return { el, $, toast, tip, tipped, showTip, hideTip, dialog, confirmDialog, promptDialog, alertDialog };
+  // ------------------------------------------------------------ menu
+  /** A small drop-down of actions behind one button (⋯ or ⚙): the things done now and then, kept off the page.
+   * KIT.menu({ label: '⋯', ariaLabel: 'More for Waterdeep', tip, items: [button, el('hr'), button], cls, listCls, align: 'right' })
+   * returns a <details>. It closes when an item is picked, on a click anywhere else and on Escape (focus goes back to its
+   * button); its document listeners exist only while it is open, so nothing is left behind when the page changes. */
+  function menu({ label = '⋯', ariaLabel = '', tip: tipText = '', items = [], cls = '', listCls = '', align = 'right' } = {}) {
+    const summary = el('summary', { class: 'button small', 'aria-label': ariaLabel || null, 'data-tip': tipText || null }, label);
+    const list = el('div', { class: `kit-menu-list ${listCls}`.trim() }, items);
+    const d = el('details', { class: `kit-menu kit-menu-${align} ${cls}`.trim() }, summary, list);
+    const outside = ev => { if (!d.contains(ev.target)) d.open = false; };
+    const keys = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); d.open = false; summary.focus(); } };
+    d.addEventListener('toggle', () => {
+      if (d.open) { if (tipEl === summary) hideTip(); document.addEventListener('click', outside, true); document.addEventListener('keydown', keys, true); }
+      else { document.removeEventListener('click', outside, true); document.removeEventListener('keydown', keys, true); }
+    });
+    list.addEventListener('click', ev => { if (ev.target.closest('button, a')) d.open = false; });
+    return d;
+  }
+
+  return { el, $, toast, tip, tipped, showTip, hideTip, dialog, confirmDialog, promptDialog, alertDialog, menu };
 })();

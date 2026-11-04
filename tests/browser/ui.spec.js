@@ -12,14 +12,16 @@ test("deleting asks in an in-page dialog, and Cancel keeps the item", async ({ p
   await approve(browser, gm.email);
   const cid = await makeCampaign(page);
   await page.goto(`index.html#/c/${cid}/regions`);
-  await page.getByRole("button", { name: "Delete" }).first().click();
+  await page.getByLabel("More for Home", { exact: true }).click();
+  await page.getByRole("button", { name: "Delete…" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Delete region Home?");
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".listrow").filter({ hasText: "Home" })).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Delete" }).first().click();
+  await page.getByLabel("More for Home", { exact: true }).click();
+  await page.getByRole("button", { name: "Delete…" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "OK" }).click();
   await expect(page.locator(".listrow").filter({ hasText: "Home" })).toHaveCount(0);
   expectNoErrors(errors);
@@ -80,4 +82,35 @@ test("the favicon and touch icon are linked and served as images", async ({ page
     expect(res.ok(), href).toBe(true);
     expect(res.headers()["content-type"], href).toMatch(/^image\//);
   }
+});
+
+test("on an iPad in portrait the tabs are a drawer: » slides them out over the page, picking one slides them back", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Jo");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page);
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto(`index.html#/c/${cid}/calendar`);
+  const nav = page.locator("nav.tabs");
+  const tuck = nav.locator(".legend-tuck");
+  await expect(nav).toHaveClass(/\btucked\b/);
+  await expect(nav.getByRole("link", { name: "Events", exact: true })).toBeHidden();
+  // the page starts beside the 46px rail, not under three rows of tabs
+  const top = await page.locator(".nowbar").evaluate(n => n.getBoundingClientRect().top);
+  expect(top).toBeLessThan(120);
+  await tuck.click();
+  await expect(nav).not.toHaveClass(/\btucked\b/);
+  await expect(tuck).toHaveAttribute("aria-expanded", "true");
+  await nav.getByRole("link", { name: "Events", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/events$`));
+  await expect(page.locator("nav.tabs")).toHaveClass(/\btucked\b/);
+  // Escape and a tap outside close it too
+  await page.locator("nav.tabs .legend-tuck").click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("nav.tabs")).toHaveClass(/\btucked\b/);
+  await page.locator("nav.tabs .legend-tuck").click();
+  await page.mouse.click(700, 700);   // the page beside the drawer
+  await expect(page.locator("nav.tabs")).toHaveClass(/\btucked\b/);
+  expectNoErrors(errors);
 });

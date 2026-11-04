@@ -1,7 +1,7 @@
 // The Search page looks through the whole campaign: Encyclopedia entries (names, aliases, tags and notes), events and
 // their tags, day notes, the Library and Party Holdings, grouped by kind, and never finds a player anything secret.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("search finds names, notes, events and tomes, and a player never finds a secret", async ({ page, browser }) => {
@@ -23,6 +23,7 @@ test("search finds names, notes, events and tomes, and a player never finds a se
   await page.goto(`index.html#/c/${cid}/today`);
   if (phone) await page.getByRole("link", { name: "Search", exact: true }).click();
   else {
+    await openLegend(page);   // on an iPad in portrait the box is in the tabs' drawer
     await page.getByRole("searchbox", { name: "Search the campaign" }).fill("griffin");
     await page.getByRole("searchbox", { name: "Search the campaign" }).press("Enter");
   }
@@ -80,7 +81,7 @@ test("pressing / jumps to the search box", async ({ page, browser }) => {
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Slash ${gm.id}`);
   await page.goto(`index.html#/c/${cid}/calendar`);
-  await expect(page.getByRole("searchbox", { name: "Search the campaign" })).toBeVisible();
-  await page.locator("body").press("/");
+  await expect(page.locator("nav.tabs")).toBeVisible();
+  await page.locator("body").press("/");   // in the iPad's drawer, / brings the tabs out with the box
   await expect(page.getByRole("searchbox", { name: "Search the campaign" })).toBeFocused();
 });

@@ -152,7 +152,8 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
 
   // The player deletes it.
   await pp.reload();
-  await pp.locator(".holding").getByRole("button", { name: "Delete" }).click();
+  await pp.locator(".holding").getByLabel(/^More for /).click();
+  await pp.locator(".holding").getByRole("button", { name: "Delete…" }).click();
   await pp.locator(".kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(pp.locator(".holding")).toHaveCount(0);
   await expect(pp.getByText("No holdings yet")).toBeVisible();
