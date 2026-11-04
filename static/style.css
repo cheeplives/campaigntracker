@@ -1073,11 +1073,13 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-note:empty { display: none; }
 .map-measure-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1001; display: flex; align-items: center; gap: 6px; padding: 4px 8px; max-width: calc(100% - 24px); flex-wrap: wrap; }
 .map-measure-bar[hidden], .map-measure-bar [hidden] { display: none; }
+.map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: calc((100% - 300px) / 2); max-width: calc(100% - 324px); }
 .map-corner { position: absolute; top: 10px; right: 12px; z-index: 1002; display: flex; align-items: flex-start; gap: 6px; }
 .map-corner .lock-toggle { width: 36px; height: 36px; }
 .map-corner > * { margin: 0; }
 .map-corner .map-gear > summary { margin: 0; }
-.map-panel-box { position: absolute; top: 56px; left: 12px; z-index: 1001; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 68px); overflow: auto; overscroll-behavior: contain; }
+.map-panel-box { position: absolute; top: 56px; left: 12px; z-index: 1001; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 68px); display: flex; flex-direction: column; }
+.map-panel-box > * { min-height: 0; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; }   /* a tall form scrolls inside the stage */
 .map-panel-box:empty { display: none; }
 /* the forms floating on the map are opaque, so a busy picture never shows through their fields */
 .map-panel, .map-label-form { margin: 0; background: var(--stock); }
@@ -1111,31 +1113,35 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
 .map-body { position: relative; }
-.map-routes { flex: 0 1 16rem; min-width: 12rem; display: flex; flex-direction: column; gap: 8px; max-height: clamp(320px, 65vh, 900px); overflow-y: auto; }
+/* the drawer: over the map's right edge, under GM only and ⚙, sliding away to its tab (so the map never changes size) */
+.map-routes { position: absolute; top: 56px; right: 0; bottom: 0; z-index: 1001; width: 300px; display: flex; flex-direction: column;
+  border-right: 0; border-radius: var(--radius) 0 0 var(--radius); transition: transform .2s ease; }
 .map-routes[hidden] { display: none; }
+.map-routes.closed { transform: translateX(100%); box-shadow: none; }
 .map-routes h3 { margin: 0; display: inline; font-size: 1.05rem; }
-.map-routes.collapsed { flex: 0 0 auto; min-width: 0; align-items: center; overflow: visible; }
-.map-side-head { display: flex; justify-content: flex-end; }
-.map-side-fold { min-width: 32px; }
-.map-side-label { writing-mode: vertical-rl; color: var(--dim); font-size: .85rem; letter-spacing: .05em; }
-.map-side-sec { display: flex; flex-direction: column; gap: 6px; }
-.map-side-sec > summary { cursor: pointer; padding: 2px 0; }
-.map-side-sec[open] > summary { margin-bottom: 6px; }
-.map-side-sec > :not(summary) + :not(summary) { margin-top: 6px; }
+.map-side-fold { position: absolute; top: 16px; right: 100%; width: 28px; min-width: 0; height: 88px; padding: 0; border-right: 0; border-radius: var(--radius) 0 0 var(--radius);
+  background: color-mix(in srgb, var(--panel) 92%, transparent); }
+.map-side-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 4px; padding: 10px 0; }
+.map-routes.closed .map-side-list { visibility: hidden; transition: visibility 0s .2s; }   /* out of the tab order once it has slid away */
+.map-side-find { margin: 0 12px 6px; width: auto; }
+.map-side-secs { display: flex; flex-direction: column; gap: 8px; }
+.map-side-sec { display: flex; flex-direction: column; }
+.map-side-sec > summary { cursor: pointer; padding: 2px 12px; }
+.map-side-sec[open] > summary { margin-bottom: 4px; }
+.map-side-list [data-name][hidden] { display: none; }
 .map-route-ends { color: var(--text); }
 .map-route-swatch { display: inline-block; width: 18px; height: 0; margin: 0 6px 3px 0; vertical-align: middle; border-top: 3px dashed var(--swatch, var(--ok)); }
 .map-route-swatch.solid { border-top-style: solid; } .map-route-swatch.dotted { border-top-style: dotted; }
 .map-route-swatch.dashdot { border-top-style: dashed; }
-.map-place { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 4px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
-.map-place.secret { border-style: dashed; }
-.map-place + .map-place { margin-top: 4px; }
+.map-place { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 4px 6px; background: none; border: 0; border-radius: 0; color: var(--text); }
+.map-place.secret { font-style: italic; }
 .map-show { display: inline-flex; align-items: center; flex: none; }
 .map-route-top, .map-place-row { display: flex; align-items: center; gap: 6px; }
 .map-route-top .map-route-name { flex: 1; min-width: 0; }
 .map-place-row .map-place { flex: 1; min-width: 0; }
-.map-place-row + .map-place-row { margin-top: 4px; }
+.map-place-row { padding: 2px 12px; }
+.map-place-row:hover, .map-route:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
 .map-place-icon { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
-.map-body.side-collapsed .map-stage { flex-basis: 30rem; }
 /* a pin's colour tints its icon itself (no disc behind it, which would hide more of the map): a grey copy of the
    icon keeps its shading, and a copy filled with the colour is multiplied over it */
 .tinted { position: relative; display: inline-flex; align-items: center; justify-content: center; color: transparent;
@@ -1165,8 +1171,8 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-gear-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1100;   /* above Leaflet's zoom buttons (1000), which come later on the page */ display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem;
   padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5); }
 .map-gear-menu > * { text-align: left; }
-.map-route { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
-.map-route.secret { border-style: dashed; }
+.map-route { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; }
+.map-route.secret { border-left: 2px dashed var(--dim); }
 .map-route-name { text-align: left; font-weight: 700; }
 path.map-route-line:not(.coloured) { stroke: var(--ok); }
 path.map-route-line.secret:not(.coloured) { stroke: var(--dim); }

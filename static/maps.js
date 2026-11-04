@@ -211,6 +211,7 @@ const MapsTab = (() => {
     const note = el('p', { class: 'small map-note', role: 'status' });
     const total = el('span', { class: 'map-measure-total', role: 'status' });
     const routeBox = el('aside', { class: 'map-routes', 'aria-label': 'Routes' });
+    routeBox.hidden = true;   // until there is a route or a pin to list
     const toolbar = el('div', { class: 'map-toolbar' });
     /** A toolbar button: an emoji and a short word (hidden on a phone), named for screen readers and tests by `name`. */
     const tbtn = (icon, word, name, onclick, tip) => {
@@ -691,20 +692,36 @@ const MapsTab = (() => {
         await refresh(); toast('Route saved');
       } catch (err) { toast(err.message, true); }
     }
-    /** The side panel: Routes and Locations (every pin), each folding up, and the whole panel folding away to the right.
-     * How it was left is remembered on this device. */
+    /** The drawer over the map's right edge: a search box, then Routes and Locations (every pin), each folding up. It
+     * slides away to its tab, never changing the map's size. How it was left is remembered on this device. */
     const sideKey = `chronicle-map-side-${cid}`;
     const sideState = () => { try { return JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { return {}; } };
     const keepSide = patch => { try { localStorage.setItem(sideKey, JSON.stringify({ ...sideState(), ...patch })); } catch { /* this visit only */ } };
+    const fold = btn('', () => { keepSide({ collapsed: !sideState().collapsed }); syncDrawer(); }, 'small map-side-fold');
+    const sideList = el('div', { class: 'map-side-list' });
+    const finder = el('input', { type: 'search', class: 'map-side-find', 'aria-label': 'Find on this map', placeholder: 'Find on this map', autocomplete: 'off' });
+    /** Hide the rows whose name doesn't hold what is typed in the search box (matched as names are: case, accents, "The"). */
+    const filterRows = () => {
+      const q = G.nameKey(finder.value);
+      routeBox.querySelectorAll('[data-name]').forEach(row => { row.hidden = !!q && !G.nameKey(row.dataset.name).includes(q); });
+    };
+    finder.addEventListener('input', filterRows);
+    const sections = el('div', { class: 'map-side-secs' });
+    sideList.append(finder, sections);
+    routeBox.append(fold, sideList);
+    function syncDrawer() {
+      const shut = !!sideState().collapsed;
+      routeBox.hidden = !routes.length && !pins.length;
+      routeBox.className = 'map-routes ' + (shut ? 'closed' : 'open');
+      stage.classList.toggle('drawer-open', !shut && !routeBox.hidden);
+      fold.textContent = shut ? '⟨' : '⟩';
+      fold.dataset.tip = shut ? 'Show the routes and locations' : 'Slide the routes and locations away';
+      fold.setAttribute('aria-label', shut ? 'Show routes and locations' : 'Hide routes and locations');
+      fold.setAttribute('aria-expanded', String(!shut));
+    }
     function renderRoutes() {
       const st = sideState();
-      routeBox.hidden = !routes.length && !pins.length;
-      routeBox.classList.toggle('collapsed', !!st.collapsed);
-      const fold = btn(st.collapsed ? '⟨' : '⟩', () => { keepSide({ collapsed: !st.collapsed }); renderRoutes(); lf?.map.invalidateSize({ animate: false }); }, 'small map-side-fold',
-        st.collapsed ? 'Show the routes and locations' : 'Fold the routes and locations away');
-      fold.setAttribute('aria-label', st.collapsed ? 'Show routes and locations' : 'Hide routes and locations');
-      fold.setAttribute('aria-expanded', String(!st.collapsed));
-      if (st.collapsed) return routeBox.replaceChildren(fold, el('span', { class: 'map-side-label', 'aria-hidden': 'true' }, 'Routes · Locations'));
+      syncDrawer();
       const section = (key, title, kids) => {
         const d = el('details', { class: 'map-side-sec', open: st[key] !== false }, el('summary', {}, el('h3', {}, title, el('span', { class: 'muted small' }, ` ${kids.length}`))), ...kids);
         d.addEventListener('toggle', () => keepSide({ [key]: d.open }));
@@ -715,7 +732,7 @@ const MapsTab = (() => {
         const a = endPin(r.points[0]), z = endPin(r.points[r.points.length - 1]);
         const swatch = el('span', { class: 'map-route-swatch' + (r.color ? '' : ' plain') + ' ' + (r.dash || 'dashed'), 'aria-hidden': 'true' });
         if (r.color) swatch.style.setProperty('--swatch', r.color);
-        return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : '') },
+        return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : ''), 'data-name': r.name },
           el('div', { class: 'map-route-top' }, showTick('r' + r.id, r.name, hid),
             el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => { if (hid.has('r' + r.id)) setHidden('r' + r.id, false); lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)); } }, swatch, r.is_secret ? '🔒 ' : '', r.name)),
           a || z ? el('span', { class: 'small map-route-ends' }, a ? pinTitle(a) : '…', ' → ', z ? pinTitle(z) : '…') : null,
@@ -745,13 +762,13 @@ const MapsTab = (() => {
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
         const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
         if (p.color) face.style.setProperty('--pin-colour', p.color);
-        return el('div', { class: 'map-place-row' }, showTick('p' + p.id, pinTitle(p), hid),
+        return el('div', { class: 'map-place-row', 'data-name': pinTitle(p) }, showTick('p' + p.id, pinTitle(p), hid),
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
             face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
-      routeBox.replaceChildren(...[el('div', { class: 'map-side-head' }, fold),
-        routes.length ? section('routes', 'Routes', routeRows) : null,
+      sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows) : null,
         pins.length ? section('places', 'Locations', placeRows) : null].filter(Boolean));
+      filterRows();
     }
 
     function onClick(ev) {
@@ -1058,7 +1075,7 @@ const MapsTab = (() => {
       el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn));
     const measureBar = el('div', { class: 'map-measure-bar' }, total, undoBtn, clearBtn, saveRouteBtn, planBtn);
     measureBar.hidden = true;
-    stage.append(toolbar, panelBox, note, measureBar);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
+    stage.append(toolbar, panelBox, note, measureBar, routeBox);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
     if (gm) stage.append(el('div', { class: 'map-corner' }, secretBtn, gear));
     const title = el('h2', {}, map.name);
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -1067,7 +1084,7 @@ const MapsTab = (() => {
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
       el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta),
-      el('div', { class: 'map-body' }, stage, routeBox)));
+      el('div', { class: 'map-body' }, stage)));
 
     if (!map.image_url || !map.width) {
       host.replaceChildren(el('p', { class: 'muted map-empty' }, gm ? 'This map has no picture yet. Use ⚙ → Change picture.' : 'This map has no picture yet.'));

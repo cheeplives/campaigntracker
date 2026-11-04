@@ -126,14 +126,14 @@ test("Map routes: a colour and a line of their own, and start and end pins; the 
   expect([route.dash, route.points.length]).toEqual(["solid", 4]);
   expect((await api(page, "route_save", { id: route.id, dash: "wavy" }, cid)).status).toBe(400);
 
-  // the panel folds to the right, and stays folded after a reload; its sections fold too
+  // the drawer slides away to the right, and stays away after a reload; its sections fold too
   const side = page.getByRole("complementary", { name: "Routes" });
   await side.locator("summary", { hasText: "Locations" }).click();
   await expect(side.locator(".map-place").first()).toBeHidden();
   await side.getByRole("button", { name: "Hide routes and locations" }).click();
-  await expect(side).toHaveClass(/collapsed/);
+  await expect(side).toHaveClass(/closed/);
   await page.reload();
-  await expect(page.getByRole("complementary", { name: "Routes" })).toHaveClass(/collapsed/);
+  await expect(page.getByRole("complementary", { name: "Routes" })).toHaveClass(/closed/);
   await page.getByRole("button", { name: "Show routes and locations" }).click();
   await expect(page.locator(".map-route", { hasText: "Jonstown road" })).toBeVisible();
   await expect(page.locator(".map-place").first()).toBeHidden();   // Locations stayed folded
