@@ -37,7 +37,7 @@ const API_WRITE = ['set_time', 'shift_note_add', 'entry_note_add', 'event_save']
 /** Whether migration 022 has been run. */
 function has_panel_links(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'connection_keys'")->fetchColumn();
+    return $has ??= has_table('connection_keys');
 }
 function need_panel_links(): void {
     if (!has_panel_links()) fail('Panel links need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');

@@ -341,22 +341,39 @@ function fanwiki_action(string $action): bool {
 }
 /** A search result's thumbnail, fetched from the wiki's own picture host and passed on, so the page needs no img-src
  * for every wiki and the reader's address never reaches them. */
+/** How long a wiki's thumbnail is kept on disk before it is fetched again, in seconds. */
+const FANWIKI_THUMB_TTL = 86400;
 function fanwiki_thumb(): void {
     me();
     $w = fanwiki_wiki((string)($_GET['wiki'] ?? ''));
     $src = (string)($_GET['src'] ?? '');
     if (strlen($src) > 1000 || !fanwiki_host_ok($w, $src)) fail('Not a picture from that wiki', 400);
-    rate_limit('fanwiki_thumb', (string)me()['id'], 240, 60);
-    try { $tmp = image_download($src, 2 << 20); }
-    catch (ImageSourceDown | LengthException) { fail('That picture couldn\'t be fetched', 502, 'source_unavailable'); }
+    // Kept a day in the uploads folder (outside the web root), by the address's hash, so every member opening the
+    // same results doesn't fetch the same pictures from the wiki again. Not with the test stub.
+    $dir = (fanwiki_cfg()['stub'] ?? '') === '' ? upload_dir()['dir'] : null;
+    $cacheDir = $dir ? "$dir/.fanwiki-thumbs" : null;
+    $cached = $cacheDir ? "$cacheDir/" . hash('sha256', $src) : null;
+    if ($cached && is_file($cached) && time() - (int)@filemtime($cached) < FANWIKI_THUMB_TTL) {
+        $tmp = $cached;
+    } else {
+        rate_limit('fanwiki_thumb', (string)me()['id'], 240, 60);
+        try { $tmp = image_download($src, 2 << 20); }
+        catch (ImageSourceDown | LengthException) { fail('That picture couldn\'t be fetched', 502, 'source_unavailable'); }
+    }
     $mime = @getimagesize($tmp)['mime'] ?? '';
-    if (!in_array($mime, FANWIKI_IMAGE_TYPES, true)) { @unlink($tmp); fail('That isn\'t a picture', 415, 'unsupported_type'); }
+    if (!in_array($mime, FANWIKI_IMAGE_TYPES, true)) { if ($tmp !== $cached) @unlink($tmp); fail('That isn\'t a picture', 415, 'unsupported_type'); }
+    if ($cached && $tmp !== $cached) {
+        if (!is_dir($cacheDir)) @mkdir($cacheDir, 0700, true);
+        if (is_dir($cacheDir) && @rename($tmp, $cached)) $tmp = $cached;
+        // now and then, clear out what has expired
+        if (random_int(1, 50) === 1) foreach (glob("$cacheDir/*") ?: [] as $f) if (time() - (int)@filemtime($f) > FANWIKI_THUMB_TTL) @unlink($f);
+    }
     header("Content-Type: $mime");
     header('Content-Length: ' . filesize($tmp));
     header('Cache-Control: private, max-age=86400');
     header('X-Content-Type-Options: nosniff');
     header("Content-Security-Policy: default-src 'none'");
     readfile($tmp);
-    @unlink($tmp);
+    if ($tmp !== $cached) @unlink($tmp);
     exit;
 }

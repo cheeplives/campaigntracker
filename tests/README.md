@@ -25,6 +25,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **chronicle-access**: Chronicle approves its own users apart from Sinless: an account approved for Sinless asks
   for Chronicle on its first sign-in here and waits; approving, revoking or removing someone in Chronicle leaves
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
+- **performance**: a campaign load builds each entry's preview from the start of its notes only, and a GM-only paragraph
+  the cut runs through never reaches a player; an entry's page asks encyclopedia_sources for only the text naming it.
 - **access**: every API action (read from api/index.php and api/fanwikis.php, so a new one fails until it is
   given a group) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
   GMs' actions; only site admins manage accounts.

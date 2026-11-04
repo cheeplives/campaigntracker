@@ -3043,10 +3043,20 @@
     try { on ? localStorage.setItem(ENC_WIDE_KEY, '1') : localStorage.removeItem(ENC_WIDE_KEY); } catch { /* private mode: just this page */ }
   }
 
+  /** The campaign's text that names entry e (encyclopedia_sources with names: only the sources containing one), asked
+   * once for an entry's page, which shows it twice ("Mentioned in", "Where it was found"). */
+  let namingCache = null;
+  function sourcesNaming(e) {
+    const names = Nouns.namesOf(e), key = `${S.camp.id}|${S.camp.changed}|${JSON.stringify(names)}`;
+    if (namingCache?.key !== key || Date.now() - namingCache.at > 15000)
+      namingCache = { key, at: Date.now(), p: api('encyclopedia_sources', { query: { cid: S.camp.id, names: JSON.stringify(names) } }) };
+    namingCache.p.catch(() => { namingCache = null; });
+    return namingCache.p;
+  }
   function entryView(e, ctx) {
     const canDelete = isGM() || e.created_by === S.user.id;
     const box = el('div', { class: 'enc-mentioned' }, el('h4', {}, 'Mentioned in'), el('p', { class: 'muted small' }, 'Looking…'));
-    api('encyclopedia_sources', { query: { cid: S.camp.id } }).then(({ sources }) => {
+    sourcesNaming(e).then(({ sources }) => {
       const linker = Nouns.linker([e], () => null), seen = new Set(), list = [];
       for (const s of sources) {
         if (s.kind.startsWith('entry') && s.id === e.id) continue;
@@ -3683,7 +3693,7 @@
     // folded once the entry has notes of its own (open for a blank one, whose quotes are what it's written from), with a count
     const head = el('summary', {}, 'Where it was found');
     const box = el('details', { class: 'enc-found', open: entryBlank(e) }, head, el('p', { class: 'muted small' }, 'Looking…'));
-    api('encyclopedia_sources', { query: { cid: S.camp.id } }).then(({ sources }) => {
+    sourcesNaming(e).then(({ sources }) => {
       const names = Nouns.namesOf(e), rows = [];
       for (const s of sources) {
         if (s.kind.startsWith('entry') && s.id === e.id) continue;

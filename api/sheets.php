@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 function has_sheets(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW COLUMNS FROM campaign_members LIKE 'active_character_id'")->fetchColumn();
+    return $has ??= has_column('campaign_members', 'active_character_id');
 }
 function need_sheets(): void {
     if (!has_sheets()) fail('Character sheets need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
