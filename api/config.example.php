@@ -176,6 +176,12 @@ return [
   // page or a script can't flood the database. Picture fetches from outside sites have their own, lower limits.
   'limits' => [
     'writes_per_minute' => 600,
+    // So one account can't grow the database without bound (0 turns a limit off). Site admins have no campaign limit.
+    'campaigns_per_account' => 50,     // campaigns a person may create (or copy) of their own
+    'write_mb_per_day'      => 50,     // what one account may save in a day, uploads aside (they have uploads.user_mb)
+    'days_per_campaign'     => 40000,  // days with weather or notes, about a century
+    'shifts_per_campaign'   => 200000, // shifts with an activity
+    'events_per_campaign'   => 20000,
   ],
   // Only behind a CDN or reverse proxy (Cloudflare, a load balancer): the addresses or CIDR ranges it connects from.
   // Requests from those addresses are limited by the X-Forwarded-For address they pass on; everyone else by their own

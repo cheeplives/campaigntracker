@@ -99,6 +99,8 @@ function role(int $cid): string {
         $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $st->execute([$cid, $u['id']]);
         $r = $st->fetchColumn();
+        // not a member yet, but perhaps invited by email (member_add): that invitation is taken up now
+        if (!$r && claim_invites($cid)) { $st->execute([$cid, $u['id']]); $r = $st->fetchColumn(); }
         if (!$r) fail('You are not a member of this campaign', 403);
     }
     // Only once access is settled, so nobody outside the campaign sets its one-time upgrade off.
@@ -559,6 +561,61 @@ function has_encyclopedia(): bool {
 }
 function need_encyclopedia(): void {
     if (!has_encyclopedia()) fail('The Encyclopedia needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
+}
+/** Whether migration 025 has been run: entries and days carry a version, and invitations by email wait in campaign_invites. */
+function has_versions(): bool {
+    static $has = null;
+    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'campaign_invites'")->fetchColumn();
+}
+/** SQL to add to an UPDATE of an entry's name or notes, so a copy opened before it is refused when saved (entry_save). */
+function entry_bump(): string { return has_versions() ? ', version=version+1' : ''; }
+
+// ---------- quotas ----------
+/** A number from the config's 'limits', or $default; 0 turns that limit off. */
+function limit_of(string $key, int $default): int {
+    $l = (array)cfg('limits', []);
+    return max(0, (int)($l[$key] ?? $default));
+}
+/** Refuse a new campaign once its creator already has limits.campaigns_per_account of their own. Site admins have none. */
+function need_campaign_room(): void {
+    $u = me();
+    $max = limit_of('campaigns_per_account', 50);
+    if ($u['is_admin'] || !$max) return;
+    $st = db()->prepare('SELECT COUNT(*) FROM campaigns WHERE created_by=?');
+    $st->execute([$u['id']]);
+    if ((int)$st->fetchColumn() >= $max) fail("You already have $max campaigns of your own. Delete one you no longer play to make room", 403, 'campaign_limit');
+}
+/** The rows a campaign may keep in each of its biggest tables: about a century of days and their shifts. */
+const ROW_BUDGETS = ['days' => ['days_per_campaign', 40000, 'days of weather and notes'],
+    'shifts' => ['shifts_per_campaign', 200000, 'shifts'], 'events' => ['events_per_campaign', 20000, 'events']];
+/** Refuse a change that would take campaign $cid's $table past its budget by adding up to $adding rows. */
+function need_row_room(int $cid, string $table, int $adding): void {
+    [$key, $default, $what] = ROW_BUDGETS[$table];
+    $max = limit_of($key, $default);
+    if (!$max) return;
+    $st = db()->prepare("SELECT COUNT(*) FROM $table WHERE campaign_id=?");   // $table is one of ROW_BUDGETS' keys
+    $st->execute([$cid]);
+    if ((int)$st->fetchColumn() + $adding > $max) fail("This campaign has reached its limit of $max $what", 413, 'row_limit');
+}
+
+// ---------- invitations ----------
+/** Turn the signed-in user's waiting invitations (campaign_invites, by their sign-in email) into memberships: every
+ * one, or only campaign $cid's. Taken up when they open their campaign list, or anything in that campaign. Returns
+ * whether there were any. */
+function claim_invites(?int $cid = null): bool {
+    if (!has_versions() || panel_request()) return false;
+    $u = me();
+    $email = mb_strtolower(trim((string)$u['email']));
+    if ($email === '') return false;
+    $only = $cid !== null ? ' AND campaign_id=' . $cid : '';
+    $st = db()->prepare("SELECT campaign_id, role FROM campaign_invites WHERE email=?$only");
+    $st->execute([$email]);
+    $rows = $st->fetchAll();
+    if (!$rows) return false;
+    $ins = db()->prepare('INSERT IGNORE INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?)');
+    foreach ($rows as $r) $ins->execute([(int)$r['campaign_id'], $u['id'], $r['role']]);
+    db()->prepare("DELETE FROM campaign_invites WHERE email=?$only")->execute([$email]);
+    return true;
 }
 /** Whether migration 018 has been run, so entries have a Category. */
 function has_categories(): bool {
@@ -1320,6 +1377,11 @@ if (!in_array($action, PUBLIC_ACTIONS, true)) me();
 if ($method === 'POST' && !panel_request()) require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
+// And a day's worth of what they send, in KB, so a script can't grow the database by gigabytes while staying under the
+// rate above. Uploads have their own room (uploads.user_mb), so only the JSON bodies count.
+if ($method === 'POST' && ($kb = limit_of('write_mb_per_day', 50) * 1024) && !str_starts_with((string)($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/'))
+    rate_limit('write_kb', 'u' . me()['id'], $kb, 86400, (int)ceil(((int)($_SERVER['CONTENT_LENGTH'] ?? 0)) / 1024),
+        'You have saved a lot today. The rest can wait until tomorrow');
 
 $readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'panel_whoami', 'panel_links', 'owlbear_manifest', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
     'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
@@ -1480,6 +1542,7 @@ try {
 
     case 'campaigns':
         $u = me();
+        claim_invites();   // a GM's invitation by email, waiting for this account
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
         $st = db()->prepare($u['is_admin']
             ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, " . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ", m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
@@ -1515,7 +1578,13 @@ try {
             'active_character_id' => $m['active_character_id'] ?? null], $members);
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
-        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'tags' => campaign_tags($cid),
+        $invites = [];
+        if ($isGm && !api_request() && has_versions()) {
+            $st = db()->prepare('SELECT email, role, created_at FROM campaign_invites WHERE campaign_id=? ORDER BY email');
+            $st->execute([$cid]);
+            $invites = $st->fetchAll();
+        }
+        out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
             'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(), 'sheets_ready' => has_sheets(),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
@@ -1558,6 +1627,7 @@ try {
 
     case 'campaign_create':
         $u = me();
+        need_campaign_room();
         $name = trim((string)str_in(p('name'), 150, false));
         if ($name === '') fail('Name required');
         $cal = stamp_cal(json_in(p('calendar')));
@@ -1620,6 +1690,7 @@ try {
     case 'campaign_copy': // GMs: a new campaign of their own with everything in this one (or setup: true, its setup only)
         $cid = cid(); need_gm($cid);
         rate_limit('campaign_copy', (string)me()['id'], 10, 60);   // each one copies every row and file of a campaign
+        need_campaign_room();
         $name = trim((string)str_in(p('name'), 150, false));
         if ($name === '') fail('Name required');
         @set_time_limit(300);
@@ -1648,25 +1719,44 @@ try {
         out(['users' => $users]);
 
     case 'member_add':
+        // By the account picked from member_candidates, or by sign-in email. An approved account joins at once, so the
+        // GM can name their character and put them in a group straight away. Any other email is recorded as an
+        // invitation, which becomes a membership when that person, approved, next opens their campaign list or the
+        // campaign itself, so a GM can invite someone before they have signed up.
         $cid = cid(); need_gm($cid);
+        $role = p('role') === 'gm' ? 'gm' : 'player';
         if (p('user_id') !== null) {
-            // Picked from the list of registered users.
-            $st = db()->prepare('SELECT id FROM users WHERE id=? AND ' . approved_sql());
+            // Picked from the list: only people the GM already plays with (anyone, for a site admin), as that list offers,
+            // so account ids can't be tried one by one.
+            $known = me()['is_admin'] ? '' : ' AND id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=' . me()['id'] . ')';
+            $st = db()->prepare('SELECT id FROM users WHERE id=? AND ' . approved_sql() . $known);
             $st->execute([int_in(p('user_id'), 1)]);
             $uid = $st->fetchColumn();
             if (!$uid) fail('That account is not approved (or no longer exists).', 404);
         } else {
-            $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND email<>'' AND " . approved_sql());
-            $st->execute([trim((string)str_in(p('email'), 191, false))]);
+            $email = mb_strtolower(trim((string)str_in(p('email'), 191, false)));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail('Type the email they sign in with');
+            $st = db()->prepare("SELECT id FROM users WHERE LOWER(email)=? AND email<>'' AND " . approved_sql());
+            $st->execute([$email]);
             $uid = $st->fetchColumn();
-            if (!$uid) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
+            if (!$uid) {
+                if (!has_versions()) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
+                db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, invited_by) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')
+                    ->execute([$cid, $email, $role, me()['id']]);
+                out(['ok' => true, 'invited' => true]);
+            }
+            if (has_versions()) db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $email]);
         }
-        $role = p('role') === 'gm' ? 'gm' : 'player';
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
         out(['ok' => true]);
 
     case 'member_remove':
         $cid = cid(); need_gm($cid);
+        if (p('email') !== null && p('user_id') === null) {   // an invitation not taken up yet
+            if (has_versions()) db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')
+                ->execute([$cid, mb_strtolower(trim((string)str_in(p('email'), 191, false)))]);
+            out(['ok' => true]);
+        }
         $uid = int_in(p('user_id'), 1);
         $st = db()->prepare("SELECT COUNT(*) FROM campaign_members WHERE campaign_id=? AND role='gm' AND user_id<>?");
         $st->execute([$cid, $uid]);
@@ -1696,7 +1786,7 @@ try {
         }
         if ($active && $name !== '') {
             $name = character_name_in($cid, $name, role($cid) === 'gm', (int)$active);
-            db()->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $active]);
+            db()->prepare('UPDATE encyclopedia_entries SET name=?' . entry_bump() . ' WHERE id=?')->execute([$name, $active]);
             character_names_sync((int)$active);
         }
         db()->prepare('UPDATE campaign_members SET character_name=? WHERE campaign_id=? AND user_id=?')->execute([$name, $cid, $uid]);
@@ -1823,7 +1913,7 @@ try {
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv((int)$c['current_shift'], camp_spd($c));
-        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations FROM days WHERE campaign_id=? AND abs_day=?');
+        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations' . (has_versions() ? ', version' : ', 0 AS version') . ' FROM days WHERE campaign_id=? AND abs_day=?');
         $st->execute([$cid, $ad]);
         $d = $st->fetch() ?: null;
         $day = null;
@@ -1833,7 +1923,7 @@ try {
             $day = ['abs_day' => $ad, 'region_id' => $d['region_id'] !== null ? (int)$d['region_id'] : null,
                 'weather' => visible_weather($d['weather_json'], $ad, (int)$c['current_shift'], $hideFuture, $order, dec($c['calendar_json'])), 'notes' => note_for($d['notes'], $d['notes_format'], $isGm),
                 'notes_format' => $d['notes_format'], 'locations' => $d['locations']];
-            if ($isGm) $day += ['gm_notes' => $d['gm_notes'], 'gm_notes_format' => $d['gm_notes_format']];
+            if ($isGm) $day += ['gm_notes' => $d['gm_notes'], 'gm_notes_format' => $d['gm_notes_format'], 'version' => (int)$d['version']];
         }
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
         $st->execute([$cid, $ad]);
@@ -1867,6 +1957,7 @@ try {
         $cid = cid(); need_gm($cid);
         $rows = p('days', []);
         if (!is_array($rows) || count($rows) > 1500) fail('Send 1–1500 days at a time');
+        need_row_room($cid, 'days', count($rows));
         $st = db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE region_id=VALUES(region_id), weather_json=VALUES(weather_json)');
         $valid = db()->prepare('SELECT id FROM regions WHERE campaign_id=?');
         $valid->execute([$cid]);
@@ -1899,17 +1990,33 @@ try {
         };
         [$notes, $notesFmt] = $note('notes');
         [$gmNotes, $gmNotesFmt] = $note('gm_notes');
+        $written = $has('notes') || $has('gm_notes') || $has('locations');   // what the Notes box saves, and its version counts
+        db()->beginTransaction();
+        $st = db()->prepare('SELECT ' . (has_versions() ? 'version' : '0') . ' FROM days WHERE campaign_id=? AND abs_day=? FOR UPDATE');
+        $st->execute([$cid, $ad]);
+        $now = $st->fetchColumn();
+        if ($now === false) need_row_room($cid, 'days', 1);
+        // version: the copy the Notes box opened (0 for a day with no row yet). Someone else's save since is refused,
+        // so it isn't overwritten; a save that leaves version out (the weather, older pages) isn't checked.
+        if ($written && p('version') !== null && has_versions() && int_in(p('version'), 0) !== (int)$now) {
+            db()->rollBack();
+            fail('Someone saved this day\'s notes after you opened them. Copy what you wrote, reload, and add it again', 409, 'stale');
+        }
         db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations) VALUES (?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE region_id=IF(?, VALUES(region_id), region_id), weather_json=COALESCE(VALUES(weather_json), weather_json),
             notes=IF(?, VALUES(notes), notes), notes_format=IF(?, VALUES(notes_format), notes_format),
             gm_notes=IF(?, VALUES(gm_notes), gm_notes), gm_notes_format=IF(?, VALUES(gm_notes_format), gm_notes_format),
-            locations=IF(?, VALUES(locations), locations)')
+            locations=IF(?, VALUES(locations), locations)' . (has_versions() ? ', version=IF(?, version+1, version)' : ''))
             ->execute([$cid, $ad, $rid, $weather, $notes, $notesFmt, $gmNotes, $gmNotesFmt, str_in(p('locations'), 5000),
-                $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations')]);
-        out(['ok' => true]);
+                $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations'), ...(has_versions() ? [$written ? 1 : 0] : [])]);
+        $st->execute([$cid, $ad]);
+        $version = (int)$st->fetchColumn();
+        db()->commit();
+        out(['ok' => true, 'version' => $version]);
 
     case 'shift_save':
         $cid = cid(); need_gm($cid);
+        need_row_room($cid, 'shifts', 1);
         $maxSlot = camp_spd(campaign_row($cid)) - 1;
         $vo = p('visibility_override');
         $vo = ($vo === null || $vo === '') ? null : int_in($vo, 0, 5);
@@ -1924,6 +2031,7 @@ try {
         $cid = cid(); need_gm($cid);
         $from = int_in(p('from_shift')); $to = int_in(p('to_shift'));
         if ($to < $from || $to - $from > 6000) fail('Too many shifts at once (max 6000)');
+        need_row_room($cid, 'shifts', $to - $from + 1);
         $act = str_in(p('activity'), 5000, false);
         if ($act === '') fail('Activity text required');
         $st = db()->prepare("INSERT INTO shifts (campaign_id, abs_day, shift, activity) VALUES (?,?,?,?)
@@ -1991,6 +2099,7 @@ try {
         $title = trim((string)str_in(p('title'), 200, false));
         if ($title === '') fail('Title required');
         $args = [$ad, $end, $shift, $shiftEnd, $title, str_in(p('body'), 20000), $secret];
+        if (!$id) need_row_room($cid, 'events', 1);
         db()->beginTransaction();
         if ($id) {
             db()->prepare('UPDATE events SET abs_day=?, end_day=?, shift=?, shift_end=?, title=?, body=?, is_secret=? WHERE id=? AND campaign_id=?')->execute([...$args, $id, $cid]);
@@ -2344,7 +2453,7 @@ try {
         $role = role($cid);
         $isGm = $role === 'gm';
         need_encyclopedia();
-        $st = db()->prepare('SELECT e.id, e.name, ' . (has_categories() ? 'e.category' : 'NULL AS category') . ', e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.name, ' . (has_categories() ? 'e.category' : 'NULL AS category') . ', e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, ' . (has_versions() ? 'e.version' : '1 AS version') . ', e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
@@ -2356,6 +2465,7 @@ try {
             $e['notes'] = rich_for($e['notes'], $isGm);
             unset($e['aliases_json']);
             $e['is_secret'] = (bool)$e['is_secret'];
+            $e['version'] = (int)$e['version'];
             $e['created_by'] = $e['created_by'] !== null ? (int)$e['created_by'] : null;
             return $e;
         }, $st->fetchAll());
@@ -2507,7 +2617,15 @@ try {
         }
         db()->beginTransaction();
         if ($old) {
-            db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=? WHERE id=?')->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
+            // version: the copy the editor opened. When someone else has saved since, the save is refused, as for tomes, so
+            // it doesn't overwrite their words; a save without one (an older page) isn't checked.
+            $stale = has_versions() && p('version') !== null ? ' AND version=' . int_in(p('version'), 1) : '';
+            $st = db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=?' . entry_bump() . " WHERE id=?$stale");
+            $st->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
+            if ($stale && !$st->rowCount()) {
+                db()->rollBack();
+                fail('Someone saved this entry after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
+            }
         } else {
             db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, aliases_json, notes, gm_notes, is_secret, created_by) VALUES (?,?,?,?,?,?,?)')
                 ->execute([$cid, $name, $aliases, $notes, $gmNotes, $secret, me()['id']]);
@@ -2516,8 +2634,11 @@ try {
         if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
         if ($old) character_names_sync($id);
+        $v = has_versions() ? db()->prepare('SELECT version FROM encyclopedia_entries WHERE id=?') : null;
+        $v?->execute([$id]);
+        $version = $v ? (int)$v->fetchColumn() : 1;
         db()->commit();
-        out(['ok' => true, 'id' => $id]);
+        out(['ok' => true, 'id' => $id, 'version' => $version]);
 
     case 'secret_reveal':
         // GM: make a run of GM-only paragraphs public, in an entry's public notes or a tome, and (log) note it as an
@@ -2546,7 +2667,7 @@ try {
             [$tag, $at] = $m[0][$i];
             $html = substr_replace($html, '<p>' . substr($tag, 7, -8) . '</p>', $at, strlen($tag));
         }
-        if ($kind === 'entry') db()->prepare('UPDATE encyclopedia_entries SET notes=? WHERE id=?')->execute([$html, $id]);
+        if ($kind === 'entry') db()->prepare('UPDATE encyclopedia_entries SET notes=?' . entry_bump() . ' WHERE id=?')->execute([$html, $id]);
         else db()->prepare('UPDATE library_tomes SET body=?, version=version+1, updated_by=? WHERE id=?')->execute([$html, me()['id'], $id]);
         $event = null;
         if (p('log')) {
@@ -2572,7 +2693,7 @@ try {
         if (!is_array($list) || count($list) > 500) fail('Send up to 500 entries at a time');
         $added = []; $aliased = [];
         $ins = db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, is_secret, created_by) VALUES (?,?,?,?)');
-        $upd = db()->prepare('UPDATE encyclopedia_entries SET aliases_json=? WHERE id=?');
+        $upd = db()->prepare('UPDATE encyclopedia_entries SET aliases_json=?' . entry_bump() . ' WHERE id=?');
         $cat = db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?');
         $ign = db()->prepare('INSERT IGNORE INTO encyclopedia_ignored (campaign_id, scope, term) VALUES (?,?,?)');
         db()->beginTransaction();
@@ -2612,7 +2733,7 @@ try {
         if ($text === '') fail('Note is empty');
         $para = '<p>' . nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'), false) . '</p>';
         $col = $role === 'gm' && p('gm_only') ? 'gm_notes' : 'notes';
-        db()->prepare("UPDATE encyclopedia_entries SET $col=? WHERE id=?")->execute([rich_html_clean((string)$e[$col] . $para), $e['id']]);
+        db()->prepare("UPDATE encyclopedia_entries SET $col=?" . entry_bump() . ' WHERE id=?')->execute([rich_html_clean((string)$e[$col] . $para), $e['id']]);
         out(['ok' => true, 'id' => (int)$e['id']]);
 
     case 'entry_delete':

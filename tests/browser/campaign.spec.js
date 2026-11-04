@@ -142,22 +142,41 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   await api(page, "event_save", { abs_day: 2, title: "Public fair" }, cid);
   await api(page, "event_save", { abs_day: 2, title: "Hidden ambush", is_secret: true }, cid);
 
-  // Not approved yet: can't be added.
+  // Not approved yet: they're refused the campaign, and the GM's add is recorded as an invitation
   const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
-  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(404);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
+  expect((await api(page, "member_add", { email: `nobody-${gm.id}@example.test`, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
+  expect((await pp.request.get(`api/index.php?a=days&cid=${cid}&from=0&to=10`)).status()).toBe(403);
   await approve(browser, player.email);
 
+  // the Members tab lists the invitations; one can be cancelled
   await page.goto(`index.html#/c/${cid}/members`);
-  await page.getByPlaceholder("Search people, or type their sign-in email").fill(player.email);
-  await page.getByRole("button", { name: "Add by email" }).click();
-  await expect(page.getByText(`(${player.email})`)).toBeVisible();
+  const invited = page.locator(".listrow.invite");
+  await expect(invited).toHaveCount(2);
+  await invited.filter({ hasText: "nobody-" }).getByRole("button", { name: "Cancel invitation" }).click();
+  await expect(invited).toHaveCount(1);
+  await expect(invited).toContainText(player.email);
 
+  // their first request in the campaign takes the invitation up
   const r = await pp.request.get(`api/index.php?a=days&cid=${cid}&from=0&to=10`);
+  expect(r.status()).toBe(200);
   const titles = (await r.json()).events.map(e => e.title);
   expect(titles).toContain("Public fair");
   expect(titles).not.toContain("Hidden ambush");
+  // the invitation is gone from the Members tab, and they're listed as a member
+  await page.reload();
+  await expect(page.getByText(`(${player.email})`)).toBeVisible();
+  await expect(invited).toHaveCount(0);
+  // someone already approved, added by email, joins at once
+  const late = person("Jem");
+  const lctx = await newContext(browser);
+  await signIn(await lctx.newPage(), late);
+  await approve(browser, late.email);
+  await page.getByPlaceholder("Search people, or type their sign-in email").fill(late.email);
+  await page.getByRole("button", { name: "Add by email" }).click();
+  await expect(page.getByText(`(${late.email})`)).toBeVisible();
   await pctx.close();
   expectNoErrors(errors);
 });

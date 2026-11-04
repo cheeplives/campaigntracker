@@ -236,7 +236,7 @@
   async function loadCampaign(cid, force) {
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
-    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.tags = r.tags || []; S.reminders = [];
+    S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.invites = r.invites || []; S.tags = r.tags || []; S.reminders = [];
     S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
     S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.sheetsReady = !!r.sheets_ready; S.mapIndex = r.maps_index || [];
     S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
@@ -1551,7 +1551,8 @@
     const save = btn('Save notes', null, 'primary small', 'Save the locations and both notes');
     save.addEventListener('click', busy(save, async () => {
       const p = pub.value(), g = sec.value();
-      await post('day_update', { abs_day: d, notes: p.text, notes_format: p.format, gm_notes: g.text, gm_notes_format: g.format, locations: locs.value }, S.camp.id);
+      // version: the copy opened here, so a co-GM's save since isn't overwritten (refused, with a message to reload)
+      await post('day_update', { abs_day: d, version: row.version || 0, notes: p.text, notes_format: p.format, gm_notes: g.text, gm_notes_format: g.format, locations: locs.value }, S.camp.id);
       toast('Notes saved'); route();
       offerNouns([{ kind: 'locations', text: locs.value, label: 'Locations visited' }, { text: p.text, format: p.format, label: 'Public notes' },
         { text: g.text, format: g.format, secret: true, label: 'Secret notes' }]);
@@ -3826,11 +3827,12 @@
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
       const p = pub.value(), g = gm?.value();
-      const body = { id: e.id, name: name.value, aliases: aliases.value.split(',').map(x => x.trim()).filter(Boolean), notes: p.text, tags: tags.get() };
+      const body = { id: e.id, version: e.id ? e.version : undefined, name: name.value, aliases: aliases.value.split(',').map(x => x.trim()).filter(Boolean), notes: p.text, tags: tags.get() };
       if (category) body.category = category.value;
       if (gm) Object.assign(body, { gm_notes: g.text, is_secret: secret.checked });
       try {
-        const { id } = await post('entry_save', body, S.camp.id);
+        const { id, version } = await post('entry_save', body, S.camp.id);
+        e.version = version;
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
         S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null, token_url: S.encyclopedia.find(x => x.id === id)?.token_url || null,
@@ -5617,7 +5619,11 @@
       const role = select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'aria-label': 'Role', 'data-tip': 'A co-GM has the same powers as you, including secrets' });
       const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'Registered people' });
       const add = async body => {
-        try { await post('member_add', { ...body, role: role.value }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+        try {
+          const r = await post('member_add', { ...body, role: role.value }, S.camp.id);
+          if (r.invited) toast(`Invitation recorded. ${body.email} joins the next time they sign in with an approved account`);
+          await loadCampaign(S.camp.id, true); route();
+        } catch (err) { toast(err.message, true); }
       };
       const matches = () => {
         const t = q.value.trim().toLowerCase();
@@ -5641,8 +5647,15 @@
         if (v && m.length === 1) return add({ user_id: m[0].id });
         toast('Pick someone from the list, or type their full sign-in email.', true);
       });
-      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Everyone who has signed in and been approved by the site admin is listed. Someone new needs to sign in once and be approved first.'
-        : 'People you play with in your other campaigns are listed by name. To add anyone else, type their full sign-in email. Someone new needs to sign in once and be approved first.'));
+      // Invitations by email not taken up yet: they become members when that person, approved, next signs in.
+      if (S.invites.length) card.append(el('h3', {}, 'Invited'), ...S.invites.map(i => el('div', { class: 'listrow member invite' },
+        el('div', { class: 'who' }, el('strong', {}, i.email), el('span', { class: `role ${i.role}` }, i.role === 'gm' ? 'GM' : 'Player'),
+          el('span', { class: 'muted small' }, ' joins when they next sign in')),
+        el('div', { class: 'actions' }, btn('Cancel invitation', async () => {
+          try { await post('member_remove', { email: i.email }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+        }, 'small danger', 'They won\'t join this campaign when they sign in')))));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Everyone who has signed in and been approved by the site admin is listed. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
+        : 'People you play with in your other campaigns are listed by name. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
       api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
     }
     mount(...campaignHeader('members'), card);
