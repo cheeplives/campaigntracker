@@ -28,6 +28,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
   outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only
   from the config's `trusted_proxies`, and only its nearest hop that isn't one of them.
+- **performance**: a campaign load builds each entry's preview from the start of its notes only, and a GM-only paragraph
+  the cut runs through never reaches a player; an entry's page asks encyclopedia_sources for only the text naming it.
 - **quotas**: an Encyclopedia entry or a day's notes saved from an older copy is refused (`stale`) instead of
   overwriting someone else's save, and a line added from At the Table counts as a save; the weather saves unchecked; an
   account has room for 50 campaigns of its own, a campaign for 40,000 days, and an account for 50 MB of saves a day.

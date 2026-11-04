@@ -7,7 +7,7 @@
 /** Whether migration 019 has been run, so the rest of the app still works on an install that hasn't. */
 function has_maps(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'maps'")->fetchColumn();
+    return $has ??= has_table('maps');
 }
 function need_maps(): void {
     if (!has_maps()) fail('Maps need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -16,12 +16,12 @@ function need_maps(): void {
 /** Whether migration 021 has been run: before it, a map's grid is squares and never drawn. */
 function has_map_grid(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW COLUMNS FROM maps LIKE 'grid_type'")->fetchColumn();
+    return $has ??= has_column('maps', 'grid_type');
 }
 /** Whether migration 024 has been run: before it, pins and routes have no icon, colour, line or lock of their own. */
 function has_map_styles(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW COLUMNS FROM map_pins LIKE 'icon'")->fetchColumn();
+    return $has ??= has_column('map_pins', 'icon');
 }
 /** The lines a route can be drawn with (MapsTab's DASHES). */
 const MAP_DASHES = ['solid', 'dashed', 'dotted', 'dashdot'];

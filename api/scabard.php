@@ -212,6 +212,7 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
             $id = $e['id'];
             $idx['rows'][$id]['blank'] = $notes === null && $gm === null;
             $idx['rows'][$id]['aliases'] = $all;
+            entry_alias_forget($cid);
             $r['entries']['filled']++;
         } else {
             db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, aliases_json, notes, gm_notes, is_secret, created_by) VALUES (?,?,?,?,?,?,?)')
@@ -219,6 +220,7 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
             $id = (int)db()->lastInsertId();
             $idx['rows'][$id] = ['id' => $id, 'name' => $name, 'aliases' => $keep, 'is_secret' => $isSecret, 'blank' => $notes === null && $gm === null];
             $idx['by'][mb_strtolower($name)] = $id;
+            if ($keep) entry_alias_forget($cid);
             $r['entries']['added']++;
         }
         foreach ($keep as $a) $idx['by'][mb_strtolower($a)] ??= $id;

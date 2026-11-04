@@ -557,7 +557,7 @@ function touch_campaign(int $cid): void {
 /** Whether migration 011 has been run, so the rest of the app still works on an install that hasn't. */
 function has_encyclopedia(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'encyclopedia_ignored'")->fetchColumn();
+    return $has ??= has_table('encyclopedia_ignored');
 }
 function need_encyclopedia(): void {
     if (!has_encyclopedia()) fail('The Encyclopedia needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -565,7 +565,7 @@ function need_encyclopedia(): void {
 /** Whether migration 025 has been run: entries and days carry a version, and invitations by email wait in campaign_invites. */
 function has_versions(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'campaign_invites'")->fetchColumn();
+    return $has ??= has_table('campaign_invites');
 }
 /** SQL to add to an UPDATE of an entry's name or notes, so a copy opened before it is refused when saved (entry_save). */
 function entry_bump(): string { return has_versions() ? ', version=version+1' : ''; }
@@ -620,7 +620,7 @@ function claim_invites(?int $cid = null): bool {
 /** Whether migration 018 has been run, so entries have a Category. */
 function has_categories(): bool {
     static $has = null;
-    return $has ??= has_encyclopedia() && (bool)db()->query("SHOW COLUMNS FROM encyclopedia_entries LIKE 'category'")->fetchColumn();
+    return $has ??= has_encyclopedia() && has_column('encyclopedia_entries', 'category');
 }
 /** A Category as sent: one of ENTRY_CATEGORIES, or null for none. */
 function category_in($v): ?string {
@@ -644,12 +644,16 @@ function entry_tags(int $cid): array {
 /** Every entry this member may see, short: what the browser needs to link names and to know which are new. */
 function entry_index(int $cid, bool $isGm, array $tokens = []): array {
     if (!has_encyclopedia()) return [];
-    $st = db()->prepare("SELECT id, name, " . (has_categories() ? 'category' : 'NULL AS category') . ", aliases_json, notes, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
+    // Only the start of the notes, for the 140-character preview: every campaign load reads this, so not the whole
+    // Encyclopedia's text. A player's blank test needs to know whether anything outside the GM's paragraphs is there,
+    // which the start shows unless it is all secret; then the rest decides, in SQL.
+    $st = db()->prepare("SELECT id, name, " . (has_categories() ? 'category' : 'NULL AS category') . ", aliases_json, LEFT(notes, " . ENTRY_PREVIEW_READ . ") AS notes,
+        CHAR_LENGTH(notes) > " . ENTRY_PREVIEW_READ . " AS cut, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
     $pics = entry_pics($cid, $isGm);
     return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'category' => $e['category'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
-        'blank' => (bool)$e['blank'] || (!$isGm && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for($e['notes'], $isGm)),
+        'blank' => (bool)$e['blank'] || (!$isGm && !(int)$e['cut'] && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for(entry_head($e['notes'], (bool)(int)$e['cut'], $isGm), $isGm)),
         'pic' => $pics[(int)$e['id']] ?? null, 'token_url' => $tokens[(int)$e['id']] ?? null], $st->fetchAll());
 }
 /** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
@@ -666,6 +670,22 @@ function entry_pics(int $cid, bool $isGm): array {
 function entry_aliases(array $e): array {
     $a = dec($e['aliases_json'] ?? null);
     return is_array($a) ? array_values(array_filter($a, 'is_string')) : [];
+}
+/** How much of an entry's notes entry_index() reads for its preview. */
+const ENTRY_PREVIEW_READ = 4000;
+/** The start of stored rich text, read only so far: a tag or entity the cut runs through is dropped, and so is a
+ * half-read secret paragraph, which mustn't be half shown. */
+function entry_head(?string $html, bool $cut, bool $isGm): ?string {
+    if (!$cut || $html === null) return $html;
+    $lt = strrpos($html, '<');
+    if ($lt !== false && $lt > (int)strrpos($html, '>')) $html = substr($html, 0, $lt);
+    $html = preg_replace('/&#?[a-z0-9]*$/i', '', $html);
+    $html = mb_strcut($html, 0, strlen($html), 'UTF-8');   // nor half a character
+    if ($isGm) return $html;
+    // an <aside> left open by the cut is a GM paragraph whose end wasn't read: drop it, as rich_open() can't see it
+    $open = strrpos($html, '<aside');
+    if ($open !== false && strpos($html, '</aside>', $open) === false) $html = substr($html, 0, $open);
+    return $html;
 }
 /** The first line or so of an entry's Public notes, for the tooltip on its links. */
 function entry_preview(?string $html): string {
@@ -720,12 +740,22 @@ function entry_by_name(int $cid, string $name): ?array {
 /** The entry of campaign $cid that $name is the name or an alias of (any case), secret or not, or null. */
 function entry_named(int $cid, string $name): ?array {
     if ($e = entry_by_name($cid, $name)) return $e;
-    $st = db()->prepare("SELECT id, name, is_secret, aliases_json FROM encyclopedia_entries WHERE campaign_id=? AND aliases_json IS NOT NULL");
-    $st->execute([$cid]);
-    $k = mb_strtolower($name);
-    foreach ($st->fetchAll() as $e) foreach (entry_aliases($e) as $a) if (mb_strtolower($a) === $k) return $e;
-    return null;
+    return entry_alias_index($cid)[mb_strtolower($name)] ?? null;
 }
+/** Every alias in campaign $cid, lower-cased => its entry, read once a request: entries_add and the Scabard import ask
+ * entry_named() hundreds of times in one request. entry_alias_forget() after a change to anyone's aliases. */
+function entry_alias_index(int $cid, bool $forget = false): array {
+    static $idx = [];
+    if ($forget) { unset($idx[$cid]); return []; }
+    if (!isset($idx[$cid])) {
+        $idx[$cid] = [];
+        $st = db()->prepare("SELECT id, name, is_secret, aliases_json FROM encyclopedia_entries WHERE campaign_id=? AND aliases_json IS NOT NULL");
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $e) foreach (entry_aliases($e) as $a) $idx[$cid][mb_strtolower($a)] ??= $e;
+    }
+    return $idx[$cid];
+}
+function entry_alias_forget(int $cid): void { entry_alias_index($cid, true); }
 
 // ---------- connections between Encyclopedia entries ----------
 // A relationship type reads one way from each end: London "Has resident" Gunther, Gunther "Resident of" London. A
@@ -745,7 +775,7 @@ const RELATION_STARTER_TYPES = [
 /** Whether migration 012 has been run. */
 function has_relations(): bool {
     static $has = null;
-    return $has ??= has_encyclopedia() && (bool)db()->query("SHOW TABLES LIKE 'encyclopedia_relations'")->fetchColumn();
+    return $has ??= has_encyclopedia() && has_table('encyclopedia_relations');
 }
 function need_relations(): void {
     if (!has_relations()) fail('Connections need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -869,7 +899,7 @@ const ATTACHMENTS_PER_PARENT = 50;
 /** Whether migration 013 has been run. */
 function has_attachments(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'attachments'")->fetchColumn();
+    return $has ??= has_table('attachments');
 }
 function need_attachments(): void {
     if (!has_attachments()) fail('Pictures and files need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -906,7 +936,7 @@ function attachment_parent(int $cid, string $type, int $id, string $role): array
 /** Whether migration 017 has been run: found pictures keep their credit, and DeviantArt works can be embedded. */
 function has_credits(): bool {
     static $has = null;
-    return $has ??= has_attachments() && (bool)db()->query("SHOW COLUMNS FROM attachments LIKE 'credit_license'")->fetchColumn();
+    return $has ??= has_attachments() && has_column('attachments', 'credit_license');
 }
 /** A found picture's credit, null for a file uploaded by hand. */
 function attachment_credit(array $a): ?array {
@@ -1098,7 +1128,7 @@ const TOME_KINDS = ['book', 'journal', 'note'];
 /** Whether migration 014 has been run, so the rest of the app still works on an install that hasn't. */
 function has_library(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'library_tomes'")->fetchColumn();
+    return $has ??= has_table('library_tomes');
 }
 function need_library(): void {
     if (!has_library()) fail('The Library needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -1137,7 +1167,7 @@ function tomes(int $cid, ?int $id = null): array {
 /** Whether migration 015 has been run, so the rest of the app still works on an install that hasn't. */
 function has_sessions(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'play_sessions'")->fetchColumn();
+    return $has ??= has_table('play_sessions');
 }
 function need_sessions(): void {
     if (!has_sessions()) fail('Sessions need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
@@ -2586,6 +2616,18 @@ try {
                 if ($isGm) $add(['kind' => 'entry_gm_notes'] + $src, $e['gm_notes'], true, 'html');
             }
         }
+        // names (JSON list, from an entry's "Mentioned in" and "Where it was found"): only the sources that contain one of
+        // them, any case, so an entry's page isn't sent the whole campaign's text; the page still decides what counts
+        $names = $_GET['names'] ?? null;
+        if (is_string($names) && strlen($names) <= 8000 && is_array($list = json_decode($names, true)) && $list) {
+            $flat = fn(string $t): string => (string)preg_replace('/\s+/u', ' ', $t);   // a name may break across lines
+            $list = array_values(array_filter(array_map(fn($n) => is_string($n) ? trim($flat($n)) : '', array_slice($list, 0, 40)), fn($n) => $n !== ''));
+            $out = array_values(array_filter($out, function ($src) use ($list, $flat) {
+                $text = $flat($src['format'] === 'html' ? rich_html_plain($src['text']) : $src['text']);
+                foreach ($list as $n) if (mb_stripos($text, $n) !== false) return true;
+                return false;
+            }));
+        }
         out(['sources' => $out]);
 
     case 'entry_save':
@@ -2710,6 +2752,7 @@ try {
                 $list = entry_aliases($of);
                 $list[] = $name;
                 $upd->execute([aliases_in($list, $cid, $of['name'], (int)$of['id']), $of['id']]);
+                entry_alias_forget($cid);
                 $aliased[] = ['id' => (int)$of['id'], 'name' => $of['name'], 'alias' => $name];
                 continue;
             }
