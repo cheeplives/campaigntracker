@@ -9,8 +9,25 @@
   const BASE = 'static/vendor/pdfjs/';
 
   let loading = null;
+  /** pdf.js reads a page's text with `for await` over a ReadableStream, which Safari before 26.4 can't iterate (the
+   * legacy build doesn't polyfill it). Give streams the async iterator they lack, reading through their reader. */
+  function streamIterator() {
+    const RS = root.ReadableStream;
+    if (!RS || RS.prototype[Symbol.asyncIterator]) return;
+    RS.prototype[Symbol.asyncIterator] = async function* () {
+      const reader = this.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) return;
+          yield value;
+        }
+      } finally { reader.releaseLock(); }
+    };
+  }
   /** pdf.js, loaded once. Since pdf.js 4 it is an ES module, imported on first use (script-src 'self' allows it). */
   function lib() {
+    streamIterator();
     if (!loading) loading = import(new URL(BASE + 'pdf.min.mjs', document.baseURI).href).then(m => {
       m.GlobalWorkerOptions.workerSrc = new URL(BASE + 'pdf.worker.min.mjs', document.baseURI).href;
       return m;
