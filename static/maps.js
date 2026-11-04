@@ -230,7 +230,8 @@ const MapsTab = (() => {
     };
     const panelBox = el('div', { class: 'map-panel-box' });
 
-    let lf = null, mode = null, toolMode = null, sheetAway = false;   // sheetAway: on a phone the sheet folds away while a tool is in use, without changing how it was left   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
+    // sheetAway: on a phone the sheet folds away while a tool is in use or a card is open, without changing how it was left
+    let lf = null, mode = null, toolMode = null, sheetAway = false;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
     /** The whole picture in view. While the scale panel is open it floats over the map's left side, and its two points
      * are picked on the picture, so the picture is fitted beside it (when there is room). */
@@ -1169,6 +1170,10 @@ const MapsTab = (() => {
     groupLayer = L.layerGroup().addTo(lmap);
     const bar = scaleControl(() => map, system).addTo(lmap);
     lf = { map: lmap, scale: bar };
+    // on a phone a card wants more of the map than the open sheet leaves it, so the sheet folds away while one is open
+    const phone = () => window.matchMedia('(max-width: 720px)').matches;
+    lmap.on('popupopen', () => { if (phone() && !sheetAway) { sheetAway = true; syncDrawer(); } })
+      .on('popupclose', () => { if (sheetAway && !mode) { sheetAway = false; syncDrawer(); } });
     // what the markers mean, bottom-left under the scale bar
     stage.append(el('div', { class: 'map-legend surface-float', role: 'note', 'aria-label': 'Legend' },
       ['📍 Place', '📅 Event', '📝 Note', '🚩 Party'].map(t => el('span', { class: 'map-legend-item' }, t)),

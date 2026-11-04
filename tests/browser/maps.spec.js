@@ -1172,7 +1172,7 @@ test("Map page: a legend sits bottom-left, and P, L, M, T and Escape drive the m
   expectNoErrors(errors);
 });
 
-test("Map page: on a phone the toolbar is icons only and the drawer is a bottom sheet that leaves an open card usable", async ({ page, browser }, testInfo) => {
+test("Map page: on a phone the toolbar is icons only and the drawer is a bottom sheet that folds away for an open card or a tool", async ({ page, browser }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("mobile"), "phone layout");
   const { cid } = await setup(page, browser, "Phone");
   const mid = await mapWithPicture(page, cid);
@@ -1192,9 +1192,14 @@ test("Map page: on a phone the toolbar is icons only and the drawer is a bottom 
   await page.locator(".map-place", { hasText: "Burnt Ford" }).tap();   // its row in the sheet centres the map on it and opens its card
   const card = page.locator(".leaflet-popup");
   await expect(card).toBeVisible();
-  await expect.poll(async () => { const c = await card.boundingBox(), d = await page.locator(".map-routes").boundingBox(); return c.y + c.height - d.y; }).toBeLessThanOrEqual(1);
-  // a tool wants the whole map, so the sheet folds away while it is in use and comes back after
+  // the card wants more of the map than the sheet leaves, so the sheet folds away while it is open, and comes back after
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);
+  const box = await settledBox(card), st = await page.locator(".map-stage").boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(st.y - 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(st.y + st.height + 1);
   await page.locator(".leaflet-popup-close-button").tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
+  // so does a tool
   const addPin = page.getByRole("button", { name: "Add pin", exact: true });
   await addPin.tap();
   await expect(page.locator(".map-routes")).toHaveClass(/closed/);
