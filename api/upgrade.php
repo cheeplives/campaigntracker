@@ -76,6 +76,8 @@ function upgrade_steps(): array {
             'Added character sheets and the template library.'],
         ['024_map_styles.sql', fn(PDO $p) => db_has_table($p, 'map_pins') && !db_has_column($p, 'map_pins', 'icon'),
             'Map pins can now have their own icon and colour and be locked, and routes their own colour and line.'],
+        ['025_versions_invites.sql', fn(PDO $p) => db_has_table($p, 'encyclopedia_entries') && !db_has_column($p, 'encyclopedia_entries', 'version'),
+            'Encyclopedia entries and day notes now refuse a save from an older copy, and GMs can invite people by email before they have an account.'],
     ];
 }
 

@@ -207,7 +207,7 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
     } else {
         if ($e) {
             $all = array_values(array_unique(array_merge($e['aliases'], $keep)));
-            db()->prepare('UPDATE encyclopedia_entries SET aliases_json=?, notes=?, gm_notes=? WHERE id=?')
+            db()->prepare('UPDATE encyclopedia_entries SET aliases_json=?, notes=?, gm_notes=?' . entry_bump() . ' WHERE id=?')
                 ->execute([$all ? json_encode($all, JSON_UNESCAPED_UNICODE) : null, $notes, $gm, $e['id']]);
             $id = $e['id'];
             $idx['rows'][$id]['blank'] = $notes === null && $gm === null;
@@ -274,7 +274,7 @@ function scabard_conn(int $cid, array $c, bool $asSessions, array &$idx, array &
         $notes = (string)$st->fetchColumn();
         $line = '<p>Player: ' . htmlspecialchars($who, ENT_NOQUOTES, 'UTF-8') . '</p>';
         if (!str_contains($notes, $line)) {
-            db()->prepare('UPDATE encyclopedia_entries SET notes=? WHERE id=?')->execute([$notes . $line, $toEnd['entry']['id']]);
+            db()->prepare('UPDATE encyclopedia_entries SET notes=?' . entry_bump() . ' WHERE id=?')->execute([$notes . $line, $toEnd['entry']['id']]);
             $idx['rows'][$toEnd['entry']['id']]['blank'] = false;
             $r['lines']++;
         }

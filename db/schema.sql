@@ -81,6 +81,20 @@ CREATE TABLE IF NOT EXISTS campaign_members (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A GM's invitation by email (025): turned into a campaign_members row when that person, approved, next signs in or
+-- opens the campaign list, so adding someone by email never tells the GM whether the address has an account.
+CREATE TABLE IF NOT EXISTS campaign_invites (
+  campaign_id INT UNSIGNED NOT NULL,
+  email VARCHAR(191) NOT NULL,                      -- lower-cased sign-in email
+  role ENUM('gm','player') NOT NULL DEFAULT 'player',
+  invited_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (campaign_id, email),
+  KEY ix_invite_email (email),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS regions (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
@@ -112,6 +126,7 @@ CREATE TABLE IF NOT EXISTS days (
   gm_notes MEDIUMTEXT,
   gm_notes_format VARCHAR(8) NOT NULL DEFAULT 'plain',
   locations TEXT,
+  version INT UNSIGNED NOT NULL DEFAULT 1,           -- bumped on each notes save; an older copy's save is refused (025)
   PRIMARY KEY (campaign_id, abs_day),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL
@@ -339,6 +354,7 @@ CREATE TABLE IF NOT EXISTS encyclopedia_entries (
   notes MEDIUMTEXT,
   gm_notes MEDIUMTEXT,
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
+  version INT UNSIGNED NOT NULL DEFAULT 1,          -- bumped on each save; an older copy's save is refused (025)
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
