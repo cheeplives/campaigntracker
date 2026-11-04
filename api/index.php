@@ -565,7 +565,7 @@ function need_encyclopedia(): void {
 /** Whether migration 025 has been run: entries and days carry a version, and invitations by email wait in campaign_invites. */
 function has_versions(): bool {
     static $has = null;
-    return $has ??= (bool)db()->query("SHOW TABLES LIKE 'campaign_invites'")->fetchColumn();
+    return $has ??= has_table('campaign_invites');
 }
 /** SQL to add to an UPDATE of an entry's name or notes, so a copy opened before it is refused when saved (entry_save). */
 function entry_bump(): string { return has_versions() ? ', version=version+1' : ''; }
