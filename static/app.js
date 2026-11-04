@@ -237,9 +237,9 @@
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.invites = r.invites || []; S.tags = r.tags || []; S.reminders = [];
-    S.encReady = !!r.encyclopedia_ready; S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.encCatsReady = !!r.encyclopedia_categories_ready;
-    S.libReady = !!r.library_ready; S.mapsReady = !!r.maps_ready; S.sheetsReady = !!r.sheets_ready; S.mapIndex = r.maps_index || [];
-    S.sessionsReady = !!r.sessions_ready; S.openSession = r.open_session || null;
+    S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
+    S.mapIndex = r.maps_index || [];
+    S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
     E.setTuning(S.camp.settings?.tuning);
@@ -1116,7 +1116,7 @@
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || (S.sheetsReady && typeof Sheets !== 'undefined'))).map(([k, l]) =>
+      const links = ts.filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined')).map(([k, l]) =>
         el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
@@ -1563,8 +1563,8 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow(row.locations, [row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, S.sessionsReady ? btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
-        'Copy these notes, as they are written now, into a session\'s notes to write its summary from') : null));
+      el('div', { class: 'row' }, save, btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
+        'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
 
   /** A day's notes as session note lines: { pub: [{ text, depth }], sec: [...] }. Paragraphs, headings and list items become
@@ -2266,7 +2266,7 @@
   /** Every event the member can see in one list, newest or oldest first, or on a timeline, narrowed by a search and by tags. */
   async function viewEvents() {
     const [{ events }, { sessions }] = await Promise.all([api('events', { query: { cid: S.camp.id } }),
-      S.sessionsReady ? api('sessions', { query: { cid: S.camp.id } }).catch(() => ({ sessions: [] })) : { sessions: [] }]);
+      api('sessions', { query: { cid: S.camp.id } }).catch(() => ({ sessions: [] }))]);
     const st = vs().events || (vs().events = { q: '', tags: new Set(), when: 'all', order: 'asc' });
     const c = cal(), d0 = today();
     const end = e => Number(e.end_day ?? e.abs_day);
@@ -2406,7 +2406,7 @@
       b.dataset.zoom = key;
       return b;
     });
-    const laneOpts = [['tags', 'Lanes by tag'], ...(S.encReady && S.encyclopedia.length ? [['entries', 'Lanes by Encyclopedia entry']] : []), ['one', 'One lane']];
+    const laneOpts = [['tags', 'Lanes by tag'], ...(S.encyclopedia.length ? [['entries', 'Lanes by Encyclopedia entry']] : []), ['one', 'One lane']];
     if (!laneOpts.some(o => o[0] === tl.lanes)) tl.lanes = 'tags';
     const laneSel = select(laneOpts, tl.lanes, { 'aria-label': 'Lanes', 'data-tip': 'One lane per tag (an event with two tags is in both), one per Encyclopedia entry the events name, or every event in one lane' });
     laneSel.addEventListener('change', () => { tl.lanes = laneSel.value; render(); });
@@ -2416,7 +2416,7 @@
       return el('label', { class: 'tl-band-opt small', 'data-tip': tipText }, cb, ` ${label}`);
     };
     const bands = [
-      S.sessionsReady && sessions.length ? bandBox('sessions', 'Sessions', 'A band showing the days each session covered') : null,
+      sessions.length ? bandBox('sessions', 'Sessions', 'A band showing the days each session covered') : null,
       (c.seasons || []).length ? bandBox('seasons', 'Seasons', 'A band showing the calendar\'s seasons') : null,
       S.holidays.length ? bandBox('holidays', 'Holidays', 'A band showing the holidays (when zoomed in to a few years or less)') : null,
     ].filter(Boolean);
@@ -2478,7 +2478,7 @@
         top.append(g);
         y += 20;
       };
-      if (tl.bands.sessions && S.sessionsReady && sessions.length) {
+      if (tl.bands.sessions && sessions.length) {
         bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null).map(x => {
           const a = Number(x.first_day), b = (x.last_day === null ? today() : Number(x.last_day)) + 1;
           if (X(b) < 0 || X(a) > W) return null;
@@ -2740,7 +2740,6 @@
   }
   /** The @ list in rich text editors: the Encyclopedia names this member can see, and a new entry made on the spot. */
   function encMentions() {
-    if (!S.encReady) return null;
     return {
       list: () => S.encyclopedia,
       create: async name => {
@@ -2758,7 +2757,6 @@
   const encSkipped = new Set();
   /** Run the detector over what was just saved and offer what it finds. sources: see Nouns.find(). */
   async function offerNouns(sources) {
-    if (!S.encReady) return;
     // a rich text note's GM-only paragraphs are read as secret, so names found only there start as GM only
     sources = sources.flatMap(s => {
       if (s.format !== 'html') return [s];
@@ -2776,11 +2774,11 @@
       hideTip();
       const cid = S.camp.id;
       // a Category, or else a tag: the detector's guess is either ("Person", "Religion")
-      const tagOpts = S.encCatsReady ? [['', 'No category'], ...ENC_CATEGORIES.map(([, n, i]) => [n, `${i} ${n}`]),
-        ...S.encTags.filter(t => !encCatNamed(t.name)).map(t => [t.name, `Tag: ${t.name}`])] : [['', 'No tag'], ...S.encTags.map(t => [t.name, t.name])];
+      const tagOpts = [['', 'No category'], ...ENC_CATEGORIES.map(([, n, i]) => [n, `${i} ${n}`]),
+        ...S.encTags.filter(t => !encCatNamed(t.name)).map(t => [t.name, `Tag: ${t.name}`])];
       const rows = found.map((f, i) => {
         const name = el('input', { value: f.term, maxlength: 150, 'aria-label': `Name for ${f.term}`, class: 'grow' });
-        const tag = select(tagOpts, f.tag || '', { 'aria-label': S.encCatsReady ? `Category or tag for ${f.term}` : `Tag for ${f.term}` });
+        const tag = select(tagOpts, f.tag || '', { 'aria-label': `Category or tag for ${f.term}` });
         const secret = isGM() ? el('input', { type: 'checkbox', checked: f.secret, 'aria-label': `${f.term} is GM only` }) : null;
         // "Hoffmann" beside an entry for Gunther Hoffmann: it may be another name for that entry rather than a new one.
         const like = Nouns.related(f.term, S.encyclopedia);
@@ -2829,7 +2827,7 @@
           if (v === 'skip' && !scan) encSkipped.add(r.f.term);
           if (v === 'alias') adds.push({ name: r.f.term, alias_of: Number(r.aliasOf.value) });
           if (v !== 'add' || !n) continue;
-          const cat = S.encCatsReady ? encCatNamed(r.tag.value) : null;
+          const cat = encCatNamed(r.tag.value);
           adds.push({ name: n, is_secret: !!r.secret?.checked, category: cat, tags: r.tag.value && !cat ? [{ name: r.tag.value }] : [] });
           if (Nouns.keyOf(n) !== Nouns.keyOf(r.f.term)) ignores.push(r.f.term); // renamed: the word as found isn't offered again
         }
@@ -2893,22 +2891,16 @@
   /** The Encyclopedia tab: the entries down the left (Blank Entries first), the one picked on the right. sel: an entry
    * id, 'new' for a new entry, or nothing. A blank entry, or a new one, opens straight in its editor. */
   async function viewEncyclopedia(sel) {
-    if (!S.encReady) {
-      return mount(...campaignHeader('encyclopedia'), el('div', { class: 'card' }, el('h2', {}, 'Encyclopedia'),
-        el('p', {}, isGM() ? 'The Encyclopedia needs a database upgrade first: open install.php on the server and press Install or upgrade.'
-          : 'The Encyclopedia isn\'t set up on this server yet. Ask whoever runs it to open install.php.')));
-    }
     const r = await api('encyclopedia', { query: { cid: S.camp.id } });
     const entries = r.entries;
     S.encTags = r.tags || []; S.encIgnored = r.ignored || [];
-    const rel = { ready: !!r.relations_ready, list: r.relations || [], types: r.relation_types || [], entries };
+    const rel = { list: r.relations || [], types: r.relation_types || [], entries };
     const conns = connIndex(rel);
     const files = { list: r.files || [], uploads: r.uploads || { ready: false } };
     S.encUploads = files.uploads;
     for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
     S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
       pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
-    S.encCatsReady = !!r.categories_ready;
     S.encChars = r.characters || {};
     const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
     // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.
@@ -2949,7 +2941,7 @@
       if (!words.every(w => hay.get(e).includes(w))) return false;
       if (st.near && e.id !== st.near && !conns.get(e.id).some(c => c.other.id === st.near)) return false;
       if (st.kind && st.kind !== 'all' && chars[e.id]?.kind !== st.kind) return false;
-      return Object.entries(offOf).every(([f, off]) => f === skip || (f === 'cat' && !S.encCatsReady) || keys.get(e)[f].some(k => !off.has(k)));
+      return Object.entries(offOf).every(([f, off]) => f === skip || keys.get(e)[f].some(k => !off.has(k)));
     };
     const countBy = f => {
       const n = new Map();
@@ -2965,7 +2957,7 @@
     const kindSeg = hasChars ? el('div', { class: 'seg enc-kinds', role: 'group', 'aria-label': 'Characters' }) : null;
     const drawKinds = () => kindSeg?.replaceChildren(...[['all', 'All', 'Every entry'], ['pc', 'PCs', 'Only entries with a PC\'s sheet'], ['npc', 'NPCs', 'Only entries with an NPC\'s sheet']].map(([k, l, t]) =>
       btn(l, () => { st.kind = k; draw(); }, (st.kind || 'all') === k ? 'small on' : 'small', t)));
-    const filters = el('div', { class: 'enc-filters' }, kindSeg, S.encCatsReady ? catPick.node : null, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+    const filters = el('div', { class: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
     const draw = () => {
       const shown = entries.filter(e => passes(e));
       const blank = shown.filter(entryBlank);
@@ -2977,7 +2969,7 @@
       };
       const of = entries.length !== shown.length ? ` of ${entries.length}` : '';
       // Grouped by Category, in the order they are listed, then the entries with none.
-      const groups = S.encCatsReady ? [...ENC_CATEGORIES, ['', 'No category', '']].map(([k, name, icon]) => [k, `${icon ? `${icon} ` : ''}${name}`, shown.filter(e => (e.category || '') === k)]).filter(g => g[2].length) : [];
+      const groups = [...ENC_CATEGORIES, ['', 'No category', '']].map(([k, name, icon]) => [k, `${icon ? `${icon} ` : ''}${name}`, shown.filter(e => (e.category || '') === k)]).filter(g => g[2].length);
       const onlyNone = groups.length === 1 && groups[0][0] === '';
       lists.replaceChildren(...clean([
         blank.length ? section('blank', `Blank Entries (${blank.length})`, blank,
@@ -3029,7 +3021,7 @@
         el('div', { class: 'row' }, el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'), scanBtn,
           btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), 'small', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here'),
           wideBtn)),
-      search, filters, nearRow, lists, ignored, isGM() && rel.ready ? relationKinds(rel) : null);
+      search, filters, nearRow, lists, ignored, isGM() ? relationKinds(rel) : null);
 
     // --- the entry picked
     const right = el('section', { class: 'card enc-detail' });
@@ -3093,7 +3085,7 @@
         el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
         el('div', { class: 'row' },
           ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
-          !ch && isGM() && S.sheetsReady && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
+          !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
             ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
           btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
           btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out'),
@@ -3524,7 +3516,6 @@
   /** The Connections card on entry e's page, grouped by label as seen from e, with the suggestions from the notes. */
   function connectionsCard(e, ctx) {
     const { rel, conns, entries, st } = ctx;
-    if (!rel.ready) return null;
     const list = conns.get(e.id) || [];
     const groups = new Map();
     for (const c of list) {
@@ -3811,7 +3802,7 @@
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
-    const category = S.encCatsReady ? select([['', 'None'], ...ENC_CATEGORIES.map(([k, n, i]) => [k, `${i} ${n}`])], e.category || '', { name: 'category' }) : null;
+    const category = select([['', 'None'], ...ENC_CATEGORIES.map(([k, n, i]) => [k, `${i} ${n}`])], e.category || '', { name: 'category' });
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
@@ -3864,11 +3855,6 @@
 
   /** The Library tab: the tomes down the left, the one picked on the right. sel: a tome id, 'new', or nothing. */
   async function viewLibrary(sel) {
-    if (!S.libReady) {
-      return mount(...campaignHeader('library'), el('div', { class: 'card' }, el('h2', {}, 'Library'),
-        el('p', {}, isGM() ? 'The Library needs a database upgrade first: open install.php on the server and press Install or upgrade.'
-          : 'The Library isn\'t set up on this server yet. Ask whoever runs it to open install.php.')));
-    }
     const [{ tomes }, one] = await Promise.all([api('library', { query: { cid: S.camp.id } }),
       sel && sel !== 'new' ? api('tome', { query: { cid: S.camp.id, id: sel } }).catch(() => null) : null]);
     const current = sel === 'new' ? { kind: 'book', title: '', description: '', body: '' } : one?.tome || null;
@@ -3975,11 +3961,6 @@
    * from them, with Build draft; for players the published summary. */
   async function viewSessions(sel) {
     const cid = S.camp.id;
-    if (!S.sessionsReady) {
-      return mount(...campaignHeader('sessions'), el('div', { class: 'card' }, el('h2', {}, 'Sessions'),
-        el('p', {}, isGM() ? 'Sessions need a database upgrade first: open install.php on the server and press Install or upgrade.'
-          : 'Sessions aren\'t set up on this server yet. Ask whoever runs it to open install.php.')));
-    }
     const [{ sessions }, one] = await Promise.all([api('sessions', { query: { cid } }),
       sel ? api('session', { query: { cid, id: sel } }).catch(() => null) : null]);
     if (one) S.sessUploads = one.uploads;
@@ -4214,14 +4195,6 @@
     return [head[0], bar, details, cols, pictures];
   }
 
-  /** The Maps and Tokens tabs before the database upgrade: what to do, in the campaign's header (as the Library and Sessions do). */
-  function mapsNotReady(tab) {
-    const title = tab === 'tokens' ? 'Tokens' : 'Maps';
-    mount(...campaignHeader(tab), el('div', { class: 'card' }, el('h2', {}, title),
-      el('p', {}, isGM() ? 'Maps need the database upgrade: open install.php on the server and press Install or upgrade.'
-        : 'Maps aren\'t set up on this server yet. Ask whoever runs it to open install.php.')));
-  }
-
   // ------------------------------------------------------------ travel tab
   async function viewTravel() {
     const out = el('div', { class: 'travel-out' });
@@ -4229,7 +4202,6 @@
     let groups = [], mapNames = new Map(), result = null;
     const pinCache = new Map();
     const loadParty = async () => {
-      if (!S.mapsReady) return;
       try {
         groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
         mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
@@ -4239,7 +4211,7 @@
     // Plan this trip: a saved route (route=) or a measured path (path=x,y;x,y…) on a map, sent from the Maps tab
     let trip = null;   // { map, pins, points, name }
     const tq = new URLSearchParams(location.hash.split('?')[1] || '');
-    if (S.mapsReady && tq.get('map')) {
+    if (tq.get('map')) {
       try {
         const d = await api('map', { query: { cid: S.camp.id, id: tq.get('map') } });
         const r = tq.get('route') ? (d.routes || []).find(x => x.id === Number(tq.get('route'))) : null;
@@ -5470,12 +5442,11 @@
   /** The 📖 button on a result: adds it to the Encyclopedia with tag and notes (rich text), then becomes a link to it. */
   function genAddButton(name, tag, notes) {
     const b = el('button', { type: 'button', class: 'small gen-add', 'aria-label': `Add ${name} to the Encyclopedia`,
-      'data-tip': `Add ${name} to the Encyclopedia, ${S.encCatsReady && encCatNamed(tag) ? 'as a' : 'tagged'} ${tag}${isGM() && genPrefs().secret ? ', as GM only' : ''}` }, '📖 Add');
+      'data-tip': `Add ${name} to the Encyclopedia, ${encCatNamed(tag) ? 'as a' : 'tagged'} ${tag}${isGM() && genPrefs().secret ? ', as GM only' : ''}` }, '📖 Add');
     b.addEventListener('click', busy(b, async () => {
-      if (!S.encReady) throw new Error('The Encyclopedia isn\'t set up on this server yet: install.php needs to be run');
       const secret = isGM() && !!genPrefs().secret;
       // Person and Location are Categories; Rumor is a tag
-      const cat = S.encCatsReady ? encCatNamed(tag) : null;
+      const cat = encCatNamed(tag);
       const { id } = await post('entry_save', { name, notes: notes(), ...(cat ? { category: cat } : { tags: [{ name: tag }] }), ...(isGM() ? { is_secret: secret } : {}) }, S.camp.id);
       S.encyclopedia = [...S.encyclopedia.filter(x => x.id !== id), { id, name, aliases: [], is_secret: secret, blank: false,
         preview: Nouns.plain(notes(), 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, x) => a.name.localeCompare(x.name));
@@ -5505,7 +5476,6 @@
    * Encyclopedia; until it arrives this gives {} and then calls ready() so the rumors can be drawn again. */
   let genCastMemo = null;
   function genCast(ready) {
-    if (!S.encReady) return {};
     if (genCastMemo?.list === S.encyclopedia && genCastMemo.cid === S.camp.id) return genCastMemo.cast || {};
     const memo = genCastMemo = { list: S.encyclopedia, cid: S.camp.id, cast: null };
     const kinds = { person: /^(person|people|npc|character|pc)s?$/, place: /^(location|place|city|town|region|planet|station|building)s?$/,
@@ -5558,7 +5528,7 @@
 
     const useEnc = el('input', { type: 'checkbox', checked: pref.useEnc !== false, onchange: e => setGenPrefs({ useEnc: e.target.checked }) });
     const rumors = genCard('Rumors', 'Talk the party overhears, and who they heard it from. With the box ticked, rumors are about the people, places, groups and items in your Encyclopedia (by their Categories and tags), with made-up names for the rest. 📖 Add puts one in the Encyclopedia, tagged Rumor',
-      [S.encReady ? el('label', { class: 'inline small gen-traits', 'data-tip': 'Use names from your Encyclopedia tagged Person, Location, Group or Item' }, useEnc, 'Use Encyclopedia names') : null].filter(Boolean),
+      [el('label', { class: 'inline small gen-traits', 'data-tip': 'Use names from your Encyclopedia tagged Person, Location, Group or Item' }, useEnc, 'Use Encyclopedia names')],
       () => el('ul', { class: 'gen-list' }, Gen.rumors(g, 6, useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {}).map(r => el('li', { class: 'gen-item' },
         el('div', { class: 'gen-what' }, el('span', { class: 'gen-rumor' }, r.name), el('span', { class: 'small muted' }, r.note)),
         el('button', { type: 'button', class: 'small', 'aria-label': 'Copy the rumor', 'data-tip': 'Copy the rumor', onclick: () => genCopy(r.name) }, '📋'),
@@ -6153,7 +6123,7 @@
         data = Scabard.parse(text);
       } catch (err) { toast(err.message, true); return; }
       const cid = S.camp.id;
-      const sessionsSel = select([['sessions', 'Sessions'], ['entries', 'Encyclopedia entries']], S.sessionsReady ? 'sessions' : 'entries', { name: 'sessions', 'aria-label': 'What dated events become' });
+      const sessionsSel = select([['sessions', 'Sessions'], ['entries', 'Encyclopedia entries']], 'sessions', { name: 'sessions', 'aria-label': 'What dated events become' });
       const pics = el('input', { type: 'checkbox', name: 'pictures', checked: true });
       const what = el('ul', { class: 'scabard-plan' });
       const status = el('p', { class: 'small muted scabard-status', 'aria-live': 'polite' });
@@ -6445,7 +6415,7 @@
   async function viewSearch(q0) {
     const cid = S.camp.id, gm = isGM();
     const [{ sources }, enc, { events }] = await Promise.all([api('encyclopedia_sources', { query: { cid } }),
-      S.encReady ? api('encyclopedia', { query: { cid } }) : { entries: [] }, api('events', { query: { cid } })]);
+      api('encyclopedia', { query: { cid } }), api('events', { query: { cid } })]);
     // Each result: a title, a link, where it sits in time (for sorting the days), and its text in segments, each GM only or not.
     const items = new Map();
     const item = (key, group, title, href, at = Infinity) => items.get(key) || (items.set(key, { group, title, href, at, segs: [], extra: [], secret: false }), items.get(key));
@@ -6528,7 +6498,7 @@
   async function viewTable() {
     const cid = S.camp.id, c = cal(), d = today(), sh = E.mod(nowShift(), spd());
     tableEntries = null;
-    const [range, groups] = await Promise.all([fetchRange(d, d), S.mapsReady ? api('groups', { query: { cid } }).then(r => r.groups).catch(() => []) : []]);
+    const [range, groups] = await Promise.all([fetchRange(d, d), api('groups', { query: { cid } }).then(r => r.groups).catch(() => [])]);
     if (S.camp?.id !== cid) return;
     const row = range.days.get(d) || null, region = regionById(row?.region_id) || currentRegion();
     const w = row?.weather || null, sw = shiftWx(d, region, w)[sh] || null;
@@ -6582,7 +6552,7 @@
       tvTimeBtn('+1 day', spd(), '', 'Move "now" on a whole day')) : null;
     view.append(head, cards, ...clean([gmRow,
       el('section', { class: 'tv-sec' }, el('b', {}, 'Today'), todays.length ? el('ul', { class: 'tv-today' }, todays) : el('p', { class: 'muted small' }, 'Nothing on today')),
-      S.encReady ? tableLookup(view) : null,
+      tableLookup(view),
       tableNote(d, sh),
       PANEL ? panelFooter() : await tableLinksBox()]));
     if (PANEL) mount(view); else mount(...campaignHeader('table'), view);
@@ -6627,7 +6597,7 @@
     let entry = null;
     const kinds = el('div', { class: 'tv-seg', role: 'radiogroup', 'aria-label': 'Where the note goes' });
     const kindBtn = (k, label) => el('button', { type: 'button', role: 'radio', 'data-kind': k, onclick: () => setKind(k) }, label);
-    kinds.append(kindBtn('shift', `On this ${word()}`), ...(S.encReady ? [kindBtn('entry', 'On an Encyclopedia entry')] : []));
+    kinds.append(kindBtn('shift', `On this ${word()}`), kindBtn('entry', 'On an Encyclopedia entry'));
     const entryIn = el('input', { list: 'tv-entry-names', placeholder: 'Entry name', 'aria-label': 'Entry', autocomplete: 'off' });
     const names = el('datalist', { id: 'tv-entry-names' }, S.encyclopedia.map(e => el('option', { value: e.name })));
     const text = el('textarea', { rows: 3, 'aria-label': 'Note', placeholder: 'What happened, or what you found out' });
@@ -6675,7 +6645,6 @@
     const r = await api('panel_links', { query: { cid } }).catch(() => ({ ready: false, links: [] }));
     const box = el('section', { class: 'card tv-links' }, el('h3', {}, 'Use in a VTT or on stream',
       tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen: make a panel link, then paste it there once. Or give a program (a Foundry module, a bot) an API key. Each sees what you see, and can be revoked here at any time')));
-    if (!r.ready) return box.append(el('p', { class: 'muted small' }, 'Run the upgrade (./deploy.sh, or install.php → Install or upgrade) to use panel links.')), box;
     const kindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
     const list = el('div', {}, r.links.length ? r.links.map(k => el('div', { class: 'listrow tv-link' },
       el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${kindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}`)),
@@ -6897,10 +6866,9 @@
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
-        else if ((tab === 'maps' || tab === 'tokens') && !S.mapsReady) mapsNotReady(tab);
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
-        else if (tab === 'characters' && S.sheetsReady && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
+        else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
         else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();

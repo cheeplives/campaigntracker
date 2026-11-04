@@ -180,6 +180,11 @@ config to move it), then runs the migrations and lists what changed. If the
 backup or a migration fails, deploy.sh ends with *NOT done* and says why; fix
 that and run `php tools/migrate.php` again.
 
+The app expects every migration to have run. Until they have (say, a pull without
+deploy.sh, or a migration that failed), every page answers *This Chronicle's database
+needs an upgrade* instead of half working, so run `php tools/migrate.php` (or
+install.php) and reload.
+
 - `php tools/migrate.php --check` says what would run, and changes nothing.
 - `php tools/migrate.php --no-backup` skips the copy, if `mysqldump` isn't
   available or you've just made a backup yourself.

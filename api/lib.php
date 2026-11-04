@@ -286,18 +286,12 @@ function require_method(string ...$allowed): void {
 }
 
 // --- auth guards -----------------------------------------------------------
-/** Whether table $t exists: one SHOW TABLES a request, however many features ask (each has_x() below). */
+/** Whether table $t exists, from one SHOW TABLES a request. The API itself needs none of this (it refuses to run on a
+ * database that is behind: schema_current() in api/upgrade.php), but sign-in also runs from api/auth/, outside it. */
 function has_table(string $t): bool {
   static $tables = null;
   $tables ??= array_flip(db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
   return isset($tables[$t]);
-}
-/** Whether table $t has column $c: one SHOW COLUMNS per table a request. $t is always a constant, never a request's. */
-function has_column(string $t, string $c): bool {
-  static $cols = [];
-  if (!has_table($t)) return false;
-  $cols[$t] ??= array_flip(array_column(db()->query("SHOW COLUMNS FROM `$t`")->fetchAll(), 'Field'));
-  return isset($cols[$t][$c]);
 }
 /** Whether migration 020 has been run: Chronicle keeps its own approvals in chronicle_access. Until it has, the shared
  * users.status (Sinless's) still decides, as before. */

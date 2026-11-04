@@ -11,7 +11,6 @@ test("Maps: a fresh install has the tables, and the campaign says maps are ready
   const cid = await makeCampaign(page, "Maps tables");
   const r = await api(page, "campaign", undefined, cid);
   expect(r.status).toBe(200);
-  expect(r.json.maps_ready).toBe(true);
   const maps = sql("SHOW TABLES LIKE 'map_%'");
   expect(maps).toContain("map_pins");
   expect(maps).toContain("map_routes");
@@ -933,21 +932,6 @@ test("Maps: a picture a map or token shows can't be made GM only by itself", asy
   const tid = Number(sql(`SELECT image_id FROM tokens WHERE id=${token.id}`).trim());
   expect((await api(page, "file_update", { id: tid, is_secret: true }, cid)).status).toBe(400);
   expect((await api(page, "file_update", { id: imageId, caption: "ok" }, cid)).status).toBe(200);
-});
-
-test("Maps: before the upgrade the Maps and Tokens tabs say what to do", async ({ page, browser }) => {
-  const errors = watchErrors(page);
-  const { cid } = await setup(page, browser, "Maps not ready");
-  await page.route("**/api/index.php?*a=campaign&*", async route => {
-    const res = await route.fetch();
-    const json = await res.json();
-    await route.fulfill({ response: res, json: { ...json, maps_ready: false } });
-  });
-  await page.goto(`#/c/${cid}/maps`);
-  await expect(page.getByText("Maps need the database upgrade: open install.php on the server and press Install or upgrade.")).toBeVisible();
-  await page.goto(`#/c/${cid}/tokens`);
-  await expect(page.getByText("Maps need the database upgrade")).toBeVisible();
-  expectNoErrors(errors);
 });
 
 test("Maps: a route or location can be hidden from the picture on this device, and shown again", async ({ page, browser }) => {

@@ -10,8 +10,8 @@ const { person, signIn, api, approve, makeCampaign } = require("./helpers");
 const ROOT = path.join(__dirname, "..", "..");
 /** Run $code after api/lib.php has loaded with the test config, and return what it prints, parsed as JSON. Async, so
  * a server in this same process can answer PHP meanwhile; with no proxy, as the requests are to this machine. */
-function php(code) {
-  const env = { ...process.env, CHRONICLE_CONFIG: path.join(ROOT, "tests", "support", "config.test.php") };
+function php(code, extraEnv = {}) {
+  const env = { ...process.env, CHRONICLE_CONFIG: path.join(ROOT, "tests", "support", "config.test.php"), ...extraEnv };
   for (const k of Object.keys(env)) if (/_proxy$/i.test(k)) delete env[k];
   return new Promise((resolve, reject) => execFile("php", ["-r", `require 'api/lib.php'; ${code}`], { cwd: ROOT, env },
     (err, out) => err ? reject(err) : resolve(JSON.parse(out.toString()))));
@@ -68,4 +68,28 @@ test("X-Forwarded-For is believed only from a trusted proxy, and only its neares
   // a proxy that passes nothing usable leaves its own address
   expect(await ip("10.1.2.3", "not-an-ip", ["10.0.0.0/8"])).toBe("10.1.2.3");
   expect(await ip("10.1.2.3", "", ["10.1.2.3"])).toBe("10.1.2.3");
+});
+
+test("the API refuses to run on a database that is behind, and says what to run", async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "the database is the same for every browser");
+  const fs = require("fs");
+  const { execFileSync } = require("child_process");
+  const args = ["-h", process.env.DB_HOST || "127.0.0.1", "-P", process.env.DB_PORT || "3306", "-u", process.env.DB_USER || "root"];
+  if (process.env.DB_PASSWORD) args.push(`-p${process.env.DB_PASSWORD}`);
+  const db = "chronicle_schema_check";
+  const run = (sql, on) => String(execFileSync("mysql", on ? [...args, on] : args, { input: sql }));
+  const current = () => php(`require 'api/upgrade.php'; echo json_encode(schema_current(db(), getcwd()));`, { DB_NAME: db });
+  run(`DROP DATABASE IF EXISTS ${db}; CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+  try {
+    expect(await current()).toBe(false);                       // nothing there yet
+    run(fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8"), db);
+    expect(await current()).toBe(true);                        // a fresh install is up to date
+    run("ALTER TABLE encyclopedia_entries DROP COLUMN version;", db);
+    expect(await current()).toBe(false);                       // the newest migration hasn't run
+  } finally {
+    run(`DROP DATABASE IF EXISTS ${db};`);
+  }
+  // and the real API answers so, before any action runs: the check is the first thing in its try block
+  const src = fs.readFileSync(path.join(ROOT, "api", "index.php"), "utf8");
+  expect(src).toMatch(/if \(!schema_current\(db\(\), dirname\(__DIR__\)\)\) json_error\(503, 'needs_upgrade'/);
 });

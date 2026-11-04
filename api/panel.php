@@ -34,15 +34,6 @@ const API_READ = ['panel_whoami', 'campaign', 'changed', 'day', 'days', 'events'
 /** What a read/write key may also change; each action still checks GM or player as usual. */
 const API_WRITE = ['set_time', 'shift_note_add', 'entry_note_add', 'event_save'];
 
-/** Whether migration 022 has been run. */
-function has_panel_links(): bool {
-    static $has = null;
-    return $has ??= has_table('connection_keys');
-}
-function need_panel_links(): void {
-    if (!has_panel_links()) fail('Panel links need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
-
 /** Whether this request came from the panel or a program, with a link code or an API key instead of the session. */
 function panel_request(): bool {
     return ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '' || api_request();
@@ -84,7 +75,6 @@ function panel_public(): bool {
 function panel_gate(string $action): void {
     $api = api_request();
     $what = $api ? 'API key' : 'panel link';
-    if (!has_panel_links()) json_error(401, 'bad_panel_link', "This Chronicle hasn't been upgraded for {$what}s yet.");
     if ($api && ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '') json_error(401, 'bad_panel_link', 'Send an API key or a panel link, not both.');
     $code = (string)($api ? $_SERVER['HTTP_X_CHRONICLE_KEY'] : $_SERVER['HTTP_X_CHRONICLE_PANEL']);
     if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', "That $what isn't right. Make a new one in Chronicle.");

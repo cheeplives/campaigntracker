@@ -204,7 +204,6 @@ const MapsTab = (() => {
     }
     let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
     let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
-    let styles = !!data.styles;   // icons, colours, lines and locks need the database upgrade (migration 024)
     const loadGroups = async () => { if (gm) groups = (await api('groups', { query: { cid } })).groups; };
     const gm = ctx.isGM();
     const system = () => ctx.unitSystem();
@@ -348,7 +347,6 @@ const MapsTab = (() => {
       const perUnit = select(UNITS, hasGrid && map.scale_unit ? map.scale_unit : G.ROLL20.unit, { 'aria-label': 'Unit' });
       const px = el('input', { type: 'number', min: 0, step: 'any', 'aria-label': 'Pixels per square', value: hasGrid ? String(map.grid_px) : hint ? String(hint.grid_px) : '' });
       const count = el('input', { type: 'number', min: 1, step: 'any', 'aria-label': 'How many squares', value: '' });
-      const graded = 'grid_type' in map;   // the shape and default need the database upgrade (migration 021)
       const shape = select([['square', 'Squares'], ['hex_flat', 'Hexes (flat top)'], ['hex_pointy', 'Hexes (pointy top)']], map.grid_type || 'square', { 'aria-label': 'Shape' });
       const shown = el('input', { type: 'checkbox', checked: !!map.grid_shown });
       const way1 = btn('Two points', () => show('points'), '', 'Click two places you know the distance between');
@@ -366,8 +364,8 @@ const MapsTab = (() => {
           el('p', { class: 'small' }, 'Click two places you know the distance between.'),
           el('div', { class: 'row' }, field('How far apart are they?', apart), field('Unit', unit))
         ] : [
-          graded ? el('div', { class: 'row' }, field('Shape', shape, null, 'A hex\'s size is from its centre to the next one\'s, flat side to flat side'),
-            el('label', { class: 'check' }, shown, ' Show the grid to everyone')) : null,
+          el('div', { class: 'row' }, field('Shape', shape, null, 'A hex\'s size is from its centre to the next one\'s, flat side to flat side'),
+            el('label', { class: 'check' }, shown, ' Show the grid to everyone')),
           el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''),
             btn(`Roll20 (${G.ROLL20.grid_px} px = ${G.ROLL20.per_square} ft)`, () => { px.value = String(G.ROLL20.grid_px); per.value = String(G.ROLL20.per_square); perUnit.value = G.ROLL20.unit; }, 'small')),
           el('p', { class: 'small' }, 'Or click the corners of a run of squares, then say how many squares that is.'),
@@ -385,7 +383,7 @@ const MapsTab = (() => {
             if (!(+px.value > 0)) throw new Error('Type how many pixels one square is');
             if (!(+per.value > 0)) throw new Error('Type how far one square is');
             patch = G.scaleFromGrid(+px.value, +per.value, perUnit.value);
-            if (graded) Object.assign(patch, { grid_type: shape.value, grid_shown: shown.checked });
+            Object.assign(patch, { grid_type: shape.value, grid_shown: shown.checked });
             if (picks.length) { offset = { x: ((picks[0].x % patch.grid_px) + patch.grid_px) % patch.grid_px, y: ((picks[0].y % patch.grid_px) + patch.grid_px) % patch.grid_px }; patch.grid_offset_x = offset.x; patch.grid_offset_y = offset.y; }
           }
           map = (await post('map_save', { id: map.id, ...patch }, cid)).map;
@@ -435,7 +433,7 @@ const MapsTab = (() => {
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
-      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || []; styles = !!d.styles;
+      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || [];
       await loadGroups().catch(() => {});
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
@@ -498,10 +496,10 @@ const MapsTab = (() => {
         p.is_locked ? el('small', { class: 'muted' }, 'Locked in place') : null,
         mine(p) ? el('div', { class: 'row' },
           btn('Edit', () => { lmap_close(); pinForm(p, p); }, 'small'),
-          styles ? btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
+          btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
             try { await post('pin_save', { id: p.id, is_locked: !p.is_locked }, cid); lmap_close(); await refresh(); toast(p.is_locked ? 'Pin unlocked' : 'Pin locked in place'); }
             catch (err) { toast(err.message, true); }
-          }, 'small', p.is_locked ? 'Let this pin be dragged again' : 'Stop this pin being dragged by accident') : null,
+          }, 'small', p.is_locked ? 'Let this pin be dragged again' : 'Stop this pin being dragged by accident'),
           btn('Delete', async () => {
             if (!await ctx.confirmDialog(`Delete the pin "${pinTitle(p)}"?`, { ok: 'Delete', danger: true })) return;
             try { await post('pin_delete', { id: p.id }, cid); await refresh(); toast('Pin deleted'); } catch (err) { toast(err.message, true); }
@@ -512,7 +510,7 @@ const MapsTab = (() => {
     /** The pin form, in the panel above the map: a new pin at xy, or pin `old` being changed. */
     function pinForm(old, xy) {
       closePanel();
-      let kind = old?.kind || (gm && S.encReady ? 'entry' : 'note'), entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : null, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
+      let kind = old?.kind || (gm ? 'entry' : 'note'), entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : null, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
       let events = null, working = false;
       const label = el('input', { maxlength: 150, autocomplete: 'off', value: old?.kind === 'note' ? old.label : '' });
       const noteIn = el('textarea', { rows: 2, maxlength: 1000, placeholder: 'A short note, if you like' }, old?.kind === 'note' ? old.note || '' : '');
@@ -536,7 +534,7 @@ const MapsTab = (() => {
       };
       qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) entry = null; drawEntries(); });
       qEvent.addEventListener('input', () => { if (event && qEvent.value !== event.title) event = null; drawEvents(); });
-      const kinds = [...(S.encReady ? [['entry', 'Encyclopedia entry']] : []), ['note', 'Note'], ['event', 'Event']];
+      const kinds = [['entry', 'Encyclopedia entry'], ['note', 'Note'], ['event', 'Event']];
       // its icon (none: the kind's own) and colour, once the database has them
       let icon = old?.icon || null, colour = old?.color || null;
       const iconBox = el('div', { class: 'map-icon-pick', role: 'group', 'aria-label': 'Icon' });
@@ -558,7 +556,7 @@ const MapsTab = (() => {
       // not field(): its <label> would pass a click on one of these buttons to the first of them once the click has
       // redrawn the buttons (older Chrome does), putting the choice straight back
       const group = (name, box) => el('div', { class: 'field' }, el('span', { class: 'lbl', 'aria-hidden': 'true' }, name), box);
-      const styleFields = styles ? el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), group('Icon', iconBox), group('Colour', colourBox)) : null;
+      const styleFields = el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), group('Icon', iconBox), group('Colour', colourBox));
       const kindBtns = kinds.map(([k, l]) => btn(l, () => { kind = k; show(); }, '', k === 'note' ? 'A label and a note' : k === 'entry' ? 'Pin an Encyclopedia entry' : 'Pin an event'));
       const body = el('div', { class: 'map-form-body' });
       const warn = (name, what) => toast(`"${name}" is GM only, so players won't see this pin until the ${what} is shown to them`);
@@ -567,7 +565,7 @@ const MapsTab = (() => {
         const b = { map_id: map.id, x: xy.x, y: xy.y };
         if (old) b.id = old.id;
         if (gm) { b.kind = kind; b.is_secret = secret.checked; }
-        if (styles) { b.icon = icon; b.color = colour; }
+        b.icon = icon; b.color = colour;
         let hidden = null;
         if (kind === 'note') {
           if (!label.value.trim()) return toast('Give the pin a label', true);
@@ -598,7 +596,7 @@ const MapsTab = (() => {
         try {
           let found = entryNamed(name);   // no second entry of a name that is already one, nor on a retry after a failed pin
           if (!found) {
-            const id = (await post('entry_save', { name, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+            const id = (await post('entry_save', { name, category: 'location' }, cid)).id;
             found = { id, name, aliases: [], is_secret: false, blank: true, preview: '' };
             S.encyclopedia = [...S.encyclopedia, found];
           }
@@ -623,7 +621,7 @@ const MapsTab = (() => {
           : kind === 'entry' ? [field('Entry name', qEntry), entryList, el('div', { class: 'row' }, btn('New entry here', newEntry, 'small', 'Add an Encyclopedia entry of this name (a Location) and pin it'))]
           : [field('Event title', qEvent), eventList, el('div', { class: 'row' }, btn('New event here', newEvent, 'small', 'Add an all-day event of this title on the campaign\'s current day, and pin it'))]));
         if (kind === 'entry') drawEntries(); else if (kind === 'event') drawEvents();
-        if (styles) drawStyle();
+        drawStyle();
       }
       const form = el('form', { class: 'map-panel card', role: 'dialog', 'aria-label': old ? 'Edit pin' : 'Add pin' },
         el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
@@ -674,7 +672,7 @@ const MapsTab = (() => {
         const was = [from.value, to.value];
         let out = null;
         const form = el('form', {}, el('h3', {}, title), field('Route name', nameIn),
-          styles ? el('div', { class: 'row' }, field('Colour', colour), field('Line', dash)) : null,
+          el('div', { class: 'row' }, field('Colour', colour), field('Line', dash)),
           named.length ? el('div', { class: 'row' }, field('Starts at', from, null, 'A pin on this map: the route is drawn on to it, and the Travel tab starts the trip there'),
             field('Ends at', to, null, 'A pin on this map: the route is drawn on to it, and the Travel tab ends the trip there')) : null,
           box ? lockBox(box, 'players never see a GM only route') : null,
@@ -695,7 +693,7 @@ const MapsTab = (() => {
           };
           snap(from, was[0], 0); snap(to, was[1], 1);
           out = { name: nameIn.value.trim(), secret: box ? box.checked : null, points, moved: JSON.stringify(points) !== JSON.stringify(r.points),
-            ...(styles ? { color: colour.value || null, dash: dash.value === 'dashed' ? null : dash.value } : {}) };
+            color: colour.value || null, dash: dash.value === 'dashed' ? null : dash.value };
           d.close();
         });
         d.addEventListener('close', () => { d.remove(); resolve(out); });
@@ -707,7 +705,7 @@ const MapsTab = (() => {
       const got = await routeDialog('Save route', { name: '', points: pts.map(p => [p.x, p.y]) }, false, 'Save route');
       if (!got) return;
       try {
-        await post('route_save', { map_id: map.id, name: got.name, points: got.points, is_secret: got.secret, ...(styles ? { color: got.color, dash: got.dash } : {}) }, cid);
+        await post('route_save', { map_id: map.id, name: got.name, points: got.points, is_secret: got.secret, color: got.color, dash: got.dash }, cid);
         mode = null; pts = []; drawMeasure(); note.textContent = ''; syncTools();
         await refresh(); toast('Route saved');
       } catch (err) { toast(err.message, true); }
@@ -780,7 +778,7 @@ const MapsTab = (() => {
               const got = await routeDialog('Edit the route', r, null, 'Save');
               if (!got) return;
               try {
-                await post('route_save', { id: r.id, name: got.name, ...(got.moved ? { points: got.points } : {}), ...(styles ? { color: got.color, dash: got.dash } : {}) }, cid);
+                await post('route_save', { id: r.id, name: got.name, ...(got.moved ? { points: got.points } : {}), color: got.color, dash: got.dash }, cid);
                 await refresh();
               } catch (err) { toast(err.message, true); }
             }, 'small', 'Its name, colour and line, and the pins it starts and ends at'),
@@ -844,7 +842,7 @@ const MapsTab = (() => {
     addPinBtn.hidden = !map.image_url;
     // Quick label (GMs): each click on the map asks for the name of the place there, and pins it as that Encyclopedia
     // entry (or a new Location), staying in this mode for the next one: a map's labels pinned by hand, fast.
-    const labelBtn = gm && S.encReady ? tbtn('🏷', 'Label', 'Quick label', () => {
+    const labelBtn = gm ? tbtn('🏷', 'Label', 'Quick label', () => {
       if (mode === 'label') { closePanel(); note.textContent = ''; return; }
       if (mode === 'measure') { pts = []; drawMeasure(); }
       if (mode) closePanel();
@@ -870,7 +868,7 @@ const MapsTab = (() => {
         try {
           let e = entryNamed(n), made = false;
           if (!e) {
-            const id = (await post('entry_save', { name: n, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+            const id = (await post('entry_save', { name: n, category: 'location' }, cid)).id;
             e = { id, name: n, aliases: [], is_secret: false, blank: true, preview: '' };
             S.encyclopedia = [...S.encyclopedia, e];
             made = true;
@@ -1082,7 +1080,7 @@ const MapsTab = (() => {
               go.textContent = `Adding ${added + 1} of ${pick.length}…`;
               let e = entryNamed(n);
               if (!e) {
-                const id = (await post('entry_save', { name: n, ...(S.encCatsReady ? { category: 'location' } : {}) }, cid)).id;
+                const id = (await post('entry_save', { name: n, category: 'location' }, cid)).id;
                 e = { id, name: n, aliases: [], is_secret: false, blank: true, preview: '' };
                 S.encyclopedia = [...S.encyclopedia, e];
                 made++;
@@ -1105,7 +1103,7 @@ const MapsTab = (() => {
           el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
       }
     }
-    const scanBtn = gm && map.image_url && S.encReady && typeof MapScan !== 'undefined'
+    const scanBtn = gm && map.image_url && typeof MapScan !== 'undefined'
       ? btn('Scan for names…', scanNames, '', 'Read the place names printed on the map, then pick which to pin as Encyclopedia locations') : null;
 
     // ⚙: setup and the map's own changes, kept out of the toolbar: done once per map, and not to be pressed by accident

@@ -88,6 +88,18 @@ function schema_tables(string $root): array {
 }
 
 /**
+ * Whether the database is at the latest migration, cheaply enough to ask on every API request (api/index.php refuses
+ * to run anything on a database that is behind): every table db/schema.sql makes is there, from one SHOW TABLES, and
+ * the newest step above has nothing left to do. The steps run in order, so the newest stands for them all.
+ */
+function schema_current(PDO $pdo, string $root): bool {
+    $have = array_flip($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
+    foreach (schema_tables($root) as $t) if (!isset($have[$t])) return false;
+    $steps = upgrade_steps();
+    return !end($steps)[1]($pdo);
+}
+
+/**
  * What upgrade_database() would run, without changing anything: a list of file names ('schema.sql' or a migration).
  * On a database with tables missing it stops after schema.sql, as the later checks need those tables to exist.
  */

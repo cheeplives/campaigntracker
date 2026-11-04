@@ -1,28 +1,9 @@
 <?php
 /**
  * The Maps tab: maps (an uploaded image with pins, routes, a scale and a grid), tokens and party groups.
- * The actions are added to api/index.php's switch as the tab is built; this file starts with the upgrade guard.
+ * The actions are added to api/index.php's switch as the tab is built.
  */
 
-/** Whether migration 019 has been run, so the rest of the app still works on an install that hasn't. */
-function has_maps(): bool {
-    static $has = null;
-    return $has ??= has_table('maps');
-}
-function need_maps(): void {
-    if (!has_maps()) fail('Maps need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
-
-/** Whether migration 021 has been run: before it, a map's grid is squares and never drawn. */
-function has_map_grid(): bool {
-    static $has = null;
-    return $has ??= has_column('maps', 'grid_type');
-}
-/** Whether migration 024 has been run: before it, pins and routes have no icon, colour, line or lock of their own. */
-function has_map_styles(): bool {
-    static $has = null;
-    return $has ??= has_column('map_pins', 'icon');
-}
 /** The lines a route can be drawn with (MapsTab's DASHES). */
 const MAP_DASHES = ['solid', 'dashed', 'dotted', 'dashdot'];
 /** A colour from a request: #rrggbb, or null for none. */
@@ -56,7 +37,7 @@ function map_row(int $cid, int $id, bool $isGm): array {
 function map_out(array $m): array {
     $num = fn($k) => ($m[$k] ?? null) !== null ? (float)$m[$k] : null;
     $url = null;
-    if ($m['image_id'] !== null && has_attachments())
+    if ($m['image_id'] !== null)
         $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$m['campaign_id'], 'id' => (int)$m['image_id']]);
     return ['id' => (int)$m['id'], 'name' => $m['name'], 'is_secret' => (bool)(int)$m['is_secret'],
         'width' => $m['width'] !== null ? (int)$m['width'] : null, 'height' => $m['height'] !== null ? (int)$m['height'] : null,
@@ -110,18 +91,15 @@ function map_save(int $cid): array {
         if ($has($k)) $m[$k] = map_num($body[$k], 'The grid offset', 0.0, $m['grid_px'] ?? 100000.0);
     if ($has('grid_px') && $m['grid_px'] !== null)   // a new grid size alone keeps the offsets already stored, wrapped to fit it
         foreach (['grid_offset_x', 'grid_offset_y'] as $k) if (!$has($k) && $m[$k] !== null) $m[$k] = fmod((float)$m[$k], $m['grid_px']);
-    if (has_map_grid()) {
-        $m += ['grid_type' => 'square', 'grid_shown' => 0];
-        if ($has('grid_type')) {
-            if (!in_array($body['grid_type'], MAP_GRID_TYPES, true)) fail('Pick squares, flat-topped hexes or pointy-topped hexes');
-            $m['grid_type'] = $body['grid_type'];
-        }
-        if ($has('grid_shown')) $m['grid_shown'] = !empty($body['grid_shown']) ? 1 : 0;
+    $m += ['grid_type' => 'square', 'grid_shown' => 0];
+    if ($has('grid_type')) {
+        if (!in_array($body['grid_type'], MAP_GRID_TYPES, true)) fail('Pick squares, flat-topped hexes or pointy-topped hexes');
+        $m['grid_type'] = $body['grid_type'];
     }
+    if ($has('grid_shown')) $m['grid_shown'] = !empty($body['grid_shown']) ? 1 : 0;
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') { $m['image_id'] = $m['width'] = $m['height'] = null; }
         else {
-            need_attachments();
             if (!$old) fail('Save the map first, then add its picture');
             $st = db()->prepare("SELECT id, width, height FROM attachments WHERE id=? AND campaign_id=? AND parent_type='map' AND parent_id=? AND kind='image' AND is_secret=0");
             $st->execute([int_in($body['image_id'], 1), $cid, $old['id']]);
@@ -137,13 +115,13 @@ function map_save(int $cid): array {
         db()->prepare('UPDATE maps SET name=?, image_id=?, width=?, height=?, scale_per_px=?, scale_unit=?, grid_px=?, grid_offset_x=?, grid_offset_y=?, is_secret=? WHERE id=?')
             ->execute([...$cols, $old['id']]);
         $id = (int)$old['id'];
-        if (has_map_grid()) db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
+        db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
         if ($old['image_id'] !== null && (int)$old['image_id'] !== $m['image_id']) attachment_remove($cid, (int)$old['image_id']);   // the old picture is no longer wanted
     } else {
         db()->prepare('INSERT INTO maps (name, image_id, width, height, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, is_secret, campaign_id, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
             ->execute([...$cols, $cid, $m['created_by']]);
         $id = (int)db()->lastInsertId();
-        if (has_map_grid()) db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
+        db()->prepare('UPDATE maps SET grid_type=?, grid_shown=? WHERE id=?')->execute([$m['grid_type'], $m['grid_shown'], $id]);
     }
     touch_campaign($cid);
     return map_out(map_row($cid, $id, true));
@@ -167,7 +145,7 @@ function pin_out(array $p): array {
 }
 /** The pins of campaign $cid matching $where (SQL on aliases p, e, ev), with their entry, event and author joined, oldest first. */
 function map_pins_select(int $cid, string $where, array $args): array {
-    $st = db()->prepare('SELECT p.*, e.name AS e_name, ' . (has_categories() ? 'e.category' : 'NULL') . ' AS e_category, e.notes AS e_notes, ev.abs_day AS ev_abs_day, ev.title AS ev_title, ' . AUTHOR_SQL . ' AS author
+    $st = db()->prepare('SELECT p.*, e.name AS e_name, e.category AS e_category, e.notes AS e_notes, ev.abs_day AS ev_abs_day, ev.title AS ev_title, ' . AUTHOR_SQL . ' AS author
         FROM map_pins p' . MAP_PIN_JOINS . ' LEFT JOIN users u ON u.id=p.created_by LEFT JOIN campaign_members m ON m.campaign_id=p.campaign_id AND m.user_id=p.created_by
         WHERE p.campaign_id=? AND ' . $where . ' ORDER BY p.id');
     $st->execute([$cid, ...$args]);
@@ -209,13 +187,12 @@ function pin_save(int $cid, bool $isGm): array {
     if ($map['width'] === null || $map['height'] === null) fail('Give the map a picture before pinning it');
     $x = map_coord($has('x') || !$old ? $body['x'] ?? null : $old['x'], $map['width']);   // kept coordinates are checked against the map it is on now
     $y = map_coord($has('y') || !$old ? $body['y'] ?? null : $old['y'], $map['height']);
-    $styles = has_map_styles();
-    $locked = $styles ? ($has('is_locked') ? (!empty($body['is_locked']) ? 1 : 0) : (int)($old['is_locked'] ?? 0)) : 0;
+    $locked = $has('is_locked') ? (!empty($body['is_locked']) ? 1 : 0) : (int)($old['is_locked'] ?? 0);
     // a locked pin stays put: moving it (or onto another map) needs unlocking first, in the same save or before
     if ($old && (int)($old['is_locked'] ?? 0) && $locked && ((float)$old['x'] !== $x || (float)$old['y'] !== $y || (int)$old['map_id'] !== (int)$map['id']))
         fail('That pin is locked. Unlock it to move it', 409);
-    $icon = $styles ? ($has('icon') ? map_icon($body['icon']) : ($old['icon'] ?? null)) : null;
-    $colour = $styles ? ($has('color') ? map_colour($body['color']) : ($old['color'] ?? null)) : null;
+    $icon = $has('icon') ? map_icon($body['icon']) : ($old['icon'] ?? null);
+    $colour = $has('color') ? map_colour($body['color']) : ($old['color'] ?? null);
     $kind = $isGm && $has('kind') ? $body['kind'] : ($old['kind'] ?? 'note');
     if (!in_array($kind, ['note', 'entry', 'event'], true)) fail('Pick a note, an entry or an event');
     $label = $has('label') ? trim((string)str_in($body['label'], 150)) : ($old['label'] ?? '');
@@ -240,7 +217,7 @@ function pin_save(int $cid, bool $isGm): array {
             ->execute([...$cols, $cid, $u]);
         $id = (int)db()->lastInsertId();
     }
-    if ($styles) db()->prepare('UPDATE map_pins SET icon=?, color=?, is_locked=? WHERE id=?')->execute([$icon, $colour, $locked, $id]);
+    db()->prepare('UPDATE map_pins SET icon=?, color=?, is_locked=? WHERE id=?')->execute([$icon, $colour, $locked, $id]);
     if ($isGm) touch_campaign($cid);   // players' pins are like their notes: they don't count as a campaign change
     return pin_out(pin_row($cid, $id, true));
 }
@@ -252,7 +229,6 @@ function pin_name_key(string $n): string {
 /** GM: make note pin $id an entry pin. $entryId names the entry to use; else one whose name or other name matches the label
  * is reused, else one is added from the label and note. Returns [pin, entry id, whether an entry was added]. */
 function pin_to_entry(int $cid, int $id, ?int $entryId): array {
-    need_encyclopedia();
     $pin = pin_row($cid, $id, true);
     if ($pin['kind'] !== 'note') fail('Only a note pin can become an entry');
     $created = false;
@@ -277,7 +253,7 @@ function pin_to_entry(int $cid, int $id, ?int $entryId): array {
                     db()->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, notes, is_secret, created_by) VALUES (?,?,?,0,?)')
                         ->execute([$cid, entry_name($pin['label']), $notes, me()['id']]);
                     $entryId = (int)db()->lastInsertId();
-                    if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
+                    db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute(['location', $entryId]);
                     $created = true;
                 } catch (PDOException $e) {   // 1062: an entry of this name appeared since the look above
                     if (($e->errorInfo[1] ?? 0) != 1062) throw $e;
@@ -341,13 +317,11 @@ function route_save(int $cid): array {
             ->execute([$map['id'], $name, $json, $secret, $cid, me()['id']]);
         $id = (int)db()->lastInsertId();
     }
-    if (has_map_styles()) {
-        $colour = $has('color') ? map_colour($body['color']) : ($old['color'] ?? null);
-        $dash = $has('dash') ? $body['dash'] : ($old['dash'] ?? null);
-        if ($dash === '') $dash = null;
-        if ($dash !== null && !in_array($dash, MAP_DASHES, true)) fail('Pick a solid, dashed, dotted or dash-dot line');
-        db()->prepare('UPDATE map_routes SET color=?, dash=? WHERE id=?')->execute([$colour, $dash, $id]);
-    }
+    $colour = $has('color') ? map_colour($body['color']) : ($old['color'] ?? null);
+    $dash = $has('dash') ? $body['dash'] : ($old['dash'] ?? null);
+    if ($dash === '') $dash = null;
+    if ($dash !== null && !in_array($dash, MAP_DASHES, true)) fail('Pick a solid, dashed, dotted or dash-dot line');
+    db()->prepare('UPDATE map_routes SET color=?, dash=? WHERE id=?')->execute([$colour, $dash, $id]);
     touch_campaign($cid);
     $st = db()->prepare('SELECT * FROM map_routes WHERE id=?');
     $st->execute([$id]);
@@ -385,12 +359,10 @@ function party_set_current_region(int $cid, ?int $rid): void {
 }
 /** The main group's region := the campaign's current region (after the settings change). */
 function party_sync_main_region(int $cid): void {
-    if (!has_maps()) return;
     db()->prepare('UPDATE party_groups SET region_id=? WHERE campaign_id=? AND is_main=1')->execute([party_current_region($cid), $cid]);
 }
 /** Take user $uid out of every group of campaign $cid (they have left the campaign). */
 function party_remove_member(int $cid, int $uid): void {
-    if (!has_maps()) return;
     db()->beginTransaction();
     try {
         party_lock($cid);
@@ -489,7 +461,7 @@ function party_groups(int $cid, bool $isGm = true): array {
         $hideMap = !$isGm && !empty($e['map_secret']);
         $hideTok = !$isGm && !empty($e['tsecret']);
         $url = null;
-        if (!$hideTok && ($e['timg'] ?? null) !== null && has_attachments())
+        if (!$hideTok && ($e['timg'] ?? null) !== null)
             $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$e['timg']]);
         $num = fn($k) => $g[$k] !== null && !$hideMap ? (float)$g[$k] : null;
         return ['id' => (int)$g['id'], 'name' => $g['name'], 'members' => party_members($g),
@@ -640,7 +612,7 @@ function token_row(int $cid, int $id): array {
 /** A token as the browser gets it; image_url is the picture's address, null until it has one (or when a player may not see it). */
 function token_out(array $t, bool $isGm): array {
     $url = null;
-    if ($t['image_id'] !== null && has_attachments() && ($isGm || !token_hidden($t)))
+    if ($t['image_id'] !== null && ($isGm || !token_hidden($t)))
         $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$t['campaign_id'], 'id' => (int)$t['image_id']]);
     return ['id' => (int)$t['id'], 'name' => $t['name'], 'kind' => $t['kind'], 'size_squares' => (int)$t['size_squares'],
         'member_id' => $t['member_id'] !== null ? (int)$t['member_id'] : null, 'entry_id' => $t['entry_id'] !== null ? (int)$t['entry_id'] : null,
@@ -656,7 +628,6 @@ function tokens_list(int $cid): array {
 /** The picture addresses of the tokens this member may see, as ['member' => user id => url, 'entry' => entry id => url]. */
 function token_urls(int $cid, bool $isGm): array {
     $out = ['member' => [], 'entry' => []];
-    if (!has_maps() || !has_attachments()) return $out;
     $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
         WHERE t.campaign_id=? AND t.image_id IS NOT NULL AND (t.member_id IS NOT NULL OR t.entry_id IS NOT NULL)'
         . ($isGm ? '' : ' AND t.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)') . ' ORDER BY t.id ASC');   // the first-assigned (lowest id) token wins a member or entry
@@ -730,7 +701,6 @@ function token_save(int $cid): array {
     if ($has('entry_id')) {
         if ($body['entry_id'] === null || $body['entry_id'] === '') $t['entry_id'] = null;
         else {
-            if (!has_encyclopedia()) fail('That entry isn\'t one of this campaign\'s', 400);
             $st = db()->prepare('SELECT 1 FROM encyclopedia_entries WHERE id=? AND campaign_id=?');
             $st->execute([int_in($body['entry_id'], 1), $cid]);
             if (!$st->fetchColumn()) fail('That entry isn\'t one of this campaign\'s', 400);
@@ -740,7 +710,6 @@ function token_save(int $cid): array {
     if ($has('image_id')) {
         if ($body['image_id'] === null || $body['image_id'] === '') $t['image_id'] = null;
         else {
-            need_attachments();
             if (!$old) fail('Save the token first, then add its picture');
             $st = db()->prepare("SELECT id FROM attachments WHERE id=? AND campaign_id=? AND parent_type='token' AND parent_id=? AND kind='image' AND is_secret=0");
             $st->execute([int_in($body['image_id'], 1), $cid, $old['id']]);
