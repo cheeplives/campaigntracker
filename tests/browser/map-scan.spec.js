@@ -104,3 +104,43 @@ test("Scan for names: the GM reviews what the scanner read and pins the approved
   await d.getByRole("button", { name: "Cancel" }).click();
   expectNoErrors(errors);
 });
+
+test("Scan for names: every scanner file is served by Apache, not refused as a backup (.htaccess)", () => {
+  // php -S, which the tests run on, never reads .htaccess, so the scanner can pass here and still be refused on the
+  // real host: its model ends in .gz, which the backups-and-archives rule denies.
+  const fs = require("fs");
+  const ht = fs.readFileSync(path.join(__dirname, "..", "..", ".htaccess"), "utf8");
+  const deny = [...ht.matchAll(/<FilesMatch "([^"]+)">\s*Require all denied/g)].map(m => new RegExp(m[1]));
+  const allowed = new Set([...ht.matchAll(/<Files "([^"]+)">\s*Require all granted/g)].map(m => m[1]));
+  const files = fs.readdirSync(path.join(__dirname, "..", "..", "static", "vendor", "tesseract"))
+    .filter(f => /\.(js|wasm|gz)$/.test(f));
+  expect(files).toContain("eng.traineddata.gz");
+  const refused = files.filter(f => deny.some(re => re.test(f)) && !allowed.has(f));
+  expect(refused).toEqual([]);
+  // and the grant comes after the rule it overrides
+  expect(ht.indexOf('<Files "eng.traineddata.gz">')).toBeGreaterThan(ht.search(/<FilesMatch "[^"]*\|gz\|/));
+});
+
+test("Scan for names: a scanner file the server refuses says so instead of loading for ever", async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  const gm = person("Gail");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Scan refused ${gm.id}`);
+  await page.goto("index.html#/");
+  const png = await printedMap(page);
+  const mapId = (await api(page, "map_save", { name: "Fen" }, cid)).json.map.id;
+  const me = await (await page.request.get("api/auth/me.php")).json();
+  const up = await page.request.post(`api/index.php?${new URLSearchParams({ a: "file_upload", cid })}`, {
+    headers: { "X-CSRF-Token": me.csrf },
+    multipart: { parent_type: "map", parent_id: String(mapId), file: { name: "fen.png", mimeType: "image/png", buffer: png } },
+  });
+  await api(page, "map_save", { id: mapId, image_id: (await up.json()).file.id }, cid);
+  await page.context().route("**/eng.traineddata.gz", r => r.fulfill({ status: 403, contentType: "text/html", body: "Forbidden" }));
+  await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  await page.getByRole("button", { name: "Scan for names…" }).click();
+  const d = page.getByRole("dialog");
+  await expect(d.getByRole("status")).toContainText("couldn't load its files", { timeout: 60_000 });
+  await expect(d.getByRole("status")).toContainText("403");
+  await d.getByRole("button", { name: "Cancel" }).click();
+});

@@ -77,6 +77,11 @@
 <FilesMatch "(~|\.(bak|backup|old|orig|save|swp|swo|tmp|dist|log|ini|inc|zip|tar|gz|tgz|7z|rar))$">
   Require all denied
 </FilesMatch>
+# Except the map text scanner's English model (static/vendor/tesseract), which ships gzipped under the name Tesseract.js
+# asks for. It is a public file from the Tesseract project, not a backup. Being after the block above, this wins.
+<Files "eng.traineddata.gz">
+  Require all granted
+</Files>
 <FilesMatch "\.(sql|md|py|sh)$">
   Require all denied
 </FilesMatch>
