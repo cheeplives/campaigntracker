@@ -105,6 +105,9 @@
     failed.catch(() => {});
     const worker = await Promise.race([failed, T.createWorker('eng', 1, {   // 1: the LSTM engine only, the one these files hold
       workerPath: BASE + 'worker.min.js', corePath: BASE.replace(/\/$/, ''), langPath: BASE.replace(/\/$/, ''), workerBlobURL: false,
+      // The model is gzipped but named eng.traineddata, as hosts refuse or mangle .gz files (one answered 404); the worker
+      // unzips it by its first bytes.
+      gzip: false,
       logger: m => {
         if (m.status === 'recognizing text') onProgress(0.2 + 0.8 * (m.progress || 0), 'Reading the map…');
         else onProgress(0.2 * (m.progress || 0), 'Loading the scanner…');
