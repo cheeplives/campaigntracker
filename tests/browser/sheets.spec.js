@@ -18,7 +18,6 @@ test("Sheets: a fresh database has the tables, and the upgrade finds nothing lef
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, "Sheets ready");
-  expect((await api(page, "campaign", undefined, cid)).json.sheets_ready).toBe(true);
   // The step is listed for older installs, and the test database needs nothing more.
   const env = { ...process.env, CHRONICLE_CONFIG: path.join(ROOT, "tests", "support", "config.test.php") };
   const steps = execFileSync("php", ["-r", `require '${ROOT}/api/upgrade.php'; echo implode("\\n", array_column(upgrade_steps(), 0));`], { env }).toString();

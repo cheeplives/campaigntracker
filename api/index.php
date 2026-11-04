@@ -15,6 +15,7 @@ require __DIR__ . '/scabard.php';
 require __DIR__ . '/sheets.php';
 require __DIR__ . '/maps.php';
 require __DIR__ . '/panel.php';
+require __DIR__ . '/upgrade.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
@@ -554,21 +555,8 @@ function touch_campaign(int $cid): void {
 // entries are for GMs. The Proper Noun Detector (static/encyclopedia.js) runs in the browser and offers new names
 // after each save; the words someone turns down are kept per campaign, one list for the GMs and one for the players.
 
-/** Whether migration 011 has been run, so the rest of the app still works on an install that hasn't. */
-function has_encyclopedia(): bool {
-    static $has = null;
-    return $has ??= has_table('encyclopedia_ignored');
-}
-function need_encyclopedia(): void {
-    if (!has_encyclopedia()) fail('The Encyclopedia needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
-/** Whether migration 025 has been run: entries and days carry a version, and invitations by email wait in campaign_invites. */
-function has_versions(): bool {
-    static $has = null;
-    return $has ??= has_table('campaign_invites');
-}
 /** SQL to add to an UPDATE of an entry's name or notes, so a copy opened before it is refused when saved (entry_save). */
-function entry_bump(): string { return has_versions() ? ', version=version+1' : ''; }
+function entry_bump(): string { return ', version=version+1'; }
 
 // ---------- quotas ----------
 /** A number from the config's 'limits', or $default; 0 turns that limit off. */
@@ -603,7 +591,7 @@ function need_row_room(int $cid, string $table, int $adding): void {
  * one, or only campaign $cid's. Taken up when they open their campaign list, or anything in that campaign. Returns
  * whether there were any. */
 function claim_invites(?int $cid = null): bool {
-    if (!has_versions() || panel_request()) return false;
+    if (panel_request()) return false;
     $u = me();
     $email = mb_strtolower(trim((string)$u['email']));
     if ($email === '') return false;
@@ -617,11 +605,6 @@ function claim_invites(?int $cid = null): bool {
     db()->prepare("DELETE FROM campaign_invites WHERE email=?$only")->execute([$email]);
     return true;
 }
-/** Whether migration 018 has been run, so entries have a Category. */
-function has_categories(): bool {
-    static $has = null;
-    return $has ??= has_encyclopedia() && has_column('encyclopedia_entries', 'category');
-}
 /** A Category as sent: one of ENTRY_CATEGORIES, or null for none. */
 function category_in($v): ?string {
     $c = mb_strtolower(trim((string)$v));
@@ -631,7 +614,6 @@ function category_in($v): ?string {
 }
 /** The Encyclopedia's tags plus any starter tag the campaign hasn't used yet (id null), by name. */
 function entry_tags(int $cid): array {
-    if (!has_encyclopedia()) return [];
     $st = db()->prepare('SELECT id, name, color FROM encyclopedia_tag_names WHERE campaign_id=?');
     $st->execute([$cid]);
     $tags = [];
@@ -643,11 +625,10 @@ function entry_tags(int $cid): array {
 }
 /** Every entry this member may see, short: what the browser needs to link names and to know which are new. */
 function entry_index(int $cid, bool $isGm, array $tokens = []): array {
-    if (!has_encyclopedia()) return [];
     // Only the start of the notes, for the 140-character preview: every campaign load reads this, so not the whole
     // Encyclopedia's text. A player's blank test needs to know whether anything outside the GM's paragraphs is there,
     // which the start shows unless it is all secret; then the rest decides, in SQL.
-    $st = db()->prepare("SELECT id, name, " . (has_categories() ? 'category' : 'NULL AS category') . ", aliases_json, LEFT(notes, " . ENTRY_PREVIEW_READ . ") AS notes,
+    $st = db()->prepare("SELECT id, name, category, aliases_json, LEFT(notes, " . ENTRY_PREVIEW_READ . ") AS notes,
         CHAR_LENGTH(notes) > " . ENTRY_PREVIEW_READ . " AS cut, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
@@ -658,9 +639,8 @@ function entry_index(int $cid, bool $isGm, array $tokens = []): array {
 }
 /** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
 function entry_pics(int $cid, bool $isGm): array {
-    if (!has_attachments()) return [];
     $st = db()->prepare("SELECT a.parent_id, MIN(a.id) AS id FROM attachments a WHERE a.campaign_id=? AND a.parent_type='encyclopedia'
-        AND " . (has_credits() ? "(a.kind='image' OR (a.kind='embed' AND a.embed_src IS NOT NULL))" : "a.kind='image'") . ($isGm ? '' : ' AND a.is_secret=0') . ' GROUP BY a.parent_id');
+        AND (a.kind='image' OR (a.kind='embed' AND a.embed_src IS NOT NULL))" . ($isGm ? '' : ' AND a.is_secret=0') . ' GROUP BY a.parent_id');
     $st->execute([$cid]);
     $out = [];
     foreach ($st->fetchAll() as $r) $out[(int)$r['parent_id']] = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['id']]);
@@ -711,7 +691,6 @@ function aliases_in($list, int $cid, string $ownName, ?int $ownId): ?string {
 /** Which list of turned-down words this member uses: the GMs' or the players'. */
 function ignore_scope(string $role): string { return $role === 'gm' ? 'gm' : 'player'; }
 function ignored_terms(int $cid, string $role): array {
-    if (!has_encyclopedia()) return [];
     $st = db()->prepare('SELECT term FROM encyclopedia_ignored WHERE campaign_id=? AND scope=? ORDER BY term');
     $st->execute([$cid, ignore_scope($role)]);
     return $st->fetchAll(PDO::FETCH_COLUMN);
@@ -772,14 +751,6 @@ const RELATION_STARTER_TYPES = [
     ['Worships', 'Worshipped by', '#0891b2'], ['Parent of', 'Child of', '#db2777'],
     ['Ally of', '', '#059669'], ['Enemy of', '', '#dc2626'], ['Related to', '', '#6b7280'],
 ];
-/** Whether migration 012 has been run. */
-function has_relations(): bool {
-    static $has = null;
-    return $has ??= has_encyclopedia() && has_table('encyclopedia_relations');
-}
-function need_relations(): void {
-    if (!has_relations()) fail('Connections need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
 /** SQL (aliases r, a, b) for the connections of campaign ? that this member may see. */
 function relations_visible_sql(bool $isGm): string {
     return 'FROM encyclopedia_relations r JOIN encyclopedia_entries a ON a.id=r.from_id JOIN encyclopedia_entries b ON b.id=r.to_id
@@ -791,7 +762,6 @@ function relation_out(array $r): array {
 }
 /** Every connection this member may see. */
 function relations_list(int $cid, bool $isGm): array {
-    if (!has_relations()) return [];
     $st = db()->prepare('SELECT r.* ' . relations_visible_sql($isGm) . ' ORDER BY r.id');
     $st->execute([$cid]);
     return array_map('relation_out', $st->fetchAll());
@@ -803,7 +773,6 @@ function relation_type_out(array $t): array {
 /** The campaign's relationships plus any starter it hasn't used yet (id null). Players get only the ones used by a
  * connection they can see, and the starters, so a label a GM made up for a secret connection never reaches them. */
 function relation_types(int $cid, bool $isGm): array {
-    if (!has_relations()) return [];
     $sql = 'SELECT id, label, inverse_label, color FROM encyclopedia_relation_types WHERE campaign_id=?';
     $args = [$cid];
     if (!$isGm) { $sql .= ' AND id IN (SELECT r.type_id ' . relations_visible_sql(false) . ')'; $args[] = $cid; }
@@ -896,47 +865,29 @@ const UPLOAD_TYPES = [
 ];
 const ATTACHMENTS_PER_PARENT = 50;
 
-/** Whether migration 013 has been run. */
-function has_attachments(): bool {
-    static $has = null;
-    return $has ??= has_table('attachments');
-}
-function need_attachments(): void {
-    if (!has_attachments()) fail('Pictures and files need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
 /** The thing a file hangs off, checked: this member must be able to see it (or it fails as not found). secret: only
  * GMs may see it, so its files are GM only too; manage_any: every member may change or remove its files, not only
  * whoever uploaded them and the GMs; gm_adds: only GMs may add files to it. */
 function attachment_parent(int $cid, string $type, int $id, string $role): array {
     switch ($type) {
         case 'encyclopedia':
-            need_encyclopedia();
             $e = entry_row($cid, $id, $role);
             return ['secret' => (bool)(int)$e['is_secret'], 'manage_any' => false];
         case 'library':                                   // every member reads and changes every tome, and its files
-            need_library();
             tome_row($cid, $id);
             return ['secret' => false, 'manage_any' => true];
         case 'session':                                   // a map or handout from a game night: GMs add, players see a published one's
-            need_sessions();
             session_row($cid, $id, $role === 'gm');
             return ['secret' => false, 'manage_any' => false, 'gm_adds' => true];
         case 'map':                                       // a map's picture: GMs add, and a GM-only map's is theirs alone
-            need_maps();
             $m = map_row($cid, $id, $role === 'gm');
             return ['secret' => (bool)(int)$m['is_secret'], 'manage_any' => false, 'gm_adds' => true];
         case 'token':                                     // a token's picture: GMs add; players may see it unless the token or its entry is GM only
-            need_maps();
             $t = token_row($cid, $id);
             if ($role !== 'gm' && token_hidden($t)) fail('Token not found', 404);   // not even its list of files
             return ['secret' => token_hidden($t), 'manage_any' => false, 'gm_adds' => true];
     }
     fail('Files can\'t be attached to that', 400);
-}
-/** Whether migration 017 has been run: found pictures keep their credit, and DeviantArt works can be embedded. */
-function has_credits(): bool {
-    static $has = null;
-    return $has ??= has_attachments() && has_column('attachments', 'credit_license');
 }
 /** A found picture's credit, null for a file uploaded by hand. */
 function attachment_credit(array $a): ?array {
@@ -955,7 +906,6 @@ function attachment_out(array $a): array {
 }
 /** The files on every Encyclopedia entry this member may see. */
 function entry_files(int $cid, bool $isGm): array {
-    if (!has_attachments()) return [];
     $st = db()->prepare("SELECT a.* FROM attachments a JOIN encyclopedia_entries e ON e.id=a.parent_id AND e.campaign_id=a.campaign_id
         WHERE a.campaign_id=? AND a.parent_type='encyclopedia'" . ($isGm ? '' : ' AND a.is_secret=0 AND e.is_secret=0') . ' ORDER BY a.id');
     $st->execute([$cid]);
@@ -978,7 +928,6 @@ function attachment_mine(array $a, string $role): bool {
 /** Delete files and their rows: those of one parent, or with $type null every file of the campaign. The rows go first,
  * so a file that can't be removed from disk is only left over, never served. */
 function attachments_purge(int $cid, ?string $type = null, ?int $id = null): void {
-    if (!has_attachments()) return;
     $where = 'campaign_id=?' . ($type !== null ? ' AND parent_type=? AND parent_id=?' : '');
     $args = $type !== null ? [$cid, $type, $id] : [$cid];
     $st = db()->prepare("SELECT stored_name FROM attachments WHERE $where");
@@ -1035,11 +984,10 @@ function upload_type(string $path, string $name): array {
 /** What the browser needs before it sends a file: whether uploads work here, the size limit and the types allowed. */
 function upload_info(): array {
     $up = upload_dir();
-    $out = ['ready' => has_attachments() && $up['dir'] !== null, 'max_bytes' => upload_max_bytes(),
+    $out = ['ready' => $up['dir'] !== null, 'max_bytes' => upload_max_bytes(),
         'accept' => implode(',', array_merge(array_keys(UPLOAD_TYPES), array_map(fn($e) => ".$e", array_merge(...array_column(UPLOAD_TYPES, 0)))))];
     // The folder's path is for whoever runs the server, not for every player.
-    if (!$out['ready']) $out['problem'] = !has_attachments() ? 'Pictures and files need a database upgrade: open install.php and press Install or upgrade.'
-        : (me()['is_admin'] ? 'Uploads aren\'t set up on this server: ' . $up['problem'] : 'Uploads aren\'t set up on this server yet. Ask whoever runs it.');
+    if (!$out['ready']) $out['problem'] = me()['is_admin'] ? 'Uploads aren\'t set up on this server: ' . $up['problem'] : 'Uploads aren\'t set up on this server yet. Ask whoever runs it.';
     return $out;
 }
 
@@ -1125,14 +1073,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 // GM or player, can add one and change any of them; deleting is for whoever added it, or a GM, as with Encyclopedia entries.
 
 const TOME_KINDS = ['book', 'journal', 'note'];
-/** Whether migration 014 has been run, so the rest of the app still works on an install that hasn't. */
-function has_library(): bool {
-    static $has = null;
-    return $has ??= has_table('library_tomes');
-}
-function need_library(): void {
-    if (!has_library()) fail('The Library needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
 function tome_row(int $cid, int $id): array {
     $st = db()->prepare('SELECT * FROM library_tomes WHERE id=? AND campaign_id=?');
     $st->execute([$id, $cid]);
@@ -1164,14 +1104,6 @@ function tomes(int $cid, ?int $id = null): array {
 // from them afterwards, which players read once it is published. A campaign has at most one open session (last_day
 // NULL); the Session notes box adds to it, and starts one when there is none.
 
-/** Whether migration 015 has been run, so the rest of the app still works on an install that hasn't. */
-function has_sessions(): bool {
-    static $has = null;
-    return $has ??= has_table('play_sessions');
-}
-function need_sessions(): void {
-    if (!has_sessions()) fail('Sessions need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
 /** A session of campaign $cid; a player only gets a published one. $lock: FOR UPDATE, inside a transaction. */
 function session_row(int $cid, int $id, bool $isGm = true, bool $lock = false): array {
     $st = db()->prepare('SELECT * FROM play_sessions WHERE id=? AND campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ($lock ? ' FOR UPDATE' : ''));
@@ -1282,7 +1214,6 @@ const CAMPAIGN_COPY = [
     ['map_pins', 'maps' => ['map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
     ['map_routes', 'maps' => ['map_id' => 'map']],
     ['party_groups', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
-    ['map_tokens', 'maps' => ['map_id' => 'map', 'token_id' => 'token']],
     // Files last: each hangs off an entry, tome, session, map or token copied above, and gets its own copy on disk.
     ['attachments', 'key' => 'attachments'],
 ];
@@ -1295,14 +1226,13 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
     $pdo = db();
     $me = me();
     $c = campaign_row($cid);
-    $has = fn(string $t) => (bool)$pdo->query('SHOW TABLES LIKE ' . $pdo->quote($t))->fetchColumn();
     $ids = [];
     $later = [];
     $files = [];                                          // stored names written, removed again if the copy fails
     $copied = [];
     $dir = upload_dir()['dir'];
     // The copied files are the copier's, so they count towards their own room for files, as an upload would.
-    if (!$setupOnly && has_attachments()) {
+    if (!$setupOnly) {
         $st = $pdo->prepare("SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE campaign_id=? AND kind<>'embed'");
         $st->execute([$cid]);
         $size = (int)$st->fetchColumn();
@@ -1322,7 +1252,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
             ->execute([$new, $me['id'], (string)($st->fetchColumn() ?: '')]);
         foreach (CAMPAIGN_COPY as $spec) {
             $t = $spec[0];
-            if (($setupOnly && empty($spec['setup'])) || !$has($t)) continue;
+            if ($setupOnly && empty($spec['setup'])) continue;
             $cols = array_column($pdo->query("SHOW COLUMNS FROM `$t`")->fetchAll(), 'Field');
             if (isset($spec['via'])) {
                 [$vc, $vm] = $spec['via'];
@@ -1444,6 +1374,9 @@ if ($method === 'POST' && in_array($action, $touchActions, true)) {
 try {
     // tests/browser/hardening.spec.js: an exception that isn't a database one still answers JSON. Test configs only.
     if (cfg('test_login') && ($_SERVER['HTTP_X_TEST_THROW'] ?? '') === '1') throw new RuntimeException('test exception');
+    // The code below assumes every migration has run (deploy.sh runs them), so an install that is behind says so plainly
+    // instead of failing on a missing table or column halfway through an action.
+    if (!schema_current(db(), dirname(__DIR__))) json_error(503, 'needs_upgrade', "This Chronicle's database needs an upgrade: run deploy.sh on the server, or open install.php and press Install or upgrade.");
     switch ($action) {
 
     // ===== account =====
@@ -1530,7 +1463,7 @@ try {
         $id = int_in(p('id'), 1);
         if ($id === $admin['id']) fail("You can't delete yourself");
         // Their token (in any campaign) is free for another, as when a member is removed; party_rows drops them from the groups.
-        if (has_maps()) db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
+        db()->prepare('UPDATE tokens SET member_id=NULL WHERE member_id=?')->execute([$id]);
         $st = db()->prepare('SELECT provider FROM users WHERE id=?');
         $st->execute([$id]);
         // The account is shared with Sinless, so it stays: they leave Chronicle (its list and their campaigns) only. An
@@ -1575,8 +1508,8 @@ try {
         claim_invites();   // a GM's invitation by email, waiting for this account
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
         $st = db()->prepare($u['is_admin']
-            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, " . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ", m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
-            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, ' . (has_sheets() ? 'm.active_character_id' : 'NULL AS active_character_id') . ', 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
+            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.active_character_id, m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
+            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, m.active_character_id, 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
         $st->execute([$u['id']]);
         out(['campaigns' => array_map(fn($r) => ['member' => (bool)(int)$r['member']] + $r, $st->fetchAll())]);
 
@@ -1600,7 +1533,7 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name' . (has_sheets() ? ', m.active_character_id' : '') . ' FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name, m.active_character_id FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
         // an API key's program gets no one's email, even through a GM's key
@@ -1609,16 +1542,16 @@ try {
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         $invites = [];
-        if ($isGm && !api_request() && has_versions()) {
+        if ($isGm && !api_request()) {
             $st = db()->prepare('SELECT email, role, created_at FROM campaign_invites WHERE campaign_id=? ORDER BY email');
             $st->execute([$cid]);
             $invites = $st->fetchAll();
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
-            'encyclopedia_ready' => has_encyclopedia(), 'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'encyclopedia_categories_ready' => has_categories(), 'library_ready' => has_library(), 'maps_ready' => has_maps(), 'maps_index' => has_maps() ? maps_index($cid, $isGm) : [], 'sessions_ready' => has_sessions(), 'sheets_ready' => has_sheets(),
+            'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
+            'encyclopedia_tags' => entry_tags($cid), 'maps_index' => maps_index($cid, $isGm),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
-            + ($isGm && has_sessions() ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
+            + ($isGm ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
     case 'changed': // polled by open pages: a new value means a GM changed something since
         $cid = cid();
@@ -1640,18 +1573,16 @@ try {
     case 'panel_links': // your panel links in this campaign (a GM: everyone's)
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        out(['ready' => has_panel_links(), 'links' => has_panel_links() ? panel_links_list($cid, $isGm) : []]);
+        out(['links' => panel_links_list($cid, $isGm)]);
 
     case 'panel_link_create':
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_panel_links();
         out(['ok' => true, 'link' => panel_link_create($cid, $isGm)]);
 
     case 'panel_link_revoke':
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_panel_links();
         panel_link_revoke($cid, $isGm);
         out(['ok' => true]);
 
@@ -1770,12 +1701,11 @@ try {
             $st->execute([$email]);
             $uid = $st->fetchColumn();
             if (!$uid) {
-                if (!has_versions()) fail('No approved account with that email. Ask them to sign in once, then have the site admin approve them.', 404);
                 db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, invited_by) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')
                     ->execute([$cid, $email, $role, me()['id']]);
                 out(['ok' => true, 'invited' => true]);
             }
-            if (has_versions()) db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $email]);
+            db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $email]);
         }
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
         out(['ok' => true]);
@@ -1783,7 +1713,7 @@ try {
     case 'member_remove':
         $cid = cid(); need_gm($cid);
         if (p('email') !== null && p('user_id') === null) {   // an invitation not taken up yet
-            if (has_versions()) db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')
+            db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')
                 ->execute([$cid, mb_strtolower(trim((string)str_in(p('email'), 191, false)))]);
             out(['ok' => true]);
         }
@@ -1795,7 +1725,7 @@ try {
         if ($isGmTarget->fetchColumn() === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
         party_remove_member($cid, $uid);
-        if (has_maps()) db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=?')->execute([$cid, $uid]);   // their token is free for another
+        db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=?')->execute([$cid, $uid]);   // their token is free for another
         out(['ok' => true]);
 
     case 'member_character': // a player names their own character; a GM can name anyone's
@@ -1808,12 +1738,10 @@ try {
         if (!$chk->fetchColumn()) fail('Only campaign members can have a character name', 404);
         // with an active character, the name is its entry's name: renaming one renames the other
         $active = null;
-        if (has_sheets()) {
-            $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN sheet_characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
-                JOIN encyclopedia_entries e ON e.id=c.entry_id AND e.is_secret=0 WHERE m.campaign_id=? AND m.user_id=?');
-            $st->execute([$cid, $uid]);
-            $active = $st->fetchColumn() ?: null;
-        }
+        $st = db()->prepare('SELECT c.entry_id FROM campaign_members m JOIN sheet_characters c ON c.id=m.active_character_id AND c.owner_id=m.user_id
+            JOIN encyclopedia_entries e ON e.id=c.entry_id AND e.is_secret=0 WHERE m.campaign_id=? AND m.user_id=?');
+        $st->execute([$cid, $uid]);
+        $active = $st->fetchColumn() ?: null;
         if ($active && $name !== '') {
             $name = character_name_in($cid, $name, role($cid) === 'gm', (int)$active);
             db()->prepare('UPDATE encyclopedia_entries SET name=?' . entry_bump() . ' WHERE id=?')->execute([$name, $active]);
@@ -1943,7 +1871,7 @@ try {
         $c = campaign_row($cid);
         $settings = dec($c['settings_json']) ?: [];
         $today = floordiv((int)$c['current_shift'], camp_spd($c));
-        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations' . (has_versions() ? ', version' : ', 0 AS version') . ' FROM days WHERE campaign_id=? AND abs_day=?');
+        $st = db()->prepare('SELECT abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations, version FROM days WHERE campaign_id=? AND abs_day=?');
         $st->execute([$cid, $ad]);
         $d = $st->fetch() ?: null;
         $day = null;
@@ -2022,13 +1950,13 @@ try {
         [$gmNotes, $gmNotesFmt] = $note('gm_notes');
         $written = $has('notes') || $has('gm_notes') || $has('locations');   // what the Notes box saves, and its version counts
         db()->beginTransaction();
-        $st = db()->prepare('SELECT ' . (has_versions() ? 'version' : '0') . ' FROM days WHERE campaign_id=? AND abs_day=? FOR UPDATE');
+        $st = db()->prepare('SELECT version FROM days WHERE campaign_id=? AND abs_day=? FOR UPDATE');
         $st->execute([$cid, $ad]);
         $now = $st->fetchColumn();
         if ($now === false) need_row_room($cid, 'days', 1);
         // version: the copy the Notes box opened (0 for a day with no row yet). Someone else's save since is refused,
         // so it isn't overwritten; a save that leaves version out (the weather, older pages) isn't checked.
-        if ($written && p('version') !== null && has_versions() && int_in(p('version'), 0) !== (int)$now) {
+        if ($written && p('version') !== null && int_in(p('version'), 0) !== (int)$now) {
             db()->rollBack();
             fail('Someone saved this day\'s notes after you opened them. Copy what you wrote, reload, and add it again', 409, 'stale');
         }
@@ -2036,9 +1964,9 @@ try {
             ON DUPLICATE KEY UPDATE region_id=IF(?, VALUES(region_id), region_id), weather_json=COALESCE(VALUES(weather_json), weather_json),
             notes=IF(?, VALUES(notes), notes), notes_format=IF(?, VALUES(notes_format), notes_format),
             gm_notes=IF(?, VALUES(gm_notes), gm_notes), gm_notes_format=IF(?, VALUES(gm_notes_format), gm_notes_format),
-            locations=IF(?, VALUES(locations), locations)' . (has_versions() ? ', version=IF(?, version+1, version)' : ''))
+            locations=IF(?, VALUES(locations), locations), version=IF(?, version+1, version)')
             ->execute([$cid, $ad, $rid, $weather, $notes, $notesFmt, $gmNotes, $gmNotesFmt, str_in(p('locations'), 5000),
-                $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations'), ...(has_versions() ? [$written ? 1 : 0] : [])]);
+                $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations'), $written ? 1 : 0]);
         $st->execute([$cid, $ad]);
         $version = (int)$st->fetchColumn();
         db()->commit();
@@ -2482,8 +2410,7 @@ try {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        need_encyclopedia();
-        $st = db()->prepare('SELECT e.id, e.name, ' . (has_categories() ? 'e.category' : 'NULL AS category') . ', e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, ' . (has_versions() ? 'e.version' : '1 AS version') . ', e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
@@ -2501,8 +2428,8 @@ try {
         }, $st->fetchAll());
         attach_tags($entries, 'entry');
         out(['entries' => $entries, 'tags' => entry_tags($cid), 'ignored' => ignored_terms($cid, $role),
-            'relations_ready' => has_relations(), 'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
-            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(), 'categories_ready' => has_categories(),
+            'relations' => relations_list($cid, $isGm), 'relation_types' => relation_types($cid, $isGm),
+            'files' => entry_files($cid, $isGm), 'uploads' => upload_info(),
             'characters' => (object)characters_by_entry($cid, $isGm)]);
 
     case 'encyclopedia_sources':
@@ -2579,42 +2506,36 @@ try {
         $st = db()->prepare('SELECT currency, location FROM party_funds WHERE campaign_id=? ORDER BY id');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $f) $add(['kind' => 'funds', 'short' => true], trim($f['currency'] . "\n" . $f['location']));
-        if (has_library()) {
-            $st = db()->prepare('SELECT id, title, description, body FROM library_tomes WHERE campaign_id=? ORDER BY title');
-            $st->execute([$cid]);
-            foreach ($st->fetchAll() as $t) {
-                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title'], 'short' => true], trim($t['title'] . "\n" . $t['description']));
-                $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_open($t['body']), false, 'html');
-                if ($isGm) $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_secrets($t['body']), true, 'html');
+        $st = db()->prepare('SELECT id, title, description, body FROM library_tomes WHERE campaign_id=? ORDER BY title');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $t) {
+            $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title'], 'short' => true], trim($t['title'] . "\n" . $t['description']));
+            $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_open($t['body']), false, 'html');
+            if ($isGm) $add(['kind' => 'tome', 'id' => (int)$t['id'], 'title' => $t['title']], rich_secrets($t['body']), true, 'html');
+        }
+        // a published summary for everyone (its secret paragraphs for GMs only); the rest, and the notes, for GMs
+        $st = db()->prepare('SELECT * FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $x) {
+            $src = ['kind' => 'session', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}"];
+            foreach (['summary', 'rewards', 'loot'] as $f) {
+                if (!array_key_exists($f, $x)) continue;
+                $add($src, rich_open($x[$f]), !(int)$x['is_published'], 'html');
+                if ($isGm) $add($src, rich_secrets($x[$f]), true, 'html');
             }
         }
-        if (has_sessions()) {
-            // a published summary for everyone (its secret paragraphs for GMs only); the rest, and the notes, for GMs
-            $st = db()->prepare('SELECT * FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number');
+        if ($isGm) {
+            $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? ORDER BY s.number, n.position');
             $st->execute([$cid]);
-            foreach ($st->fetchAll() as $x) {
-                $src = ['kind' => 'session', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}"];
-                foreach (['summary', 'rewards', 'loot'] as $f) {
-                    if (!array_key_exists($f, $x)) continue;
-                    $add($src, rich_open($x[$f]), !(int)$x['is_published'], 'html');
-                    if ($isGm) $add($src, rich_secrets($x[$f]), true, 'html');
-                }
-            }
-            if ($isGm) {
-                $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? ORDER BY s.number, n.position');
-                $st->execute([$cid]);
-                foreach ($st->fetchAll() as $x) $add(['kind' => 'session_note', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}", 'short' => true], $x['text'], true);
-            }
+            foreach ($st->fetchAll() as $x) $add(['kind' => 'session_note', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}", 'short' => true], $x['text'], true);
         }
-        if (has_encyclopedia()) {
-            $st = db()->prepare('SELECT id, name, notes, is_secret' . ($isGm ? ', gm_notes' : '') . ' FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
-            $st->execute([$cid]);
-            foreach ($st->fetchAll() as $e) {
-                $src = ['kind' => 'entry', 'id' => (int)$e['id'], 'title' => $e['name']];
-                $add($src, rich_open($e['notes']), (bool)$e['is_secret'], 'html');
-                if ($isGm) $add($src, rich_secrets($e['notes']), true, 'html');
-                if ($isGm) $add(['kind' => 'entry_gm_notes'] + $src, $e['gm_notes'], true, 'html');
-            }
+        $st = db()->prepare('SELECT id, name, notes, is_secret' . ($isGm ? ', gm_notes' : '') . ' FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
+        $st->execute([$cid]);
+        foreach ($st->fetchAll() as $e) {
+            $src = ['kind' => 'entry', 'id' => (int)$e['id'], 'title' => $e['name']];
+            $add($src, rich_open($e['notes']), (bool)$e['is_secret'], 'html');
+            if ($isGm) $add($src, rich_secrets($e['notes']), true, 'html');
+            if ($isGm) $add(['kind' => 'entry_gm_notes'] + $src, $e['gm_notes'], true, 'html');
         }
         // names (JSON list, from an entry's "Mentioned in" and "Where it was found"): only the sources that contain one of
         // them, any case, so an entry's page isn't sent the whole campaign's text; the page still decides what counts
@@ -2636,7 +2557,6 @@ try {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        need_encyclopedia();
         $id = p('id') ? int_in(p('id'), 1) : null;
         $old = $id ? entry_row($cid, $id, $role) : null;
         $name = entry_name(p('name'));
@@ -2650,7 +2570,7 @@ try {
         $gmNotes = $isGm ? $rich('gm_notes') : ($old['gm_notes'] ?? null);
         $secret = $isGm ? (p('is_secret', $old ? (bool)$old['is_secret'] : false) ? 1 : 0) : 0;
         $category = array_key_exists('category', body()) ? category_in(p('category')) : ($old['category'] ?? null);
-        if ($old && !$isGm && $name !== $old['name'] && has_sheets()) {
+        if ($old && !$isGm && $name !== $old['name']) {
             // a character's name is its player's to change
             $owner = db()->prepare('SELECT owner_id FROM sheet_characters WHERE entry_id=?');
             $owner->execute([$id]);
@@ -2661,7 +2581,7 @@ try {
         if ($old) {
             // version: the copy the editor opened. When someone else has saved since, the save is refused, as for tomes, so
             // it doesn't overwrite their words; a save without one (an older page) isn't checked.
-            $stale = has_versions() && p('version') !== null ? ' AND version=' . int_in(p('version'), 1) : '';
+            $stale = p('version') !== null ? ' AND version=' . int_in(p('version'), 1) : '';
             $st = db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=?' . entry_bump() . " WHERE id=?$stale");
             $st->execute([$name, $aliases, $notes, $gmNotes, $secret, $id]);
             if ($stale && !$st->rowCount()) {
@@ -2673,10 +2593,10 @@ try {
                 ->execute([$cid, $name, $aliases, $notes, $gmNotes, $secret, me()['id']]);
             $id = (int)db()->lastInsertId();
         }
-        if (has_categories()) db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
+        db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
         if ($old) character_names_sync($id);
-        $v = has_versions() ? db()->prepare('SELECT version FROM encyclopedia_entries WHERE id=?') : null;
+        $v = db()->prepare('SELECT version FROM encyclopedia_entries WHERE id=?');
         $v?->execute([$id]);
         $version = $v ? (int)$v->fetchColumn() : 1;
         db()->commit();
@@ -2689,8 +2609,8 @@ try {
         $cid = cid(); need_gm($cid);
         $kind = p('kind');
         $id = int_in(p('id'), 1);
-        if ($kind === 'entry') { need_encyclopedia(); $row = entry_row($cid, $id, 'gm'); $html = (string)$row['notes']; $name = $row['name']; }
-        elseif ($kind === 'tome') { need_library(); $row = tome_row($cid, $id); $html = (string)$row['body']; $name = $row['title']; }
+        if ($kind === 'entry') { $row = entry_row($cid, $id, 'gm'); $html = (string)$row['notes']; $name = $row['name']; }
+        elseif ($kind === 'tome') { $row = tome_row($cid, $id); $html = (string)$row['body']; $name = $row['title']; }
         else fail('Pick an entry or a tome');
         $which = p('which');
         if (!is_array($which) || !$which || count($which) > 200) fail('Pick the paragraphs to reveal');
@@ -2730,7 +2650,6 @@ try {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        need_encyclopedia();
         $list = p('entries', []);
         if (!is_array($list) || count($list) > 500) fail('Send up to 500 entries at a time');
         $added = []; $aliased = [];
@@ -2759,8 +2678,8 @@ try {
             $ins->execute([$cid, $name, $isGm && !empty($x['is_secret']) ? 1 : 0, me()['id']]);
             $id = (int)db()->lastInsertId();
             if (isset($x['tags'])) save_event_tags($cid, $id, $x['tags'], 'entry');
-            if (has_categories() && !empty($x['category'])) $cat->execute([category_in($x['category']), $id]);
-            $added[] = ['id' => $id, 'name' => $name, 'category' => has_categories() && !empty($x['category']) ? category_in($x['category']) : null];
+            if (!empty($x['category'])) $cat->execute([category_in($x['category']), $id]);
+            $added[] = ['id' => $id, 'name' => $name, 'category' => !empty($x['category']) ? category_in($x['category']) : null];
         }
         db()->commit();
         out(['ok' => true, 'added' => $added, 'aliased' => $aliased]);
@@ -2770,7 +2689,6 @@ try {
         // entry), and a GM to its GM notes with gm_only.
         $cid = cid();
         $role = role($cid);
-        need_encyclopedia();
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         $text = trim((string)str_in(p('body'), 5000, false));
         if ($text === '') fail('Note is empty');
@@ -2782,14 +2700,11 @@ try {
     case 'entry_delete':
         $cid = cid();
         $role = role($cid);
-        need_encyclopedia();
         $e = entry_row($cid, int_in(p('id'), 1), $role);
         if ($role !== 'gm' && (int)$e['created_by'] !== me()['id']) fail('Only a GM can delete an entry someone else added', 403);
-        if (has_sheets()) {
-            $st = db()->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
-            $st->execute([$e['id']]);
-            if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
-        }
+        $st = db()->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
+        $st->execute([$e['id']]);
+        if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
         db()->beginTransaction();
         attachments_purge($cid, 'encyclopedia', (int)$e['id']);
         db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);
@@ -2799,7 +2714,6 @@ try {
     case 'terms_ignore': // the detector stops offering these words to this member's side (the GMs, or the players)
         $cid = cid();
         $role = role($cid);
-        need_encyclopedia();
         $terms = p('terms', []);
         if (!is_array($terms) || count($terms) > 500) fail('Send up to 500 words at a time');
         $ins = db()->prepare('INSERT IGNORE INTO encyclopedia_ignored (campaign_id, scope, term) VALUES (?,?,?)');
@@ -2809,7 +2723,6 @@ try {
     case 'term_restore': // offer a turned-down word again
         $cid = cid();
         $role = role($cid);
-        need_encyclopedia();
         db()->prepare('DELETE FROM encyclopedia_ignored WHERE campaign_id=? AND scope=? AND term=?')->execute([$cid, ignore_scope($role), entry_name(p('term'))]);
         out(['ok' => true]);
 
@@ -2822,7 +2735,6 @@ try {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        need_relations();
         $me = entry_row($cid, int_in(p('entry_id'), 1), $role);
         $add = p('add', []); $remove = p('remove', []);
         if (!is_array($add) || !is_array($remove) || count($add) + count($remove) > 200) fail('Send up to 200 entries at a time');
@@ -2865,7 +2777,6 @@ try {
     case 'relation_update': // one connection's note, and (GMs) whether it is GM only
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_relations();
         $r = relation_row($cid, int_in(p('id'), 1), $isGm);
         if (!relation_mine($r, $isGm)) fail('Only a GM can change a connection someone else made', 403);
         $note = array_key_exists('note', body()) ? (trim((string)str_in(p('note'), 200)) ?: null) : $r['note'];
@@ -2881,7 +2792,6 @@ try {
     case 'relation_delete':
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_relations();
         $r = relation_row($cid, int_in(p('id'), 1), $isGm);
         if (!relation_mine($r, $isGm)) fail('Only a GM can remove a connection someone else made', 403);
         db()->prepare('DELETE FROM encyclopedia_relations WHERE id=?')->execute([$r['id']]);
@@ -2891,7 +2801,6 @@ try {
         // GMs rename a relationship's labels or colour, or merge it into another (merge_into: its connections move there).
         $cid = cid();
         need_gm($cid);
-        need_relations();
         $t = relation_type_row($cid, int_in(p('id'), 1));
         db()->beginTransaction();
         if (p('merge_into')) {
@@ -2922,7 +2831,6 @@ try {
     case 'relation_type_delete': // GMs: the relationship and every connection made with it
         $cid = cid();
         need_gm($cid);
-        need_relations();
         $t = relation_type_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM encyclopedia_relation_types WHERE id=?')->execute([$t['id']]);
         out(['ok' => true]);
@@ -2931,20 +2839,16 @@ try {
     case 'library':
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_library();
         out(['tomes' => array_map(fn($t) => tome_out($t, false, $isGm), tomes($cid))]);
 
     case 'tome':
         $cid = cid();
         $role = role($cid);
-        need_library();
         $t = tomes($cid, int_in($_GET['id'] ?? null, 1))[0] ?? fail('Tome not found', 404);
         $files = [];
-        if (has_attachments()) {
-            $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='library' AND parent_id=?" . ($role === 'gm' ? '' : ' AND is_secret=0') . ' ORDER BY id');
-            $st->execute([$cid, (int)$t['id']]);
-            $files = array_map('attachment_out', $st->fetchAll());
-        }
+        $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='library' AND parent_id=?" . ($role === 'gm' ? '' : ' AND is_secret=0') . ' ORDER BY id');
+        $st->execute([$cid, (int)$t['id']]);
+        $files = array_map('attachment_out', $st->fetchAll());
         out(['tome' => tome_out($t, true, $role === 'gm') + ['files' => $files], 'uploads' => upload_info()]);
 
     case 'tome_save':
@@ -2952,7 +2856,6 @@ try {
         // saved since, the save is refused so it doesn't overwrite their words.
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_library();
         $id = p('id') ? int_in(p('id'), 1) : null;
         $old = $id ? tome_row($cid, $id) : null;
         $kind = (string)p('kind', $old['kind'] ?? 'book');
@@ -2981,18 +2884,16 @@ try {
     case 'tome_delete':
         $cid = cid();
         $role = role($cid);
-        need_library();
         $t = tome_row($cid, int_in(p('id'), 1));
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
-        if (has_attachments()) attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
+        attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
         out(['ok' => true]);
 
     // ===== play sessions =====
     case 'sessions': // newest first; a player gets the published ones only, without the GMs' note counts
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_sessions();
         $st = db()->prepare($isGm
             ? 'SELECT s.*, COUNT(n.id) AS notes, COALESCE(SUM(n.is_covered), 0) AS covered FROM play_sessions s LEFT JOIN session_notes n ON n.session_id=s.id
                WHERE s.campaign_id=? GROUP BY s.id ORDER BY s.number DESC'
@@ -3003,20 +2904,16 @@ try {
     case 'session': // one session with its summary and pictures; GMs get its notes too
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_sessions();
         $s = session_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
         $files = [];
-        if (has_attachments()) {
-            $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='session' AND parent_id=?" . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY id');
-            $st->execute([$cid, (int)$s['id']]);
-            $files = array_map('attachment_out', $st->fetchAll());
-        }
+        $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='session' AND parent_id=?" . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY id');
+        $st->execute([$cid, (int)$s['id']]);
+        $files = array_map('attachment_out', $st->fetchAll());
         out(['session' => session_out($s, true, $isGm) + ['files' => $files], 'uploads' => upload_info()] + ($isGm ? ['notes' => snotes((int)$s['id'])] : []));
 
     case 'session_save': // GMs: a new session, or a change to one's title, dates or publishing; reopen makes it the open one
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         db()->beginTransaction();
         if (p('id')) {
             $s = session_row($cid, int_in(p('id'), 1), true, true);
@@ -3042,7 +2939,6 @@ try {
     case 'session_summary_save': // GMs: the summary, from the copy the page opened (version)
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $s = session_row($cid, int_in(p('id'), 1));
         $html = rich_html_clean((string)str_in(p('summary'), 2_000_000)) ?: null;
         $set = 'summary=?'; $args = [$html];
@@ -3059,7 +2955,6 @@ try {
     case 'session_end': // GMs: the open session (or the one named) ends on the current day
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         if (p('id')) {
             $s = session_row($cid, int_in(p('id'), 1));
             $c = campaign_row($cid);
@@ -3071,7 +2966,6 @@ try {
     case 'session_delete': // GMs: the session and its notes
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $s = session_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM play_sessions WHERE id=?')->execute([$s['id']]);
         attachments_purge($cid, 'session', (int)$s['id']);   // files have no foreign key to cascade
@@ -3080,7 +2974,6 @@ try {
     case 'snote_add': // GMs: a quick note, at the end of the session named, else the open one, else a new one
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $text = snote_text(p('text'));
         $depth = int_in(p('depth', 0), 0, 3);
         $at = int_in(p('abs_shift'));
@@ -3113,7 +3006,6 @@ try {
     case 'snote_bulk': // GMs: many notes at once (typed in the session's notes box, or taken from a day's notes), at the end of the session named
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $list = p('notes');
         if (!is_array($list) || !$list) fail('There are no notes to add', 400);
         if (count($list) > 500) fail('That is more than 500 notes at once. Add them in parts', 400);
@@ -3141,7 +3033,6 @@ try {
     case 'snote_save': // GMs: a note's text, indent, stamp or tick
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $n = snote_row($cid, int_in(p('id'), 1));
         $text = array_key_exists('text', body()) ? snote_text(p('text')) : $n['text'];
         $depth = array_key_exists('depth', body()) ? int_in(p('depth'), 0, 3) : (int)$n['depth'];
@@ -3153,7 +3044,6 @@ try {
     case 'snote_move': // GMs: a note to another place in its session (position, from 1), or to the end of another session
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         db()->beginTransaction();
         $n = snote_row($cid, int_in(p('id'), 1));
         $sid = (int)$n['session_id'];
@@ -3181,7 +3071,6 @@ try {
     case 'snote_delete':
         $cid = cid();
         need_gm($cid);
-        need_sessions();
         $n = snote_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM session_notes WHERE id=?')->execute([$n['id']]);
         out(['ok' => true]);
@@ -3190,7 +3079,6 @@ try {
     case 'files': // the files on one parent that this member may see
         $cid = cid();
         $role = role($cid);
-        need_attachments();
         $type = (string)($_GET['parent_type'] ?? '');
         $pid = int_in($_GET['parent_id'] ?? null, 1);
         attachment_parent($cid, $type, $pid, $role);
@@ -3201,7 +3089,6 @@ try {
     case 'file': // the file itself, to show or download, only to someone who may see it
         $cid = cid();
         $role = role($cid);
-        need_attachments();
         $a = attachment_row($cid, int_in($_GET['id'] ?? null, 1), $role);
         if ($a['kind'] === 'embed') {
             // An embedded DeviantArt work: no file here, so the browser is sent to DeviantArt's picture, and only there.
@@ -3235,7 +3122,6 @@ try {
     case 'file_upload': // multipart form: parent_type, parent_id, file, caption, is_secret (GMs)
         $cid = cid();
         $role = role($cid);
-        need_attachments();
         $max = upload_max_bytes();
         $limit = round($max / 1048576, 1) . ' MB';
         // Past post_max_size PHP drops the whole request, so all there is to go on is its length.
@@ -3270,8 +3156,6 @@ try {
     case 'image_import': // Find Image's picks: parent_type, parent_id, source, id, mode ('copy' or 'embed'), is_secret (GMs)
         $cid = cid();
         $role = role($cid);
-        need_attachments();
-        if (!has_credits()) fail('Saving found pictures needs a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
         $type = (string)p('parent_type', '');
         $pid = int_in(p('parent_id'), 1);
         if (!empty(attachment_parent($cid, $type, $pid, $role)['gm_adds']) && $role !== 'gm') fail('Only a GM can add files here', 403);
@@ -3327,12 +3211,11 @@ try {
     case 'file_update': // a file's caption, and (GMs) whether it is GM only
         $cid = cid();
         $role = role($cid);
-        need_attachments();
         $a = attachment_row($cid, int_in(p('id'), 1), $role);
         if (!attachment_mine($a, $role)) fail('Only a GM can change a file someone else added', 403);
         $caption = array_key_exists('caption', body()) ? (trim((string)str_in(p('caption'), 200)) ?: null) : $a['caption'];
         $secret = $role === 'gm' && array_key_exists('is_secret', body()) ? (p('is_secret') ? 1 : 0) : (int)$a['is_secret'];
-        if ($secret && !(int)$a['is_secret'] && has_maps()) {   // a picture a map or token shows is hidden by hiding the map or token
+        if ($secret && !(int)$a['is_secret']) {   // a picture a map or token shows is hidden by hiding the map or token
             $st = db()->prepare('SELECT (SELECT COUNT(*) FROM maps WHERE image_id=?) + (SELECT COUNT(*) FROM tokens WHERE image_id=?)');
             $st->execute([$a['id'], $a['id']]);
             if ((int)$st->fetchColumn() > 0) fail('This picture is in use; hide the map or token instead');
@@ -3345,13 +3228,12 @@ try {
     case 'file_delete':
         $cid = cid();
         $role = role($cid);
-        need_attachments();
         $a = attachment_row($cid, int_in(p('id'), 1), $role);
         if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
         attachment_remove($cid, (int)$a['id']);
-        if ($a['parent_type'] === 'map' && has_maps())   // a map whose picture this was goes back to having none
+        if ($a['parent_type'] === 'map')   // a map whose picture this was goes back to having none
             db()->prepare('UPDATE maps SET image_id=NULL, width=NULL, height=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
-        if ($a['parent_type'] === 'token' && has_maps())   // and a token goes back to having no picture
+        if ($a['parent_type'] === 'token')   // and a token goes back to having no picture
             db()->prepare('UPDATE tokens SET image_id=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
         out(['ok' => true]);
 
@@ -3359,61 +3241,52 @@ try {
     case 'maps':
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_maps();
         out(['maps' => maps_list($cid, $isGm)]);
 
     case 'map': // one map with its pins, routes and party groups
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_maps();
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
         out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
-            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])), 'styles' => has_map_styles()]);
+            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id']))]);
 
     case 'groups': // every member: the party's groups, main first
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_maps();
         out(['groups' => party_groups($cid, $isGm)]);
 
     case 'group_split': // GMs: from_id, name, members [user ids from that group], region_id (default: the group's)
         $cid = cid();
         need_gm($cid);
-        need_maps();
         group_split($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
     case 'group_save': // GMs: id, then name, region_id, is_main, token_id
         $cid = cid();
         need_gm($cid);
-        need_maps();
         group_save($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
     case 'group_move': // GMs: id, map_id (null to take it off the maps), x, y
         $cid = cid();
         need_gm($cid);
-        need_maps();
         group_move($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
     case 'group_merge': // GMs: id, into_id
         $cid = cid();
         need_gm($cid);
-        need_maps();
         group_merge($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
     case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, grid_type, grid_shown
         $cid = cid();
         need_gm($cid);
-        need_maps();
         out(['ok' => true, 'map' => map_save($cid)]);
 
     case 'map_delete':
         $cid = cid();
         need_gm($cid);
-        need_maps();
         $m = map_row($cid, int_in(p('id'), 1), true);
         db()->prepare('DELETE FROM maps WHERE id=?')->execute([$m['id']]);
         attachments_purge($cid, 'map', (int)$m['id']);   // files have no foreign key to cascade
@@ -3423,13 +3296,11 @@ try {
     case 'pin_save': // members: id (to change one), map_id, x, y, label, note; GMs also kind (note|entry|event), entry_id, event_id, is_secret
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_maps();
         out(['ok' => true, 'pin' => pin_save($cid, $isGm)]);
 
     case 'pin_delete': // a player's own note pin, or any pin for a GM
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        need_maps();
         $pin = pin_row($cid, int_in(p('id'), 1), $isGm);
         if (!$isGm && ((int)$pin['created_by'] !== me()['id'] || $pin['kind'] !== 'note')) fail('You can only change your own pins', 403);
         db()->prepare('DELETE FROM map_pins WHERE id=?')->execute([$pin['id']]);
@@ -3439,20 +3310,17 @@ try {
     case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)
         $cid = cid();
         need_gm($cid);
-        need_maps();
         [$pin, $entryId, $created] = pin_to_entry($cid, int_in(p('id'), 1), p('entry_id') ? int_in(p('entry_id'), 1) : null);
         out(['ok' => true, 'pin' => $pin, 'entry_id' => $entryId, 'created' => $created]);
 
     case 'route_save': // GMs: id (to change one), map_id, name, points [[x, y], ...], is_secret
         $cid = cid();
         need_gm($cid);
-        need_maps();
         out(['ok' => true, 'route' => route_save($cid)]);
 
     case 'route_delete':
         $cid = cid();
         need_gm($cid);
-        need_maps();
         $st = db()->prepare('DELETE FROM map_routes WHERE id=? AND campaign_id=?');
         $st->execute([int_in(p('id'), 1), $cid]);
         if (!$st->rowCount()) fail('Route not found', 404);
@@ -3463,27 +3331,22 @@ try {
     case 'tokens': // GMs: every token with the groups using it
         $cid = cid();
         need_gm($cid);
-        need_maps();
         out(['tokens' => tokens_list($cid)]);
 
     case 'token_upload': // GMs, multipart: file, name (default: the file's name). One token and its picture
         $cid = cid();
         need_gm($cid);
-        need_maps();
-        need_attachments();
         if (empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) fail('That file is too big for the server', 413);
         out(['ok' => true, 'token' => token_upload($cid)]);
 
     case 'token_save': // GMs: id (to change one), name, kind, size_squares, member_id, entry_id, is_secret, image_id, group_ids
         $cid = cid();
         need_gm($cid);
-        need_maps();
         out(['ok' => true, 'token' => token_save($cid)]);
 
     case 'token_delete':
         $cid = cid();
         need_gm($cid);
-        need_maps();
         $t = token_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM tokens WHERE id=?')->execute([$t['id']]);   // the groups using it let go of it
         attachments_purge($cid, 'token', (int)$t['id']);

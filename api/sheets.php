@@ -9,14 +9,6 @@
  */
 declare(strict_types=1);
 
-function has_sheets(): bool {
-    static $has = null;
-    return $has ??= has_column('campaign_members', 'active_character_id');
-}
-function need_sheets(): void {
-    if (!has_sheets()) fail('Character sheets need a database upgrade: open install.php and press Install or upgrade', 409, 'needs_upgrade');
-}
-
 // ---------- Layouts: the same rules as static/sheetlayout.js, which only gives the editor its messages ----------
 
 const SHEET_TYPES = ['text', 'longtext', 'number', 'counter', 'pips', 'checkbox', 'choice', 'list'];
@@ -175,7 +167,6 @@ function need_template_editor(array $t): void {
 
 /** The template actions; none belongs to a campaign. */
 function templates_action(string $action): void {
-    need_sheets();
     $me = me();
     switch ($action) {
         case 'templates':
@@ -375,7 +366,6 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
 /** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
  * Summary fields as this member may see them (none when the sheet is hidden from them). */
 function characters_by_entry(int $cid, bool $isGm): array {
-    if (!has_sheets()) return [];
     $out = [];
     foreach (character_rows($cid, $isGm) as $c) {
         $card = character_card($c, $isGm);
@@ -386,7 +376,6 @@ function characters_by_entry(int $cid, bool $isGm): array {
 }
 /** Write a character's name into character_name for every member whose active character it is. */
 function character_names_sync(int $entryId): void {
-    if (!has_sheets()) return;
     db()->prepare('UPDATE campaign_members m JOIN sheet_characters c ON c.id=m.active_character_id JOIN encyclopedia_entries e ON e.id=c.entry_id
         SET m.character_name=e.name WHERE c.entry_id=? AND c.owner_id=m.user_id AND e.is_secret=0')->execute([$entryId]);
 }
@@ -406,7 +395,6 @@ const PRESENCE_SECONDS = 40;
 
 /** The character actions of campaign $cid. */
 function characters_action(string $action, int $cid): void {
-    need_sheets();
     $role = role($cid);
     $isGm = $role === 'gm';
     $me = me();
@@ -434,13 +422,13 @@ function characters_action(string $action, int $cid): void {
                 $chk = $pdo->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
                 $chk->execute([$e['id']]);
                 if ($chk->fetchColumn()) fail('That entry already has a character sheet', 409);
-                if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$e['id']]);
+                $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$e['id']]);
                 $entry = (int)$e['id'];
             } else {
                 $name = character_name_in($cid, p('name'), $isGm);
                 $pdo->prepare('INSERT INTO encyclopedia_entries (campaign_id, name, created_by) VALUES (?,?,?)')->execute([$cid, $name, $me['id']]);
                 $entry = (int)$pdo->lastInsertId();
-                if (has_categories()) $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
+                $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
             }
             $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, sheet_public, template_version, field_values, field_stamps, hidden)
                 VALUES (?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $kind === 'pc' ? 1 : 0, $t['version']]);
@@ -636,7 +624,6 @@ function starter_files(): array {
 /** Admins: add the starter files that aren't in the library yet and update the ones that changed. */
 function starter_templates_load(): void {
     need_admin();
-    need_sheets();
     $added = $updated = $unchanged = 0;
     $pdo = db();
     $pdo->beginTransaction();

@@ -27,7 +27,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
 - **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
   outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only
-  from the config's `trusted_proxies`, and only its nearest hop that isn't one of them.
+  from the config's `trusted_proxies`, and only its nearest hop that isn't one of them; the API refuses to run on a
+  database whose newest migration hasn't run, or with a table missing (`needs_upgrade`), and a fresh install passes.
 - **performance**: a campaign load builds each entry's preview from the start of its notes only, and a GM-only paragraph
   the cut runs through never reaches a player; an entry's page asks encyclopedia_sources for only the text naming it.
 - **quotas**: an Encyclopedia entry or a day's notes saved from an older copy is refused (`stale`) instead of

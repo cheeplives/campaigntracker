@@ -147,8 +147,6 @@ function scabard_report(): array {
 
 /** Pages and connections from a Scabard export, as scabard.js sends them. Returns the report. */
 function scabard_import(int $cid, array $b): array {
-    need_encyclopedia();
-    need_relations();
     $opts = is_array($b['options'] ?? null) ? $b['options'] : [];
     $asSessions = ($opts['sessions'] ?? 'sessions') !== 'entries';
     $pages = $b['pages'] ?? [];
@@ -183,7 +181,6 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
     $secrets = is_string($p['secrets'] ?? null) ? $p['secrets'] : '';
     $isSecret = !empty($p['is_secret']);
     if ($concept === 'Event' && $asSessions && ($s = scabard_session_of($name))) {
-        need_sessions();
         if (scabard_session($cid, $s['date'], $s['title'])) { $r['sessions']['kept']++; return; }
         $c = campaign_row($cid);
         $day = floordiv((int)$c['current_shift'], camp_spd($c));
@@ -226,7 +223,7 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
         foreach ($keep as $a) $idx['by'][mb_strtolower($a)] ??= $id;
     }
     $kind = SCABARD_CONCEPTS[$concept];
-    if (in_array(mb_strtolower($kind), ENTRY_CATEGORIES, true) && has_categories()) { // an entry already in a Category keeps it
+    if (in_array(mb_strtolower($kind), ENTRY_CATEGORIES, true)) { // an entry already in a Category keeps it
         db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=? AND category IS NULL')->execute([mb_strtolower($kind), $id]);
     } elseif (scabard_tag($cid, $id, $kind, $tags)) $r['tags']++;
     // Its picture, for the browser's third pass: Scabard's own pictures only; one hosted elsewhere is named in the report.
@@ -247,7 +244,7 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
 function scabard_end(int $cid, string $name, string $concept, bool $asSessions, array $idx): ?array {
     if ($name === '') return null;
     if ($concept === 'Event' && $asSessions && ($s = scabard_session_of($name))) {
-        $row = has_sessions() ? scabard_session($cid, $s['date'], $s['title']) : null;
+        $row = scabard_session($cid, $s['date'], $s['title']);
         return $row ? ['session' => (int)$row['id']] : null;
     }
     $e = scabard_entry($idx, $name);
@@ -333,8 +330,6 @@ function scabard_cast_lines(int $cid, int $sid, array $byLabel): int {
 /** A page's picture, fetched from scabard.com and kept on its entry, credited to Scabard: name, urls (tried in order),
  * page_url. Answers {ok, copied} or {ok, skipped: why}; an entry that has a picture already is left as it is. */
 function scabard_picture(int $cid, array $b): array {
-    need_encyclopedia();
-    need_attachments();
     if (!upload_dir()['dir']) fail(upload_info()['problem'], 409, 'uploads_unavailable');
     $name = scabard_name($b['name'] ?? '');
     $e = $name !== '' ? entry_named($cid, $name) : null;
@@ -358,7 +353,7 @@ function scabard_picture(int $cid, array $b): array {
     [$mime, $kind, $w, $h] = upload_type($tmp, $file);
     if ($kind !== 'image') return ['ok' => true, 'skipped' => 'not_picture'];
     $page = is_string($b['page_url'] ?? null) && preg_match('#^https://(www\.)?scabard\.com/#', $b['page_url']) && strlen($b['page_url']) <= 500 ? $b['page_url'] : null;
-    $credit = has_credits() ? ['credit_title' => mb_substr($e['name'], 0, 200), 'credit_source' => 'Scabard', 'credit_source_url' => $page] : [];
+    $credit = ['credit_title' => mb_substr($e['name'], 0, 200), 'credit_source' => 'Scabard', 'credit_source_url' => $page];
     $row = attachment_store($cid, $tmp, ['parent_type' => 'encyclopedia', 'parent_id' => (int)$e['id'], 'original_name' => $file, 'mime' => $mime,
         'kind' => 'image', 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'is_secret' => 0] + $credit);
     return ['ok' => true, 'copied' => true, 'file' => $row];
