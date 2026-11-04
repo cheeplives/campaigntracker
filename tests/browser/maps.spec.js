@@ -1151,6 +1151,26 @@ test("Map page: measuring, a click on a pin lays the point on it, so a route sta
   await expect(page.locator(".leaflet-popup")).toBeVisible();
 });
 
+test("Map page: the mode hint never covers the form open under the toolbar", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Hint");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await page.getByRole("button", { name: "Quick label" }).click();
+  await expect(page.locator(".map-note")).toContainText("Click a place on the map");
+  const pic = await settledBox(page.locator(".map-view img.leaflet-image-layer"));
+  await page.mouse.click(pic.x + pic.width * 0.6, pic.y + pic.height * 0.7);
+  const form = page.locator(".map-label-form");
+  await expect(form).toBeVisible();
+  await expect(page.locator(".map-note")).toBeVisible();   // the hint still says how to finish
+  const f = await settledBox(page.locator(".map-panel-box")), n = await settledBox(page.locator(".map-note"));
+  const overlap = !(n.y >= f.y + f.height || n.y + n.height <= f.y || n.x >= f.x + f.width || n.x + n.width <= f.x);
+  expect(overlap).toBe(false);
+  await expect(form.getByRole("button", { name: "Pin it" })).toBeVisible();
+  await form.getByRole("button", { name: "Skip" }).click();   // its buttons take a click, nothing over them
+  await expect(form).toHaveCount(0);
+});
+
 test("Map page: pin labels show by zoom, hover, selection and the Labels toggle; the party is always labelled", async ({ page, browser }) => {
   const { cid } = await setup(page, browser, "Labels");
   const mid = await mapWithPicture(page, cid);

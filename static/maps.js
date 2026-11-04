@@ -230,6 +230,8 @@ const MapsTab = (() => {
       return b;
     };
     const panelBox = el('div', { class: 'map-panel-box' });
+    // the mode's hint sits under a form open there, never over it: the stage knows where the form ends
+    new ResizeObserver(() => stage.style.setProperty('--panel-bottom', `${panelBox.offsetTop + panelBox.offsetHeight}px`)).observe(panelBox);
 
     // sheetAway: on a phone the sheet folds away while a tool is in use or a card is open, without changing how it was left
     let lf = null, mode = null, toolMode = null, sheetAway = false;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null

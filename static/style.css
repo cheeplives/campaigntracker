@@ -1175,6 +1175,11 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-panel-box { position: absolute; top: 56px; left: 12px; z-index: 1001; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 68px); display: flex; flex-direction: column; }
 .map-panel-box > * { min-height: 0; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; }   /* a tall form scrolls inside the stage */
 .map-panel-box:empty { display: none; }
+/* with a form open under the toolbar, the hint goes under it, at its width */
+.map-stage .map-panel-box:not(:empty) + .map-note { top: calc(var(--panel-bottom, 120px) + 8px); left: 12px; transform: none; max-width: min(420px, calc(100% - 24px)); }
+/* and both keep clear of the open drawer and its tab */
+.map-stage.drawer-open .map-panel-box { width: min(420px, calc(100% - 372px)); }
+.map-stage.drawer-open .map-panel-box:not(:empty) + .map-note { max-width: min(420px, calc(100% - 372px)); }
 /* the forms floating on the map are opaque, so a busy picture never shows through their fields */
 .map-panel, .map-label-form { margin: 0; background: var(--stock); }
 .map-label-form { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
@@ -1529,7 +1534,8 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
   .map-toolbar .small { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 1.1rem; }
   .map-tool-group + .map-tool-group { margin-left: 2px; padding-left: 4px; }
   .map-panel-box, .map-note { top: 80px; }
-  .map-panel-box { width: calc(100% - 24px); max-height: calc(50% - 80px); }   /* the scale panel's points are picked on the picture under it */
+  .map-panel-box, .map-stage.drawer-open .map-panel-box { width: calc(100% - 24px); max-height: calc(50% - 80px); }   /* the sheet is along the bottom, not the side */
+  .map-stage.drawer-open .map-panel-box:not(:empty) + .map-note { max-width: calc(100% - 24px); }   /* the scale panel's points are picked on the picture under it */
   .map-measure-bar { flex-wrap: nowrap; overflow-x: auto; gap: 4px; padding: 4px; bottom: 70px; }
   .map-measure-bar > * { flex: none; }
   .map-routes { top: auto; left: 0; width: auto; height: 45%; border-right: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
