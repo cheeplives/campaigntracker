@@ -1202,8 +1202,9 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .72rem/1.3 var(--body);
   color: var(--text); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 4px;
   opacity: 0; pointer-events: none; transition: opacity .12s; }
-/* a pin's name, always in the page, is shown close up, with Labels on, on hover or focus, while its card is open, and always for the party */
-.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in .map-marker-label, .map-marker:hover .map-marker-label,
+/* a pin's name, always in the page, is shown close up (unless Labels was turned off), with Labels on, on hover or focus, while its card
+   is open, and always for the party */
+.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in:not(.labels-off) .map-marker-label, .map-marker:hover .map-marker-label,
 .map-marker-box:focus-visible .map-marker-label, .map-marker.selected .map-marker-label, .map-party .map-marker-label { opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }

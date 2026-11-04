@@ -1120,6 +1120,15 @@ test("Map page: pin labels show by zoom, hover, selection and the Labels toggle;
   await page.reload();
   await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".map-pin", { hasText: "Mirewood" }).locator(".map-marker-label")).toHaveCSS("opacity", "1");
+  // Labels turned off stays off close up too, and after a reload
+  await page.getByRole("button", { name: "Labels" }).click();
+  await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "false");
+  await zoomIn(); await zoomIn();
+  await expect(page.locator(".map-stage")).toHaveClass(/zoomed-in/);
+  await expect(label).toHaveCSS("opacity", "0");
+  await page.reload();
+  await zoomIn(); await zoomIn();
+  await expect(page.locator(".map-pin", { hasText: "Mirewood" }).locator(".map-marker-label")).toHaveCSS("opacity", "0");
 });
 
 test("Map page: a legend sits bottom-left, and P, L, M, T and Escape drive the modes except while typing", async ({ page, browser }) => {

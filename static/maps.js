@@ -893,16 +893,21 @@ const MapsTab = (() => {
       mode = 'party'; note.textContent = 'Click the map where the party is'; syncTools();
     }, 'Put the party\'s marker anywhere on this map (T)') : null;
     if (partyBtn) partyBtn.hidden = !map.image_url;
-    // Labels: every pin's name shown at every zoom (otherwise only close up, on hover and on the open card)
+    // Labels: on, every pin's name shows at every zoom; turned off, none do (a hover or the open card still names one);
+    // until the button has been pressed on this device, names show close up only
     const labelsKey = `chronicle-map-labels-${cid}-${id}`;
-    const labelsWanted = () => { try { return localStorage.getItem(labelsKey) === '1'; } catch { return false; } };
-    let labelsOn = labelsWanted();   // kept here too, for a browser that won't store it
-    const syncLabels = () => { stage.classList.toggle('labels-on', labelsOn); labelsBtn.setAttribute('aria-pressed', String(labelsOn)); };
+    const labelsStored = () => { try { return localStorage.getItem(labelsKey); } catch { return null; } };
+    let labelsSet = labelsStored();   // '1', '0' or null; kept here too, for a browser that won't store it
+    const syncLabels = () => {
+      stage.classList.toggle('labels-on', labelsSet === '1');
+      stage.classList.toggle('labels-off', labelsSet === '0');
+      labelsBtn.setAttribute('aria-pressed', String(labelsSet === '1'));
+    };
     const labelsBtn = tbtn('🔤', 'Labels', 'Labels', () => {
-      labelsOn = !labelsOn;
-      try { localStorage.setItem(labelsKey, labelsOn ? '1' : '0'); } catch { /* this visit only */ }
+      labelsSet = labelsSet === '1' ? '0' : '1';
+      try { localStorage.setItem(labelsKey, labelsSet); } catch { /* this visit only */ }
       syncLabels();
-    }, 'Show every pin\'s name at every zoom (just for you)');
+    }, 'Show every pin\'s name, or none (just for you)');
     labelsBtn.hidden = !map.image_url;
     syncLabels();
     const saveRouteBtn = btn('Save route…', () => saveRoute(), 'small', 'Keep the path you measured as a named route on this map');
