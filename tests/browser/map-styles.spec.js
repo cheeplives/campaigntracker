@@ -2,7 +2,7 @@
 // colour and line, starting and ending at pins; the side panel's Routes and Locations, folding away; the party put
 // anywhere on the map, and a new location where it stands; the grid's opacity; the ⚙ menu.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, mapWithPicture, settledBox, newContext, closeContexts } = require("./helpers");
+const { gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, mapWithPicture, settledBox, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function setup(page, browser, label) {
@@ -173,13 +173,18 @@ test("Map tools: the grid's opacity is each person's own, and the ⚙ menu holds
   const mapId = await mapWithPicture(page, cid, { grid_px: 20, scale_per_px: 0.25, scale_unit: "ft", grid_shown: true });
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   const slider = page.getByLabel("Grid opacity");
+  await expect(slider).toBeHidden();   // it is in the ⚙ menu
+  await page.getByLabel("Map settings").click();
   await expect(slider).toBeVisible();
   await slider.fill("40");
+  await expect(page.locator(".map-gear-menu")).toBeVisible();   // moving the slider leaves the menu open
   await expect(page.locator(".map-grid")).toHaveCSS("opacity", "0.4");
   await page.reload();
   await expect(page.locator(".map-grid")).toHaveCSS("opacity", "0.4");
   await page.getByRole("button", { name: "Grid", exact: true }).click();   // hidden: no slider
+  await page.getByLabel("Map settings").click();
   await expect(page.getByLabel("Grid opacity")).toBeHidden();
+  await page.getByLabel("Map settings").click();
 
   await expect(page.getByRole("button", { name: "Delete map" })).toBeHidden();
   await page.getByLabel("Map settings").click();

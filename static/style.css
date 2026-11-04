@@ -1059,11 +1059,24 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-card img, .map-card-blank { width: 100%; height: 120px; object-fit: cover; border-radius: calc(var(--radius) / 2); background: var(--panel); display: flex; align-items: center; justify-content: center; }
 .map-head { align-items: baseline; gap: 12px; }
 .map-head h2 { margin: 0; }
-.map-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+/* what floats on the map: one look for every surface, over Leaflet's controls (1000), under the app's dialogs */
+.map-toolbar, .map-measure-bar, .map-gear > summary, .map-corner .lock-toggle, .map-legend, .map-routes, .map-panel {
+  background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
+.map-toolbar { position: absolute; top: 10px; left: 56px; z-index: 1001; display: flex; align-items: center; gap: 2px; padding: 4px; max-width: calc(100% - 180px); flex-wrap: wrap; }
+.map-tool-group { display: flex; align-items: center; gap: 2px; }
+.map-tool-group + .map-tool-group { margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
+.map-toolbar .small { white-space: nowrap; }
 .map-toolbar button[aria-pressed="true"], .map-kinds > button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.map-toolbar-gap { flex: 1 1 0; }
 .map-measure-total { font-weight: 700; color: var(--accent); min-width: 4ch; }
-.map-note { min-height: 1.4em; margin: 0 0 6px; color: var(--dim); }
+.map-note { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); z-index: 1001; max-width: min(36rem, calc(100% - 24px)); margin: 0; padding: 6px 12px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; text-align: center; border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); pointer-events: none; }
+.map-note:empty { display: none; }
+.map-measure-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1001; display: flex; align-items: center; gap: 6px; padding: 4px 8px; max-width: calc(100% - 24px); flex-wrap: wrap; }
+.map-measure-bar[hidden], .map-measure-bar [hidden] { display: none; }
+.map-corner { position: absolute; top: 10px; right: 12px; z-index: 1002; display: flex; align-items: flex-start; gap: 6px; }
+.map-corner .lock-toggle { width: 36px; height: 36px; }
+.map-corner > * { margin: 0; }
+.map-corner .map-gear > summary { margin: 0; }
 .map-panel { margin: 0 0 8px; background: var(--stock); }
 .map-panel .row { align-items: flex-end; flex-wrap: wrap; gap: 8px; }
 .map-panel input[type=number] { width: 8em; }
@@ -1140,7 +1153,9 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-grid-opacity { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); }
 .map-grid-opacity input { width: 7rem; accent-color: var(--accent); }
 .map-gear { position: relative; }
-.map-gear > summary { list-style: none; font-size: 1.1rem; padding: 4px 10px; }
+.map-gear > summary { list-style: none; font-size: 1.1rem; height: 36px; padding: 0 10px; display: inline-flex; align-items: center; }
+.map-gear-menu hr { border: 0; border-top: 1px solid var(--line); margin: 2px 4px; width: auto; }
+.map-gear-menu [hidden] { display: none; }
 .map-gear > summary::-webkit-details-marker { display: none; }
 .map-gear[open] > summary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .map-gear-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1100;   /* above Leaflet's zoom buttons (1000), which come later on the page */ display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem;

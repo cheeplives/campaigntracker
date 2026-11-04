@@ -139,4 +139,9 @@ async function tokenUpload(page, cid, name) {
   return (await res.json()).token;
 }
 
-module.exports = { newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+/** Open a map's ⚙ menu (Map settings) and press one of its items. */
+async function gearAction(page, name) {
+  await page.getByLabel("Map settings").click();
+  await page.locator(".map-gear-menu").getByRole("button", { name }).click();
+}
+module.exports = { gearAction, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

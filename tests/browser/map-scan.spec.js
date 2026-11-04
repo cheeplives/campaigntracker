@@ -4,7 +4,7 @@
 // Location). Quick label pins names by hand: click a spot, type its name.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, settledBox } = require("./helpers");
+const { gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, settledBox } = require("./helpers");
 const MapScan = require(path.join(__dirname, "..", "..", "static", "mapscan.js"));
 test.afterEach(closeContexts);
 // The service worker would see the scanner's and the page's requests first, and in WebKit page.route() then never fakes them.
@@ -68,7 +68,7 @@ test("Scan for names: the GM reviews what the scanner read and pins the approved
   await api(page, "map_save", { id: mapId, image_id: (await up.json()).file.id }, cid);
 
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await d.getByRole("button", { name: "Read here" }).click();
   await expect(d.getByRole("heading")).toContainText("Found", { timeout: 150_000 });
@@ -101,7 +101,7 @@ test("Scan for names: the GM reviews what the scanner read and pins the approved
   await expect(pp.getByRole("button", { name: "Scan for names…" })).toHaveCount(0);
 
   // scanning again finds them already pinned, and leaves them unticked
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   await d.getByRole("button", { name: "Read here" }).click();
   await expect(d.getByRole("heading")).toContainText("Found", { timeout: 150_000 });
   await expect(d.locator(".map-scan-row").filter({ has: page.getByRole("checkbox", { name: "Add Mirewood", exact: true }) })).toContainText("Already pinned on this map");
@@ -142,7 +142,7 @@ test("Scan for names: a scanner file the server refuses says so instead of loadi
   await api(page, "map_save", { id: mapId, image_id: (await up.json()).file.id }, cid);
   await page.context().route("**/eng.traineddata", r => r.fulfill({ status: 403, contentType: "text/html", body: "Forbidden" }));
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog");
   await d.getByRole("button", { name: "Read here" }).click();
   await expect(d.getByRole("status")).toContainText("couldn't load its files", { timeout: 60_000 });
@@ -209,7 +209,7 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
       body: JSON.stringify({ id: "msg_1", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(answer) }] }) });
   });
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await d.getByRole("button", { name: "Read with Claude" }).click();
   await expect(d.getByRole("heading")).toContainText("Found 2 names");
@@ -242,7 +242,7 @@ test("Scan for names: an API key Anthropic refuses says so", async ({ page, brow
   await page.context().route("https://api.anthropic.com/**", r => r.request().method() === "OPTIONS" ? r.fulfill({ status: 204, headers: CORS })
     : r.fulfill({ status: 401, headers: { ...CORS, "content-type": "application/json" }, body: JSON.stringify({ type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }) }));
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await d.getByRole("button", { name: "Read with Claude" }).click();
   await expect(d.getByRole("status")).toContainText("didn't accept your API key");
@@ -252,7 +252,7 @@ test("Scan for names: with no key, Read with Claude points to the account page, 
   const errors = watchErrors(page);
   const { cid, mapId } = await mapReady(page, browser, "Kit");
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await expect(d.getByRole("button", { name: "Read with Claude" })).toHaveCount(0);
   await d.getByRole("link", { name: "Add your key" }).click();
@@ -272,7 +272,7 @@ test("Scan for names: with no key, Read with Claude points to the account page, 
   expect(await page.evaluate(() => localStorage.getItem("chronicle.anthropicKey"))).toBe(KEY);
   expect(toServer).toEqual([]);
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  await page.getByRole("button", { name: "Scan for names…" }).click();
+  await gearAction(page, "Scan for names…");
   await expect(d.getByRole("button", { name: "Read with Claude" })).toBeVisible();
   await d.getByRole("button", { name: "Cancel" }).click();
   await page.goto("index.html#/account");
