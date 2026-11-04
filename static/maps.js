@@ -372,14 +372,29 @@ const MapsTab = (() => {
     const pinTitle = p => (p.kind === 'entry' && p.entry ? p.entry.name : p.kind === 'event' && p.event ? p.event.title : p.label) || 'Pin';
     const kindIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
     const pinIcon = p => p.icon || kindIcon(p);
+    // Routes and locations hidden from the picture: the viewer's own choice, kept on this device for this map. The lists still show them.
+    function hiddenIds() { try { return new Set(JSON.parse(localStorage.getItem(`chronicle-map-hidden-${map.id}`) || '[]')); } catch { return new Set(); } }
+    function setHidden(id, hide) {
+      const ids = hiddenIds();
+      if (hide) ids.add(id); else ids.delete(id);
+      try { localStorage.setItem(`chronicle-map-hidden-${map.id}`, JSON.stringify([...ids])); } catch { /* hidden for this visit only */ }
+      drawPins(); drawRoutes(); renderRoutes();
+    }
+    /** The "show on the map" tick of a route or location in the side panel: id is 'r' + route id or 'p' + pin id. */
+    function showTick(id, name, hid) {
+      const box = el('input', { type: 'checkbox', checked: !hid.has(id), 'aria-label': `Show ${name} on the map` });
+      box.addEventListener('change', () => setHidden(id, !box.checked));
+      return el('label', { class: 'map-show', 'data-tip': 'Show this on the map' }, box);
+    }
     function drawPins() {
       pinLayer.clearLayers(); pinMarkers.clear();
-      for (const p of pins) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
+      const hid = hiddenIds();
+      for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
         className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : ''),
         draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p) }));
     }
     /** Centre the map on pin p and open its card. */
-    const showPin = p => { const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
+    const showPin = p => { if (hiddenIds().has('p' + p.id)) setHidden('p' + p.id, false); const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
@@ -592,7 +607,9 @@ const MapsTab = (() => {
     const routeLines = new Map();
     function drawRoutes() {
       routeLayer.clearLayers(); routeLines.clear();
+      const hid = hiddenIds();
       for (const r of routes) {
+        if (hid.has('r' + r.id)) continue;
         const at = r.points.map(([x, y]) => toLatLng(x, y));
         const [, dash, round] = DASHES[r.dash] || DASHES.dashed;
         const line = L.polyline(at, { weight: 3, dashArray: dash, lineCap: round ? 'round' : 'butt', interactive: false,
@@ -677,12 +694,14 @@ const MapsTab = (() => {
         d.addEventListener('toggle', () => keepSide({ [key]: d.open }));
         return d;
       };
+      const hid = hiddenIds();
       const routeRows = routes.map(r => {
         const a = endPin(r.points[0]), z = endPin(r.points[r.points.length - 1]);
         const swatch = el('span', { class: 'map-route-swatch' + (r.color ? '' : ' plain') + ' ' + (r.dash || 'dashed'), 'aria-hidden': 'true' });
         if (r.color) swatch.style.setProperty('--swatch', r.color);
         return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : '') },
-          el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)) }, swatch, r.is_secret ? '🔒 ' : '', r.name),
+          el('div', { class: 'map-route-top' }, showTick('r' + r.id, r.name, hid),
+            el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => { if (hid.has('r' + r.id)) setHidden('r' + r.id, false); lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)); } }, swatch, r.is_secret ? '🔒 ' : '', r.name)),
           a || z ? el('span', { class: 'small map-route-ends' }, a ? pinTitle(a) : '…', ' → ', z ? pinTitle(z) : '…') : null,
           el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
           gm ? el('div', { class: 'row' },
@@ -710,8 +729,9 @@ const MapsTab = (() => {
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
         const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
         if (p.color) face.style.setProperty('--pin-colour', p.color);
-        return el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
-          face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null);
+        return el('div', { class: 'map-place-row' }, showTick('p' + p.id, pinTitle(p), hid),
+          el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
+            face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
       routeBox.replaceChildren(...[el('div', { class: 'map-side-head' }, fold),
         routes.length ? section('routes', 'Routes', routeRows) : null,

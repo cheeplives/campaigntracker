@@ -10,10 +10,15 @@
 declare(strict_types=1);
 require __DIR__ . '/../lib.php';
 
+/** How long a sign-in started in api/auth/login.php may take to come back, in seconds. */
+const OAUTH_STATE_TTL = 600;
+
 require_method('GET');
 rate_limit('callback', client_ip(), 30, 300);   // 30 callbacks / 5 min / IP
 
 function auth_fail(string $reason): void {
+  // Part of the reason can come from the query string: keep it short and on one line, so nobody can forge log lines.
+  $reason = substr((string) preg_replace('/[\x00-\x1F\x7F]+/', ' ', $reason), 0, 200);
   error_log('oauth callback failed: ' . $reason);
   // Return to the app (which reads ?auth_error and shows a retry message), using
   // the configured base_url so this works under a subpath (e.g. /chronicle/).
@@ -32,6 +37,8 @@ $code  = (string) ($_GET['code'] ?? '');
 if (!$sess || $code === '' || $state === '' || !hash_equals((string) $sess['state'], $state)) {
   auth_fail('bad_state');
 }
+// A sign-in is finished within minutes; an old state is one left in a session, not someone signing in now.
+if (time() - (int) ($sess['ts'] ?? 0) > OAUTH_STATE_TTL) auth_fail('expired_state');
 $provider = (string) $sess['provider'];
 $oauth = cfg('oauth', []);
 if (empty($oauth[$provider]['client_id'])) auth_fail('provider_unconfigured');

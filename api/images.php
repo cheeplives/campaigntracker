@@ -95,13 +95,19 @@ function image_public(array $item): array { unset($item['full'], $item['mature']
 
 // --- tokens ----------------------------------------------------------------------------------------------------
 /** A client-credentials access token for $name ('openverse' or 'deviantart'), kept until it expires in a file in the
- * uploads folder (outside the web root); null when the config has no keys for it. */
+ * uploads folder (outside the web root), or in the session folder when uploads aren't set up, so a search never
+ * asks for a fresh token each time; null when the config has no keys for it. */
 function image_token(string $name, string $tokenUrl): ?string {
     $keys = (array)(image_cfg()[$name] ?? []);
     $id = trim((string)($keys['client_id'] ?? '')); $secret = trim((string)($keys['client_secret'] ?? ''));
     if ($id === '' || $secret === '') return null;
     $dir = upload_dir()['dir'];
-    $file = $dir ? "$dir/.image-search-tokens.json" : null;
+    if ($dir) $file = "$dir/.image-search-tokens.json";
+    else {   // the session folder is ours (lib.php session_dir); PHP's temp folder as the last resort
+        $sess = (string)session_save_path();
+        $dir = $sess !== '' && is_dir($sess) && is_writable($sess) ? rtrim($sess, '/') : rtrim(sys_get_temp_dir(), '/');
+        $file = "$dir/.chronicle-image-tokens-" . substr(hash('sha256', (string)cfg('base_url', '') . __DIR__), 0, 16) . '.json';
+    }
     $cache = $file && is_file($file) ? (json_decode((string)@file_get_contents($file), true) ?: []) : [];
     $key = $name . ':' . hash('sha256', $id);
     if (($cache[$key]['until'] ?? 0) > time() + 60) return $cache[$key]['token'];

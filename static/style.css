@@ -1109,6 +1109,11 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-place { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 4px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .map-place.secret { border-style: dashed; }
 .map-place + .map-place { margin-top: 4px; }
+.map-show { display: inline-flex; align-items: center; flex: none; }
+.map-route-top, .map-place-row { display: flex; align-items: center; gap: 6px; }
+.map-route-top .map-route-name { flex: 1; min-width: 0; }
+.map-place-row .map-place { flex: 1; min-width: 0; }
+.map-place-row + .map-place-row { margin-top: 4px; }
 .map-place-icon { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
 .map-body.side-collapsed .map-stage { flex-basis: 30rem; }
 /* a pin's colour tints its icon itself (no disc behind it, which would hide more of the map): a grey copy of the

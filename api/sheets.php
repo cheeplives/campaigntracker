@@ -217,8 +217,11 @@ function templates_action(string $action): void {
             elseif (preg_match('~^(?:https?://)?(?:www\.)?dndbeyond\.com/(?:profile/[^/?#]+/)?characters/(\d{1,12})(?:[/?#].*)?$~i', $url, $m))
                 $get = "https://character-service.dndbeyond.com/character/v5/character/$m[1]";
             else fail('Paste a Pathbuilder 2e Export JSON link or a D&D Beyond character link');
-            $r = http_request('GET', $get, ['timeout' => 15, 'compress' => true, 'headers' => ['Accept: application/json', 'User-Agent: CampaignChronicle/1.0']]);
-            $json = $r['status'] === 200 && strlen($r['body']) < 5_000_000 ? json_decode($r['body'], true) : null;
+            // each call holds a PHP worker for up to 15 seconds on a third party's server: a modest cap per account
+            rate_limit('sheet_import', (string)$me['id'], 10, 60);
+            $r = http_request('GET', $get, ['timeout' => 15, 'compress' => true, 'max_bytes' => 5_000_000,
+                'headers' => ['Accept: application/json', 'User-Agent: CampaignChronicle/1.0']]);
+            $json = $r['status'] === 200 ? json_decode($r['body'], true) : null;
             if (!is_array($json) || (isset($json['success']) && !$json['success']))
                 fail(str_contains($get, 'dndbeyond') ? "D&D Beyond didn't send that character. Its privacy must be Public (in the character's Home > Manage > Character Privacy)" : "Pathbuilder didn't send that character. Check the link from its Export JSON", 502);
             out(['json' => $json]);
