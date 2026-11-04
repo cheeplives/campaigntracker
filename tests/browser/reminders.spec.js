@@ -20,7 +20,7 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
 
   // Added from today's page, it starts on the next shift, since the clock is already on this one.
   await page.goto(`index.html#/c/${cid}`);
-  await page.getByRole("button", { name: "+ Add reminder" }).click();
+  await page.getByRole("button", { name: "+ New reminder" }).click();
   const form = page.locator("form.reminder");
   await expect(form.getByLabel("Shift", { exact: true })).toHaveValue("1");
   await form.getByLabel("Title").fill("The ransom is due");
@@ -119,7 +119,7 @@ test("players keep their own reminders, GMs can share theirs, and only future ti
   // On the day page a player sees no audience picker, only their own reminders and shared ones.
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".event.reminder")).toHaveCount(2);
-  await pp.getByRole("button", { name: "+ Add reminder" }).click();
+  await pp.getByRole("button", { name: "+ New reminder" }).click();
   await expect(pp.locator("form.reminder")).toContainText("Only you see your reminders.");
   await expect(pp.locator("form.reminder").getByLabel("Who sees it")).toHaveCount(0);
 

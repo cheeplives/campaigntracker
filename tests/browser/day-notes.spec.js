@@ -134,7 +134,7 @@ test("every box folds, and stays folded in this browser for this account", async
   await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
   // Adding an event to a folded Events box unfolds it.
   await page.locator("[data-box=events]").locator(".daybox-toggle").click();
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "+ New event" }).click();
   await expect(page.locator("[data-box=events] .daybox-body")).toBeVisible();
   // Unfolding comes back too.
   await page.locator("[data-box=shifts]").locator(".daybox-toggle").click();

@@ -15,7 +15,7 @@ test("an event gets a shift range and tags, shown in day and week view", async (
 
   await page.goto(`index.html#/c/${cid}/day/3`);
   await expect(page.locator(".event", { hasText: "Old watch" })).toContainText("Dawn");
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "+ New event" }).click();
   const form = page.locator("form.event");
   await expect(form.getByLabel("Starts", { exact: true })).toHaveCount(0);
   await expect(form.getByRole("combobox", { name: /^Shift Start/ })).toBeHidden();
@@ -77,7 +77,7 @@ test("a player who may add events can tag them", async ({ page, browser }) => {
   await gctx.close();
 
   await page.goto(`index.html#/c/${cid}/day/3`);
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "+ New event" }).click();
   const form = page.locator("form.event");
   await form.getByLabel("Title", { exact: true }).fill("Harvest dance");
   const party = form.getByRole("button", { name: "Party", exact: true });
