@@ -72,7 +72,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   const perrors = watchErrors(pp);
   await pp.goto(`index.html#/c/${cid}/holdings`);
 
-  await pp.getByRole("button", { name: "+ Add holding" }).click();
+  await pp.getByRole("button", { name: "+ New holding" }).click();
   const dlg = pp.locator("dialog.hold-dialog");
   const fieldsOf = () => dlg.locator(".hold-fields .lbl").allTextContents();
   await expect(dlg.getByLabel("Type", { exact: true })).toHaveValue("vehicle");

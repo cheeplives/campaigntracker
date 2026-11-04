@@ -1019,7 +1019,7 @@
     modeSel.addEventListener('change', drawShifts);
     presetSel.addEventListener('change', drawShifts);
     drawShifts();
-    const f = el('form', { class: 'card narrow' }, el('h1', {}, 'New campaign'),
+    const f = el('form', { class: 'card narrow form-wide' }, el('h1', {}, 'New campaign'),
       field('Name', el('input', { name: 'name', required: true, maxlength: 150 })),
       field('Description', el('textarea', { name: 'description', rows: 2 })),
       field('Calendar preset', presetSel, 'Every preset can be fully customized afterwards (Settings tab).',
@@ -1480,14 +1480,14 @@
 
     // --- events
     const evBox = dayBox('events', 'Events', {
-      actions: (isGM() || settings().players_can_add_events) ? btn('+ Add event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
     const rems = dayReminders(d);
     const remBox = dayBox('reminders', 'Reminders', {
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
-      actions: btn('+ Add reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
@@ -2047,9 +2047,11 @@
           if (!await confirmDialog('Delete this note?')) return;
           try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'link small'), 'Delete this note') : null))));
-    const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…' });
+    // The note box stays folded behind its button until it's wanted, so a day of events isn't a stack of empty boxes
+    const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…', hidden: true, 'aria-label': `Note on ${e.title}` });
     const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
     addNote.addEventListener('click', busy(addNote, async () => {
+      if (noteIn.hidden) { noteIn.hidden = false; addNote.textContent = 'Save note'; noteIn.focus(); return; }
       if (!noteIn.value.trim()) return;
       await post('note_add', { event_id: e.id, body: noteIn.value }, S.camp.id); route();
       offerNouns([{ text: noteIn.value, secret: !!Number(e.is_secret), label: `a note on "${e.title}"` }]);
@@ -3011,7 +3013,7 @@
     const wideBtn = btn('', () => { wide = !wide; rememberEncWide(wide); setWide(); }, 'small enc-widebtn');
     const setWide = () => {
       page.classList.toggle('wide', wide);
-      wideBtn.textContent = wide ? '⇤ Narrow list' : '⇥ Wide list';
+      wideBtn.textContent = wide ? '⇤ Narrow view' : '⇥ Wide view';
       wideBtn.setAttribute('aria-pressed', String(wide));
       wideBtn.dataset.tip = wide ? 'Give the entry its room back and narrow the list' : 'Widen the list to see more of the Encyclopedia at once, and narrow the entry';
     };
@@ -3980,7 +3982,7 @@
       el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'Not ended yet: its last day is still open' }, 'open') : null),
       el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
         isGM() ? `${x.covered} of ${x.notes} notes covered` : null, isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
-    const add = isGM() ? btn('+ Session', busy(null, async () => {
+    const add = isGM() ? btn('+ New session', busy(null, async () => {
       const r = await post('session_save', {}, cid);
       S.openSession = r.session;
       location.hash = href(r.session.id);
@@ -3990,7 +3992,7 @@
         ? 'Each game night: your running notes, and the summary you write from them afterwards. Players read a summary once you publish it'
         : 'A summary of each game night, as the GM writes it up')), el('div', { class: 'row' }, add, wideBtn)),
       el('div', { class: 'lib-list' }, sessions.length ? sessions.map(item)
-        : el('p', { class: 'muted small' }, isGM() ? 'No sessions yet. Press + Session, then take your notes in it.' : 'No session summaries published yet.')));
+        : el('p', { class: 'muted small' }, isGM() ? 'No sessions yet. Press + New session, then take your notes in it.' : 'No session summaries published yet.')));
     const right = el('section', { class: 'card enc-detail sess-detail' });
     if (sel && !one) right.append(el('p', { class: 'muted' }, 'That session isn\'t here any more.'));
     else if (!one) right.append(el('p', { class: 'muted' }, sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.'));
@@ -4936,7 +4938,7 @@
     const { downtimes } = await api('downtimes', { query: { cid: S.camp.id } });
     const head = el('div', { class: 'card' }, el('div', { class: 'row spread' },
       el('h2', {}, 'Downtime', tip('Rests and stretches of downtime, one card each. Making one writes Long Rest, Short Rest or Downtime into the activity of the shifts it covers, and can move the clock to its end. Pick what the party does on each card and who does it.')),
-      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary', 'Start a long rest, a short rest or some days of downtime') : null),
+      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary small', 'Start a long rest, a short rest or some days of downtime') : null),
       downtimes.length ? null : el('p', { class: 'muted' }, isGM() ? 'No rests or downtime yet. Press New downtime to add one.' : 'No rests or downtime yet.'));
     mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(downtimeCard)));
   }
@@ -5097,7 +5099,7 @@
       field('Title', title),
       el('span', { class: 'lbl' }, 'Activities', tip(players.length ? 'Tick what the party does, then pick which players do each one' : 'Tick what the party does. Add players on the Members tab to put them on activities')),
       list,
-      el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small', 'Add your own activity to this card')),
+      el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small primary', 'Add your own activity to this card')),
       el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
       el('div', { class: 'row' }, save, del));
     return card;
@@ -5155,8 +5157,8 @@
     const right = el('div', { class: 'holdings-col' },
       el('div', { class: 'card' }, el('div', { class: 'row spread' },
         el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
-        btn('+ Add holding', () => holdingDialog(), 'primary', 'Add a vehicle, animal, building, asset or a type of your own')),
-        holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press Add holding to add one.')),
+        btn('+ New holding', () => holdingDialog(), 'primary small', 'Add a vehicle, animal, building, asset or a type of your own')),
+        holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
       holdings.map(holdingCard));
     mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear)), right));
   }
@@ -5314,7 +5316,7 @@
     const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': `New item in ${h.name}'s storage` });
     const nWeight = wInput('');
     nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
-    const add = btn('+ Add', null, 'small', 'Put this item in storage');
+    const add = btn('+ Add', null, 'small primary', 'Put this item in storage');
     // Not disabled while saving, so a quick second item (Enter, Enter) is added too.
     add.addEventListener('click', busy(null, async () => {
       if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
@@ -5614,7 +5616,8 @@
         list.replaceChildren(...clean([m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
           el('div', {}, el('strong', {}, u.display_name || u.email || 'Unnamed account'), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
           el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email || 'them'} to this campaign`))))
-          : [el('p', { class: 'muted' }, candidates.length ? 'Nobody registered matches. Type their full sign-in email and press Add by email.' : 'Nobody to list here. Add someone by their sign-in email.')],
+          // With nobody to pick from, the note under the form already says to add people by email: no empty-list message
+          : candidates.length ? [el('p', { class: 'muted' }, 'Nobody registered matches. Type their full sign-in email and press Add by email.')] : [],
           m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null]));
       };
       q.addEventListener('input', renderList);

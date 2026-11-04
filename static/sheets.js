@@ -714,7 +714,7 @@ const Sheets = (() => {
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Characters'),
         el('div', { class: 'row' }, el('a', { href: '#/templates', class: 'small', 'data-tip': 'Every template, to use, fork or change' }, 'Sheet templates'),
-          button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary'))), seg),
+          button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary small'))), seg),
       list);
   }
   /** Pick a template and a name; GMs also pick PC or NPC. */
