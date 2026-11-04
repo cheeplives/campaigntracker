@@ -143,3 +143,13 @@ test("Scan for names: a scanner file the server refuses says so instead of loadi
   await expect(d.getByRole("status")).toContainText("403");
   await d.getByRole("button", { name: "Cancel" }).click();
 });
+
+test("Scan for names: deploy.sh's security check doesn't call any file the repo ships a leftover to delete", () => {
+  // It once flagged the scanner's eng.traineddata.gz as a stray backup, and deleting it as told broke the scanner.
+  const { spawnSync } = require("child_process");
+  const r = spawnSync("php", [path.join(__dirname, "..", "..", "tools", "security-check.php")], { encoding: "utf8" });
+  const out = r.stdout + r.stderr;
+  expect(out).toContain("Security check");
+  // tests/ itself holds generated reports locally; only what the repo ships counts
+  expect(out.split("\n").filter(l => l.includes("Leftover file") && !l.includes("tests/"))).toEqual([]);
+});
