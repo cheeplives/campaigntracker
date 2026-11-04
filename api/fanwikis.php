@@ -22,7 +22,6 @@
 
 const FANWIKI_ACTIONS = ['fanwiki_wikis', 'fanwiki_search', 'fanwiki_summary', 'fanwiki_images', 'fanwiki_thumb'];
 /** Actions that only read, so index.php takes them as GET. */
-const FANWIKI_READ_ACTIONS = FANWIKI_ACTIONS;
 const FANWIKI_HITS = 8;
 const FANWIKI_IMAGES = 20;
 /** How long a wiki's api.php address, article path and licence are trusted before they are asked again, in seconds. */

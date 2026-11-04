@@ -9,6 +9,7 @@
  */
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
+require __DIR__ . '/actions.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
@@ -20,7 +21,12 @@ require __DIR__ . '/upgrade.php';
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
 // ---------- helpers ----------
-function out($data, int $code = 200): void { json_out($data, $code); }
+/** Answer the action. A change marked 'touch' in api/actions.php, made by a GM, also tells open pages about it. */
+function out($data, int $code = 200): void {
+    $cid = $GLOBALS['touch_cid'] ?? 0;
+    if ($cid && $code < 400 && role($cid) === 'gm') touch_campaign($cid);
+    json_out($data, $code);
+}
 const ERROR_CODES = [400 => 'bad_request', 403 => 'forbidden', 404 => 'not_found', 405 => 'method_not_allowed',
     409 => 'conflict', 413 => 'payload_too_large', 500 => 'server_error'];
 /** Fail with a human message; the machine code follows the HTTP status unless given. */
@@ -116,6 +122,15 @@ function role(int $cid): string {
     return $cache[$cid] = $r;
 }
 function need_gm(int $cid): void { if (role($cid) !== 'gm') fail('Only the GM can do that', 403); }
+/** Row $id of $table if it is campaign $cid's, or fail 404 with $missing; also when $hidden($row) says this member may
+ * not see it (a secret one, for a player). $table is always a name from the code, never from the request. */
+function row_of(string $table, int $cid, int $id, string $missing, ?callable $hidden = null): array {
+    $st = db()->prepare("SELECT * FROM `$table` WHERE id=? AND campaign_id=?");
+    $st->execute([$id, $cid]);
+    $r = $st->fetch();
+    if (!$r || ($hidden && $hidden($r))) fail($missing, 404);
+    return $r;
+}
 function cid(): int {
     $c = $_GET['cid'] ?? p('cid');
     if ($c === null) fail('Missing campaign id');
@@ -514,11 +529,7 @@ function holding_stats($v, string $kind): string {
 }
 /** Fetch a gear row or holding of campaign $cid by id, or fail. */
 function holding_row(string $table, int $id, int $cid): array {
-    $st = db()->prepare("SELECT * FROM $table WHERE id=? AND campaign_id=?");
-    $st->execute([$id, $cid]);
-    $r = $st->fetch();
-    if (!$r) fail($table === 'holdings' ? 'Holding not found' : 'Item not found', 404);
-    return $r;
+    return row_of($table, $cid, $id, $table === 'holdings' ? 'Holding not found' : 'Item not found');
 }
 /** Tick a gear row's or holding's amount up or down by $delta, never below 0. Returns the new amount. */
 function holding_tick(string $table, int $cid): int {
@@ -544,7 +555,8 @@ function editable_reminder(int $cid, int $id, string $role): array {
     if (!$r || (!$mine && !($role === 'gm' && $r['audience'] !== 'me'))) fail('Reminder not found', 404);
     return $r;
 }
-/** Tell open pages about a GM's change to a reminder others can see (a private one stays quiet). */
+/** Tell open pages about a GM's change. Most changes are marked 'touch' in api/actions.php and out() calls this; an
+ * action whose notice depends on what changed (a private reminder, a player's own pin) calls it itself. */
 function touch_campaign(int $cid): void {
     db()->prepare('UPDATE campaigns SET updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$cid]);
 }
@@ -704,11 +716,7 @@ function entry_name($v): string {
 }
 /** An entry of campaign $cid this member may see, or fail. */
 function entry_row(int $cid, int $id, string $role): array {
-    $st = db()->prepare('SELECT * FROM encyclopedia_entries WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    $e = $st->fetch();
-    if (!$e || ($role !== 'gm' && (int)$e['is_secret'])) fail('Entry not found', 404);
-    return $e;
+    return row_of('encyclopedia_entries', $cid, $id, 'Entry not found', fn($e) => $role !== 'gm' && (int)$e['is_secret']);
 }
 /** The entry of campaign $cid named $name (any case), secret or not, or null. */
 function entry_by_name(int $cid, string $name): ?array {
@@ -830,11 +838,7 @@ function relations_dedupe(int $tid): void {
 }
 /** A relationship row of campaign $cid, or fail. */
 function relation_type_row(int $cid, int $id): array {
-    $st = db()->prepare('SELECT * FROM encyclopedia_relation_types WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    $t = $st->fetch();
-    if (!$t) fail('That connection is gone', 404);
-    return $t;
+    return row_of('encyclopedia_relation_types', $cid, $id, 'That connection is gone');
 }
 /** A connection of campaign $cid this member may see, or fail. */
 function relation_row(int $cid, int $id, bool $isGm): array {
@@ -913,10 +917,7 @@ function entry_files(int $cid, bool $isGm): array {
 }
 /** A file of campaign $cid this member may see, with its parent's checks, or fail. */
 function attachment_row(int $cid, int $id, string $role): array {
-    $st = db()->prepare('SELECT * FROM attachments WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    $a = $st->fetch();
-    if (!$a) fail('File not found', 404);
+    $a = row_of('attachments', $cid, $id, 'File not found');
     $parent = attachment_parent($cid, $a['parent_type'], (int)$a['parent_id'], $role);
     if ($role !== 'gm' && ($parent['secret'] || (int)$a['is_secret'])) fail('File not found', 404);
     return $a + ['_parent' => $parent];
@@ -928,24 +929,22 @@ function attachment_mine(array $a, string $role): bool {
 /** Delete files and their rows: those of one parent, or with $type null every file of the campaign. The rows go first,
  * so a file that can't be removed from disk is only left over, never served. */
 function attachments_purge(int $cid, ?string $type = null, ?int $id = null): void {
-    $where = 'campaign_id=?' . ($type !== null ? ' AND parent_type=? AND parent_id=?' : '');
-    $args = $type !== null ? [$cid, $type, $id] : [$cid];
+    if ($type === null) attachments_drop('campaign_id=?', [$cid]);
+    else attachments_drop('campaign_id=? AND parent_type=? AND parent_id=?', [$cid, $type, $id]);
+}
+/** Delete one file of campaign $cid, its row and then its stored file. */
+function attachment_remove(int $cid, int $id): void {
+    attachments_drop('campaign_id=? AND id=?', [$cid, $id]);
+}
+/** The one place files are deleted: the rows matching $where, then their stored files. */
+function attachments_drop(string $where, array $args): void {
     $st = db()->prepare("SELECT stored_name FROM attachments WHERE $where");
     $st->execute($args);
     $names = $st->fetchAll(PDO::FETCH_COLUMN);
     if (!$names) return;
     db()->prepare("DELETE FROM attachments WHERE $where")->execute($args);
     $dir = upload_dir()['dir'];
-    if ($dir) foreach ($names as $n) if (preg_match('/^[0-9a-f]{32}$/', $n)) @unlink("$dir/$n");
-}
-/** Delete one file of campaign $cid, its row and then its stored file. */
-function attachment_remove(int $cid, int $id): void {
-    $st = db()->prepare('SELECT stored_name FROM attachments WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    $name = $st->fetchColumn();
-    if ($name === false) return;
-    db()->prepare('DELETE FROM attachments WHERE id=?')->execute([$id]);
-    if (($dir = upload_dir()['dir']) && preg_match('/^[0-9a-f]{32}$/', (string)$name)) @unlink("$dir/$name");
+    if ($dir) foreach ($names as $n) if (preg_match('/^[0-9a-f]{32}$/', (string)$n)) @unlink("$dir/$n");
 }
 /** An uploaded file's name, safe to keep and to send back: no folders, no control characters, 200 characters at most. */
 function upload_name(string $name): string {
@@ -1074,9 +1073,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 const TOME_KINDS = ['book', 'journal', 'note'];
 function tome_row(int $cid, int $id): array {
-    $st = db()->prepare('SELECT * FROM library_tomes WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    return $st->fetch() ?: fail('Tome not found', 404);
+    return row_of('library_tomes', $cid, $id, 'Tome not found');
 }
 /** A tome as the browser gets it, without its secret paragraphs for a player; the body only when $full (the list sends a word count instead). */
 function tome_out(array $t, bool $full, bool $isGm): array {
@@ -1136,9 +1133,7 @@ function snote_out(array $n): array {
         'text' => $n['text'], 'abs_shift' => (int)$n['abs_shift'], 'is_covered' => (bool)(int)$n['is_covered']];
 }
 function snote_row(int $cid, int $id): array {
-    $st = db()->prepare('SELECT * FROM session_notes WHERE id=? AND campaign_id=?');
-    $st->execute([$id, $cid]);
-    return $st->fetch() ?: fail('Note not found', 404);
+    return row_of('session_notes', $cid, $id, 'Note not found');
 }
 function snotes(int $sid): array {
     $st = db()->prepare('SELECT * FROM session_notes WHERE session_id=? ORDER BY position, id');
@@ -1325,15 +1320,15 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
 // A request with an API key may come from any site's page (a Foundry module, say), so CORS is open to it alone.
 api_cors();
 require_method('GET', 'POST');
-// Default deny: every action needs a signed-in, approved account unless it is listed here, checked before anything else
-// runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to this).
-// The fan wiki list and the starter templates' sources, public like the About page that shows them; the Owlbear
-// Rodeo extension's manifest (api/panel.php).
-const PUBLIC_ACTIONS = ['fanwiki_wikis', 'starter_sources', 'owlbear_manifest'];
-// The At the Table panel signs in with a panel link's code instead of the session, for a short list of actions
-// (api/panel.php); a header no other site can send needs no CSRF token.
-if (panel_request()) panel_gate($action);
-if (!in_array($action, PUBLIC_ACTIONS, true)) me();
+// Default deny: an action runs only if api/actions.php lists it, and only for whom it says, checked before anything else
+// runs, so a new action is never open by accident (tests/browser/access.spec.js holds every action to its entry).
+$spec = ACTIONS[$action] ?? null;
+if ($spec === null) fail('Unknown action', 404, 'unknown_action');
+// The At the Table panel signs in with a panel link's code instead of the session, and a program with an API key, for
+// the actions marked 'panel' or 'key' (api/panel.php); a header no other site can send needs no CSRF token.
+if (panel_request()) panel_gate($action, $spec);
+if ($spec['who'] !== 'public') me();
+if ($method !== (empty($spec['get']) ? 'POST' : 'GET')) fail($method === 'GET' ? 'Use POST for this action' : 'Use GET for this action', 405);
 if ($method === 'POST' && !panel_request()) require_csrf();
 // Per account, so one script or stuck page can't flood the database: far above what anyone clicking does.
 if ($method === 'POST') rate_limit('write', 'u' . me()['id'], (int)(cfg('limits', [])['writes_per_minute'] ?? 600), 60);
@@ -1343,33 +1338,9 @@ if ($method === 'POST' && ($kb = limit_of('write_mb_per_day', 50) * 1024) && !st
     rate_limit('write_kb', 'u' . me()['id'], $kb, 86400, (int)ceil(((int)($_SERVER['CONTENT_LENGTH'] ?? 0)) / 1024),
         'You have saved a lot today. The rest can wait until tomorrow');
 
-$readActions = ['campaigns', 'campaign', 'templates', 'template', 'starter_sources', 'characters', 'character', 'changed', 'panel_whoami', 'panel_links', 'owlbear_manifest', 'days', 'day', 'events', 'downtimes', 'holdings', 'reminders', 'users', 'member_candidates',
-    'encyclopedia', 'encyclopedia_sources', 'library', 'tome', 'files', 'file', 'sessions', 'session', 'image_search', 'maps', 'map', 'groups', 'tokens',
-    ...(defined('FANWIKI_READ_ACTIONS') ? FANWIKI_READ_ACTIONS : [])];
-if ($method === 'GET' && !in_array($action, $readActions, true)) fail('Use POST for this action', 405);
-if ($method === 'POST' && in_array($action, $readActions, true)) fail('Use GET for this action', 405);
 // A read changes nothing in the session, so let go of its file lock now (PHP writes last_seen as it does): otherwise
 // every open tab's poll, an upload and a campaign copy all queue behind one another for the whole request.
 if ($method === 'GET' && session_status() === PHP_SESSION_ACTIVE) session_write_close();
-
-// A GM's change to a campaign bumps campaigns.updated_at, which open pages poll ('changed') to tell
-// players the calendar has changed. days_save is left out: it is the GM's browser storing generated
-// weather on its own, which players' pages already work out the same way.
-$touchActions = ['campaign_update', 'set_time', 'member_add', 'member_remove', 'member_character', 'region_save', 'region_delete',
-    'holiday_save', 'holiday_delete', 'day_update', 'shift_save', 'shifts_fill', 'shift_note_add', 'shift_note_delete',
-    'event_save', 'event_delete', 'note_add', 'note_delete', 'downtime_save', 'downtime_delete',
-    'gear_save', 'gear_tick', 'gear_delete', 'holding_save', 'holding_tick', 'holding_delete', 'storage_save', 'storage_delete', 'funds_save', 'funds_delete',
-    'entry_save', 'entries_add', 'entry_delete', 'tome_save', 'tome_delete', 'file_upload', 'image_import', 'file_update', 'file_delete', 'secret_reveal',
-    'session_save', 'session_end', 'session_delete', 'scabard_import', 'scabard_picture', 'entry_note_add', 'character_create', 'character_save', 'character_delete'];
-if ($method === 'POST' && in_array($action, $touchActions, true)) {
-    register_shutdown_function(function () {
-        if (http_response_code() >= 400) return;
-        try {
-            $cid = (int)($_GET['cid'] ?? p('cid'));
-            if ($cid > 0 && role($cid) === 'gm') db()->prepare('UPDATE campaigns SET updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$cid]);
-        } catch (Throwable $e) { /* the change itself is saved; only the notice is lost */ }
-    });
-}
 
 try {
     // tests/browser/hardening.spec.js: an exception that isn't a database one still answers JSON. Test configs only.
@@ -1377,6 +1348,11 @@ try {
     // The code below assumes every migration has run (deploy.sh runs them), so an install that is behind says so plainly
     // instead of failing on a missing table or column halfway through an action.
     if (!schema_current(db(), dirname(__DIR__))) json_error(503, 'needs_upgrade', "This Chronicle's database needs an upgrade: run deploy.sh on the server, or open install.php and press Install or upgrade.");
+    if ($spec['who'] === 'admin') need_admin();
+    elseif ($spec['who'] === 'gm') need_gm(cid());
+    elseif ($spec['who'] === 'member') role(cid());
+    // A GM's change bumps campaigns.updated_at as it answers (out()), which open pages poll ('changed') to reload.
+    if (!empty($spec['touch'])) $GLOBALS['touch_cid'] = cid();
     switch ($action) {
 
     // ===== account =====
