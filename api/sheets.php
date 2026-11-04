@@ -519,7 +519,7 @@ function characters_action(string $action, int $cid): void {
             if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
             if ($handed !== null) $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
             if ($renamed) {
-                $pdo->prepare('UPDATE encyclopedia_entries SET name=? WHERE id=?')->execute([$name, $c['entry_id']]);
+                $pdo->prepare('UPDATE encyclopedia_entries SET name=?' . entry_bump() . ' WHERE id=?')->execute([$name, $c['entry_id']]);
                 character_names_sync((int)$c['entry_id']);
             }
             $pdo->commit();

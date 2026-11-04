@@ -25,6 +25,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **chronicle-access**: Chronicle approves its own users apart from Sinless: an account approved for Sinless asks
   for Chronicle on its first sign-in here and waits; approving, revoking or removing someone in Chronicle leaves
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
+- **quotas**: an Encyclopedia entry or a day's notes saved from an older copy is refused (`stale`) instead of
+  overwriting someone else's save, and a line added from At the Table counts as a save; the weather saves unchecked; an
+  account has room for 50 campaigns of its own, a campaign for 40,000 days, and an account for 50 MB of saves a day.
 - **access**: every API action (read from api/index.php and api/fanwikis.php, so a new one fails until it is
   given a group) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
   GMs' actions; only site admins manage accounts.
@@ -51,7 +54,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   for a first campaign and with others already there; a custom calendar is created with its own number of months, each
   with its own length, and a week of its own length and day names; a custom calendar takes leap days in a month and a leap rule
   (every N, except every N), which the year and month lengths and weekdays follow, and
-  Settings spells out the next leap years; members are added by sign-in email, only once approved; players never
+  Settings spells out the next leap years; members are added by sign-in email: an approved account joins at once, any other address is an invitation
+  taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; players never
   receive secret events; a GM picks people they already play with from the approved accounts not yet in
   the campaign, which only GMs can list.
 - **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,

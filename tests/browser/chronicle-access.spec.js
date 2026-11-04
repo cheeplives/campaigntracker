@@ -23,8 +23,9 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   await signIn(gp, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(gp, `Shared ${gm.id}`);
-  // Before they ask, Chronicle doesn't know them: a GM can't add them, the admin doesn't list them.
-  expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).status).toBe(404);
+  // Before they ask, Chronicle doesn't know them: a GM's add is only an invitation (the same answer as for anyone, so
+  // it tells the GM nothing), and the admin doesn't list them.
+  expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
   const ap = await (await newContext(browser)).newPage();
   await signIn(ap, ADMIN);
   expect((await api(ap, "users")).json.users.map(u => u.email)).not.toContain(who.email);
@@ -37,8 +38,8 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   expect((await api(ap, "users")).json.users.find(u => u.email === who.email).status).toBe("pending");
 
   await approve(browser, who.email);
-  expect((await api(page, "campaigns")).status).toBe(200);
-  expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).status).toBe(200);
+  // once approved, the invitation is taken up as their campaign list opens
+  expect((await api(page, "campaigns")).json.campaigns.map(c => c.id)).toContain(cid);
 });
 
 test("approving or revoking in Chronicle leaves the account's Sinless access alone", async ({ page, browser }) => {

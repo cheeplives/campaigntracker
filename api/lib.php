@@ -361,17 +361,19 @@ function client_ip(): string {
 
 /** Fixed-window limiter: allow up to $max hits per $windowSec for (bucket,id);
  * on exceed, respond 429 and exit. Fails OPEN on any DB error — a limiter glitch
- * must never lock the whole app out. Toggle off with 'rate_limit_enabled' => false. */
-function rate_limit(string $bucket, string $id, int $max, int $windowSec): void {
+ * must never lock the whole app out. Toggle off with 'rate_limit_enabled' => false.
+ * $weight counts one call as that many hits (a budget in KB, say); $message replaces the generic one. */
+function rate_limit(string $bucket, string $id, int $max, int $windowSec, int $weight = 1, string $message = ''): void {
   if (!cfg('rate_limit_enabled', true)) return;
   $now = time();
   $win = (int) (floor($now / $windowSec) * $windowSec);
   try {
     $pdo = db();
     $pdo->prepare(
-      'INSERT INTO rate_limits (bucket, id, window_start, hits) VALUES (:b, :i, :w1, 1)
-       ON DUPLICATE KEY UPDATE hits = IF(window_start = :w2, hits + 1, 1), window_start = :w3'
-    )->execute([':b' => $bucket, ':i' => $id, ':w1' => $win, ':w2' => $win, ':w3' => $win]);
+      'INSERT INTO rate_limits (bucket, id, window_start, hits) VALUES (:b, :i, :w1, :n1)
+       ON DUPLICATE KEY UPDATE hits = IF(window_start = :w2, hits + :n2, :n3), window_start = :w3'
+    )->execute([':b' => $bucket, ':i' => $id, ':w1' => $win, ':w2' => $win, ':w3' => $win,
+      ':n1' => max(1, $weight), ':n2' => max(1, $weight), ':n3' => max(1, $weight)]);
     $sel = $pdo->prepare('SELECT hits FROM rate_limits WHERE bucket = ? AND id = ? LIMIT 1');
     $sel->execute([$bucket, $id]);
     $hits = (int) $sel->fetchColumn();
@@ -384,7 +386,7 @@ function rate_limit(string $bucket, string $id, int $max, int $windowSec): void 
   }
   if ($hits > $max) {
     header('Retry-After: ' . $windowSec);
-    json_error(429, 'rate_limited', 'Too many attempts. Wait a few minutes and try again.');
+    json_error(429, 'rate_limited', $message !== '' ? $message : 'Too many attempts. Wait a few minutes and try again.');
   }
 }
 
