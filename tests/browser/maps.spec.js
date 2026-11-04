@@ -1118,11 +1118,13 @@ test("Map page: pin labels show by zoom, hover, selection and the Labels toggle;
   await expect(label).toHaveCSS("opacity", "1");
   await page.locator(".leaflet-popup-close-button").click();
   await expect(page.locator(".map-pin.selected")).toHaveCount(0);
-  const zoomIn = page.locator(".leaflet-control-zoom-in"), zoomOut = page.locator(".leaflet-control-zoom-out");
-  await zoomIn.click(); await zoomIn.click();
+  // one step at a time: Leaflet drops a zoom asked for while the last one is still animating
+  const zoom = async button => { await page.locator(button).click(); await page.waitForTimeout(350); await expect(page.locator(".map-view .leaflet-zoom-anim")).toHaveCount(0); };
+  const zoomIn = () => zoom(".leaflet-control-zoom-in"), zoomOut = () => zoom(".leaflet-control-zoom-out");
+  await zoomIn(); await zoomIn();
   await expect(page.locator(".map-stage")).toHaveClass(/zoomed-in/);
   await expect(label).toHaveCSS("opacity", "1");
-  await zoomOut.click(); await zoomOut.click();
+  await zoomOut(); await zoomOut();
   await expect(page.locator(".map-stage")).not.toHaveClass(/zoomed-in/);
   await page.getByRole("button", { name: "Labels" }).click();
   await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "true");

@@ -1059,8 +1059,9 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-card img, .map-card-blank { width: 100%; height: 120px; object-fit: cover; border-radius: calc(var(--radius) / 2); background: var(--panel); display: flex; align-items: center; justify-content: center; }
 .map-head { align-items: baseline; gap: 12px; }
 .map-head h2 { margin: 0; }
-/* what floats on the map: one look for every surface, over Leaflet's controls (1000), under the app's dialogs */
-.map-toolbar, .map-measure-bar, .map-gear > summary, .map-corner .lock-toggle, .map-legend, .map-routes, .map-panel {
+/* .surface-float: a panel floating over content (the map's toolbar, drawer, legend…), one look for all of them. On the
+   map they sit over Leaflet's controls (1000) and under the app's dialogs */
+.surface-float, .map-gear > summary, .map-corner .lock-toggle, .map-panel {
   background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
 .map-toolbar { position: absolute; top: 10px; left: 56px; z-index: 1001; display: flex; align-items: center; gap: 2px; padding: 4px; max-width: calc(100% - 180px); flex-wrap: wrap; }
 .map-tool-group { display: flex; align-items: center; gap: 2px; }
@@ -1071,6 +1072,11 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-note { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); z-index: 1001; max-width: min(36rem, calc(100% - 24px)); margin: 0; padding: 6px 12px;
   background: var(--accent); color: var(--on-accent); font-weight: 600; text-align: center; border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); pointer-events: none; }
 .map-note:empty { display: none; }
+.map-legend { position: absolute; left: 12px; bottom: 12px; z-index: 1001; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 5px 10px; font-size: .78rem; color: var(--text); pointer-events: none; }
+.map-legend-gm { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border: 2px dashed var(--text); border-radius: 50%; vertical-align: -1px; }
+.map-stage .leaflet-bottom.leaflet-left { margin-bottom: 40px; }   /* the scale bar, over the legend */
+.map-stage.measuring .map-legend { display: none; }
+.map-stage.measuring .leaflet-bottom.leaflet-left { margin-bottom: 0; }
 .map-measure-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1001; display: flex; align-items: center; gap: 6px; padding: 4px 8px; max-width: calc(100% - 24px); flex-wrap: wrap; }
 .map-measure-bar[hidden], .map-measure-bar [hidden] { display: none; }
 .map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: calc((100% - 300px) / 2); max-width: calc(100% - 324px); }
@@ -1108,8 +1114,12 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-marker-box { background: none; border: 0; }
 .map-marker { position: relative; width: var(--marker-size); height: var(--marker-size); display: flex; align-items: center; justify-content: center; font-size: calc(var(--marker-size) * .8); line-height: 1; }
 .map-marker-icon { width: 100%; height: 100%; object-fit: cover; }
-.map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .75rem/1.3 var(--body);
-  color: var(--text); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 4px; }
+.map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .72rem/1.3 var(--body);
+  color: var(--text); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 4px;
+  opacity: 0; pointer-events: none; transition: opacity .12s; }
+/* a pin's name, always in the page, is shown close up, with Labels on, on hover or focus, while its card is open, and always for the party */
+.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in .map-marker-label, .map-marker:hover .map-marker-label,
+.map-marker-box:focus-visible .map-marker-label, .map-marker.selected .map-marker-label, .map-party .map-marker-label { opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
 .map-body { position: relative; }
