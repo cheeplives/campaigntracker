@@ -573,8 +573,12 @@ test("a published session is the player's to read and export; notes move between
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
   await page.reload(); // the page was already open there: load the new session into its Move to list
   if (page.viewportSize().width <= 720) await page.getByRole("button", { name: "Notes", exact: true }).click(); // a phone opens on the summary
-  await page.locator(".sess-notes .snote").first().hover();
-  await page.locator(".sess-notes .snote").first().getByLabel("Move to another session").selectOption(String(other));
+  // the Move list shows on hover; the page can be drawn again under a still mouse (Firefox then drops the hover), so
+  // hover again until the pick goes through
+  await expect(async () => {
+    await page.locator(".sess-notes .snote").first().hover();
+    await page.locator(".sess-notes .snote").first().getByLabel("Move to another session").selectOption(String(other), { timeout: 2000 });
+  }).toPass();
   await expect(page.locator(".sess-notes .snote")).toHaveCount(4);
   expect((await one(page, cid, other)).json.notes.map(n => n.text)).toEqual(["Took a quick job to Europa", "Sensor set off on approach to Jupiter"]);
   await page.goto(`index.html#/c/${cid}/sessions/${other}`);
