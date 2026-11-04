@@ -947,3 +947,35 @@ test("Maps: before the upgrade the Maps and Tokens tabs say what to do", async (
   await expect(page.getByText("Maps need the database upgrade")).toBeVisible();
   expectNoErrors(errors);
 });
+
+test("Maps: a route or location can be hidden from the picture on this device, and shown again", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps hide");
+  const m = await api(page, "map_save", { name: "Sartar" }, cid);
+  const id = m.json.map.id;
+  const up = await upload(page, cid, "map", id);
+  expect((await api(page, "map_save", { id, image_id: up.json.file.id }, cid)).status).toBe(200);
+  expect((await api(page, "pin_save", { map_id: id, x: 50, y: 50, kind: "note", label: "Camp" }, cid)).status).toBe(200);
+  expect((await api(page, "route_save", { map_id: id, name: "King's Road", points: [[10, 10], [200, 150]] }, cid)).status).toBe(200);
+
+  await page.goto(`index.html#/c/${cid}/maps/${id}`);
+  await expect(page.locator(".map-pin")).toHaveCount(1);
+  await expect(page.locator("path.map-route-line")).toHaveCount(1);
+
+  await page.getByRole("checkbox", { name: "Show King's Road on the map" }).uncheck();
+  await expect(page.locator("path.map-route-line")).toHaveCount(0);
+  await expect(page.locator(".map-pin")).toHaveCount(1);
+  await page.getByRole("checkbox", { name: "Show Camp on the map" }).uncheck();
+  await expect(page.locator(".map-pin")).toHaveCount(0);
+
+  // kept on this device for this map, and the lists still show both
+  await page.reload();
+  await expect(page.locator(".map-pin")).toHaveCount(0);
+  await expect(page.locator("path.map-route-line")).toHaveCount(0);
+  await expect(page.locator(".map-place", { hasText: "Camp" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Show King's Road on the map" })).not.toBeChecked();
+
+  await page.getByRole("checkbox", { name: "Show Camp on the map" }).check();
+  await expect(page.locator(".map-pin")).toHaveCount(1);
+  expectNoErrors(errors);
+});
