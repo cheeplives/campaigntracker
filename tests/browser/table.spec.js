@@ -154,6 +154,8 @@ test.describe("panel links", () => {
     const pid = Number(sql(`SELECT user_id FROM connection_keys WHERE token_hash=SHA2('${p}', 256)`).trim());
     expect((await api(page, "member_remove", { user_id: pid }, cid)).status).toBe(200);
     expect((await panelCall(bare, p, "campaign")).json.error).toBe("bad_panel_link");
+    expect((await panelCall(bare, p, "shift_note_add", { body: { abs_day: 2, shift: 0, body: "After leaving" } })).json.error).toBe("bad_panel_link");
+    expect(sql(`SELECT COUNT(*) FROM shift_notes WHERE body='After leaving'`).trim()).toBe("0");
     await bare.dispose();
   });
 
@@ -241,6 +243,33 @@ test("the panel opens in another site's frame with only a link, follows the GM, 
   await expect(panel.getByText("Paste your panel link")).toBeVisible();
   await expect(panel.locator(".panel-ask .error")).toContainText("revoked");
   expectNoErrors(errors);
+});
+
+test("in another site's frame, the panel changes nothing until it is allowed to there", async ({ page, browser }) => {
+  const { cid } = await table(page, browser, "Clickjack");
+  const link = await makeLink(page, cid, { label: "Owlbear" });
+  const ctx = await newContext(browser);
+  const vtt = await ctx.newPage();
+  await vtt.goto(`http://localhost:${PORT}/offline.html`);
+  await vtt.evaluate(src => { document.body.innerHTML = ""; const f = document.createElement("iframe"); f.src = src; f.style.cssText = "width:420px;height:900px"; document.body.append(f); },
+    `${BASE}panel.html#k=${link.code}`);
+  const panel = vtt.frameLocator("iframe");
+  const shift = () => Number(sql(`SELECT current_shift FROM campaigns WHERE id = ${cid}`).trim());
+  const before = shift();
+  await panel.getByRole("button", { name: /Pass a shift/ }).click();
+  await expect(panel.getByText(/Changes are off while localhost/)).toBeVisible();
+  expect(shift()).toBe(before);
+  // allowed, for this site only, after saying which site it is
+  await panel.getByRole("button", { name: "Allow changes here" }).click();
+  await expect(panel.getByRole("dialog")).toContainText("localhost");
+  await panel.getByRole("button", { name: "Allow changes", exact: true }).click();
+  await expect(panel.getByRole("button", { name: /Changes allowed on localhost/ })).toBeVisible();
+  await panel.getByRole("button", { name: /Pass a shift/ }).click();
+  await expect.poll(shift).toBe(before + 1);
+  // and remembered when the frame is opened again
+  await vtt.reload();
+  await vtt.evaluate(src => { document.body.innerHTML = ""; const f = document.createElement("iframe"); f.src = src; document.body.append(f); }, `${BASE}panel.html`);
+  await expect(vtt.frameLocator("iframe").getByRole("button", { name: /Changes allowed on localhost/ })).toBeVisible();
 });
 
 test("a public link with overlay is see-through and shows only the date, weather, light and moons", async ({ page, browser }) => {

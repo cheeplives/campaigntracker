@@ -39,7 +39,10 @@ const RichText = (() => {
       if (tag === 'a') {
         const href = safeHref(n.getAttribute('href'));
         if (!href) { copy(n, to, depth); continue; }
-        node = el('a', { href, target: '_blank', rel: 'noopener noreferrer nofollow' });
+        // anyone in the campaign can write a link, so it is marked as leaving the app and names where it goes
+        let host = '';
+        try { host = new URL(href, location.href).host; } catch (e) { /* safeHref only passes URLs */ }
+        node = el('a', { href, target: '_blank', rel: 'noopener noreferrer nofollow', class: 'rt-external', title: host ? `Opens ${host} in a new tab` : 'Opens in a new tab' });
       } else if (tag === 'aside') node = el('aside', { class: 'rt-secret', 'data-tip': 'Only GMs ever see this paragraph. The server never sends it to players' });
       else node = document.createElement(tag);
       to.append(node);

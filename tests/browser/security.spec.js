@@ -74,3 +74,20 @@ test("the server's Content-Security-Policy header and index.html's meta tag allo
   const directives = csp => csp.split(";").map(d => d.trim()).filter(d => d && !d.startsWith("frame-ancestors")).sort();
   expect(directives(meta)).toEqual(directives(header));
 });
+
+test("the page's CSP keeps inline style attributes but refuses an injected <style> element", async ({ page }) => {
+  await page.goto("index.html#/about");
+  const r = await page.evaluate(() => {
+    const s = document.createElement("style");
+    s.textContent = "#csp-probe { color: rgb(1, 2, 3); }";
+    document.head.append(s);
+    const p = document.createElement("span");
+    p.id = "csp-probe";
+    p.setAttribute("style", "background-color: rgb(4, 5, 6)");
+    document.body.append(p);
+    const cs = getComputedStyle(p);
+    return { color: cs.color, bg: cs.backgroundColor };
+  });
+  expect(r.color).not.toBe("rgb(1, 2, 3)");      // style-src-elem 'self'
+  expect(r.bg).toBe("rgb(4, 5, 6)");             // style-src-attr 'unsafe-inline', which el() needs
+});

@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path'), http = require('http');
 
 const ROOT = path.join(__dirname, '..', '..');
-const TYPES = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.pdf': 'application/pdf', '.png': 'image/png', '.woff2': 'font/woff2', '.svg': 'image/svg+xml' };
+const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.pdf': 'application/pdf', '.png': 'image/png', '.woff2': 'font/woff2', '.svg': 'image/svg+xml' };
 
 function playwright() {
   try {

@@ -1393,7 +1393,7 @@
       licence: 'Apache 2.0', url: 'https://github.com/naptha/tesseract.js' },
     tessdata: { title: 'Tesseract English model (tessdata_best, 4.0.0_best_int, via @tesseract.js-data/eng)', by: 'Google and the Tesseract OCR contributors',
       licence: 'Apache 2.0', url: 'https://github.com/tesseract-ocr/tessdata_best' },
-    pdfjs: { title: 'PDF.js 3.11.174 PDF reader, for drafting a sheet template from a PDF (static/vendor/pdfjs)', by: 'Mozilla and the PDF.js contributors',
+    pdfjs: { title: 'PDF.js 6.4.299 PDF reader, for drafting a sheet template from a PDF (static/vendor/pdfjs)', by: 'Mozilla and the PDF.js contributors',
       licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' },
     inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
     barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',

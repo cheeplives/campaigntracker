@@ -100,6 +100,10 @@ test("Templates: anyone makes, lists and forks one; only the author edits it", a
   expect(bList.find(t => t.id === id)).toBeUndefined();
   expect(bList.find(t => t.id === fork.json.template.id).forked_from).toEqual({ id, name });
   expect((await api(pa, "templates", undefined)).json.templates.find(t => t.id === id)).toBeTruthy(); // its author still sees it
+  // and it is private, not only unlisted: B can't open or fork it by its id; its author still can
+  expect((await get(pb, "template", { id })).status).toBe(404);
+  expect((await api(pb, "template_fork", { id })).status).toBe(404);
+  expect((await get(pa, "template", { id })).status).toBe(200);
   // Search by game.
   const q = (await get(pb, "templates", { q: "Test RPG" })).json.templates;
   expect(q.length).toBeGreaterThan(0);

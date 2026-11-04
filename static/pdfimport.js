@@ -9,19 +9,12 @@
   const BASE = 'static/vendor/pdfjs/';
 
   let loading = null;
-  /** pdf.js, loaded once. */
+  /** pdf.js, loaded once. Since pdf.js 4 it is an ES module, imported on first use (script-src 'self' allows it). */
   function lib() {
-    if (root.pdfjsLib) return Promise.resolve(root.pdfjsLib);
-    if (!loading) loading = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = BASE + 'pdf.min.js';
-      s.onload = () => {
-        root.pdfjsLib.GlobalWorkerOptions.workerSrc = BASE + 'pdf.worker.min.js';
-        resolve(root.pdfjsLib);
-      };
-      s.onerror = () => { loading = null; reject(new Error("The PDF reader didn't load. Check your connection and try again.")); };
-      document.head.append(s);
-    });
+    if (!loading) loading = import(new URL(BASE + 'pdf.min.mjs', document.baseURI).href).then(m => {
+      m.GlobalWorkerOptions.workerSrc = new URL(BASE + 'pdf.worker.min.mjs', document.baseURI).href;
+      return m;
+    }, () => { loading = null; throw new Error("The PDF reader didn't load. Check your connection and try again."); });
     return loading;
   }
 
@@ -96,7 +89,9 @@
 
   /** Let go of $doc: pdf.js frees its copy of the file and its worker. */
   function close(doc) {
-    if (doc) doc.destroy().catch(() => {});
+    // since pdf.js 6 the document is let go of through the task that loaded it
+    const task = doc && (doc.loadingTask || doc);
+    if (task && typeof task.destroy === 'function') Promise.resolve(task.destroy()).catch(() => {});
   }
 
   root.PdfImport = { NOTICE, read, renderPage, close };
