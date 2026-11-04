@@ -1174,6 +1174,8 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-grid-opacity input { width: 7rem; accent-color: var(--accent); }
 .map-gear { position: relative; }
 .map-gear > summary { list-style: none; font-size: 1.1rem; height: 36px; padding: 0 10px; display: inline-flex; align-items: center; }
+.map-gear .map-gear-menu { min-width: 13rem; }
+.map-gear-menu > button { white-space: nowrap; }
 .map-gear-menu hr { border: 0; border-top: 1px solid var(--line); margin: 2px 4px; width: auto; }
 .map-gear-menu [hidden] { display: none; }
 .map-gear > summary::-webkit-details-marker { display: none; }
