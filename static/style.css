@@ -1425,6 +1425,40 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .lock-toggle:has(input:disabled) { cursor: default; opacity: .7; }
 
 /* the map text scanner's review */
+/* the map page on a touch screen: every control at least 44px */
+@media (pointer: coarse) {
+  .map-toolbar .small, .map-measure-bar .small { min-height: 44px; min-width: 44px; }
+  .map-corner .lock-toggle, .map-gear > summary { width: 44px; height: 44px; justify-content: center; padding: 0; }
+  .map-side-fold { min-width: 44px; min-height: 44px; }
+  .map-routes { top: 64px; }
+  .map-panel-box { top: 66px; }
+  .map-note { top: 66px; }
+}
+/* the map page on a phone: the toolbar's emoji alone, in one row along the bottom (a card opens over the top), the
+   drawer a sheet over the bottom of the map that starts closed, no legend */
+@media (max-width: 720px) {
+  .map-tool-word { display: none; }
+  .map-toolbar { top: auto; bottom: 10px; left: 12px; max-width: calc(100% - 84px); gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  .map-toolbar .small { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 1.1rem; }
+  .map-tool-group + .map-tool-group { margin-left: 2px; padding-left: 4px; }
+  .map-panel-box, .map-note { top: 80px; }
+  .map-panel-box { width: calc(100% - 24px); max-height: calc(50% - 80px); }   /* the scale panel's points are picked on the picture under it */
+  .map-measure-bar { flex-wrap: nowrap; overflow-x: auto; gap: 4px; padding: 4px; bottom: 70px; }
+  .map-measure-bar > * { flex: none; }
+  .map-routes { top: auto; left: 0; width: auto; height: 45%; border-right: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .map-routes.closed { transform: translateY(100%); }
+  .map-routes.closed .map-side-fold { bottom: calc(100% + 10px); }   /* beside the toolbar while the sheet is away */
+  .map-side-fold { top: auto; right: 12px; bottom: 100%; width: 52px; height: 44px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .map-routes.open .map-side-fold { border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; height: 32px; min-height: 32px; }
+  .map-legend { display: none; }
+  .map-stage .leaflet-bottom.leaflet-left { margin-bottom: 64px; }
+  .map-stage.measuring .leaflet-bottom.leaflet-left { margin-bottom: 120px; }
+  .map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: 50%; max-width: calc(100% - 24px); }
+  .map-stage.drawer-open .map-measure-bar { bottom: calc(45% + 12px); }
+  .map-stage.drawer-open .map-toolbar { bottom: calc(45% + 10px); }
+  .map-stage.drawer-open .leaflet-bottom { bottom: 45%; }
+}
+}
 .map-scan-dialog { width: min(640px, calc(100vw - 32px)); overflow-wrap: anywhere; }
 .map-scan-dialog progress { width: 100%; accent-color: var(--accent); }
 .map-scan-list { display: flex; flex-direction: column; gap: 6px; max-height: min(55vh, 520px); overflow-y: auto; margin: 8px 0; }

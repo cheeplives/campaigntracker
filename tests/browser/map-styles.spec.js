@@ -2,7 +2,7 @@
 // colour and line, starting and ending at pins; the side panel's Routes and Locations, folding away; the party put
 // anywhere on the map, and a new location where it stands; the grid's opacity; the ⚙ menu.
 const { test, expect } = require("@playwright/test");
-const { gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, mapWithPicture, settledBox, newContext, closeContexts } = require("./helpers");
+const { openDrawer, gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, mapWithPicture, settledBox, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function setup(page, browser, label) {
@@ -52,11 +52,14 @@ test("Map pins: a GM's new pin starts as an Encyclopedia entry, with an icon and
 
   // the side panel lists it under Locations; a player sees it there too
   const side = page.getByRole("complementary", { name: "Routes" });
+  await openDrawer(page);
   await expect(side.locator(".map-place")).toHaveText(["🏰Boldhome"]);
   await side.locator(".map-place", { hasText: "Boldhome" }).click();
   await expect(page.locator(".leaflet-popup")).toContainText("Boldhome");
   await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await openDrawer(pp);
   await expect(pp.locator(".map-place", { hasText: "Boldhome" })).toBeVisible();
+  await pp.getByRole("button", { name: "Hide routes and locations" }).click();   // out of the way of the picture (on a phone, a sheet over it)
   // a player's own pin is still a note, with no kinds to pick
   await pp.getByRole("button", { name: "Add pin", exact: true }).click();
   await clickPic(pp, 0.7, 0.7);
@@ -116,6 +119,7 @@ test("Map routes: a colour and a line of their own, and start and end pins; the 
   // both ends were far from the pins, so the route is drawn on to each
   expect([route.color, route.dash, route.points.length, route.points[0], route.points[3]]).toEqual(["#3a7bd5", "dotted", 4, [20, 180], [280, 20]]);
 
+  await openDrawer(page);
   await row.getByRole("button", { name: "Edit" }).click();
   const e = page.getByRole("dialog", { name: "Edit the route" });
   await expect(e.getByLabel("Starts at")).toHaveValue(/\d+/);   // now found at its end
@@ -128,6 +132,7 @@ test("Map routes: a colour and a line of their own, and start and end pins; the 
 
   // the drawer slides away to the right, and stays away after a reload; its sections fold too
   const side = page.getByRole("complementary", { name: "Routes" });
+  await openDrawer(page);
   await side.locator("summary", { hasText: "Locations" }).click();
   await expect(side.locator(".map-place").first()).toBeHidden();
   await side.getByRole("button", { name: "Hide routes and locations" }).click();

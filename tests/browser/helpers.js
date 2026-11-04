@@ -144,4 +144,10 @@ async function gearAction(page, name) {
   await page.getByLabel("Map settings").click();
   await page.locator(".map-gear-menu").getByRole("button", { name }).click();
 }
-module.exports = { gearAction, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+/** Open a map's Routes and Locations drawer, if it is closed (it starts closed on a phone). */
+async function openDrawer(page) {
+  await expect(page.locator(".map-routes")).toHaveClass(/open|closed/);   // drawn once the map has loaded
+  if (/closed/.test(await page.locator(".map-routes").getAttribute("class"))) await page.getByRole("button", { name: "Show routes and locations" }).click();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
+}
+module.exports = { openDrawer, gearAction, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

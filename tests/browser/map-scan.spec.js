@@ -302,7 +302,7 @@ test("Quick label: each click on the map asks for a name and pins it as an entry
   await name.press("Enter");
   await expect(page.locator(".map-pin", { hasText: "Ravenhold" })).toBeVisible();
   await expect(quick).toHaveAttribute("aria-pressed", "true");   // still labelling
-  await click(0.7, 0.5);
+  await click(0.45, 0.5);   // left of the Routes and Locations drawer, which the first pin brought out
   await name.fill("mirewood");
   await expect(page.locator(".map-label-form")).toContainText("Pins the entry Mirewood");
   await page.getByRole("button", { name: "Pin it" }).click();

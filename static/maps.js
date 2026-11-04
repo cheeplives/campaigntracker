@@ -30,6 +30,9 @@ const MapsTab = (() => {
   const toXY = ll => ({ x: ll.lng, y: -ll.lat });
 
   let say = () => {};   // the page's toast, for a marker that could not be moved
+  // Leaflet focuses the map on a press, then scrolls the window back to where it was; with the page's smooth scrolling
+  // that scroll-back is animated, moving a marker out from under the finger between press and release (so the tap misses it)
+  if (typeof L !== 'undefined' && L.Map.Keyboard) L.Map.Keyboard.prototype._onMouseDown = function () { if (!this._focused) this._map._container.focus({ preventScroll: true }); };
 
   /** A marker on `layer`: the picture, or the emoji, with its label under it. It keeps its size as the map zooms. onMove
    * runs after a drag and, if it fails, the marker goes back; onOpen's node fills the card a click opens. */
@@ -233,8 +236,14 @@ const MapsTab = (() => {
      * are picked on the picture, so the picture is fitted beside it (when there is room). */
     const fitPicture = () => {
       if (!lf) return;
-      const beside = mode === 'scale' && stage.clientWidth > 720;
-      lf.map.fitBounds(bounds(), beside ? { paddingTopLeft: [panelBox.offsetWidth + 24, 56], paddingBottomRight: [12, 12], animate: false } : { animate: false });
+      // clear of the toolbar along the top and the legend or measure bar along the bottom (and a phone's open sheet)
+      const sheet = stage.classList.contains('drawer-open') && window.matchMedia('(max-width: 720px)').matches;
+      const phone = window.matchMedia('(max-width: 720px)').matches;
+      if (mode !== 'scale') return lf.map.fitBounds(bounds(), { paddingTopLeft: [12, phone ? 64 : toolbar.offsetTop + toolbar.offsetHeight + 8],
+        paddingBottomRight: [!phone && stage.classList.contains('drawer-open') ? 312 : 12, phone ? (sheet ? Math.round(stage.clientHeight * 0.45) : 0) + 128 : 48], animate: false });   // a phone: the toolbar, and the measure bar over it
+      // beside it when there is room, otherwise under it (a phone)
+      const pad = stage.clientWidth > 720 ? [panelBox.offsetWidth + 24, 56] : [12, panelBox.offsetTop + panelBox.offsetHeight + 12];
+      lf.map.fitBounds(bounds(), { paddingTopLeft: pad, paddingBottomRight: [12, phone ? 76 : 12], animate: false });
     };
 
     // ---- measuring
@@ -320,7 +329,11 @@ const MapsTab = (() => {
       });
       if (picks.length === 2) L.polyline(picks.map(p => toLatLng(p.x, p.y)), { weight: 2, dashArray: '4 4', className: 'map-line', interactive: false }).addTo(pickLayer);
     };
-    function closePanel() { panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools(); }
+    function closePanel() {
+      const refit = mode === 'scale';   // the picture was fitted beside (or under) the scale panel: back to the whole stage
+      panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools();
+      if (refit) fitPicture();
+    }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
       mode = 'scale'; picks = []; drawPicks(); note.textContent = '';
@@ -701,7 +714,12 @@ const MapsTab = (() => {
     /** The drawer over the map's right edge: a search box, then Routes and Locations (every pin), each folding up. It
      * slides away to its tab, never changing the map's size. How it was left is remembered on this device. */
     const sideKey = `chronicle-map-side-${cid}`;
-    const sideState = () => { try { return JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { return {}; } };
+    // until it has been opened or closed on this device, the drawer starts open, except on a phone, where it would cover half the map
+    const sideState = () => {
+      let st = {};
+      try { st = JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { /* storage may be off */ }
+      return 'collapsed' in st ? st : { ...st, collapsed: window.matchMedia('(max-width: 720px)').matches };
+    };
     const keepSide = patch => { try { localStorage.setItem(sideKey, JSON.stringify({ ...sideState(), ...patch })); } catch { /* this visit only */ } };
     const fold = btn('', () => { keepSide({ collapsed: !sideState().collapsed }); syncDrawer(); }, 'small map-side-fold');
     const sideList = el('div', { class: 'map-side-list' });
@@ -718,8 +736,10 @@ const MapsTab = (() => {
     /** A card opening keeps out from under the open drawer: from its side, or on a phone (a sheet along the bottom) its top. */
     const syncPad = () => {
       const open = stage.classList.contains('drawer-open'), sheet = window.matchMedia('(max-width: 720px)').matches;
+      // the toolbar runs along the top, or on a phone along the bottom (over the sheet when it is open)
+      cardPad.tl[1] = sheet ? 64 : toolbar.offsetTop + toolbar.offsetHeight + 8;
       cardPad.br[0] = open && !sheet ? 316 : 16;
-      cardPad.br[1] = open && sheet ? Math.round(stage.clientHeight * 0.45) + 16 : 16;
+      cardPad.br[1] = sheet ? (open ? Math.round(stage.clientHeight * 0.45) : 0) + 70 : 16;
     };
     function syncDrawer() {
       const shut = !!sideState().collapsed;
@@ -1159,14 +1179,14 @@ const MapsTab = (() => {
     drawGrid();
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
-    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); window.removeEventListener('resize', fit); lmap.remove(); };
+    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); window.removeEventListener('resize', fit); lmap.remove(); lf = null; };
     // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map.
     // --map-top is how far down the window the stage starts, so the CSS can take it to the window's bottom edge
     const fit = () => {
       if (!host.isConnected) return teardown();
       const top = Math.round(stage.getBoundingClientRect().top + window.scrollY) + 'px';
       if (stage.style.getPropertyValue('--map-top') !== top) stage.style.setProperty('--map-top', top);
-      lmap.invalidateSize({ animate: false });
+      lmap.invalidateSize({ animate: false, pan: false });   // the picture stays put under the pointer as the stage grows or shrinks at the bottom
       syncPad();
     };
     // the page's body too: the bar over the tabs can grow after the map is drawn, moving the stage down. A frame later,
