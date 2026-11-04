@@ -1067,10 +1067,14 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-panel { margin: 0 0 8px; background: var(--stock); }
 .map-panel .row { align-items: flex-end; flex-wrap: wrap; gap: 8px; }
 .map-panel input[type=number] { width: 8em; }
-.map-stage { position: relative; height: clamp(320px, 65vh, 900px); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.map-head .map-meta { margin-left: 2px; }
+/* the stage runs from under the header to the window's bottom edge (maps.js writes --map-top, where it starts on the
+   page), never under 320px: on a very short window the page scrolls instead */
+.map-stage { position: relative; height: max(320px, calc(100vh - var(--map-top, 260px) - 16px)); border-radius: var(--radius); overflow: hidden; background: var(--panel-2); }
+.map-canvas { position: absolute; inset: 0; }
 .map-stage.picking { cursor: crosshair; }
 .map-stage.picking .leaflet-grab { cursor: crosshair; }
-.map-stage .leaflet-container { width: 100%; height: 100%; background: var(--panel-2); font: inherit; }
+.map-canvas.leaflet-container { width: 100%; height: 100%; background: var(--panel-2); font: inherit; }
 .map-empty { padding: 16px; }
 .map-stage .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
 .map-stage .leaflet-bar a:hover { background: var(--panel-2); color: var(--accent); }
@@ -1089,8 +1093,7 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
   color: var(--text); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 4px; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
-.map-body { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
-.map-body .map-stage { flex: 1 1 22rem; min-width: 0; }
+.map-body { position: relative; }
 .map-routes { flex: 0 1 16rem; min-width: 12rem; display: flex; flex-direction: column; gap: 8px; max-height: clamp(320px, 65vh, 900px); overflow-y: auto; }
 .map-routes[hidden] { display: none; }
 .map-routes h3 { margin: 0; display: inline; font-size: 1.05rem; }

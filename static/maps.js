@@ -204,7 +204,10 @@ const MapsTab = (() => {
     const base = `#/c/${cid}/maps/${id}`;
     await loadGroups().catch(() => {});
 
-    const host = el('div', { class: 'map-stage' });
+    // the stage fills the window under the header; the Leaflet canvas and every control floating on the map are its children
+    const stage = el('div', { class: 'map-stage' });
+    const host = el('div', { class: 'map-canvas' });
+    stage.append(host);
     const note = el('p', { class: 'small map-note', role: 'status' });
     const total = el('span', { class: 'map-measure-total', role: 'status' });
     const tools = el('div', { class: 'map-tools' });
@@ -403,6 +406,7 @@ const MapsTab = (() => {
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
       drawPins(); drawRoutes(); renderRoutes(); drawGroups();
+      meta.textContent = metaText();
     }
     // ---- the party's groups: a flag, or the group's token, with its name
     let groupLayer = null;
@@ -683,7 +687,6 @@ const MapsTab = (() => {
       const st = sideState();
       routeBox.hidden = !routes.length && !pins.length;
       routeBox.classList.toggle('collapsed', !!st.collapsed);
-      host.closest('.map-body')?.classList.toggle('side-collapsed', !!st.collapsed);
       const fold = btn(st.collapsed ? '⟨' : '⟩', () => { keepSide({ collapsed: !st.collapsed }); renderRoutes(); lf?.map.invalidateSize({ animate: false }); }, 'small map-side-fold',
         st.collapsed ? 'Show the routes and locations' : 'Fold the routes and locations away');
       fold.setAttribute('aria-label', st.collapsed ? 'Show routes and locations' : 'Hide routes and locations');
@@ -847,7 +850,7 @@ const MapsTab = (() => {
       undoBtn.hidden = clearBtn.hidden = !m;
       total.hidden = !m;
       if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
-      host.classList.toggle('picking', !!mode);
+      stage.classList.toggle('picking', !!mode);
       // two quick taps while laying down points are two points, not a zoom
       lf?.map.doubleClickZoom[mode ? 'disable' : 'enable']();
     }
@@ -1028,10 +1031,13 @@ const MapsTab = (() => {
     tools.append(saveRouteBtn, planBtn);
     toolbar.append(...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich, scanBtn, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
     const title = el('h2', {}, map.name);
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const metaText = () => `${plural(pins.length, 'location')} · ${plural(routes.length, 'route')}${hasScale() ? ' · scale set' : ''}`;
+    const meta = el('span', { class: 'map-meta small muted' }, metaText());
 
-    ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
-      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title), toolbar, note, panelBox,
-      el('div', { class: 'map-body' }, host, routeBox)));
+    ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
+      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta), toolbar, note, panelBox,
+      el('div', { class: 'map-body' }, stage, routeBox)));
 
     if (!map.image_url || !map.width) {
       host.replaceChildren(el('p', { class: 'muted map-empty' }, gm ? 'This map has no picture yet. Use ⚙ → Change picture.' : 'This map has no picture yet.'));
@@ -1057,12 +1063,18 @@ const MapsTab = (() => {
     drawGrid();
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
-    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };
-    // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map
-    const fit = () => { if (!host.isConnected) teardown(); else lmap.invalidateSize({ animate: false }); };
+    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); window.removeEventListener('resize', fit); lmap.remove(); };
+    // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map.
+    // --map-top is how far down the window the stage starts, so the CSS can take it to the window's bottom edge
+    const fit = () => {
+      if (!host.isConnected) return teardown();
+      stage.style.setProperty('--map-top', Math.round(stage.getBoundingClientRect().top + window.scrollY) + 'px');
+      lmap.invalidateSize({ animate: false });
+    };
     const ro = new ResizeObserver(fit);
     window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
-    ro.observe(host);
+    window.addEventListener('resize', fit);
+    ro.observe(stage);
     drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
