@@ -2,7 +2,7 @@
 // panel link's code in the X-Chronicle-Panel header, for a virtual tabletop's frame, OBS or a shared screen.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, goTab } = require("./helpers");
 test.afterEach(closeContexts);
 const PORT = process.env.PORT || "8755", BASE = `http://127.0.0.1:${PORT}/`;
 
@@ -42,7 +42,7 @@ test("At the Table sits in the Party group and shows the date, weather, light, m
   await page.goto(`index.html#/c/${cid}`);
   const tab = page.locator(".tabs a", { hasText: "At the Table" });
   await expect(tab).toHaveAttribute("data-group", "Party");
-  await tab.click();
+  await goTab(page, "At the Table");
   await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
   const view = page.locator(".table-view");
   await expect(view.locator(".tv-date")).toContainText("Firstmonth");

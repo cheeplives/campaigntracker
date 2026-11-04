@@ -35,7 +35,7 @@ test("a new account waits for approval, then gets in", async ({ page, browser })
   await approve(browser, who.email);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Your campaigns" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Pat" })).toBeVisible();
+  await expect(page.getByLabel("Account menu for Pat")).toBeVisible();
   expectNoErrors(errors);
 });
 
@@ -54,7 +54,13 @@ test("the admin identity is approved and made admin on first sign-in", async ({ 
   await signIn(page, ADMIN);
   await page.goto("index.html#/admin");
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
+  // Users is in the account menu under the admin's name, with Account and Sign out
+  await page.getByLabel(/^Account menu for /).click();
   await expect(page.getByRole("link", { name: "Users" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Account" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("link", { name: "Users" })).toBeHidden();
   expectNoErrors(errors);
 });
 

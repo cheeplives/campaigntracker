@@ -1109,13 +1109,10 @@ const MapsTab = (() => {
     // ⚙: setup and the map's own changes, kept out of the toolbar: done once per map, and not to be pressed by accident
     const off = new AbortController();   // the page's own listeners on the document, taken down when it is left
     window.addEventListener('hashchange', () => off.abort(), { once: true });
-    const gear = gm ? el('details', { class: 'map-gear' }, el('summary', { class: 'button', 'aria-label': 'Map settings', title: 'Scale, scanning, export, and changing, renaming or deleting this map' }, '⚙'),
-      el('div', { class: 'map-gear-menu' }, ...[scaleBtn, opacityBox, scanBtn, exportBtn, el('hr'), swap, btn('Rename', rename), el('hr'), del].filter(Boolean))) : null;
-    if (gear) {
-      gear.querySelector('.map-gear-menu').addEventListener('click', ev => { if (ev.target.closest('button')) gear.open = false; });
-      gear.querySelector('input[type=file]').addEventListener('change', () => { gear.open = false; });
-      document.addEventListener('click', ev => { if (gear.open && !gear.contains(ev.target)) gear.open = false; }, { signal: off.signal });   // a click anywhere else closes it
-    }
+    // KIT.menu closes it when an item is picked, on a click anywhere else and on Escape
+    const gear = gm ? KIT.menu({ label: '⚙', ariaLabel: 'Map settings', tip: 'Scale, scanning, export, and changing, renaming or deleting this map',
+      cls: 'map-gear', listCls: 'map-gear-menu', items: [scaleBtn, opacityBox, scanBtn, exportBtn, el('hr'), swap, btn('Rename', rename), el('hr'), del] }) : null;
+    gear?.querySelector('input[type=file]').addEventListener('change', () => { gear.open = false; });
     // keys, until the page is left: P Add pin, L Quick label, M Measure/Route, T Place party, Escape out of what is open.
     // Not while typing, nor while a dialog is open over the page.
     document.addEventListener('keydown', ev => {

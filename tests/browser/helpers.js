@@ -139,6 +139,30 @@ async function tokenUpload(page, cid, name) {
   return (await res.json()).token;
 }
 
+/** Bring out the campaign tabs: on an iPad in portrait the Legend is a drawer, closed until its » is pressed. */
+async function openLegend(page) {
+  const nav = page.locator("nav.tabs"), tuck = nav.locator(".legend-tuck");
+  await nav.waitFor();
+  if (!await tuck.isVisible() || !await nav.evaluate(n => n.classList.contains("tucked"))) return;
+  await tuck.click();
+  await expect(nav).not.toHaveClass(/\btucked\b/);
+}
+/** Open a campaign tab by name from the Legend (out of its drawer, and out of a folded group, when it has to be). */
+async function goTab(page, name) {
+  await openLegend(page);
+  // by CSS, not by role: a tab folded away is display: none, so it is not in the accessibility tree to be found
+  const link = page.locator("nav.tabs a[data-group]").filter({ hasText: new RegExp(`^${name}$`) });
+  if (!await link.isVisible()) {
+    const group = await link.getAttribute("data-group");
+    await page.locator("nav.tabs .tab-group button", { hasText: group }).click();
+  }
+  await link.click();
+}
+/** Open the ⋯ menu of a row, card or campaign named `name` (its "More for <name>") and press one of its items. */
+async function pressMore(page, name, item) {
+  await page.getByLabel(`More for ${name}`, { exact: true }).click();
+  await page.locator(".kit-menu[open] .kit-menu-list").getByRole("button", { name: item }).click();
+}
 /** Open a map's ⚙ menu (Map settings) and press one of its items. */
 async function gearAction(page, name) {
   await page.getByLabel("Map settings").click();
@@ -150,4 +174,4 @@ async function openDrawer(page) {
   if (/closed/.test(await page.locator(".map-routes").getAttribute("class"))) await page.getByRole("button", { name: "Show routes and locations" }).click();
   await expect(page.locator(".map-routes")).toHaveClass(/open/);
 }
-module.exports = { openDrawer, gearAction, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+module.exports = { openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

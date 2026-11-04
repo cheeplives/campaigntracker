@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { openDrawer, gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+const { openDrawer, gearAction, openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
@@ -393,6 +393,7 @@ test("Maps: the tab sits after Generators and lists maps", async ({ page, browse
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Maps tab");
   await page.goto(`#/c/${cid}/generators`);
+  await openLegend(page);
   await expect(page.locator("nav.tabs a", { hasText: "Maps" })).toBeVisible();
   const tabs = await page.locator("nav.tabs a[data-group]").allTextContents();
   expect(tabs[tabs.indexOf("Generators") + 1]).toBe("Maps");
