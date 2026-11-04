@@ -25,6 +25,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **chronicle-access**: Chronicle approves its own users apart from Sinless: an account approved for Sinless asks
   for Chronicle on its first sign-in here and waits; approving, revoking or removing someone in Chronicle leaves
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
+- **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
+  outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only
+  from the config's `trusted_proxies`, and only its nearest hop that isn't one of them.
 - **access**: every API action (read from api/index.php and api/fanwikis.php, so a new one fails until it is
   given a group) refuses anyone signed out or waiting for approval, anyone outside the campaign, and a player on the
   GMs' actions; only site admins manage accounts.
