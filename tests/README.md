@@ -182,7 +182,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **map-scan**: the text scanner's names from Tesseract's words (a line's words joined, labels side by side split,
   noise and unsure words dropped, the surest of a repeated name kept, boxes back in the map's pixels); a GM scans a
   printed map in the browser, fixes a name, pins the approved ones as entries (reusing one of the same name, else a new
-  Location), and a second scan shows them already pinned; players get no Scan button; .htaccess serves every scanner file (its .gz model is not refused as a backup), and a file the server refuses ends the scan with a message instead of loading for ever.
+  Location), and a second scan shows them already pinned; players get no Scan button; .htaccess serves every scanner file (none ends in .gz, which hosts refuse or mangle), and a file the server refuses ends the scan with a message instead of loading for ever.
 - **maps**: the Maps tab sits after Generators; a GM adds a map with its picture (uploaded or from Find Image), scales
   it by two points or grid squares (a `30x20` file name fills in the square size, the Roll20 button 70 px = 5 ft, and the
   grid offset is the first click's position modulo the square), and measures; an unscaled map says so; a 6000 × 4000

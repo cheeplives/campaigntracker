@@ -107,18 +107,17 @@ test("Scan for names: the GM reviews what the scanner read and pins the approved
 
 test("Scan for names: every scanner file is served by Apache, not refused as a backup (.htaccess)", () => {
   // php -S, which the tests run on, never reads .htaccess, so the scanner can pass here and still be refused on the
-  // real host: its model ends in .gz, which the backups-and-archives rule denies.
+  // real host (its model once ended in .gz, which the backups-and-archives rule denies).
   const fs = require("fs");
   const ht = fs.readFileSync(path.join(__dirname, "..", "..", ".htaccess"), "utf8");
   const deny = [...ht.matchAll(/<FilesMatch "([^"]+)">\s*Require all denied/g)].map(m => new RegExp(m[1]));
   const allowed = new Set([...ht.matchAll(/<Files "([^"]+)">\s*Require all granted/g)].map(m => m[1]));
   const files = fs.readdirSync(path.join(__dirname, "..", "..", "static", "vendor", "tesseract"))
-    .filter(f => /\.(js|wasm|gz)$/.test(f));
-  expect(files).toContain("eng.traineddata.gz");
+    .filter(f => !/^(LICENSE|README)/.test(f));
+  expect(files).toContain("eng.traineddata");
+  expect(files.filter(f => f.endsWith(".gz"))).toEqual([]);   // hosts refuse or mangle .gz files: one answered 404
   const refused = files.filter(f => deny.some(re => re.test(f)) && !allowed.has(f));
   expect(refused).toEqual([]);
-  // and the grant comes after the rule it overrides
-  expect(ht.indexOf('<Files "eng.traineddata.gz">')).toBeGreaterThan(ht.search(/<FilesMatch "[^"]*\|gz\|/));
 });
 
 test("Scan for names: a scanner file the server refuses says so instead of loading for ever", async ({ page, browser }) => {
@@ -136,7 +135,7 @@ test("Scan for names: a scanner file the server refuses says so instead of loadi
     multipart: { parent_type: "map", parent_id: String(mapId), file: { name: "fen.png", mimeType: "image/png", buffer: png } },
   });
   await api(page, "map_save", { id: mapId, image_id: (await up.json()).file.id }, cid);
-  await page.context().route("**/eng.traineddata.gz", r => r.fulfill({ status: 403, contentType: "text/html", body: "Forbidden" }));
+  await page.context().route("**/eng.traineddata", r => r.fulfill({ status: 403, contentType: "text/html", body: "Forbidden" }));
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
   await page.getByRole("button", { name: "Scan for names…" }).click();
   const d = page.getByRole("dialog");
