@@ -1077,7 +1077,11 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-corner .lock-toggle { width: 36px; height: 36px; }
 .map-corner > * { margin: 0; }
 .map-corner .map-gear > summary { margin: 0; }
-.map-panel { margin: 0 0 8px; background: var(--stock); }
+.map-panel-box { position: absolute; top: 56px; left: 12px; z-index: 1001; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 68px); overflow: auto; overscroll-behavior: contain; }
+.map-panel-box:empty { display: none; }
+/* the forms floating on the map are opaque, so a busy picture never shows through their fields */
+.map-panel, .map-label-form { margin: 0; background: var(--stock); }
+.map-label-form { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
 .map-panel .row { align-items: flex-end; flex-wrap: wrap; gap: 8px; }
 .map-panel input[type=number] { width: 8em; }
 .map-head .map-meta { margin-left: 2px; }
@@ -1418,6 +1422,6 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .map-scan-way { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
 .map-scan-way p { margin: 2px 0 0; }
 .map-scan-way > :last-child { flex: none; }
-.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .map-label-form input { flex: 1 1 14rem; min-width: 0; }
 .map-label-form small { flex-basis: 100%; }

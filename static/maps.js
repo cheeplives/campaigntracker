@@ -222,6 +222,13 @@ const MapsTab = (() => {
 
     let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
+    /** The whole picture in view. While the scale panel is open it floats over the map's left side, and its two points
+     * are picked on the picture, so the picture is fitted beside it (when there is room). */
+    const fitPicture = () => {
+      if (!lf) return;
+      const beside = mode === 'scale' && stage.clientWidth > 720;
+      lf.map.fitBounds(bounds(), beside ? { paddingTopLeft: [panelBox.offsetWidth + 24, 56], paddingBottomRight: [12, 12], animate: false } : { animate: false });
+    };
 
     // ---- measuring
     let pts = [];
@@ -370,6 +377,7 @@ const MapsTab = (() => {
       panelBox.replaceChildren(panel);
       show(way);
       syncTools();
+      fitPicture();
     }
 
     // ---- pins
@@ -1050,7 +1058,7 @@ const MapsTab = (() => {
       el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn));
     const measureBar = el('div', { class: 'map-measure-bar' }, total, undoBtn, clearBtn, saveRouteBtn, planBtn);
     measureBar.hidden = true;
-    stage.append(toolbar, note, measureBar);
+    stage.append(toolbar, panelBox, note, measureBar);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
     if (gm) stage.append(el('div', { class: 'map-corner' }, secretBtn, gear));
     const title = el('h2', {}, map.name);
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -1058,7 +1066,7 @@ const MapsTab = (() => {
     const meta = el('span', { class: 'map-meta small muted' }, metaText());
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
-      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta), panelBox,
+      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta),
       el('div', { class: 'map-body' }, stage, routeBox)));
 
     if (!map.image_url || !map.width) {
@@ -1103,7 +1111,7 @@ const MapsTab = (() => {
     drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
-      lmap.invalidateSize({ animate: false }); lmap.fitBounds(bounds(), { animate: false });
+      lmap.invalidateSize({ animate: false }); fitPicture();
       const want = pinMarkers.get(Number(params.get('pin')));   // a link back from an entry or event: centre on that pin and open its card
       const at = pins.find(q => q.id === Number(params.get('pin')));
       if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); }
