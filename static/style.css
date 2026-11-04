@@ -1061,18 +1061,47 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-card img, .map-card-blank { width: 100%; height: 120px; object-fit: cover; border-radius: calc(var(--radius) / 2); background: var(--panel); display: flex; align-items: center; justify-content: center; }
 .map-head { align-items: baseline; gap: 12px; }
 .map-head h2 { margin: 0; }
-.map-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+/* .surface-float: a panel floating over content (the map's toolbar, drawer, legend…), one look for all of them. On the
+   map they sit over Leaflet's controls (1000) and under the app's dialogs */
+.surface-float, .map-gear > summary, .map-corner .lock-toggle, .map-panel {
+  background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
+.map-toolbar { position: absolute; top: 10px; left: 56px; z-index: 1001; display: flex; align-items: center; gap: 2px; padding: 4px; max-width: calc(100% - 180px); flex-wrap: wrap; }
+.map-tool-group { display: flex; align-items: center; gap: 2px; }
+.map-tool-group + .map-tool-group { margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
+.map-toolbar .small { white-space: nowrap; }
 .map-toolbar button[aria-pressed="true"], .map-kinds > button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.map-toolbar-gap { flex: 1 1 0; }
 .map-measure-total { font-weight: 700; color: var(--accent); min-width: 4ch; }
-.map-note { min-height: 1.4em; margin: 0 0 6px; color: var(--dim); }
-.map-panel { margin: 0 0 8px; background: var(--stock); }
+.map-note { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); z-index: 1001; max-width: min(36rem, calc(100% - 24px)); margin: 0; padding: 6px 12px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; text-align: center; border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); pointer-events: none; }
+.map-note:empty { display: none; }
+.map-legend { position: absolute; left: 12px; bottom: 12px; z-index: 1001; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 5px 10px; font-size: .78rem; color: var(--text); pointer-events: none; }
+.map-legend-gm { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border: 2px dashed var(--text); border-radius: 50%; vertical-align: -1px; }
+.map-stage .leaflet-bottom.leaflet-left { margin-bottom: 40px; }   /* the scale bar, over the legend */
+.map-stage.measuring .map-legend { display: none; }
+.map-stage.measuring .leaflet-bottom.leaflet-left { margin-bottom: 0; }
+.map-measure-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1001; display: flex; align-items: center; gap: 6px; padding: 4px 8px; max-width: calc(100% - 24px); flex-wrap: wrap; }
+.map-measure-bar[hidden], .map-measure-bar [hidden] { display: none; }
+.map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: calc((100% - 300px) / 2); max-width: calc(100% - 324px); }
+.map-corner { position: absolute; top: 10px; right: 12px; z-index: 1002; display: flex; align-items: flex-start; gap: 6px; }
+.map-corner .lock-toggle { width: 36px; height: 36px; }
+.map-corner > * { margin: 0; }
+.map-corner .map-gear > summary { margin: 0; }
+.map-panel-box { position: absolute; top: 56px; left: 12px; z-index: 1001; width: min(420px, calc(100% - 24px)); max-height: calc(100% - 68px); display: flex; flex-direction: column; }
+.map-panel-box > * { min-height: 0; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; }   /* a tall form scrolls inside the stage */
+.map-panel-box:empty { display: none; }
+/* the forms floating on the map are opaque, so a busy picture never shows through their fields */
+.map-panel, .map-label-form { margin: 0; background: var(--stock); }
+.map-label-form { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); }
 .map-panel .row { align-items: flex-end; flex-wrap: wrap; gap: 8px; }
 .map-panel input[type=number] { width: 8em; }
-.map-stage { position: relative; height: clamp(320px, 65vh, 900px); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.map-head .map-meta { margin-left: 2px; }
+/* the stage runs from under the header to the window's bottom edge (maps.js writes --map-top, where it starts on the
+   page), never under 320px: on a very short window the page scrolls instead */
+.map-stage { position: relative; height: max(320px, calc(100vh - var(--map-top, 260px) - 16px)); border-radius: var(--radius); overflow: hidden; background: var(--panel-2); }
+.map-canvas { position: absolute; inset: 0; }
 .map-stage.picking { cursor: crosshair; }
 .map-stage.picking .leaflet-grab { cursor: crosshair; }
-.map-stage .leaflet-container { width: 100%; height: 100%; background: var(--panel-2); font: inherit; }
+.map-canvas.leaflet-container { width: 100%; height: 100%; background: var(--panel-2); font: inherit; }
 .map-empty { padding: 16px; }
 .map-stage .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
 .map-stage .leaflet-bar a:hover { background: var(--panel-2); color: var(--accent); }
@@ -1087,37 +1116,45 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-marker-box { background: none; border: 0; }
 .map-marker { position: relative; width: var(--marker-size); height: var(--marker-size); display: flex; align-items: center; justify-content: center; font-size: calc(var(--marker-size) * .8); line-height: 1; }
 .map-marker-icon { width: 100%; height: 100%; object-fit: cover; }
-.map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .75rem/1.3 var(--body);
-  color: var(--text); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 4px; }
+.map-marker-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; padding: 0 5px; white-space: nowrap; font: 700 .72rem/1.3 var(--body);
+  color: var(--text); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 4px;
+  opacity: 0; pointer-events: none; transition: opacity .12s; }
+/* a pin's name, always in the page, is shown close up, with Labels on, on hover or focus, while its card is open, and always for the party */
+.map-stage.labels-on .map-marker-label, .map-stage.zoomed-in .map-marker-label, .map-marker:hover .map-marker-label,
+.map-marker-box:focus-visible .map-marker-label, .map-marker.selected .map-marker-label, .map-party .map-marker-label { opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
-.map-body { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
-.map-body .map-stage { flex: 1 1 22rem; min-width: 0; }
-.map-routes { flex: 0 1 16rem; min-width: 12rem; display: flex; flex-direction: column; gap: 8px; max-height: clamp(320px, 65vh, 900px); overflow-y: auto; }
+.map-body { position: relative; }
+/* the drawer: over the map's right edge, under GM only and ⚙, sliding away to its tab (so the map never changes size) */
+.map-routes { position: absolute; top: 56px; right: 0; bottom: 0; z-index: 1001; width: 300px; display: flex; flex-direction: column;
+  border-right: 0; border-radius: var(--radius) 0 0 var(--radius); transition: transform .2s ease; }
 .map-routes[hidden] { display: none; }
+.map-routes.closed { transform: translateX(100%); box-shadow: none; pointer-events: none; }   /* only its tab takes a click once it has slid away */
+.map-routes.closed .map-side-fold { pointer-events: auto; }
 .map-routes h3 { margin: 0; display: inline; font-size: 1.05rem; }
-.map-routes.collapsed { flex: 0 0 auto; min-width: 0; align-items: center; overflow: visible; }
-.map-side-head { display: flex; justify-content: flex-end; }
-.map-side-fold { min-width: 32px; }
-.map-side-label { writing-mode: vertical-rl; color: var(--dim); font-size: .85rem; letter-spacing: .05em; }
-.map-side-sec { display: flex; flex-direction: column; gap: 6px; }
-.map-side-sec > summary { cursor: pointer; padding: 2px 0; }
-.map-side-sec[open] > summary { margin-bottom: 6px; }
-.map-side-sec > :not(summary) + :not(summary) { margin-top: 6px; }
+.map-side-fold { position: absolute; top: 16px; right: 100%; width: 28px; min-width: 0; height: 88px; padding: 0; border-right: 0; border-radius: var(--radius) 0 0 var(--radius);
+  background: color-mix(in srgb, var(--panel) 92%, transparent); }
+.map-side-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 4px; padding: 10px 0; }
+.map-routes.closed .map-side-list { visibility: hidden; transition: visibility 0s .2s; }   /* out of the tab order once it has slid away */
+.map-side-find { margin: 0 12px 6px; width: auto; }
+.map-side-secs { display: flex; flex-direction: column; gap: 8px; }
+.map-side-sec { display: flex; flex-direction: column; }
+.map-side-sec > summary { cursor: pointer; padding: 2px 12px; }
+.map-side-sec[open] > summary { margin-bottom: 4px; }
+.map-side-list [data-name][hidden] { display: none; }
 .map-route-ends { color: var(--text); }
 .map-route-swatch { display: inline-block; width: 18px; height: 0; margin: 0 6px 3px 0; vertical-align: middle; border-top: 3px dashed var(--swatch, var(--ok)); }
 .map-route-swatch.solid { border-top-style: solid; } .map-route-swatch.dotted { border-top-style: dotted; }
 .map-route-swatch.dashdot { border-top-style: dashed; }
-.map-place { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 4px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
-.map-place.secret { border-style: dashed; }
-.map-place + .map-place { margin-top: 4px; }
+.map-place { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 4px 6px; background: none; border: 0; border-radius: 0; color: var(--text); }
+.map-place.secret { font-style: italic; }
 .map-show { display: inline-flex; align-items: center; flex: none; }
 .map-route-top, .map-place-row { display: flex; align-items: center; gap: 6px; }
 .map-route-top .map-route-name { flex: 1; min-width: 0; }
 .map-place-row .map-place { flex: 1; min-width: 0; }
-.map-place-row + .map-place-row { margin-top: 4px; }
+.map-place-row { padding: 2px 12px; }
+.map-place-row:hover, .map-route:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
 .map-place-icon { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
-.map-body.side-collapsed .map-stage { flex-basis: 30rem; }
 /* a pin's colour tints its icon itself (no disc behind it, which would hide more of the map): a grey copy of the
    icon keeps its shading, and a copy filled with the colour is multiplied over it */
 .tinted { position: relative; display: inline-flex; align-items: center; justify-content: center; color: transparent;
@@ -1139,14 +1176,18 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-grid-opacity { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); }
 .map-grid-opacity input { width: 7rem; accent-color: var(--accent); }
 .map-gear { position: relative; }
-.map-gear > summary { list-style: none; font-size: 1.1rem; padding: 4px 10px; }
+.map-gear > summary { list-style: none; font-size: 1.1rem; height: 36px; padding: 0 10px; display: inline-flex; align-items: center; }
+.map-gear .map-gear-menu { min-width: 13rem; }
+.map-gear-menu > button { white-space: nowrap; }
+.map-gear-menu hr { border: 0; border-top: 1px solid var(--line); margin: 2px 4px; width: auto; }
+.map-gear-menu [hidden] { display: none; }
 .map-gear > summary::-webkit-details-marker { display: none; }
 .map-gear[open] > summary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .map-gear-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1100;   /* above Leaflet's zoom buttons (1000), which come later on the page */ display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem;
   padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5); }
 .map-gear-menu > * { text-align: left; }
-.map-route { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
-.map-route.secret { border-style: dashed; }
+.map-route { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; }
+.map-route.secret { border-left: 2px dashed var(--dim); }
 .map-route-name { text-align: left; font-weight: 700; }
 path.map-route-line:not(.coloured) { stroke: var(--ok); }
 path.map-route-line.secret:not(.coloured) { stroke: var(--dim); }
@@ -1389,6 +1430,43 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .lock-toggle:has(input:disabled) { cursor: default; opacity: .7; }
 
 /* the map text scanner's review */
+/* the map page on a touch screen: every control at least 44px */
+@media (pointer: coarse) {
+  .map-toolbar .small, .map-measure-bar .small { min-height: 44px; min-width: 44px; }
+  .map-corner .lock-toggle, .map-gear > summary { width: 44px; height: 44px; justify-content: center; padding: 0; }
+  .map-side-fold { min-width: 44px; min-height: 44px; }
+  .map-routes { top: 64px; }
+  .map-panel-box { top: 66px; }
+  .map-note { top: 66px; }
+}
+/* the map page on a phone: the toolbar's emoji alone, in one row along the bottom (a card opens over the top), the
+   drawer a sheet over the bottom of the map that starts closed, no legend */
+@media (max-width: 720px) {
+  .map-tool-word { display: none; }
+  /* tall enough for the toolbar, a hint and the measure bar to leave room on the picture; on a short phone it runs
+     past the screen and the page scrolls to it */
+  .map-stage { height: max(460px, calc(100vh - var(--map-top, 260px) - 16px)); }
+  .map-note { font-size: .875rem; padding: 4px 10px; }
+  .map-toolbar { top: auto; bottom: 10px; left: 12px; max-width: calc(100% - 84px); gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  .map-toolbar .small { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 1.1rem; }
+  .map-tool-group + .map-tool-group { margin-left: 2px; padding-left: 4px; }
+  .map-panel-box, .map-note { top: 80px; }
+  .map-panel-box { width: calc(100% - 24px); max-height: calc(50% - 80px); }   /* the scale panel's points are picked on the picture under it */
+  .map-measure-bar { flex-wrap: nowrap; overflow-x: auto; gap: 4px; padding: 4px; bottom: 70px; }
+  .map-measure-bar > * { flex: none; }
+  .map-routes { top: auto; left: 0; width: auto; height: 45%; border-right: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .map-routes.closed { transform: translateY(100%); }
+  .map-routes.closed .map-side-fold { bottom: calc(100% + 10px); }   /* beside the toolbar while the sheet is away */
+  .map-side-fold { top: auto; right: 12px; bottom: 100%; width: 52px; height: 44px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .map-routes.open .map-side-fold { border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; height: 32px; min-height: 32px; }
+  .map-legend { display: none; }
+  .map-stage .leaflet-bottom.leaflet-left { margin-bottom: 64px; }
+  .map-stage.measuring .leaflet-bottom.leaflet-left { margin-bottom: 120px; }
+  .map-stage.drawer-open .map-measure-bar, .map-stage.drawer-open .map-note { left: 50%; max-width: calc(100% - 24px); }
+  .map-stage.drawer-open .map-measure-bar { bottom: calc(45% + 70px); }   /* over the toolbar, which sits on the sheet */
+  .map-stage.drawer-open .map-toolbar { bottom: calc(45% + 10px); }
+  .map-stage.drawer-open .leaflet-bottom { bottom: 45%; }
+}
 .map-scan-dialog { width: min(640px, calc(100vw - 32px)); overflow-wrap: anywhere; }
 .map-scan-dialog progress { width: 100%; accent-color: var(--accent); }
 .map-scan-list { display: flex; flex-direction: column; gap: 6px; max-height: min(55vh, 520px); overflow-y: auto; margin: 8px 0; }
@@ -1402,6 +1480,6 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .map-scan-way { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
 .map-scan-way p { margin: 2px 0 0; }
 .map-scan-way > :last-child { flex: none; }
-.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .map-label-form input { flex: 1 1 14rem; min-width: 0; }
 .map-label-form small { flex-basis: 100%; }

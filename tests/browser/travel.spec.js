@@ -2,7 +2,7 @@
 // shifts (a quarter of the calendar's day), and the campaign's genre limits the
 // modes and samples on offer.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture, settledBox } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, mapWithPicture, settledBox, openDrawer } = require("./helpers");
 
 test("samples fill the planner, trips count shifts, and the genre limits the modes", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -278,6 +278,7 @@ test("Travel: Plan this trip brings a map route's length and ends to the planner
   await api(page, "group_move", { id: main.id, map_id: mapId, x: 50, y: 60 }, cid);
 
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  await openDrawer(page);   // a phone starts with the routes list folded away
   await page.locator(".map-route").getByRole("button", { name: "Plan this trip" }).click();
   await expect(page).toHaveURL(new RegExp(`/travel\\?map=${mapId}&route=${route.id}$`));
   await expect(page.locator(".travel-trip")).toContainText("Planning the trip along East Road on Sartar.");
@@ -301,13 +302,12 @@ test("Travel: Plan this trip brings a map route's length and ends to the planner
   // a measured path travels in the address, and the Maps tab offers it while measuring
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
   await page.getByRole("button", { name: "Measure" }).click();
-  const stage = page.locator(".map-view .leaflet-container");
-  await stage.scrollIntoViewIfNeeded();
-  const box = await stage.boundingBox();
-  await stage.click({ position: { x: box.width * 0.3, y: box.height * 0.5 } });
-  const plan = page.locator(".map-toolbar").getByRole("button", { name: "Plan this trip" });
+  await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();
+  const pic = await settledBox(page.locator(".map-view img.leaflet-image-layer"));   // the picture, clear of the routes drawer
+  await page.mouse.click(pic.x + pic.width * 0.4, pic.y + pic.height * 0.85);   // below the pins and the route, at y 60 of 200
+  const plan = page.locator(".map-measure-bar").getByRole("button", { name: "Plan this trip" });
   await expect(plan).toBeHidden();   // one point is no trip
-  await stage.click({ position: { x: box.width * 0.7, y: box.height * 0.5 } });
+  await page.mouse.click(pic.x + pic.width * 0.6, pic.y + pic.height * 0.85);
   await plan.click();
   await expect(page).toHaveURL(new RegExp(`/travel\\?map=${mapId}&path=\\d+,\\d+;\\d+,\\d+$`));
   await expect(page.locator(".travel-trip")).toContainText("Planning the trip along a measured path on Sartar.");

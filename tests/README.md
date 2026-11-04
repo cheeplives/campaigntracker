@@ -204,6 +204,14 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   picture opens; a GM-only map, its picture and its pins never reach players; players add public note pins and change
   only their own; GMs pin new or existing entries and events, which link back with 📍, save routes, and turn a player's
   pin into an entry (or link it to the one of that name); replacing or deleting a map's picture leaves no file behind.
+  The page's layout: the stage fills the window to its bottom edge and never shrinks under 320px; the toolbar floats on
+  the map in two groups with every control's old name; a map with no picture has no picture-only tools and its keys
+  don't throw; Set scale, Scan for names, Export, Change picture, Rename and Delete sit in ⚙ in that order, and players
+  have no ⚙ or lock; the pin form floats under the toolbar and scrolls inside the stage; the drawer slides over the map
+  without resizing it and its search filters the rows; pin labels show by zoom, hover, an open card and the Labels
+  toggle (remembered), and the party is always named; the legend sits bottom-left (not on a phone) and P, L, M, T and
+  Escape drive the modes except while typing, and stop when the page is left; on a phone the toolbar is icons only and
+  the drawer a bottom sheet, closed at first, that a pin's card opens above.
 - **mapgeo**: `static/mapgeo.js` sets a scale from two points or grid squares, reads square sizes from file names,
   and shows distances in the reader's units, with AU and light-years on space maps.
 - **party-groups**: a campaign starts with one main group holding every player, and a late joiner goes into it; GMs

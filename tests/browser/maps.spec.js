@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+const { openDrawer, gearAction, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
@@ -429,7 +429,7 @@ test("Maps: a GM adds a map and scales it by two points, then measures", async (
   await clickPicture(page, 0.6, 0.3);
   await expect(page.locator(".map-measure-total")).toHaveText(/\d+(\.\d)? mi/);
   // forty miles between the two points used for the scale, so the same span measures forty
-  await expect(page.locator(".map-measure-total")).toContainText("40 mi");
+  await expect(page.locator(".map-measure-total")).toHaveText(/^(39\.[5-9]|40(\.[0-4])?) mi/);   // to a screen pixel, which on a phone is more than a map pixel
   await page.getByRole("button", { name: "Undo point" }).click();
   await expect(page.locator(".map-measure-total")).toHaveText("");
   await clickMap(page, 0.9, 0.3);
@@ -453,10 +453,11 @@ test("Maps: a file name with 30x20 fills in the square size", async ({ page, bro
   await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();   // so the boxes below are where the clicks land
   const img = await page.locator(".map-view img.leaflet-image-layer").boundingBox();
   const box = await page.locator(".map-view .leaflet-container").boundingBox();
-  const at = fx => ({ x: ((box.x + box.width * fx - img.x) / img.width) * 300, y: ((box.y + box.height * 0.5 - img.y) / img.height) * 200 });
+  // on the picture, which is fitted beside the scale panel (on a phone, under it)
+  const at = fx => ({ x: 300 * fx, y: 100 });
   const a = at(0.5), b = at(0.9);
-  await clickMap(page, 0.5, 0.5);
-  await clickMap(page, 0.9, 0.5);
+  await clickPicture(page, 0.5, 0.5);
+  await clickPicture(page, 0.9, 0.5);
   await page.getByLabel("How many squares").fill("2");
   await page.getByRole("button", { name: "Save scale" }).click();
   await expect(page.locator(".map-scale")).toBeVisible();
@@ -479,7 +480,7 @@ test("Maps: the grid is drawn over the map, each person can hide it, and Measure
   await expect(page.locator(".map-view .leaflet-container")).toBeVisible();
   await expect(page.getByRole("button", { name: "Grid", exact: true })).toBeHidden();   // no grid yet
   // the GM sets 20 px squares of 5 ft, shown to everyone, through the scale dialog
-  await page.getByRole("button", { name: "Scale" }).click();
+  await gearAction(page, "Scale");
   await page.getByRole("button", { name: "Grid squares" }).click();
   await expect(page.getByLabel("Shape")).toHaveValue("square");
   await page.getByLabel("Pixels per square").fill("20");
@@ -566,16 +567,16 @@ test("Maps: a GM exports the picture, and a gridded map as Universal VTT that re
   const { cid, pp } = await setup(page, browser, "Maps export");
   const id = await mapWithPicture(page, cid, { name: "Keep: Upper/Lower" });
   await page.goto(`#/c/${cid}/maps/${id}`);
-  await page.getByRole("button", { name: "Export…" }).click();
+  await gearAction(page, "Export…");
   await expect(page.getByRole("button", { name: "Universal VTT (.dd2vtt)" })).toBeDisabled();   // no grid yet
-  await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("Set grid squares first (Scale → Grid squares)");
+  await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("Set grid squares first (⚙ → Set scale… → Grid squares)");
   const [pic] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Export the map" }).getByRole("button", { name: "Picture", exact: true }).click()]);
   expect(pic.suggestedFilename()).toBe("Keep Upper Lower.png");
   expect(Buffer.compare(require("fs").readFileSync(await pic.path()), MAP_PNG)).toBe(0);
 
   expect((await api(page, "map_save", { id, grid_px: 50, grid_offset_x: 10, grid_offset_y: 0, scale_per_px: 0.1, scale_unit: "ft" }, cid)).status).toBe(200);
   await page.reload();
-  await page.getByRole("button", { name: "Export…" }).click();
+  await gearAction(page, "Export…");
   const [uv] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Universal VTT (.dd2vtt)" }).click()]);
   expect(uv.suggestedFilename()).toBe("Keep Upper Lower.dd2vtt");
   const json = JSON.parse(require("fs").readFileSync(await uv.path(), "utf8"));
@@ -687,7 +688,7 @@ test("Maps: leaving a map and coming back leaves one map on the page and no erro
 /** A click at (fx, fy) of the map's picture itself, which the container is wider than. */
 async function clickPic(page, fx, fy) {
   await page.locator(".map-view .leaflet-container").scrollIntoViewIfNeeded();
-  const box = await page.locator(".map-view .leaflet-image-layer").boundingBox();
+  const box = await settledBox(page.locator(".map-view .leaflet-image-layer"));   // a card opening may still be panning the map
   await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
 }
 const pinForm = page => page.getByRole("dialog", { name: "Add pin" });
@@ -744,7 +745,7 @@ test("Maps: a GM pins a new entry and an existing event, and the entry links bac
   await expect(page.locator(".leaflet-popup")).toContainText("Weathertop");
   await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Weathertop/ })).toBeVisible();
 
-  await startPin(page, 0.7, 0.6);
+  await startPin(page, 0.55, 0.65);   // clear of the open card and of the drawer, on an iPad held upright too
   await pinForm(page).getByRole("button", { name: "Event" }).click();
   await pinForm(page).getByLabel("Event title").fill("Council");
   await pinForm(page).getByRole("button", { name: /Council at dawn/ }).click();
@@ -776,6 +777,7 @@ test("Maps: a GM saves a route and a player sees its length", async ({ page, bro
   await pp.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(pp.locator(".map-route", { hasText: "Old North Road" })).toContainText(/\d+(\.\d)? (km|mi)/);
   await expect(pp.locator(".map-route").getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await openDrawer(page);
   await row.getByRole("button", { name: "GM only" }).click();
   await expect(row.getByRole("button", { name: "GM only" })).toHaveAttribute("aria-pressed", "true");
   await pp.reload();
@@ -961,6 +963,7 @@ test("Maps: a route or location can be hidden from the picture on this device, a
   await page.goto(`index.html#/c/${cid}/maps/${id}`);
   await expect(page.locator(".map-pin")).toHaveCount(1);
   await expect(page.locator("path.map-route-line")).toHaveCount(1);
+  await openDrawer(page);
 
   await page.getByRole("checkbox", { name: "Show King's Road on the map" }).uncheck();
   await expect(page.locator("path.map-route-line")).toHaveCount(0);
@@ -978,4 +981,228 @@ test("Maps: a route or location can be hidden from the picture on this device, a
   await page.getByRole("checkbox", { name: "Show Camp on the map" }).check();
   await expect(page.locator(".map-pin")).toHaveCount(1);
   expectNoErrors(errors);
+});
+
+// ---------------------------------------------------------------------------------------------- the page's layout
+/** Note pins named `names` on map `mid`, spread over its picture. */
+async function notePins(page, cid, mid, names) {
+  for (const [i, label] of names.entries()) {
+    expect((await api(page, "pin_save", { map_id: mid, x: 60 + i * 80, y: 60 + (i % 2) * 70, kind: "note", label }, cid)).status).toBe(200);
+  }
+}
+
+test("Map page: the map stage fills the window to its bottom edge and never shrinks under 320px", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Stage");
+  const mid = await mapWithPicture(page, cid);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const stage = page.locator(".map-view .map-stage");
+  await expect(stage).toBeVisible();
+  await expect.poll(async () => { const box = await stage.boundingBox(); return Math.abs(box.y + box.height - 800); }).toBeLessThanOrEqual(20);
+  await expect(page.locator(".map-view .leaflet-container")).toHaveCount(1);
+  await expect(page.locator(".map-view.card")).toHaveCount(0);
+  await expect(page.locator(".map-view .map-meta")).toHaveText("0 locations · 0 routes");
+  await page.setViewportSize({ width: 1280, height: 420 });
+  await expect.poll(async () => (await stage.boundingBox()).height).toBeGreaterThanOrEqual(320);
+});
+
+test("Map page: the toolbar floats on the map in two groups and keeps every control's name", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Toolbar");
+  const mid = await mapWithPicture(page, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const stage = page.locator(".map-view .map-stage"), bar = stage.locator(".map-toolbar");
+  await expect(bar).toBeVisible();
+  const s = await stage.boundingBox(), b = await bar.boundingBox();
+  expect(b.x).toBeGreaterThanOrEqual(s.x); expect(b.y).toBeGreaterThanOrEqual(s.y); expect(b.x + b.width).toBeLessThanOrEqual(s.x + s.width);
+  await expect(bar.locator(".map-tool-group")).toHaveCount(2);
+  const pin = bar.getByRole("button", { name: "Add pin" });
+  await expect(pin).toHaveText(/Pin$/);
+  await expect(pin).not.toHaveText(/Add pin/);
+  for (const name of ["Quick label", "Measure/Route", "Place party", "Labels"]) await expect(bar.getByRole("button", { name })).toBeVisible();
+  for (const name of ["Scale", "Export…", "Scan for names…", "Undo point", "Save route…"]) await expect(bar.getByRole("button", { name })).toHaveCount(0);
+  await expect(page.locator(".map-note")).toBeHidden();
+  await pin.click();
+  await expect(page.locator(".map-note")).toHaveText("Click the map to place the pin");
+  const n = await page.locator(".map-note").boundingBox(), t = await bar.boundingBox();
+  expect(n.y).toBeLessThan(t.y + t.height + 24);   // at the top of the map, just under the toolbar
+  await page.getByRole("button", { name: "Measure/Route" }).click();   // no scale yet: the hint says so and measure mode doesn't start
+  await expect(page.locator(".map-measure-bar")).toBeHidden();
+});
+
+test("Map page: a map with no picture shows the message and no picture-only tools", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Blank");
+  const mid = (await api(page, "map_save", { name: "Blank" }, cid)).json.map.id;
+  const errors = watchErrors(page);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await expect(page.locator(".map-empty")).toContainText("no picture yet");
+  await expect(page.getByRole("button", { name: "Add pin" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Labels" })).toBeHidden();
+  await page.keyboard.press("p");
+  await page.keyboard.press("Escape");
+  expectNoErrors(errors);
+});
+
+test("Map page: setup lives in the Map settings menu, in order, and players have no menu", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Gear");
+  const mid = await mapWithPicture(page, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const corner = page.locator(".map-view .map-corner");
+  await expect(corner.getByRole("button", { name: "GM only" })).toBeVisible();
+  await page.getByLabel("Map settings").click();
+  const menu = page.locator(".map-gear-menu");
+  const names = await menu.locator("button:visible, label:visible").allTextContents();
+  expect(names.map(t => t.trim())).toEqual(["Set scale…", "Scan for names…", "Export…", "Change picture", "Rename", "Delete map"]);   // no grid yet, so no opacity slider
+  await menu.getByRole("button", { name: "Scale" }).click();
+  await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
+  await expect(menu).toBeHidden();
+  await pp.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await expect(pp.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(pp.getByLabel("Map settings")).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "GM only" })).toHaveCount(0);
+});
+
+test("Map page: the pin form opens on the map under the toolbar and scrolls inside the stage", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Panel");
+  const mid = await mapWithPicture(page, cid);
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const stage = page.locator(".map-view .map-stage");
+  await page.getByRole("button", { name: "Add pin" }).click();
+  await clickPic(page, 0.7, 0.6);
+  const form = page.getByRole("dialog", { name: "Add pin" });
+  await expect(form).toBeVisible();
+  const s = await stage.boundingBox(), f = await form.boundingBox(), t = await stage.locator(".map-toolbar").boundingBox();
+  expect(f.y).toBeGreaterThan(t.y + t.height);
+  expect(f.x).toBeGreaterThanOrEqual(s.x);
+  expect(f.y + f.height).toBeLessThanOrEqual(s.y + s.height + 1);   // it scrolls inside the stage rather than growing past it
+  expect(f.width).toBeLessThanOrEqual(420);
+});
+
+test("Map page: the drawer slides over the map without resizing it, and its search filters the rows", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Drawer");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Boldhome", "Jonstown", "Wilmskirk"]);
+  expect((await api(page, "route_save", { map_id: mid, name: "King's Road", points: [[10, 10], [200, 150]] }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const canvas = page.locator(".map-view .leaflet-container");
+  await openDrawer(page);
+  const before = await canvas.boundingBox();
+  await page.getByRole("button", { name: "Hide routes and locations" }).click();
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);
+  expect((await canvas.boundingBox()).width).toBe(before.width);
+  await page.getByRole("button", { name: "Show routes and locations" }).click();
+  await page.getByLabel("Find on this map").fill("jons");
+  await expect(page.locator(".map-place:visible")).toHaveCount(1);
+  await expect(page.locator(".map-place:visible")).toContainText("Jonstown");
+  await expect(page.locator(".map-route:visible")).toHaveCount(0);
+  await page.getByLabel("Find on this map").fill("");
+  await expect(page.locator(".map-place:visible")).toHaveCount(3);
+  await page.reload();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
+});
+
+test("Map page: pin labels show by zoom, hover, selection and the Labels toggle; the party is always labelled", async ({ page, browser }) => {
+  const { cid } = await setup(page, browser, "Labels");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford", "Mirewood"]);
+  const g = (await api(page, "groups", undefined, cid)).json.groups[0];
+  expect((await api(page, "group_move", { id: g.id, map_id: mid, x: 250, y: 160 }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const ford = page.locator(".map-pin", { hasText: "Burnt Ford" }), label = ford.locator(".map-marker-label");
+  await expect(label).toHaveCSS("opacity", "0");
+  await expect(page.locator(".map-party .map-marker-label")).toHaveCSS("opacity", "1");
+  await ford.hover();
+  await expect(label).toHaveCSS("opacity", "1");
+  await page.mouse.move(5, 5);
+  await expect(label).toHaveCSS("opacity", "0");
+  await ford.click();
+  await expect(page.locator(".map-pin.selected")).toHaveCount(1);
+  await page.mouse.move(5, 5);
+  await expect(label).toHaveCSS("opacity", "1");
+  await page.locator(".leaflet-popup-close-button").click();
+  await expect(page.locator(".map-pin.selected")).toHaveCount(0);
+  // one step at a time: Leaflet drops a zoom asked for while the last one is still animating
+  const zoom = async button => { await page.locator(button).click(); await page.waitForTimeout(350); await expect(page.locator(".map-view .leaflet-zoom-anim")).toHaveCount(0); };
+  const zoomIn = () => zoom(".leaflet-control-zoom-in"), zoomOut = () => zoom(".leaflet-control-zoom-out");
+  await zoomIn(); await zoomIn();
+  await expect(page.locator(".map-stage")).toHaveClass(/zoomed-in/);
+  await expect(label).toHaveCSS("opacity", "1");
+  await zoomOut(); await zoomOut();
+  await expect(page.locator(".map-stage")).not.toHaveClass(/zoomed-in/);
+  await page.getByRole("button", { name: "Labels" }).click();
+  await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "true");
+  await expect(label).toHaveCSS("opacity", "1");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Labels" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".map-pin", { hasText: "Mirewood" }).locator(".map-marker-label")).toHaveCSS("opacity", "1");
+});
+
+test("Map page: a legend sits bottom-left, and P, L, M, T and Escape drive the modes except while typing", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Keys");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Camp"]);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const legend = page.getByLabel("Legend");
+  await expect(legend.locator(".map-legend-item")).toHaveText(["📍 Place", "📅 Event", "📝 Note", "🚩 Party", "GM only"]);
+  if (page.viewportSize().width > 720) {
+    const s = await page.locator(".map-stage").boundingBox(), g = await legend.boundingBox();
+    expect(g.x - s.x).toBeLessThan(40); expect(s.y + s.height - (g.y + g.height)).toBeLessThan(40);
+  } else await expect(legend).toBeHidden();   // a phone keeps its small screen for the map
+  await openDrawer(page);
+  const pin = page.getByRole("button", { name: "Add pin" });
+  await page.keyboard.press("p");
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("t");
+  await expect(page.getByRole("button", { name: "Place party" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Place party" })).toHaveAttribute("aria-pressed", "false");
+  await page.getByLabel("Find on this map").fill("");
+  await page.getByLabel("Find on this map").press("p");
+  await expect(page.getByLabel("Find on this map")).toHaveValue("p");
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await page.goto(`index.html#/c/${cid}/maps`);
+  await expect(page.locator(".map-list-head")).toBeVisible();
+  await page.keyboard.press("m");   // the listener went with the page: nothing happens, and nothing throws
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await expect(page.locator(".map-view .leaflet-container")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Measure/Route" })).toHaveAttribute("aria-pressed", "false");
+  expectNoErrors(errors);
+});
+
+test("Map page: on a phone the toolbar is icons only and the drawer is a bottom sheet that folds away for an open card or a tool", async ({ page, browser }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith("mobile"), "phone layout");
+  const { cid } = await setup(page, browser, "Phone");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  const pin = page.getByRole("button", { name: "Add pin" });
+  await expect(pin).toBeVisible();
+  expect((await pin.boundingBox()).width).toBeLessThan(56);
+  expect((await pin.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(pin.locator(".map-tool-word")).toBeHidden();
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);   // on a phone it starts closed, leaving the map whole
+  await openDrawer(page);
+  await page.locator(".map-stage").scrollIntoViewIfNeeded();
+  const stage = await page.locator(".map-stage").boundingBox(), drawer = await settledBox(page.locator(".map-routes"));
+  expect(drawer.width).toBeGreaterThanOrEqual(stage.width - 1);
+  expect(drawer.height).toBeLessThanOrEqual(stage.height * 0.5);
+  await page.locator(".map-place", { hasText: "Burnt Ford" }).tap();   // its row in the sheet centres the map on it and opens its card
+  const card = page.locator(".leaflet-popup");
+  await expect(card).toBeVisible();
+  // the card wants more of the map than the sheet leaves, so the sheet folds away while it is open, and comes back after
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);
+  const box = await settledBox(card), st = await page.locator(".map-stage").boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(st.y - 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(st.y + st.height + 1);
+  await page.locator(".leaflet-popup-close-button").tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
+  // so does a tool
+  const addPin = page.getByRole("button", { name: "Add pin", exact: true });
+  await addPin.tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/closed/);
+  await addPin.tap();
+  await expect(page.locator(".map-routes")).toHaveClass(/open/);
 });

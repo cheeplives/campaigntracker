@@ -30,6 +30,9 @@ const MapsTab = (() => {
   const toXY = ll => ({ x: ll.lng, y: -ll.lat });
 
   let say = () => {};   // the page's toast, for a marker that could not be moved
+  // Leaflet focuses the map on a press, then scrolls the window back to where it was; with the page's smooth scrolling
+  // that scroll-back is animated, moving a marker out from under the finger between press and release (so the tap misses it)
+  if (typeof L !== 'undefined' && L.Map.Keyboard) L.Map.Keyboard.prototype._onMouseDown = function () { if (!this._focused) this._map._container.focus({ preventScroll: true }); };
 
   /** A marker on `layer`: the picture, or the emoji, with its label under it. It keeps its size as the map zooms. onMove
    * runs after a drag and, if it fails, the marker goes back; onOpen's node fills the card a click opens. */
@@ -39,7 +42,7 @@ const MapsTab = (() => {
     return el('label', { class: 'lock-toggle', 'data-tip': `GM only: ${tipText}` }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
   }
   const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
-  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen }) {
+  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad }) {
     const tint = color && !image;
     const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' })
       : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
@@ -48,7 +51,11 @@ const MapsTab = (() => {
     if (color) node.style.setProperty('--pin-colour', color);
     const m = L.marker(toLatLng(x, y), { icon: L.divIcon({ html: node, className: 'map-marker-box', iconSize: [sizePx, sizePx], iconAnchor: [sizePx / 2, sizePx / 2] }),
       draggable, title: label || '', keyboard: true, riseOnHover: true });
-    if (onOpen) m.bindPopup(() => onOpen(), { className: 'map-card-popup', minWidth: 160 });
+    if (onOpen) {
+      // pad: { tl, br }, the room a card keeps from the map's edges ([x, y] arrays, read each time a card opens)
+      m.bindPopup(() => onOpen(), { className: 'map-card-popup', minWidth: 160, ...(pad ? { autoPanPaddingTopLeft: pad.tl, autoPanPaddingBottomRight: pad.br } : {}) });
+      m.on('popupopen', () => node.classList.add('selected')).on('popupclose', () => node.classList.remove('selected'));   // its label shows while its card is open
+    }
     let was = m.getLatLng();
     if (onMove) m.on('dragend', async () => {
       try { await onMove(toXY(m.getLatLng())); was = m.getLatLng(); } catch (err) { m.setLatLng(was); say(err.message, true); }
@@ -204,16 +211,41 @@ const MapsTab = (() => {
     const base = `#/c/${cid}/maps/${id}`;
     await loadGroups().catch(() => {});
 
-    const host = el('div', { class: 'map-stage' });
+    // the stage fills the window under the header; the Leaflet canvas and every control floating on the map are its children
+    const stage = el('div', { class: 'map-stage' });
+    const host = el('div', { class: 'map-canvas' });
+    stage.append(host);
     const note = el('p', { class: 'small map-note', role: 'status' });
     const total = el('span', { class: 'map-measure-total', role: 'status' });
-    const tools = el('div', { class: 'map-tools' });
-    const routeBox = el('aside', { class: 'map-routes', 'aria-label': 'Routes' });
-    const toolbar = el('div', { class: 'map-toolbar' });
+    // the room an open card keeps clear of what floats on the map: the toolbar along the top, and the drawer (kept up to date in syncDrawer)
+    const cardPad = { tl: [16, 64], br: [16, 16] };
+    const routeBox = el('aside', { class: 'map-routes surface-float', 'aria-label': 'Routes' });
+    routeBox.hidden = true;   // until there is a route or a pin to list
+    const toolbar = el('div', { class: 'map-toolbar surface-float' });
+    /** A toolbar button: an emoji and a short word (hidden on a phone), named for screen readers and tests by `name`. */
+    const tbtn = (icon, word, name, onclick, tip) => {
+      const b = btn([`${icon} `, el('span', { class: 'map-tool-word' }, word)], onclick, 'small', tip);
+      b.setAttribute('aria-label', name);
+      return b;
+    };
     const panelBox = el('div', { class: 'map-panel-box' });
 
-    let lf = null, mode = null;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
+    // sheetAway: on a phone the sheet folds away while a tool is in use or a card is open, without changing how it was left
+    let lf = null, mode = null, toolMode = null, sheetAway = false;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
+    /** The whole picture in view. While the scale panel is open it floats over the map's left side, and its two points
+     * are picked on the picture, so the picture is fitted beside it (when there is room). */
+    const fitPicture = () => {
+      if (!lf) return;
+      // clear of the toolbar along the top and the legend or measure bar along the bottom (and a phone's open sheet)
+      const sheet = stage.classList.contains('drawer-open') && window.matchMedia('(max-width: 720px)').matches;
+      const phone = window.matchMedia('(max-width: 720px)').matches;
+      if (mode !== 'scale') return lf.map.fitBounds(bounds(), { paddingTopLeft: [12, phone ? 64 : toolbar.offsetTop + toolbar.offsetHeight + 8],
+        paddingBottomRight: [!phone && stage.classList.contains('drawer-open') ? 312 : 12, phone ? (sheet ? Math.round(stage.clientHeight * 0.45) : 0) + 128 : 48], animate: false });   // a phone: the toolbar, and the measure bar over it
+      // beside it when there is room, otherwise under it (a phone)
+      const pad = stage.clientWidth > 720 ? [panelBox.offsetWidth + 24, 56] : [12, panelBox.offsetTop + panelBox.offsetHeight + 12];
+      lf.map.fitBounds(bounds(), { paddingTopLeft: pad, paddingBottomRight: [12, phone ? 76 : 12], animate: false });
+    };
 
     // ---- measuring
     let pts = [];
@@ -272,11 +304,11 @@ const MapsTab = (() => {
       gridWidth();
       gridLayer = L.svgOverlay(root, bounds(), { pane: 'mapGrid', interactive: false, className: 'map-grid', opacity: gridOpacity() }).addTo(lf.map);
     }
-    const gridBtn = btn('Grid', () => {
+    const gridBtn = tbtn('▦', 'Grid', 'Grid', () => {
       const on = !gridWanted();
       try { localStorage.setItem(gridKey, on ? '1' : '0'); } catch { /* shown or hidden for this visit only */ }
       drawGrid();
-    }, '', 'Show or hide the map\'s grid (just for you)');
+    }, 'Show or hide the map\'s grid (just for you)');
     gridBtn.hidden = true;
     const opacityIn = el('input', { type: 'range', min: 10, max: 100, step: 5, value: String(Math.round(gridOpacity() * 100)), 'aria-label': 'Grid opacity' });
     opacityIn.addEventListener('input', () => {
@@ -298,7 +330,11 @@ const MapsTab = (() => {
       });
       if (picks.length === 2) L.polyline(picks.map(p => toLatLng(p.x, p.y)), { weight: 2, dashArray: '4 4', className: 'map-line', interactive: false }).addTo(pickLayer);
     };
-    function closePanel() { panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools(); }
+    function closePanel() {
+      const refit = mode === 'scale';   // the picture was fitted beside (or under) the scale panel: back to the whole stage
+      panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools();
+      if (refit) fitPicture();
+    }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
       mode = 'scale'; picks = []; drawPicks(); note.textContent = '';
@@ -362,6 +398,7 @@ const MapsTab = (() => {
       panelBox.replaceChildren(panel);
       show(way);
       syncTools();
+      fitPicture();
     }
 
     // ---- pins
@@ -391,7 +428,7 @@ const MapsTab = (() => {
       const hid = hiddenIds();
       for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
         className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : ''),
-        draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p) }));
+        draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p), pad: cardPad }));
     }
     /** Centre the map on pin p and open its card. */
     const showPin = p => { if (hiddenIds().has('p' + p.id)) setHidden('p' + p.id, false); const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
@@ -403,13 +440,14 @@ const MapsTab = (() => {
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
       drawPins(); drawRoutes(); renderRoutes(); drawGroups();
+      meta.textContent = metaText();
     }
     // ---- the party's groups: a flag, or the group's token, with its name
     let groupLayer = null;
     const drawGroups = () => {
       groupLayer.clearLayers();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
-        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28,
+        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad,
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
@@ -674,21 +712,53 @@ const MapsTab = (() => {
         await refresh(); toast('Route saved');
       } catch (err) { toast(err.message, true); }
     }
-    /** The side panel: Routes and Locations (every pin), each folding up, and the whole panel folding away to the right.
-     * How it was left is remembered on this device. */
+    /** The drawer over the map's right edge: a search box, then Routes and Locations (every pin), each folding up. It
+     * slides away to its tab, never changing the map's size. How it was left is remembered on this device. */
     const sideKey = `chronicle-map-side-${cid}`;
-    const sideState = () => { try { return JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { return {}; } };
+    // until it has been opened or closed on this device, the drawer starts open, except on a phone, where it would cover half the map
+    const sideState = () => {
+      let st = {};
+      try { st = JSON.parse(localStorage.getItem(sideKey) || '{}') || {}; } catch { /* storage may be off */ }
+      return 'collapsed' in st ? st : { ...st, collapsed: window.matchMedia('(max-width: 720px)').matches };
+    };
     const keepSide = patch => { try { localStorage.setItem(sideKey, JSON.stringify({ ...sideState(), ...patch })); } catch { /* this visit only */ } };
+    const fold = btn('', () => {
+      if (sheetAway) { sheetAway = false; keepSide({ collapsed: false }); } else keepSide({ collapsed: !sideState().collapsed });
+      syncDrawer();
+    }, 'small map-side-fold');
+    const sideList = el('div', { class: 'map-side-list' });
+    const finder = el('input', { type: 'search', class: 'map-side-find', 'aria-label': 'Find on this map', placeholder: 'Find on this map', autocomplete: 'off' });
+    /** Hide the rows whose name doesn't hold what is typed in the search box (matched as names are: case, accents, "The"). */
+    const filterRows = () => {
+      const q = G.nameKey(finder.value);
+      routeBox.querySelectorAll('[data-name]').forEach(row => { row.hidden = !!q && !G.nameKey(row.dataset.name).includes(q); });
+    };
+    finder.addEventListener('input', filterRows);
+    const sections = el('div', { class: 'map-side-secs' });
+    sideList.append(finder, sections);
+    routeBox.append(fold, sideList);
+    /** A card opening keeps out from under the open drawer: from its side, or on a phone (a sheet along the bottom) its top. */
+    const syncPad = () => {
+      const open = stage.classList.contains('drawer-open'), sheet = window.matchMedia('(max-width: 720px)').matches;
+      // the toolbar runs along the top, or on a phone along the bottom (over the sheet when it is open)
+      cardPad.tl[1] = sheet ? 64 : toolbar.offsetTop + toolbar.offsetHeight + 8;
+      cardPad.br[0] = open && !sheet ? 316 : 16;
+      cardPad.br[1] = sheet ? (open ? Math.round(stage.clientHeight * 0.45) : 0) + 70 : 16;
+    };
+    function syncDrawer() {
+      const shut = !!sideState().collapsed || sheetAway;
+      routeBox.hidden = !routes.length && !pins.length;
+      routeBox.className = 'map-routes ' + (shut ? 'closed' : 'open');
+      stage.classList.toggle('drawer-open', !shut && !routeBox.hidden);
+      syncPad();
+      fold.textContent = shut ? '⟨' : '⟩';
+      fold.dataset.tip = shut ? 'Show the routes and locations' : 'Slide the routes and locations away';
+      fold.setAttribute('aria-label', shut ? 'Show routes and locations' : 'Hide routes and locations');
+      fold.setAttribute('aria-expanded', String(!shut));
+    }
     function renderRoutes() {
       const st = sideState();
-      routeBox.hidden = !routes.length && !pins.length;
-      routeBox.classList.toggle('collapsed', !!st.collapsed);
-      host.closest('.map-body')?.classList.toggle('side-collapsed', !!st.collapsed);
-      const fold = btn(st.collapsed ? '⟨' : '⟩', () => { keepSide({ collapsed: !st.collapsed }); renderRoutes(); lf?.map.invalidateSize({ animate: false }); }, 'small map-side-fold',
-        st.collapsed ? 'Show the routes and locations' : 'Fold the routes and locations away');
-      fold.setAttribute('aria-label', st.collapsed ? 'Show routes and locations' : 'Hide routes and locations');
-      fold.setAttribute('aria-expanded', String(!st.collapsed));
-      if (st.collapsed) return routeBox.replaceChildren(fold, el('span', { class: 'map-side-label', 'aria-hidden': 'true' }, 'Routes · Locations'));
+      syncDrawer();
       const section = (key, title, kids) => {
         const d = el('details', { class: 'map-side-sec', open: st[key] !== false }, el('summary', {}, el('h3', {}, title, el('span', { class: 'muted small' }, ` ${kids.length}`))), ...kids);
         d.addEventListener('toggle', () => keepSide({ [key]: d.open }));
@@ -699,7 +769,7 @@ const MapsTab = (() => {
         const a = endPin(r.points[0]), z = endPin(r.points[r.points.length - 1]);
         const swatch = el('span', { class: 'map-route-swatch' + (r.color ? '' : ' plain') + ' ' + (r.dash || 'dashed'), 'aria-hidden': 'true' });
         if (r.color) swatch.style.setProperty('--swatch', r.color);
-        return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : '') },
+        return el('div', { class: 'map-route' + (r.is_secret ? ' secret' : ''), 'data-name': r.name },
           el('div', { class: 'map-route-top' }, showTick('r' + r.id, r.name, hid),
             el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => { if (hid.has('r' + r.id)) setHidden('r' + r.id, false); lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)); } }, swatch, r.is_secret ? '🔒 ' : '', r.name)),
           a || z ? el('span', { class: 'small map-route-ends' }, a ? pinTitle(a) : '…', ' → ', z ? pinTitle(z) : '…') : null,
@@ -729,13 +799,13 @@ const MapsTab = (() => {
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
         const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
         if (p.color) face.style.setProperty('--pin-colour', p.color);
-        return el('div', { class: 'map-place-row' }, showTick('p' + p.id, pinTitle(p), hid),
+        return el('div', { class: 'map-place-row', 'data-name': pinTitle(p) }, showTick('p' + p.id, pinTitle(p), hid),
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
             face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
-      routeBox.replaceChildren(...[el('div', { class: 'map-side-head' }, fold),
-        routes.length ? section('routes', 'Routes', routeRows) : null,
+      sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows) : null,
         pins.length ? section('places', 'Locations', placeRows) : null].filter(Boolean));
+      filterRows();
     }
 
     function onClick(ev) {
@@ -759,27 +829,27 @@ const MapsTab = (() => {
     }
 
     // ---- the toolbar
-    const measureBtn = btn('Measure/Route', () => {
+    const measureBtn = tbtn('📏', 'Route', 'Measure/Route', () => {
       if (mode === 'measure') { mode = null; pts = []; drawMeasure(); note.textContent = ''; return syncTools(); }
       if (!hasScale()) { note.textContent = gm ? 'Set the scale to measure' : 'The GM hasn\'t set this map\'s scale yet'; return; }
       if (mode === 'scale' || mode === 'pin' || mode === 'label') closePanel();
       mode = 'measure'; note.textContent = gm ? 'Click the map to lay down points, then Save route… to keep it' : 'Click the map to lay down points'; syncTools();
-    }, '', gm ? 'Click along a path to add up its length, and keep it as a route' : 'Click along a path to add up its length');
-    const addPinBtn = btn('Add pin', () => {
+    }, gm ? 'Click along a path to add up its length, and keep it as a route (M)' : 'Click along a path to add up its length (M)');
+    const addPinBtn = tbtn('📍', 'Pin', 'Add pin', () => {
       if (mode === 'pin') { closePanel(); note.textContent = ''; return; }
       if (mode === 'label') closePanel();
       if (mode === 'scale' || mode === 'measure') { if (mode === 'measure') { pts = []; drawMeasure(); } closePanel(); }
       panelBox.replaceChildren(); mode = 'pin'; note.textContent = 'Click the map to place the pin'; syncTools();
-    }, '', 'Click the map to leave a pin there');
+    }, 'Click the map to leave a pin there (P)');
     addPinBtn.hidden = !map.image_url;
     // Quick label (GMs): each click on the map asks for the name of the place there, and pins it as that Encyclopedia
     // entry (or a new Location), staying in this mode for the next one: a map's labels pinned by hand, fast.
-    const labelBtn = gm && S.encReady ? btn('Quick label', () => {
+    const labelBtn = gm && S.encReady ? tbtn('🏷', 'Label', 'Quick label', () => {
       if (mode === 'label') { closePanel(); note.textContent = ''; return; }
       if (mode === 'measure') { pts = []; drawMeasure(); }
       if (mode) closePanel();
       mode = 'label'; note.textContent = 'Click a place on the map, then type its name. Press Quick label again when you\'re done'; syncTools();
-    }, '', 'Click each place on the map and type its name: each becomes a pin and an Encyclopedia location') : null;
+    }, 'Click each place on the map and type its name: each becomes a pin and an Encyclopedia location (L)') : null;
     if (labelBtn) labelBtn.hidden = !map.image_url;
     function labelAt(xy) {
       picks = [xy]; drawPicks();
@@ -817,19 +887,31 @@ const MapsTab = (() => {
     }
     // GMs: put a group of the party anywhere on the map (a pin isn't needed), with a select when there is more than one group
     const partyWhich = select(groups.map(g => [g.id, g.name]), groups[0]?.id ?? '', { 'aria-label': 'Which group', class: 'small' });
-    const partyBtn = gm ? btn('Place party', () => {
+    const partyBtn = gm ? tbtn('🚩', 'Party', 'Place party', () => {
       if (mode === 'party') { mode = null; note.textContent = ''; return syncTools(); }
       if (mode === 'measure') { pts = []; drawMeasure(); }
       if (mode) closePanel();
       if (!groups.length) { note.textContent = 'The party has no group yet: add players on the Members tab'; return; }
       mode = 'party'; note.textContent = 'Click the map where the party is'; syncTools();
-    }, '', 'Put the party\'s marker anywhere on this map') : null;
+    }, 'Put the party\'s marker anywhere on this map (T)') : null;
     if (partyBtn) partyBtn.hidden = !map.image_url;
-    const saveRouteBtn = btn('Save route…', () => saveRoute(), '', 'Keep the path you measured as a named route on this map');
+    // Labels: every pin's name shown at every zoom (otherwise only close up, on hover and on the open card)
+    const labelsKey = `chronicle-map-labels-${cid}-${id}`;
+    const labelsWanted = () => { try { return localStorage.getItem(labelsKey) === '1'; } catch { return false; } };
+    let labelsOn = labelsWanted();   // kept here too, for a browser that won't store it
+    const syncLabels = () => { stage.classList.toggle('labels-on', labelsOn); labelsBtn.setAttribute('aria-pressed', String(labelsOn)); };
+    const labelsBtn = tbtn('🔤', 'Labels', 'Labels', () => {
+      labelsOn = !labelsOn;
+      try { localStorage.setItem(labelsKey, labelsOn ? '1' : '0'); } catch { /* this visit only */ }
+      syncLabels();
+    }, 'Show every pin\'s name at every zoom (just for you)');
+    labelsBtn.hidden = !map.image_url;
+    syncLabels();
+    const saveRouteBtn = btn('Save route…', () => saveRoute(), 'small', 'Keep the path you measured as a named route on this map');
     saveRouteBtn.hidden = true;
     // Plan this trip: the Travel tab, with the path's length and the pins at its ends filled in
     const tripLink = query => `#/c/${cid}/travel?map=${map.id}&${query}`;
-    const planBtn = btn('Plan this trip', () => { location.hash = tripLink('path=' + pts.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')); }, '',
+    const planBtn = btn('Plan this trip', () => { location.hash = tripLink('path=' + pts.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')); }, 'small',
       'Work out the travel time along this path on the Travel tab; Depart then moves the party\'s marker to its end');
     planBtn.hidden = true;
     const undoBtn = btn('Undo point', () => { pts.pop(); drawMeasure(); }, 'small');
@@ -846,12 +928,23 @@ const MapsTab = (() => {
       planBtn.hidden = !(gm && m && pts.length > 1 && hasScale());
       undoBtn.hidden = clearBtn.hidden = !m;
       total.hidden = !m;
-      if (scaleBtn) scaleBtn.setAttribute('aria-pressed', String(mode === 'scale'));
-      host.classList.toggle('picking', !!mode);
+      measureBar.hidden = !m;
+      if (scaleBtn) { scaleBtn.setAttribute('aria-pressed', String(mode === 'scale')); scaleBtn.textContent = 'Set scale…' + scaleText(); }
+      stage.classList.toggle('picking', !!mode);
+      stage.classList.toggle('measuring', m);   // the measure bar takes the legend's place along the bottom
       // two quick taps while laying down points are two points, not a zoom
       lf?.map.doubleClickZoom[mode ? 'disable' : 'enable']();
+      // on a phone the sheet would cover half of the map a tool is used on, so it folds away until the tool is put down
+      if (mode !== toolMode) { toolMode = mode; sheetAway = !!mode && window.matchMedia('(max-width: 720px)').matches; syncDrawer(); }
     }
-    const scaleBtn = gm ? btn('Scale', () => (mode === 'scale' ? closePanel() : openScale()), '', 'Tell the map how far apart things are') : null;
+    const scaleBtn = gm ? btn('Set scale…', () => (mode === 'scale' ? closePanel() : openScale()), '', 'Tell the map how far apart things are') : null;
+    scaleBtn?.setAttribute('aria-label', 'Scale');
+    // the scale as the ⚙ menu shows it: "· 1 sq = 5 mi" (a grid) or "· 100 px = 2 mi"
+    const scaleText = () => {
+      if (!hasScale()) return '';
+      const sq = map.grid_px > 0, d = G.fmtDistance(G.toMetres(sq ? map.grid_px : 100, map), system(), G.isSpace(map));
+      return ` · ${sq ? '1 sq' : '100 px'} = ${d}`;
+    };
     const rename = () => {
       const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Rename the map' });
       const name = el('input', { value: map.name, maxlength: 150, required: true, 'aria-label': 'New name', autocomplete: 'off' });
@@ -891,7 +984,7 @@ const MapsTab = (() => {
       d.append(el('h3', {}, `Export ${map.name}`),
         el('div', { class: 'row' }, asPicture, asUvtt),
         hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
-          : el('p', { class: 'small' }, 'Set grid squares first (Scale → Grid squares) to export a Universal VTT file.'),
+          : el('p', { class: 'small' }, 'Set grid squares first (⚙ → Set scale… → Grid squares) to export a Universal VTT file.'),
         el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
       d.addEventListener('close', () => d.remove());
       document.body.append(d); d.showModal();
@@ -1015,23 +1108,49 @@ const MapsTab = (() => {
     const scanBtn = gm && map.image_url && S.encReady && typeof MapScan !== 'undefined'
       ? btn('Scan for names…', scanNames, '', 'Read the place names printed on the map, then pick which to pin as Encyclopedia locations') : null;
 
-    // ⚙: the map's own changes, kept out of the toolbar so they aren't pressed by accident
-    const gear = gm ? el('details', { class: 'map-gear' }, el('summary', { class: 'button', 'aria-label': 'Map settings', title: 'Change the picture, rename or delete this map' }, '⚙'),
-      el('div', { class: 'map-gear-menu' }, swap, btn('Rename', rename), del)) : null;
+    // ⚙: setup and the map's own changes, kept out of the toolbar: done once per map, and not to be pressed by accident
+    const off = new AbortController();   // the page's own listeners on the document, taken down when it is left
+    window.addEventListener('hashchange', () => off.abort(), { once: true });
+    const gear = gm ? el('details', { class: 'map-gear' }, el('summary', { class: 'button', 'aria-label': 'Map settings', title: 'Scale, scanning, export, and changing, renaming or deleting this map' }, '⚙'),
+      el('div', { class: 'map-gear-menu' }, ...[scaleBtn, opacityBox, scanBtn, exportBtn, el('hr'), swap, btn('Rename', rename), el('hr'), del].filter(Boolean))) : null;
     if (gear) {
       gear.querySelector('.map-gear-menu').addEventListener('click', ev => { if (ev.target.closest('button')) gear.open = false; });
       gear.querySelector('input[type=file]').addEventListener('change', () => { gear.open = false; });
-      const off = new AbortController();   // a click anywhere else closes it, until the page is left
-      document.addEventListener('click', ev => { if (gear.open && !gear.contains(ev.target)) gear.open = false; }, { signal: off.signal });
-      window.addEventListener('hashchange', () => off.abort(), { once: true });
+      document.addEventListener('click', ev => { if (gear.open && !gear.contains(ev.target)) gear.open = false; }, { signal: off.signal });   // a click anywhere else closes it
     }
-    tools.append(saveRouteBtn, planBtn);
-    toolbar.append(...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich, scanBtn, gridBtn, opacityBox, undoBtn, clearBtn, total, tools, el('span', { class: 'map-toolbar-gap' }), scaleBtn, exportBtn, secretBtn, gear].filter(Boolean));
+    // keys, until the page is left: P Add pin, L Quick label, M Measure/Route, T Place party, Escape out of what is open.
+    // Not while typing, nor while a dialog is open over the page.
+    document.addEventListener('keydown', ev => {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing) return;
+      if (ev.target.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]') || document.querySelector('dialog[open]')) return;
+      const press = b => { if (b && !b.hidden) { ev.preventDefault(); b.click(); } };
+      const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+      if (k === 'p') press(addPinBtn);
+      else if (k === 'l') press(labelBtn);
+      else if (k === 'm') press(measureBtn);
+      else if (k === 't') press(partyBtn);
+      else if (k === 'Escape') {
+        if (gear?.open) gear.open = false;
+        else if (lf?.map.getContainer().querySelector('.leaflet-popup')) lmap_close();
+        else if (mode === 'scale') closePanel();
+        else press({ pin: addPinBtn, label: labelBtn, measure: measureBtn, party: partyBtn }[mode]);
+      }
+    }, { signal: off.signal });
+    // the toolbar: the modes used all the time, then what is only seen; the measure bar while measuring; GM only and ⚙ top-right
+    toolbar.append(el('div', { class: 'map-tool-group' }, ...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich].filter(Boolean)),
+      el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn));
+    const measureBar = el('div', { class: 'map-measure-bar surface-float' }, total, undoBtn, clearBtn, saveRouteBtn, planBtn);
+    measureBar.hidden = true;
+    stage.append(toolbar, panelBox, note, measureBar, routeBox);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
+    if (gm) stage.append(el('div', { class: 'map-corner' }, secretBtn, gear));
     const title = el('h2', {}, map.name);
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const metaText = () => `${plural(pins.length, 'location')} · ${plural(routes.length, 'route')}${hasScale() ? ' · scale set' : ''}`;
+    const meta = el('span', { class: 'map-meta small muted' }, metaText());
 
-    ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card map-view' },
-      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title), toolbar, note, panelBox,
-      el('div', { class: 'map-body' }, host, routeBox)));
+    ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
+      el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta),
+      el('div', { class: 'map-body' }, stage)));
 
     if (!map.image_url || !map.width) {
       host.replaceChildren(el('p', { class: 'muted map-empty' }, gm ? 'This map has no picture yet. Use ⚙ → Change picture.' : 'This map has no picture yet.'));
@@ -1051,22 +1170,45 @@ const MapsTab = (() => {
     groupLayer = L.layerGroup().addTo(lmap);
     const bar = scaleControl(() => map, system).addTo(lmap);
     lf = { map: lmap, scale: bar };
+    // on a phone a card wants more of the map than the open sheet leaves it, so the sheet folds away while one is open
+    const phone = () => window.matchMedia('(max-width: 720px)').matches;
+    lmap.on('popupopen', () => { if (phone() && !sheetAway) { sheetAway = true; syncDrawer(); } })
+      .on('popupclose', () => { if (sheetAway && !mode) { sheetAway = false; syncDrawer(); } });
+    // what the markers mean, bottom-left under the scale bar
+    stage.append(el('div', { class: 'map-legend surface-float', role: 'note', 'aria-label': 'Legend' },
+      ['📍 Place', '📅 Event', '📝 Note', '🚩 Party'].map(t => el('span', { class: 'map-legend-item' }, t)),
+      el('span', { class: 'map-legend-item' }, el('i', { class: 'map-legend-gm', 'aria-hidden': 'true' }), 'GM only')));
+    // pins' names show once zoomed in well past the fit the page opened at (as well as on hover, on the open card, and with Labels)
+    let baseZoom = lmap.getZoom();
+    const syncZoom = () => stage.classList.toggle('zoomed-in', lmap.getZoom() >= baseZoom + 1.5);
+    lmap.on('zoomend', syncZoom);
+    syncZoom();
     syncTools();
     lmap.on('click', onClick);
     lmap.on('zoom', gridWidth);
     drawGrid();
     // the map must know its size once it is on the page, and again whenever that changes
     let gone = false;
-    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); lmap.remove(); };
-    // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map
-    const fit = () => { if (!host.isConnected) teardown(); else lmap.invalidateSize({ animate: false }); };
-    const ro = new ResizeObserver(fit);
+    const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); window.removeEventListener('resize', fit); lmap.remove(); lf = null; };
+    // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map.
+    // --map-top is how far down the window the stage starts, so the CSS can take it to the window's bottom edge
+    const fit = () => {
+      if (!host.isConnected) return teardown();
+      const top = Math.round(stage.getBoundingClientRect().top + window.scrollY) + 'px';
+      if (stage.style.getPropertyValue('--map-top') !== top) stage.style.setProperty('--map-top', top);
+      lmap.invalidateSize({ animate: false, pan: false });   // the picture stays put under the pointer as the stage grows or shrinks at the bottom
+      syncPad();
+    };
+    // the page's body too: the bar over the tabs can grow after the map is drawn, moving the stage down. A frame later,
+    // so the stage's new height is never a change inside the observer's own callback
+    const ro = new ResizeObserver(() => requestAnimationFrame(fit));
     window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
-    ro.observe(host);
+    window.addEventListener('resize', fit);
+    ro.observe(stage); ro.observe(document.body);
     drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
-      lmap.invalidateSize({ animate: false }); lmap.fitBounds(bounds(), { animate: false });
+      lmap.invalidateSize({ animate: false }); fitPicture(); baseZoom = lmap.getZoom(); syncZoom();
       const want = pinMarkers.get(Number(params.get('pin')));   // a link back from an entry or event: centre on that pin and open its card
       const at = pins.find(q => q.id === Number(params.get('pin')));
       if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); }
