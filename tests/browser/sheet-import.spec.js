@@ -50,3 +50,18 @@ test("Import: a .txt renamed .pdf", async ({ page, browser }) => {
   await page.getByLabel("Import from PDF").setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.from("Just some notes, not a PDF.\n") });
   await expect(page.locator("#toast")).toHaveText("That file isn't a PDF.");
 });
+
+// Older Safari and Chrome (an iPad a year or two behind, say) lack what pdf.js's plain build leans on, so the app
+// vendors its legacy build. Take those additions away before pdf.js loads, in the page and in its worker alike.
+test("Import: still reads a PDF in a browser without the newest JavaScript", async ({ page, browser }) => {
+  const strip = "delete Map.prototype.getOrInsert; delete Map.prototype.getOrInsertComputed; delete WeakMap.prototype.getOrInsert;" +
+    " delete WeakMap.prototype.getOrInsertComputed; delete Math.sumPrecise; delete Uint8Array.fromBase64; delete Uint8Array.prototype.toBase64;" +
+    " delete Uint8Array.prototype.toHex; delete Uint8Array.fromHex;\n";
+  await page.route(/\/static\/vendor\/pdfjs\/.*\.mjs$/, async route => {
+    const res = await route.fetch();
+    await route.fulfill({ response: res, body: strip + await res.text() });
+  });
+  await editor(page, browser, "Ike");
+  await page.getByLabel("Import from PDF").setInputFiles(path.join(SUPPORT, "fillable-sheet.pdf"));
+  await expect.poll(() => labels(page)).toEqual(expect.arrayContaining(["STR", "Athletics", "CharacterName"]));
+});
