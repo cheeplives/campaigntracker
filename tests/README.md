@@ -94,9 +94,12 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
+- **table** (layout): the block up top has the shift's weather and a 🔔 badge that lists the reminders; a shift in four
+  sessions shows the latest two chips and +2 more; the visibility pill opens its choice, which saves; the action pick is
+  half the box's width, above the writing; End and Pass time stay on screen in the floating bar as the page scrolls, ↑
+  goes back to the top, and Encyclopedia add opens over the bar.
 - **table** (framing): in another site's frame the panel changes nothing until "Allow changes here" is turned on for that site, which is remembered.
-- **table**: At the Table sits first under Play and shows the date, shift, party and moons, with the weather in the clock's
-  shift's big box; End shift moves the clock, offers to start a session when none is open (Start a session starts one on the new shift; Not now isn't asked again); Pass time… skips ahead by an amount or to a date and shift, labels every shift passed with the activity, refuses a time that isn't after now, and opens the downtime dialog; an Encyclopedia lookup finds names (never a secret entry for a player); a
+- **table**: At the Table sits first under Play and shows the date, shift, weather and party in one block over the big box; End shift moves the clock, offers to start a session when none is open (Start a session starts one on the new shift; Not now isn't asked again); Pass time… skips ahead by an amount or to a date and shift, labels every shift passed with the activity, refuses a time that isn't after now, and opens the downtime dialog; an Encyclopedia lookup finds names (never a secret entry for a player); a
   player's note goes on the clock's shift from the big box, and an entry note, escaped, at the end of an entry's Public
   notes (a GM's GM-only one in its GM notes, a player never on a secret entry). Panel links: members make and revoke their own, only GMs make public ones and revoke
   anyone's, and only the code's hash is stored; a link reaches only its own campaign (the cid asked for is ignored) and
@@ -276,7 +279,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   summary-then-description notes (`div` → `p`, `span` unwrapped, Scabard links as text), GM notes, secret pages as GM
   only, a `Player:` line, names cut to 150 characters, fills in a blank entry and keeps one with notes; connections read
   from the right end on the starter kinds and new ones, a former one noted, a secret one or one touching a secret entry
-  GM only; dated events become published, closed Sessions with the secrets as GM-only paragraphs and Participants,
+  GM only; dated events become published, closed Sessions with no in-game dates (so the import day's shifts show no
+  session chips) and with the secrets as GM-only paragraphs and Participants,
   Setting, Protagonists and Part of lines; the picture comes from the image stub's `www.scabard.com` with a Scabard
   credit, while one hosted elsewhere or gone is reported; players get none of the GM's side and can't import; a second
   run keeps everything and doubles nothing. The reader (`static/scabard.js`) splits dated names, plans and batches.
