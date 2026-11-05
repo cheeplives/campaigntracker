@@ -4,7 +4,7 @@
 const { test, expect } = require("@playwright/test");
 const path = require("path");
 const Engine = require(path.join(__dirname, "..", "..", "static", "engine.js"));
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, openPassTime } = require("./helpers");
 
 test("engine: slots, names and travel in each time mode", () => {
   const cal = mode => { const c = { months: [{ name: "M", days: 30 }], weekdays: [], timeMode: mode }; Engine.prep(c); return c; };
@@ -84,6 +84,7 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   await expect(page.locator("[data-box=shifts] .daybox-toggle")).toHaveText("Hours");
   await expect(page.locator(".shiftcard")).toHaveCount(24);
   await expect(page.locator(".shiftcard.now h4")).toContainText("06:00");
+  await openPassTime(page);
   await expect(page.getByLabel("Unit").locator("option").first()).toHaveText("hour(s)");
   await page.getByRole("button", { name: "Pass time ▶" }).click();
   await expect(page.locator(".now-date")).toContainText("07:00");

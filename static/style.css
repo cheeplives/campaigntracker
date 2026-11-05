@@ -141,15 +141,22 @@ button.on { background: var(--accent); color: var(--on-accent); }
 
 /* now bar */
 /* One line: the campaign name small, then the date, where and the weather, so the page below gets the room. Pass time is
- * its own row on Current Day and the calendar, and a button that opens that row everywhere else */
+ * a button at the end that opens its own row, the same on every page */
 .nowbar { background: var(--stock); border-radius: var(--radius); padding: 8px 16px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; position: relative;
   box-shadow: 0 1px 0 var(--line), 0 10px 24px -16px rgb(0 0 0 / .6); }
 .nowbar::after { position: absolute; left: 20px; right: 20px; bottom: -3px; height: 6px; }
-.now-main { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.now-main { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; flex: 1 1 0; min-width: 0; }   /* wraps inside itself, so the ⏩ keeps its place at the end even as it widens on hover */
 .now-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .now-title h1 { margin: 0; font-size: .85rem; color: var(--dim); letter-spacing: .12em; }
 .now-title .role { display: none; }   /* the View as player button, and players' lack of it, already say which side you're on */
 .now-time { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
-.now-passbtn { margin-left: auto; }
+.now-passbtn { margin-left: auto; white-space: nowrap; }
+/* Just the ⏩ until the mouse is over it, it has keyboard focus, or its row is open. A touch screen has no hover, so there a
+ * tap opens the row and the button shows its name while the row is open. */
+.now-passbtn .pt-label { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; vertical-align: bottom; white-space: pre;
+  transition: max-width .2s ease, opacity .15s ease; }
+.now-passbtn:focus-visible .pt-label, .now-passbtn[aria-expanded="true"] .pt-label { max-width: 7em; opacity: 1; }
+@media (hover: hover) { .now-passbtn:hover .pt-label { max-width: 7em; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .now-passbtn .pt-label { transition: none; } }
 .nowbar .passtime { flex: 1 1 100%; }
 .now-title .view-as { margin-left: 4px; padding: 2px 8px; font-size: .75rem; }
 /* View as player: a GM previewing the players' side, with nothing to change until they leave */
