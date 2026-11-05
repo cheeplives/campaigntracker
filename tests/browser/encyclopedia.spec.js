@@ -75,10 +75,11 @@ test("the detector finds names, emphasis and set-apart words, and leaves out com
 test("saving notes offers new names; added ones become entries, linked on the page, and secret ones stay with the GMs", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Encyclopedia");
-  await page.goto(`index.html#/c/${cid}`);
+  // Locations visited saves with the day (current-day.spec.js checks it offers names too); here it is only read back, linked.
+  expect((await api(page, "day_update", { abs_day: 2, locations: "Altdorf, the Grey Lady inn" }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const pub = page.locator(".notepanel.public .ql-editor"), sec = page.locator(".notepanel.secret .ql-editor");
   await expect(pub).toBeVisible();
-  await page.locator("textarea[name=locations]").fill("Altdorf, the Grey Lady inn");
   await pub.click();
   await page.locator(".notepanel.public button.ql-bold").click();
   await pub.pressSequentially("Gunther");
@@ -90,16 +91,14 @@ test("saving notes offers new names; added ones become entries, linked on the pa
 
   const dlg = page.locator("dialog.noun-dialog");
   await expect(dlg).toBeVisible();
-  await expect(dlg.locator(".noun-row")).toHaveCount(4);
+  await expect(dlg.locator(".noun-row")).toHaveCount(3);
   await expect(nounRow(page, "Altdorf").locator("select")).toHaveValue("Location");
   await expect(nounRow(page, "Black Hand").locator("input[type=checkbox]")).toBeChecked(); // only in the Secret notes
   await expect(nounRow(page, "Gunther").locator("input[type=checkbox]")).not.toBeChecked();
-  await expect(nounRow(page, "Grey Lady inn").locator("select")).toHaveValue("Location"); // from the Locations visited list
   await nounRow(page, "Gunther").locator("select").selectOption("Person");
-  await nounRow(page, "Grey Lady inn").getByText("Ignore").click();
   await nounRow(page, "Black Hand").getByText("Skip").click();
   await dlg.getByRole("button", { name: "Save choices" }).click();
-  await expect(page.getByText("Added 2 to the Encyclopedia · 1 ignored")).toBeVisible();
+  await expect(page.getByText("Added 2 to the Encyclopedia")).toBeVisible();
   await expect(page.locator("[data-box=notes] .enc-mentions")).toContainText("Gunther");   // the page has redrawn with the new entries
   // A skipped name isn't asked about again until the page is reloaded; a scan still finds it.
   await page.getByRole("button", { name: "Save notes" }).click();
@@ -121,9 +120,9 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   // the dialog's Location and Person are Categories, not tags
   expect([byName.Gunther.category, byName.Altdorf.category, byName["Black Hand"].category]).toEqual(["person", "location", null]);
   expect(byName.Gunther.tags).toEqual([]);
-  expect(json.ignored).toEqual(["Grey Lady inn"]);
+  expect(json.ignored).toEqual([]);
   // the GM's notes are still open in their editors, so the entries they name are listed below them
-  await expect(page.locator("[data-box=notes] .enc-mentions a")).toHaveText(["Altdorf", "Gunther", "Black Hand"]);
+  await expect(page.locator("[data-box=notes] .enc-mentions a")).toHaveText(["Gunther", "Altdorf", "Black Hand"]);
 
   // The player never gets the secret entry, its name, or the GMs' ignored words.
   const perrors = watchErrors(pp);
@@ -135,7 +134,7 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   expect(JSON.stringify((await api(pp, "campaign", undefined, cid)).json)).not.toContain("Black Hand");
 
   // Names are linked where the player reads them, and a link opens the entry.
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator(".notes-locs a.enc-link")).toHaveText("Altdorf");
   await expect(pp.locator("[data-box=notes] .richtext strong a.enc-link")).toHaveText("Gunther");
   await pp.locator("[data-box=notes] .richtext a.enc-link", { hasText: "Gunther" }).click();
@@ -157,7 +156,7 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   await expect(pp.locator(".enc-detail .richtext a.enc-link").first()).toHaveText("Altdorf"); // other entries are linked in it
   await expect(pp.locator(".enc-detail .enc-where a")).toContainText(["Public notes"]);
   // the hover text on a link gives the first line of the entry
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator("[data-box=notes] .richtext a.enc-link", { hasText: "Gunther" })).toHaveAttribute("data-tip", /Gunther runs the inn in Altdorf/);
   await pp.goBack();
   await expect(pp.locator(".enc-detail h2")).toHaveText("Gunther");
