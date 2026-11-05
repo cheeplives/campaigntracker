@@ -16,7 +16,7 @@ test("on a touch screen a tooltip opens on tap and closes on a second tap or a t
   test.skip(!hasTouch, "touch screens only");
   const errors = watchErrors(page);
   const cid = await gmCampaign(page, browser, "Tess");
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const tipbox = page.locator("#tipbox");
   const weather = page.locator(".kv .wx");
   await expect(weather).toBeVisible();
