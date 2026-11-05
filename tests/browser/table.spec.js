@@ -57,6 +57,46 @@ test("At the Table leads the Play group and shows the date, the party, the moons
   expectNoErrors(errors);
 });
 
+test("Pass time… skips ahead by an amount or to a date, labels the time passed, and leads to rests and travel", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Pell");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Pass ${gm.id}`);   // now: Dawn of day 2 (shift 8)
+  await page.goto(`index.html#/c/${cid}/table`);
+  const view = page.locator(".table-view");
+  await view.getByRole("button", { name: "Pass time…" }).click();
+  const dlg = page.locator("dialog.pt-dialog");
+  await dlg.getByRole("spinbutton", { name: "Amount" }).fill("2");
+  await dlg.getByRole("combobox", { name: "Unit" }).selectOption("day");
+  await expect(dlg.locator("[role=status]")).toContainText("8 shifts on");
+  await dlg.getByLabel("Activity for the time passed").fill("Waiting for the caravan");
+  await dlg.getByRole("button", { name: "Pass time ▶" }).click();
+  await expect(dlg).toHaveCount(0);
+  expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(16);
+  expect(sql(`SELECT COUNT(*) FROM shifts WHERE campaign_id = ${cid} AND activity = 'Waiting for the caravan'`).trim()).toBe("8");
+  // to a date: Dusk of the day after next
+  await view.getByRole("button", { name: "Pass time…" }).click();
+  await dlg.getByLabel("To a date").check();
+  await dlg.locator(".pt-skip .w-day").fill("7");
+  await dlg.getByLabel("Shift of that day").selectOption({ label: "Dusk" });
+  await expect(dlg.locator("[role=status]")).toContainText("Dusk");
+  await dlg.getByRole("button", { name: "Pass time ▶" }).click();
+  await expect(dlg).toHaveCount(0);
+  expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(6 * 4 + 2);
+  // a time that isn't after now is refused
+  await view.getByRole("button", { name: "Pass time…" }).click();
+  await dlg.getByLabel("To a date").check();
+  await dlg.locator(".pt-skip .w-day").fill("1");
+  await dlg.getByRole("button", { name: "Pass time ▶" }).click();
+  await expect(dlg.locator(".bad")).toContainText("Pick a time after now");
+  // rests open the downtime dialog
+  await dlg.getByRole("button", { name: /Rest or downtime/ }).click();
+  await expect(page.locator("dialog.dt-dialog")).toBeVisible();
+  await page.locator("dialog.dt-dialog").getByRole("button", { name: "Cancel" }).click();
+  expectNoErrors(errors);
+});
+
 test("a player's note goes on the clock's shift, or at the end of an Encyclopedia entry, and an entry can be looked up", async ({ page, browser }) => {
   const { cid, pp } = await table(page, browser, "Notes");
   const e = await api(page, "entry_save", { name: "Coaching Inn", notes: "<p>A walled inn on the road.</p>" }, cid);
