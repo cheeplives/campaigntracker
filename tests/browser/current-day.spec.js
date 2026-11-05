@@ -26,9 +26,9 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
-  // Today's boxes come folded under it: Weather, Shifts, Events, Reminders. The day's notes are on its calendar page.
-  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["table-weather", "table-shifts", "table-events", "table-reminders"]);
-  await expect(page.locator(".daybox.folded")).toHaveCount(4);
+  // The Clocks box, then today's boxes, come folded under it: Weather, Shifts, Events, Reminders. The day's notes are on its calendar page.
+  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["clocks", "table-weather", "table-shifts", "table-events", "table-reminders"]);
+  await expect(page.locator(".daybox.folded")).toHaveCount(5);
   // Locations visited sits under the Region for this day, saves with the day and survives a weather re-roll.
   await page.locator("[data-box=table-weather] .daybox-toggle").click();
   const regionTop = (await page.locator(".dayedit [name=region_id]").boundingBox()).y;
