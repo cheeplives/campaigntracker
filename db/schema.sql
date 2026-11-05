@@ -497,6 +497,8 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   played_on DATE NULL,
   first_day BIGINT NOT NULL,
   last_day BIGINT NULL,
+  first_shift BIGINT NULL,                      -- the absolute shift it started on; NULL on sessions from before 027 (whole days)
+  last_shift BIGINT NULL,                       -- the absolute shift it ended on; NULL while open, or from before 027
   summary MEDIUMTEXT,
   summary_format VARCHAR(8) NOT NULL DEFAULT 'html',
   rewards MEDIUMTEXT NULL,
@@ -637,6 +639,23 @@ CREATE TABLE IF NOT EXISTS party_groups (
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL,
   FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE SET NULL,
   FOREIGN KEY (token_id) REFERENCES tokens(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Where a party group was put on a map and on what shift (abs_shift), a row each time the GM moves it: the map draws
+-- them as the group's trail (db/migrations/027_session_shifts_party_trail.sql).
+CREATE TABLE IF NOT EXISTS party_trail (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  group_id INT UNSIGNED NOT NULL,
+  map_id INT UNSIGNED NOT NULL,
+  x DOUBLE NOT NULL,
+  y DOUBLE NOT NULL,
+  abs_shift BIGINT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_trail_map (map_id, group_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (group_id) REFERENCES party_groups(id) ON DELETE CASCADE,
+  FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Character sheets. sheet_templates are site-wide, not a campaign's: anyone can use or fork one, only its author (or a

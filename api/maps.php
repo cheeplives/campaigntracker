@@ -548,7 +548,42 @@ function group_move(int $cid): void {
         $x = map_coord(array_key_exists('x', $body) ? $body['x'] : ($same ? $g['x'] : $map['width'] / 2), $map['width']);   // no x or y: where it was, else the middle
         $y = map_coord(array_key_exists('y', $body) ? $body['y'] : ($same ? $g['y'] : $map['height'] / 2), $map['height']);
         db()->prepare('UPDATE party_groups SET map_id=?, x=?, y=? WHERE id=?')->execute([$map['id'], $x, $y, $g['id']]);
+        trail_add($cid, (int)$g['id'], (int)$map['id'], $x, $y);
     }
+    touch_campaign($cid);
+}
+
+// ---------- the party's trail ----------
+// Where each group was put on a map, and on which shift (party_trail). A move in the same shift as the group's last
+// point on that map replaces it, so a drag to tidy up where the party stands leaves one point, not a scribble; a
+// move in a later shift adds a point. The map draws them in order as the group's trail.
+
+/** Add group $gid's new place on map $mapId to its trail, at the campaign's current shift. */
+function trail_add(int $cid, int $gid, int $mapId, float $x, float $y): void {
+    $now = (int)campaign_row($cid)['current_shift'];
+    $st = db()->prepare('SELECT id, map_id, abs_shift FROM party_trail WHERE group_id=? ORDER BY id DESC LIMIT 1');
+    $st->execute([$gid]);
+    $last = $st->fetch();
+    if ($last && (int)$last['map_id'] === $mapId && (int)$last['abs_shift'] === $now)
+        db()->prepare('UPDATE party_trail SET x=?, y=? WHERE id=?')->execute([$x, $y, $last['id']]);
+    else db()->prepare('INSERT INTO party_trail (campaign_id, group_id, map_id, x, y, abs_shift) VALUES (?,?,?,?,?,?)')
+        ->execute([$cid, $gid, $mapId, $x, $y, $now]);
+}
+/** The trail points on map $mapId, oldest first, of the groups in $groupIds (the ones this user may see there). */
+function trail_on_map(int $mapId, array $groupIds): array {
+    if (!$groupIds) return [];
+    $st = db()->prepare('SELECT group_id, x, y, abs_shift FROM party_trail WHERE map_id=? AND group_id IN (' . implode(',', array_map('intval', $groupIds)) . ') ORDER BY group_id, id');
+    $st->execute([$mapId]);
+    return array_map(fn($r) => ['group_id' => (int)$r['group_id'], 'x' => (float)$r['x'], 'y' => (float)$r['y'], 'abs_shift' => (int)$r['abs_shift']], $st->fetchAll());
+}
+/** GM: forget group id's trail on map map_id (every group's when id is left out). */
+function trail_clear(int $cid): void {
+    $body = body();
+    $map = map_row($cid, int_in($body['map_id'] ?? null, 1), true);
+    if (($body['id'] ?? null) !== null) {
+        $g = group_row($cid, $body['id']);
+        db()->prepare('DELETE FROM party_trail WHERE map_id=? AND group_id=?')->execute([$map['id'], $g['id']]);
+    } else db()->prepare('DELETE FROM party_trail WHERE map_id=?')->execute([$map['id']]);
     touch_campaign($cid);
 }
 /** GM: fold group id into into_id. Merging the main group makes into_id the main one. */

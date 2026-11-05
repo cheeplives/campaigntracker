@@ -1697,8 +1697,9 @@
     ['>+1, >+9, >+2w', 'jump on a day, nine days, two weeks'], ['>dusk', 'jump to that part of the day'], ['>+1 dawn', 'the next day at dawn'],
     ['>12 Firstmonth', 'jump to a date'], ['>', 'alone: back to the campaign\'s clock']];
   const sessionName = s => `Session ${s.number}${s.title ? `: ${s.title}` : ''}`;
-  /** The stamp a session's notes start from: its first day. */
-  const sessionStart = s => Number(s.first_day) * spd();
+  /** The stamp a session's notes start from: the shift it started on, or its first day's first shift for a session
+   * from before sessions kept their shifts. */
+  const sessionStart = s => s.first_shift !== null && s.first_shift !== undefined ? Number(s.first_shift) : Number(s.first_day) * spd();
   /** A session's notes as text: what was saved, or (never saved as text yet) its old note rows written out. */
   const sessionNotesText = (s, rows) => s.notes_text ?? Sessions.foldNotes(cal(), rows || [], sessionStart(s));
 
@@ -3241,7 +3242,7 @@
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
-    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
+    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
