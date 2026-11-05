@@ -1298,3 +1298,100 @@ test("Map page: on a phone the toolbar is icons only and the drawer is a bottom 
   await addPin.tap();
   await expect(page.locator(".map-routes")).toHaveClass(/open/);
 });
+
+test("At the Table: the party card shows the map around the party, and a GM's new event can be pinned where the party is", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Table map");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);                  // at 60, 60
+  const g = (await api(page, "groups", undefined, cid)).json.groups[0];
+  expect((await api(page, "group_move", { id: g.id, map_id: mid, x: 70, y: 70 }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}`);
+  const mini = page.locator(".tv-party .mini-map");
+  await expect(mini).toBeVisible();
+  await expect(mini.locator(".mm-flag")).toHaveCount(1);
+  await expect(mini.locator(".mm-pin")).toHaveCount(1);
+  await expect(mini).toHaveAttribute("href", `#/c/${cid}/maps/${mid}`);
+  // + New event in the big box, pinned at the party's marker
+  await page.locator(".tv-now").getByRole("button", { name: "+ New event" }).click();
+  const form = page.locator(".tv-now form.event");
+  await form.getByLabel("Title").fill("Ambush at the ford");
+  await form.getByLabel(/Pin it where the party is/).check();
+  await form.getByRole("button", { name: "Add event" }).click();
+  await expect(page.locator("#toast")).toHaveText("Event saved");
+  await expect.poll(async () => (await getMap(page, cid, mid)).json.pins.find(p => p.kind === "event")?.event?.title).toBe("Ambush at the ford");
+  const pin = (await getMap(page, cid, mid)).json.pins.find(p => p.kind === "event");
+  expect([pin.x, pin.y]).toEqual([70, 70]);
+  expectNoErrors(errors);
+});
+
+test("Map page: moving the main group offers to log it on the clock's shift, by the pin it is at", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Log move");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  const d = Math.floor(now / 4), i = now % 4;
+  await api(page, "shift_save", { abs_day: d, shift: i, activity: "Breakfast", gm_notes: "Spy watches" }, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Party is here" }).click();
+  const note = page.locator(".map-note");
+  await expect(note).toContainText('moved. Log "Moved to Burnt Ford"');
+  await note.getByRole("button", { name: "Log it", exact: true }).click();
+  await expect(note).toBeEmpty();
+  const shift = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=${d}`)).json()).shifts.find(s => Number(s.shift) === i);
+  await expect.poll(async () => (await shift()).activity).toBe("Breakfast\nMoved to Burnt Ford");
+  expect((await shift()).gm_notes).toBe("Spy watches");                 // the rest of the shift is kept
+  expectNoErrors(errors);
+});
+
+test("Sessions: a session's page shows the pinned places it names, on their map", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Session places");
+  const mid = await mapWithPicture(page, cid);
+  const entry = async name => (await api(page, "entry_save", { name, category: "location", notes: "<p>A place.</p>" }, cid)).json.id;
+  const ford = await entry("Burnt Ford"), mire = await entry("Mirewood");
+  await entry("Nowhere Pinned");
+  expect((await api(page, "pin_save", { map_id: mid, x: 60, y: 60, kind: "entry", entry_id: ford }, cid)).status).toBe(200);
+  expect((await api(page, "pin_save", { map_id: mid, x: 200, y: 120, kind: "entry", entry_id: mire }, cid)).status).toBe(200);
+  const sid = (await api(page, "session_save", {}, cid)).json.session.id;
+  await api(page, "session_notes_save", { id: sid, notes_text: "Crossed at Burnt Ford\nNowhere Pinned was empty", base: null }, cid);
+  await api(page, "session_summary_save", { id: sid, version: 1, summary: "<p>They reached Mirewood.</p>" }, cid);
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  const places = page.locator(".sess-places");
+  await expect(places.locator(".mini-map")).toBeVisible();
+  await expect(places.locator(".mm-pin")).toHaveCount(2);
+  await expect(places.locator(".sess-place-list a")).toHaveText(["📍 Burnt Ford", "📍 Mirewood"]);
+  // a player reads the published summary: only Mirewood is named there
+  await api(page, "session_save", { id: sid, is_published: true }, cid);
+  await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(pp.locator(".sess-places .sess-place-list a")).toHaveText(["📍 Mirewood"]);
+  expectNoErrors(errors);
+});
+
+test("Trail: At the Table says where the party was the shift before, and the day's Locations visited offers the pins it passed", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Was near");
+  const mid = await mapWithPicture(page, cid);
+  const ford = (await api(page, "entry_save", { name: "Burnt Ford", category: "location" }, cid)).json.id;
+  expect((await api(page, "pin_save", { map_id: mid, x: 60, y: 60, kind: "entry", entry_id: ford }, cid)).status).toBe(200);
+  await notePins(page, cid, mid, ["Camp"]);                                    // a note pin at 60, 60 too, but no entry: never offered
+  const g = (await api(page, "groups", undefined, cid)).json.groups[0];
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  await api(page, "group_move", { id: g.id, map_id: mid, x: 62, y: 61, stops: [] }, cid);
+  // a stop can't be on or after the clock
+  expect((await api(page, "group_move", { id: g.id, map_id: mid, x: 250, y: 160, stops: [{ x: 1, y: 1, abs_shift: now }] }, cid)).status).toBe(400);
+  await api(page, "set_time", { current_shift: now + 1 }, cid);
+  await api(page, "group_move", { id: g.id, map_id: mid, x: 250, y: 160 }, cid);
+  await page.goto(`index.html#/c/${cid}`);
+  await expect(page.locator(".tv-side.prev")).toContainText("Was near Burnt Ford");
+  await expect(pp.goto(`index.html#/c/${cid}`)).resolves.toBeTruthy();
+  await expect(pp.locator(".tv-side.prev")).toContainText("Was near Burnt Ford");   // players see the trail too
+  // the day's Locations visited offers Burnt Ford from the trail, though no shift names it
+  await page.locator("[data-box=table-weather] .daybox-toggle").click();
+  await expect(page.locator(".loc-suggest")).toContainText("+ Burnt Ford");
+  await page.locator(".loc-suggest").getByRole("button", { name: "+ Burnt Ford" }).click();
+  await expect(page.getByLabel("Locations visited")).toHaveValue("Burnt Ford");
+  expectNoErrors(errors);
+});

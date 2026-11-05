@@ -222,7 +222,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   without resizing it and its search filters the rows; pin labels show by zoom, hover, an open card and the Labels
   toggle (remembered), and the party is always named; the legend sits bottom-left (not on a phone) and P, L, M, T and
   Escape drive the modes except while typing, and stop when the page is left; on a phone the toolbar is icons only and
-  the drawer a bottom sheet, closed at first, that a pin's card opens above.
+  the drawer a bottom sheet, closed at first, that a pin's card opens above. At the Table's party card shows the map around the party with the pins near it, and a GM's new event there can be pinned at the party's marker; moving the main group offers Log it, which adds "Moved to" the nearest pin to the clock's shift and keeps the rest of it; a session's page shows the pinned places it names on their map (a player only those in the published summary); the shift before At the Table says where the trail had the party, for players too, and the day's Locations visited offers the entries pinned where the trail passed; a stop on or after the clock is refused.
 - **mapgeo**: `static/mapgeo.js` sets a scale from two points or grid squares, reads square sizes from file names,
   and shows distances in the reader's units, with AU and light-years on space maps.
 - **party-groups**: a campaign starts with one main group holding every player, and a late joiner goes into it; GMs
@@ -256,7 +256,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   (Settings) limits the modes and samples, and a campaign with none keeps them all;
   a Custom region typed on the day page or in the travel planner joins the campaign's regions; a trip's From and To join
   the first and last days' Locations visited; the trip's event is tagged Transit, and so is any event running in a shift
-  given an On the move action (on the day page or in Pass time), keeping its other tags.
+  given an On the move action (on the day page or in Pass time), keeping its other tags. A trip along a route leaves a trail stop for each shift on the way, in order along the road, ending at the route's end on the clock's shift.
 - **time-modes**: four shifts, two shifts (Day and Night) and hours each have
   their slot names, weather quarters and travel maths; switching a campaign's mode
   moves the clock, shift activities, shift notes, timed events, sessions' first and

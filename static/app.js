@@ -2084,12 +2084,108 @@
       return k.length > 1 && new RegExp(`(^|[^\\p{L}\\p{N}])${esc(k)}($|[^\\p{L}\\p{N}])`, 'u').test(t);
     }));
   }
+  /** A still picture of part of a map: the window win ({ x, y, w, h } in the map's pixels) of its picture, with the pins
+   * given as dots (named on hover, and in a line under it when label is set) and, at flag, the party's 🚩. Null when the map
+   * has no picture. A click opens href. */
+  function miniMap(m, win, { pins = [], flag = null, href = null, label = false, tipText = '' } = {}) {
+    const W = Number(m.width), H = Number(m.height);
+    if (!m.image_url || !W || !H) return null;
+    const pct = v => `${(v * 100).toFixed(3)}%`;
+    const at = (x, y) => ({ left: pct((x - win.x) / win.w), top: pct((y - win.y) / win.h) });
+    const inside = p => p.x >= win.x && p.x <= win.x + win.w && p.y >= win.y && p.y <= win.y + win.h;
+    const img = el('img', { src: m.image_url, alt: '', loading: 'lazy', draggable: 'false' });
+    Object.assign(img.style, { width: pct(W / win.w), height: pct(H / win.h), left: pct(-win.x / win.w), top: pct(-win.y / win.h) });
+    const dot = (p, cls, text) => {
+      const d = el('span', { class: cls, 'data-tip': text || null, 'aria-hidden': 'true' }, cls === 'mm-flag' ? '🚩' : label && text ? el('span', { class: 'mm-label' }, text) : '');
+      Object.assign(d.style, at(p.x, p.y));
+      return d;
+    };
+    const shown = pins.filter(inside);
+    const box = el(href ? 'a' : 'div', { class: 'mini-map', href, 'data-tip': tipText || null, 'aria-label': tipText || `Part of ${m.name}` },
+      img, ...shown.map(p => dot(p, 'mm-pin' + (label ? ' named' : ''), MapGeo.pinName(p))), flag ? dot(flag, 'mm-flag', null) : null);
+    box.style.aspectRatio = `${win.w} / ${win.h}`;
+    return box;
+  }
+  /** The point a fraction f (0 to 1) of the way along a path of points, by distance. */
+  function pointAlong(pts, f) {
+    const seg = pts.slice(1).map((p, i) => Math.hypot(p.x - pts[i].x, p.y - pts[i].y));
+    let left = f * seg.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < seg.length; i++) {
+      if (left <= seg[i] || i === seg.length - 1) {
+        const t = seg[i] ? Math.min(1, left / seg[i]) : 0;
+        return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * t, y: pts[i].y + (pts[i + 1].y - pts[i].y) * t };
+      }
+      left -= seg[i];
+    }
+    return { x: pts[0].x, y: pts[0].y };
+  }
+  /** The window of a map around point c, side span (in its pixels), kept on the picture. */
+  function mapWindowAt(m, c, span) {
+    const W = Number(m.width), H = Number(m.height), w = Math.min(span, W), h = Math.min(span, H);
+    return { x: Math.max(0, Math.min(W - w, c.x - w / 2)), y: Math.max(0, Math.min(H - h, c.y - h / 2)), w, h };
+  }
+  /** The window of a map that holds these points, with a margin, never thinner than half as tall as wide (or the reverse). */
+  function mapWindowAround(m, pts) {
+    const W = Number(m.width), H = Number(m.height), xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+    const least = Math.max(W, H) * 0.12;
+    let w = Math.max(least, (Math.max(...xs) - Math.min(...xs)) * 1.6), h = Math.max(least, (Math.max(...ys) - Math.min(...ys)) * 1.4);
+    if (w > 2 * h) h = w / 2; else if (h > 2 * w) w = h / 2;
+    w = Math.min(w, W); h = Math.min(h, H);
+    const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+    return { x: Math.max(0, Math.min(W - w, cx - w / 2)), y: Math.max(0, Math.min(H - h, cy - h / 2)), w, h };
+  }
+  /** A session's places: the Encyclopedia's Locations named in its text that have a pin, on a picture of the map most of
+   * them are on, each named under it and linking to its pin. Null when none is pinned. */
+  async function sessionPlaces(text) {
+    const named = placesNamed(text);
+    if (!named.length) return null;
+    const ids = new Set(named.map(e => e.id));
+    const pinned = (S.mapIndex || []).filter(p => ids.has(p.entry_id));
+    if (!pinned.length) return null;
+    const count = new Map();
+    for (const p of pinned) count.set(p.map_id, (count.get(p.map_id) || 0) + 1);
+    const mapId = [...count].sort((a, b) => b[1] - a[1])[0][0];
+    let m;
+    try { m = await api('map', { query: { cid: S.camp.id, id: mapId } }); } catch { return null; }
+    const pins = (m.pins || []).filter(p => ids.has(p.entry_id));
+    if (!pins.length) return null;
+    const pic = miniMap(m.map, mapWindowAround(m.map, pins), { pins, label: true, href: `#/c/${S.camp.id}/maps/${mapId}`, tipText: `Open ${m.map.name}` });
+    const others = [...count.keys()].filter(id => id !== mapId).length;
+    return el('section', { class: 'sess-places', 'data-box': 'places' },
+      el('h3', {}, 'Places', tip('The Encyclopedia\'s Locations named in this session that are pinned on a map')),
+      pic,
+      el('div', { class: 'row sess-place-list' }, pins.map(p => el('a', { class: 'map-link small', href: `#/c/${S.camp.id}/maps/${mapId}?pin=${p.id}`,
+        'data-tip': `Open ${m.map.name} at ${MapGeo.pinName(p)}` }, `📍 ${MapGeo.pinName(p)}`))),
+      others ? el('p', { class: 'small muted' }, `And on ${others} other map${others === 1 ? '' : 's'}: their entries link to them.`) : null);
+  }
+  /** Add a line to what the party does on the clock's shift, keeping what is written there (the map's Log it). */
+  async function logOnShift(text) {
+    const a = nowShift(), n = spd(), d = Math.floor(a / n), i = E.mod(a, n);
+    const r = await api('day', { query: { cid: S.camp.id, d } });
+    const s = (r.shifts || []).find(x => Number(x.shift) === i) || {};
+    const activity = [String(s.activity || '').trim(), text].filter(Boolean).join('\n');
+    await post('shift_save', { abs_day: d, shift: i, activity, gm_notes: s.gm_notes || '', visibility_override: s.visibility_override ?? '' }, S.camp.id);
+  }
+
   /** Places for a day's Locations visited: the Encyclopedia's Locations named in what was written on its shifts (activity,
    * players' notes and GM notes) that the box doesn't list yet. dayData: what the day action sent. */
-  function locationSuggestions(dayData, have) {
+  function locationSuggestions(dayData, have, near = []) {
     const text = [...(dayData?.shifts || []).flatMap(s => [s.activity, s.gm_notes]), ...(dayData?.shift_notes || []).map(n => n.body)].filter(Boolean).join('\n');
     const listed = new Set(String(have || '').split(/[,\n]/).map(x => x.trim().toLowerCase()).filter(Boolean));
-    return placesNamed(text).filter(e => ![e.name, ...(e.aliases || [])].some(n => listed.has(String(n).toLowerCase())));
+    const seen = new Set();
+    return [...placesNamed(text), ...near].filter(e => !seen.has(e.id) && seen.add(e.id))
+      .filter(e => ![e.name, ...(e.aliases || [])].some(n => listed.has(String(n).toLowerCase())));
+  }
+  /** The Encyclopedia entries pinned nearest where the main group's trail had it on day d's shifts (on its map). */
+  async function trailPlaces(d) {
+    const { groups } = await api('groups', { query: { cid: S.camp.id } });
+    const g = groups.find(x => x.is_main) || groups[0];
+    if (!g?.map_id) return [];
+    const m = await api('map', { query: { cid: S.camp.id, id: g.map_id } });
+    const n = spd(), reach = Math.max(Number(m.map.width) || 0, Number(m.map.height) || 0) * 0.03 + 10;
+    const pts = (m.trail || []).filter(t => t.group_id === g.id && Math.floor(t.abs_shift / n) === d);
+    const ids = new Set(pts.map(t => MapGeo.nearestPin(m.pins || [], t, reach)).filter(p => p?.entry_id).map(p => p.entry_id));
+    return S.encyclopedia.filter(e => ids.has(e.id));
   }
 
   function dayEditor(d, row, region, w, dayData) {
@@ -2102,16 +2198,18 @@
     const locs = el('textarea', { name: 'locations', rows: 1, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     // places the day's shifts name that the box doesn't list yet: a tap adds one to the box, saved with Save day
     const sugg = el('div', { class: 'row loc-suggest' });
+    let near = [];   // the places the party's trail passed this day, once the map has loaded
     const drawSugg = () => {
-      const list = locationSuggestions(dayData, locs.value);
+      const list = locationSuggestions(dayData, locs.value, near);
       sugg.hidden = !list.length;
-      sugg.replaceChildren(el('span', { class: 'small muted' }, 'Named on the shifts:'), ...list.map(e => btn(`+ ${e.name}`, () => {
+      sugg.replaceChildren(el('span', { class: 'small muted', 'data-tip': 'The Encyclopedia\'s places named on this day\'s shifts, and the pins the party\'s trail passed' }, 'Places this day:'), ...list.map(e => btn(`+ ${e.name}`, () => {
         locs.value = [locs.value.trim(), e.name].filter(Boolean).join(', ');
         drawSugg();
       }, 'small', `Add ${e.name} to Locations visited. Save day keeps it`)));
     };
     locs.addEventListener('input', drawSugg);
     drawSugg();
+    trailPlaces(d).then(list => { near = list; drawSugg(); }).catch(() => {});
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
         el('div', {},
@@ -2464,7 +2562,8 @@
     }
   }, true);
 
-  function eventForm(d, e = {}) {
+  /** opt.pinAt: { map_id, map_name, x, y }, where the party stands: a GM can pin the new event there. */
+  function eventForm(d, e = {}, opt = {}) {
     const names = shiftNames();
     const start = Number(e.abs_day ?? d); // a new event starts on the day it is added from
     const lasts = e.end_day !== null && e.end_day !== undefined ? Number(e.end_day) - start + 1 : 1;
@@ -2480,6 +2579,7 @@
     const syncAllDay = () => { startField.hidden = endField.hidden = allDay.checked; };
     allDay.addEventListener('change', syncAllDay); syncAllDay();
     const tags = tagPicker(e.tags || []);
+    const pinIt = !e.id && opt.pinAt && isGM() ? el('input', { type: 'checkbox', name: 'pin_it' }) : null;
     const f = el('form', { class: 'event editing' },
       el('div', { class: 'grid2' },
         field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
@@ -2489,6 +2589,7 @@
         isGM() ? lockField(el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), 'players won\'t see this event or its notes') : null),
       tags.node,
       field('Details', el('textarea', { name: 'body', rows: 4, value: e.body || '' })),
+      pinIt ? el('label', { class: 'inline small', 'data-tip': `Put a pin for this event on ${opt.pinAt.map_name}, at the party's marker` }, pinIt, ` 📍 Pin it where the party is, on ${opt.pinAt.map_name}`) : null,
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save event' : 'Add event'), btn('Cancel', () => route(), 'small')));
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
@@ -2497,9 +2598,15 @@
       if (timed && n === 1 && Number(shiftEnd.value) < Number(shiftStart.value)) { toast(`${Word()} End is before ${Word()} Start`, true); return; }
       const picked = tags.get();
       try {
-        await post('event_save', { id: e.id, abs_day: start, end_day: n > 1 ? start + n - 1 : null,
+        const saved = await post('event_save', { id: e.id, abs_day: start, end_day: n > 1 ? start + n - 1 : null,
           shift: timed ? shiftStart.value : null, shift_end: timed ? shiftEnd.value : null,
           title: v.title, body: v.body, is_secret: v.is_secret, tags: picked }, S.camp.id);
+        if (pinIt?.checked) {
+          try {
+            await post('pin_save', { map_id: opt.pinAt.map_id, x: opt.pinAt.x, y: opt.pinAt.y, kind: 'event', event_id: saved.id }, S.camp.id);
+            await loadCampaign(S.camp.id, true);   // its 📍 link back
+          } catch (err) { toast(`Event saved, but not pinned: ${err.message}`, true); }
+        }
         for (const t of picked) if (!S.tags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.tags.push(t);
         toast('Event saved'); route();
         offerNouns([{ text: `${v.title}\n${v.body}`, title: true, secret: isGM() && !!v.is_secret, label: `event "${v.title}"` }]);
@@ -3455,7 +3562,8 @@
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
-    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true), ...extra });
+    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
+    nowShift, slotWord: word, logOnShift, ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -4067,7 +4175,7 @@
         if (n <= 0) throw new Error(`Trip is shorter than one ${word()}`);
         const g = travelling(), side = sideTrip();
         const label = `In transit${side ? ` (${g.name})` : ''}${fromName.value || toName.value ? `: ${fromName.value || '?'} → ${toName.value || '?'}` : ''}`;
-        const startDay = today();
+        const startDay = today(), startShift = nowShift();
         const travelId = side ? '' : await travelReg.resolve(), arriveId = await arriveReg.resolve();
         // a side group's trip only moves the clock: the shifts are the main party's, and so is the weather's region
         await passShifts(n, side ? null : label, travelId || null, side ? null : arriveId || null);
@@ -4077,7 +4185,10 @@
         }
         if (g && trip) {   // a planned trip ends where its route does
           const end = trip.points[trip.points.length - 1];
-          try { await post('group_move', { id: g.id, map_id: trip.map.id, x: end.x, y: end.y }, S.camp.id); }
+          // its trail gets a stop for each shift on the way (each day's start, on a long trip), along the route
+          const step = n > 48 ? spd() : 1, stops = [];
+          for (let k = step; k < n && stops.length < 400; k += step) stops.push({ ...pointAlong(trip.points, k / n), abs_shift: startShift + k });
+          try { await post('group_move', { id: g.id, map_id: trip.map.id, x: end.x, y: end.y, stops }, S.camp.id); }
           catch (err) { toast(`The marker did not move: ${err.message}`, true); }
         } else if (g && g.map_id && toName.value.trim()) {
           try {
@@ -5341,8 +5452,10 @@
     const outLink = (href, label, tipText) => el('a', { href: chronicleHref(href), target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null, 'data-tip': tipText }, label);
 
     // where the party is: the main group (else the first), its region and the pin nearest its marker on its map
+    const mainGroup = groups.find(x => x.is_main) || groups[0];
+    let partyMap = null, partyData = null;
     const party = await (async () => {
-      const g = groups.find(x => x.is_main) || groups[0];
+      const g = mainGroup;
       const reg = (g && regionById(g.region_id)) || region;
       const lines = [];
       if (g?.map_id) {
@@ -5350,7 +5463,11 @@
           const m = await api('map', { query: { cid, id: g.map_id } });
           const reach = Math.max(m.map.width || 0, m.map.height || 0) * 0.03 + 10;
           const pin = MapGeo.nearestPin(m.pins, { x: g.x, y: g.y }, reach);
+          partyMap = m.map; partyData = m;
           lines.push(el('div', {}, '📍 ', pin ? `Near ${MapGeo.pinName(pin)}` : 'On the map'));
+          // a small picture of the map around the party, with the pins near it
+          const span = Math.max(Number(m.map.width) || 0, Number(m.map.height) || 0) * 0.3;
+          if (!PANEL) lines.push(miniMap(m.map, mapWindowAt(m.map, g, span), { pins: m.pins, flag: g, href: `#/c/${cid}/maps/${g.map_id}`, tipText: `Open ${m.map.name}` }));
           lines.push(el('div', { class: 'small' }, outLink(`#/c/${cid}/maps/${g.map_id}`, m.map.name, 'Open the map')));
         } catch { /* a map this member can't open: the region is enough */ }
       }
@@ -5406,7 +5523,8 @@
         ...evs.map(e => eventView(e, cur.d)), ...rems.map(x => reminderView(x, cur.d)),
         evs.length || rems.length ? null : el('p', { class: 'muted small' }, `Nothing else on this ${word()}.`));
       const canAdd = (isGM() || settings().players_can_add_events) && !S.viewAs;
-      if (canAdd) here.append(el('div', { class: 'row' }, btn('+ New event', ev => { ev.target.closest('.row').replaceWith(eventForm(cur.d, { shift: cur.i, shift_end: cur.i })); }, 'small',
+      if (canAdd) here.append(el('div', { class: 'row' }, btn('+ New event', ev => { ev.target.closest('.row').replaceWith(eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
+          { pinAt: partyMap && mainGroup?.x !== null && mainGroup?.x !== undefined ? { map_id: partyMap.id, map_name: partyMap.name, x: mainGroup.x, y: mainGroup.y } : null })); }, 'small',
         `Log something that happens on this ${word()}`)));
       big.append(here);
     }
@@ -5428,8 +5546,17 @@
     const written = y => !!(y && (y.s.activity || y.s.gm_notes || y.notes.length));
     let prevAbs = at - 1;
     if (hourMode()) for (let k = at - 1; k >= (d - 1) * n; k--) if (written(slot(k))) { prevAbs = k; break; }
+    // where the main group's trail had it on a shift: the pin nearest its point then
+    const wasNear = abs => {
+      if (!partyData || !mainGroup) return null;
+      const t = (partyData.trail || []).filter(q => q.group_id === mainGroup.id && q.abs_shift <= abs).pop();
+      const reach = Math.max(Number(partyData.map.width) || 0, Number(partyData.map.height) || 0) * 0.03 + 10;
+      const pin = t && MapGeo.nearestPin(partyData.pins || [], t, reach);
+      return pin ? MapGeo.pinName(pin) : null;
+    };
     const side = (abs, before) => {
       const y = slot(abs), i = E.mod(abs, n), dd = Math.floor(abs / n);
+      const near = before ? wasNear(abs) : null;
       const ahead = abs > now, canLook = isGM() || !ahead;
       const act = (y?.s.activity || '').trim().split('\n')[0];
       const evN = y ? y.x.r.events.filter(e => eventCovers(e, dd, i)).length : 0, remN = (S.reminders || []).filter(x => x.due_shift === abs).length;
@@ -5438,6 +5565,7 @@
         el('span', { class: 'small muted' }, dd === d ? (before ? `The ${word()} before` : `The ${word()} after`) : E.fmtDate(c, dd, { noWeekday: true })),
         y?.sw ? el('span', { class: 'small' }, `${E.WEATHER[y.sw.type]?.icon || ''} ${E.weatherLabel(y.sw, tempUnit())}`) : el('span', { class: 'small muted' }, 'Weather not known yet'),
         act ? el('span', { class: 'small tv-side-act' }, act.length > 90 ? `${act.slice(0, 88)}…` : act) : null,
+        near ? el('span', { class: 'small tv-side-near' }, `📍 Was near ${near}`) : null,
         evN ? el('span', { class: 'small' }, `📅 ${evN} event${evN === 1 ? '' : 's'}`) : null,
         remN ? el('span', { class: 'small' }, `🔔 ${remN} reminder${remN === 1 ? '' : 's'}`) : null,
         canLook ? el('span', { class: 'small muted tv-side-hint' }, abs === now ? 'Back to now' : before ? 'Look back, or fix its notes' : 'Look ahead') : null];
@@ -5720,7 +5848,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, settings, shiftNames, nowShift, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
