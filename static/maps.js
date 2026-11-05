@@ -492,7 +492,7 @@ const MapsTab = (() => {
       drawTrail();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
         MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
-          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
+          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); offerLog(g, xy); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
             gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
@@ -500,6 +500,19 @@ const MapsTab = (() => {
               trail.some(t => t.group_id === g.id) ? btn('Clear trail', () => clearTrail(g), 'small', 'Forget where this group has been on this map, leaving where it stands now') : null) : null) });
       }
     };
+    /** The main group was moved on this map: offer, under the toolbar, to write it on the clock's shift ("Moved to Tarsk",
+     * by the pin nearest where it now stands). Nothing is written unless Log it is pressed. */
+    function offerLog(g, at) {
+      if (!gm || !g?.is_main || !ctx.logOnShift) return;
+      const pin = G.nearestPin(pins, at, reach());
+      const text = pin ? `Moved to ${G.pinName(pin)}` : `Moved on ${map.name}`;
+      const go = btn('Log it', async () => {
+        try { await ctx.logOnShift(text); note.textContent = ''; toast(`Logged on ${ctx.fmtShift(ctx.nowShift())}`); }
+        catch (err) { toast(err.message, true); }
+      }, 'small', `Add "${text}" to what the party does this ${ctx.slotWord()}`);
+      note.replaceChildren(`${g.name} moved. Log "${text}" on ${ctx.fmtShift(ctx.nowShift())}? `, go, ' ',
+        Object.assign(btn('✕', () => { note.textContent = ''; }, 'link small', 'Don\'t log it'), { ariaLabel: 'Don\'t log it' }));
+    }
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
     /** GMs: move a group to this pin. With more than one group, a small select asks which. */
     function partyHere(p) {
@@ -509,7 +522,7 @@ const MapsTab = (() => {
         const g = groups.find(q => q.id === Number(which ? which.value : groups[0].id));
         try {
           await post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid);
-          lmap_close(); await refresh(); toast(`${g.name} is at ${pinTitle(p)}`);
+          lmap_close(); await refresh(); toast(`${g.name} is at ${pinTitle(p)}`); offerLog(g, p);
         } catch (err) { toast(err.message, true); }
       }, 'small', 'Put a group of the party here, with its marker'));
     }
@@ -876,7 +889,7 @@ const MapsTab = (() => {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         const g = groups.find(q => q.id === Number(partyWhich.value)) || groups[0];
         mode = null; note.textContent = ''; syncTools();
-        post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid).then(() => refresh()).then(() => toast(`${g.name} moved`)).catch(err => toast(err.message, true));
+        post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid).then(() => refresh()).then(() => { toast(`${g.name} moved`); offerLog(g, p); }).catch(err => toast(err.message, true));
       }
       else if (mode === 'scale') { picks = picks.length >= 2 ? [p] : [...picks, p]; drawPicks(); if (picks.length === 2) panelBox.querySelector('input[aria-label="How many squares"]')?.dispatchEvent(new Event('input')); }
     }

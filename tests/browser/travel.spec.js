@@ -314,3 +314,30 @@ test("Travel: Plan this trip brings a map route's length and ends to the planner
   await expect(page.locator(".travel-trip")).toContainText("Planning the trip along a measured path on Sartar.");
   expectNoErrors(errors);
 });
+
+test("Travel: a journey along a route leaves a stop on the party's trail for each shift on the way", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Mara");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Trip stops ${gm.id}`);
+  const mapId = await mapWithPicture(page, cid);
+  expect((await api(page, "map_save", { id: mapId, scale_per_px: 0.5, scale_unit: "mi" }, cid)).status).toBe(200);   // about 100 miles
+  const route = (await api(page, "route_save", { map_id: mapId, name: "East Road", points: [[52, 60], [150, 60], [248, 61]] }, cid)).json.route;
+  const main = (await api(page, "groups", undefined, cid)).json.groups[0];
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 52, y: 60 }, cid);
+  const start = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  await page.goto(`index.html#/c/${cid}/travel?map=${mapId}&route=${route.id}`);
+  await page.getByRole("button", { name: "Calculate" }).click();
+  await page.getByRole("button", { name: /Depart/ }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  expect(now - start).toBeGreaterThan(2);
+  const trail = (await (await page.request.get(`api/index.php?a=map&cid=${cid}&id=${mapId}`)).json()).trail;
+  // the start, a stop for each shift between, and the route's end on the clock's shift
+  expect(trail.map(t => t.abs_shift)).toEqual(Array.from({ length: now - start + 1 }, (_, k) => start + k));
+  expect(trail[trail.length - 1]).toMatchObject({ x: 248, y: 61 });
+  const xs = trail.map(t => t.x);
+  expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  expectNoErrors(errors);
+});

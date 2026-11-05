@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, nowShift, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -66,13 +66,19 @@
       // maps, handouts and sketches from the night: GMs add them, players see them once the session is published
       const pictures = gm || s.files?.length ? attachmentsCard('session', s.id, s.files || (s.files = []), { uploads: S.sessUploads, gmAdds: true,
         empty: 'No pictures or files yet. Add a map, a handout or a sketch of the scene.' }) : null;
+      // the places it names, on a picture of their map, under it all (filled in once the map has loaded)
+      const places = el('div', { class: 'sess-places-slot' });
+      const asText = html => new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent;
+      const placesFrom = notesText => sessionPlaces([asText(s.summary), asText(s.rewards), asText(s.loot), notesText || ''].join('\n'))
+        .then(n => places.replaceChildren(...(n ? [n] : []))).catch(() => {});
       const head = [el('h2', {}, sessionName(s)),
         el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
       if (!gm) {
+        placesFrom('');
         return [head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
           el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
           ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
-            el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), pictures];
+            el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), places, pictures];
       }
 
       // --- details: title, date played, publishing, open or ended
@@ -229,7 +235,8 @@
         ...s.extra_shifts.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
             `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })])) : null;
-      return [head[0], bar, extras, details, cols, pictures];
+      placesFrom(entry.text());
+      return [head[0], bar, extras, details, cols, places, pictures];
     }
 
     return { viewSessions };

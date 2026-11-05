@@ -548,6 +548,17 @@ function group_move(int $cid): void {
         $x = map_coord(array_key_exists('x', $body) ? $body['x'] : ($same ? $g['x'] : $map['width'] / 2), $map['width']);   // no x or y: where it was, else the middle
         $y = map_coord(array_key_exists('y', $body) ? $body['y'] : ($same ? $g['y'] : $map['height'] / 2), $map['height']);
         db()->prepare('UPDATE party_groups SET map_id=?, x=?, y=? WHERE id=?')->execute([$map['id'], $x, $y, $g['id']]);
+        // stops: where a journey had the group on the shifts it passed on the way (Travel's Depart), before this point
+        $stops = $body['stops'] ?? [];
+        if (!is_array($stops) || count($stops) > 400) fail('Send at most 400 stops');
+        $now = (int)campaign_row($cid)['current_shift'];
+        $prev = PHP_INT_MIN;
+        foreach ($stops as $p) {
+            $at = int_in($p['abs_shift'] ?? null);
+            if ($at <= $prev || $at >= $now) fail('Stops go in time order, before the clock');
+            trail_add($cid, (int)$g['id'], (int)$map['id'], map_coord($p['x'] ?? null, $map['width']), map_coord($p['y'] ?? null, $map['height']), $at);
+            $prev = $at;
+        }
         trail_add($cid, (int)$g['id'], (int)$map['id'], $x, $y);
     }
     touch_campaign($cid);
@@ -559,8 +570,8 @@ function group_move(int $cid): void {
 // move in a later shift adds a point. The map draws them in order as the group's trail.
 
 /** Add group $gid's new place on map $mapId to its trail, at the campaign's current shift. */
-function trail_add(int $cid, int $gid, int $mapId, float $x, float $y): void {
-    $now = (int)campaign_row($cid)['current_shift'];
+function trail_add(int $cid, int $gid, int $mapId, float $x, float $y, ?int $at = null): void {
+    $now = $at ?? (int)campaign_row($cid)['current_shift'];
     $st = db()->prepare('SELECT id, map_id, abs_shift FROM party_trail WHERE group_id=? ORDER BY id DESC LIMIT 1');
     $st->execute([$gid]);
     $last = $st->fetch();
