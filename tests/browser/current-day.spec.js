@@ -79,6 +79,31 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   expectNoErrors(errors);
 });
 
+test("Locations visited suggests the Encyclopedia's places named on the day's shifts, and a tap adds one", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Lou");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Places ${gm.id}`);
+  for (const [name, category, aliases] of [["Altdorf", "location", []], ["The Grey Lady", "location", ["Grey Lady inn"]], ["Hera", "person", []], ["Ford", "location", []]])
+    expect((await api(page, "entry_save", { name, category, aliases, notes: "<p>Here.</p>" }, cid)).status).toBe(200);
+  await api(page, "shift_save", { abs_day: 2, shift: 0, activity: "Rode to Altdorf with Hera", gm_notes: "Spies wait at the grey lady inn" }, cid);
+  await api(page, "shift_note_add", { abs_day: 2, shift: 1, body: "Crossed at the Fordham bridge" }, cid);   // Ford only as part of a word
+  await page.goto(`index.html#/c/${cid}/day/2`);
+  const sugg = page.locator(".loc-suggest");
+  await expect(sugg.getByRole("button")).toHaveText(["+ Altdorf", "+ The Grey Lady"]);
+  await sugg.getByRole("button", { name: "+ Altdorf" }).click();
+  await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf");
+  await expect(sugg.getByRole("button")).toHaveText(["+ The Grey Lady"]);
+  await sugg.getByRole("button", { name: "+ The Grey Lady" }).click();
+  await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf, The Grey Lady");
+  await expect(sugg).toBeHidden();
+  await page.getByRole("button", { name: "Save day" }).click();
+  await expect(page.getByText("Day saved")).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf, The Grey Lady");
+  expectNoErrors(errors);
+});
+
 test("players see today's weather only up to the current shift", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Eli"), player = person("Fay");

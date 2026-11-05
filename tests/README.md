@@ -108,7 +108,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   public overlay link is see-through with only the date, weather, light and moons; the GM makes a link from At the
   Table, sees it once, and revokes it.
 - **api-keys**: a read-only key reads only its maker's campaign, with no member's email, and is refused writes, other actions, the panel link's header, both headers at once and revocation; a read/write key does what its maker may (a GM's passes time, a player's can't but adds notes signed as them and events) and stops when its maker leaves, writes included; a GM's key sent with View as player is answered as a player and changes nothing; a key request is open to any site (CORS) and nothing else is; New API key… shows the key once with a curl example and lists it.
-- **current-day**: a campaign opens on At the Table (no Current Day tab): the clock's shift in a big box with the shift
+- **current-day**: Locations visited offers the Encyclopedia's Locations named on the day's shifts (by name or other name, whole words only, never a Person) that the box doesn't list, and a tap adds one; a campaign opens on At the Table (no Current Day tab): the clock's shift in a big box with the shift
   before and after beside it, the GM's browser saves today's shift weather, and today's Weather, Shifts, Events and
   Reminders boxes come folded under it and stay as left; what the party does saves as typed; End shift moves the clock
   on one; a click on the shift before looks at it (no End shift there) and Back to now returns; an old Current Day link

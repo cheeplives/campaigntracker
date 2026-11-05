@@ -1618,3 +1618,4 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .map-label-form input { flex: 1 1 14rem; min-width: 0; }
 .map-label-form small { flex-basis: 100%; }
+.loc-suggest { gap: 6px; margin: -2px 0 6px; } .loc-suggest[hidden] { display: none; }
