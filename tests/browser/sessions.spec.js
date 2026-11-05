@@ -569,3 +569,91 @@ test("on a phone a session's notes and summary are two tabs", async ({ page, bro
   await expect(page.locator(".sess-summary")).toBeVisible();
   await expect(page.locator(".sess-notes")).toBeHidden();
 });
+
+test("a session takes in shifts outside its run, the day says which sessions cover each shift, and one can be written up afterwards", async ({ page, browser }) => {
+  const { cid, pp } = await gmAndPlayer(page, browser, "Extra shifts");
+  await api(page, "set_time", { current_shift: 9 }, cid);                     // Midday of day 2
+  const sid = await newSession(page, cid);
+  await api(page, "set_time", { current_shift: 10 }, cid);
+  await api(page, "session_end", {}, cid);
+  // a flashback on day 1, and a shift inside the run that is already covered
+  const add = await api(page, "session_shift_add", { id: sid, abs_shift: 5 }, cid);
+  expect(add.status, JSON.stringify(add.json)).toBe(200);
+  expect(add.json.session.extra_shifts).toEqual([5]);
+  expect((await api(page, "session_shift_add", { id: sid, abs_shift: 10 }, cid)).json.session.extra_shifts).toEqual([5]);
+  expect((await api(page, "sessions", undefined, cid)).json.sessions[0].extra_shifts).toEqual([5]);
+  const daySessions = async (p, d) => (await (await p.request.get(`api/index.php?a=day&cid=${cid}&d=${d}`)).json()).sessions;
+  expect(await daySessions(page, 1)).toEqual([{ id: sid, number: 1, title: "", slots: [1] }]);
+  expect(await daySessions(page, 2)).toEqual([{ id: sid, number: 1, title: "", slots: [1, 2] }]);
+  expect(await daySessions(pp, 1)).toEqual([]);                               // not published
+  await api(page, "session_save", { id: sid, is_published: true }, cid);
+  expect(await daySessions(pp, 1)).toEqual([{ id: sid, number: 1, title: "", slots: [1] }]);
+  expect((await api(pp, "session_shift_add", { id: sid, abs_shift: 6 }, cid)).status).toBe(403);
+  // written up afterwards: made ended where it says, and the open session stays open
+  const open = await newSession(page, cid);
+  const late = await api(page, "session_save", { first_shift: 2, last_shift: 3 }, cid);
+  expect(late.json.session).toMatchObject({ number: 3, first_day: 0, first_shift: 2, last_day: 0, last_shift: 3 });
+  expect((await api(page, "campaign", undefined, cid)).json.open_session).toMatchObject({ id: open });
+  // started at a shift picked: it is the open one
+  expect((await api(page, "session_save", { first_shift: 8 }, cid)).json.session).toMatchObject({ number: 4, first_shift: 8, last_shift: null });
+  expect((await one(page, cid, open)).json.session.last_day).not.toBeNull();
+  expect((await api(page, "session_shift_remove", { id: sid, abs_shift: 5 }, cid)).json.session.extra_shifts).toEqual([]);
+});
+
+test("+ Session… on a shift puts it in a session, Build draft gathers it in its place, and the session page takes it out", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Flashback");
+  await api(page, "set_time", { current_shift: 9 }, cid);
+  const sid = await newSession(page, cid);
+  await api(page, "shift_save", { abs_day: 2, shift: 1, activity: "Marching to Altdorf" }, cid);
+  await api(page, "set_time", { current_shift: 10 }, cid);
+  await api(page, "session_end", {}, cid);
+  await api(page, "shift_save", { abs_day: 1, shift: 2, activity: "Years ago the ford flooded" }, cid);
+  await page.goto(`index.html#/c/${cid}/day/1`);
+  const card = page.locator(".shiftcard").nth(2);
+  await expect(card.locator(".sess-chip")).toHaveCount(0);
+  await card.getByRole("button", { name: "+ Session…" }).click();
+  await expect(page.locator("dialog.kit-dialog select")).toHaveValue(String(sid));
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "Add" }).click();
+  await expect(page.locator(".shiftcard").nth(2).locator(".sess-chip")).toHaveText("Session 1");
+  // the chip opens the session, which says it takes the shift in; Build draft puts the flashback first, as it came first
+  await page.locator(".shiftcard").nth(2).locator(".sess-chip").click();
+  await expect(page.locator(".sess-extras-list")).toContainText("Also takes in:");
+  await expect(page.locator(".sess-item.on")).toContainText("and 1 other shift");
+  await buildDraft(page);
+  const summary = page.locator(".sess-summary .ql-editor").first();
+  await expect(summary).toContainText("Years ago the ford flooded");
+  expect(await summary.innerText()).toMatch(/Years ago the ford flooded[\s\S]*Marching to Altdorf/);
+  await page.locator(".sess-extras-list").getByRole("button").click();
+  await expect(page.locator(".sess-extras-list")).toHaveCount(0);
+  expect((await one(page, cid, sid)).json.session.extra_shifts).toEqual([]);
+  expectNoErrors(errors);
+});
+
+test("+ New session asks when it starts, and Played already writes one up afterwards", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Starting when");
+  await api(page, "set_time", { current_shift: 9 }, cid);
+  await page.goto(`index.html#/c/${cid}/sessions`);
+  await page.getByRole("button", { name: "+ New session" }).click();
+  const d = page.locator("dialog.kit-dialog");
+  await expect(d.getByLabel("Shift it starts")).toHaveValue("1");             // the clock's Midday
+  await d.getByLabel("Shift it starts").selectOption("0");
+  await d.getByRole("button", { name: "Start session" }).click();
+  await expect(page).toHaveURL(/sessions\/\d+$/);
+  expect((await api(page, "campaign", undefined, cid)).json.open_session).toMatchObject({ number: 1, first_shift: 8 });
+  // one written up afterwards, for yesterday: the open session stays open
+  await page.getByRole("button", { name: "+ New session" }).click();
+  const yesterday = String(Number(await d.getByLabel("Day").first().inputValue()) - 1);   // the clock is on day 2, not a month's first
+  await d.getByLabel("Day").first().fill(yesterday);
+  await d.getByLabel("Shift it starts").selectOption("0");
+  await d.getByLabel("Played already").check();
+  await d.getByLabel("Shift it ended").selectOption("3");
+  await d.getByLabel("Day").nth(1).fill(yesterday);
+  await d.getByRole("button", { name: "Make session" }).click();
+  await expect(page.locator(".sess-item.on")).toContainText("Session 2");
+  const list = (await api(page, "sessions", undefined, cid)).json.sessions;
+  expect(list.find(x => x.number === 2)).toMatchObject({ first_shift: 1 * 4 + 0, last_shift: 1 * 4 + 3 });
+  expect((await api(page, "campaign", undefined, cid)).json.open_session).toMatchObject({ number: 1 });
+  expectNoErrors(errors);
+});

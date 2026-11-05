@@ -1606,7 +1606,7 @@
 
     // --- shifts
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
-      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null)));
+      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null, { sessions: r.sessions })));
 
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
@@ -1798,12 +1798,89 @@
    * at most a month of days from its start, so a session left open for ages doesn't load a year of days. */
   async function sessionShiftNotes(s) {
     const n = spd(), from = sessionStart(s), to = Math.min(sessionEnd(s), from + 31 * n - 1);
-    if (to < from) return [];
-    const ds = [];
-    for (let d = Math.floor(from / n); d <= Math.floor(to / n); d++) ds.push(d);
-    const days = await Promise.all(ds.map(d => api('day', { query: { cid: S.camp.id, d } })
+    // the shifts it takes in outside its run (a flashback, a split party's other half) too, each in its place in time
+    const extra = (s.extra_shifts || []).map(Number).filter(a => a < from || a > to).slice(0, 4 * n);
+    const ds = new Set(extra.map(a => Math.floor(a / n)));
+    for (let d = Math.floor(from / n); d <= Math.floor(to / n); d++) ds.add(d);
+    const days = await Promise.all([...ds].map(d => api('day', { query: { cid: S.camp.id, d } })
       .then(r => ({ d, shifts: r.shifts || [], shift_notes: r.shift_notes || [] }))));
-    return Sessions.shiftNotes(cal(), days, from, to);
+    const runs = [...(to < from ? [] : [[from, to]]), ...extra.map(a => [a, a])].sort((a, b) => a[0] - b[0]);
+    return runs.flatMap(([a, b]) => Sessions.shiftNotes(cal(), days, a, b));
+  }
+  /** + New session's question, Starting when?: the clock's shift to start now, or an earlier one; Played already writes
+   * one up afterwards, ended where it says, and leaves an open session open. Resolves to the new session, or null. */
+  function newSessionDialog() {
+    hideTip();
+    return new Promise(resolve => {
+      const now = nowShift(), n = spd();
+      let made = null;
+      const shiftSel = label => select(shiftNames().map((x, i) => [i, x]), E.mod(now, n), { 'aria-label': label });
+      const day = datePicker(today()), slot = shiftSel(`${Word()} it starts`);
+      const done = el('input', { type: 'checkbox' });
+      const endDay = datePicker(today()), endSlot = shiftSel(`${Word()} it ended`);
+      const endField = field('It ended', el('div', { class: 'row' }, endDay, endSlot), 'The session is made ended here, and a session that is open now stays open');
+      const err = el('p', { class: 'bad small', hidden: true });
+      const first = () => (day.getAbs() ?? today()) * n + Number(slot.value);
+      const last = () => (endDay.getAbs() ?? today()) * n + Number(endSlot.value);
+      const go = el('button', { class: 'primary', type: 'submit' }, 'Start session');
+      const d = el('dialog', { class: 'kit-dialog pt-dialog', 'aria-label': 'New session' },
+        el('form', { novalidate: true },
+          el('h3', {}, 'New session'),
+          field('Starting when?', el('div', { class: 'row' }, day, slot), `The campaign's clock (${E.fmtShift(cal(), now)}) unless you pick another ${word()}. Build draft gathers the ${word()}s from here`),
+          el('label', { class: 'inline' }, done, ' Played already: write it up afterwards'),
+          endField, err,
+          el('div', { class: 'kit-dialog-actions' }, go, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel'))));
+      const sync = () => { endField.hidden = !done.checked; go.textContent = done.checked ? 'Make session' : 'Start session'; };
+      done.addEventListener('change', sync); sync();
+      d.addEventListener('close', () => { d.remove(); resolve(made); });
+      d.querySelector('form').addEventListener('submit', busy(go, async e => {
+        e.preventDefault();
+        err.hidden = true;
+        if (done.checked && last() < first()) { err.textContent = 'It can\'t end before it starts.'; err.hidden = false; return; }
+        try {
+          const r = await post('session_save', { first_shift: first(), ...(done.checked ? { last_shift: last() } : {}) }, S.camp.id);
+          if (!done.checked) S.openSession = r.session;
+          made = r.session;
+        } catch (x) { err.textContent = x.message; err.hidden = false; return; }
+        d.close();
+      }));
+      document.body.append(d);
+      d.showModal();
+    });
+  }
+  /** A shift's sessions, as chips linking to them, and for a GM "+ Session…" to put the shift in one: an existing session
+   * takes it in (a shift outside its run is added on its own: a flashback, or a split party's other half), or A new
+   * session made for it. */
+  function shiftSessions(abs, sessions, after) {
+    const mine = (sessions || []).filter(x => (x.slots || []).includes(E.mod(abs, spd())));
+    const chips = mine.map(x => el('a', { class: 'chip sess-chip', href: `#/c/${S.camp.id}/sessions/${x.id}`, 'data-tip': `This ${word()} is part of ${sessionName(x)}` }, `Session ${x.number}`));
+    const add = isGM() && !PANEL && !S.viewAs ? btn(mine.length ? '+' : '+ Session…', () => addShiftToSession(abs, mine, after), 'link small',
+      `Put this ${word()} in a session: one already played (as a flashback or a split party's other half) or a new one`) : null;
+    if (add && mine.length) add.setAttribute('aria-label', 'Add to another session');
+    return chips.length || add ? el('div', { class: 'row sess-chips' }, chips, add) : null;
+  }
+  async function addShiftToSession(abs, already, after) {
+    let sessions;
+    try { ({ sessions } = await api('sessions', { query: { cid: S.camp.id } })); } catch (err) { return toast(err.message, true); }
+    const have = new Set(already.map(x => x.id));
+    const pick = select([['new', 'A new session'], ...sessions.filter(x => !have.has(x.id)).map(x => [x.id, `${sessionName(x)} (${Sessions.daysCovered(cal(), x)})`])],
+      sessions.find(x => !have.has(x.id))?.id ?? 'new', { 'aria-label': 'Session' });
+    const v = await KIT.dialog({ title: `Add ${E.fmtShift(cal(), abs)} to a session`, message: el('span', {}, pick), buttons: [
+      { value: 'add', label: 'Add', cls: 'primary', focus: true }, { value: '', label: 'Cancel' }] });
+    if (v !== 'add') return;
+    try {
+      if (pick.value === 'new') {
+        // the clock's own shift with nothing open starts a session there; any other shift gets one made for it alone
+        const open = abs === nowShift() && !S.openSession;
+        const r = await post('session_save', { first_shift: abs, ...(open ? {} : { last_shift: abs }) }, S.camp.id);
+        if (open) S.openSession = r.session;
+        toast(`${sessionName(r.session)} made for ${E.fmtShift(cal(), abs)}`);
+      } else {
+        const r = await post('session_shift_add', { id: Number(pick.value), abs_shift: abs }, S.camp.id);
+        toast(`${E.fmtShift(cal(), abs)} is in ${sessionName(r.session)}`);
+      }
+      (after || route)();
+    } catch (err) { toast(err.message, true); }
   }
   /** A session's notes as text: what was saved, or (never saved as text yet) its old note rows written out. */
   const sessionNotesText = (s, rows) => s.notes_text ?? Sessions.foldNotes(cal(), rows || [], sessionStart(s));
@@ -2104,6 +2181,7 @@
     const isNow = d * spd() + i === nowShift();
     const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
       el('div', { class: 'row spread' }, shiftTitle(d, i, isNow), visPill(v)),
+      PANEL ? null : shiftSessions(d * spd() + i, opt.sessions, opt.after),
       sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
         : hiddenWx ? el('div', { class: 'small muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet') : null,
       ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
@@ -5293,7 +5371,7 @@
     const partyCard = el('div', { class: 'tv-card tv-party' }, el('b', {}, 'Party'), ...party);
 
     // the big box: the shift as its card on the day page shows it, made large, its editor open
-    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route })
+    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions })
       : el('div', { class: 'card shiftcard' }, el('p', { class: 'muted' }, `This ${word()} couldn't be loaded.`));
     big.classList.add('tv-now');
 
@@ -5642,7 +5720,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, settings, shiftNames, nowShift, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));

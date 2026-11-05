@@ -5,8 +5,9 @@
  * what the rest of the app uses. Plain script, no build step. */
 (function (root) {
   'use strict';
+  const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, nowShift, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -21,11 +22,10 @@
         el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'Not ended yet: its last day is still open' }, 'open') : null),
         el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
           isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
-      const add = isGM() ? btn('+ New session', busy(null, async () => {
-        const r = await post('session_save', {}, cid);
-        S.openSession = r.session;
-        location.hash = href(r.session.id);
-      }), 'primary small', 'Start a session on the campaign\'s current day, then take your notes in it') : null;
+      const add = isGM() ? btn('+ New session', async () => {
+        const made = await newSessionDialog();
+        if (made) location.hash = href(made.id);
+      }, 'primary small', 'Start a session at the campaign\'s clock or another shift, or write one up afterwards, then take your notes in it') : null;
       // the list, and a search over the sessions' names and dates once there are a few
       const list = el('div', { class: 'lib-list' });
       const search = sessions.length > 4 ? el('input', { type: 'search', value: sessQuery, placeholder: 'Search names and dates', 'aria-label': 'Search the sessions' }) : null;
@@ -223,7 +223,13 @@
       const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, Math.max(240, innerHeight * 0.75))}px`; };
       for (const e of ['input', 'keyup', 'focus']) nbox.addEventListener(e, grow);
       if (nbox.value) requestAnimationFrame(grow);
-      return [head[0], bar, details, cols, pictures];
+      // the shifts it takes in outside its run (added from a shift's + Session…), each linking to its day; ✕ takes one out
+      const n = E.slotsPerDay(cal());
+      const extras = (s.extra_shifts || []).length ? el('p', { class: 'small sess-extras-list' }, el('span', { class: 'muted' }, 'Also takes in: '),
+        ...s.extra_shifts.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
+          Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
+            `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })])) : null;
+      return [head[0], bar, extras, details, cols, pictures];
     }
 
     return { viewSessions };

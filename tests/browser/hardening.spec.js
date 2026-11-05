@@ -84,7 +84,7 @@ test("the API refuses to run on a database that is behind, and says what to run"
     expect(await current()).toBe(false);                       // nothing there yet
     run(fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8"), db);
     expect(await current()).toBe(true);                        // a fresh install is up to date
-    run("ALTER TABLE play_sessions DROP COLUMN last_shift, DROP COLUMN first_shift;", db);
+    run("DROP TABLE session_shifts;", db);
     expect(await current()).toBe(false);                       // the newest migration hasn't run
   } finally {
     run(`DROP DATABASE IF EXISTS ${db};`);

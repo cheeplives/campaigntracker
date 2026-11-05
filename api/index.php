@@ -350,6 +350,13 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
     $st->execute([$cid]);
     $up = $pdo->prepare('UPDATE party_trail SET abs_shift=? WHERE id=?');
     foreach ($st->fetchAll() as $r) $up->execute([convert_slot((int)$r['abs_shift'], $old, $new), $r['id']]);
+    // a session's shifts outside its run: two that land on the same slot become one
+    $st = $pdo->prepare('SELECT x.session_id, x.abs_shift FROM session_shifts x JOIN play_sessions s ON s.id=x.session_id WHERE s.campaign_id=?');
+    $st->execute([$cid]);
+    $rows = $st->fetchAll();
+    $pdo->prepare('DELETE x FROM session_shifts x JOIN play_sessions s ON s.id=x.session_id WHERE s.campaign_id=?')->execute([$cid]);
+    $ins = $pdo->prepare('INSERT IGNORE INTO session_shifts (session_id, abs_shift) VALUES (?,?)');
+    foreach ($rows as $r) $ins->execute([$r['session_id'], convert_slot((int)$r['abs_shift'], $old, $new)]);
 }
 
 /**
@@ -615,6 +622,7 @@ const CAMPAIGN_COPY = [
     ['library_tomes', 'key' => 'library'],
     ['play_sessions', 'key' => 'session'],
     ['session_notes', 'maps' => ['session_id' => 'session']],
+    ['session_shifts', 'via' => ['session_id', 'session']],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
     ['sheet_characters', 'maps' => ['entry_id' => 'encyclopedia']],
     // Maps (db/migrations/019_maps.sql)
@@ -1300,7 +1308,8 @@ try {
             WHERE n.campaign_id=? AND n.abs_day=? ORDER BY n.created_at, n.id');
         $st->execute([$cid, $ad]);
         $shiftNotes = $st->fetchAll();
-        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'events' => $events, 'today' => $today]);
+        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'events' => $events, 'today' => $today,
+            'sessions' => day_sessions($cid, $c, $ad, $isGm)]);
 
     case 'days_save': // GM: batch upsert generated weather (+ region) — never touches notes
         $cid = cid(); need_gm($cid);
@@ -1628,6 +1637,8 @@ try {
     case 'session_notes_save':
     case 'session_end':
     case 'session_delete':
+    case 'session_shift_add':
+    case 'session_shift_remove':
         sessions_action($action);
 
     // ===== pictures and files ===== (api/files.php)

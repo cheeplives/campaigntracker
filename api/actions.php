@@ -119,6 +119,8 @@ const ACTIONS = [
     'session_notes_save' => ['who' => 'gm'],
     'session_end' => ['who' => 'gm', 'touch' => true],
     'session_delete' => ['who' => 'gm', 'touch' => true],
+    'session_shift_add' => ['who' => 'gm', 'touch' => true],
+    'session_shift_remove' => ['who' => 'gm', 'touch' => true],
     'files' => ['get' => true, 'who' => 'member'],
     'file' => ['get' => true, 'who' => 'member'],
     'file_upload' => ['who' => 'member', 'touch' => true],
