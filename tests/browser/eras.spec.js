@@ -57,7 +57,12 @@ test("a GM adds eras in Settings, and the calendar labels and date picker use th
   await expect(page.locator('textarea[name="eras"]')).toHaveValue("Old Age, OA, -50\nNew Age, NA, 1, restart\nBefore Time, BT, -50, before");
 
   await page.goto(`./#/c/${cid}/calendar`);
+  // Month redraws the calendar even when it is already showing a month, so wait for the new bar before typing in its
+  // date picker: a picker filled in the old bar is thrown away when the redraw lands
+  await expect(page.locator(".calbar h2")).toBeVisible();
+  await page.locator(".calbar").evaluate(n => { n.dataset.stale = "1"; });
   await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.locator(".calbar[data-stale]")).toHaveCount(0);
   await expect(page.locator(".calbar h2")).toHaveText("Firstmonth 1 NA");
   await expect(page.locator(".calbar h2")).toHaveAttribute("data-tip", /New Age: year 1 of the era, calendar year 1/);
 

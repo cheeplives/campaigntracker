@@ -96,7 +96,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   view, an event saved the old way still shows, and Go to today opens today.
 - **table** (framing): in another site's frame the panel changes nothing until "Allow changes here" is turned on for that site, which is remembered.
 - **table**: At the Table sits first under Play and shows the date, shift, party and moons, with the weather in the clock's
-  shift's big box; End shift moves the clock; an Encyclopedia lookup finds names (never a secret entry for a player); a
+  shift's big box; End shift moves the clock; Pass time… skips ahead by an amount or to a date and shift, labels every shift passed with the activity, refuses a time that isn't after now, and opens the downtime dialog; an Encyclopedia lookup finds names (never a secret entry for a player); a
   player's note goes on the clock's shift from the big box, and an entry note, escaped, at the end of an entry's Public
   notes (a GM's GM-only one in its GM notes, a player never on a secret entry). Panel links: members make and revoke their own, only GMs make public ones and revoke
   anyone's, and only the code's hash is stored; a link reaches only its own campaign (the cid asked for is ignored) and

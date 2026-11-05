@@ -787,6 +787,12 @@ button.link.danger { color: var(--bad); font-size: 1rem; }
 .ledger-total { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: flex-end; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
 .ledger-total.over strong { color: var(--bad); }
 dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
+/* At the Table's Pass time dialog: Skip ahead, then the rests and travel it leads to */
+dialog.kit-dialog.pt-dialog { width: min(480px, calc(100vw - 32px)); }
+.pt-dialog fieldset { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; padding: 8px 12px 12px; }
+.pt-dialog legend { padding: 0 4px; font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .08em; color: var(--label); }
+.pt-dialog .row[hidden] { display: none; }
+.field > .combo.grow { flex: none; }   /* in a field's column, grow would make the box 200px tall */
 .hold-dialog [hidden] { display: none; }
 .hold-fields { margin: 4px 0; padding-top: 6px; border-top: 1px dashed var(--line); }
 .hold-fields:empty { display: none; }

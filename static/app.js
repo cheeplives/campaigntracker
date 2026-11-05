@@ -1240,6 +1240,74 @@
     return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, actionCombo(act), go, back);
   }
 
+  /** At the Table's Pass time dialog: skip ahead by an amount or to a date (with an activity for the time passed, and
+   * when it lands shown as you type), or start a rest or downtime, or plan a trip on the Travel tab. Resolves once the
+   * clock has moved (true), or not (false). */
+  function passTimeDialog() {
+    hideTip();
+    return new Promise(resolve => {
+      const c = cal(), n = spd(), now = nowShift();
+      let moved = false;
+      const how = [['amount', 'By an amount'], ['date', 'To a date']].map(([v, l]) => el('label', { class: 'inline' },
+        el('input', { type: 'radio', name: 'pt-how', value: v, checked: v === 'amount' }), ` ${l}`));
+      const def = { day: 'shift', week: 'day', month: 'week' }[settings().time_unit || 'day'] || 'shift';
+      const amt = el('input', { type: 'number', value: 1, min: 1, class: 'w-num', 'aria-label': 'Amount' });
+      const unit = select([['shift', `${word()}(s)`], ['day', 'day(s)'], ['week', 'week(s)'], ['month', 'month(s)'], ['year', 'year(s)']], def, { 'aria-label': 'Unit' });
+      const day = datePicker(today() + 1);
+      const slot = select(shiftNames().map((x, i) => [i, x]), 0, { 'aria-label': `${Word()} of that day` });
+      const act = el('input', { placeholder: `e.g. Waiting for the caravan`, 'aria-label': 'Activity for the time passed' });
+      const byAmount = el('div', { class: 'row' }, amt, unit), byDate = el('div', { class: 'row', hidden: true }, day, slot);
+      const lands = el('p', { class: 'small muted', role: 'status' });
+      const err = el('p', { class: 'bad small', hidden: true });
+      const mode = () => how.map(h => h.querySelector('input')).find(i => i.checked).value;
+      const target = () => mode() === 'amount' ? now + unitShifts(unit.value, Math.round(Number(amt.value) || 0))
+        : (day.getAbs() ?? today()) * n + Number(slot.value);
+      const sync = () => {
+        byAmount.hidden = mode() !== 'amount'; byDate.hidden = mode() !== 'date';
+        const t = target();
+        lands.textContent = t > now ? `Lands on ${E.fmtShift(c, t)}, ${t - now} ${word()}${t - now === 1 ? '' : 's'} on.` : 'That isn\'t after now.';
+      };
+      for (const x of [...how, amt, unit, slot]) x.addEventListener('change', sync);
+      amt.addEventListener('input', sync);
+      day.addEventListener('change', sync); day.addEventListener('input', sync);
+      const go = el('button', { class: 'primary', type: 'submit' }, 'Pass time ▶');
+      const d = el('dialog', { class: 'kit-dialog pt-dialog', 'aria-label': 'Pass time' },
+        el('form', { novalidate: true },
+          el('h3', {}, 'Pass time'),
+          el('p', { class: 'small muted' }, `Now: ${E.fmtShift(c, now)}`),
+          el('fieldset', { class: 'pt-skip' }, el('legend', {}, 'Skip ahead'),
+            el('div', { class: 'row', role: 'radiogroup', 'aria-label': 'How far' }, how),
+            byAmount, byDate,
+            field('What the party does meanwhile (optional)', actionCombo(act), `Written into every ${word()} that passes. ${Word()}s that already have an activity keep it`),
+            lands, err,
+            el('div', { class: 'row' }, go)),
+          el('fieldset', { class: 'pt-other' }, el('legend', {}, 'Or'),
+            el('div', { class: 'row' },
+              btn('🛏 Rest or downtime…', () => { d.close(); downtimeDialog(); }, 'small', 'Start a long rest, a short rest or some days of downtime: it labels the shifts it covers and can move the clock to its end'),
+              el('a', { class: 'button small', href: `#/c/${S.camp.id}/travel`, onclick: () => d.close(),
+                'data-tip': 'Plan a trip on the Travel tab: Depart passes the travel time, labels each shift with the trip and moves the party on the map' }, '🧭 Travel…'))),
+          el('div', { class: 'kit-dialog-actions' }, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel'))));
+      sync();
+      d.addEventListener('close', () => { d.remove(); resolve(moved); });
+      d.querySelector('form').addEventListener('submit', busy(go, async e => {
+        e.preventDefault();
+        err.hidden = true;
+        const t = target();
+        if (!(t > now)) { err.textContent = `Pick a time after now (${E.fmtShift(c, now)}).`; err.hidden = false; return; }
+        if (t - now > n * 3650 && !await confirmDialog(`That jumps ${Math.round((t - now) / n)} days. Continue?`)) return;
+        try { await passShifts(t - now, act.value.trim()); }
+        catch (x) { err.textContent = x.message; err.hidden = false; return; }
+        moved = true;
+        vs().anchor = today();
+        d.close();
+        toast(`Now: ${E.fmtShift(cal(), nowShift())}`);
+      }));
+      document.body.append(d);
+      d.showModal();
+      amt.focus();
+    });
+  }
+
   // ------------------------------------------------------------ calendar tab
   /** "Reign of Aldric: year 27 of the era, calendar year 1526" for a year an era covers, else undefined. */
   function eraTip(c, y) {
@@ -5197,15 +5265,12 @@
         `Log something that happens on this ${word()}`)));
       big.append(here);
     }
-    // End shift moves the clock on one; Pass time opens the bar's row for longer jumps
+    // End shift moves the clock on one; Pass time… opens a dialog for longer jumps, rests and travel
     if (isGM() && !S.viewAs && at === now) {
       const end = btn(`End ${names[nsh]} ▶ on to ${names[E.mod(now + 1, n)]}`, null, 'primary', `Move the campaign clock on one ${word()}, rolling the weather for a new day. Everyone's view catches up`);
       end.addEventListener('click', busy(end, async () => { await passShifts(1); toast(`Now: ${E.fmtShift(cal(), nowShift())}`); route(); }));
-      const more = btn('Pass time…', () => {
-        const open = document.querySelector('.now-passbtn');
-        if (open && open.getAttribute('aria-expanded') !== 'true') open.click();
-        document.querySelector('.passtime input')?.focus();
-      }, '', 'Pass more time at once: hours, days, weeks or months, with an activity for the time passed');
+      const more = btn('Pass time…', async () => { if (await passTimeDialog()) route(); }, '',
+        'Pass more time at once: skip ahead by an amount or to a date with an activity for the time passed, or start a rest, downtime or a trip');
       big.append(el('div', { class: 'row tv-actions' }, end, more));
     }
 
