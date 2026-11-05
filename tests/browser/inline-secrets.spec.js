@@ -22,7 +22,7 @@ const get = async (page, qs) => (await (await page.request.get(`api/index.php?${
 test("the GM marks a paragraph of the day's Public notes GM only, and players never receive it", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Secret paragraph");
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const pub = page.locator(".notepanel.public .ql-editor");
   await pub.click();
   await pub.pressSequentially("Market day in Bree");
@@ -48,7 +48,7 @@ test("the GM marks a paragraph of the day's Public notes GM only, and players ne
   expect(pday.notes).toBe("<p>Market day in Bree</p>");
   expect(JSON.stringify(await get(pp, `a=days&cid=${cid}&from=0&to=9`))).not.toContain("ale");
   expect(JSON.stringify(await get(pp, `a=encyclopedia_sources&cid=${cid}`))).not.toContain("ale");
-  await pp.goto(`index.html#/c/${cid}/today`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator("[data-box=notes] .richtext")).toHaveText("Market day in Bree");
   await expect(pp.locator("aside")).toHaveCount(0);
   await pp.goto(`index.html#/c/${cid}/search?q=ale`);
@@ -100,7 +100,7 @@ test("View as player shows the GM the players' side, and changes nothing meanwhi
   await expect(page.locator(".now-title .role")).toHaveText("Player view");
   await expect(page.locator(".evrow h4")).toHaveText(["Open fair"]);
   await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator("[data-box=notes] .richtext")).toHaveText("Fair day");
   await expect(page.locator(".notepanel.secret")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Pass time/i })).toHaveCount(0);
@@ -126,7 +126,7 @@ test("typing @ lists Encyclopedia names to write into a note, and can add a new 
   const { cid } = await gmAndPlayer(page, browser, "Mentions");
   await api(page, "entry_save", { name: "Gunther Hoffmann", aliases: ["the innkeeper"] }, cid);
   await api(page, "entry_save", { name: "Griselda" }, cid);
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const pub = page.locator(".notepanel.public .ql-editor");
   const list = page.locator(".notepanel.public .rt-mentions");
   await pub.click();
