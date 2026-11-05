@@ -73,6 +73,7 @@ shifts that have come round so far, unless the GM lets players see future weathe
 | `groups` | | The party groups and where each one is: `{ groups: [{ id, name, members, region_id, map_id, x, y, … }] }`. |
 | `maps` | | `{ maps: [...] }`. |
 | `map` | `id` | One map with its pins and routes. |
+| `clocks` | | `{ clocks: [{ id, name, description, segments, filled, visibility, by_gm, entry, archived, ticks, … }] }`. A player's key never gets secret clocks, and gets `filled: null` and no `ticks` on a vague clock someone else made. |
 
 ## Write actions (read-and-write keys)
 
