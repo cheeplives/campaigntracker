@@ -55,10 +55,10 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   const row = page.locator(".weekrow", { hasText: "Skirmish at the ford" });
   await expect(row.locator(".chip.tag", { hasText: "Battle" })).toHaveCSS("background-color", "rgb(185, 28, 28)");
 
-  // Go to today, from another day.
+  // Go to today, from another day: At the Table, on the campaign's current day.
   await page.goto(`index.html#/c/${cid}/day/7`);
   await page.getByRole("link", { name: "Go to today" }).click();
-  await expect(page).toHaveURL(/#\/c\/\d+\/day\/2$/);
+  await expect(page).toHaveURL(/#\/c\/\d+\/table$/);
   expectNoErrors(errors);
 });
 

@@ -184,9 +184,9 @@ test("a session's notes are one box: Enter makes a line, Tab indents, @ names, a
   await expect(notesCol(page).locator(".snote-help")).toContainText(">+1 dawn");
   await expect(notesCol(page).locator(".snote-help")).toContainText("GM-only paragraph");
 
-  // Current Day has no notes box (a day's notes are on its calendar page), and a player gets no session until it is published
+  // At the Table has no notes box (a day's notes are on its calendar page), and a player gets no session until it is published
   await page.goto(`index.html#/c/${cid}`);
-  await expect(page.locator("[data-box=shifts]")).toBeVisible();
+  await expect(page.locator("[data-box=table-shifts]")).toBeVisible();
   await expect(page.locator("[data-box=notes]")).toHaveCount(0);
   await expect(page.locator("[data-box=session]")).toHaveCount(0);
   expect((await one(pp, cid, sid)).status).toBe(404);

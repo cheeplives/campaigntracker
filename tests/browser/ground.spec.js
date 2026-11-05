@@ -14,10 +14,12 @@ test("the day page shows snow cover after a cold snap and mud after days of rain
   const cid = await makeCampaign(page, `Ground ${gm.id}`); // now = day 2, Dawn
 
   expect((await api(page, "days_save", { days: [...days(-3, 1, { type: "blizzard", temp: -8, wind: 3 }), ...days(2, 3, { type: "overcast", temp: -6, wind: 1 })] }, cid)).status).toBe(200);
-  await page.goto(`index.html#/c/${cid}/today`);
+  // At the Table's big box has the ground this shift
+  await page.goto(`index.html#/c/${cid}/table`);
+  await expect(page.locator(".tv-now .ground")).toContainText(/snow/i);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator(".kv")).toContainText("Ground now");
   await expect(page.locator(".kv .ground")).toContainText(/snow, \d+ cm/i);
-  await expect(page.locator(".dayhero .ground")).toContainText(/snow/i);
   await expect(page.locator(".shiftcard .ground")).toHaveCount(4);
   await expect(page.locator(".kv .ground")).toHaveAttribute("data-tip", /Last snowfall: yesterday/);
 
@@ -33,11 +35,11 @@ test("the day page shows snow cover after a cold snap and mud after days of rain
   await signIn(pp, player);
   await approve(browser, player.email);
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
-  await pp.goto(`index.html#/c/${cid}/today`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator(".kv .ground")).toContainText(/Muddy|Waterlogged/);
   await expect(pp.locator(".shiftcard .ground")).toHaveCount(1);
-  await pp.goto(`index.html#/c/${cid}/today/3`);
-  await expect(pp.locator(".dayhero")).toContainText("Weather not known yet");
+  await pp.goto(`index.html#/c/${cid}/day/3`);
+  await expect(pp.locator(".shiftcard .wx")).toHaveCount(0);
   await expect(pp.locator(".ground")).toHaveCount(0);
   await pctx.close();
   expectNoErrors(errors);

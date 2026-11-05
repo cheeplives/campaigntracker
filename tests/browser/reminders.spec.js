@@ -66,15 +66,15 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   // Remind me later: gone until the clock moves again.
   await pdlg.getByRole("button", { name: "Remind me later" }).click();
   await expect(pdlg).toHaveCount(0);
-  await goTab(pp, "Current Day");
-  await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
-  await expect(pp.locator(".event.reminder")).toContainText("Midday · Due");
+  await goTab(pp, "At the Table");
+  await expect(pp.locator(".tabs a.on")).toHaveText("At the Table");
+  await expect(pp.locator("[data-box=table-reminders] .event.reminder")).toContainText("Midday · Due");   // in today's Reminders box
   await expect(pdlg).toHaveCount(0);
   // A new page load asks again; this time the player dismisses it, and only for themselves.
   await pp.reload();
   await expect(pdlg).toContainText("The ransom is due");
   await pdlg.getByRole("button", { name: "Dismiss" }).click();
-  await expect(pp.locator(".event.reminder")).toContainText("Midday · Due"); // until the page redraws
+  await expect(pp.locator("[data-box=table-reminders] .event.reminder")).toContainText("Midday · Due"); // until the page redraws
   // Dismiss saves in the background, so wait for the server to have it.
   await expect.poll(async () => (await api(pp, "reminders", undefined, cid)).json.reminders.map(x => [x.title, x.due, x.dismissed]))
     .toEqual([["The ransom is due", true, true]]);

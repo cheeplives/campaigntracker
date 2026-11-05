@@ -1058,17 +1058,16 @@
   // ------------------------------------------------------------ campaign shell
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
-    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['today', 'Current Day'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
-    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['table', 'At the Table'], ['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
+    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
+    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
   const TAB_TIPS = {
-    today: 'The campaign\'s current day up close: every shift, its weather and visibility, and the day\'s events',
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list: search it and filter it by tag',
     sessions: 'Each game night\'s quick notes and the summary written from them',
-    table: 'The campaign right now, in big type: for the table, a phone, beside a virtual tabletop or on a stream',
+    table: 'Play from here: the shift the clock is on in a big box (what the party does, notes, its events) with End shift, and today\'s weather, shifts and events folded underneath',
     characters: 'Everyone\'s characters and their sheets',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
@@ -1103,7 +1102,7 @@
           S.viewAs ? el('div', { class: 'view-as-banner', role: 'status' }, el('span', {}, '👁 Viewing as a player: this is what your players see. Changes are off.'),
             btn('Leave player view', () => setViewingAs(false), 'small primary')) : null,
           el('div', { class: 'now-time' },
-            el('a', { href: `#/c/${S.camp.id}/today`, class: 'now-date', 'data-tip': `The current ${word()} and date in the campaign. Click to open today` }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
+            el('a', { href: `#/c/${S.camp.id}/table`, class: 'now-date', 'data-tip': `The current ${word()} and date in the campaign. Click to open At the Table` }, `${shiftNames()[sh]} · ${E.fmtDate(c, d)}`),
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
               weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d, region),
               hol.map(holidayChip)))),
@@ -1457,39 +1456,45 @@
   }
 
   // ------------------------------------------------------------ day drill-down
-  /** current: the Current Day tab, which opens on today with the current shift up front and can step to other days. */
-  async function viewDay(d, current = false) {
-    const c = cal(), names = shiftNames();
+  /** A day as the day page and At the Table read it: the server's day (its row, shifts, shift notes and events), with its
+   * region, weather, the weather in each shift and the ground. */
+  async function loadDay(d, withGround = true) {
     const r = await api('day', { query: { cid: S.camp.id, d } });
     const row = r.day || {};
     const region = regionById(row.region_id) || currentRegion();
     const w = row.weather || null;
     const shifts = {}; r.shifts.forEach(s => (shifts[s.shift] = s));
     let grounds = [];
-    try { grounds = await groundFor(d, region, w); } catch { /* the day still shows without it */ }
-    const groundNow = d === today() ? grounds[E.mod(nowShift(), spd())] : grounds.filter(Boolean).pop();
-    const p = E.fromAbs(c, d);
-    const sea = E.season(c, d, region?.settings?.hemisphere);
-    const sun = E.sunTimes(c, d, region?.settings?.hemisphere);
-    const hol = E.holidaysOn(c, S.holidays, d);
+    if (withGround) try { grounds = await groundFor(d, region, w); } catch { /* the day still shows without it */ }
+    return { d, r, row, region, w, shifts, grounds, sws: shiftWx(d, region, w) };
+  }
 
-    const toCalendar = btn(current ? 'Show in calendar' : 'Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
-      current ? 'Open the calendar on this day' : 'Return to the calendar, showing this day');
-    const exportBtn = btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: r }), 'small',
+  /** The day page (a day of the calendar): Previous and Next day, then its boxes. Today is At the Table. */
+  async function viewDay(d) {
+    const c = cal(), x = await loadDay(d);
+    const toCalendar = btn('Back to calendar', () => { vs().anchor = d; location.hash = `#/c/${S.camp.id}/calendar`; }, 'small',
+      'Return to the calendar, showing this day');
+    const exportBtn = btn('⬇ Export', () => DayExport.download({ camp: S.camp, role: S.role, regions: S.regions, holidays: S.holidays, tempUnit: tempUnit(), d, data: x.r }), 'small',
       'Download this day as a Markdown file (events, weather, notes and shifts) to paste into Scabard or another wiki. It holds only what you can see here');
-    const tabDay = n => `#/c/${S.camp.id}/${current ? `today/${n}` : `day/${n}`}`;
-    const nav = current ? el('div', { class: 'calbar' },
-      el('a', { class: 'button small', href: tabDay(d - 1) }, '◀ Previous day'),
-      el('h2', {}, E.fmtDate(c, d)),
-      el('a', { class: 'button small', href: tabDay(d + 1) }, 'Next day ▶'),
-      d !== today() ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/today`, 'data-tip': 'Back to the campaign\'s current day' }, 'Return to today') : null,
-      toCalendar, exportBtn) : el('div', { class: 'calbar' },
+    const nav = el('div', { class: 'calbar' },
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d - 1}` }, '◀ Previous day'),
       el('h2', {}, E.fmtDate(c, d)),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
       toCalendar,
-      el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${today()}`, 'data-tip': 'Open the campaign\'s current day' }, 'Go to today'),
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/table`, 'data-tip': 'Open At the Table, on the campaign\'s current day' }, 'Go to today'),
       exportBtn);
+    mount(...campaignHeader('calendar'), nav, ...dayBoxes(x));
+  }
+
+  /** A day's boxes: Weather, Shifts (or Hours), Notes, Events and Reminders. table: under At the Table, where they start
+   * folded (remembered apart from the day page's) and the Notes box stays on the day's calendar page. */
+  function dayBoxes({ d, r, row, region, w, shifts, grounds, sws }, table = false) {
+    const c = cal(), names = shiftNames();
+    const key = k => (table ? `table-${k}` : k);
+    const groundNow = d === today() ? grounds[E.mod(nowShift(), spd())] : grounds.filter(Boolean).pop();
+    const sea = E.season(c, d, region?.settings?.hemisphere);
+    const sun = E.sunTimes(c, d, region?.settings?.hemisphere);
+    const hol = E.holidaysOn(c, S.holidays, d);
 
     // --- weather and the day's conditions
     const overview = el('div', { class: 'dayconditions' },
@@ -1504,34 +1509,35 @@
           `☀ Sunrise ${E.fmtClock(sun.sunrise)} · Sunset ${E.fmtClock(sun.sunset)}`, el('div', { class: 'small muted' }, `${fmtDaylight(sun.daylight)} of daylight`)) : null,
         el('div', {}, el('span', { class: 'lbl' }, 'Moons'), E.moons(c, d, region).map(m => el('div', {}, m.redMoon ? moonGlyph(m) : m.icon, ` ${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)`))),
         hol.length ? el('div', {}, el('span', { class: 'lbl' }, 'Holidays'), hol.map(x => el('div', {}, holidayChip(x), x.description ? ` ${x.description}` : ''))) : null,
-        // The Current Day tab's banner already shows the shift the clock is on.
-        d === today() && !current ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
+        // At the Table already shows the shift the clock is on.
+        d === today() && !table ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
 
     if (isGM()) overview.append(dayEditor(d, row, region, w));
 
     // --- shifts
-    const sws = shiftWx(d, region, w);
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
       shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null)));
 
     // --- events
-    const evBox = dayBox('events', 'Events', {
+    const evBox = dayBox(key('events'), 'Events', {
+      folded: table,
       actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
     const rems = dayReminders(d);
-    const remBox = dayBox('reminders', 'Reminders', {
+    const remBox = dayBox(key('reminders'), 'Reminders', {
+      folded: table,
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
       actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
-    mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
-      dayBox('weather', 'Weather', { summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
-      dayBox('shifts', `${Word()}s`, { tip: shiftTip() }, shiftCards),
-      // The Current Day tab keeps to the day as it runs; the day's Public and Secret notes are on its calendar page.
-      current ? null : notesBox(d, row),
-      evBox, remBox);
+    return clean([
+      dayBox(key('weather'), table ? 'Today\'s weather and conditions' : 'Weather', { folded: table, summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, overview),
+      dayBox(key('shifts'), table ? `Every ${word()} today` : `${Word()}s`, { folded: table, tip: shiftTip() }, shiftCards),
+      // The day's Public and Secret notes are on its calendar page.
+      table ? null : notesBox(d, row),
+      evBox, remBox]);
   }
 
   // The day page is a column of boxes (Weather, Shifts or Hours, Notes, Events, Reminders), each of which folds to its
@@ -1542,12 +1548,13 @@
   }
   function rememberFold(key, folded) {
     const all = foldedBoxes();
-    if (folded) all[key] = true; else delete all[key];
+    all[key] = folded;   // kept either way: At the Table's boxes start folded
     try { localStorage.setItem(`${BOXES_KEY}:${S.user?.id}`, JSON.stringify(all)); } catch { /* private mode: just this page */ }
   }
-  /** A day box: its heading folds and unfolds it. opts: { tip, actions }, where actions sit at the right of the heading. */
+  /** A day box: its heading folds and unfolds it. opts: { tip, actions, summary, folded }: actions sit at the right of the
+   * heading; folded is how it starts until it has been folded or unfolded in this browser. */
   function dayBox(key, title, opts, ...body) {
-    const folded = !!foldedBoxes()[key];
+    const all = foldedBoxes(), folded = key in all ? !!all[key] : !!opts.folded;
     const inner = el('div', { class: 'daybox-body', id: `daybox-${key}`, hidden: folded }, body);
     const toggle = el('button', { type: 'button', class: 'daybox-toggle', 'aria-expanded': String(!folded), 'aria-controls': inner.id,
       'data-tip': 'Fold or unfold this box. It stays as you leave it in this browser' }, el('span', { class: 'daybox-caret', 'aria-hidden': 'true' }), title);
@@ -1841,45 +1848,22 @@
   /** Hours of daylight as "11h 40m". */
   const fmtDaylight = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`; };
 
-  /** The Current Day tab's banner and the day's shifts (or hours) at a glance. On today it shows the shift the campaign
-   * clock is on, large; on any other day, the day's forecast (what the player may see of it). */
-  function dayHero(d, region, w, sws, shifts, ground) {
-    const c = cal(), names = shiftNames(), isToday = d === today();
+  /** Day d's shifts (or hours) in a row, each with its weather: NOW on the one the clock is on, and for GMs a click on another
+   * moves the clock there. */
+  function dayStrip(d, sws) {
+    const names = shiftNames(), isToday = d === today();
     const sh = isToday ? E.mod(nowShift(), spd()) : d < today() ? spd() : -1; // which shifts have passed
-    let main;
-    if (isToday) {
-      const sw = sws[sh] || null, def = sw ? E.WEATHER[sw.type] || {} : null;
-      const v = E.visibility(c, region, sw, d, sh, shifts[sh]?.visibility_override);
-      main = el('div', { class: 'dh-now' },
-        el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
-        el('div', {},
-          el('div', { class: 'lbl' }, 'Now'),
-          el('div', { class: 'dh-shift' }, names[sh]),
-          el('div', {}, weatherText(sw, `Weather this ${names[sh]}`), ' ', visPill(v)),
-          ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
-          shifts[sh]?.activity ? el('p', { class: 'pre dh-act' }, linked(shifts[sh].activity)) : null));
-    } else {
-      const def = w ? E.WEATHER[w.type] || {} : null;
-      main = el('div', { class: 'dh-now' },
-        el('div', { class: 'dh-icon', 'aria-hidden': 'true' }, def?.icon || '·'),
-        el('div', {},
-          el('div', { class: 'lbl' }, d < today() ? 'Past day' : 'Coming day'),
-          el('div', { class: 'dh-shift' }, w ? def.label || w.type : isGM() ? 'No weather recorded' : 'Weather not known yet'),
-          w ? el('div', {}, weatherText(w)) : null,
-          ground ? el('div', { class: 'small' }, groundText(ground, d)) : null));
-    }
-    return el('div', { class: 'dayhero' }, main,
-      el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
-        const x = sws[i] || null, cls = ['dh-step'];
-        if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
-        const wxt = x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${wxTip(x)}` : `${names[i]}: weather not known yet`;
-        const kids = [el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i])];
-        if (i === sh) return el('div', { class: cls.join(' '), 'data-tip': `${wxt}. The campaign clock is on this ${word()}` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids);
-        if (!isGM()) return el('div', { class: cls.join(' '), 'data-tip': wxt }, ...kids);
-        cls.push('nowpick');
-        return moveNowButton(d, i, el('button', { type: 'button', class: cls.join(' '), 'aria-label': `Move Now to ${names[i]}`,
-          'data-tip': `${wxt}. Click to move the NOW flag, and the campaign clock, here` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids));
-      })));
+    return el('div', { class: 'dh-strip' + (hourMode() ? ' hours' : ''), style: spd() === 2 ? { gridTemplateColumns: 'repeat(2, minmax(64px, 1fr))', maxWidth: '240px' } : {} }, names.map((_, i) => {
+      const x = sws[i] || null, cls = ['dh-step'];
+      if (i === sh) cls.push('now'); else if (i < sh) cls.push('past');
+      const wxt = x ? `${names[i]}: ${E.weatherLabel(x, tempUnit())}${wxTip(x)}` : `${names[i]}: weather not known yet`;
+      const kids = [el('span', { class: 'dh-step-icon' }, x ? E.WEATHER[x.type]?.icon || '' : '?'), el('span', { class: 'small' }, names[i])];
+      if (i === sh) return el('div', { class: cls.join(' '), 'data-tip': `${wxt}. The campaign clock is on this ${word()}` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids);
+      if (!isGM()) return el('div', { class: cls.join(' '), 'data-tip': wxt }, ...kids);
+      cls.push('nowpick');
+      return moveNowButton(d, i, el('button', { type: 'button', class: cls.join(' '), 'aria-label': `Move Now to ${names[i]}`,
+        'data-tip': `${wxt}. Click to move the NOW flag, and the campaign clock, here` }, el('span', { class: 'nowtag' }, 'NOW'), ...kids));
+    }));
   }
 
   /** A region select with a "Custom…" choice that shows a name box. resolve() returns the picked region id ('' for the
@@ -1975,8 +1959,10 @@
     return b;
   }
 
-  /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. */
-  function shiftCard(d, i, s, region, sw, hiddenWx, notes, ground) {
+  /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. opt: { big: the
+   * shift At the Table is on (never folded, its editor open), readOnly: as a player sees it (the panel), after: what to
+   * redraw once a note is added or deleted (else the page) }. */
+  function shiftCard(d, i, s, region, sw, hiddenWx, notes, ground, opt = {}) {
     const c = cal(), names = shiftNames();
     const v = E.visibility(c, region, sw, d, i, s.visibility_override);
     const isNow = d * spd() + i === nowShift();
@@ -1988,13 +1974,13 @@
       el('small', { class: 'muted', 'data-tip': `How the visibility score was worked out: base light for the ${word()}, then moonlight, weather and terrain` }, v.parts.join(' · ')));
     // In hours mode a day has many cards, so an hour with nothing recorded starts folded to its heading.
     const fold = c => {
-      if (!hourMode() || isNow || s.activity || s.gm_notes || (s.visibility_override ?? '') !== '' || notes.length) return c;
+      if (opt.big || !hourMode() || isNow || s.activity || s.gm_notes || (s.visibility_override ?? '') !== '' || notes.length) return c;
       const det = el('details', { class: c.className + ' folded' }), sum = el('summary');
       sum.append(c.firstChild); det.append(sum, ...c.childNodes);
       return det;
     };
-    if (!isGM()) {
-      card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), shiftNotes(d, i, notes));
+    if (!isGM() || opt.readOnly) {
+      card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), shiftNotes(d, i, notes, opt.after));
       return fold(card);
     }
     // The GM's editor folds to a summary of what's recorded (the shift that's now starts open), and each box saves as you
@@ -2039,15 +2025,16 @@
       save();
     });
     for (const x of [act, gmn, ov]) x.addEventListener('change', save);
-    const editor = el('details', { class: 'shift-edit', open: isNow || null },
+    const editor = el('details', { class: 'shift-edit', open: isNow || opt.big || null },
       el('summary', { 'data-tip': `Open to write what the party does, GM-only notes and the visibility. Each box saves as you leave it` },
         preview, el('span', { class: 'shift-edit-label' }, el('span', { class: 'when-closed' }, '✎ Edit'), el('span', { class: 'when-open' }, 'Done'))),
-      pick, act, hint, gmn, mentionRow(s.activity, s.gm_notes) || '',
+      opt.big ? el('span', { class: 'lbl' }, 'What the party does') : null, pick, act, hint,
+      opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '',
       el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
         tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`))));
     editor.addEventListener('focusout', e => { if (!editor.contains(e.relatedTarget)) { save(); offer(); } });
     editor.addEventListener('toggle', () => { if (!editor.open) { save(); offer(); } });
-    card.append(editor, status, shiftNotes(d, i, notes));
+    card.append(editor, status, shiftNotes(d, i, notes, opt.after));
     return fold(card);
   }
 
@@ -2058,13 +2045,13 @@
   }
 
   /** Free notes at the foot of a shift card, separate from events. Anyone in the campaign can add one. */
-  function shiftNotes(d, i, notes) {
+  function shiftNotes(d, i, notes, after = route) {
     const list = notes.map(n => el('div', { class: 'enote' },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
         (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
           if (!await confirmDialog('Delete this note?')) return;
-          try { await post('shift_note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+          try { await post('shift_note_delete', { id: n.id }, S.camp.id); after(); } catch (err) { toast(err.message, true); }
         }, 'link small'), 'Delete this note') : null)));
     // the box stays closed behind + Note until it's wanted
     const input = el('textarea', { rows: 3, placeholder: 'Your note', hidden: true, 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
@@ -2072,8 +2059,8 @@
     add.addEventListener('click', busy(add, async () => {
       if (input.hidden) { input.hidden = false; add.textContent = 'Add note'; input.focus(); return; }
       if (!input.value.trim()) return;
-      await post('shift_note_add', { abs_day: d, shift: i, body: input.value }, S.camp.id); route();
-      offerNouns([{ text: input.value, label: `a ${shiftNames()[i]} note` }]);
+      await post('shift_note_add', { abs_day: d, shift: i, body: input.value }, S.camp.id); after();
+      if (!PANEL) offerNouns([{ text: input.value, label: `a ${shiftNames()[i]} note` }]);   // the panel can't add entries
     }));
     return el('div', { class: 'shiftnotes' }, list.length ? el('span', { class: 'lbl' }, 'Notes') : null, el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
@@ -5099,20 +5086,42 @@
   }
 
   // ------------------------------------------------------------ At the Table
-  // The campaign right now, in big type, for the table, a phone, a virtual tabletop or a stream: the date and shift,
-  // the weather, light and moons, where the party is, what's on today, an Encyclopedia lookup, a note on this shift or
-  // an entry, and Pass a shift for GMs. The same view is the panel (panel.html, PANEL below), signed in with a panel
-  // link where Chronicle's own sign-in can't reach; the links are made in the box at its foot.
+  // The campaign as it is played: the date and where the party is up top, then a big box for the shift the clock is on
+  // (what the party does, everyone's notes, the GM notes, its events and reminders, End shift), with the shift before and
+  // the one after beside it to look at. Today's boxes (its weather, every shift, events, reminders) fold away underneath.
+  // The same view is the panel (panel.html, PANEL below), signed in with a panel link where Chronicle's own sign-in can't
+  // reach; there it keeps to the header, the shift's activity and notes, and the lookup. The links are made at its foot.
   const ENTRY_NOTE_TIP = 'Added to the end of the entry\'s Public notes, which everyone in the campaign can read';
   let tableEntries = null;   // the Encyclopedia's entries with their notes, loaded the first time one is looked up
+  let tablePeek = null;      // the shift (absolute) looked at from a side panel; null: the one the clock is on
+  /** Whether event e is on shift i of day d: an all-day event on any shift of its days, else from its start shift on its
+   * first day to its end shift on its last. */
+  function eventCovers(e, d, i) {
+    const a = Number(e.abs_day), b = Number(e.end_day ?? e.abs_day);
+    if (d < a || d > b) return false;
+    if (e.shift === null || e.shift === undefined) return true;
+    const lo = d === a ? Number(e.shift) : 0, hi = d === b ? Number(e.shift_end ?? e.shift) : spd() - 1;
+    return i >= lo && i <= hi;
+  }
   async function viewTable() {
-    const cid = S.camp.id, c = cal(), d = today(), sh = E.mod(nowShift(), spd());
+    const cid = S.camp.id, c = cal(), n = spd(), names = shiftNames(), now = nowShift(), d0 = today();
+    // a look elsewhere ends once the clock gets there; a player can look back but not ahead
+    if (PANEL || tablePeek === now || (tablePeek !== null && !isGM() && tablePeek > now)) tablePeek = null;
+    const at = tablePeek ?? now, d = Math.floor(at / n);
     tableEntries = null;
-    const [range, groups] = await Promise.all([fetchRange(d, d), api('groups', { query: { cid } }).then(r => r.groups).catch(() => [])]);
+    // the day looked at and those either side (for the side panels), and today (for the boxes underneath)
+    const want = PANEL ? [d] : [...new Set([d - 1, d, d + 1, d0])];
+    const [loaded, groups] = await Promise.all([
+      Promise.all(want.map(x => loadDay(x, x === d || x === d0).catch(() => null))),
+      api('groups', { query: { cid } }).then(r => r.groups).catch(() => [])]);
     if (S.camp?.id !== cid) return;
-    const row = range.days.get(d) || null, region = regionById(row?.region_id) || currentRegion();
-    const w = row?.weather || null, sw = shiftWx(d, region, w)[sh] || null;
-    const v = E.visibility(c, region, sw, d, sh, null);
+    const days = new Map(want.map((x, k) => [x, loaded[k]]));
+    const slot = abs => {
+      const x = days.get(Math.floor(abs / n)), i = E.mod(abs, n);
+      return x ? { abs, d: x.d, i, x, s: x.shifts[i] || {}, sw: x.sws[i] || null, hidden: !!x.w?.partial && !x.sws[i],
+        notes: (x.r.shift_notes || []).filter(m => Number(m.shift) === i), ground: x.grounds[i] || null } : null;
+    };
+    const cur = slot(at), region = cur?.x.region || currentRegion();
     const card = (title, ...kids) => el('div', { class: 'tv-card' }, el('b', {}, title), ...kids);
     const chronicleHref = h => (PANEL ? `index.html${h}` : h);
     const outLink = (href, label, tipText) => el('a', { href: chronicleHref(href), target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null, 'data-tip': tipText }, label);
@@ -5136,41 +5145,100 @@
       return lines.length ? lines : [el('div', { class: 'muted' }, 'Not set')];
     })();
 
-    // what's on today: its events, and the reminders that fall on it
-    const from = d * spd(), to = from + spd();
-    const todays = [
-      ...range.events.filter(e => Number(e.abs_day) <= d && Number(e.end_day ?? e.abs_day) >= d)
-        .map(e => el('li', {}, '📅 ', Number(e.is_secret) ? secretTag() : null, ' ', outLink(`#/c/${cid}/day/${d}`, e.title, shiftRange(e)))),
-      ...(S.reminders || []).filter(x => x.due_shift >= from && x.due_shift < to)
-        .map(x => el('li', { class: x.due ? '' : 'muted' }, '⏰ ', x.title, el('span', { class: 'small muted' }, ` · ${E.fmtShift(c, x.due_shift).split(',')[0]}`))),
-    ];
-
-    const view = el('div', { class: 'table-view' + (PANEL ? ' in-panel' : '') });
+    const view = el('div', { class: 'table-view' + (PANEL ? ' in-panel' : ' tv-wide') });
+    const nsh = E.mod(now, n);
     const head = el('div', { class: 'tv-head' },
       el('div', { class: 'tv-camp' }, S.camp.name),
-      el('div', { class: 'tv-date' }, E.fmtDate(c, d)),
-      el('div', { class: 'tv-shift' }, hourMode() ? `${shiftNames()[sh]}` : `${shiftNames()[sh]} · ${spd() === 2 ? (sh ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][sh]} shift of 4`}`),
-      E.holidaysOn(c, S.holidays, d).map(holidayChip));
-    const cards = el('div', { class: 'tv-grid' },
-      card('Weather', el('div', { class: 'big' }, weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`))),
-      card('Light', el('div', { class: 'big' }, visPill(v))),
-      card('Moons', E.moons(c, d, region).length ? el('div', { class: 'tv-moons' }, E.moons(c, d, region).map(m => el('div', {}, moonGlyph(m), ` ${m.name}: ${m.label}`))) : el('div', { class: 'muted' }, 'None')),
-      card('Party', ...party));
-    const gmRow = isGM() && !S.viewAs ? el('div', { class: 'tv-gm row' },
-      tvTimeBtn(`◀ Back a ${word()}`, -1, '', `Step back one ${word()}. Recorded weather, notes and activities stay`),
-      tvTimeBtn(`Pass a ${word()} ▶`, 1, 'primary', `Move "now" on one ${word()} and roll the weather for a new day. Everyone's view catches up`),
-      tvTimeBtn('+1 day', spd(), '', 'Move "now" on a whole day')) : null;
-    view.append(head, cards, ...clean([gmRow,
-      el('section', { class: 'tv-sec' }, el('b', {}, 'Today'), todays.length ? el('ul', { class: 'tv-today' }, todays) : el('p', { class: 'muted small' }, 'Nothing on today')),
-      tableLookup(view),
-      tableNote(d, sh),
-      PANEL ? panelFooter() : await tableLinksBox()]));
-    if (PANEL) mount(view); else mount(...campaignHeader('table'), view);
-  }
-  function tvTimeBtn(label, n, cls, tipText) {
-    const b = btn(label, null, `small ${cls}`, tipText);
-    b.addEventListener('click', busy(b, async () => { await passShifts(n); toast(`Now: ${E.fmtShift(cal(), nowShift())}`); await viewTable(); }));
-    return b;
+      el('div', { class: 'tv-date' }, E.fmtDate(c, d0)),
+      el('div', { class: 'tv-shift' }, hourMode() ? `${names[nsh]}` : `${names[nsh]} · ${n === 2 ? (nsh ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][nsh]} shift of 4`}`),
+      E.holidaysOn(c, S.holidays, d0).map(holidayChip));
+    const moons = E.moons(c, d0, region);
+    const moonCard = card('Moons', moons.length ? el('div', { class: 'tv-moons' }, moons.map(m => el('div', {}, moonGlyph(m), ` ${m.name}: ${m.label}`))) : el('div', { class: 'muted' }, 'None'));
+    const partyCard = el('div', { class: 'tv-card tv-party' }, el('b', {}, 'Party'), ...party);
+
+    // the big box: the shift as its card on the day page shows it, made large, its editor open
+    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route })
+      : el('div', { class: 'card shiftcard' }, el('p', { class: 'muted' }, `This ${word()} couldn't be loaded.`));
+    big.classList.add('tv-now');
+
+    if (PANEL) {
+      // the panel: the header, the clock's shift as a player reads it, what's on today and the lookup
+      const sw = cur?.sw || null, v = E.visibility(c, region, sw, d0, nsh, cur?.s.visibility_override);
+      const from = d0 * n, to = from + n;
+      const todays = [
+        ...(cur?.x.r.events || []).map(e => el('li', {}, '📅 ', Number(e.is_secret) ? secretTag() : null, ' ', outLink(`#/c/${cid}/day/${d0}`, e.title, shiftRange(e)))),
+        ...(S.reminders || []).filter(x => x.due_shift >= from && x.due_shift < to)
+          .map(x => el('li', { class: x.due ? '' : 'muted' }, '⏰ ', x.title, el('span', { class: 'small muted' }, ` · ${E.fmtShift(c, x.due_shift).split(',')[0]}`))),
+      ];
+      view.append(head,
+        el('div', { class: 'tv-grid' },
+          card('Weather', el('div', { class: 'big' }, weatherText(sw, cur?.x.w?.partial ? `Weather this ${names[nsh]}` : `Weather this ${names[nsh]}. Day's forecast: ${E.weatherLabel(cur?.x.w, tempUnit())}`))),
+          card('Light', el('div', { class: 'big' }, visPill(v))), moonCard, partyCard),
+        big,
+        el('section', { class: 'tv-sec' }, el('b', {}, 'Today'), todays.length ? el('ul', { class: 'tv-today' }, todays) : el('p', { class: 'muted small' }, 'Nothing on today')),
+        tableLookup(view), tableNote(), panelFooter());
+      return mount(view);
+    }
+
+    // looking at another shift: say so, with the way back
+    if (at !== now) {
+      big.prepend(el('div', { class: 'tv-peek row' }, el('span', {}, `Looking at ${E.fmtShift(c, at)}. The clock is on ${names[nsh]}.`),
+        btn('Back to now', () => { tablePeek = null; viewTable(); }, 'small primary', `Back to the ${word()} the campaign clock is on`)));
+    }
+    // its events and reminders, and + New event set to it
+    if (cur) {
+      const evs = cur.x.r.events.filter(e => eventCovers(e, cur.d, cur.i)), rems = dayReminders(cur.d).filter(x => E.mod(x.due_shift, n) === cur.i);
+      const here = el('div', { class: 'tv-here' }, el('span', { class: 'lbl' }, `Events and reminders this ${word()}`),
+        ...evs.map(e => eventView(e, cur.d)), ...rems.map(x => reminderView(x, cur.d)),
+        evs.length || rems.length ? null : el('p', { class: 'muted small' }, `Nothing else on this ${word()}.`));
+      const canAdd = (isGM() || settings().players_can_add_events) && !S.viewAs;
+      if (canAdd) here.append(el('div', { class: 'row' }, btn('+ New event', ev => { ev.target.closest('.row').replaceWith(eventForm(cur.d, { shift: cur.i, shift_end: cur.i })); }, 'small',
+        `Log something that happens on this ${word()}`)));
+      big.append(here);
+    }
+    // End shift moves the clock on one; Pass time opens the bar's row for longer jumps
+    if (isGM() && !S.viewAs && at === now) {
+      const end = btn(`End ${names[nsh]} ▶ on to ${names[E.mod(now + 1, n)]}`, null, 'primary', `Move the campaign clock on one ${word()}, rolling the weather for a new day. Everyone's view catches up`);
+      end.addEventListener('click', busy(end, async () => { await passShifts(1); toast(`Now: ${E.fmtShift(cal(), nowShift())}`); route(); }));
+      const more = btn('Pass time…', () => {
+        const open = document.querySelector('.now-passbtn');
+        if (open && open.getAttribute('aria-expanded') !== 'true') open.click();
+        document.querySelector('.passtime input')?.focus();
+      }, '', 'Pass more time at once: hours, days, weeks or months, with an activity for the time passed');
+      big.append(el('div', { class: 'row tv-actions' }, end, more));
+    }
+
+    // the shift before (in hours mode the last hour with something written, back into yesterday) and the one after
+    const written = y => !!(y && (y.s.activity || y.s.gm_notes || y.notes.length));
+    let prevAbs = at - 1;
+    if (hourMode()) for (let k = at - 1; k >= (d - 1) * n; k--) if (written(slot(k))) { prevAbs = k; break; }
+    const side = (abs, before) => {
+      const y = slot(abs), i = E.mod(abs, n), dd = Math.floor(abs / n);
+      const ahead = abs > now, canLook = isGM() || !ahead;
+      const act = (y?.s.activity || '').trim().split('\n')[0];
+      const evN = y ? y.x.r.events.filter(e => eventCovers(e, dd, i)).length : 0, remN = (S.reminders || []).filter(x => x.due_shift === abs).length;
+      const kids = [
+        el('b', {}, before ? `◀ ${names[i]}` : `${names[i]} ▶`),
+        el('span', { class: 'small muted' }, dd === d ? (before ? `The ${word()} before` : `The ${word()} after`) : E.fmtDate(c, dd, { noWeekday: true })),
+        y?.sw ? el('span', { class: 'small' }, `${E.WEATHER[y.sw.type]?.icon || ''} ${E.weatherLabel(y.sw, tempUnit())}`) : el('span', { class: 'small muted' }, 'Weather not known yet'),
+        act ? el('span', { class: 'small tv-side-act' }, act.length > 90 ? `${act.slice(0, 88)}…` : act) : null,
+        evN ? el('span', { class: 'small' }, `📅 ${evN} event${evN === 1 ? '' : 's'}`) : null,
+        remN ? el('span', { class: 'small' }, `🔔 ${remN} reminder${remN === 1 ? '' : 's'}`) : null,
+        canLook ? el('span', { class: 'small muted tv-side-hint' }, abs === now ? 'Back to now' : before ? 'Look back, or fix its notes' : 'Look ahead') : null];
+      const cls = `tv-side ${before ? 'prev' : 'next'}`;
+      if (!canLook) return el('div', { class: cls }, ...clean(kids));
+      return el('button', { type: 'button', class: cls, 'aria-label': `Look at ${names[i]}, ${E.fmtDate(c, dd, { noWeekday: true })}`,
+        onclick: () => { tablePeek = abs === now ? null : abs; viewTable(); } }, ...clean(kids));
+    };
+
+    const today0 = days.get(d0);
+    view.append(head, el('div', { class: 'tv-grid' }, partyCard, moonCard),
+      cur ? dayStrip(cur.d, cur.x.sws) : null,
+      el('div', { class: 'tv-stage' }, side(prevAbs, true), big, side(at + 1, false)),
+      tableLookup(view), tableNote(),
+      ...(today0 ? dayBoxes(today0, true) : []),
+      await tableLinksBox());
+    mount(...campaignHeader('table'), view);
   }
   async function loadTableEntries() {
     if (!tableEntries) tableEntries = (await api('encyclopedia', { query: { cid: S.camp.id } })).entries;
@@ -5202,47 +5270,28 @@
     input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => show().catch(e => toast(e.message, true)), 200); });
     return el('section', { class: 'tv-sec' }, el('b', {}, 'Encyclopedia'), input, out);
   }
-  /** A note on this shift (shift notes, as on Current Day) or at the end of an Encyclopedia entry's notes. */
-  function tableNote(d, sh) {
-    let entry = null;
-    const kinds = el('div', { class: 'tv-seg', role: 'radiogroup', 'aria-label': 'Where the note goes' });
-    const kindBtn = (k, label) => el('button', { type: 'button', role: 'radio', 'data-kind': k, onclick: () => setKind(k) }, label);
-    kinds.append(kindBtn('shift', `On this ${word()}`), kindBtn('entry', 'On an Encyclopedia entry'));
+  /** A note at the end of an Encyclopedia entry's notes. (A note on the shift goes in the big box's Notes.) */
+  function tableNote() {
     const entryIn = el('input', { list: 'tv-entry-names', placeholder: 'Entry name', 'aria-label': 'Entry', autocomplete: 'off' });
     const names = el('datalist', { id: 'tv-entry-names' }, S.encyclopedia.map(e => el('option', { value: e.name })));
-    const text = el('textarea', { rows: 3, 'aria-label': 'Note', placeholder: 'What happened, or what you found out' });
+    const text = el('textarea', { rows: 3, 'aria-label': 'Note', placeholder: 'What you found out' });
     const gmOnly = el('input', { type: 'checkbox' });
     const gmLabel = el('label', { class: 'small', 'data-tip': 'Goes in the entry\'s GM notes instead, which players never see' }, gmOnly, ' GM only');
-    const hint = el('p', { class: 'small muted' });
     const save = btn('Save note', null, 'primary small');
-    const box = el('section', { class: 'tv-sec tv-note' }, el('b', {}, 'Add a note'), kinds, el('div', { class: 'tv-entry-pick' }, entryIn, names), text,
-      el('div', { class: 'row spread' }, isGM() ? gmLabel : el('span'), save), hint);
-    let kind = 'shift';
-    function setKind(k) {
-      kind = k;
-      kinds.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.kind === k)));
-      box.querySelector('.tv-entry-pick').hidden = k !== 'entry';
-      gmLabel.hidden = k !== 'entry';
-      hint.textContent = k === 'entry' ? ENTRY_NOTE_TIP : `Saved as ${PANEL ? S.user.display_name || 'you' : 'you'}, on ${shiftNames()[sh]}, ${E.fmtDate(cal(), d, { noWeekday: true })}`;
-    }
-    box.setEntry = e => { entry = e; entryIn.value = e.name; setKind('entry'); };
+    const box = el('section', { class: 'tv-sec tv-note' }, el('b', {}, 'Add a note to an Encyclopedia entry'), el('div', { class: 'tv-entry-pick' }, entryIn, names), text,
+      el('div', { class: 'row spread' }, isGM() ? gmLabel : el('span'), save), el('p', { class: 'small muted' }, ENTRY_NOTE_TIP));
+    box.setEntry = e => { entryIn.value = e.name; };
     save.addEventListener('click', busy(save, async () => {
       const body = text.value.trim();
       if (!body) return toast('Write the note first', true);
-      if (kind === 'entry') {
-        const n = entryIn.value.trim().toLowerCase();
-        const e = S.encyclopedia.find(x => x.name.toLowerCase() === n || (x.aliases || []).some(a => a.toLowerCase() === n));
-        if (!e) return toast('Pick an entry from the list', true);
-        await post('entry_note_add', { id: e.id, body, gm_only: isGM() && gmOnly.checked }, S.camp.id);
-        tableEntries = null;
-        toast(`Note added to ${e.name}`);
-      } else {
-        await post('shift_note_add', { abs_day: d, shift: sh, body }, S.camp.id);
-        toast(`Note added to ${shiftNames()[sh]}`);
-      }
+      const n = entryIn.value.trim().toLowerCase();
+      const e = S.encyclopedia.find(x => x.name.toLowerCase() === n || (x.aliases || []).some(a => a.toLowerCase() === n));
+      if (!e) return toast('Pick an entry from the list', true);
+      await post('entry_note_add', { id: e.id, body, gm_only: isGM() && gmOnly.checked }, S.camp.id);
+      tableEntries = null;
+      toast(`Note added to ${e.name}`);
       text.value = '';
     }));
-    setKind('shift');
     return box;
   }
 
@@ -5487,8 +5536,8 @@
         const cid = Number(parts[1]);
         await loadCampaign(cid);
         const rem = await loadReminders().catch(() => null); // fresh on every page, so a pass of time pops what it reached
-        const tab = parts[2] || 'today';
-        const viewToday = () => viewDay(today(), true);
+        const tab = parts[2] || 'table';
+        const viewToday = () => viewTable();   // Current Day is At the Table now
         if (tab === 'day') await viewDay(Number(parts[3]));
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
@@ -5497,7 +5546,7 @@
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
-        else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]), true);
+        else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]));   // an old Current Day link to another day
         else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;

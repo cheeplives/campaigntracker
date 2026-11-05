@@ -183,7 +183,7 @@ test("the GM moves the NOW flag from shift title to shift title; players only se
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Now flag ${gm.id}`); // now is Dawn of day 2
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const nowCard = page.locator(".shiftcard.now");
   await expect(nowCard.locator("h4")).toContainText("Dawn");
   await expect(nowCard.locator(".nowtag")).toHaveText("NOW");
@@ -198,12 +198,13 @@ test("the GM moves the NOW flag from shift title to shift title; players only se
   await page.locator(".shifts").getByRole("button", { name: "Move Now to Dawn" }).click();
   await expect(page.locator(".shiftcard.now h4")).toContainText("Dawn");
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(8);
-  // The Weather box's strip of shift forecasts carries the flag too, and moves it the same way.
+  // At the Table's strip of shift forecasts carries the flag too, and moves it the same way.
+  await page.goto(`index.html#/c/${cid}/table`);
   await expect(page.locator(".dh-step.now .nowtag")).toHaveText("NOW");
   await expect(page.locator(".dh-step.now")).toContainText("Dawn");
   await page.locator(".dh-strip").getByRole("button", { name: "Move Now to Midday" }).click();
   await expect(page.locator(".dh-step.now")).toContainText("Midday");
-  await expect(page.locator(".shiftcard.now h4")).toContainText("Midday");
+  await expect(page.locator(".tv-now h4")).toContainText("Midday");
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(9);
 
   // A player sees the flag but can't move it.
@@ -212,7 +213,7 @@ test("the GM moves the NOW flag from shift title to shift title; players only se
   await signIn(pp, player);
   await approve(browser, player.email);
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator(".shiftcard.now .nowtag")).toHaveText("NOW");
   await expect(pp.locator(".nowpick")).toHaveCount(0);
   await pctx.close();

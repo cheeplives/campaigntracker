@@ -47,7 +47,7 @@ test("the GM's own saves don't announce themselves on the GM's page", async ({ p
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Own changes ${gm.id}`);
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await page.getByLabel("Locations visited").fill("The old mill");
   await page.getByRole("button", { name: "Save day" }).click();
   await expect(page.getByText("Day saved")).toBeVisible();
