@@ -3403,32 +3403,41 @@
 
   // ------------------------------------------------------------ list and reader
   // Encyclopedia, Library and Sessions share one layout: a list card with its title, + New, a ⋯ menu for the rarer
-  // actions and Wide view, then search and filters above the list; the reader card beside it with the item picked.
-  /** wide: { key, tips: [off, on] } lets the page swap widths, remembered in this browser under key. */
-  function listPage({ cls = '', title, tipText, add = null, more = [], wide = null, top = [], list, reader, picked }) {
+  // actions and Wide view, « to tuck the list away, then search and filters above the list; the reader card beside it with the item picked.
+  /** wide: { key, tips: [off, on] } lets the page swap widths, remembered in this browser under key.
+   * hide: { key, was } puts a « at the list's top right that tucks it away to a thin rail (» and its name, the whole rail a
+   * button to bring it back) so the item picked takes the screen, remembered under key
+   * (was: an older key whose '1' counts as hidden until the button is pressed). Two columns only: one column has nothing to fold. */
+  function listPage({ cls = '', title, tipText, add = null, more = [], wide = null, hide = null, top = [], list, reader, picked }) {
     const page = el('div', { class: `enc-page ${cls}`.trim() + (picked ? ' has-sel' : '') });
-    let wideBtn = null;
-    if (wide) {
+    const toggle = (o, onCls, label, tips) => {
       let on = false;
-      try { on = localStorage.getItem(wide.key) === '1'; } catch { /* private mode */ }
-      const set = () => {
-        page.classList.toggle('wide', on);
-        wideBtn.textContent = on ? '⇤ Narrow view' : '⇥ Wide view';
-        wideBtn.setAttribute('aria-pressed', String(on));
-        wideBtn.dataset.tip = wide.tips[on ? 1 : 0];
-      };
-      wideBtn = btn('', () => {
+      try { on = localStorage.getItem(o.key) === '1' || (!!o.was && localStorage.getItem(o.key) === null && localStorage.getItem(o.was) === '1'); } catch { /* private mode */ }
+      const b = btn('', () => {
         on = !on;
-        try { on ? localStorage.setItem(wide.key, '1') : localStorage.removeItem(wide.key); } catch { /* private mode: just this page */ }
+        try { localStorage.setItem(o.key, on ? '1' : '0'); } catch { /* private mode: just this page */ }
         set();
-      }, 'small enc-widebtn');
+        if (onCls === 'list-hidden') (on ? rail : b).focus();
+      }, onCls === 'wide' ? 'small enc-widebtn' : 'lp-hidebtn');
+      const set = () => {
+        page.classList.toggle(onCls, on);
+        b.textContent = label(on);
+        b.setAttribute('aria-pressed', String(on));
+        b.dataset.tip = tips[on ? 1 : 0];
+      };
+      const rail = onCls === 'list-hidden' ? el('button', { type: 'button', class: 'lp-rail', 'aria-label': `Show the ${title} list`, 'data-tip': `Show the ${title} list again`,
+        onclick: () => b.click() }, el('span', { class: 'lp-rail-icon', 'aria-hidden': 'true' }, '»'), el('span', { class: 'lp-rail-name' }, title)) : null;
       set();
-    }
+      return { b, rail };
+    };
+    const wideBtn = wide ? toggle(wide, 'wide', on => on ? '⇤ Narrow view' : '⇥ Wide view', wide.tips).b : null;
+    const hid = hide ? toggle(hide, 'list-hidden', () => '«', [`Tuck the list away to the left, so the ${picked ? 'item picked' : 'page'} takes the room. It stays as you leave it in this browser`, '']) : null;
+    hid?.b.setAttribute('aria-label', 'Hide the list');
     const items = more.filter(Boolean);
     const menu = items.length ? KIT.menu({ ariaLabel: `More for ${title}`, tip: 'More: scan, export and the like', items, cls: 'more-menu' }) : null;
     const left = el('section', { class: 'card enc-index' },
-      el('div', { class: 'lp-head' }, el('h2', {}, title, tipText ? tip(tipText) : null), el('div', { class: 'lp-actions' }, add, menu, wideBtn)),
-      ...clean(top), list);
+      el('div', { class: 'lp-head' + (hid ? ' has-hide' : '') }, el('h2', {}, title, tipText ? tip(tipText) : null), el('div', { class: 'lp-actions' }, add, menu, wideBtn), hid?.b),
+      ...clean(top), list, hid?.rail);
     list.classList.add('lp-list');
     reader.classList.add('card', 'enc-detail');
     page.append(left, reader);
@@ -3493,6 +3502,7 @@
     mount(...campaignHeader('library'), listPage({ cls: 'lib-page', title: 'Library', picked: !!(current || sel),
       tipText: 'The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them',
       add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
+      hide: { key: 'chronicle:libhide' },
       wide: { key: 'chronicle:libwide', tips: ['Widen the list to see more of the Library at once, and narrow the tome', 'Give the tome its room back and narrow the list'] },
       top: [search, el('div', { class: 'enc-filters' }, kindRow)], list, reader }));
   }
