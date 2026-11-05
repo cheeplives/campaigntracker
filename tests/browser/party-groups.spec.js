@@ -174,6 +174,19 @@ test("Party: groups on maps, bounds, tokens and GM-only maps", async ({ page, br
   const mv = await api(page, "group_move", { id: scouts.id, map_id: open, x: 120, y: 80 }, cid);
   expect(mv.status, JSON.stringify(mv.json)).toBe(200);
   expect(mv.json.groups[1]).toMatchObject({ map_id: open, x: 120, y: 80 });
+  // the trail: a move in the same shift replaces the group's last point, a move in a later shift adds one
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  await api(page, "group_move", { id: scouts.id, map_id: open, x: 130, y: 90 }, cid);
+  await api(page, "set_time", { current_shift: now + 1 }, cid);
+  await api(page, "group_move", { id: scouts.id, map_id: open, x: 200, y: 150 }, cid);
+  const trailOf = async (who, mapId) => (await (await who.request.get(`api/index.php?${new URLSearchParams({ a: "map", cid, id: mapId })}`)).json()).trail;
+  const expected = [{ group_id: scouts.id, x: 130, y: 90, abs_shift: now }, { group_id: scouts.id, x: 200, y: 150, abs_shift: now + 1 }];
+  expect(await trailOf(page, open)).toEqual(expected);
+  expect(await trailOf(pp, open)).toEqual(expected);      // players see the trail on a map they can open
+  expect((await api(pp, "trail_clear", { map_id: open, id: scouts.id }, cid)).status).toBe(403);
+  expect((await api(page, "trail_clear", { map_id: open, id: scouts.id }, cid)).status).toBe(200);
+  expect(await trailOf(page, open)).toEqual([]);
+  await api(page, "group_move", { id: scouts.id, map_id: open, x: 120, y: 80 }, cid);
   await api(page, "group_move", { id: main.id, map_id: secret, x: 10, y: 20 }, cid);
   // the map's own groups; a player doesn't get the one on the GM-only map, nor where it is
   const res = await pp.request.get(`api/index.php?${new URLSearchParams({ a: "map", cid, id: open })}`);
@@ -299,6 +312,38 @@ test("Party: a GM drags a group's marker and it stays there", async ({ page, bro
   await page.mouse.up();
   await expect.poll(async () => (await groups(page, cid))[0].x).toBeGreaterThan(100);
   expect((await groups(page, cid))[0].y).toBeGreaterThan(100);
+  expectNoErrors(errors);
+});
+
+test("Party: the map draws a group's trail, shift by shift, and the legend hides it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Party trail", 1);
+  const mapId = await mapWithPicture(page, cid);
+  const main = (await groups(page, cid))[0];
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 50, y: 50 }, cid);
+  await api(page, "set_time", { current_shift: now + 1 }, cid);
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 150, y: 100 }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator("path.map-trail-dot")).toHaveCount(2);
+  await expect(page.locator("path.map-trail-line")).toHaveCount(1);
+  // the legend's Trail hides it (a phone has no legend, so the trail just shows there)
+  if (await page.locator(".map-legend").isVisible()) {
+    const toggle = page.getByRole("button", { name: "Trail" });
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await toggle.click();
+    await expect(page.locator("path.map-trail-dot")).toHaveCount(0);
+    await page.reload();   // remembered in this browser
+    await expect(page.locator(".map-party")).toHaveCount(1);
+    await expect(page.locator("path.map-trail-dot")).toHaveCount(0);
+    await page.getByRole("button", { name: "Trail" }).click();
+    await expect(page.locator("path.map-trail-dot")).toHaveCount(2);
+  }
+  // the GM clears it from the group's card
+  await page.locator(".map-party").click();
+  await page.getByRole("button", { name: "Clear trail" }).click();
+  await page.locator(".kit-dialog").getByRole("button", { name: "Clear trail" }).click();
+  await expect(page.locator("path.map-trail-dot")).toHaveCount(0);
   expectNoErrors(errors);
 });
 

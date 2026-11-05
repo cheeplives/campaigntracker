@@ -48,6 +48,28 @@ test("sessions open, end and reopen; only one is open at a time", async ({ page,
   expect(list.map(s => [s.number, s.last_day === null])).toEqual([[2, false], [1, true]]);
 });
 
+test("a session keeps the shift it started and ended on, and moves them with its days", async ({ page, browser }) => {
+  const { cid } = await gmAndPlayer(page, browser, "Session shifts");
+  const now = (await api(page, "campaign", undefined, cid)).json.campaign.current_shift;
+  await api(page, "set_time", { current_shift: now + 1 }, cid);
+  const s = (await api(page, "session_save", {}, cid)).json.session;
+  expect(s).toMatchObject({ first_day: 2, first_shift: now + 1, last_shift: null });
+  // two shifts later the session ends there
+  await api(page, "set_time", { current_shift: now + 6 }, cid);
+  expect((await api(page, "session_end", {}, cid)).status).toBe(200);
+  expect((await one(page, cid, s.id)).json.session).toMatchObject({ first_shift: now + 1, last_day: 3, last_shift: now + 6 });
+  // a day changed by hand takes the shift with it: the first of the new first day, the last of the new last day
+  const moved = await api(page, "session_save", { id: s.id, first_day: 1, last_day: 4 }, cid);
+  expect(moved.json.session).toMatchObject({ first_day: 1, first_shift: 4, last_day: 4, last_shift: 19 });
+  // a title alone leaves them as they were; reopening clears the end
+  expect((await api(page, "session_save", { id: s.id, title: "Night run" }, cid)).json.session).toMatchObject({ first_shift: 4, last_shift: 19 });
+  expect((await api(page, "session_save", { id: s.id, reopen: true }, cid)).json.session).toMatchObject({ last_day: null, last_shift: null });
+  // a session from before shifts were kept stays on whole days
+  sql(`UPDATE play_sessions SET first_shift=NULL WHERE id=${s.id}`);
+  await api(page, "session_end", {}, cid);
+  expect((await one(page, cid, s.id)).json.session).toMatchObject({ first_shift: null, last_shift: null, last_day: 3 });
+});
+
 test("a session's notes save as text; a save from an older copy is refused, and the same text sent again passes", async ({ page, browser }) => {
   const { cid, pp } = await gmAndPlayer(page, browser, "Notes text API");
   const sid = await newSession(page, cid);

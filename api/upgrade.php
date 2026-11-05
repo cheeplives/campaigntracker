@@ -80,6 +80,8 @@ function upgrade_steps(): array {
             'Encyclopedia entries and day notes now refuse a save from an older copy, and GMs can invite people by email before they have an account.'],
         ['026_session_notes_text.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'notes_text'),
             'A session\'s notes are now one text box that saves as you type; each session\'s notes go into it when it is next opened.'],
+        ['027_session_shifts_party_trail.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'first_shift'),
+            'Sessions now remember the shift they started and ended on, and the party leaves a trail on the maps as you move it.'],
     ];
 }
 

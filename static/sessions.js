@@ -195,10 +195,23 @@
 
   /** "Session 12: A Locked Box", or "Session 12" when it has no title. */
   const name = s => `Session ${s.number}${s.title ? `: ${s.title}` : ''}`;
-  /** The in-game days a session covered, as text. */
+  /** The in-game days a session covered, as text, with the shifts it started and ended on when it knows them (sessions
+   * from before those were kept cover whole days). */
   function daysCovered(cal, s) {
     const f = d => E.fmtDate(cal, d, { noWeekday: true });
-    if (s.last_day === null || s.last_day === undefined) return `${f(s.first_day)} onwards`;
+    const open = s.last_day === null || s.last_day === undefined;
+    if (s.first_shift !== null && s.first_shift !== undefined) {
+      const n = E.slotsPerDay(cal), names = E.shiftNames(cal);
+      const at = a => ({ d: Math.floor(a / n), name: names[E.mod(a, n)] });
+      const a = at(Number(s.first_shift));
+      if (open) return `${a.name}, ${f(a.d)} onwards`;
+      if (s.last_shift !== null && s.last_shift !== undefined) {
+        const b = at(Number(s.last_shift));
+        if (a.d === b.d) return a.name === b.name ? `${a.name}, ${f(a.d)}` : `${f(a.d)}, ${a.name} to ${b.name}`;
+        return `${a.name}, ${f(a.d)} to ${b.name}, ${f(b.d)}`;
+      }
+    }
+    if (open) return `${f(s.first_day)} onwards`;
     return s.last_day === s.first_day ? f(s.first_day) : `${f(s.first_day)} to ${f(s.last_day)}`;
   }
   /** A session as a Markdown file, laid out like the day export: a # title, an italic byline, the summary and, when

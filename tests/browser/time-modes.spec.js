@@ -38,6 +38,13 @@ test("switching time mode moves the clock, activities and events to the same tim
   // A rest from Midday of day 2 to Dawn of day 3, and a short rest that cost no shift at Dawn of day 2.
   sql(`INSERT INTO downtimes (campaign_id, kind, start_shift, end_shift, slots) VALUES (${cid}, 'long_rest', 9, 12, 4), (${cid}, 'short_rest', 8, 8, 0)`);
   const rests = () => sql(`SELECT start_shift, end_shift, slots FROM downtimes WHERE campaign_id = ${cid} ORDER BY id`).trim().split("\n");
+  // A session over the same shifts, and a point on the party's trail at Midday of day 2.
+  sql(`INSERT INTO play_sessions (campaign_id, number, first_day, last_day, first_shift, last_shift) VALUES (${cid}, 1, 2, 3, 9, 12)`);
+  const sessionShifts = () => sql(`SELECT first_shift, last_shift FROM play_sessions WHERE campaign_id = ${cid}`).trim();
+  const party = (await api(page, "groups", undefined, cid)).json.groups[0];
+  const mapId = (await api(page, "map_save", { name: "Trail" }, cid)).json.map.id;
+  sql(`INSERT INTO party_trail (campaign_id, group_id, map_id, x, y, abs_shift) VALUES (${cid}, ${party.id}, ${mapId}, 1, 1, 9)`);
+  const trailShift = () => sql(`SELECT abs_shift FROM party_trail WHERE campaign_id = ${cid}`).trim();
 
   // Four shifts to hours: Dawn is 06:00, Midday 12:00, and the overnight shift runs to 05:00 the next day.
   let c = await calendar();
@@ -49,6 +56,8 @@ test("switching time mode moves the clock, activities and events to the same tim
   expect(events()).toEqual(["Feast\t2\t3\t18\t5", "Fair\t2\t-\t-\t-"]);
   expect(sql(`SELECT abs_day, shift FROM shift_notes WHERE campaign_id = ${cid}`).trim()).toBe("2\t18");
   expect(rests()).toEqual(["60\t83\t24", "54\t54\t0"]);
+  expect(sessionShifts()).toBe("60\t83");
+  expect(trailShift()).toBe("60");
 
   // Hours to two shifts: the morning's activities join in Day, the evening is Night.
   c = await calendar();
@@ -63,6 +72,9 @@ test("switching time mode moves the clock, activities and events to the same tim
   await api(page, "campaign_update", { calendar: { ...c.calendar, timeMode: "shifts4" } }, cid);
   expect((await calendar()).current_shift).toBe(2 * 4);
   expect(events()).toEqual(["Feast\t2\t-\t2\t3", "Fair\t2\t-\t-\t-"]);
+  // by way of Day and Night the session widens to whole shifts: Dawn of day 2 to Midday of day 3
+  expect(sessionShifts()).toBe("8\t13");
+  expect(trailShift()).toBe("8");
 
   // A slot past the end of the day is refused.
   expect((await api(page, "shift_save", { abs_day: 2, shift: 4, activity: "x" }, cid)).status).toBe(400);

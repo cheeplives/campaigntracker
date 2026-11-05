@@ -9,6 +9,8 @@ declare(strict_types=1);
 // A session is one game night: the GM's quick notes taken during it (notes_text, one text box, GMs only; older
 // sessions' notes are rows in session_notes until the page folds them into it) and the summary written from them
 // afterwards, which players read once it is published. A campaign has at most one open session (last_day NULL).
+// first_shift and last_shift are the absolute shifts it started and ended on (migration 027); NULL on older sessions,
+// which cover their first and last days whole.
 
 /** A session of campaign $cid; a player only gets a published one. $lock: FOR UPDATE, inside a transaction. */
 function session_row(int $cid, int $id, bool $isGm = true, bool $lock = false): array {
@@ -26,6 +28,8 @@ function open_session(int $cid): ?array {
 function session_out(array $s, bool $full, bool $isGm): array {
     $o = ['id' => (int)$s['id'], 'number' => (int)$s['number'], 'title' => $s['title'], 'played_on' => $s['played_on'],
         'first_day' => (int)$s['first_day'], 'last_day' => $s['last_day'] === null ? null : (int)$s['last_day'],
+        'first_shift' => $s['first_shift'] === null ? null : (int)$s['first_shift'],
+        'last_shift' => $s['last_shift'] === null ? null : (int)$s['last_shift'],
         'is_published' => (bool)(int)$s['is_published'], 'version' => (int)$s['version']];
     if ($full) {
         $o['summary'] = (string)rich_for($s['summary'], $isGm);
@@ -46,20 +50,40 @@ function snotes(int $sid): array {
     $st->execute([$sid]);
     return array_map('snote_out', $st->fetchAll());
 }
-/** End every open session of the campaign at the current day. */
-function sessions_end_all(int $cid): void {
+/** End the open sessions of the campaign (or only session $id) at the current shift: its day, and the shift itself. */
+function sessions_end_all(int $cid, ?int $id = null): void {
     $c = campaign_row($cid);
-    $day = floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
-    db()->prepare('UPDATE play_sessions SET last_day=GREATEST(first_day, ?) WHERE campaign_id=? AND last_day IS NULL')->execute([$day, $cid]);
+    $now = (int)$c['current_shift'];
+    $day = floordiv($now, slots_per_day(dec($c['calendar_json'])));
+    $where = $id === null ? 'campaign_id=?' : 'id=?';
+    db()->prepare("UPDATE play_sessions SET last_day=GREATEST(first_day, ?), last_shift=IF(first_shift IS NULL, NULL, GREATEST(first_shift, ?))
+        WHERE $where AND last_day IS NULL")->execute([$day, $now, $id ?? $cid]);
 }
-/** A new open session (any open one ended first), numbered after the campaign's last. */
+/** A new open session (any open one ended first), numbered after the campaign's last. It starts on the current shift
+ * when that falls on $firstDay, and on the day's first shift otherwise. */
 function session_create(int $cid, int $firstDay, string $title = '', ?string $playedOn = null): int {
     sessions_end_all($cid);
     $st = db()->prepare('SELECT COALESCE(MAX(number), 0) + 1 FROM play_sessions WHERE campaign_id=? FOR UPDATE');
     $st->execute([$cid]);
-    db()->prepare('INSERT INTO play_sessions (campaign_id, number, title, played_on, first_day, created_by) VALUES (?,?,?,?,?,?)')
-        ->execute([$cid, (int)$st->fetchColumn(), $title, $playedOn ?? date('Y-m-d'), $firstDay, me()['id']]);
+    $number = (int)$st->fetchColumn();
+    $c = campaign_row($cid);
+    $now = (int)$c['current_shift'];
+    $spd = slots_per_day(dec($c['calendar_json']));
+    db()->prepare('INSERT INTO play_sessions (campaign_id, number, title, played_on, first_day, first_shift, created_by) VALUES (?,?,?,?,?,?,?)')
+        ->execute([$cid, $number, $title, $playedOn ?? date('Y-m-d'), $firstDay, floordiv($now, $spd) === $firstDay ? $now : $firstDay * $spd, me()['id']]);
     return (int)db()->lastInsertId();
+}
+/** A session's first and last shifts after its days were changed to $first and $last: a shift that no longer falls on
+ * its day becomes that day's first (or last) shift; a session from before 027 keeps none. */
+function session_shifts_for_days(array $s, int $cid, int $first, ?int $last): array {
+    if ($s['first_shift'] === null) return [null, null];
+    $spd = slots_per_day(dec(campaign_row($cid)['calendar_json']));
+    $a = (int)$s['first_shift'];
+    if (floordiv($a, $spd) !== $first) $a = $first * $spd;
+    if ($last === null) return [$a, null];
+    $b = $s['last_shift'] === null ? ($last + 1) * $spd - 1 : (int)$s['last_shift'];
+    if (floordiv($b, $spd) !== $last) $b = ($last + 1) * $spd - 1;
+    return [$a, max($a, $b)];
 }
 /** A real-world date as YYYY-MM-DD, or null. */
 function date_in($v): ?string {
@@ -105,6 +129,8 @@ function sessions_action(string $action): void {
             $pub = array_key_exists('is_published', body()) ? (p('is_published') ? 1 : 0) : (int)$s['is_published'];
             db()->prepare('UPDATE play_sessions SET title=?, played_on=?, first_day=?, last_day=?, is_published=? WHERE id=?')
                 ->execute([$title, $played, $first, $last, $pub, $s['id']]);
+            [$fs, $ls] = session_shifts_for_days($s, $cid, $first, $last);
+            db()->prepare('UPDATE play_sessions SET first_shift=?, last_shift=? WHERE id=?')->execute([$fs, $ls, $s['id']]);
             $id = (int)$s['id'];
         } else {
             db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]); // one new session at a time
@@ -146,15 +172,11 @@ function sessions_action(string $action): void {
         }
         out(['ok' => true, 'notes_text' => $text]);
 
-    case 'session_end': // GMs: the open session (or the one named) ends on the current day
+    case 'session_end': // GMs: the open session (or the one named) ends on the current shift
         $cid = cid();
         need_gm($cid);
-        if (p('id')) {
-            $s = session_row($cid, int_in(p('id'), 1));
-            $c = campaign_row($cid);
-            $day = floordiv((int)$c['current_shift'], slots_per_day(dec($c['calendar_json'])));
-            db()->prepare('UPDATE play_sessions SET last_day=GREATEST(first_day, ?) WHERE id=? AND last_day IS NULL')->execute([$day, $s['id']]);
-        } else sessions_end_all($cid);
+        if (p('id')) sessions_end_all($cid, (int)session_row($cid, int_in(p('id'), 1))['id']);
+        else sessions_end_all($cid);
         out(['ok' => true]);
 
     case 'session_delete': // GMs: the session and its notes

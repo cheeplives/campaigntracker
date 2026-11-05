@@ -205,6 +205,7 @@ const MapsTab = (() => {
       return ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' }, el('p', {}, 'Map not found'), el('a', { href: `#/c/${cid}/maps` }, 'Back to the maps')));
     }
     let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
+    let trail = data.trail || [];   // where the groups were put on this map, oldest first, each with the shift it was on
     let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
     const loadGroups = async () => { if (gm) groups = (await api('groups', { query: { cid } })).groups; };
     const gm = ctx.isGM();
@@ -452,7 +453,7 @@ const MapsTab = (() => {
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
-      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || [];
+      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || []; trail = d.trail || [];
       await loadGroups().catch(() => {});
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
@@ -460,16 +461,43 @@ const MapsTab = (() => {
       meta.textContent = metaText();
     }
     // ---- the party's groups: a flag, or the group's token, with its name
-    let groupLayer = null;
+    let groupLayer = null, trailLayer = null;
+    // The party's trail: a dotted line through where each group was put, shift by shift, a dot at each with when it was.
+    // Shown unless hidden from the legend, which this browser remembers.
+    const TRAIL_KEY = 'chronicle:maptrail';
+    let trailShown = (() => { try { return localStorage.getItem(TRAIL_KEY) !== 'off'; } catch { return true; } })();
+    const drawTrail = () => {
+      trailLayer.clearLayers();
+      if (!trailShown) return;
+      const byGroup = new Map();
+      for (const t of trail) byGroup.set(t.group_id, [...(byGroup.get(t.group_id) || []), t]);
+      for (const [gid, pts] of byGroup) {
+        const g = (gm ? groups : here).find(q => q.id === gid) || groups.find(q => q.id === gid);
+        const name = g?.name || 'The party';
+        // where the group stands now is the trail's last point, so the line runs on to the flag
+        const at = pts.map(t => toLatLng(t.x, t.y));
+        if (g && g.map_id === map.id && g.x !== null && (pts.at(-1).x !== g.x || pts.at(-1).y !== g.y)) at.push(toLatLng(g.x, g.y));
+        if (at.length > 1) L.polyline(at, { weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false, className: 'map-trail-line' }).addTo(trailLayer);
+        pts.forEach((t, i) => L.circleMarker(toLatLng(t.x, t.y), { radius: i === pts.length - 1 ? 5 : 4, weight: 2, className: 'map-trail-dot' })
+          .bindTooltip(el('span', {}, `${name}: ${ctx.fmtShift(t.abs_shift)}`), { className: 'map-tip' }).addTo(trailLayer));
+      }
+    };
+    const clearTrail = async g => {
+      if (!await ctx.confirmDialog(`Clear ${g.name}'s trail on this map? Where it stands now stays.`, { ok: 'Clear trail', danger: true })) return;
+      try { await post('trail_clear', { map_id: map.id, id: g.id }, cid); lmap_close(); await refresh(); toast('Trail cleared'); }
+      catch (err) { toast(err.message, true); }
+    };
     const drawGroups = () => {
       groupLayer.clearLayers();
+      drawTrail();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
         MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
             gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
-              'Pin a place where the party is now, as a new Encyclopedia entry or a note')) : null) });
+              'Pin a place where the party is now, as a new Encyclopedia entry or a note'),
+              trail.some(t => t.group_id === g.id) ? btn('Clear trail', () => clearTrail(g), 'small', 'Forget where this group has been on this map, leaving where it stands now') : null) : null) });
       }
     };
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
@@ -1210,6 +1238,7 @@ const MapsTab = (() => {
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);
     routeLayer = L.layerGroup().addTo(lmap);
+    trailLayer = L.layerGroup().addTo(lmap);
     pinLayer = L.layerGroup().addTo(lmap);
     groupLayer = L.layerGroup().addTo(lmap);
     const bar = scaleControl(() => map, system).addTo(lmap);
@@ -1221,6 +1250,17 @@ const MapsTab = (() => {
     // what the markers mean, bottom-left under the scale bar
     stage.append(el('div', { class: 'map-legend surface-float', role: 'note', 'aria-label': 'Legend' },
       ['📍 Place', '📅 Event', '📝 Note', '🚩 Party'].map(t => el('span', { class: 'map-legend-item' }, t)),
+      trail.length ? (() => {
+        const b = el('button', { type: 'button', class: 'map-legend-item map-legend-trail', 'aria-pressed': String(trailShown),
+          'data-tip': 'The party\'s trail: where each group was put on this map, shift by shift. Press to hide or show it' },
+          el('i', { class: 'map-legend-dots', 'aria-hidden': 'true' }), 'Trail');
+        b.addEventListener('click', () => {
+          trailShown = !trailShown; b.setAttribute('aria-pressed', String(trailShown));
+          try { localStorage.setItem(TRAIL_KEY, trailShown ? 'on' : 'off'); } catch {}
+          drawTrail();
+        });
+        return b;
+      })() : null,
       el('span', { class: 'map-legend-item' }, el('i', { class: 'map-legend-gm', 'aria-hidden': 'true' }), 'GM only')));
     // pins' names show once zoomed in well past the fit the page opened at (as well as on hover, on the open card, and with Labels)
     let baseZoom = lmap.getZoom();

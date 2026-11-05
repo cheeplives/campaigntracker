@@ -133,6 +133,7 @@ const ACTIONS = [
     'group_save' => ['who' => 'gm'],
     'group_move' => ['who' => 'gm'],
     'group_merge' => ['who' => 'gm'],
+    'trail_clear' => ['who' => 'gm'],
     'map_save' => ['who' => 'gm'],
     'map_delete' => ['who' => 'gm'],
     'pin_save' => ['who' => 'member'],

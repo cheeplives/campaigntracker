@@ -337,6 +337,19 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
         $b = max($a, convert_slot((int)$r['end_shift'], $old, $new, true));
         $up->execute([$a, $b, $b - $a + 1, $r['id']]);
     }
+
+    // A session's first and last shifts (an ended session runs to the end of its last shift), and the party's trail.
+    $st = $pdo->prepare('SELECT id, first_shift, last_shift FROM play_sessions WHERE campaign_id=? AND first_shift IS NOT NULL');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE play_sessions SET first_shift=?, last_shift=? WHERE id=?');
+    foreach ($st->fetchAll() as $r) {
+        $a = convert_slot((int)$r['first_shift'], $old, $new);
+        $up->execute([$a, $r['last_shift'] === null ? null : max($a, convert_slot((int)$r['last_shift'], $old, $new, true)), $r['id']]);
+    }
+    $st = $pdo->prepare('SELECT id, abs_shift FROM party_trail WHERE campaign_id=?');
+    $st->execute([$cid]);
+    $up = $pdo->prepare('UPDATE party_trail SET abs_shift=? WHERE id=?');
+    foreach ($st->fetchAll() as $r) $up->execute([convert_slot((int)$r['abs_shift'], $old, $new), $r['id']]);
 }
 
 /**
@@ -609,7 +622,8 @@ const CAMPAIGN_COPY = [
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
     ['map_pins', 'maps' => ['map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
     ['map_routes', 'maps' => ['map_id' => 'map']],
-    ['party_groups', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
+    ['party_groups', 'key' => 'group', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
+    ['party_trail', 'maps' => ['group_id' => 'group', 'map_id' => 'map']],
     // Files last: each hangs off an entry, tome, session, map or token copied above, and gets its own copy on disk.
     ['attachments', 'key' => 'attachments'],
 ];
@@ -1636,8 +1650,10 @@ try {
         $cid = cid();
         $isGm = role($cid) === 'gm';
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
+        // the party's trail: every group's that has been on this map, as a player can see this map
         out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
-            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id']))]);
+            'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])),
+            'trail' => trail_on_map((int)$m['id'], array_map(fn($g) => $g['id'], party_groups($cid, $isGm)))]);
 
     case 'groups': // every member: the party's groups, main first
         $cid = cid();
@@ -1661,6 +1677,12 @@ try {
         need_gm($cid);
         group_move($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'trail_clear': // GMs: map_id, and id for one group's trail (every group's without)
+        $cid = cid();
+        need_gm($cid);
+        trail_clear($cid);
+        out(['ok' => true]);
 
     case 'group_merge': // GMs: id, into_id
         $cid = cid();
