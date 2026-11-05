@@ -1611,13 +1611,9 @@ try {
     case 'session':
     case 'session_save':
     case 'session_summary_save':
+    case 'session_notes_save':
     case 'session_end':
     case 'session_delete':
-    case 'snote_add':
-    case 'snote_bulk':
-    case 'snote_save':
-    case 'snote_move':
-    case 'snote_delete':
         sessions_action($action);
 
     // ===== pictures and files ===== (api/files.php)

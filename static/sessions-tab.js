@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, snoteList, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -20,7 +20,7 @@
       const item = (x, cls = 'sess-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (one?.session.id === x.id ? ' on' : ''), href: href(x.id), 'aria-current': one?.session.id === x.id ? 'page' : null },
         el('span', { class: 'enc-name' }, sessionName(x), x.last_day === null && isGM() ? el('span', { class: 'chip sess-open', 'data-tip': 'Not ended yet: its last day is still open' }, 'open') : null),
         el('small', { class: 'lib-desc' }, [x.played_on ? `Played ${x.played_on}` : null, Sessions.daysCovered(cal(), x),
-          isGM() ? `${x.covered} of ${x.notes} notes covered` : null, isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
+          isGM() && !x.is_published ? 'not published' : null].filter(Boolean).join(' · ')));
       const add = isGM() ? btn('+ New session', busy(null, async () => {
         const r = await post('session_save', {}, cid);
         S.openSession = r.session;
@@ -56,7 +56,8 @@
       const cid = S.camp.id, gm = isGM();
       const withNotes = gm ? el('input', { type: 'checkbox' }) : null;
       const exportBtn = btn('⬇ Export', () => {
-        const md = Sessions.markdown({ cal: cal(), session: { ...s, ...(gm ? { summary: editor.value().text, ...(rewards ? { rewards: rewards.value().text, loot: loot.value().text } : {}) } : {}) }, notes, gm,
+        const md = Sessions.markdown({ cal: cal(), session: { ...s, ...(gm ? { summary: editor.value().text, ...(rewards ? { rewards: rewards.value().text, loot: loot.value().text } : {}) } : {}) },
+          notes: gm ? Sessions.parseLines(entry.text()) : [], gm,
           withNotes: !!withNotes?.checked, toMarkdown: RichText.toMarkdown });
         const a = el('a', { href: URL.createObjectURL(new Blob([md], { type: 'text/markdown' })), download: Sessions.fileName(s) });
         document.body.append(a); a.click(); a.remove();
@@ -116,23 +117,8 @@
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
         el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, more);
 
-      // --- the notes, each ticked once the summary covers it
-      const notesHead = el('h3', {});
-      const notesList = el('div', { class: 'snotes' });
-      const others = sessions.filter(x => x.id !== s.id);
-      const opts = { onChange: () => reloadNotes(), notes: () => notes, tick: true, move: others, onTick: () => countNotes() };
-      const countable = () => notes.filter(n => Sessions.mark(n.text) !== '>');
-      const countNotes = () => notesHead.replaceChildren('Notes ', el('span', { class: 'muted small' }, `${countable().filter(n => n.is_covered).length} of ${countable().length} covered`),
-        tip('Your notes from the game. Tick one once the summary covers it, so you can see what\'s left. Build draft ticks the ones it uses'));
-      const drawNotes = () => {
-        countNotes();
-        notesList.replaceChildren(...(notes.length ? snoteList(notes, opts) : [el('p', { class: 'muted small' }, 'No notes in this session.')]));
-      };
-      async function reloadNotes() {
-        try { notes = (await api('session', { query: { cid, id: s.id } })).notes || []; } catch (err) { toast(err.message, true); }
-        drawNotes();
-      }
-      drawNotes();
+      // --- the notes: one text box, saved as it is typed (notesEntry in app.js); Build draft under it writes the summary
+      const notesHead = el('h3', {}, 'Notes', tip('Your notes from the game, a line each. They save as you type. Build draft writes the summary from them. The ? button under the box lists what each mark does'));
 
       // --- the summary
       const editor = RichText.editor({ text: s.summary || '', format: 'html', label: 'Summary', placeholder: 'What happened this session, for the players to read',
@@ -147,8 +133,9 @@
         placeholder: 'The coin, items and treasure the party found' }) : null;
       loot?.node.classList.add('rt-medium');
       const draft = btn('Build draft', async () => {
-        const html = Sessions.draftHtml(cal(), notes);
-        if (!html) return toast('Nothing to draft: every note is a ! aside or a time jump', true);
+        const html = Sessions.draftHtml(cal(), Sessions.notesFromText(cal(), entry.text(), sessionStart(s), nowShift()).notes);
+        if (!html) return toast(entry.text().trim() ? 'Nothing to draft: every note is a ! aside or a time jump' : 'Type some notes first', true);
+        if (editing.hidden) setEditing(true);
         let append = false;
         if (editor.value().text) {
           const v = await KIT.dialog({ message: 'The summary already has writing in it. Replace it with the draft, or add the draft below it?', buttons: [
@@ -157,13 +144,9 @@
           append = v === 'add';
         }
         editor.setHtml(html, append);
-        for (const n of notes) {
-          const k = Sessions.mark(n.text);
-          if (k === '!' || k === '>' || n.is_covered) continue;
-          try { await post('snote_save', { id: n.id, is_covered: true }, cid); n.is_covered = true; } catch (err) { toast(err.message, true); break; }
-        }
-        drawNotes();
-      }, 'small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out and ? lines listed GM only at the end. Then rewrite it as you like');
+        cols.dataset.show = 'summary';   // one column (a phone): show the summary it filled
+      }, 'primary small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out, $ lines as GM-only paragraphs and ? lines listed GM only at the end. Then rewrite it as you like, and Save');
+      const entry = notesEntry(s, notes, [draft]);
       // The GM reads the session as players do, with the Encyclopedia's names linked (and the GM-only paragraphs marked),
       // and Edit opens the editors. A session with nothing written yet opens in them.
       const reading = el('div', { class: 'sess-read' });
@@ -179,7 +162,7 @@
       }, 'small', 'Close the editors without saving what was changed in them');
       function setEditing(on) {
         editing.hidden = !on; reading.hidden = on;
-        edit.hidden = on; draft.hidden = cancel.hidden = !on;
+        edit.hidden = on; cancel.hidden = !on;
         showSave();
         if (!on) drawReading();
       }
@@ -197,10 +180,10 @@
           const r = await post('session_summary_save', { id: s.id, version: s.version, ...written }, cid);
           s.version = r.session.version; s.summary = r.session.summary; s.rewards = r.session.rewards; s.loot = r.session.loot;
           savedWriting = written;
-          // names added from the detector's dialog are linked in the summary as read, and in the notes
+          // names added from the detector's dialog are linked in the summary as read
           offerNouns([{ text: s.summary, format: 'html', label: `${sessionName(s)}'s summary` },
             ...(hasExtras ? [{ text: s.rewards, format: 'html', label: `${sessionName(s)}'s rewards` }, { text: s.loot, format: 'html', label: `${sessionName(s)}'s loot` }] : [])])
-            .then(() => { drawReading(); drawNotes(); });
+            .then(() => drawReading());
         }
         const t = title.value.trim().replace(/\s+/g, ' '), on = played.value || null;
         if (t !== (s.title || '') || on !== (s.played_on || null)) {
@@ -221,10 +204,10 @@
       const cols = el('div', { class: 'sess-cols', 'data-show': (s.summary || '').trim() ? 'summary' : 'notes' });
       const tabBtn = (key, label) => btn(label, () => { cols.dataset.show = key; }, 'small', `Show the ${label.toLowerCase()}`);
       cols.append(el('div', { class: 'sess-tabs row' }, tabBtn('summary', 'Summary'), tabBtn('notes', 'Notes')),
-        el('div', { class: 'sess-notes' }, notesHead, notesEntry(s, () => notes, () => reloadNotes()), notesList),
+        el('div', { class: 'sess-notes' }, notesHead, entry.node),
         el('div', { class: 'sess-summary' },
           el('div', { class: 'row sess-sumhead' }, el('h3', {}, 'Summary', tip('What you write up from the notes. GM-only paragraphs (🔒) never reach players')),
-            el('div', { class: 'row' }, edit, draft, cancel, save)),
+            el('div', { class: 'row' }, edit, cancel, save)),
           reading,
           editing));
       editing.append(editor.node,
@@ -233,11 +216,11 @@
             el('div', {}, el('h3', {}, 'Loot Found', tip('The coin, items and treasure found this session. Players read it once the session is published; GM-only paragraphs (🔒) never reach them')), loot.node))
             : el('p', { class: 'muted small' }, 'Open install.php on the server and press Install or upgrade to add Session Rewards and Loot Found.'));
       setEditing(![s.summary, s.rewards, s.loot].some(t => (t || '').trim()));
-      // the notes box starts small and grows with what's typed in it, up to half the window
-      const nbox = cols.querySelector('.snote-box');
-      const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, innerHeight / 2)}px`; };
-      for (const e of ['input', 'keyup', 'focus']) nbox?.addEventListener(e, grow);
-      if (nbox?.value) requestAnimationFrame(grow);
+      // the notes box grows with what's typed in it, up to most of the window, then scrolls
+      const nbox = entry.box;
+      const grow = () => { nbox.style.height = 'auto'; nbox.style.height = `${Math.min(nbox.scrollHeight + 2, Math.max(240, innerHeight * 0.75))}px`; };
+      for (const e of ['input', 'keyup', 'focus']) nbox.addEventListener(e, grow);
+      if (nbox.value) requestAnimationFrame(grow);
       return [head[0], bar, details, cols, pictures];
     }
 

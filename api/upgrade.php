@@ -78,6 +78,8 @@ function upgrade_steps(): array {
             'Map pins can now have their own icon and colour and be locked, and routes their own colour and line.'],
         ['025_versions_invites.sql', fn(PDO $p) => db_has_table($p, 'encyclopedia_entries') && !db_has_column($p, 'encyclopedia_entries', 'version'),
             'Encyclopedia entries and day notes now refuse a save from an older copy, and GMs can invite people by email before they have an account.'],
+        ['026_session_notes_text.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'notes_text'),
+            'A session\'s notes are now one text box that saves as you type; each session\'s notes go into it when it is next opened.'],
     ];
 }
 

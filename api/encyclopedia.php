@@ -262,8 +262,12 @@ function encyclopedia_action(string $action): void {
                 if ($isGm) $add($src, rich_secrets($x[$f]), true, 'html');
             }
         }
-        if ($isGm) {
-            $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? ORDER BY s.number, n.position');
+        if ($isGm) {   // the notes: a session's text box, or its old rows while it has never been saved as text
+            $st = db()->prepare('SELECT id, number, title, notes_text FROM play_sessions WHERE campaign_id=? AND notes_text IS NOT NULL ORDER BY number');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $x) if (trim((string)$x['notes_text']) !== '')
+                $add(['kind' => 'session_note', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}"], $x['notes_text'], true);
+            $st = db()->prepare('SELECT n.text, s.id, s.number, s.title FROM session_notes n JOIN play_sessions s ON s.id=n.session_id WHERE n.campaign_id=? AND s.notes_text IS NULL ORDER BY s.number, n.position');
             $st->execute([$cid]);
             foreach ($st->fetchAll() as $x) $add(['kind' => 'session_note', 'id' => (int)$x['id'], 'title' => $x['title'] !== '' ? $x['title'] : "Session {$x['number']}", 'short' => true], $x['text'], true);
         }
