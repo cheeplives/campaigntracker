@@ -235,6 +235,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   links, a bad kind or empty title is refused, only the author or a GM deletes, and someone outside the campaign gets nothing; saving a tome offers its new names, and Scan campaign finds names in tomes,
   downtime, holdings and Gear and Loot (but not the Long Rest label a rest writes), with an entry quoting the tome it was found in; the 🔍 Scan button on a tome or an entry offers only the names in that one, an entry's GM notes included, and says when none are missing; a player adds a picture to the GM's tome and the GM sees it on the page
   and in the editor, anyone can take a tome's files off, and deleting the tome deletes its files.
+- **list-pane**: the « on the Encyclopedia's and the Library's list tucks it to a rail and gives the item picked the width,
+  with Wide view on too; each tab remembers it on its own, the rail brings the list back, and one column has no «. (The
+  Sessions tab's « is in **sessions**, along with an old Wide view setting carrying over as a tucked list.)
 - **generators**: every generator gives real text for every genre, people, line of business
   and size, and a seed repeats it; street names, cyberpunk handles and cyberspace handles come in every genre with a real name each, made for the chosen people and gender; rumors use the names they're given; modern names follow each culture's order and forms (Japanese family name first, Russian
   feminine surnames) and gender-neutral names come from their own lists; a GM switches genre (remembered), re-rolls, sees just the names with no family name twice, turns on looks and quirks, and adds a town and one of its people

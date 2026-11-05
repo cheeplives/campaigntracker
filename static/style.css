@@ -878,7 +878,7 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 .enc-page.wide .enc-lists > section { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 8px; align-content: start; }
 .enc-page.wide .enc-lists > section > :not(.enc-item) { grid-column: 1 / -1; }
 .enc-page.wide .enc-detail h2 { font-size: 1.9rem; }
-/* The list card's head, the same on Encyclopedia, Library and Sessions: the title, then + New, ⋯ and Wide view */
+/* The list card's head, the same on Encyclopedia, Library and Sessions: the title, then + New, ⋯, Wide view and Hide list */
 .lp-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .lp-head h2 { margin: 0; }
 .lp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -890,9 +890,28 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
   .enc-page:not(.wide) > .enc-index { position: sticky; top: calc(var(--topbar-h, 0px) + 8px); max-height: calc(100vh - var(--topbar-h, 0px) - 16px); }
   .enc-page:not(.wide) > .enc-index > .lp-list { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-right: 2px; }
 }
+/* Hide list: the « tucks the list to a thin rail down the left (» and its name, the whole rail a button to bring it back) and the item picked takes the
+   rest of the width, whether or not Wide view is on. Two columns only; one column shows the list as ever. */
+.lp-rail { display: none; }
+/* the « at the list card's top right, like the Legend's */
+.lp-head.has-hide { position: relative; padding-right: 34px; }
+.lp-hidebtn { position: absolute; top: -4px; right: -6px; width: 30px; height: 30px; padding: 0; line-height: 1; font-size: 1.2rem; color: var(--dim); background: none; border: 1px solid transparent; }
+.lp-hidebtn:hover { color: var(--text); border-color: var(--line); background: none; }
+@media (min-width: 901px) {
+  .enc-page.list-hidden, .enc-page.list-hidden.wide { grid-template-columns: 44px minmax(0, 1fr); }
+  .enc-page.list-hidden > .enc-index { position: sticky; top: calc(var(--topbar-h, 0px) + 8px); padding: 0; overflow: hidden; }
+  .enc-page.list-hidden > .enc-index > :not(.lp-rail) { display: none; }
+  .enc-page.list-hidden .lp-rail { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;
+    min-height: min(320px, calc(100vh - var(--topbar-h, 0px) - 16px)); padding: 12px 0; cursor: pointer; color: var(--accent); font-weight: 700; }
+  .enc-page.list-hidden .lp-rail:hover { background: var(--panel-2); }
+  .enc-page.list-hidden .lp-rail:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .lp-rail-icon { font-size: 1.2rem; line-height: 1; }
+  .lp-rail-name { writing-mode: vertical-rl; letter-spacing: .08em; }
+  .enc-page.list-hidden.wide .enc-detail h2 { font-size: 2.8rem; }
+}
 @media (max-width: 900px) {
   .enc-page, .enc-page.wide { grid-template-columns: 1fr; }
-  .enc-widebtn { display: none; } /* one column already: nothing to swap */
+  .enc-widebtn, .lp-hidebtn { display: none; } /* one column already: nothing to swap or fold */
   .enc-page.has-sel .enc-detail { order: -1; } /* the entry picked comes first, the list after it */
   .enc-page:not(.has-sel) > .lp-empty { display: none; } /* one column: the list is the place to start */
 }
@@ -1114,12 +1133,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .snote-box { display: block; width: 100%; box-sizing: border-box; min-height: 8em; resize: vertical; tab-size: 2; line-height: 1.4; }
 .snote-entry-all { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .snote-entry-bar { align-items: center; gap: 8px; }
-/* Wide view: the sessions run across the top, the session picked takes the width below */
-.sess-page.wide { grid-template-columns: minmax(0, 1fr); }
-.sess-page.wide .lib-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.sess-page.wide .lib-list .sess-item { flex: 0 1 240px; }
-@media (min-width: 721px) { .sess-page.wide .sess-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
-@media (max-width: 900px) { .sess-page.wide .lib-list { display: block; } }
+/* Hide list: the session picked takes the width, its notes column a little wider */
+@media (min-width: 901px) { .sess-page.list-hidden .sess-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
 
 /* the Red Moon, drawn red where lit and black where not */
 .moon-glyph { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.15em; }

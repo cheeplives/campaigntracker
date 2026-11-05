@@ -44,11 +44,11 @@
       else if (!one) readerEmpty(reader, { lead: sessions.length ? 'Pick a session to read it.' : 'Nothing here yet.',
         title: 'Latest', start: [...sessions.filter(x => x.last_day === null && isGM()), ...sessions.filter(x => !(x.last_day === null && isGM()))].slice(0, 4).map(x => item(x, 'lp-start-item')) });
       else reader.append(...clean(sessionPage(one.session, one.notes || [], sessions)));
-      // Wide view: the sessions run across the top and the session picked gets the room, remembered in this browser.
+      // Hide list: the list folds to a rail and the session picked gets the room, remembered in this browser.
       mount(...campaignHeader('sessions'), listPage({ cls: 'sess-page', title: 'Sessions', picked: !!sel, add, top: [search], list, reader,
         tipText: isGM() ? 'Each game night: your running notes, and the summary you write from them afterwards. Players read a summary once you publish it'
           : 'A summary of each game night, as the GM writes it up',
-        wide: { key: 'chronicle:sesswide', tips: ['Give the session the whole width, with the list of sessions along the top', 'Back to the list beside the session'] } }));
+        hide: { key: 'chronicle:sesshide', was: 'chronicle:sesswide' } }));
     }
     let sessQuery = '';
 

@@ -395,20 +395,28 @@ test("Import to a session on a day's calendar page copies the day's Public and S
   expectNoErrors(errors);
 });
 
-test("the Sessions tab has a wide view, remembered, with the list of sessions along the top", async ({ page, browser }) => {
+test("Hide list folds the list of sessions to a rail so the session takes the screen, remembered", async ({ page, browser }) => {
   test.skip(page.viewportSize().width <= 900, "one column already");
-  const { cid } = await gmAndPlayer(page, browser, "Sessions wide");
+  const { cid } = await gmAndPlayer(page, browser, "Sessions hide");
+  // someone who had Wide view on before keeps the session's room
+  await page.goto("index.html");
+  await page.evaluate(() => localStorage.setItem("chronicle:sesswide", "1"));
   const sid = await openSession(page, cid);
-  const wideBtn = page.getByRole("button", { name: "⇥ Wide view" });
-  await wideBtn.click();
-  await expect(page.locator(".sess-page")).toHaveClass(/wide/);
-  await expect(page.getByRole("button", { name: "⇤ Narrow view" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".sess-page")).toHaveClass(/list-hidden/);
+  await expect(page.getByRole("button", { name: "⇥ Wide view" })).toHaveCount(0);
+  const rail = page.getByRole("button", { name: "Show the Sessions list" });
+  await rail.click();
+  await expect(page.locator(".sess-item").first()).toBeVisible();
   const list = await page.locator(".sess-item").first().boundingBox(), detail = await page.locator(".sess-detail").boundingBox();
-  expect(list.y + list.height).toBeLessThan(detail.y + 1); // the list sits above the session
+  expect(list.x + list.width).toBeLessThan(detail.x + 1); // the list beside the session
   await page.reload();
-  await expect(page.locator(".sess-page")).toHaveClass(/wide/);
-  await page.getByRole("button", { name: "⇤ Narrow view" }).click();
-  await expect(page.locator(".sess-page")).not.toHaveClass(/wide/);
+  await expect(page.locator(".sess-page")).not.toHaveClass(/list-hidden/);
+  await page.getByRole("button", { name: "Hide the list" }).click();
+  await expect(page.locator(".sess-item")).toBeHidden();
+  const wider = await page.locator(".sess-detail").boundingBox();
+  expect(wider.width).toBeGreaterThan(detail.width + 150);
+  await page.reload();
+  await expect(page.locator(".sess-page")).toHaveClass(/list-hidden/);
   expect(sid).toBeGreaterThan(0);
 });
 
