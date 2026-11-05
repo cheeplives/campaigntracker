@@ -86,7 +86,7 @@ function upgrade_steps(): array {
             'A session can now take in shifts outside its one run, such as a flashback or a split party played another night.'],
         ['029_session_undated.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'undated'),
             'Sessions imported from Scabard no longer sit on the day of the import: they have no in-game dates, so the shifts of that day stop showing them all.'],
-        ['029_clocks.sql', fn(PDO $p) => !db_has_table($p, 'clock_ticks'), 'Added Clocks, for the GM and players to track what is coming.'],
+        ['030_clocks.sql', fn(PDO $p) => !db_has_table($p, 'clock_ticks'), 'Added Clocks, for the GM and players to track what is coming.'],
     ];
 }
 

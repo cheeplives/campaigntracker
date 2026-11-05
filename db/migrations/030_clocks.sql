@@ -1,10 +1,10 @@
--- 029_clocks.sql — the Clocks tab, and the Clocks box on At the Table.
+-- 030_clocks.sql — the Clocks tab, and the Clocks box on At the Table.
 --
 -- clocks: a GM's or a player's clock (segments, how many are filled, who sees it, the entry it is about).
 -- clock_ticks: each fill or empty of a clock, with the campaign clock's shift at the time.
 --
 -- Run ONCE on an install created before this change:
---   mysql -u <user> -p <database> < db/migrations/029_clocks.sql
+--   mysql -u <user> -p <database> < db/migrations/030_clocks.sql
 -- (deploy.sh and install.php run it for you when there is no clocks table.)
 -- Fresh installs already get it from db/schema.sql.
 -- Clocks: a circle cut into segments that fills as something comes closer (a plot, a danger, a long job). Any member makes

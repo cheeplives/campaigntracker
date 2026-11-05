@@ -668,7 +668,7 @@ CREATE TABLE IF NOT EXISTS session_shifts (
   FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Clocks (db/migrations/029_clocks.sql).
+-- Clocks (db/migrations/030_clocks.sql).
 -- Clocks: a circle cut into segments that fills as something comes closer (a plot, a danger, a long job). Any member makes
 -- one; a GM's and a player's are drawn in different colours. visibility: shown (everyone sees how full it is), vague
 -- (players see it is there, not how full; its maker and GMs see all) or secret (GMs only; only a GM makes one). The maker
