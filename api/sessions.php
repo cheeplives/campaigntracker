@@ -6,9 +6,9 @@
 declare(strict_types=1);
 
 // ---------- play sessions ----------
-// A session is one game night: the GM's quick notes taken during it (session_notes, GMs only) and the summary written
-// from them afterwards, which players read once it is published. A campaign has at most one open session (last_day
-// NULL); the Session notes box adds to it, and starts one when there is none.
+// A session is one game night: the GM's quick notes taken during it (notes_text, one text box, GMs only; older
+// sessions' notes are rows in session_notes until the page folds them into it) and the summary written from them
+// afterwards, which players read once it is published. A campaign has at most one open session (last_day NULL).
 
 /** A session of campaign $cid; a player only gets a published one. $lock: FOR UPDATE, inside a transaction. */
 function session_row(int $cid, int $id, bool $isGm = true, bool $lock = false): array {
@@ -34,26 +34,17 @@ function session_out(array $s, bool $full, bool $isGm): array {
             $o['loot'] = (string)rich_for($s['loot'], $isGm);
         }
     }
-    if ($isGm && isset($s['notes'])) { $o['notes'] = (int)$s['notes']; $o['covered'] = (int)$s['covered']; }
+    if ($full && $isGm) $o['notes_text'] = $s['notes_text'] ?? null;   // null: never saved, so the page folds the old rows in
     return $o;
 }
 function snote_out(array $n): array {
     return ['id' => (int)$n['id'], 'session_id' => (int)$n['session_id'], 'position' => (int)$n['position'], 'depth' => (int)$n['depth'],
         'text' => $n['text'], 'abs_shift' => (int)$n['abs_shift'], 'is_covered' => (bool)(int)$n['is_covered']];
 }
-function snote_row(int $cid, int $id): array {
-    return row_of('session_notes', $cid, $id, 'Note not found');
-}
 function snotes(int $sid): array {
     $st = db()->prepare('SELECT * FROM session_notes WHERE session_id=? ORDER BY position, id');
     $st->execute([$sid]);
     return array_map('snote_out', $st->fetchAll());
-}
-/** A note's text: one line, 1 to 1000 characters. */
-function snote_text($v): string {
-    $t = trim(preg_replace('/\s+/u', ' ', (string)str_in($v, 1000, false)));
-    if ($t === '') fail('Write something first');
-    return $t;
 }
 /** End every open session of the campaign at the current day. */
 function sessions_end_all(int $cid): void {
@@ -80,13 +71,10 @@ function date_in($v): ?string {
 /** Answer one of these actions: api/index.php sends them here, once api/actions.php has let them through. */
 function sessions_action(string $action): void {
     switch ($action) {
-    case 'sessions': // newest first; a player gets the published ones only, without the GMs' note counts
+    case 'sessions': // newest first; a player gets the published ones only
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        $st = db()->prepare($isGm
-            ? 'SELECT s.*, COUNT(n.id) AS notes, COALESCE(SUM(n.is_covered), 0) AS covered FROM play_sessions s LEFT JOIN session_notes n ON n.session_id=s.id
-               WHERE s.campaign_id=? GROUP BY s.id ORDER BY s.number DESC'
-            : 'SELECT * FROM play_sessions WHERE campaign_id=? AND is_published=1 ORDER BY number DESC');
+        $st = db()->prepare('SELECT * FROM play_sessions WHERE campaign_id=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY number DESC');
         $st->execute([$cid]);
         out(['sessions' => array_map(fn($x) => session_out($x, false, $isGm), $st->fetchAll())]);
 
@@ -98,7 +86,9 @@ function sessions_action(string $action): void {
         $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='session' AND parent_id=?" . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY id');
         $st->execute([$cid, (int)$s['id']]);
         $files = array_map('attachment_out', $st->fetchAll());
-        out(['session' => session_out($s, true, $isGm) + ['files' => $files], 'uploads' => upload_info()] + ($isGm ? ['notes' => snotes((int)$s['id'])] : []));
+        // GMs get the old note rows too while the notes haven't been saved as text, for the page to fold in
+        out(['session' => session_out($s, true, $isGm) + ['files' => $files], 'uploads' => upload_info()]
+            + ($isGm ? ['notes' => ($s['notes_text'] ?? null) === null ? snotes((int)$s['id']) : []] : []));
 
     case 'session_save': // GMs: a new session, or a change to one's title, dates or publishing; reopen makes it the open one
         $cid = cid();
@@ -141,6 +131,21 @@ function sessions_action(string $action): void {
         if (!$st->rowCount()) fail('This summary was saved somewhere else after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
         out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), true, true)]);
 
+    case 'session_notes_save': // GMs: the notes box's text, saved as it is typed. base is the text this copy last had from the
+        // server (null for a session never saved as text); when the notes have changed since, nothing is saved (stale)
+        $cid = cid();
+        need_gm($cid);
+        $s = session_row($cid, int_in(p('id'), 1));
+        $text = (string)str_in(p('notes_text'), 500_000, false);
+        $base = p('base') === null ? null : (string)str_in(p('base'), 500_000, false);
+        $st = db()->prepare('UPDATE play_sessions SET notes_text=? WHERE id=? AND notes_text <=> ?');
+        $st->execute([$text, $s['id'], $base]);
+        if (!$st->rowCount()) {                       // no row changed: already this text, or changed elsewhere
+            $now = session_row($cid, (int)$s['id'])['notes_text'];
+            if ($now !== $text) fail('These notes were changed in another tab or on another device after this page loaded', 409, 'stale');
+        }
+        out(['ok' => true, 'notes_text' => $text]);
+
     case 'session_end': // GMs: the open session (or the one named) ends on the current day
         $cid = cid();
         need_gm($cid);
@@ -158,110 +163,6 @@ function sessions_action(string $action): void {
         $s = session_row($cid, int_in(p('id'), 1));
         db()->prepare('DELETE FROM play_sessions WHERE id=?')->execute([$s['id']]);
         attachments_purge($cid, 'session', (int)$s['id']);   // files have no foreign key to cascade
-        out(['ok' => true]);
-
-    case 'snote_add': // GMs: a quick note, at the end of the session named, else the open one, else a new one
-        $cid = cid();
-        need_gm($cid);
-        $text = snote_text(p('text'));
-        $depth = int_in(p('depth', 0), 0, 3);
-        $at = int_in(p('abs_shift'));
-        $key = p('key') !== null ? (string)str_in(p('key'), 40) : null;
-        db()->beginTransaction();
-        // The campaign's lock first, before any other read: one note (and one new session) at a time, each seeing the last.
-        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);
-        $c = campaign_row($cid);
-        if ($key !== null) { // sent before, and the reply lost: the note that was saved then
-            $st = db()->prepare('SELECT * FROM session_notes WHERE campaign_id=? AND client_key=?');
-            $st->execute([$cid, $key]);
-            if ($n = $st->fetch()) {
-                db()->commit();
-                out(['ok' => true, 'note' => snote_out($n), 'session' => session_out(session_row($cid, (int)$n['session_id']), false, true)]);
-            }
-        }
-        if (p('session_id')) $s = session_row($cid, int_in(p('session_id'), 1), true, true);
-        else {
-            $s = open_session($cid);
-            if (!$s) $s = session_row($cid, session_create($cid, floordiv($at, slots_per_day(dec($c['calendar_json'])))));
-            $s = session_row($cid, (int)$s['id'], true, true);
-        }
-        db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, client_key, created_by)
-            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ?, ? FROM session_notes WHERE session_id=?')
-            ->execute([$cid, $s['id'], $depth, $text, $at, $key, me()['id'], $s['id']]);
-        $nid = (int)db()->lastInsertId();
-        db()->commit();
-        out(['ok' => true, 'note' => snote_out(snote_row($cid, $nid)), 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);
-
-    case 'snote_bulk': // GMs: many notes at once (typed in the session's notes box, or taken from a day's notes), at the end of the session named
-        $cid = cid();
-        need_gm($cid);
-        $list = p('notes');
-        if (!is_array($list) || !$list) fail('There are no notes to add', 400);
-        if (count($list) > 500) fail('That is more than 500 notes at once. Add them in parts', 400);
-        $rows = [];
-        foreach ($list as $x) {
-            if (!is_array($x)) fail('Those notes could not be read', 400);
-            $rows[] = [snote_text($x['text'] ?? null), int_in($x['depth'] ?? 0, 0, 3), int_in($x['abs_shift'] ?? null)];
-        }
-        $key = p('key') !== null ? (string)str_in(p('key'), 30) : null;
-        db()->beginTransaction();
-        db()->prepare('SELECT id FROM campaigns WHERE id=? FOR UPDATE')->execute([$cid]);
-        $s = session_row($cid, int_in(p('session_id'), 1), true, true);
-        if ($key !== null) { // sent before, and the reply lost: nothing more to add
-            $st = db()->prepare('SELECT 1 FROM session_notes WHERE campaign_id=? AND client_key=?');
-            $st->execute([$cid, $key . '.0']);
-            if ($st->fetch()) { db()->commit(); out(['ok' => true, 'added' => 0, 'again' => true]); }
-        }
-        $ins = db()->prepare('INSERT INTO session_notes (campaign_id, session_id, position, depth, text, abs_shift, client_key, created_by)
-            SELECT ?, ?, COALESCE(MAX(position), 0) + 1, ?, ?, ?, ?, ? FROM session_notes WHERE session_id=?');
-        foreach ($rows as $i => [$text, $depth, $at])
-            $ins->execute([$cid, $s['id'], $depth, $text, $at, $key !== null ? "$key.$i" : null, me()['id'], $s['id']]);
-        db()->commit();
-        out(['ok' => true, 'added' => count($rows)]);
-
-    case 'snote_save': // GMs: a note's text, indent, stamp or tick
-        $cid = cid();
-        need_gm($cid);
-        $n = snote_row($cid, int_in(p('id'), 1));
-        $text = array_key_exists('text', body()) ? snote_text(p('text')) : $n['text'];
-        $depth = array_key_exists('depth', body()) ? int_in(p('depth'), 0, 3) : (int)$n['depth'];
-        $at = array_key_exists('abs_shift', body()) ? int_in(p('abs_shift')) : (int)$n['abs_shift'];
-        $cov = array_key_exists('is_covered', body()) ? (p('is_covered') ? 1 : 0) : (int)$n['is_covered'];
-        db()->prepare('UPDATE session_notes SET text=?, depth=?, abs_shift=?, is_covered=? WHERE id=?')->execute([$text, $depth, $at, $cov, $n['id']]);
-        out(['ok' => true, 'note' => snote_out(snote_row($cid, (int)$n['id']))]);
-
-    case 'snote_move': // GMs: a note to another place in its session (position, from 1), or to the end of another session
-        $cid = cid();
-        need_gm($cid);
-        db()->beginTransaction();
-        $n = snote_row($cid, int_in(p('id'), 1));
-        $sid = (int)$n['session_id'];
-        if (p('session_id') && int_in(p('session_id'), 1) !== $sid) {
-            $to = session_row($cid, int_in(p('session_id'), 1), true, true);
-            db()->prepare('UPDATE session_notes SET session_id=?, position=(SELECT p FROM (SELECT COALESCE(MAX(position), 0) + 1 AS p FROM session_notes WHERE session_id=?) x) WHERE id=?')
-                ->execute([$to['id'], $to['id'], $n['id']]);
-        } else {
-            session_row($cid, $sid, true, true);
-            $ids = array_column(snotes($sid), 'id');
-            $ids = array_values(array_filter($ids, fn($i) => $i !== (int)$n['id']));
-            if (p('after_id') !== null) {               // after this note (0: first), wherever it is now
-                $after = int_in(p('after_id'), 0);
-                $at = $after ? array_search($after, $ids, true) : -1;
-                if ($at === false) fail('That note is no longer in this session. Reload and try again', 409);
-                $pos = $at + 2;
-            } else $pos = int_in(p('position', count($ids) + 1), 1);
-            array_splice($ids, min($pos, count($ids) + 1) - 1, 0, [(int)$n['id']]);
-            $up = db()->prepare('UPDATE session_notes SET position=? WHERE id=?');
-            foreach ($ids as $i => $id) $up->execute([$i + 1, $id]);
-        }
-        db()->commit();
-        out(['ok' => true]);
-
-    case 'snote_delete':
-        $cid = cid();
-        need_gm($cid);
-        $n = snote_row($cid, int_in(p('id'), 1));
-        db()->prepare('DELETE FROM session_notes WHERE id=?')->execute([$n['id']]);
         out(['ok' => true]);
     }
 }

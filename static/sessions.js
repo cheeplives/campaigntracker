@@ -1,23 +1,28 @@
 /* sessions.js — the shorthand of a session's notes box, and the draft summary built from a session's notes.
  *
  * Plain script, no build step, and no page needed: app.js hands it the calendar and the notes and gets back numbers
- * and text, so the same file runs under Node in the tests. A note is { id, position, depth, text, abs_shift,
- * is_covered }; its first character can mark it:
+ * and text, so the same file runs under Node in the tests. A session's notes are one text box (notesFromText reads it
+ * as notes: a line each, indented lines under the line above). A note is { depth, text, abs_shift }; its first
+ * character can mark it:
  *   !  a GM aside (dice, rules): never in the draft;
  *   ?  a loose end: in the draft only as a GM-only "Loose ends" paragraph at the end;
  *   >  a time jump: the notes after it take the day and shift it reaches (see parseJump);
- *   🔒 (at the start of an unindented line) a GM-only block: it and the lines indented under it reach the draft only as a
- *      GM-only paragraph. Notes imported from a day's Secret notes are written this way. */
+ *   $  a secret: in the draft as a GM-only paragraph, with the lines indented under it. 🔒 at the start of an
+ *      unindented line does the same (notes imported from a day's Secret notes before $ were written this way).
+ * Sessions from before the text box kept a row per note; foldNotes writes those rows out as the box's text. */
 'use strict';
 
 (function (root) {
   const E = typeof module !== 'undefined' && module.exports ? require('./engine.js') : root.Engine;
 
-  /** '!', '?', '>' or '' for a note's text. */
+  /** '!', '?', '>', '$' or '' for a note's text. */
   const mark = text => {
     const c = String(text || '').trimStart().charAt(0);
-    return '!?>'.includes(c) && c ? c : '';
+    return '!?>$'.includes(c) && c ? c : '';
   };
+  /** Whether a note starts a GM-only block: $, or 🔒 on an unindented line. */
+  const secretLine = (text, depth) => mark(text) === '$' || (Number(depth) === 0 && String(text || '').trim().startsWith('🔒'));
+  const secretText = text => { const t = String(text || '').trim(); return (t.startsWith('🔒') ? t.slice('🔒'.length) : t.slice(1)).trim(); };
 
   /** The text typed in the notes box as notes: one per non-blank line, trimmed, its depth from how far it is indented
    * (tabs count four spaces; a line indented further than the one above is a level deeper, at most 3; one indented less
@@ -77,6 +82,63 @@
     return clock;
   }
 
+  /** The notes box's text as notes, each stamped with the shift it happened in: start (the session's first day) until a
+   * > line moves it; ">" alone goes to clock. Returns { notes: [{ text, depth, abs_shift, line }], end (the stamp after
+   * the last line), bad: [line numbers of > lines that couldn't be read, which leave the stamp where it was] }. */
+  function notesFromText(cal, text, start, clock) {
+    let stamp = start;
+    const notes = [], bad = [];
+    for (const l of parseLines(text)) {
+      if (mark(l.text) === '>') {
+        const at = parseJump(cal, l.text, stamp, clock);
+        if (at === null) bad.push(l.line); else stamp = at;
+      }
+      notes.push({ text: l.text, depth: l.depth, abs_shift: stamp, line: l.line });
+    }
+    return { notes, end: stamp, bad };
+  }
+  /** A > line that takes the day of stamp `from` to day `to` (keeping the shift), checked by reading it back: ">+3"
+   * going forward, else the date itself. null when no line would read back right (a calendar parseDate can't name). */
+  function jumpLine(cal, from, to) {
+    const n = E.slotsPerDay(cal), day = Math.floor(from / n);
+    if (to === day) return null;
+    const tries = [];
+    if (to > day) tries.push(`>+${to - day}`);
+    const p = E.fromAbs(cal, to), mo = cal.months[p.month];
+    if (mo) tries.push(`>${p.day} ${mo.name} ${p.year}`, `>${p.day} ${mo.name}`);
+    for (const t of tries) {
+      const at = parseJump(cal, t, from, from);
+      if (at !== null && Math.floor(at / n) === to) return t;
+    }
+    return null;
+  }
+  /** The text for the notes box from a session's note rows (in order), from before notes were one text box: a line each,
+   * indented two spaces a level. Where a note's day isn't the one the lines above it reach from start (notes imported
+   * from a day, moved in time, or a ">" back to a clock that has moved since), a > line is written above it, so the
+   * draft still puts it under its day. */
+  function foldNotes(cal, rows, start) {
+    const n = E.slotsPerDay(cal), out = [];
+    let stamp = start;
+    for (const r of rows) {
+      const pad = '  '.repeat(Math.max(0, Math.min(3, Number(r.depth) || 0))), at = Number(r.abs_shift), text = String(r.text || '').trim();
+      if (!text) continue;
+      if (mark(text) === '>') {
+        const read = parseJump(cal, text, stamp, stamp);
+        if (read !== null && Math.floor(read / n) === Math.floor(at / n)) { out.push(pad + text); stamp = read; continue; }
+        const j = jumpLine(cal, stamp, Math.floor(at / n));
+        out.push(pad + (j || text));
+        stamp = j ? parseJump(cal, j, stamp, stamp) : at;
+        continue;
+      }
+      if (Math.floor(at / n) !== Math.floor(stamp / n)) {
+        const j = jumpLine(cal, stamp, Math.floor(at / n));
+        if (j) { out.push(pad + j); stamp = parseJump(cal, j, stamp, stamp); }
+      }
+      out.push(pad + text);
+    }
+    return out.join('\n');
+  }
+
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   /** A note as a sentence: trimmed, its first letter capitalized, a full stop added when it has no closing mark. */
   function sentence(text) {
@@ -87,7 +149,8 @@
   }
   /** A starting summary from a session's notes (in order), as rich text: each unindented note a paragraph with its
    * indented notes as further sentences, grouped under a heading per in-game day when there are several; ! and >
-   * lines left out; ? lines in one GM-only "Loose ends" paragraph at the end. '' when nothing is left. */
+   * lines left out; $ (and 🔒) lines GM-only paragraphs, with the lines indented under them; ? lines in one GM-only
+   * "Loose ends" paragraph at the end. '' when nothing is left. */
   function draftHtml(cal, notes) {
     const n = E.slotsPerDay(cal), paras = [], loose = [], secret = [];
     // where indented lines go: the paragraph above, the loose end above (in brackets), or nowhere under a ! line
@@ -95,8 +158,10 @@
     for (const x of notes) {
       const k = mark(x.text), top = Number(x.depth) === 0 || !cur;
       if (k === '>') continue;
-      if (top && String(x.text).trim().startsWith('🔒')) {
-        secret.push({ text: String(x.text).trim().slice('🔒'.length).trim(), more: [] });
+      if (secretLine(x.text, top ? 0 : x.depth)) {
+        const t = secretText(x.text);
+        if (!top) { if (t && !cur.sink) secret.push({ text: t, more: [] }); continue; }   // an indented $ line: that line alone, GM only
+        secret.push({ text: t, more: [] });
         cur = { secret: secret[secret.length - 1] };
         continue;
       }
@@ -120,7 +185,10 @@
       if (days.length > 1) html += `<h3>${esc(E.fmtDate(cal, d))}</h3>`;
       for (const p of paras) if (p.day === d) html += `<p>${esc(p.parts.join(' '))}</p>`;
     }
-    for (const g of secret) html += `<aside>${esc(g.more.length ? `${g.text}: ${g.more.join('; ')}` : g.text)}</aside>`;
+    for (const g of secret) {
+      const t = g.text && g.more.length ? `${g.text}: ${g.more.join('; ')}` : g.text || g.more.join('; ');
+      if (t) html += `<aside>${esc(t)}</aside>`;
+    }
     if (loose.length) html += `<aside>${esc(`Loose ends: ${loose.map(l => l.more.length ? `${l.text} (${l.more.join('; ')})` : l.text).join('; ')}`)}</aside>`;
     return html;
   }
@@ -156,7 +224,7 @@
   /** "Session 12 - A Locked Box.md", without characters a file name can't hold. */
   const fileName = s => `${`Session ${s.number}${s.title ? ` - ${s.title}` : ''}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()}.md`;
 
-  const Sessions = { mark, parseLines, parseJump, stampAt, draftHtml, sentence, name, daysCovered, markdown, fileName };
+  const Sessions = { mark, parseLines, parseJump, stampAt, notesFromText, jumpLine, foldNotes, draftHtml, sentence, name, daysCovered, markdown, fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = Sessions;
   else root.Sessions = Sessions;
 })(typeof window !== 'undefined' ? window : globalThis);

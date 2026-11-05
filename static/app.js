@@ -1601,7 +1601,7 @@
         'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
 
-  /** A day's notes as session note lines: { pub: [{ text, depth }], sec: [...] }. Paragraphs, headings and list items become
+  /** A day's notes as lines for a session's notes: { pub: [{ text, depth }], sec: [...] }. Paragraphs, headings and list items become
    * lines (nested lists indent); GM-only paragraphs in the Public notes go with the Secret ones. Text that isn't rich text
    * is read by its indent, as typed in the notes box. */
   function dayNoteLines(text, format) {
@@ -1642,31 +1642,37 @@
     const dlg = el('dialog', { class: 'kit-dialog', 'aria-label': 'Import notes to a session' },
       el('form', { novalidate: true },
         el('h3', {}, 'Import notes to a session'),
-        el('p', { class: 'kit-dialog-msg' }, `The notes of ${E.fmtDate(cal(), d)} become lines in the session\'s notes, stamped with this day. The day\'s notes stay as they are.`),
+        el('p', { class: 'kit-dialog-msg' }, `The notes of ${E.fmtDate(cal(), d)} go at the end of the session\'s notes, under a jump to this day. The day\'s notes stay as they are.`),
         field('Add them to', where),
         el('label', { class: 'inline' }, pubBox, ` Public notes (${p.pub.length} line${p.pub.length === 1 ? '' : 's'})`),
-        el('label', { class: 'inline', 'data-tip': 'GM-only notes go in under a 🔒 line, which the draft summary keeps as a GM-only paragraph' }, secBox,
+        el('label', { class: 'inline', 'data-tip': 'GM-only notes go in under a $ line, which the draft summary keeps as a GM-only paragraph' }, secBox,
           ` Secret notes (${secretLines.length} line${secretLines.length === 1 ? '' : 's'})`),
         err,
         el('div', { class: 'kit-dialog-actions' }, go, el('button', { type: 'button', onclick: () => dlg.close() }, 'Cancel'))));
     dlg.addEventListener('close', () => dlg.remove());
     dlg.querySelector('form').addEventListener('submit', busy(go, async e => {
       e.preventDefault();
-      const notes = [], at = d * spd();
-      if (pubBox.checked) for (const l of p.pub) notes.push({ ...l, abs_shift: at });
-      if (secBox.checked) {
-        notes.push({ text: `🔒 Secret notes · ${E.fmtDate(cal(), d, { noWeekday: true })}`, depth: 0, abs_shift: at });
-        for (const l of secretLines) notes.push({ text: l.text, depth: Math.min(3, l.depth + 1), abs_shift: at });
+      const add = [], line = l => `${'  '.repeat(Math.max(0, Math.min(3, l.depth)))}${l.text}`;
+      if (pubBox.checked) for (const l of p.pub) add.push(line(l));
+      if (secBox.checked && secretLines.length) {
+        add.push(`$ Secret notes · ${E.fmtDate(cal(), d, { noWeekday: true })}`);
+        for (const l of secretLines) add.push(line({ text: l.text, depth: l.depth + 1 }));
       }
-      if (!(pubBox.checked ? p.pub.length : 0) && !(secBox.checked ? secretLines.length : 0)) { err.textContent = 'Pick notes that have something written in them'; err.hidden = false; return; }
+      if (!add.length) { err.textContent = 'Pick notes that have something written in them'; err.hidden = false; return; }
       try {
         let sid = where.value === 'new' ? null : Number(where.value);
         if (!sid) sid = (await post('session_save', {}, cid)).session.id;
-        await post('snote_bulk', { session_id: sid, notes }, cid);
+        // at the end of the session's notes as saved, under a > line to this day when the notes there are on another
+        const r = await api('session', { query: { cid, id: sid } });
+        const was = sessionNotesText(r.session, r.notes);
+        const end = Sessions.notesFromText(cal(), was, sessionStart(r.session), nowShift()).end;
+        const jump = Sessions.jumpLine(cal(), end, d);
+        const text = [was.replace(/\s+$/, ''), jump, ...add].filter(Boolean).join('\n');
+        await post('session_notes_save', { id: sid, notes_text: text, base: r.session.notes_text ?? null }, cid);
         dlg.close();
         const to = sessions.find(x => x.id === sid);
-        toast(`Added ${notes.length} note${notes.length === 1 ? '' : 's'} to ${to ? sessionName(to) : 'a new session'}`);
-      } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+        toast(`Added ${add.length} line${add.length === 1 ? '' : 's'} to ${to ? sessionName(to) : 'a new session'}'s notes`);
+      } catch (ex) { err.textContent = ex.status === 409 ? 'That session\'s notes were being changed just then. Try again' : ex.message; err.hidden = false; }
     }));
     document.body.append(dlg);
     dlg.showModal();
@@ -1674,129 +1680,119 @@
   }
 
   // ------------------------------------------------------------ session notes
-  // The GM's quick notes during play, typed into the notes box on a session's page (the Sessions tab): free text, one
-  // note per line, indented lines under the line above. The shorthand (static/sessions.js): ! a GM aside, ? a loose
-  // end, > a time jump. What is typed is kept in this browser until it is added to the session, so nothing typed is lost.
-  const SNOTE_TIP = 'Enter starts a new line · Tab / Shift+Tab indents · Ctrl+Enter adds them to the session · @ names an Encyclopedia entry · ! keeps a line out of the summary · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock';
-  const SNOTE_HELP = [['Enter', 'a new line: each line becomes one note'], ['Tab, Shift+Tab', 'indent a line under the line above, or bring it back out (Esc, then Tab, leaves the box)'], ['Ctrl+Enter', 'adds what you have typed to the session\'s notes'], ['@', 'names an Encyclopedia entry'],
-    ['!', 'at the start: a GM aside (dice, rules), kept out of the summary'], ['?', 'at the start: a loose end, listed apart at the end of the summary'],
+  // The GM's notes during play, in one text box on a session's page (the Sessions tab): free text, a line per note,
+  // indented lines under the line above. The shorthand (static/sessions.js): ! a GM aside, ? a loose end, > a time jump,
+  // $ a secret. The box saves as it is typed; until the server has it, it is kept in this browser too.
+  const SNOTE_TIP = 'Saves as you type · Enter starts a new line · Tab / Shift+Tab indents · @ names an Encyclopedia entry · ! keeps a line out of the summary · $ puts it in the summary as a secret · ? marks a loose end · > jumps in time: >+1, >dusk, >+1 dawn, >12 Firstmonth, > alone for the clock';
+  const SNOTE_HELP = [['Enter', 'a new line: each line is one note'], ['Tab, Shift+Tab', 'indent a line under the line above, or bring it back out (Esc, then Tab, leaves the box)'], ['@', 'names an Encyclopedia entry'],
+    ['!', 'at the start: a GM aside (dice, rules), kept out of the summary'], ['$', 'at the start: a secret, which Build draft puts in the summary as a GM-only paragraph (with the lines indented under it)'],
+    ['?', 'at the start: a loose end, listed apart (GM only) at the end of the summary'],
     ['>+1, >+9, >+2w', 'jump on a day, nine days, two weeks'], ['>dusk', 'jump to that part of the day'], ['>+1 dawn', 'the next day at dawn'],
     ['>12 Firstmonth', 'jump to a date'], ['>', 'alone: back to the campaign\'s clock']];
-  const SNOTE_MARKS = { '!': ['🎲', 'GM aside: kept out of the summary\'s draft'], '?': ['❓', 'Loose end: not in the summary, listed under Loose ends'] };
   const sessionName = s => `Session ${s.number}${s.title ? `: ${s.title}` : ''}`;
-  /** Where a note sits in time, short: the shift alone on the campaign's current day, else the date too. */
-  function snoteStamp(abs) {
-    const n = spd(), d = Math.floor(abs / n), sh = shiftNames()[E.mod(abs, n)];
-    return d === today() ? sh : `${sh} · ${E.fmtDate(cal(), d, { noWeekday: true })}`;
-  }
-  /** One note as a row. opts: { onChange(), notes() → the session's notes, tick, move: [sessions] }. A > line is a divider. */
-  function snoteRow(n, opts) {
-    const k = Sessions.mark(n.text);
-    const del = btn('✕', async () => {
-      if (!await confirmDialog('Delete this note?', { ok: 'Delete', danger: true })) return;
-      try { await post('snote_delete', { id: n.id }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
-    }, 'link small snote-del', 'Delete this note');
-    del.setAttribute('aria-label', 'Delete note');
-    const nudge = (dir, label, glyph) => {
-      const b = btn(glyph, async () => {
-        const list = opts.notes(), i = list.findIndex(x => x.id === n.id), to = i + dir;
-        if (to < 0 || to >= list.length) return;
-        // named by the note it goes after, so a list another tab has changed since still puts it in the right place
-        const after = dir < 0 ? list[i - 2]?.id ?? 0 : list[i + 1].id;
-        try { await post('snote_move', { id: n.id, after_id: after }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
-      }, 'link small snote-nudge', label);
-      b.setAttribute('aria-label', label);
-      return b;
+  /** The stamp a session's notes start from: its first day. */
+  const sessionStart = s => Number(s.first_day) * spd();
+  /** A session's notes as text: what was saved, or (never saved as text yet) its old note rows written out. */
+  const sessionNotesText = (s, rows) => s.notes_text ?? Sessions.foldNotes(cal(), rows || [], sessionStart(s));
+
+  /** The notes box on a session's page: one text box, saved as it is typed. rows: the session's note rows from before
+   * the text box, folded in when it has never been saved as text. actions: buttons for the start of its bar (Build
+   * draft). Returns { node, text() }. */
+  function notesEntry(s, rows, actions = []) {
+    const cid = S.camp.id, uid = S.user?.id;
+    const backupKey = `chronicle:snotes:${uid}:${s.id}`, oldDraftKey = `chronicle:snotes-draft:${uid}:${s.id}`;
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode: kept on the page only */ } }
     };
-    // a note's time shows in the heading over its group (see snoteList); this moves the one note to another day or shift
-    const when = k === '>' ? null : btn('🕓', async () => {
-      const v = await promptDialog('Move this note in time. Write it as a jump from where it is: +1, -1, dusk, +1 dawn or 12 Firstmonth', { ok: 'Move' });
-      if (v === null || !v.trim()) return;
-      const back = /^\s*-(\d+)\s*$/.exec(v);
-      const to = back ? n.abs_shift - Number(back[1]) * spd() : Sessions.parseJump(cal(), `>${v}`, n.abs_shift, nowShift());
-      if (to === null) return toast('Couldn\'t read that; try +1, dusk or 12 Firstmonth', true);
-      try { await post('snote_save', { id: n.id, abs_shift: to }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
-    }, 'link small snote-when-btn', `${snoteStamp(n.abs_shift)}. Click to move this note to another day or shift`);
-    when?.setAttribute('aria-label', 'Move in time');
-    const tools = el('span', { class: 'snote-tools' }, when, nudge(-1, 'Move up', '▲'), nudge(1, 'Move down', '▼'),
-      opts.move?.length ? select([['', 'Move to…'], ...opts.move.map(s => [s.id, sessionName(s)])], '', {
-        'aria-label': 'Move to another session', 'data-tip': 'Move this note to another session, at its end',
-        onchange: async ev => {
-          try { await post('snote_move', { id: n.id, session_id: Number(ev.target.value) }, S.camp.id); toast('Note moved'); opts.onChange(); } catch (err) { toast(err.message, true); }
-        } }) : null, del);
-    if (k === '>') {
-      const clock = btn('Set the clock here', busy(null, async () => {
-        await passShifts(n.abs_shift - nowShift());
-        toast(`The clock is now ${snoteStamp(n.abs_shift)}`); route();
-      }), 'small', 'Move the campaign\'s clock (weather, reminders and everyone\'s pages) to this day and shift');
-      return el('div', { class: 'snote-jump', 'data-tip': 'Time jump: the notes after this take this day and shift. Set the clock here also moves the campaign\'s clock' },
-        el('span', { class: 'snote-jump-at' }, `${shiftNames()[E.mod(n.abs_shift, spd())]} · ${E.fmtDate(cal(), Math.floor(n.abs_shift / spd()))}`),
-        el('code', { class: 'small muted' }, n.text), clock, tools);
-    }
-    const textEl = el('span', { class: 'snote-text' }, linked(n.text));
-    const row = el('div', { class: `snote snote-d${n.depth}` + (n.is_covered ? ' covered' : '') },
-      opts.tick ? el('input', { type: 'checkbox', checked: n.is_covered, 'aria-label': 'Covered by the summary', 'data-tip': 'Ticked once the summary covers this note',
-        onchange: async ev => {
-          try { await post('snote_save', { id: n.id, is_covered: ev.target.checked }, S.camp.id); n.is_covered = ev.target.checked; opts.onTick?.(); } catch (err) { toast(err.message, true); }
-        } }) : null,
-      SNOTE_MARKS[k] ? el('span', { class: 'snote-mark', 'data-tip': SNOTE_MARKS[k][1], 'aria-label': SNOTE_MARKS[k][1] }, SNOTE_MARKS[k][0]) : null,
-      textEl,
-      tools);
-    // a click on the text (not a link in it) changes it: Enter saves, Escape leaves it, Tab and Shift+Tab indent
-    textEl.addEventListener('click', ev => {
-      if (ev.target.closest('a')) return;
-      let depth = n.depth;
-      const edit = el('input', { class: 'snote-edit', value: n.text, maxlength: 1000, 'aria-label': 'Change this note', 'data-tip': 'Enter saves the change · Escape leaves it · Tab / Shift+Tab indents' });
-      edit.addEventListener('keydown', async e => {
-        if (e.key === 'Escape') return opts.onChange();
-        if (e.key === 'Tab') { e.preventDefault(); depth = Math.max(0, Math.min(3, depth + (e.shiftKey ? -1 : 1))); row.className = `snote snote-d${depth}`; return; }
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        try { await post('snote_save', { id: n.id, text: edit.value, depth }, S.camp.id); opts.onChange(); } catch (err) { toast(err.message, true); }
-      });
-      textEl.replaceWith(edit);
-      edit.focus();
-    });
-    return row;
-  }
-
-  /** A session's notes as rows, grouped by when they happened: once the notes cover more than one shift, a heading names the
-   * day and shift over each run of notes that share it (a > line is its own heading). One shift needs no heading. */
-  function snoteList(notes, opts) {
-    const heads = new Set(notes.map(n => n.abs_shift)).size > 1;
-    let at = null;
-    return notes.flatMap(n => {
-      const row = snoteRow(n, opts), was = at;
-      at = n.abs_shift;
-      if (!heads || Sessions.mark(n.text) === '>' || n.abs_shift === was) return [row];
-      return [el('div', { class: 'snote-when' }, snoteStamp(n.abs_shift)), row];
-    });
-  }
-
-  /** The notes box on a session's page: free text, a line per note, kept in this browser until Add to notes sends it.
-   * getNotes() gives the session's notes as last loaded; onAdded() runs once they are saved. */
-  function notesEntry(s, getNotes, onAdded) {
-    const cid = S.camp.id, draftKey = `chronicle:snotes-draft:${S.user?.id}:${s.id}`;
     const help = el('div', { class: 'snote-help small', hidden: true }, el('dl', {}, SNOTE_HELP.map(([k, v]) => [el('dt', {}, el('code', {}, k)), el('dd', {}, v)])));
     const err = el('p', { class: 'snote-err small', role: 'alert' });
-    const box = el('textarea', { class: 'snote-box', rows: 7, maxlength: 60000, spellcheck: true, 'aria-label': 'New notes', 'data-tip': SNOTE_TIP,
-      placeholder: 'Type your notes here, a line each. Enter starts a new line and Tab indents. Add them to the session when you are ready.' });
-    try { box.value = localStorage.getItem(draftKey) || ''; } catch { /* private mode */ }
-    const count = el('span', { class: 'small muted' });
-    let attempt = null;  // the key the notes being added go under, so a resend whose first send arrived adds nothing twice
-    const changed = () => {
-      attempt = null;
-      try { box.value ? localStorage.setItem(draftKey, box.value) : localStorage.removeItem(draftKey); } catch { /* private mode: kept on the page only */ }
-      const n = Sessions.parseLines(box.value).length;
-      count.textContent = n ? `${n} line${n === 1 ? '' : 's'} not added yet` : '';
+    const hint = el('p', { class: 'snote-hint small muted' });
+    const status = el('span', { class: 'small muted snote-status', 'aria-live': 'polite' });
+    const box = el('textarea', { class: 'snote-box', rows: 12, maxlength: 500000, spellcheck: true, 'aria-label': 'Session notes', 'data-tip': SNOTE_TIP,
+      placeholder: 'Type your notes here as the game goes, a line each. Enter starts a new line and Tab indents. They save as you type; Build draft writes the summary from them.' });
+
+    // base: the text the server has, as far as this page knows (null: never saved as text). What the box starts with:
+    // the saved text, or the old rows written out, then whatever this browser kept that the server never got.
+    let base = s.notes_text ?? null;
+    let text = sessionNotesText(s, rows);
+    let saveNow = base === null && !!text;                   // folded from the old rows: save it as text at once
+    const oldDraft = (store.get(oldDraftKey) || '').trim(); // lines typed before the text box and never added
+    if (oldDraft) { text = text ? `${text}\n${oldDraft}` : oldDraft; saveNow = true; }
+    let kept = null;
+    try { kept = JSON.parse(store.get(backupKey) || 'null'); } catch { /* not ours */ }
+    let conflict = null;                                    // this browser's copy, when the server's changed under it
+    if (kept && typeof kept.text === 'string' && kept.text !== text) {
+      if (kept.base === base) { text = kept.text; saveNow = true; }   // typed here, the save never got through
+      else if (kept.text !== base) conflict = kept.text;              // typed here, and the notes changed elsewhere since
+    }
+    box.value = text;
+
+    const keep = () => store.set(backupKey, box.value === base ? null : JSON.stringify({ text: box.value, base }));
+    const lines = () => {
+      const { notes, bad } = Sessions.notesFromText(cal(), box.value, sessionStart(s), nowShift());
+      const n = notes.length;
+      hint.textContent = bad.length ? `Line${bad.length === 1 ? '' : 's'} ${bad.join(', ')}: couldn't read that jump; try >+1, >dusk or >12 Firstmonth` : '';
+      return n;
     };
+    let timer = null, saving = null, stale = conflict !== null;   // stale: nothing saves until the GM picks a copy
+    const show = (t, bad = false) => { status.textContent = t; status.classList.toggle('bad', bad); };
+    /** Send the box's text, unless the server already has it; one send at a time, the latest text after it. */
+    async function save() {
+      clearTimeout(timer); timer = null;
+      if (stale) return;
+      if (saving) { await saving; if (box.value === base) return; }
+      const sent = box.value;
+      if (sent === base) { show(base === null ? '' : 'Saved'); return; }
+      show('Saving…');
+      saving = (async () => {
+        try {
+          await post('session_notes_save', { id: s.id, notes_text: sent, base }, cid);
+          base = sent; s.notes_text = sent;
+          store.set(oldDraftKey, null);
+          keep();
+          show(box.value === base ? 'Saved' : 'Saving…');
+          err.replaceChildren();
+        } catch (e) {
+          if (e.status === 409) { stale = true; showStale(); }
+          else show(`Not saved: ${e.message}. What you typed is kept in this browser and saves when it can`, true);
+        } finally { saving = null; }
+      })();
+      await saving;
+      if (!stale && box.value !== base && !timer) timer = setTimeout(save, 1500);
+    }
+    /** The server's notes changed under this page: say so, and let the GM pick which copy to keep. */
+    function showStale(mine = box.value) {
+      show('Not saved', true);
+      err.replaceChildren('These notes were changed in another tab or on another device. ',
+        btn('Load the saved notes', busy(null, async () => {
+          const r = await api('session', { query: { cid, id: s.id } });
+          base = r.session.notes_text ?? null; s.notes_text = base;
+          box.value = sessionNotesText(r.session, r.notes); stale = false;
+          store.set(backupKey, null); err.replaceChildren(); changed(false);
+        }), 'small', 'Put the saved notes in the box, in place of what is in it now'), ' ',
+        btn('Keep mine', busy(null, async () => {
+          const r = await api('session', { query: { cid, id: s.id } });
+          base = r.session.notes_text ?? null; stale = false; box.value = mine;
+          err.replaceChildren(); changed(false); await save();
+        }), 'small', 'Save what is in this box over the other copy'));
+    }
+    function changed(soon = true) {
+      err.textContent && !stale && err.replaceChildren();
+      keep(); lines();
+      if (stale) return;
+      if (box.value === base) { clearTimeout(timer); timer = null; show(base === null ? '' : 'Saved'); return; }
+      show('Not saved yet');
+      clearTimeout(timer);
+      timer = setTimeout(save, soon ? 2000 : 0);
+    }
     /** Indent (dir 1) or outdent (dir -1) every line the selection touches, by two spaces. */
     function indent(dir) {
       const v = box.value, from = v.lastIndexOf('\n', box.selectionStart - 1) + 1;
       let to = v.indexOf('\n', box.selectionEnd); if (to < 0) to = v.length;
-      const lines = v.slice(from, to).split('\n');
+      const ls = v.slice(from, to).split('\n');
       let first = 0, total = 0;
-      const out = lines.map((l, i) => {
+      const out = ls.map((l, i) => {
         const cut = dir > 0 ? 0 : Math.min(2, /^ */.exec(l)[0].length);
         const r = dir > 0 ? '  ' + l : l.slice(cut), d = dir > 0 ? 2 : -cut;
         if (i === 0) first = d;
@@ -1810,12 +1806,17 @@
     }
     const wrap = el('div', { class: 'snote-entry' }, box);
     const mentions = encMentions() ? RichText.inputMentions(box, wrap, encMentions()) : null;
-    box.addEventListener('input', () => { err.textContent = ''; changed(); });
+    box.addEventListener('input', () => changed());
+    box.addEventListener('blur', () => { if (timer) save(); });
+    // leaving the page (another tab of the app, closing or hiding it): send what is waiting
+    const flush = () => { if (timer) save(); }, off = new AbortController();
+    addEventListener('pagehide', flush, { signal: off.signal });
+    addEventListener('hashchange', () => { flush(); off.abort(); }, { signal: off.signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); }, { signal: off.signal });
     box.addEventListener('keydown', ev => {
       if (mentions?.keydown(ev)) return;
       if (ev.key === 'Tab' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !box.dataset.freeTab) { ev.preventDefault(); indent(ev.shiftKey ? -1 : 1); }
       else if (ev.key === 'Escape') box.dataset.freeTab = '1';   // the next Tab leaves the box, as a keyboard user needs
-      else if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); addBtn.click(); }
       if (ev.key !== 'Escape') delete box.dataset.freeTab;
     });
     const phone = (glyph, label, dir) => {
@@ -1825,42 +1826,16 @@
     };
     const helpBtn = btn('?', () => { help.hidden = !help.hidden; }, 'small', 'Show the shorthand this box understands');
     helpBtn.setAttribute('aria-label', 'Shorthand');
-    let adding = false;  // one add at a time: a second press while one is on its way would send the same lines under a new key
-    async function add() {
-      err.textContent = '';
-      const lines = Sessions.parseLines(box.value);
-      if (!lines.length) { err.textContent = 'Type a note first'; return; }
-      const long = lines.find(l => l.text.length > 1000);
-      if (long) { err.textContent = `Line ${long.line} is longer than 1000 characters`; return; }
-      // another tab may have jumped in time since this page loaded: start from the session as saved
-      let have = getNotes();
-      try { have = (await api('session', { query: { cid, id: s.id } })).notes || have; } catch { /* offline: the add below will say */ }
-      let stamp = Sessions.stampAt(have, nowShift());
-      const notes = [];
-      for (const l of lines) {
-        let at = stamp;
-        if (Sessions.mark(l.text) === '>') {
-          at = Sessions.parseJump(cal(), l.text, stamp, nowShift());
-          if (at === null) { err.textContent = `Line ${l.line}: couldn't read that jump; try >+1, >dusk or >12 Firstmonth`; return; }
-          stamp = at;
-        }
-        notes.push({ text: l.text, depth: l.depth, abs_shift: at });
-      }
-      err.textContent = '';
-      attempt = attempt || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
-      try { await post('snote_bulk', { session_id: s.id, notes, key: attempt }, cid); } catch (e) { err.textContent = `Not added: ${e.message}. What you typed is still here`; return; }
-      box.value = ''; changed();
-      toast(`Added ${notes.length} note${notes.length === 1 ? '' : 's'}`);
-      onAdded();
-    }
-    const addBtn = btn('Add to notes', busy(null, async () => {
-      if (adding) return;
-      adding = true;
-      try { await add(); } finally { adding = false; }
-    }), 'primary small', 'Add each line you typed to this session\'s notes, below. Nothing is added until you press this');
-    changed();
-    return el('div', { class: 'snote-entry-all' },
-      wrap, el('div', { class: 'row snote-entry-bar' }, addBtn, phone('⇤', 'Outdent', -1), phone('⇥', 'Indent', 1), helpBtn, count), err, help);
+    lines();
+    show(base === null ? '' : 'Saved');
+    if (conflict !== null) showStale(conflict);
+    else if (saveNow) changed(false);
+    return {
+      node: el('div', { class: 'snote-entry-all' },
+        wrap, el('div', { class: 'row snote-entry-bar' }, ...actions, phone('⇤', 'Outdent', -1), phone('⇥', 'Indent', 1), helpBtn, status), hint, err, help),
+      text: () => box.value,
+      box
+    };
   }
 
   /** Hours of daylight as "11h 40m". */
@@ -5480,7 +5455,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, settings, shiftNames, snoteList, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));

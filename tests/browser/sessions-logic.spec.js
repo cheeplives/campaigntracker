@@ -112,3 +112,37 @@ test("draftHtml puts a 🔒 line and the lines under it in a GM-only paragraph, 
     note(4, "the seal is forged", 1, 9), note(5, "Left at dusk", 0, 9)];
   expect(Sessions.draftHtml(c, notes)).toBe("<p>Arrived at the station.</p><p>Left at dusk.</p><aside>Secret notes · 3 Firstmonth: Essen is Tevari's agent; the seal is forged</aside>");
 });
+
+test("draftHtml puts a $ line in a GM-only paragraph: with the lines under it, or alone when it is indented", () => {
+  const c = calendar();
+  expect(Sessions.mark("$ Essen is a spy")).toBe("$");
+  const notes = [note(1, "Arrived at the station", 0, 9), note(2, "$ Essen is Tevari's agent", 1, 9), note(3, "Met the Harbormaster", 1, 9),
+    note(4, "$Secrets", 0, 9), note(5, "the seal is forged", 1, 9), note(6, "Left at dusk", 0, 9), note(7, "! roll", 0, 9), note(8, "$ under an aside", 1, 9)];
+  expect(Sessions.draftHtml(c, notes)).toBe("<p>Arrived at the station. Met the Harbormaster.</p><p>Left at dusk.</p>"
+    + "<aside>Essen is Tevari's agent</aside><aside>Secrets: the seal is forged</aside>");
+  // a $ alone, with only lines under it
+  expect(Sessions.draftHtml(c, [note(1, "$", 0, 9), note(2, "hidden", 1, 9)])).toBe("<aside>hidden</aside>");
+});
+
+test("notesFromText stamps each line from the session's first day, moving at each > line, and names the jumps it can't read", () => {
+  const c = calendar();
+  const got = Sessions.notesFromText(c, "Arrived\n  quiet\n>+1\nFlip and burn\n>wibble\n>dusk\nDebris\n>\nNow", 8, 30);
+  expect(got.notes.map(n => [n.text, n.depth, n.abs_shift])).toEqual([["Arrived", 0, 8], ["quiet", 1, 8], [">+1", 0, 12], ["Flip and burn", 0, 12],
+    [">wibble", 0, 12], [">dusk", 0, 14], ["Debris", 0, 14], [">", 0, 30], ["Now", 0, 30]]);
+  expect(got.bad).toEqual([5]);
+  expect(got.end).toBe(30);
+  expect(Sessions.notesFromText(c, "", 8, 30)).toEqual({ notes: [], end: 8, bad: [] });
+});
+
+test("foldNotes writes old note rows out as the box's text, with a > line wherever a note's day isn't the one the lines reach", () => {
+  const c = calendar();
+  // day 2 is shifts 8-11; a typed >+1, a note moved by hand to day 5, then one moved back to day 1, then a > to a clock since moved on
+  const rows = [note(1, "Arrived", 0, 8), note(2, "quiet", 1, 9), note(3, ">+1", 0, 12), note(4, "Flip and burn", 0, 12), note(5, "Day five", 0, 21),
+    note(6, "aside", 1, 21), note(7, "Back to day one", 0, 4), note(8, ">", 0, 4), note(9, "  ", 0, 4)];
+  const text = Sessions.foldNotes(c, rows, 8);
+  expect(text).toBe(`Arrived\n  quiet\n>+1\nFlip and burn\n>+2\nDay five\n  aside\n>2 Firstmonth 1\nBack to day one\n>`);
+  // read back, every note is on its old day
+  const back = Sessions.notesFromText(c, text, 8, 99).notes.filter(n => Sessions.mark(n.text) !== ">");
+  expect(back.map(n => [n.text, Math.floor(n.abs_shift / 4)])).toEqual([["Arrived", 2], ["quiet", 2], ["Flip and burn", 3], ["Day five", 5], ["aside", 5], ["Back to day one", 1]]);
+  expect(Sessions.foldNotes(c, [], 8)).toBe("");
+});

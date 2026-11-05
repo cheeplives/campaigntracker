@@ -75,7 +75,7 @@ test("no action reaches another campaign's rows through an id", async ({ page, b
   const before = snapshot(away);
   expect(before).toContain(MARK);
   expect(ACTIONS.length).toBeGreaterThan(80);
-  expect(ID_KEYS).toEqual(expect.arrayContaining(["id", "entry_id", "map_id", "session_id", "token_id", "parent_id"]));
+  expect(ID_KEYS).toEqual(expect.arrayContaining(["id", "entry_id", "map_id", "token_id", "parent_id"]));
 
   // Every id the other campaign's rows have, whatever table: each is tried in every id parameter at once.
   const withIds = sql(`SELECT c.table_name FROM information_schema.columns c JOIN information_schema.columns i ON i.table_schema=c.table_schema

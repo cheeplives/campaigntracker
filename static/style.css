@@ -1071,28 +1071,15 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .enc-detail .richtext h2 { font-size: 1.25rem; line-height: 1.2; }
 .enc-detail .richtext h3 { font-size: 1.1rem; line-height: 1.2; }
 
-/* Session notes: the GM's quick notes during play (Current Day) and on a session's page */
-.snotes { display: flex; flex-direction: column; gap: 2px; max-height: 26em; overflow-y: auto; }
-.snote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; padding: 2px 4px; border-radius: 4px; }
-.snote:hover, .snote:focus-within { background: var(--panel-2); }
-.snote-d1 { padding-left: 1.6em; } .snote-d2 { padding-left: 3.2em; } .snote-d3 { padding-left: 4.8em; }
-.snote-text { flex: 1 1 12em; min-width: 0; overflow-wrap: break-word; cursor: text; }
-.snote.covered .snote-text { opacity: .65; }
-.snote-edit { flex: 1; min-width: 0; }
-.snote-when { margin: 8px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .8em; font-weight: 700; color: var(--accent); }
-.snote-when:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-/* the row's tools (▲ ▼ Move to… ✕) show on hover or focus, and always on a touch screen, where they wrap under the note */
-.snote-tools { display: none; gap: 2px; align-items: center; margin-left: auto; }
-.snote:hover .snote-tools, .snote:focus-within .snote-tools, .snote-jump:hover .snote-tools, .snote-jump:focus-within .snote-tools { display: inline-flex; }
-.snote-tools select { font-size: .8em; padding: 0 2px; min-height: 0; }
-.snote-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px; padding-top: 4px; border-top: 1px dashed var(--line); font-size: .9em; }
-.snote-jump-at { font-weight: 700; color: var(--accent); }
+/* Session notes: the GM's notes during play, one text box on a session's page */
 .snote-phone { display: none; }
 .snote-err:empty { display: none; }
 .snote-err { color: var(--bad); margin: 0; }
 .snote-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
 .snote-help dd { margin: 0; }
-@media (pointer: coarse) { .snote-phone { display: inline-flex; } .snote-tools { display: inline-flex; } }
+@media (pointer: coarse) { .snote-phone { display: inline-flex; } }
+.snote-hint { margin: 0; } .snote-hint:empty { display: none; }
+.snote-status.bad { color: var(--bad); }
 /* under the title: when it was played, Published, then Details, Export and the ⋯ menu at the right */
 .sess-bar { align-items: center; gap: 6px 10px; margin-top: -4px; }
 .sess-bar > p { margin: 0; }
@@ -1118,9 +1105,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 /* Session Rewards and Loot Found side by side end level: each editor fills its column's height */
 .sess-extras > div { display: flex; flex-direction: column; }
 .sess-extras > div > .rt-editor { flex: 1; }
-.sess-notes .snote-box { min-height: 4.5em; height: 4.5em; }   /* drag its corner for more */
+.sess-notes .snote-box { min-height: 14em; }   /* grows with the notes (sessions-tab.js), or drag its corner */
 .sess-cols h3 { margin: 0 0 6px; }
-.sess-cols .snotes { max-height: 70vh; }
 .sess-tabs { display: none; grid-column: 1 / -1; }
 .sess-open { margin-left: 6px; font-size: .75em; background: var(--accent); color: var(--on-accent); }
 @media (max-width: 720px) {
@@ -1128,7 +1114,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
   .sess-tabs { display: flex; }
   .sess-cols[data-show="notes"] .sess-summary, .sess-cols[data-show="summary"] .sess-notes { display: none; }
 }
-/* The notes box on a session's page: free text, a line a note */
+/* The notes box on a session's page: free text, a line a note, saved as it is typed */
 .snote-entry { position: relative; }
 .snote-box { display: block; width: 100%; box-sizing: border-box; min-height: 8em; resize: vertical; tab-size: 2; line-height: 1.4; }
 .snote-entry-all { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }

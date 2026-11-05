@@ -501,6 +501,7 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   summary_format VARCHAR(8) NOT NULL DEFAULT 'html',
   rewards MEDIUMTEXT NULL,
   loot MEDIUMTEXT NULL,
+  notes_text MEDIUMTEXT NULL,                   -- the GM's notes, one text box (static/sessions.js); NULL: not saved since session_notes
   is_published TINYINT(1) NOT NULL DEFAULT 0,
   version INT UNSIGNED NOT NULL DEFAULT 1,
   created_by BIGINT UNSIGNED NULL,
@@ -511,7 +512,8 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- The GM's quick notes during a session, one line each, in order (position). depth 0 to 3 indents a line under the
+-- The GM's quick notes during a session, from before they were one text box (play_sessions.notes_text): one line each,
+-- in order (position). Kept for sessions whose notes_text is NULL; the session's page folds them into its text box. depth 0 to 3 indents a line under the
 -- one above. text is plain; a leading ! is a GM aside, ? a loose end and > a time jump (static/sessions.js).
 -- abs_shift is the in-game shift the note was taken in (its day is abs_shift / shifts per day). is_covered: ticked
 -- once the summary covers it. Only GMs ever get these rows.
