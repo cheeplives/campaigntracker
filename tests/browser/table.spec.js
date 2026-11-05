@@ -46,9 +46,10 @@ test("At the Table leads the Play group and shows the date, the party, the moons
   await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
   const view = page.locator(".table-view");
   await expect(view.locator(".tv-date")).toContainText("Firstmonth");
-  await expect(view.locator(".tv-card")).toHaveCount(2);
-  await expect(view.locator(".tv-now .wx")).toBeVisible();
-  await expect(view.locator(".tv-card", { hasText: "Party" })).toContainText("Home");
+  // one block over the big box: the date and shift, its weather, where the party is
+  await expect(view.locator(".tv-card")).toHaveCount(0);
+  await expect(view.locator(".tv-summary .wx")).toBeVisible();
+  await expect(view.locator(".tv-summary .tv-party")).toContainText("Home");
   // End shift moves the clock, and the view follows
   const before = await view.locator(".tv-shift").textContent();
   await view.getByRole("button", { name: /^End Dawn/ }).click();
@@ -109,6 +110,8 @@ test("a player's note goes on the clock's shift, or at the end of an Encyclopedi
 
   await pp.goto(`index.html#/c/${cid}/table`);
   const view = pp.locator(".table-view");
+  // Search and Encyclopedia add are in the floating bar
+  await view.locator(".tv-bar").getByRole("button", { name: "🔍 Search" }).click();
   await view.getByLabel("Look up a name in the Encyclopedia").fill("coach");
   await expect(view.locator(".tv-entry h3")).toContainText("Coaching Inn");
   await expect(view.locator(".tv-entry")).toContainText("A walled inn on the road.");
@@ -124,6 +127,7 @@ test("a player's note goes on the clock's shift, or at the end of an Encyclopedi
   expect(notes).toContain("Sore feet");
 
   // an entry note, from the looked-up entry's Add a note
+  await view.locator(".tv-bar").getByRole("button", { name: "🔍 Search" }).click();
   await view.getByLabel("Look up a name in the Encyclopedia").fill("coach");
   await view.getByRole("button", { name: "📝 Add a note" }).click();
   await expect(view.getByLabel("Entry")).toHaveValue("Coaching Inn");
@@ -363,4 +367,58 @@ test("the GM makes a panel link from At the Table and copies it once", async ({ 
   await page.locator(".tv-links .tv-link").getByRole("button", { name: "Revoke" }).click();
   await page.locator("dialog.kit-dialog").getByRole("button", { name: "Revoke" }).click();
   await expect(page.locator(".tv-links")).toContainText("No panel links yet");
+});
+
+test("the block up top, the reminders badge, the visibility pill, the session chips, the floating bar and back to the top", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Rook");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Layout ${gm.id}`);
+  expect((await api(page, "reminder_save", { title: "The ransom is due", due_shift: 9, audience: "gm" }, cid)).status).toBe(200);
+  expect((await api(page, "set_time", { current_shift: 9 }, cid)).status).toBe(200);
+  for (let k = 0; k < 4; k++) expect((await api(page, "session_save", { first_shift: 9, last_shift: 9 }, cid)).status).toBe(200);
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.goto(`index.html#/c/${cid}`);
+  const remDialog = page.locator("dialog.reminder-dialog");
+  await expect(remDialog).toBeVisible();
+  await remDialog.getByRole("button", { name: "Remind me later" }).click();
+  const view = page.locator(".table-view");
+  // the block: date, shift and weather, and the badge that lists the reminders
+  const top = view.locator(".tv-summary");
+  await expect(top.locator(".tv-shift")).toContainText("Midday");
+  await expect(top.locator(".wx")).toBeVisible();
+  await top.getByText("🔔 1 reminder").click();
+  await expect(top.locator(".tv-rem-pop")).toContainText("The ransom is due");
+  await page.keyboard.press("Escape");
+  await expect(top.locator(".tv-rem-pop")).toBeHidden();
+  // the session chips: the latest two, then +2 more
+  const now = view.locator(".tv-now");
+  await expect(now.locator(".sess-chips > .sess-chip")).toHaveText(["Session 3", "Session 4"]);
+  await now.getByText("+2 more").click();
+  await expect(now.locator(".sess-more-pop .sess-chip")).toHaveText(["Session 1", "Session 2"]);
+  // the visibility pill opens its choice, and a pick saves and shows on the pill
+  await now.getByLabel("Change the visibility for Midday").click();
+  await now.getByLabel("Visibility for Midday", { exact: true }).selectOption("1");
+  await expect(now.locator(".vis-pick > summary .vis")).toContainText("1");
+  await expect.poll(() => sql(`SELECT visibility_override FROM shifts WHERE campaign_id=${cid}`).trim()).toBe("1");
+  await expect(now.locator(".vis-pop")).toBeHidden();
+  // the actions sit beside the heading, half the box's width
+  const [pick, act] = await Promise.all([now.getByLabel("Add an action").boundingBox(), now.getByLabel("What the party does this Midday").boundingBox()]);
+  expect(Math.abs(pick.width - act.width / 2)).toBeLessThan(30);
+  expect(pick.y).toBeLessThan(act.y);
+  // the floating bar stays on screen as the page scrolls, and ↑ goes back to the top
+  const bar = view.locator(".tv-bar");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(bar.getByRole("button", { name: /^End Midday/ })).toBeInViewport();
+  await expect(bar.getByRole("button", { name: "Pass time…" })).toBeInViewport();
+  await page.getByRole("button", { name: "Back to the top" }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.getByRole("button", { name: "Back to the top" })).not.toHaveClass(/show/);
+  // Encyclopedia add opens over the bar
+  await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
+  await expect(view.getByLabel("Entry", { exact: true })).toBeFocused();
+  await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
+  await expect(view.locator(".tv-bar-pop")).toBeHidden();
+  expectNoErrors(errors);
 });

@@ -155,6 +155,20 @@
   setInterval(() => (PANEL ? panelPoll() : checkForChanges()), CHANGE_POLL_MS);
   document.addEventListener('visibilitychange', () => (PANEL ? panelPoll() : checkForChanges()));
 
+  // ↑ back to the top of any page, once it has scrolled a screen's worth
+  if (!PANEL) {
+    const toTop = el('button', { type: 'button', class: 'to-top', 'aria-label': 'Back to the top', 'data-tip': 'Back to the top of the page' }, '↑');
+    toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+    const showTop = () => toTop.classList.toggle('show', window.scrollY > Math.min(600, window.innerHeight * 0.8));
+    window.addEventListener('scroll', showTop, { passive: true });
+    document.body.append(toTop);
+  }
+
+  // a shift's visibility choice (and other small pop-ups that are <details>) shuts when a click lands elsewhere
+  document.addEventListener('click', e => document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]')
+    .forEach(x => { if (!x.contains(e.target)) x.open = false; }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]').forEach(x => { x.open = false; }); });
+
   // ------------------------------------------------------------ reminders
   // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
   // for everyone it is meant for, until each of them dismisses it. Every page load in a campaign checks, and so
@@ -1797,7 +1811,8 @@
   /** What was written on the shifts a session ran over (activities, players' notes, GM notes), as notes for Build draft:
    * at most a month of days from its start, so a session left open for ages doesn't load a year of days. */
   async function sessionShiftNotes(s) {
-    const n = spd(), from = sessionStart(s), to = Math.min(sessionEnd(s), from + 31 * n - 1);
+    const n = spd(), from = sessionStart(s), to = s.undated ? from - 1 : Math.min(sessionEnd(s), from + 31 * n - 1);
+    // an undated session (one imported without its in-game dates) has no run, only the shifts given it one at a time;
     // the shifts it takes in outside its run (a flashback, a split party's other half) too, each in its place in time
     const extra = (s.extra_shifts || []).map(Number).filter(a => a < from || a > to).slice(0, 4 * n);
     const ds = new Set(extra.map(a => Math.floor(a / n)));
@@ -1853,7 +1868,12 @@
    * session made for it. */
   function shiftSessions(abs, sessions, after) {
     const mine = (sessions || []).filter(x => (x.slots || []).includes(E.mod(abs, spd())));
-    const chips = mine.map(x => el('a', { class: 'chip sess-chip', href: `#/c/${S.camp.id}/sessions/${x.id}`, 'data-tip': `This ${word()} is part of ${sessionName(x)}` }, `Session ${x.number}`));
+    const chip = x => el('a', { class: 'chip sess-chip', href: `#/c/${S.camp.id}/sessions/${x.id}`, 'data-tip': `This ${word()} is part of ${sessionName(x)}` }, `Session ${x.number}`);
+    // the latest two show; the rest fold behind "+N more", so a shift in many sessions doesn't take the box over
+    const latest = [...mine].sort((a, b) => b.number - a.number), shown = latest.slice(0, 2), rest = latest.slice(2);
+    const chips = [...shown.reverse().map(chip), rest.length ? el('details', { class: 'sess-more-chips' },
+      el('summary', { class: 'chip', 'data-tip': `The other sessions this ${word()} is part of` }, `+${rest.length} more`),
+      el('div', { class: 'sess-more-pop' }, rest.reverse().map(chip))) : null].filter(Boolean);
     const add = isGM() && !PANEL && !S.viewAs ? btn(mine.length ? '+' : '+ Session…', () => addShiftToSession(abs, mine, after), 'link small',
       `Put this ${word()} in a session: one already played (as a flashback or a split party's other half) or a new one`) : null;
     if (add && mine.length) add.setAttribute('aria-label', 'Add to another session');
@@ -2280,10 +2300,11 @@
     const card = el('div', { class: 'card shiftcard' + (isNow ? ' now' : '') },
       el('div', { class: 'row spread' }, shiftTitle(d, i, isNow), visPill(v)),
       PANEL ? null : shiftSessions(d * spd() + i, opt.sessions, opt.after),
-      sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
+      // At the Table's big box leaves the weather, ground and light to the block over it
+      ...(opt.big ? [] : [sw ? el('div', { class: 'small' }, weatherText(sw, `Weather this ${names[i]}, worked out from the day's forecast`))
         : hiddenWx ? el('div', { class: 'small muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet') : null,
       ground ? el('div', { class: 'small' }, groundText(ground, d)) : null,
-      el('small', { class: 'muted', 'data-tip': `How the visibility score was worked out: base light for the ${word()}, then moonlight, weather and terrain` }, v.parts.join(' · ')));
+      el('small', { class: 'muted', 'data-tip': `How the visibility score was worked out: base light for the ${word()}, then moonlight, weather and terrain` }, v.parts.join(' · '))]));
     // In hours mode a day has many cards, so an hour with nothing recorded starts folded to its heading.
     const fold = c => {
       if (opt.big || !hourMode() || isNow || s.activity || s.gm_notes || (s.visibility_override ?? '') !== '' || notes.length) return c;
@@ -2297,9 +2318,9 @@
     }
     // The GM's editor folds to a summary of what's recorded (the shift that's now starts open), and each box saves as you
     // leave it, with Saved ✓ beside the summary: no Save button.
-    const act = el('textarea', { rows: 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
+    const act = el('textarea', { rows: opt.big ? 6 : 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
     const hint = el('small', { class: 'muted' });
-    const gmn = el('textarea', { rows: 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
+    const gmn = el('textarea', { rows: opt.big ? 3 : 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
     const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
     ov.setAttribute('aria-label', `Visibility for ${names[i]}`);
     const status = el('small', { class: 'shift-status', role: 'status' });
@@ -2337,13 +2358,21 @@
       save();
     });
     for (const x of [act, gmn, ov]) x.addEventListener('change', save);
+    // the visibility changes from its pill in the card's heading: a click opens the choice under it
+    const pill = card.querySelector('.vis');
+    const visPick = el('details', { class: 'vis-pick' });
+    pill.replaceWith(visPick);
+    visPick.append(el('summary', { 'aria-label': `Change the visibility for ${names[i]}` }, pill),
+      el('div', { class: 'vis-pop surface-float' }, el('label', { class: 'inline' }, 'Visibility ', ov),
+        tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)));
+    visPick.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
+    ov.addEventListener('change', () => { visPick.open = false; });
+    // the big box: the writing is the main thing, with the actions a half-width pick beside its heading
     const editor = el('details', { class: 'shift-edit', open: isNow || opt.big || null },
-      el('summary', { 'data-tip': `Open to write what the party does, GM-only notes and the visibility. Each box saves as you leave it` },
+      el('summary', { 'data-tip': `Open to write what the party does and GM-only notes. Each box saves as you leave it` },
         preview, el('span', { class: 'shift-edit-label' }, el('span', { class: 'when-closed' }, '✎ Edit'), el('span', { class: 'when-open' }, 'Done'))),
-      opt.big ? el('span', { class: 'lbl' }, 'What the party does') : null, pick, act, hint,
-      opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '',
-      el('div', { class: 'row' }, el('label', { class: 'inline' }, 'Visibility ', ov,
-        tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`))));
+      ...(opt.big ? [el('div', { class: 'tv-act-head' }, el('span', { class: 'lbl' }, 'What the party does'), pick)] : [pick]), act, hint,
+      opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '');
     editor.addEventListener('focusout', e => { if (!editor.contains(e.relatedTarget)) { save(); offer(); } });
     editor.addEventListener('toggle', () => { if (!editor.open) { save(); offer(); } });
     card.append(editor, status, shiftNotes(d, i, notes, opt.after));
@@ -2839,7 +2868,7 @@
         y += 20;
       };
       if (tl.bands.sessions && sessions.length) {
-        bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null).map(x => {
+        bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null && !x.undated).map(x => {
           const a = Number(x.first_day), b = (x.last_day === null ? today() : Number(x.last_day)) + 1;
           if (X(b) < 0 || X(a) > W) return null;
           const label = `Session ${x.number}${x.title ? `: ${x.title}` : ''}`;
@@ -5454,26 +5483,25 @@
     // where the party is: the main group (else the first), its region and the pin nearest its marker on its map
     const mainGroup = groups.find(x => x.is_main) || groups[0];
     let partyMap = null, partyData = null;
+    // its parts: the region, the pin it's near, a link to its map, a small picture of the map around it, the other groups
     const party = await (async () => {
-      const g = mainGroup;
-      const reg = (g && regionById(g.region_id)) || region;
-      const lines = [];
+      const g = mainGroup, out = { region: ((g && regionById(g.region_id)) || region)?.name || null, near: null, link: null, mini: null,
+        groups: groups.length > 1 ? `${groups.length} groups: ${groups.map(x => x.name).join(', ')}` : null };
       if (g?.map_id) {
         try {
           const m = await api('map', { query: { cid, id: g.map_id } });
-          const reach = Math.max(m.map.width || 0, m.map.height || 0) * 0.03 + 10;
+          const W = Number(m.map.width) || 0, H = Number(m.map.height) || 0, reach = Math.max(W, H) * 0.03 + 10;
           const pin = MapGeo.nearestPin(m.pins, { x: g.x, y: g.y }, reach);
           partyMap = m.map; partyData = m;
-          lines.push(el('div', {}, '📍 ', pin ? `Near ${MapGeo.pinName(pin)}` : 'On the map'));
-          // a small picture of the map around the party, with the pins near it
-          const span = Math.max(Number(m.map.width) || 0, Number(m.map.height) || 0) * 0.3;
-          if (!PANEL) lines.push(miniMap(m.map, mapWindowAt(m.map, g, span), { pins: m.pins, flag: g, href: `#/c/${cid}/maps/${g.map_id}`, tipText: `Open ${m.map.name}` }));
-          lines.push(el('div', { class: 'small' }, outLink(`#/c/${cid}/maps/${g.map_id}`, m.map.name, 'Open the map')));
+          out.near = pin ? `Near ${MapGeo.pinName(pin)}` : 'On the map';
+          out.link = outLink(`#/c/${cid}/maps/${g.map_id}`, m.map.name, 'Open the map');
+          // a small picture of the map around the party, wider than tall, with the pins near it
+          const span = Math.max(W, H) * 0.3, w = Math.min(span, W), h = Math.min(span * 0.62, H);
+          const win = { x: Math.max(0, Math.min(W - w, g.x - w / 2)), y: Math.max(0, Math.min(H - h, g.y - h / 2)), w, h };
+          if (!PANEL) out.mini = miniMap(m.map, win, { pins: m.pins, flag: g, href: `#/c/${cid}/maps/${g.map_id}`, tipText: `Open ${m.map.name}` });
         } catch { /* a map this member can't open: the region is enough */ }
       }
-      if (reg) lines.unshift(el('div', { class: 'big' }, reg.name));
-      if (groups.length > 1) lines.push(el('div', { class: 'small muted' }, `${groups.length} groups: ${groups.map(x => x.name).join(', ')}`));
-      return lines.length ? lines : [el('div', { class: 'muted' }, 'Not set')];
+      return out;
     })();
 
     const view = el('div', { class: 'table-view' + (PANEL ? ' in-panel' : ' tv-wide') });
@@ -5483,9 +5511,11 @@
       el('div', { class: 'tv-date' }, E.fmtDate(c, d0)),
       el('div', { class: 'tv-shift' }, hourMode() ? `${names[nsh]}` : `${names[nsh]} · ${n === 2 ? (nsh ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][nsh]} shift of 4`}`),
       E.holidaysOn(c, S.holidays, d0).map(holidayChip));
-    const moons = E.moons(c, d0, region);
+    const moons = E.moons(c, d, region);
     const moonCard = card('Moons', moons.length ? el('div', { class: 'tv-moons' }, moons.map(m => el('div', {}, moonGlyph(m), ` ${m.name}: ${m.label}`))) : el('div', { class: 'muted' }, 'None'));
-    const partyCard = el('div', { class: 'tv-card tv-party' }, el('b', {}, 'Party'), ...party);
+    const partyCard = el('div', { class: 'tv-card tv-party' }, el('b', {}, 'Party'), ...(party.region || party.near ? clean([
+      party.region ? el('div', { class: 'big' }, party.region) : null, party.near ? el('div', {}, '📍 ', party.near) : null,
+      party.link ? el('div', { class: 'small' }, party.link) : null, party.groups ? el('div', { class: 'small muted' }, party.groups) : null]) : [el('div', { class: 'muted' }, 'Not set')]));
 
     // the big box: the shift as its card on the day page shows it, made large, its editor open
     const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions })
@@ -5516,19 +5546,50 @@
       big.prepend(el('div', { class: 'tv-peek row' }, el('span', {}, `Looking at ${E.fmtShift(c, at)}. The clock is on ${names[nsh]}.`),
         btn('Back to now', () => { tablePeek = null; viewTable(); }, 'small primary', `Back to the ${word()} the campaign clock is on`)));
     }
-    // its events and reminders, and + New event set to it
+    // its events, and + New event set to it (its reminders are behind the badge in the block over it)
     if (cur) {
-      const evs = cur.x.r.events.filter(e => eventCovers(e, cur.d, cur.i)), rems = dayReminders(cur.d).filter(x => E.mod(x.due_shift, n) === cur.i);
-      const here = el('div', { class: 'tv-here' }, el('span', { class: 'lbl' }, `Events and reminders this ${word()}`),
-        ...evs.map(e => eventView(e, cur.d)), ...rems.map(x => reminderView(x, cur.d)),
-        evs.length || rems.length ? null : el('p', { class: 'muted small' }, `Nothing else on this ${word()}.`));
+      const evs = cur.x.r.events.filter(e => eventCovers(e, cur.d, cur.i));
+      const here = el('div', { class: 'tv-here' }, el('span', { class: 'lbl' }, `Events this ${word()}`),
+        ...evs.map(e => eventView(e, cur.d)), evs.length ? null : el('p', { class: 'muted small' }, `No events on this ${word()}.`));
       const canAdd = (isGM() || settings().players_can_add_events) && !S.viewAs;
       if (canAdd) here.append(el('div', { class: 'row' }, btn('+ New event', ev => { ev.target.closest('.row').replaceWith(eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
           { pinAt: partyMap && mainGroup?.x !== null && mainGroup?.x !== undefined ? { map_id: partyMap.id, map_name: partyMap.name, x: mainGroup.x, y: mainGroup.y } : null })); }, 'small',
         `Log something that happens on this ${word()}`)));
       big.append(here);
     }
-    // End shift moves the clock on one; Pass time… opens a dialog for longer jumps, rests and travel
+
+    // the block over the big box, one card: the date and shift, its weather, where the party is, the moons, a badge for
+    // the reminders, a small map, and the day's shifts with their weather along the foot
+    const ai = E.mod(at, n);
+    const remList = [...new Map([...(S.reminders || []).filter(x => x.due && !x.dismissed), ...(S.reminders || []).filter(x => x.due_shift === at)]
+      .sort((a, b) => a.due_shift - b.due_shift).map(x => [x.id, x])).values()];
+    const remBadge = remList.length ? el('details', { class: 'tv-rem' },
+      el('summary', { class: 'chip tv-rem-chip' + (remList.some(x => x.due && !x.dismissed) ? ' due' : ''), 'data-tip': `Reminders on this ${word()}, and any the clock has reached that you haven't dismissed. Click to read them` },
+        `🔔 ${remList.length} reminder${remList.length === 1 ? '' : 's'}`),
+      el('div', { class: 'tv-rem-pop surface-float' }, remList.map(x => reminderView(x, Math.floor(x.due_shift / n))))) : null;
+    const wx = cur?.sw ? weatherText(cur.sw, `Weather this ${names[ai]}, worked out from the day's forecast`)
+      : el('span', { class: 'muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet');
+    const ground = cur?.ground ? groundText(cur.ground, cur.d) : null;
+    const moonLine = moons.length ? el('span', { class: 'tv-fact tv-moon-line' }, moons.map(m => el('span', { 'data-tip': `${m.name}: ${m.label}` }, moonGlyph(m), ` ${m.name} ${m.label}`))) : null;
+    const summary = el('section', { class: 'tv-summary', 'aria-label': `This ${word()}` },
+      el('div', { class: 'tv-sum-main' },
+        el('div', { class: 'tv-sum-top' },
+          el('div', { class: 'tv-head' },
+            el('div', { class: 'tv-date' }, E.fmtDate(c, d)),
+            el('div', { class: 'tv-shift' }, hourMode() ? names[ai] : `${names[ai]} · ${n === 2 ? (ai ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][ai]} shift of 4`}`,
+              ...E.holidaysOn(c, S.holidays, d).map(holidayChip))),
+          remBadge),
+        el('div', { class: 'tv-facts' },
+          el('span', { class: 'tv-fact tv-wx' }, wx, ground ? el('span', { class: 'small' }, ground) : null),
+          el('span', { class: 'tv-fact tv-party' }, '📍 ', clean([party.region ? el('b', {}, party.region) : null, party.near, party.link, party.groups
+            ? el('span', { class: 'muted' }, party.groups) : null]).flatMap((x, k) => k ? [' · ', x] : [x]),
+            party.region || party.near ? null : el('span', { class: 'muted' }, 'Party not placed')),
+          moonLine)),
+      party.mini ? el('div', { class: 'tv-sum-map tv-party' }, party.mini) : null,
+      cur ? dayStrip(cur.d, cur.x.sws) : null);
+
+    // the floating bar: End and Pass time for the GM on the clock's shift, and the Encyclopedia for everyone, in a pop-up over it
+    const tools = [];
     if (isGM() && !S.viewAs && at === now) {
       const end = btn(`End ${names[nsh]} ▶ on to ${names[E.mod(now + 1, n)]}`, null, 'primary', `Move the campaign clock on one ${word()}, rolling the weather for a new day. Everyone's view catches up`);
       end.addEventListener('click', busy(end, async () => {
@@ -5539,8 +5600,22 @@
       }));
       const more = btn('Pass time…', async () => { if (await passTimeDialog()) route(); }, '',
         'Pass more time at once: skip ahead by an amount or to a date with an activity for the time passed, or start a rest, downtime or a trip');
-      big.append(el('div', { class: 'row tv-actions' }, end, more));
+      tools.push(end, more, el('span', { class: 'tv-bar-gap', 'aria-hidden': 'true' }));
     }
+    const pop = el('div', { class: 'tv-bar-pop surface-float', hidden: true });
+    const lookup = tableLookup(view, () => openPop('note')), note = tableNote();
+    pop.append(lookup, note);
+    const lookBtn = btn('🔍 Search', () => openPop(pop.dataset.on === 'look' ? null : 'look'), '', 'Look a name up in the Encyclopedia');
+    const noteBtn = btn('📝 Encyclopedia add', () => openPop(pop.dataset.on === 'note' ? null : 'note'), '', 'Add a note to the end of an Encyclopedia entry');
+    function openPop(which) {
+      pop.hidden = !which; pop.dataset.on = which || '';
+      lookup.hidden = which !== 'look'; note.hidden = which !== 'note';
+      lookBtn.setAttribute('aria-pressed', String(which === 'look')); noteBtn.setAttribute('aria-pressed', String(which === 'note'));
+      if (which) (which === 'look' ? lookup.querySelector('input') : note.querySelector('input'))?.focus();
+    }
+    openPop(null);
+    pop.addEventListener('keydown', e => { if (e.key === 'Escape') { openPop(null); } });
+    const dock = el('div', { class: 'tv-dock' }, pop, el('div', { class: 'tv-bar surface-float', role: 'toolbar', 'aria-label': 'At the Table tools' }, ...tools, lookBtn, noteBtn));
 
     // the shift before (in hours mode the last hour with something written, back into yesterday) and the one after
     const written = y => !!(y && (y.s.activity || y.s.gm_notes || y.notes.length));
@@ -5576,12 +5651,10 @@
     };
 
     const today0 = days.get(d0);
-    view.append(head, el('div', { class: 'tv-grid' }, partyCard, moonCard),
-      cur ? dayStrip(cur.d, cur.x.sws) : null,
+    view.append(summary,
       el('div', { class: 'tv-stage' }, side(prevAbs, true), big, side(at + 1, false)),
-      tableLookup(view), tableNote(),
       ...(today0 ? dayBoxes(today0, true) : []),
-      await tableLinksBox());
+      await tableLinksBox(), dock);
     mount(...campaignHeader('table'), view);
   }
   async function loadTableEntries() {
@@ -5589,7 +5662,7 @@
     return tableEntries;
   }
   /** Look an entry up by name or alias and read it here, with Add a note and a link into the Encyclopedia. */
-  function tableLookup(view) {
+  function tableLookup(view, onNote) {
     const input = el('input', { type: 'search', placeholder: 'Look up a name in the Encyclopedia', 'aria-label': 'Look up a name in the Encyclopedia', autocomplete: 'off' });
     const out = el('div', { class: 'tv-lookup' });
     const show = async () => {
@@ -5606,7 +5679,7 @@
         el('h3', {}, full.is_secret ? secretTag() : null, ' ', full.name, cat ? el('span', { class: 'chip tag' }, `${cat[2]} ${cat[1]}`) : null),
         full.notes ? RichText.view(full.notes, 'html', 'tv-notes') : el('p', { class: 'muted small' }, 'Nothing written about it yet'),
         el('div', { class: 'row' },
-          btn('📝 Add a note', () => { const n = view.querySelector('.tv-note'); n?.setEntry(full); n?.scrollIntoView({ block: 'nearest' }); n?.querySelector('textarea')?.focus(); }, 'small'),
+          btn('📝 Add a note', () => { onNote?.(); const n = view.querySelector('.tv-note'); n?.setEntry(full); n?.scrollIntoView({ block: 'nearest' }); n?.querySelector('textarea')?.focus(); }, 'small'),
           el('a', { class: 'button small', href: (PANEL ? 'index.html' : '') + `#/c/${S.camp.id}/encyclopedia/${full.id}`, target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null }, PANEL ? 'Open in Chronicle ↗' : 'Open the entry')),
         hits.length > 1 ? el('p', { class: 'small muted' }, `Also: ${hits.slice(1, 6).map(e => e.name).join(', ')}`) : null));
     };

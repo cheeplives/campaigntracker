@@ -108,7 +108,7 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   // At the Table: the hour the clock is on in the big box, the day's 24 hours in a row over it, and End moves on an hour
   await page.goto(`index.html#/c/${cid}/table`);
   await expect(page.locator(".tv-now h4")).toContainText("07:00");
-  await expect(page.locator(".tv-wide > .dh-strip .dh-step")).toHaveCount(24);
+  await expect(page.locator(".tv-summary > .dh-strip .dh-step")).toHaveCount(24);
   await expect(page.locator(".tv-side.next")).toContainText("08:00");
   await page.getByRole("button", { name: /^End 07:00 ▶ on to 08:00/ }).click();
   await page.getByRole("button", { name: "Not now" }).click();

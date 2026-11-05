@@ -499,6 +499,7 @@ CREATE TABLE IF NOT EXISTS play_sessions (
   last_day BIGINT NULL,
   first_shift BIGINT NULL,                      -- the absolute shift it started on; NULL on sessions from before 027 (whole days)
   last_shift BIGINT NULL,                       -- the absolute shift it ended on; NULL while open, or from before 027
+  undated TINYINT(1) NOT NULL DEFAULT 0,        -- 1: no in-game dates (imported from Scabard); covers no shifts (029)
   summary MEDIUMTEXT,
   summary_format VARCHAR(8) NOT NULL DEFAULT 'html',
   rewards MEDIUMTEXT NULL,

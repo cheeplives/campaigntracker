@@ -16,7 +16,7 @@ test("the day page shows snow cover after a cold snap and mud after days of rain
   expect((await api(page, "days_save", { days: [...days(-3, 1, { type: "blizzard", temp: -8, wind: 3 }), ...days(2, 3, { type: "overcast", temp: -6, wind: 1 })] }, cid)).status).toBe(200);
   // At the Table's big box has the ground this shift
   await page.goto(`index.html#/c/${cid}/table`);
-  await expect(page.locator(".tv-now .ground")).toContainText(/snow/i);
+  await expect(page.locator(".tv-summary .ground")).toContainText(/snow/i);
   await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator(".kv")).toContainText("Ground now");
   await expect(page.locator(".kv .ground")).toContainText(/snow, \d+ cm/i);

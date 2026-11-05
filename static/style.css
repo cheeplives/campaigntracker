@@ -1624,6 +1624,11 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .sess-chips { gap: 4px; margin: 2px 0 4px; }
 .sess-chip { background: var(--accent); color: var(--on-accent); text-decoration: none; font-size: .72rem; }
 .sess-chip:hover { filter: brightness(1.1); }
+.sess-more-chips { position: relative; }
+.sess-more-chips > summary { list-style: none; cursor: pointer; font-size: .72rem; }
+.sess-more-chips > summary::-webkit-details-marker { display: none; }
+.sess-more-pop { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; display: flex; flex-wrap: wrap; gap: 4px; width: max-content; max-width: min(320px, 80vw);
+  max-height: 200px; overflow: auto; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
 .sess-extras-list { margin: 0 0 6px; }
 /* a still picture of part of a map (At the Table's party card, a session's places): its picture cropped to a window,
    with pins as dots and the party's flag */
@@ -1637,3 +1642,54 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .sess-place-list { gap: 4px 12px; }
 .mini-map .mm-label { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); white-space: nowrap; font: 600 .75rem var(--body, inherit); color: var(--text);
   background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 0 4px; border-radius: 3px; }
+
+/* ---- At the Table: one block over the big box (date, shift, weather, party, moons, reminders, a small map, the day's shifts) */
+.tv-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.tv-summary > .dh-strip { grid-column: 1 / -1; max-width: none; margin-top: 2px; flex: none; }
+.tv-sum-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tv-sum-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
+.tv-summary .tv-date { font-size: clamp(20px, 3vw, 26px); }
+.tv-summary .tv-shift { font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.tv-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; }
+.tv-fact { display: inline-flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
+.tv-wx .wx { font-weight: 600; }
+.tv-moon-line { color: var(--dim); font-size: .9rem; }
+.tv-sum-map .mini-map { width: 170px; max-width: 170px; margin: 0; }
+.tv-rem { position: relative; }
+.tv-rem > summary { list-style: none; cursor: pointer; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-size: .78rem; padding: 3px 9px; }
+.tv-rem > summary::-webkit-details-marker { display: none; }
+.tv-rem > summary.due { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.tv-rem-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(420px, 86vw); max-height: 60vh; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
+/* the big box: the writing first and large, the action pick half width beside its heading */
+.tv-act-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
+.tv-act-head .lbl { margin: 0 !important; }
+.tv-act-head .actpick { width: 50%; min-width: 0; }
+.tv-now .shift-edit textarea:first-of-type { min-height: 8em; }
+/* a shift's visibility pill opens its choice */
+.vis-pick { position: relative; display: inline-block; }
+.vis-pick > summary { list-style: none; cursor: pointer; display: inline-block; }
+.vis-pick > summary::-webkit-details-marker { display: none; }
+.vis-pick > summary .vis::after { content: ' ▾'; font-size: .8em; }
+.vis-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; display: flex; gap: 6px; align-items: center; padding: 8px 10px; white-space: nowrap; background: var(--panel); color: var(--text); font-size: .9rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* the session chips past the latest two */
+.sess-more-chips > summary.chip { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+/* the floating bar at the foot of the screen */
+.table-view.tv-wide { padding-bottom: 90px; }
+.tv-dock { position: fixed; z-index: 50; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 110px); }
+.tv-bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px; }
+.tv-bar > button { margin: 0; white-space: nowrap; }
+.tv-bar > button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.tv-bar-gap { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
+.tv-bar-pop { width: min(560px, calc(100vw - 110px)); max-height: 60vh; overflow: auto; padding: 12px; background: var(--panel); }
+.tv-bar-pop[hidden], .tv-bar-pop > [hidden] { display: none; }
+@media (max-width: 700px) {
+  .tv-summary { grid-template-columns: 1fr; }
+  .tv-sum-map .mini-map { width: 100%; max-width: 260px; }
+  .tv-act-head .actpick { width: 60%; }
+}
+/* back to the top, on any page once it has scrolled */
+.to-top { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1;
+  background: var(--accent); color: var(--on-accent); border: 0; box-shadow: 0 6px 18px -8px rgb(0 0 0 / .55); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.to-top.show { opacity: .9; pointer-events: auto; }
+.to-top.show:hover { opacity: 1; }
+@media print { .to-top, .tv-dock { display: none; } }
