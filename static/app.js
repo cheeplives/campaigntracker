@@ -109,6 +109,14 @@
     loadCampaign(S.camp.id, true).then(route, err => toast(err.message, true));
   }
 
+  // A reload or a close cuts off any request still on its way, and Safari rejects it as "TypeError: Load failed". The
+  // page is going, so nothing is lost and no one is there to tell: a request that fails that way while leaving isn't a fault.
+  let leaving = false;
+  addEventListener('beforeunload', () => { leaving = true; });
+  addEventListener('pagehide', () => { leaving = true; });
+  addEventListener('pageshow', () => { leaving = false; });   // back from the back-forward cache
+  addEventListener('unhandledrejection', e => { if (leaving && e.reason instanceof TypeError) e.preventDefault(); });
+
   // ------------------------------------------------------------ change notices
   // An open campaign page asks the server every so often whether a GM has changed the campaign
   // (api 'changed', which a GM's save bumps). If so it offers a Refresh in a banner; it never
