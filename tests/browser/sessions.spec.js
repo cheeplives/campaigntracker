@@ -184,9 +184,10 @@ test("a session's notes are one box: Enter makes a line, Tab indents, @ names, a
   await expect(notesCol(page).locator(".snote-help")).toContainText(">+1 dawn");
   await expect(notesCol(page).locator(".snote-help")).toContainText("GM-only paragraph");
 
-  // Current Day has no notes box, and a player gets no session until it is published
+  // Current Day has no notes box (a day's notes are on its calendar page), and a player gets no session until it is published
   await page.goto(`index.html#/c/${cid}`);
-  await expect(page.locator("[data-box=notes]")).toBeVisible();
+  await expect(page.locator("[data-box=shifts]")).toBeVisible();
+  await expect(page.locator("[data-box=notes]")).toHaveCount(0);
   await expect(page.locator("[data-box=session]")).toHaveCount(0);
   expect((await one(pp, cid, sid)).status).toBe(404);
   expectNoErrors(errors);
@@ -272,14 +273,14 @@ test("on a phone the ⇥ and ⇤ buttons indent", async ({ page, browser, isMobi
   await savedAs(page, cid, sid, "Top line\n  Under it");
 });
 
-test("Import to a session on Current Day adds the day's Public and Secret notes to a session's box, secrets under a $ line", async ({ page, browser }) => {
+test("Import to a session on a day's calendar page adds the day's Public and Secret notes to a session's box, secrets under a $ line", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid } = await gmAndPlayer(page, browser, "Notes import");
   const today = Math.floor((await api(page, "campaign", undefined, cid)).json.campaign.current_shift / 4);
   expect((await api(page, "day_update", { abs_day: today, notes_format: "html", gm_notes_format: "html",
     notes: "<p>Docked at Iapetus</p><ul><li>Hera called<ul><li>Harbormaster answered</li></ul></li></ul><aside>Essen is a spy</aside>",
     gm_notes: "<p>The seal is forged</p>" }, cid)).status).toBe(200);
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/${today}`);
   await page.getByRole("button", { name: "Import to a session…" }).click();
   const dlg = page.locator("dialog");
   await expect(dlg.getByLabel("Session to add the notes to")).toHaveValue("new");

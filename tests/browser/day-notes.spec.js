@@ -23,7 +23,7 @@ async function gmAndPlayer(page, browser, label) {
 test("the GM formats Public and Secret notes; players read only the Public ones", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Rich notes");
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const pub = page.locator(".notepanel.public .ql-editor"), sec = page.locator(".notepanel.secret .ql-editor");
   await expect(pub).toBeVisible();
 
@@ -65,7 +65,7 @@ test("the GM formats Public and Secret notes; players read only the Public ones"
 
   // The player sees the formatted Public notes, no editor and no Secret notes; the server never sends them.
   const perrors = watchErrors(pp);
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator("[data-box=notes] .richtext strong")).toHaveText("Gunther");
   await expect(pp.locator("[data-box=notes] .richtext td").first()).toHaveText("Rope");
   await expect(pp.locator("[data-box=notes] .ql-editor")).toHaveCount(0);
@@ -104,7 +104,7 @@ test("notes keep only the allowed formatting, on the server and in the browser",
   const { sql } = require("./helpers");
   sql(`UPDATE days SET notes='<p>Hi<img src=x onerror="window.pwned=1"><a href="javascript:window.pwned=1">x</a></p><script>window.pwned=1</script>' WHERE campaign_id=${cid} AND abs_day=2`);
   const perrors = watchErrors(pp);
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   const view = pp.locator("[data-box=notes] .richtext");
   await expect(view).toContainText("Hi");
   await expect(view.locator("img, script")).toHaveCount(0);
@@ -121,7 +121,7 @@ test("notes keep only the allowed formatting, on the server and in the browser",
 test("every box folds, and stays folded in this browser for this account", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Fold boxes");
-  await page.goto(`index.html#/c/${cid}`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   const shifts = page.locator("[data-box=shifts]");
   await expect(shifts.locator(".shiftcard").first()).toBeVisible();
   await shifts.locator(".daybox-toggle").click();
@@ -131,7 +131,7 @@ test("every box folds, and stays folded in this browser for this account", async
   await page.reload();
   await expect(page.locator("[data-box=shifts] .shiftcard").first()).toBeHidden();
   await expect(page.locator("[data-box=notes] .daybox-body")).toBeHidden();
-  await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
+  await expect(page.locator("[data-box=weather] .dayconditions")).toBeVisible();
   // Adding an event to a folded Events box unfolds it.
   await page.locator("[data-box=events]").locator(".daybox-toggle").click();
   await page.getByRole("button", { name: "+ New event" }).click();
@@ -141,7 +141,7 @@ test("every box folds, and stays folded in this browser for this account", async
   await page.reload();
   await expect(page.locator("[data-box=shifts] .shiftcard").first()).toBeVisible();
   // Another account keeps its own boxes.
-  await pp.goto(`index.html#/c/${cid}`);
+  await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator("[data-box=notes] .daybox-body")).toBeVisible();
   expectNoErrors(errors);
 });

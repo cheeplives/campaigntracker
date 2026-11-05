@@ -1496,6 +1496,7 @@
       el('div', { class: 'kv' },
         el('div', {}, el('span', { class: 'lbl' }, 'Season', tip('From the calendar\'s season dates, flipped for regions in the other hemisphere. The season picks which weather odds apply.')), sea.name || '—'),
         el('div', {}, el('span', { class: 'lbl' }, 'Region'), region ? el('span', { 'data-tip': regionSummary(region) }, region.name) : '—'),
+        (row.locations || '').trim() ? el('div', { class: 'notes-locs' }, el('span', { class: 'lbl' }, 'Locations visited', tip(LOC_TIP)), el('div', { class: 'pre' }, linked(row.locations))) : null,
         el('div', {}, el('span', { class: 'lbl' }, w?.partial ? 'Weather now' : 'Forecast', tip(w?.partial ? SO_FAR_TIP : FORECAST_TIP)), weatherText(w)),
         groundNow ? el('div', {}, el('span', { class: 'lbl' }, d === today() ? 'Ground now' : 'Ground at day\'s end',
           tip('Snow lying on the ground, or how wet or frozen it is, from the weather of the days before. Each shift card shows it as the day goes on')), groundText(groundNow, d)) : null,
@@ -1528,7 +1529,8 @@
     mount(...campaignHeader(current ? 'today' : 'calendar'), nav,
       dayBox('weather', 'Weather', { summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, current ? dayHero(d, region, w, sws, shifts, groundNow) : null, overview),
       dayBox('shifts', `${Word()}s`, { tip: shiftTip() }, shiftCards),
-      notesBox(d, row),
+      // The Current Day tab keeps to the day as it runs; the day's Public and Secret notes are on its calendar page.
+      current ? null : notesBox(d, row),
       evBox, remBox);
   }
 
@@ -1568,36 +1570,33 @@
     return box.querySelector('.daybox-body');
   }
 
-  /** The Notes box: the places the party went, Public notes everyone in the campaign reads and Secret notes only GMs
+  const LOC_TIP = 'The towns, sites and buildings the party went to this day. Players can see this';
+  /** The Notes box, on a day's calendar page: Public notes everyone in the campaign reads and Secret notes only GMs
    * see. The GM writes both notes in word-processor editors; players read the Public ones. */
   function notesBox(d, row) {
     const PUBLIC_TIP = 'Everyone in the campaign can read these. Only GMs can change them';
     const SECRET_TIP = 'Only GMs ever see these. The server never sends them to players';
-    const LOC_TIP = 'The towns, sites and buildings the party went to this day. Players can see this';
     if (!isGM()) {
       return dayBox('notes', 'Notes', {},
-        row.locations ? el('div', { class: 'notes-locs' }, el('span', { class: 'lbl' }, 'Locations visited', tip(LOC_TIP)), el('div', { class: 'pre' }, linked(row.locations))) : null,
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)),
           (row.notes || '').trim() ? linkedNote(row.notes, row.notes_format) : el('p', { class: 'muted' }, 'No notes for this day yet.')));
     }
-    const locs = el('textarea', { name: 'locations', rows: 1, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     const pub = RichText.editor({ text: row.notes, format: row.notes_format, label: 'Public notes', placeholder: 'What happened today, for everyone to read', secret: true, mentions: encMentions() });
     const sec = RichText.editor({ text: row.gm_notes, format: row.gm_notes_format, label: 'Secret notes', placeholder: 'Secrets, plans and reminders for GMs only', mentions: encMentions() });
-    const save = btn('Save notes', null, 'primary small', 'Save the locations and both notes');
+    const save = btn('Save notes', null, 'primary small', 'Save both notes');
     save.addEventListener('click', busy(save, async () => {
       const p = pub.value(), g = sec.value();
       // version: the copy opened here, so a co-GM's save since isn't overwritten (refused, with a message to reload)
-      await post('day_update', { abs_day: d, version: row.version || 0, notes: p.text, notes_format: p.format, gm_notes: g.text, gm_notes_format: g.format, locations: locs.value }, S.camp.id);
+      await post('day_update', { abs_day: d, version: row.version || 0, notes: p.text, notes_format: p.format, gm_notes: g.text, gm_notes_format: g.format }, S.camp.id);
       toast('Notes saved'); route();
-      offerNouns([{ kind: 'locations', text: locs.value, label: 'Locations visited' }, { text: p.text, format: p.format, label: 'Public notes' },
+      offerNouns([{ text: p.text, format: p.format, label: 'Public notes' },
         { text: g.text, format: g.format, secret: true, label: 'Secret notes' }]);
     }));
     return dayBox('notes', 'Notes', {},
-      field('Locations visited', locs, null, LOC_TIP),
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
-      mentionRow(row.locations, [row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
+      mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
       el('div', { class: 'row' }, save, btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
         'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
@@ -1915,12 +1914,15 @@
     const tVal = w && typeof w.temp === 'number' ? E.toTempUnit(w.temp, tUnit, 1) : '';
     const temp = el('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, unitSystem())})`]), w?.wind || 0, { name: 'wind' });
+    const locs = el('textarea', { name: 'locations', rows: 1, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
-        field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+        el('div', {},
+          field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
+          field('Locations visited', locs, null, LOC_TIP)),
         field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           `Set the day's weather by hand. Rain, fog, snow and the like lower visibility; see the ${word()} cards below for the exact effect.`)),
-      el('div', { class: 'row' }, el('button', { class: 'primary small', 'data-tip': 'Save the region and weather. Notes save from the Notes box' }, 'Save day'),
+      el('div', { class: 'row' }, el('button', { class: 'primary small', 'data-tip': 'Save the region, locations visited and weather' }, 'Save day'),
         tipped(btn('🎲 Re-roll weather', async () => {
           let rid;
           try { rid = await regPick.resolve(); } catch (err) { return toast(err.message, true); }
@@ -1942,9 +1944,12 @@
         if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
         weather = withShiftWx(d, regionById(rid) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
       }
+      // Locations go only when changed: saving them counts as a save of the day's notes (a co-GM's open copy goes stale).
+      const locChanged = locs.value !== (row.locations || '');
       try {
-        await post('day_update', { abs_day: d, region_id: rid || null, weather }, S.camp.id);
+        await post('day_update', { abs_day: d, region_id: rid || null, weather, ...(locChanged ? { locations: locs.value } : {}) }, S.camp.id);
         toast('Day saved'); route();
+        if (locChanged) offerNouns([{ kind: 'locations', text: locs.value, label: 'Locations visited' }]);
       } catch (err) { toast(err.message, true); }
     });
     return f;

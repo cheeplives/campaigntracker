@@ -21,16 +21,18 @@ test("a campaign opens on the Current Day tab, and the GM's browser saves today'
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
-  // The boxes come in order: Weather, Notes, Session notes (GMs), Shifts, Events, Reminders.
-  await expect(page.locator(".daybox")).toHaveCount(5);
-  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "shifts", "notes", "events", "reminders"]);
+  // The boxes come in order: Weather, Shifts, Events, Reminders. The day's notes are on its calendar page, not here.
+  await expect(page.locator(".daybox")).toHaveCount(4);
+  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["weather", "shifts", "events", "reminders"]);
   await expect(page.locator("[data-box=weather] .dayhero")).toBeVisible();
   // The banner shows the current shift, so the conditions list under it leaves out its own Now line.
   await expect(page.locator(".dayconditions .lbl", { hasText: /^Now$/ })).toHaveCount(0);
-  // Locations visited sits in the Notes box, saves with the notes and survives a weather re-roll.
+  // Locations visited sits under the Region for this day, saves with the day and survives a weather re-roll.
+  const regionTop = (await page.locator(".dayedit [name=region_id]").boundingBox()).y;
+  expect((await page.getByLabel("Locations visited").boundingBox()).y).toBeGreaterThan(regionTop);
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
-  await page.getByRole("button", { name: "Save notes" }).click();
-  await expect(page.getByText("Notes saved")).toBeVisible();
+  await page.getByRole("button", { name: "Save day" }).click();
+  await expect(page.getByText("Day saved")).toBeVisible();
   await notNow(page); // the detector offers Altdorf and the Grey Lady inn for the Encyclopedia
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
   // The re-roll saves, then redraws the page: wait for the redraw, so the next click doesn't land on a link it replaces.
@@ -85,8 +87,8 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect((await api(page, "day_update", { abs_day: 2, notes: "", locations: "Ubersreik market" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Current Day");
-  await expect(pp.locator("[data-box=notes]")).toContainText("Ubersreik market");      // players read the day's locations
-  await expect(pp.locator("[data-box=weather]")).not.toContainText("Ubersreik market"); // no longer in the weather box
+  await expect(pp.locator(".dayconditions .notes-locs")).toContainText("Ubersreik market"); // players read the day's locations, by the Region
+  await expect(pp.locator("[data-box=notes]")).toHaveCount(0);                             // and no Notes box on the Current Day tab
   // Days run Dawn first, so at Dawn the player has Dawn's weather and nothing after it.
   await expect(pp.locator(".shiftcard h4").first()).toHaveText(/^Dawn/);
   await expect(pp.locator(".shiftcard").first()).not.toContainText("Weather not known yet");
