@@ -187,7 +187,8 @@ function scabard_page(int $cid, array $p, bool $asSessions, array &$idx, array &
         $st = db()->prepare('SELECT COALESCE(MAX(number), 0) + 1 FROM play_sessions WHERE campaign_id=? FOR UPDATE');
         $st->execute([$cid]);
         $summary = scabard_rich($p['brief'] ?? '', $p['description'] ?? '') . scabard_secret_blocks($secrets);
-        db()->prepare('INSERT INTO play_sessions (campaign_id, number, title, played_on, first_day, last_day, summary, summary_format, is_published, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
+        // Scabard knows the real-world day it was played, not the campaign's: no in-game dates (the day is a placeholder)
+        db()->prepare('INSERT INTO play_sessions (campaign_id, number, title, played_on, first_day, last_day, undated, summary, summary_format, is_published, created_by) VALUES (?,?,?,?,?,?,1,?,?,?,?)')
             ->execute([$cid, (int)$st->fetchColumn(), mb_substr($s['title'], 0, 200), $s['date'], $day, $day, $summary ?: null, 'html', $isSecret ? 0 : 1, me()['id']]);
         $r['sessions']['added']++;
         return;

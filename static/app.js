@@ -1797,7 +1797,8 @@
   /** What was written on the shifts a session ran over (activities, players' notes, GM notes), as notes for Build draft:
    * at most a month of days from its start, so a session left open for ages doesn't load a year of days. */
   async function sessionShiftNotes(s) {
-    const n = spd(), from = sessionStart(s), to = Math.min(sessionEnd(s), from + 31 * n - 1);
+    const n = spd(), from = sessionStart(s), to = s.undated ? from - 1 : Math.min(sessionEnd(s), from + 31 * n - 1);
+    // an undated session (one imported without its in-game dates) has no run, only the shifts given it one at a time;
     // the shifts it takes in outside its run (a flashback, a split party's other half) too, each in its place in time
     const extra = (s.extra_shifts || []).map(Number).filter(a => a < from || a > to).slice(0, 4 * n);
     const ds = new Set(extra.map(a => Math.floor(a / n)));
@@ -2839,7 +2840,7 @@
         y += 20;
       };
       if (tl.bands.sessions && sessions.length) {
-        bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null).map(x => {
+        bandRow('Sessions', y0 => sessions.filter(x => x.first_day !== null && !x.undated).map(x => {
           const a = Number(x.first_day), b = (x.last_day === null ? today() : Number(x.last_day)) + 1;
           if (X(b) < 0 || X(a) > W) return null;
           const label = `Session ${x.number}${x.title ? `: ${x.title}` : ''}`;

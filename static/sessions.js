@@ -224,7 +224,10 @@
   /** The in-game days a session covered, as text, with the shifts it started and ended on when it knows them (sessions
    * from before those were kept cover whole days). */
   function daysCovered(cal, s) {
-    const run = runCovered(cal, s), k = (s.extra_shifts || []).length;
+    const k = (s.extra_shifts || []).length, w = E.slotWord(cal);
+    // an imported session with no in-game dates covers only the shifts it was given one at a time
+    if (s.undated) return k ? `${k} ${k === 1 ? w : `${w}s`}, no in-game dates otherwise` : 'No in-game dates';
+    const run = runCovered(cal, s);
     return k ? `${run}, and ${k} other ${k === 1 ? E.slotWord(cal) : `${E.slotWord(cal)}s`}` : run;
   }
   function runCovered(cal, s) {

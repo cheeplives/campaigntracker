@@ -49,7 +49,7 @@ function session_out(array $s, bool $full, bool $isGm, ?array $extra = null): ar
         'first_day' => (int)$s['first_day'], 'last_day' => $s['last_day'] === null ? null : (int)$s['last_day'],
         'first_shift' => $s['first_shift'] === null ? null : (int)$s['first_shift'],
         'last_shift' => $s['last_shift'] === null ? null : (int)$s['last_shift'],
-        'is_published' => (bool)(int)$s['is_published'], 'version' => (int)$s['version'],
+        'is_published' => (bool)(int)$s['is_published'], 'version' => (int)$s['version'], 'undated' => (bool)(int)($s['undated'] ?? 0),
         'extra_shifts' => $extra ?? (session_extras([(int)$s['id']])[(int)$s['id']] ?? [])];
     if ($full) {
         $o['summary'] = (string)rich_for($s['summary'], $isGm);
@@ -123,7 +123,7 @@ function day_sessions(int $cid, array $c, int $ad, bool $isGm): array {
     foreach ($rows as $s) {
         [$a, $b] = session_span($s, $spd, (int)$c['current_shift']);
         $slots = [];
-        for ($x = max($a, $lo); $x <= min($b, $hi); $x++) $slots[] = $x - $lo;
+        if (!(int)($s['undated'] ?? 0)) for ($x = max($a, $lo); $x <= min($b, $hi); $x++) $slots[] = $x - $lo;   // undated: its extra shifts alone
         foreach ($extras[(int)$s['id']] ?? [] as $x) if ($x >= $lo && $x <= $hi) $slots[] = $x - $lo;
         if (!$slots) continue;
         sort($slots);
@@ -175,8 +175,11 @@ function sessions_action(string $action): void {
             if (p('reopen')) { sessions_end_all($cid); $last = null; }
             if ($last !== null && $last < $first) fail('The last day can\'t be before the first');
             $pub = array_key_exists('is_published', body()) ? (p('is_published') ? 1 : 0) : (int)$s['is_published'];
-            db()->prepare('UPDATE play_sessions SET title=?, played_on=?, first_day=?, last_day=?, is_published=? WHERE id=?')
-                ->execute([$title, $played, $first, $last, $pub, $s['id']]);
+            // in-game dates set by hand (or reopening it) date it again; undated: true takes them away
+            $undated = array_key_exists('undated', body()) ? (p('undated') ? 1 : 0)
+                : (array_key_exists('first_day', body()) || array_key_exists('last_day', body()) || p('reopen') ? 0 : (int)($s['undated'] ?? 0));
+            db()->prepare('UPDATE play_sessions SET title=?, played_on=?, first_day=?, last_day=?, is_published=?, undated=? WHERE id=?')
+                ->execute([$title, $played, $first, $last, $pub, $undated, $s['id']]);
             [$fs, $ls] = session_shifts_for_days($s, $cid, $first, $last);
             db()->prepare('UPDATE play_sessions SET first_shift=?, last_shift=? WHERE id=?')->execute([$fs, $ls, $s['id']]);
             $id = (int)$s['id'];
@@ -239,7 +242,7 @@ function sessions_action(string $action): void {
         $a = int_in(p('abs_shift'));
         $c = campaign_row($cid);
         [$from, $to] = session_span($s, slots_per_day(dec($c['calendar_json'])), (int)$c['current_shift']);
-        if ($a < $from || $a > $to) {
+        if ((int)($s['undated'] ?? 0) || $a < $from || $a > $to) {
             $st = db()->prepare('SELECT COUNT(*) FROM session_shifts WHERE session_id=?');
             $st->execute([$s['id']]);
             if ((int)$st->fetchColumn() >= 500) fail('A session can take in at most 500 shifts outside its run');

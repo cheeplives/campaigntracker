@@ -107,8 +107,11 @@
       // Title and Played on are set once, so they fold behind ✎ Details (open while the session has no title), and the one
       // Save under the summary saves them with everything else; the rest of
       // what's done to a session, rather than written in it, waits in the ⋯ menu. The summary is left the room under the title.
+      const undated = el('input', { type: 'checkbox', checked: !!s.undated });
       const details = el('div', { class: 'sess-fields', hidden: !!s.title },
-        el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')));
+        el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')),
+        el('label', { class: 'inline small', 'data-tip': 'For a session written up without its in-game days (an imported one): it covers only the shifts you add it to one at a time, At the Table' },
+          undated, ' No in-game dates'));
       const detailsBtn = btn('✎ Details', () => {
         details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
         showSave();
@@ -194,9 +197,9 @@
             .then(() => drawReading());
         }
         const t = title.value.trim().replace(/\s+/g, ' '), on = played.value || null;
-        if (t !== (s.title || '') || on !== (s.played_on || null)) {
-          const r = await post('session_save', { id: s.id, title: t, played_on: on }, cid);
-          Object.assign(s, { title: r.session.title, played_on: r.session.played_on });
+        if (t !== (s.title || '') || on !== (s.played_on || null) || undated.checked !== !!s.undated) {
+          const r = await post('session_save', { id: s.id, title: t, played_on: on, undated: undated.checked }, cid);
+          Object.assign(s, { title: r.session.title, played_on: r.session.played_on, undated: r.session.undated });
           // the heading, the date line and the session's name in the list, redrawn in place so nothing typed is lost
           head[0].textContent = sessionName(s);
           head[1].textContent = [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · ');

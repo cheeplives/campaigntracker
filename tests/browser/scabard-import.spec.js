@@ -149,6 +149,10 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   // The sessions: dated, titled, closed, published, with the secrets as GM-only paragraphs and the cast as lines.
   const sessions = (await api(page, "sessions", undefined, cid)).json.sessions;
   expect(sessions.map(s => [s.number, s.title, s.played_on, s.is_published, s.last_day !== null])).toEqual([[2, "Into the Night", "2025-10-12", true, true], [1, "Final Preparations", "2025-10-05", true, true]]);
+  // they come without in-game dates, so they don't all land on the shift the import ran on
+  expect(sessions.map(s => s.undated)).toEqual([true, true]);
+  const day = await page.request.get(`api/index.php?a=day&cid=${cid}&d=${sessions[0].first_day}`).then(r => r.json());
+  expect(day.sessions).toEqual([]);
   const full = (await page.request.get(`api/index.php?a=session&cid=${cid}&id=${sessions[1].id}`).then(r => r.json())).session;
   expect(full.summary).toContain("<p>They shopped for the trip.</p>");
   expect(full.summary).toContain("<aside><p>The tail follows them.</p></aside><aside><ul><li>Beat one</li></ul></aside>");
