@@ -59,7 +59,7 @@ test("the campaign tabs stay on screen as the page scrolls", async ({ page, brow
   const errors = watchErrors(page);
   const cid = await gmCampaign(page, browser, "Pinned");
   await page.goto(`index.html#/c/${cid}/today`);
-  await expect(page.locator("nav.tabs a.on")).toHaveText("Current Day");
+  await expect(page.locator("nav.tabs a.on")).toHaveText("At the Table");
   // in a drawer, what stays on screen is its » rail
   const on = isDrawer(viewport) ? page.locator("nav.tabs .legend-tuck") : page.locator("nav.tabs a.on");
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -92,7 +92,7 @@ test("the Legend groups its tabs under Play, Party, World and Setup", async ({ p
   await expect(page.locator("nav.tabs a").last()).toHaveText("Settings");
   // each heading sits just before its group's first tab
   const order = await page.locator("nav.tabs > *").allTextContents();
-  for (const [g, first] of [["Play", "Current Day"], ["Party", "At the Table"], ["World", "Encyclopedia"], ["Setup", "Regions"]])
+  for (const [g, first] of [["Play", "At the Table"], ["Party", "Characters"], ["World", "Encyclopedia"], ["Setup", "Regions"]])
     expect(order[order.indexOf(g) + 1]).toBe(first);
   // headings show in the side Legend (and its drawer); across the top on a phone they are a thin divider
   const heading = page.locator("nav.tabs .tab-group", { hasText: "World" });
@@ -126,17 +126,17 @@ test("the Legend's groups fold, Setup starts folded, and they stay as left", asy
   await toggle("Play").click();
   await expect(toggle("Play")).toHaveAttribute("aria-expanded", "false");
   // the open page's tab stays in view in a folded group
-  await expect(tab("Current Day")).toBeVisible();
+  await expect(tab("At the Table")).toBeVisible();
   await expect(tab("Calendar")).toBeHidden();
   // remembered after a reload, and on another page
   await page.reload();
   await show();
   await expect(tab("Regions")).toBeVisible();
-  await expect(tab("Current Day")).toBeVisible();
+  await expect(tab("At the Table")).toBeVisible();
   await expect(tab("Events")).toBeHidden();
   await tab("Encyclopedia").click();
   await show();
-  await expect(tab("Current Day")).toBeHidden();
+  await expect(tab("At the Table")).toBeHidden();
   await expect(tab("Regions")).toBeVisible();
   await toggle("Setup").click();
   await expect(tab("Regions")).toBeHidden();
@@ -152,7 +152,7 @@ test("the Legend has no heading and tucks away to the left, and stays as left", 
   const cid = await gmCampaign(page, browser, "Tuck");
   await page.goto(`index.html#/c/${cid}/today`);
   const nav = page.locator("nav.tabs"), tuck = page.locator("nav.tabs .legend-tuck"), today = page.locator("nav.tabs a.on");
-  await expect(today).toHaveText("Current Day");
+  await expect(today).toHaveText("At the Table");
   expect(await nav.evaluate(n => getComputedStyle(n, "::before").content)).toBe("none");
   if (viewport.width <= 560) {
     await expect(tuck).toBeHidden();

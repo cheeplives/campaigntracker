@@ -65,7 +65,7 @@ const ACTIONS = [
     'holiday_delete' => ['who' => 'gm', 'touch' => true],
     'days' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
     'events' => ['get' => true, 'who' => 'member', 'key' => 'read'],
-    'day' => ['get' => true, 'who' => 'member', 'key' => 'read'],
+    'day' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
     'days_save' => ['who' => 'gm', 'panel' => 'write'],
     'day_update' => ['who' => 'gm', 'touch' => true],
     'shift_save' => ['who' => 'gm', 'touch' => true],

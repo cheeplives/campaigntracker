@@ -95,25 +95,28 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
 - **table** (framing): in another site's frame the panel changes nothing until "Allow changes here" is turned on for that site, which is remembered.
-- **table**: At the Table sits first under Party and shows the date, shift, weather, light, moons and the party's
-  region; Pass a shift moves the clock; an Encyclopedia lookup finds names (never a secret entry for a player); a note
-  goes on the current shift or, escaped, at the end of an entry's Public notes (a GM's GM-only one in its GM notes, a
-  player never on a secret entry). Panel links: members make and revoke their own, only GMs make public ones and revoke
+- **table**: At the Table sits first under Play and shows the date, shift, party and moons, with the weather in the clock's
+  shift's big box; End shift moves the clock; an Encyclopedia lookup finds names (never a secret entry for a player); a
+  player's note goes on the clock's shift from the big box, and an entry note, escaped, at the end of an entry's Public
+  notes (a GM's GM-only one in its GM notes, a player never on a secret entry). Panel links: members make and revoke their own, only GMs make public ones and revoke
   anyone's, and only the code's hash is stored; a link reaches only its own campaign (the cid asked for is ignored) and
   its short list of actions, needs no CSRF token, acts as its maker (a player's can't pass time), and stops when its
   member leaves; a public link gets no secret event, entry, GM note, GM reminder or weather seed, changes nothing, and
   stops when its GM stops being one; the Owlbear Rodeo manifest is public with CORS and opens panel.html; only
   panel.html may be framed (.htaccess). panel.html opens with only a link and no cookie in a frame on another origin,
-  catches up when the GM passes time, takes the code out of the address, and asks for a new link once revoked; a
+  shows the clock's shift without the GM editor, day boxes or time buttons, catches up when the GM passes time, takes the code out of the address, and asks for a new link once revoked; a
   public overlay link is see-through with only the date, weather, light and moons; the GM makes a link from At the
   Table, sees it once, and revokes it.
 - **api-keys**: a read-only key reads only its maker's campaign, with no member's email, and is refused writes, other actions, the panel link's header, both headers at once and revocation; a read/write key does what its maker may (a GM's passes time, a player's can't but adds notes signed as them and events) and stops when its maker leaves, writes included; a GM's key sent with View as player is answered as a player and changes nothing; a key request is open to any site (CORS) and nothing else is; New API key… shows the key once with a curl example and lists it.
-- **current-day**: a campaign opens on the Current Day tab and the GM's browser
-  saves today's shift weather; players get today's weather only up to the current
-  shift (never the forecast), nothing for later days, and everything once allowed;
-  Previous/Next day and Return to today stay on the tab and keep that rule; the tab
-  has no Notes box; the day's Locations visited sits under the Region dropdown, saves
-  with Save day, survives a re-roll and is shown to players by the Region.
+- **current-day**: a campaign opens on At the Table (no Current Day tab): the clock's shift in a big box with the shift
+  before and after beside it, the GM's browser saves today's shift weather, and today's Weather, Shifts, Events and
+  Reminders boxes come folded under it and stay as left; what the party does saves as typed; End shift moves the clock
+  on one; a click on the shift before looks at it (no End shift there) and Back to now returns; an old Current Day link
+  to another day opens its calendar page and Go to today comes back. Players get today's weather only up to the
+  current shift (never the forecast), nothing for later days, and everything once allowed, in the big box, the side
+  panels, the Shifts box and the days' calendar pages; they can look back but not ahead and get no End shift; there is
+  no Notes box under At the Table; the day's Locations visited sits under the Region dropdown, saves with Save day,
+  survives a re-roll and is shown to players by the Region.
 - **day-notes**: the GM writes bold text and a table in the Public notes and a Secret note, and they save as cleaned HTML and reopen in the editor; tables wait behind ⋯, and ⤢ Focus gives the editor the whole window until Esc; players read the formatted Public notes, never the Secret ones, the month grid previews them as plain text and the export turns them into Markdown; scripts, images, styles, attributes and javascript: links are stripped on the server, and HTML put straight into the database is still rebuilt from the allow-list in the browser; a plain note from before shows as typed; every day box folds and stays folded per account in that browser, and adding an event unfolds Events.
 - **encyclopedia**: the Proper Noun Detector finds capitalized, bold/italic and quoted names and a day's
   Locations visited, leaves out common and calendar words, members' names, shift actions and any lone word that only

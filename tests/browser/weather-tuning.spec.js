@@ -42,7 +42,7 @@ test("a GM tunes the ground in Settings, the day page follows, and Reset puts it
   const days = Array.from({ length: 12 }, (_, i) => ({ abs_day: -9 + i, weather: { type: "rain", temp: 12, wind: 1 } }));
   expect((await api(page, "days_save", { days }, cid)).status).toBe(200);
 
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator(".kv .ground")).toContainText(/Muddy|Waterlogged/); // twelve days of heavy rain
 
   await page.goto(`index.html#/c/${cid}/settings/weather`);
@@ -72,7 +72,7 @@ test("a GM tunes the ground in Settings, the day page follows, and Reset puts it
   expect(camp.settings.tuning).toEqual({ koppen: { Cfb: { winter: { storm: 2.5 } } }, ground: { rainfall: { rain: 0.2 }, wet: { muddy: 50, waterlogged: 58 } } });
   await expect(page.locator(".tune-card").getByLabel("Muddy from (mm)")).toHaveClass(/tuned/);
 
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator(".kv .ground")).toBeVisible();
   await expect(page.locator(".kv .ground")).not.toContainText(/Muddy|Waterlogged/);
 
@@ -82,7 +82,7 @@ test("a GM tunes the ground in Settings, the day page follows, and Reset puts it
   await page.locator("dialog[open]").getByRole("button", { name: "OK" }).click();
   await expect(page.locator("#toast")).toContainText("Weather tuning reset");
   expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.tuning).toBeUndefined();
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator(".kv .ground")).toContainText(/Muddy|Waterlogged/);
   expectNoErrors(errors);
 });

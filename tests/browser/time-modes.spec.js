@@ -80,7 +80,7 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   await page.getByRole("button", { name: "OK" }).click();
   await expect(page.locator(".now-date")).toContainText("06:00");
 
-  await page.goto(`index.html#/c/${cid}/today`);
+  await page.goto(`index.html#/c/${cid}/day/2`);
   await expect(page.locator("[data-box=shifts] .daybox-toggle")).toHaveText("Hours");
   await expect(page.locator(".shiftcard")).toHaveCount(24);
   await expect(page.locator(".shiftcard.now h4")).toContainText("06:00");
@@ -88,6 +88,13 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   await expect(page.getByLabel("Unit").locator("option").first()).toHaveText("hour(s)");
   await page.getByRole("button", { name: "Pass time ▶" }).click();
   await expect(page.locator(".now-date")).toContainText("07:00");
+  // At the Table: the hour the clock is on in the big box, the day's 24 hours in a row over it, and End moves on an hour
+  await page.goto(`index.html#/c/${cid}/table`);
+  await expect(page.locator(".tv-now h4")).toContainText("07:00");
+  await expect(page.locator(".tv-wide > .dh-strip .dh-step")).toHaveCount(24);
+  await expect(page.locator(".tv-side.next")).toContainText("08:00");
+  await page.getByRole("button", { name: /^End 07:00 ▶ on to 08:00/ }).click();
+  await expect(page.locator(".tv-now h4")).toContainText("08:00");
 
   await page.goto(`index.html#/c/${cid}/travel`);
   await page.locator("select.travel-mode").selectOption("overland");

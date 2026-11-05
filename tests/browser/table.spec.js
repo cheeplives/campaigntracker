@@ -33,7 +33,7 @@ async function panelCall(request, code, action, { query = {}, body } = {}) {
   return { status: r.status(), json: await r.json() };
 }
 
-test("At the Table sits in the Party group and shows the date, weather, light, moons and the party", async ({ page, browser }) => {
+test("At the Table leads the Play group and shows the date, the party, the moons and the clock's shift", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Tamsin");
   await signIn(page, gm);
@@ -41,23 +41,23 @@ test("At the Table sits in the Party group and shows the date, weather, light, m
   const cid = await makeCampaign(page, `Table ${gm.id}`);
   await page.goto(`index.html#/c/${cid}`);
   const tab = page.locator(".tabs a", { hasText: "At the Table" });
-  await expect(tab).toHaveAttribute("data-group", "Party");
+  await expect(tab).toHaveAttribute("data-group", "Play");
   await goTab(page, "At the Table");
   await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
   const view = page.locator(".table-view");
   await expect(view.locator(".tv-date")).toContainText("Firstmonth");
-  await expect(view.locator(".tv-card")).toHaveCount(4);
-  await expect(view.locator(".tv-card", { hasText: "Weather" }).locator(".wx")).toBeVisible();
+  await expect(view.locator(".tv-card")).toHaveCount(2);
+  await expect(view.locator(".tv-now .wx")).toBeVisible();
   await expect(view.locator(".tv-card", { hasText: "Party" })).toContainText("Home");
-  // Pass a shift moves the clock, and the view follows
+  // End shift moves the clock, and the view follows
   const before = await view.locator(".tv-shift").textContent();
-  await view.getByRole("button", { name: /Pass a shift/ }).click();
+  await view.getByRole("button", { name: /^End Dawn/ }).click();
   await expect(view.locator(".tv-shift")).not.toHaveText(before);
   expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(9);
   expectNoErrors(errors);
 });
 
-test("a note goes on this shift or at the end of an Encyclopedia entry, and an entry can be looked up", async ({ page, browser }) => {
+test("a player's note goes on the clock's shift, or at the end of an Encyclopedia entry, and an entry can be looked up", async ({ page, browser }) => {
   const { cid, pp } = await table(page, browser, "Notes");
   const e = await api(page, "entry_save", { name: "Coaching Inn", notes: "<p>A walled inn on the road.</p>" }, cid);
   expect(e.status).toBe(200);
@@ -71,17 +71,17 @@ test("a note goes on this shift or at the end of an Encyclopedia entry, and an e
   await view.getByLabel("Look up a name in the Encyclopedia").fill("hidden");
   await expect(view.locator(".tv-lookup")).toContainText("No entry by that name");
 
-  // a shift note, as on Current Day
-  await view.getByLabel("Note", { exact: true }).fill("Sore feet");
-  await view.getByRole("button", { name: "Save note" }).click();
-  await expect(pp.getByText(/Note added to/)).toBeVisible();
+  // a note on the shift, in the big box
+  await view.locator(".tv-now").getByRole("button", { name: "+ Note" }).click();
+  await view.locator(".tv-now").getByLabel("Notes for Dawn").fill("Sore feet");
+  await view.locator(".tv-now").getByRole("button", { name: "Add note" }).click();
+  await expect(view.locator(".tv-now .enote")).toContainText("Sore feet");
   const notes = sql(`SELECT body FROM shift_notes WHERE campaign_id=${cid}`);
   expect(notes).toContain("Sore feet");
 
   // an entry note, from the looked-up entry's Add a note
   await view.getByLabel("Look up a name in the Encyclopedia").fill("coach");
   await view.getByRole("button", { name: "📝 Add a note" }).click();
-  await expect(view.getByRole("radio", { name: "On an Encyclopedia entry" })).toHaveAttribute("aria-checked", "true");
   await expect(view.getByLabel("Entry")).toHaveValue("Coaching Inn");
   await expect(view.getByText("GM only")).toHaveCount(0);   // players can't make a GM-only note
   await view.getByLabel("Note", { exact: true }).fill("Hans owes Kurt <3> shillings");
@@ -228,7 +228,11 @@ test("the panel opens in another site's frame with only a link, follows the GM, 
   const panel = vtt.frameLocator("iframe");
   await expect(panel.locator(".tv-date")).toContainText("Firstmonth");
   await expect(panel.locator(".panel-foot")).toContainText("via panel link");
-  await expect(panel.getByRole("button", { name: /Pass a shift/ })).toBeVisible();
+  // the panel keeps to the clock's shift as players read it: no GM editor, no day boxes, no buttons that move the clock
+  await expect(panel.locator(".tv-now h4")).toContainText("Dawn");
+  await expect(panel.locator(".tv-now .shift-edit")).toHaveCount(0);
+  await expect(panel.locator(".daybox, .tv-side")).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: /Pass a shift|^End / })).toHaveCount(0);
   const before = await panel.locator(".tv-shift").textContent();
   // the GM passes time in Chronicle; the panel catches up when it next checks
   expect((await api(page, "set_time", { current_shift: 13 }, cid)).status).toBe(200);
@@ -254,18 +258,22 @@ test("in another site's frame, the panel changes nothing until it is allowed to 
   await vtt.evaluate(src => { document.body.innerHTML = ""; const f = document.createElement("iframe"); f.src = src; f.style.cssText = "width:420px;height:900px"; document.body.append(f); },
     `${BASE}panel.html#k=${link.code}`);
   const panel = vtt.frameLocator("iframe");
-  const shift = () => Number(sql(`SELECT current_shift FROM campaigns WHERE id = ${cid}`).trim());
-  const before = shift();
-  await panel.getByRole("button", { name: /Pass a shift/ }).click();
+  const notes = () => Number(sql(`SELECT COUNT(*) FROM shift_notes WHERE campaign_id = ${cid}`).trim());
+  const addNote = async text => {
+    await panel.locator(".tv-now").getByRole("button", { name: "+ Note" }).click().catch(() => {});   // already open after a refused try
+    await panel.locator(".tv-now").getByLabel("Notes for Dawn").fill(text);
+    await panel.locator(".tv-now").getByRole("button", { name: "Add note" }).click();
+  };
+  await addNote("Framed");
   await expect(panel.getByText(/Changes are off while localhost/)).toBeVisible();
-  expect(shift()).toBe(before);
+  expect(notes()).toBe(0);
   // allowed, for this site only, after saying which site it is
   await panel.getByRole("button", { name: "Allow changes here" }).click();
   await expect(panel.getByRole("dialog")).toContainText("localhost");
   await panel.getByRole("button", { name: "Allow changes", exact: true }).click();
   await expect(panel.getByRole("button", { name: /Changes allowed on localhost/ })).toBeVisible();
-  await panel.getByRole("button", { name: /Pass a shift/ }).click();
-  await expect.poll(shift).toBe(before + 1);
+  await addNote("Allowed");
+  await expect.poll(notes).toBe(1);
   // and remembered when the frame is opened again
   await vtt.reload();
   await vtt.evaluate(src => { document.body.innerHTML = ""; const f = document.createElement("iframe"); f.src = src; document.body.append(f); }, `${BASE}panel.html`);
