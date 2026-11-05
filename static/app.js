@@ -1594,7 +1594,7 @@
         // At the Table already shows the shift the clock is on.
         d === today() && !table ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
 
-    if (isGM()) overview.append(dayEditor(d, row, region, w));
+    if (isGM()) overview.append(dayEditor(d, row, region, w, r));
 
     // --- shifts
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
@@ -1989,7 +1989,25 @@
     return { node, sel, resolve };
   }
 
-  function dayEditor(d, row, region, w) {
+  /** The Encyclopedia's Locations named in some text (by name or other name, as whole words, any case), in the order
+   * the Encyclopedia lists them. */
+  function placesNamed(text) {
+    const t = ` ${String(text || '').toLowerCase().replace(/\s+/g, ' ')} `;
+    const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return S.encyclopedia.filter(e => e.category === 'location' && [e.name, ...(e.aliases || [])].some(n => {
+      const k = String(n || '').trim().toLowerCase();
+      return k.length > 1 && new RegExp(`(^|[^\\p{L}\\p{N}])${esc(k)}($|[^\\p{L}\\p{N}])`, 'u').test(t);
+    }));
+  }
+  /** Places for a day's Locations visited: the Encyclopedia's Locations named in what was written on its shifts (activity,
+   * players' notes and GM notes) that the box doesn't list yet. dayData: what the day action sent. */
+  function locationSuggestions(dayData, have) {
+    const text = [...(dayData?.shifts || []).flatMap(s => [s.activity, s.gm_notes]), ...(dayData?.shift_notes || []).map(n => n.body)].filter(Boolean).join('\n');
+    const listed = new Set(String(have || '').split(/[,\n]/).map(x => x.trim().toLowerCase()).filter(Boolean));
+    return placesNamed(text).filter(e => ![e.name, ...(e.aliases || [])].some(n => listed.has(String(n).toLowerCase())));
+  }
+
+  function dayEditor(d, row, region, w, dayData) {
     const regPick = regionPicker([['', '— (current region)']], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
@@ -1997,11 +2015,23 @@
     const temp = el('input', { type: 'number', name: 'temp', value: tVal, step: 'any', class: 'w-num' });
     const wind = select(E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, unitSystem())})`]), w?.wind || 0, { name: 'wind' });
     const locs = el('textarea', { name: 'locations', rows: 1, value: row.locations || '', placeholder: 'e.g. Altdorf, the Grey Lady inn, Reikwald crossroads' });
+    // places the day's shifts name that the box doesn't list yet: a tap adds one to the box, saved with Save day
+    const sugg = el('div', { class: 'row loc-suggest' });
+    const drawSugg = () => {
+      const list = locationSuggestions(dayData, locs.value);
+      sugg.hidden = !list.length;
+      sugg.replaceChildren(el('span', { class: 'small muted' }, 'Named on the shifts:'), ...list.map(e => btn(`+ ${e.name}`, () => {
+        locs.value = [locs.value.trim(), e.name].filter(Boolean).join(', ');
+        drawSugg();
+      }, 'small', `Add ${e.name} to Locations visited. Save day keeps it`)));
+    };
+    locs.addEventListener('input', drawSugg);
+    drawSugg();
     const f = el('form', { class: 'dayedit' },
       el('div', { class: 'grid2' },
         el('div', {},
           field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
-          field('Locations visited', locs, null, LOC_TIP)),
+          field('Locations visited', locs, null, LOC_TIP), sugg),
         field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
           `Set the day's weather by hand. Rain, fog, snow and the like lower visibility; see the ${word()} cards below for the exact effect.`)),
       el('div', { class: 'row' }, el('button', { class: 'primary small', 'data-tip': 'Save the region, locations visited and weather' }, 'Save day'),
