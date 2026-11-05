@@ -41,6 +41,9 @@ test("switching time mode moves the clock, activities and events to the same tim
   // A session over the same shifts, and a point on the party's trail at Midday of day 2.
   sql(`INSERT INTO play_sessions (campaign_id, number, first_day, last_day, first_shift, last_shift) VALUES (${cid}, 1, 2, 3, 9, 12)`);
   const sessionShifts = () => sql(`SELECT first_shift, last_shift FROM play_sessions WHERE campaign_id = ${cid}`).trim();
+  // and two shifts it takes in outside its run: Midday and Dusk of day 1
+  sql(`INSERT INTO session_shifts (session_id, abs_shift) SELECT id, 5 FROM play_sessions WHERE campaign_id = ${cid} UNION ALL SELECT id, 6 FROM play_sessions WHERE campaign_id = ${cid}`);
+  const extraShifts = () => sql(`SELECT x.abs_shift FROM session_shifts x JOIN play_sessions s ON s.id = x.session_id WHERE s.campaign_id = ${cid} ORDER BY x.abs_shift`).trim().split("\n");
   const party = (await api(page, "groups", undefined, cid)).json.groups[0];
   const mapId = (await api(page, "map_save", { name: "Trail" }, cid)).json.map.id;
   sql(`INSERT INTO party_trail (campaign_id, group_id, map_id, x, y, abs_shift) VALUES (${cid}, ${party.id}, ${mapId}, 1, 1, 9)`);
@@ -58,6 +61,7 @@ test("switching time mode moves the clock, activities and events to the same tim
   expect(rests()).toEqual(["60\t83\t24", "54\t54\t0"]);
   expect(sessionShifts()).toBe("60\t83");
   expect(trailShift()).toBe("60");
+  expect(extraShifts()).toEqual(["36", "42"]);
 
   // Hours to two shifts: the morning's activities join in Day, the evening is Night.
   c = await calendar();
@@ -66,6 +70,7 @@ test("switching time mode moves the clock, activities and events to the same tim
   expect(rows()).toEqual(["2\t0\tBreakfast\\nMarket"]); // mysql -N prints the newline as \n
   expect(events()).toEqual(["Feast\t2\t-\t1\t1", "Fair\t2\t-\t-\t-"]);
   expect(sql(`SELECT abs_day, shift FROM shift_notes WHERE campaign_id = ${cid}`).trim()).toBe("2\t1");
+  expect(extraShifts()).toEqual(["2", "3"]);   // Day and Night of day 1
 
   // Two shifts back to four: Day starts at Dawn and Night at Dusk.
   c = await calendar();

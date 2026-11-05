@@ -1619,3 +1619,8 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .map-label-form input { flex: 1 1 14rem; min-width: 0; }
 .map-label-form small { flex-basis: 100%; }
 .loc-suggest { gap: 6px; margin: -2px 0 6px; } .loc-suggest[hidden] { display: none; }
+/* the sessions a shift is part of, under its heading, and "+ Session…" to put it in one */
+.sess-chips { gap: 4px; margin: 2px 0 4px; }
+.sess-chip { background: var(--accent); color: var(--on-accent); text-decoration: none; font-size: .72rem; }
+.sess-chip:hover { filter: brightness(1.1); }
+.sess-extras-list { margin: 0 0 6px; }

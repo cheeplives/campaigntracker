@@ -224,6 +224,10 @@
   /** The in-game days a session covered, as text, with the shifts it started and ended on when it knows them (sessions
    * from before those were kept cover whole days). */
   function daysCovered(cal, s) {
+    const run = runCovered(cal, s), k = (s.extra_shifts || []).length;
+    return k ? `${run}, and ${k} other ${k === 1 ? E.slotWord(cal) : `${E.slotWord(cal)}s`}` : run;
+  }
+  function runCovered(cal, s) {
     const f = d => E.fmtDate(cal, d, { noWeekday: true });
     const open = s.last_day === null || s.last_day === undefined;
     if (s.first_shift !== null && s.first_shift !== undefined) {

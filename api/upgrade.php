@@ -82,6 +82,8 @@ function upgrade_steps(): array {
             'A session\'s notes are now one text box that saves as you type; each session\'s notes go into it when it is next opened.'],
         ['027_session_shifts_party_trail.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'first_shift'),
             'Sessions now remember the shift they started and ended on, and the party leaves a trail on the maps as you move it.'],
+        ['028_session_extra_shifts.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_table($p, 'session_shifts'),
+            'A session can now take in shifts outside its one run, such as a flashback or a split party played another night.'],
     ];
 }
 

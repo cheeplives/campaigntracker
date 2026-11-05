@@ -1276,8 +1276,14 @@ const MapsTab = (() => {
     const teardown = () => { if (gone) return; gone = true; ro.disconnect(); window.removeEventListener('hashchange', teardown); window.removeEventListener('resize', fit); lmap.remove(); lf = null; };
     // no animations here: Leaflet ignores a drag that starts while it is zooming, and a tap would land on a moving map.
     // --map-top is how far down the window the stage starts, so the CSS can take it to the window's bottom edge
+    // A link back to a pin (?pin=) opens its card. The page can still be settling then (Firefox lays the stage out again
+    // a frame later, and the card can close with it), so until someone touches the map, a card that closed opens again.
+    let linked = null;
+    for (const ev of ['pointerdown', 'keydown', 'wheel']) stage.addEventListener(ev, () => { linked = null; }, { capture: true, once: true });
+    const keepLinked = () => { if (linked && !gone && !linked.isPopupOpen()) linked.openPopup(); };
     const fit = () => {
       if (!host.isConnected) return teardown();
+      keepLinked();
       const top = Math.round(stage.getBoundingClientRect().top + window.scrollY) + 'px';
       if (stage.style.getPropertyValue('--map-top') !== top) stage.style.setProperty('--map-top', top);
       lmap.invalidateSize({ animate: false, pan: false });   // the picture stays put under the pointer as the stage grows or shrinks at the bottom
@@ -1295,7 +1301,7 @@ const MapsTab = (() => {
       lmap.invalidateSize({ animate: false }); fitPicture(); baseZoom = lmap.getZoom(); syncZoom();
       const want = pinMarkers.get(Number(params.get('pin')));   // a link back from an entry or event: centre on that pin and open its card
       const at = pins.find(q => q.id === Number(params.get('pin')));
-      if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); }
+      if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); linked = want; for (const t of [250, 800]) setTimeout(keepLinked, t); setTimeout(() => { linked = null; }, 3000); }
       else if (params.get('pin')) note.textContent = 'That pin is not on this map';
     });
     syncTools();

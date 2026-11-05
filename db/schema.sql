@@ -658,6 +658,15 @@ CREATE TABLE IF NOT EXISTS party_trail (
   FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A shift a session covers outside its run from first_shift to last_shift: a flashback, or a split party's other half
+-- (db/migrations/028_session_extra_shifts.sql).
+CREATE TABLE IF NOT EXISTS session_shifts (
+  session_id INT UNSIGNED NOT NULL,
+  abs_shift BIGINT NOT NULL,
+  PRIMARY KEY (session_id, abs_shift),
+  FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Character sheets. sheet_templates are site-wide, not a campaign's: anyone can use or fork one, only its author (or a
 -- site admin) changes it; a starter template (starter_key set, from db/starter-templates/) has no author. layout is
 -- JSON: sections of typed fields, each with a permanent key (see static/sheetlayout.js).
