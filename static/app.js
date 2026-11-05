@@ -1240,6 +1240,20 @@
     return el('div', { class: 'passtime' }, el('span', { class: 'lbl' }, 'Pass time', tip('Advance the campaign clock. Players see the new "now" straight away.')), amt, unit, actionCombo(act), go, back);
   }
 
+  /** After End shift with no session open: ask once whether to start one on the shift the clock moved to, so Build draft
+   * can gather the shifts played. Not now isn't asked again in this browser until it is closed. */
+  async function offerSession() {
+    const key = `chronicle:nosessask:${S.camp.id}`;
+    if (S.openSession || !isGM() || S.viewAs) return;
+    try { if (sessionStorage.getItem(key)) return; } catch { /* asked every time without storage */ }
+    const v = await KIT.dialog({ message: `No session is open. Start one now, from ${E.fmtShift(cal(), nowShift())}? Its notes and Build draft will gather the shifts you play.`,
+      buttons: [{ value: 'start', label: 'Start a session', cls: 'primary', focus: true }, { value: '', label: 'Not now' }] });
+    if (v !== 'start') { try { sessionStorage.setItem(key, '1'); } catch { /* fine */ } return; }
+    const r = await post('session_save', {}, S.camp.id);
+    S.openSession = r.session;
+    toast(`${sessionName(r.session)} started`);
+  }
+
   /** At the Table's Pass time dialog: skip ahead by an amount or to a date (with an activity for the time passed, and
    * when it lands shown as you type), or start a rest or downtime, or plan a trip on the Travel tab. Resolves once the
    * clock has moved (true), or not (false). */
@@ -1768,6 +1782,21 @@
   /** The stamp a session's notes start from: the shift it started on, or its first day's first shift for a session
    * from before sessions kept their shifts. */
   const sessionStart = s => s.first_shift !== null && s.first_shift !== undefined ? Number(s.first_shift) : Number(s.first_day) * spd();
+  /** The last shift a session covers: the one it ended on, the end of its last day for a session from before shifts
+   * were kept, or the clock while it is open. */
+  const sessionEnd = s => s.last_shift !== null && s.last_shift !== undefined ? Number(s.last_shift)
+    : s.last_day !== null && s.last_day !== undefined ? (Number(s.last_day) + 1) * spd() - 1 : nowShift();
+  /** What was written on the shifts a session ran over (activities, players' notes, GM notes), as notes for Build draft:
+   * at most a month of days from its start, so a session left open for ages doesn't load a year of days. */
+  async function sessionShiftNotes(s) {
+    const n = spd(), from = sessionStart(s), to = Math.min(sessionEnd(s), from + 31 * n - 1);
+    if (to < from) return [];
+    const ds = [];
+    for (let d = Math.floor(from / n); d <= Math.floor(to / n); d++) ds.push(d);
+    const days = await Promise.all(ds.map(d => api('day', { query: { cid: S.camp.id, d } })
+      .then(r => ({ d, shifts: r.shifts || [], shift_notes: r.shift_notes || [] }))));
+    return Sessions.shiftNotes(cal(), days, from, to);
+  }
   /** A session's notes as text: what was saved, or (never saved as text yet) its old note rows written out. */
   const sessionNotesText = (s, rows) => s.notes_text ?? Sessions.foldNotes(cal(), rows || [], sessionStart(s));
 
@@ -5268,7 +5297,12 @@
     // End shift moves the clock on one; Pass time… opens a dialog for longer jumps, rests and travel
     if (isGM() && !S.viewAs && at === now) {
       const end = btn(`End ${names[nsh]} ▶ on to ${names[E.mod(now + 1, n)]}`, null, 'primary', `Move the campaign clock on one ${word()}, rolling the weather for a new day. Everyone's view catches up`);
-      end.addEventListener('click', busy(end, async () => { await passShifts(1); toast(`Now: ${E.fmtShift(cal(), nowShift())}`); route(); }));
+      end.addEventListener('click', busy(end, async () => {
+        await passShifts(1);
+        toast(`Now: ${E.fmtShift(cal(), nowShift())}`);
+        await offerSession();
+        route();
+      }));
       const more = btn('Pass time…', async () => { if (await passTimeDialog()) route(); }, '',
         'Pass more time at once: skip ahead by an amount or to a date with an activity for the time passed, or start a rest, downtime or a trip');
       big.append(el('div', { class: 'row tv-actions' }, end, more));
@@ -5570,7 +5604,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, settings, shiftNames, nowShift, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));

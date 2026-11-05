@@ -369,6 +369,34 @@ async function buildDraft(page) {
 }
 const draftText = "Sensor set off on approach to Jupiter. Listening Station - comm relay satellite. Edited data to remove Tevari.";
 
+test("Build draft gathers the shifts the session ran over: activities, players' notes, and GM notes kept GM-only", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Draft shifts");
+  await api(page, "set_time", { current_shift: 9 }, cid);                     // Midday of day 2
+  const sid = await newSession(page, cid);
+  await api(page, "shift_save", { abs_day: 2, shift: 0, activity: "Before we sat down" }, cid);
+  await api(page, "shift_save", { abs_day: 2, shift: 1, activity: "Marching to Altdorf", gm_notes: "Ambush waits at the ford" }, cid);
+  expect((await api(pp, "shift_note_add", { abs_day: 2, shift: 1, body: "Pip saw a crow" }, cid)).status).toBe(200);
+  await api(page, "set_time", { current_shift: 10 }, cid);
+  await api(page, "session_end", {}, cid);
+  await api(page, "shift_save", { abs_day: 2, shift: 3, activity: "After the session" }, cid);
+  await saveNotes(page, cid, sid, "Met the ferryman");
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await buildDraft(page);
+  const summary = page.locator(".sess-summary .ql-editor").first();
+  await expect(summary.locator("p").first()).toContainText("Marching to Altdorf. Pip saw a crow.");
+  await expect(summary).toContainText("Met the ferryman.");
+  await expect(summary).toContainText("Ambush waits at the ford");
+  await expect(summary).not.toContainText("Before we sat down");
+  await expect(summary).not.toContainText("After the session");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator("#toast")).toHaveText("Saved");
+  await notNow(page);
+  const saved = (await one(page, cid, sid)).json.session.summary;
+  expect(saved).toMatch(/<aside[^>]*>Ambush waits at the ford<\/aside>/);   // GM-only
+  expectNoErrors(errors);
+});
+
 test("a session's page: notes beside the summary, Build draft under them fills it, and the summary saves", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid } = await gmAndPlayer(page, browser, "Sessions tab");

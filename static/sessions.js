@@ -139,6 +139,32 @@
     return out.join('\n');
   }
 
+  /** What was written on the shifts a session ran over, as notes for the draft, shift by shift from `from` to `to`
+   * (absolute shifts): a shift's activity as a line (any further lines of it indented under it), each player's note on
+   * it indented under that with its author in brackets (a line of its own when the shift has no activity), and the GM's
+   * notes on it as a $ line, so they stay GM-only. Activities and players' notes are marked plain: draftHtml reads no
+   * shorthand in them. days: what the day action sends for each day, { d, shifts:
+   * [{ shift, activity, gm_notes }], shift_notes: [{ shift, body, author }] }. */
+  function shiftNotes(cal, days, from, to) {
+    const n = E.slotsPerDay(cal), out = [];
+    const lines = t => String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const byDay = new Map(days.map(x => [Number(x.d), x]));
+    for (let a = from; a <= to; a++) {
+      const x = byDay.get(Math.floor(a / n));
+      if (!x) continue;
+      const i = E.mod(a, n), s = (x.shifts || []).find(y => Number(y.shift) === i) || {};
+      const act = lines(s.activity);
+      // plain: written on a shift, not in the shorthand, so a ! or ? it starts with is just a character
+      act.forEach((t, k) => out.push({ text: t, depth: k ? 1 : 0, abs_shift: a, plain: true }));
+      for (const m of (x.shift_notes || []).filter(y => Number(y.shift) === i)) {
+        const t = lines(m.body).join(' ');
+        if (t) out.push({ text: m.author ? `${sentence(t)} (${m.author})` : t, depth: act.length ? 1 : 0, abs_shift: a, plain: true });
+      }
+      lines(s.gm_notes).forEach((t, k) => out.push({ text: k ? t : `$ ${t}`, depth: k ? 1 : 0, abs_shift: a }));
+    }
+    return out;
+  }
+
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   /** A note as a sentence: trimmed, its first letter capitalized, a full stop added when it has no closing mark. */
   function sentence(text) {
@@ -156,9 +182,9 @@
     // where indented lines go: the paragraph above, the loose end above (in brackets), or nowhere under a ! line
     let cur = null;
     for (const x of notes) {
-      const k = mark(x.text), top = Number(x.depth) === 0 || !cur;
+      const k = x.plain ? '' : mark(x.text), top = Number(x.depth) === 0 || !cur;
       if (k === '>') continue;
-      if (secretLine(x.text, top ? 0 : x.depth)) {
+      if (!x.plain && secretLine(x.text, top ? 0 : x.depth)) {
         const t = secretText(x.text);
         if (!top) { if (t && !cur.sink) secret.push({ text: t, more: [] }); continue; }   // an indented $ line: that line alone, GM only
         secret.push({ text: t, more: [] });
@@ -237,7 +263,7 @@
   /** "Session 12 - A Locked Box.md", without characters a file name can't hold. */
   const fileName = s => `${`Session ${s.number}${s.title ? ` - ${s.title}` : ''}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()}.md`;
 
-  const Sessions = { mark, parseLines, parseJump, stampAt, notesFromText, jumpLine, foldNotes, draftHtml, sentence, name, daysCovered, markdown, fileName };
+  const Sessions = { mark, parseLines, parseJump, stampAt, notesFromText, jumpLine, foldNotes, shiftNotes, draftHtml, sentence, name, daysCovered, markdown, fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = Sessions;
   else root.Sessions = Sessions;
 })(typeof window !== 'undefined' ? window : globalThis);

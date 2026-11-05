@@ -106,6 +106,7 @@ test("in hours mode the day, pass-time box and travel planner count hours", asyn
   await expect(page.locator(".tv-wide > .dh-strip .dh-step")).toHaveCount(24);
   await expect(page.locator(".tv-side.next")).toContainText("08:00");
   await page.getByRole("button", { name: /^End 07:00 ▶ on to 08:00/ }).click();
+  await page.getByRole("button", { name: "Not now" }).click();
   await expect(page.locator(".tv-now h4")).toContainText("08:00");
 
   await page.goto(`index.html#/c/${cid}/travel`);

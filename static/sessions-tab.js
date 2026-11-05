@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, nowShift, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -132,9 +132,11 @@
       const loot = hasExtras ? RichText.editor({ text: s.loot || '', format: 'html', label: 'Loot Found', secret: true, mentions: encMentions(),
         placeholder: 'The coin, items and treasure the party found' }) : null;
       loot?.node.classList.add('rt-medium');
-      const draft = btn('Build draft', async () => {
-        const html = Sessions.draftHtml(cal(), Sessions.notesFromText(cal(), entry.text(), sessionStart(s), nowShift()).notes);
-        if (!html) return toast(entry.text().trim() ? 'Nothing to draft: every note is a ! aside or a time jump' : 'Type some notes first', true);
+      const draft = btn('Build draft', busy(null, async () => {
+        // what was written on the session's shifts first, then the notes box, each under its day
+        const fromShifts = await sessionShiftNotes(s).catch(() => []);
+        const html = Sessions.draftHtml(cal(), [...fromShifts, ...Sessions.notesFromText(cal(), entry.text(), sessionStart(s), nowShift()).notes]);
+        if (!html) return toast(entry.text().trim() ? 'Nothing to draft: every note is a ! aside or a time jump' : 'Type some notes first, or write on the shifts At the Table', true);
         if (editing.hidden) setEditing(true);
         let append = false;
         if (editor.value().text) {
@@ -145,7 +147,7 @@
         }
         editor.setHtml(html, append);
         cols.dataset.show = 'summary';   // one column (a phone): show the summary it filled
-      }, 'primary small', 'Fill the summary from your notes: a paragraph per note with its indented lines, a heading per day, ! lines left out, $ lines as GM-only paragraphs and ? lines listed GM only at the end. Then rewrite it as you like, and Save');
+      }), 'primary small', 'Fill the summary from the shifts this session ran over and your notes: each shift\'s activity with the players\' notes on it, the GM notes on a shift as GM-only paragraphs, then a paragraph per note with its indented lines, a heading per day, ! lines left out, $ lines as GM-only paragraphs and ? lines listed GM only at the end. Then rewrite it as you like, and Save');
       const entry = notesEntry(s, notes, [draft]);
       // The GM reads the session as players do, with the Encyclopedia's names linked (and the GM-only paragraphs marked),
       // and Edit opens the editors. A session with nothing written yet opens in them.
