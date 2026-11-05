@@ -374,7 +374,7 @@ test("a session's page: notes beside the summary, Build draft under them fills i
   await page.locator(".sess-summary .ql-editor").nth(1).fill("300 XP each and the Harbormaster's favour");
   await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed Tevari ledger and 40 crowns");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.locator("#toast")).toHaveText("Saved");
   await notNow(page); // the summary names Jupiter and Tevari: the Proper Noun Detector offers them
   // saved, the summary reads as players see it, and ✎ Edit opens the editors again
   await expect(summary).toBeHidden();
