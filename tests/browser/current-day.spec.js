@@ -53,8 +53,12 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   await expect(now.locator(".shift-status")).toHaveText("Saved ✓");
   // End shift moves the clock on one, and the box follows
   await page.getByRole("button", { name: /^End Dawn ▶ on to Midday/ }).click();
+  // with no session open, it offers to start one on the shift the clock moved to
+  await expect(page.locator("dialog.kit-dialog")).toContainText("No session is open");
+  await page.getByRole("button", { name: "Start a session" }).click();
   await expect(now.locator("h4")).toContainText("Midday");
   expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(9);
+  expect((await api(page, "campaign", undefined, cid)).json.open_session).toMatchObject({ number: 1, first_shift: 9 });
   // a look at the shift before, with its activity, and back
   await expect(page.locator(".tv-side.prev")).toContainText("Breakfast at the inn");
   await page.locator(".tv-side.prev").click();

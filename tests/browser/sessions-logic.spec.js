@@ -146,3 +146,23 @@ test("foldNotes writes old note rows out as the box's text, with a > line wherev
   expect(back.map(n => [n.text, Math.floor(n.abs_shift / 4)])).toEqual([["Arrived", 2], ["quiet", 2], ["Flip and burn", 3], ["Day five", 5], ["aside", 5], ["Back to day one", 1]]);
   expect(Sessions.foldNotes(c, [], 8)).toBe("");
 });
+
+test("shiftNotes turns the shifts a session ran over into notes: activities, players' notes under them, GM notes GM-only", () => {
+  const days = [
+    { d: 2, shifts: [{ shift: 0, activity: "Before the session" }, { shift: 1, activity: "Marching to Altdorf\nRain all day", gm_notes: "Ambush waits\nTwo bandits" }, { shift: 2, activity: "? not a loose end" }],
+      shift_notes: [{ shift: 1, body: "saw a crow", author: "Pip" }, { shift: 3, body: "Kept watch", author: "Hera" }] },
+    { d: 3, shifts: [{ shift: 0, activity: "Arrived" }], shift_notes: [] },
+  ];
+  const cal = calendar();
+  const notes = Sessions.shiftNotes(cal, days, 9, 12);   // Midday of day 2 to Dawn of day 3
+  expect(notes.map(n => [n.text, n.depth, n.abs_shift])).toEqual([
+    ["Marching to Altdorf", 0, 9], ["Rain all day", 1, 9], ["Saw a crow. (Pip)", 1, 9], ["$ Ambush waits", 0, 9], ["Two bandits", 1, 9],
+    ["? not a loose end", 0, 10], ["Kept watch. (Hera)", 0, 11], ["Arrived", 0, 12]]);
+  // the draft: a paragraph per shift under its day, the GM notes GM-only, and no shorthand read in an activity
+  const html = Sessions.draftHtml(cal, notes);
+  expect(html).toContain("<p>Marching to Altdorf. Rain all day. Saw a crow. (Pip)</p>");
+  expect(html).toContain("<p>? not a loose end.</p>");
+  expect(html).toContain("<aside>Ambush waits: Two bandits</aside>");
+  expect(html).not.toContain("Before the session");
+  expect(html.indexOf("Kept watch")).toBeLessThan(html.indexOf("Arrived"));
+});

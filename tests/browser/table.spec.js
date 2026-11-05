@@ -52,8 +52,12 @@ test("At the Table leads the Play group and shows the date, the party, the moons
   // End shift moves the clock, and the view follows
   const before = await view.locator(".tv-shift").textContent();
   await view.getByRole("button", { name: /^End Dawn/ }).click();
+  await page.getByRole("button", { name: "Not now" }).click();   // no session started; not asked again in this browser
   await expect(view.locator(".tv-shift")).not.toHaveText(before);
   expect((await api(page, "campaign", undefined, cid)).json.campaign.current_shift).toBe(9);
+  await view.getByRole("button", { name: /^End Midday/ }).click();
+  await expect(view.locator(".tv-shift")).toContainText("Dusk");
+  await expect(page.locator("dialog.kit-dialog")).toHaveCount(0);
   expectNoErrors(errors);
 });
 
