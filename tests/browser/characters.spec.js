@@ -493,3 +493,32 @@ test("Characters: a player's first PC becomes their character, named by it", asy
   expect((await api(gm, "character_save", { id: handed.id, version: handed.version, owner_id: ids.p1 }, cid)).status).toBe(200);
   expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(String(first.id));
 });
+
+test("Encyclopedia: an entry's editor has every button its page has, and a Person entry offers Add character sheet, then Open sheet", async ({ page, browser }) => {
+  const { cid, gm, tpl } = await party(page, browser);
+  const blank = (await api(gm, "entry_save", { name: "Hoffmann", category: "person" }, cid)).json.id;
+  // a blank entry opens straight in its editor: the button is there, and only while the Category is Person (or none);
+  // the editor has everything the page has: Copy as handout, Scan and the connections
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${blank}`);
+  const form = gm.locator(".enc-form");
+  await expect(form.getByRole("button", { name: "📋 Copy as handout" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "🔍 Scan" })).toBeVisible();
+  await expect(form.getByRole("heading", { name: "Connections" })).toBeVisible();
+  const add = gm.getByRole("button", { name: "Add character sheet" });
+  await expect(add).toBeVisible();
+  await gm.locator("select[name=category]").selectOption("location");
+  await expect(add).toBeHidden();
+  await gm.locator("select[name=category]").selectOption("person");
+  await add.click();
+  await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await gm.getByRole("button", { name: "Add sheet" }).click();
+  await expect(gm).toHaveURL(/#\/c\/\d+\/characters\/\d+$/);
+  // with notes it opens on its page, which has the button too; once it has a sheet, both say Open sheet
+  const written = (await api(gm, "entry_save", { name: "Greta", category: "person", notes: "<p>Runs the ferry.</p>" }, cid)).json.id;
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${written}`);
+  await expect(gm.getByRole("button", { name: "Add character sheet" })).toBeVisible();
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${blank}`);
+  await expect(gm.getByRole("link", { name: "Open sheet" })).toBeVisible();
+  await gm.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(gm.locator(".enc-form").getByRole("link", { name: "Open sheet" })).toBeVisible();
+});

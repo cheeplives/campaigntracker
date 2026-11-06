@@ -3968,7 +3968,8 @@
       out);
   }
 
-  function entryForm(e) {
+  /** opt (from the Encyclopedia tab): tools, more buttons for the header; extra, cards under the notes (connections). */
+  function entryForm(e, opt = {}) {
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
@@ -3976,8 +3977,19 @@
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
+    // a Person entry's character sheet, from the editor too (a blank entry opens straight here): Open sheet, or a GM's
+    // Add character sheet, shown while the Category picked is Person (or none)
+    const ch = e.id ? S.encChars?.[e.id] || null : null;
+    const sheetBtn = !e.id || typeof Sheets === 'undefined' ? null
+      : ch ? (ch.sheet_visible ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null)
+      : isGM() ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for a PC or an NPC with stats') : null;
+    if (sheetBtn && !ch) {
+      const fit = () => { sheetBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; };
+      category.addEventListener('change', fit);
+      fit();
+    }
     const f = el('form', { class: 'enc-form' },
-      el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
+      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row' }, sheetBtn, opt.tools || [])),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
@@ -3989,6 +4001,7 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
       tags.node,
+      ...(opt.extra || []).filter(Boolean),
       e.id ? foundIn(e, pub, gm) : null,
       e.id ? wikiSummary(name, pub) : null,
       e.id && Fan ? Fan.summary(fanCtx({ name, pub })) : null,
