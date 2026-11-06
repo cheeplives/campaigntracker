@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -107,16 +107,19 @@
       // Title and Played on are set once, so they fold behind ✎ Details (open while the session has no title), and the one
       // Save under the summary saves them with everything else; the rest of
       // what's done to a session, rather than written in it, waits in the ⋯ menu. The summary is left the room under the title.
+      // 🗓 In-game dates…: where it starts and ends in the campaign's calendar, or still open
+      const datesBtn = btn('🗓 In-game dates…', busy(null, async () => { if (await sessionDatesDialog(s)) route(); }), 'small',
+        'Set the day and shift the session starts and ends on in the campaign\'s calendar, or leave it open');
       const undated = el('input', { type: 'checkbox', checked: !!s.undated });
       const details = el('div', { class: 'sess-fields', hidden: !!s.title },
         el('div', { class: 'sess-fields-row' }, field('Title', title), field('Played on', played, null, 'The real-world date of the game night')),
         el('label', { class: 'inline small', 'data-tip': 'For a session written up without its in-game days (an imported one): it covers only the shifts you add it to one at a time, At the Table' },
-          undated, ' No in-game dates'));
+          undated, ' No in-game dates'), el('div', { class: 'row' }, datesBtn));
       const detailsBtn = btn('✎ Details', () => {
         details.hidden = !details.hidden; detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
         showSave();
       },
-        'small', 'Change the title and the date you played');
+        'small', 'Change the title, the date you played, and the in-game days and shifts it covers');
       detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
       const more = el('details', { class: 'sess-more' }, el('summary', { class: 'button small', 'aria-label': 'More', title: 'End or reopen, export with notes, delete' }, '⋯'),
         el('div', { class: 'sess-more-list' }, openClose,
@@ -233,11 +236,19 @@
       for (const e of ['input', 'keyup', 'focus']) nbox.addEventListener(e, grow);
       if (nbox.value) requestAnimationFrame(grow);
       // the shifts it takes in outside its run (added from a shift's + Session…), each linking to its day; ✕ takes one out
-      const n = E.slotsPerDay(cal());
-      const extras = (s.extra_shifts || []).length ? el('p', { class: 'small sess-extras-list' }, el('span', { class: 'muted' }, 'Also takes in: '),
-        ...s.extra_shifts.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
+      // + Add a shift… puts in one more, picked by day and shift
+      const n = E.slotsPerDay(cal()), xs = s.extra_shifts || [];
+      const addShift = btn(`+ Add a ${E.slotWord(cal())}…`, busy(null, async () => {
+        const a = await pickShiftDialog(`Add a ${E.slotWord(cal())} to ${sessionName(s)}`, 'Add');
+        if (a === null) return;
+        await post('session_shift_add', { id: s.id, abs_shift: a }, cid);
+        toast(`${E.fmtShift(cal(), a)} is in ${sessionName(s)}`);
+        route();
+      }), 'link small', `Put one more ${E.slotWord(cal())} in this session, outside its run: a flashback, or a split party's other half`);
+      const extras = el('p', { class: 'small sess-extras-list' }, el('span', { class: 'muted' }, xs.length ? 'Also takes in: ' : `Takes in no other ${E.slotWord(cal())}s. `),
+        ...xs.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
-            `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })])) : null;
+            `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })]), ' ', addShift);
       placesFrom(entry.text());
       return [head[0], bar, extras, details, cols, places, pictures];
     }

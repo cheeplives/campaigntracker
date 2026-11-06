@@ -181,6 +181,18 @@ function sessions_action(string $action): void {
             db()->prepare('UPDATE play_sessions SET title=?, played_on=?, first_day=?, last_day=?, is_published=?, undated=? WHERE id=?')
                 ->execute([$title, $played, $first, $last, $pub, $undated, $s['id']]);
             [$fs, $ls] = session_shifts_for_days($s, $cid, $first, $last);
+            // its in-game start and end set to the shift (the session page's In-game dates…): last_shift null leaves it open,
+            // ending any other open session, as Reopen does
+            if (array_key_exists('first_shift', body())) {
+                $spd = slots_per_day(dec(campaign_row($cid)['calendar_json']));
+                $fs = int_in(p('first_shift'));
+                $ls = p('last_shift') === null ? null : int_in(p('last_shift'));
+                if ($ls !== null && $ls < $fs) fail('It can\'t end before it starts');
+                if ($ls === null && $s['last_day'] !== null) sessions_end_all($cid);
+                $first = floordiv($fs, $spd); $last = $ls === null ? null : floordiv($ls, $spd);
+                $undated = array_key_exists('undated', body()) && p('undated') ? 1 : 0;
+                db()->prepare('UPDATE play_sessions SET first_day=?, last_day=?, undated=? WHERE id=?')->execute([$first, $last, $undated, $s['id']]);
+            }
             db()->prepare('UPDATE play_sessions SET first_shift=?, last_shift=? WHERE id=?')->execute([$fs, $ls, $s['id']]);
             $id = (int)$s['id'];
         } else {
@@ -250,11 +262,33 @@ function sessions_action(string $action): void {
         }
         out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);
 
-    case 'session_shift_remove': // GMs: a shift outside the run taken back out of the session
+    case 'session_shift_remove': // GMs: a shift taken back out of the session: one it takes in outside its run, or the first or
+        // last shift of its run, which then starts a shift later or ends a shift earlier (a run of one shift leaves it undated)
         $cid = cid();
         need_gm($cid);
-        $s = session_row($cid, int_in(p('id'), 1));
-        db()->prepare('DELETE FROM session_shifts WHERE session_id=? AND abs_shift=?')->execute([$s['id'], int_in(p('abs_shift'))]);
+        db()->beginTransaction();
+        $s = session_row($cid, int_in(p('id'), 1), true, true);
+        $a = int_in(p('abs_shift'));
+        $st = db()->prepare('DELETE FROM session_shifts WHERE session_id=? AND abs_shift=?');
+        $st->execute([$s['id'], $a]);
+        $c = campaign_row($cid);
+        $spd = slots_per_day(dec($c['calendar_json']));
+        [$from, $to] = session_span($s, $spd, (int)$c['current_shift']);
+        $ended = $s['last_day'] !== null;
+        if (!$st->rowCount() && !(int)($s['undated'] ?? 0) && $a >= $from && $a <= $to) {
+            $name = 'Session ' . $s['number'];
+            if ($from === $to && !$ended) fail("That is the only shift of $name, which is still open: end it or delete it instead");
+            if ($from === $to) {
+                db()->prepare('UPDATE play_sessions SET undated=1 WHERE id=?')->execute([$s['id']]);
+            } else {
+                if ($a === $from) $from++;
+                elseif ($a === $to && $ended) $to--;
+                else fail("That shift is in the middle of $name's run: change where it starts or ends on its page (In-game dates…) instead");
+                db()->prepare('UPDATE play_sessions SET first_day=?, first_shift=?, last_day=?, last_shift=? WHERE id=?')
+                    ->execute([floordiv($from, $spd), $from, $ended ? floordiv($to, $spd) : null, $ended ? $to : null, $s['id']]);
+            }
+        }
+        db()->commit();
         out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), false, true)]);
 
     case 'session_delete': // GMs: the session and its notes

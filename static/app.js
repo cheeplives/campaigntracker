@@ -165,9 +165,9 @@
   }
 
   // a shift's visibility choice (and other small pop-ups that are <details>) shuts when a click lands elsewhere
-  document.addEventListener('click', e => document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]')
+  document.addEventListener('click', e => document.querySelectorAll('details.tv-rem[open], details.sess-more-chips[open]')
     .forEach(x => { if (!x.contains(e.target)) x.open = false; }));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]').forEach(x => { x.open = false; }); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.tv-rem[open], details.sess-more-chips[open]').forEach(x => { x.open = false; }); });
 
   // ------------------------------------------------------------ reminders
   // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
@@ -1871,16 +1871,86 @@
    * session made for it. */
   function shiftSessions(abs, sessions, after) {
     const mine = (sessions || []).filter(x => (x.slots || []).includes(E.mod(abs, spd())));
-    const chip = x => el('a', { class: 'chip sess-chip', href: `#/c/${S.camp.id}/sessions/${x.id}`, 'data-tip': `This ${word()} is part of ${sessionName(x)}` }, `Session ${x.number}`);
+    const gm = isGM() && !PANEL && !S.viewAs;
+    // a GM's chip has a ✕ that takes the shift out of that session
+    const chip = x => {
+      const a = el('a', { class: 'chip sess-chip', href: `#/c/${S.camp.id}/sessions/${x.id}`, 'data-tip': `This ${word()} is part of ${sessionName(x)}` }, `Session ${x.number}`);
+      if (!gm) return a;
+      const off = btn('✕', () => removeShiftFromSession(abs, x, after), 'link small sess-chip-off', `Take this ${word()} out of ${sessionName(x)}`);
+      off.setAttribute('aria-label', `Take ${E.fmtShift(cal(), abs)} out of Session ${x.number}`);
+      return el('span', { class: 'sess-chip-wrap' }, a, off);
+    };
     // the latest two show; the rest fold behind "+N more", so a shift in many sessions doesn't take the box over
     const latest = [...mine].sort((a, b) => b.number - a.number), shown = latest.slice(0, 2), rest = latest.slice(2);
     const chips = [...shown.reverse().map(chip), rest.length ? el('details', { class: 'sess-more-chips' },
       el('summary', { class: 'chip', 'data-tip': `The other sessions this ${word()} is part of` }, `+${rest.length} more`),
       el('div', { class: 'sess-more-pop' }, rest.reverse().map(chip))) : null].filter(Boolean);
-    const add = isGM() && !PANEL && !S.viewAs ? btn(mine.length ? '+' : '+ Session…', () => addShiftToSession(abs, mine, after), 'link small',
+    const add = gm ? btn(mine.length ? '+' : '+ Session…', () => addShiftToSession(abs, mine, after), 'link small',
       `Put this ${word()} in a session: one already played (as a flashback or a split party's other half) or a new one`) : null;
     if (add && mine.length) add.setAttribute('aria-label', 'Add to another session');
     return chips.length || add ? el('div', { class: 'row sess-chips' }, chips, add) : null;
+  }
+  /** Take shift abs out of session x: one it takes in outside its run goes, and the first or last shift of its run moves
+   * its start or end by one (the server says when the shift is in the middle of the run). */
+  async function removeShiftFromSession(abs, x, after) {
+    if (!await confirmDialog(`Take ${E.fmtShift(cal(), abs)} out of ${sessionName(x)}?`)) return;
+    try {
+      await post('session_shift_remove', { id: x.id, abs_shift: abs }, S.camp.id);
+      toast(`${E.fmtShift(cal(), abs)} is no longer in ${sessionName(x)}`);
+      (after || route)();
+    } catch (err) { toast(err.message, true); }
+  }
+  /** A day and a shift (or hour) picked in two boxes; abs() is the absolute shift. */
+  function shiftPicker(abs0, label) {
+    const n = spd(), day = datePicker(Math.floor(abs0 / n)), slot = select(shiftNames().map((x, i) => [i, x]), E.mod(abs0, n), { 'aria-label': `${label}: ${word()}` });
+    day.querySelectorAll('[aria-label]').forEach(x => x.setAttribute('aria-label', `${label}: ${x.getAttribute('aria-label').toLowerCase()}`));
+    return { node: el('div', { class: 'row' }, day, slot), abs: () => (day.getAbs() ?? Math.floor(abs0 / n)) * n + Number(slot.value) };
+  }
+  /** The session page's In-game dates…: where the session starts and ends in the campaign's calendar, or that it is still
+   * open. Resolves to the saved session, or null. */
+  function sessionDatesDialog(s) {
+    hideTip();
+    return new Promise(resolve => {
+      const n = spd(), now = nowShift();
+      const from = s.first_shift ?? s.first_day * n;
+      const to = s.last_shift ?? (s.last_day === null || s.last_day === undefined ? now : (s.last_day + 1) * n - 1);
+      const start = shiftPicker(s.undated ? now : from, 'Starts'), end = shiftPicker(s.undated ? now : Math.max(from, to), 'Ends');
+      const open = el('input', { type: 'checkbox', checked: s.last_day === null || s.last_day === undefined });
+      const endField = field('Ends', end.node);
+      const err = el('p', { class: 'bad small', hidden: true });
+      const go = el('button', { class: 'primary', type: 'submit' }, 'Save');
+      let saved = null;
+      const d = el('dialog', { class: 'kit-dialog pt-dialog', 'aria-label': 'In-game dates' },
+        el('form', { novalidate: true },
+          el('h3', {}, `${sessionName(s)}: in-game dates`),
+          el('p', { class: 'small muted' }, `The ${word()}s of the campaign's calendar it ran over. Build draft gathers them, and each ${word()} card shows the session. ${word()}s it takes in outside these are listed under the session's title.`),
+          field('Starts', start.node),
+          el('label', { class: 'inline' }, open, ' Still open (it runs to the clock; any other open session ends)'),
+          endField, err,
+          el('div', { class: 'kit-dialog-actions' }, go, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel'))));
+      const sync = () => { endField.hidden = open.checked; };
+      open.addEventListener('change', sync); sync();
+      d.addEventListener('close', () => { d.remove(); resolve(saved); });
+      d.querySelector('form').addEventListener('submit', busy(go, async e => {
+        e.preventDefault();
+        err.hidden = true;
+        if (!open.checked && end.abs() < start.abs()) { err.textContent = 'It can\'t end before it starts.'; err.hidden = false; return; }
+        try {
+          const r = await post('session_save', { id: s.id, first_shift: start.abs(), last_shift: open.checked ? null : end.abs() }, S.camp.id);
+          if (open.checked) S.openSession = r.session; else if (S.openSession?.id === s.id) S.openSession = null;
+          saved = r.session;
+        } catch (x) { err.textContent = x.message; err.hidden = false; return; }
+        d.close();
+      }));
+      document.body.append(d);
+      d.showModal();
+    });
+  }
+  /** Pick one day and shift (or hour) in a dialog; resolves to the absolute shift, or null. */
+  async function pickShiftDialog(title, okLabel) {
+    const pick = shiftPicker(nowShift(), title);
+    const v = await KIT.dialog({ title, message: pick.node, buttons: [{ value: 'ok', label: okLabel, cls: 'primary', focus: true }, { value: '', label: 'Cancel' }] });
+    return v === 'ok' ? pick.abs() : null;
   }
   async function addShiftToSession(abs, already, after) {
     let sessions;
@@ -2324,8 +2394,17 @@
     const act = el('textarea', { rows: opt.big ? 6 : 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
     const hint = el('small', { class: 'muted' });
     const gmn = el('textarea', { rows: opt.big ? 3 : 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
-    const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
+    // the visibility pill is itself the choice: Auto (what the light, moon, weather and terrain give) first, then each score
+    const auto = E.visibility(c, region, sw, d, i, null);
+    const ov = select([['', `👁 ${auto.score} ${auto.label} · auto`], ...E.VIS_LABELS.map((l, k) => [k, `👁 ${k} ${l}`])], s.visibility_override ?? '');
     ov.setAttribute('aria-label', `Visibility for ${names[i]}`);
+    const drawVis = () => {
+      const nv = ov.value === '' ? auto : E.visibility(c, region, sw, d, i, Number(ov.value));
+      ov.className = `vis vis-select v${nv.score}`;
+      ov.dataset.tip = `Visibility ${nv.score} of 5 (${nv.label}): how well the party can see this ${word()}.\n${nv.parts.join(' · ')}\nPick a score to force it for this ${word()} (a magical darkness, a burning city), or Auto to work it out again`;
+    };
+    drawVis();
+    ov.addEventListener('change', drawVis);
     const status = el('small', { class: 'shift-status', role: 'status' });
     const preview = el('span', { class: 'shift-preview' });
     const drawPreview = () => preview.replaceChildren(...clean([
@@ -2349,7 +2428,6 @@
         const was = saved; saved = now;
         status.textContent = 'Saved ✓'; status.className = 'shift-status ok';
         drawPreview();
-        if (now.o !== was.o) card.querySelector('.vis')?.replaceWith(visPill(E.visibility(c, region, sw, d, i, now.o === '' ? null : Number(now.o))));
         if (now.a !== was.a) nouns.a = true;
         if (now.g !== was.g) nouns.g = true;
       } catch (err) { status.textContent = 'Not saved'; status.className = 'shift-status bad'; toast(err.message, true); }
@@ -2362,14 +2440,8 @@
     });
     for (const x of [act, gmn, ov]) x.addEventListener('change', save);
     // the visibility changes from its pill in the card's heading: a click opens the choice under it
-    const pill = card.querySelector('.vis');
-    const visPick = el('details', { class: 'vis-pick' });
-    pill.replaceWith(visPick);
-    visPick.append(el('summary', { 'aria-label': `Change the visibility for ${names[i]}` }, pill),
-      el('div', { class: 'vis-pop surface-float' }, el('label', { class: 'inline' }, 'Visibility ', ov),
-        tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)));
-    visPick.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
-    ov.addEventListener('change', () => { visPick.open = false; });
+    card.querySelector('.vis').replaceWith(ov);
+    ov.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
     // the big box: the writing is the main thing, with the actions a half-width pick beside its heading
     const editor = el('details', { class: 'shift-edit', open: isNow || opt.big || null },
       el('summary', { 'data-tip': `Open to write what the party does and GM-only notes. Each box saves as you leave it` },
@@ -5976,7 +6048,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
