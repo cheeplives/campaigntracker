@@ -719,11 +719,11 @@ const Sheets = (() => {
   }
   /** A GM's Player and party boxes for a new character: who plays it (no one, a player or a GM) and, for one no player
    * plays, whether it travels with the party (on to start for a PC, off for an NPC, until the GM ticks it). */
-  function whoPlays(kind) {
+  function whoPlays(kind, ownerId = 0) {
     const S = ctx.S;
     const owner = el('select', { 'aria-label': 'Player' }, el('option', { value: 0 }, 'No player (the GM runs it)'),
-      S.members.filter(m => m.role === 'player').map(m => el('option', { value: m.id }, memberName(m))),
-      S.members.filter(m => m.role === 'gm').map(m => el('option', { value: m.id }, `${memberName(m)} (GM)`)));
+      S.members.filter(m => m.role === 'player').map(m => el('option', { value: m.id, selected: Number(m.id) === ownerId }, memberName(m))),
+      S.members.filter(m => m.role === 'gm').map(m => el('option', { value: m.id, selected: Number(m.id) === ownerId }, `${memberName(m)} (GM)`)));
     const party = el('input', { type: 'checkbox', 'aria-label': 'Travels with the party' });
     const partyRow = el('label', { class: 'small check', 'data-tip': 'Listed with the party\'s players on Travel and the maps, and goes where the party goes. A player\'s own character is in the party with them' },
       party, ' Travels with the party');
@@ -740,8 +740,9 @@ const Sheets = (() => {
     return { nodes: [ctx.field('Player', owner), partyRow],
       values: () => ({ owner_id: Number(owner.value), party: !partyRow.hidden && party.checked }) };
   }
-  /** Pick a template and a name; GMs also pick PC or NPC, who plays it, and whether it travels with the party. */
-  async function newCharacter() {
+  /** Pick a template and a name; GMs also pick PC or NPC, who plays it, and whether it travels with the party.
+   * preset (from the Members tab): the name and owner_id to start from; an entry already called that name gets the sheet. */
+  async function newCharacter(preset = null) {
     const { templates } = await ctx.api('templates');
     if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
     const search = el('input', { type: 'search', placeholder: 'Name or game', 'aria-label': 'Search templates' });
@@ -754,9 +755,9 @@ const Sheets = (() => {
     };
     search.addEventListener('input', fill);
     fill();
-    const name = el('input', { maxlength: 150, 'aria-label': 'Character name', required: true, placeholder: 'Their name' });
+    const name = el('input', { maxlength: 150, 'aria-label': 'Character name', required: true, placeholder: 'Their name', value: preset?.name || '' });
     const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc' }, 'PC (a player character)'), el('option', { value: 'npc' }, 'NPC (GM only until shown)'));
-    const who = ctx.isGM() ? whoPlays(kind) : null;
+    const who = ctx.isGM() ? whoPlays(kind, Number(preset?.owner_id) || 0) : null;
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New character' },
       el('form', { method: 'dialog' }, el('h3', {}, 'New character'),
         search, ctx.field('Template', pick), ctx.field('Name', name), who ? [ctx.field('Kind', kind), who.nodes] : null,
@@ -765,13 +766,15 @@ const Sheets = (() => {
       d.remove();
       if (d.returnValue !== 'ok') return;
       try {
-        const r = await ctx.post('character_create', { template_id: Number(pick.value), name: name.value, kind: kind.value, ...(who ? who.values() : {}) }, cid());
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), name: name.value, kind: kind.value, ...(who ? who.values() : {}),
+          ...(preset ? { use_entry: true } : {}) }, cid());
+        if (ctx.reloadCampaign) await ctx.reloadCampaign();   // the member list carries each one's active character
         location.hash = `#/c/${cid()}/characters/${r.character.id}`;
       } catch (err) { toast(err.message, true); }
     });
     document.body.append(d);
     d.showModal();
-    name.focus();
+    (preset ? search : name).focus();
   }
 
   /** A GM gives Encyclopedia entry e a character sheet: pick a template, and PC or NPC (NPC to start). */
@@ -1012,5 +1015,5 @@ const Sheets = (() => {
     return renderLibrary();
   }
 
-  return { mount, route, campaignRoute, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, closePdf, stopPresence };
+  return { mount, route, campaignRoute, newCharacter, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, closePdf, stopPresence };
 })();

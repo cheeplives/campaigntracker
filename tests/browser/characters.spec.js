@@ -130,7 +130,7 @@ test("Characters: the player and the GM on one sheet see each other, and the GM 
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await expect(p1.getByLabel("Strength", { exact: true })).toBeEnabled();
   await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
-  await expect(gm.locator(".sheet-viewers")).toContainText("Pip is also looking at this sheet");
+  await expect(gm.locator(".sheet-viewers")).toContainText("Watched is also looking at this sheet");   // Pip, by their first PC's name
   await expect(gm.getByLabel("Strength", { exact: true })).toBeDisabled();
 
   let checked = presenceChecked(p1);
@@ -401,8 +401,10 @@ test("Characters: a GM makes a PC with no player, and it travels with the party"
   // the GM takes it out of the party, then hands it to a player: it is in the party with them, not on its own
   await gm.getByLabel("Travels with the party").uncheck();
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
+  await expect(gm.locator(".sheet-page")).not.toContainText("In the party");   // drawn again from the save
   await gm.getByLabel("Travels with the party").check();
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).not.toBe("NULL");
+  await expect(gm.locator(".sheet-page")).toContainText("In the party");
   await gm.getByLabel("Whose sheet").selectOption({ label: "Pip" });
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
   await expect(gm.getByLabel("Travels with the party")).toHaveCount(0);
@@ -443,4 +445,51 @@ test("Characters: the party's characters with no player split off and merge back
   // a character from another group can't be split off this one
   expect((await api(gm, "group_split", { from_id: groups[0].id, name: "Nope", characters: [lone.id] }, cid)).status).toBe(400);
   void pc;
+});
+
+test("Members: a character named the old way is matched up with a sheet, linked or made", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl, ids } = await party(page, browser);
+  // the old way: only a name on the Members tab; Quin's name is also already an Encyclopedia entry
+  await api(gm, "member_character", { user_id: ids.p1, character_name: "Brannoc" }, cid);
+  await api(gm, "member_character", { user_id: ids.p2, character_name: "Quinella" }, cid);
+  expect((await api(gm, "entry_save", { name: "Quinella", category: "person" }, cid)).status).toBe(200);
+  const sheet = await make(gm, cid, { template_id: tpl.id, name: "Brannoc", owner_id: 0 });
+
+  await gm.goto(`index.html#/c/${cid}/members`);
+  const pip = gm.locator(".member", { hasText: "Pip" });
+  await expect(pip).toContainText("No sheet yet");
+  await pip.getByRole("button", { name: "Link a sheet…" }).click();
+  await expect(gm.getByLabel("Character sheet", { exact: true })).toHaveValue(String(sheet.id));   // the one with its name comes first
+  await gm.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(pip.getByRole("link", { name: "Brannoc" })).toBeVisible();
+  expect(sql(`SELECT owner_id FROM sheet_characters WHERE id=${sheet.id}`).trim()).toBe(String(ids.p1));
+  expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(String(sheet.id));
+
+  // Quin makes their own sheet from their row: it goes on the entry already called Quinella
+  await p2.goto(`index.html#/c/${cid}/members`);
+  const quin = p2.locator(".member", { hasText: "Quin" });
+  await quin.getByRole("button", { name: "Make a sheet" }).click();
+  await expect(p2.getByLabel("Character name")).toHaveValue("Quinella");
+  await p2.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await p2.getByRole("button", { name: "Make character" }).click();
+  await expect(p2).toHaveURL(/#\/c\/\d+\/characters\/\d+$/);
+  const qid = Number(p2.url().match(/characters\/(\d+)$/)[1]);
+  expect(sql(`SELECT e.name FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id WHERE c.id=${qid}`).trim()).toBe("Quinella");
+  expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE campaign_id=${cid} AND name='Quinella'`).trim()).toBe("1");
+  expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p2}`).trim()).toBe(String(qid));
+  // a player can't take a sheet that isn't theirs, or put one on an entry that isn't their character's name
+  expect((await api(p2, "member_link_character", { character_id: sheet.id }, cid)).status).toBe(403);
+  const other = (await api(gm, "entry_save", { name: "Somebody Else", category: "person" }, cid)).json;
+  expect((await api(p2, "character_create", { template_id: tpl.id, entry_id: other.id }, cid)).status).toBe(403);
+});
+
+test("Characters: a player's first PC becomes their character, named by it", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl, ids } = await party(page, browser);
+  const first = await make(p1, cid, { template_id: tpl.id, name: "First" });
+  await make(p1, cid, { template_id: tpl.id, name: "Second" });
+  expect(sql(`SELECT CONCAT(active_character_id, ' ', character_name) FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(`${first.id} First`);
+  // a GM handing a no-player sheet to a player with none makes it theirs too
+  const handed = await make(gm, cid, { template_id: tpl.id, name: "Handed", owner_id: 0 });
+  expect((await api(gm, "character_save", { id: handed.id, version: handed.version, owner_id: ids.p1 }, cid)).status).toBe(200);
+  expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(String(first.id));
 });

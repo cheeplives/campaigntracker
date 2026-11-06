@@ -387,6 +387,12 @@ function character_name_in(int $cid, $v, bool $isGm, ?int $exceptEntry = null): 
     if ($e && (int)$e['id'] !== $exceptEntry) fail($isGm || !(int)$e['is_secret'] ? 'An entry is already called that. Pick another name, or add a sheet to that entry' : 'Pick another name', 409, 'name_taken');
     return $name;
 }
+/** Member $uid's character name in campaign $cid, as the Members tab shows it (empty for none). */
+function db_member_character_name(int $cid, int $uid): string {
+    $st = db()->prepare('SELECT character_name FROM campaign_members WHERE campaign_id=? AND user_id=?');
+    $st->execute([$cid, $uid]);
+    return (string)$st->fetchColumn();
+}
 function member_role(int $cid, int $uid): ?string {
     $st = db()->prepare('SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?');
     $st->execute([$cid, $uid]);
@@ -426,6 +432,16 @@ function character_owner_in(int $cid, $v, bool $isGm): ?int {
     if (!member_role($cid, $owner)) fail('Pick someone in this campaign');
     return $owner;
 }
+/** Make character $id user $uid's active character, writing its name over their character name (a GM-only entry's
+ * name never: it isn't made active), when $always or they have none yet. */
+function character_make_active(int $cid, int $uid, int $id, bool $always = false): void {
+    $st = db()->prepare('SELECT e.name, e.is_secret FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id WHERE c.id=?');
+    $st->execute([$id]);
+    $c = $st->fetch();
+    if (!$c || (int)$c['is_secret']) return;
+    db()->prepare('UPDATE campaign_members SET active_character_id=?, character_name=? WHERE campaign_id=? AND user_id=?'
+        . ($always ? '' : ' AND active_character_id IS NULL'))->execute([$id, $c['name'], $cid, $uid]);
+}
 /** Campaign $cid's main party group's id (made if there is none yet). */
 function party_main_id(int $cid): int {
     return (int)party_rows($cid)[0]['id'];
@@ -449,15 +465,21 @@ function characters_action(string $action, int $cid): void {
             $t = template_row(int_in(p('template_id'), 1));
             $kind = p('kind', 'pc');
             if (!in_array($kind, ['pc', 'npc'], true)) fail('A character is a PC or an NPC');
-            if (!$isGm && ($kind !== 'pc' || p('entry_id') || p('party') || (p('owner_id') !== null && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
+            if (!$isGm && ($kind !== 'pc' || p('party') || (p('owner_id') !== null && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
             // no owner_id: whoever makes it; 0: no player (a GM runs it)
             $owner = p('owner_id') === null ? $me['id'] : character_owner_in($cid, p('owner_id'), $isGm);
             // in the party: a character with no player in this campaign travels with the main group when the GM says so
             $party = $isGm && p('party') && ($owner === null || member_role($cid, $owner) !== 'player') ? party_main_id($cid) : null;
             $pdo = db();
             $pdo->beginTransaction();
-            if (p('entry_id')) {
-                $e = entry_row($cid, int_in(p('entry_id'), 1), $role);
+            // use_entry: an entry that already has the name gets the sheet (a member's character from the Members tab)
+            $entryId = p('entry_id');
+            if (!$entryId && p('use_entry') && ($named = entry_by_name($cid, entry_name(p('name'))))) $entryId = $named['id'];
+            if ($entryId) {
+                $e = entry_row($cid, int_in($entryId, 1), $role);
+                // a player gives a sheet only to the entry named as their character on the Members tab
+                if (!$isGm && ((int)$e['is_secret'] || mb_strtolower(trim((string)db_member_character_name($cid, $me['id']))) !== mb_strtolower($e['name'])))
+                    fail('Players make their own PCs', 403);
                 if (!in_array($e['category'] ?? null, [null, 'person'], true)) fail('Only a Person entry can have a character sheet');
                 $chk = $pdo->prepare('SELECT 1 FROM sheet_characters WHERE entry_id=?');
                 $chk->execute([$e['id']]);
@@ -474,6 +496,9 @@ function characters_action(string $action, int $cid): void {
                 VALUES (?,?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $party, $kind === 'pc' ? 1 : 0, $t['version']]);
             $id = (int)$pdo->lastInsertId();
             character_kind_tag($cid, $entry, $kind);
+            // a player's first character is the one the rest of the app names them by
+            // (and one made from the Members tab is that member's character, GM or not)
+            if ($owner !== null && (p('use_entry') || member_role($cid, $owner) === 'player')) character_make_active($cid, $owner, $id);
             $pdo->commit();
             out(['ok' => true, 'character' => character_out(character_row($cid, $id, $isGm), $isGm)['character']]);
 
@@ -568,7 +593,10 @@ function characters_action(string $action, int $cid): void {
             $st = $pdo->prepare('UPDATE sheet_characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
             $st->execute(array_merge($args, [$c['id'], int_in(p('version'), 1)]));
             if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
-            if ($handed !== null) $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
+            if ($handed !== null) {
+                $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
+                if ($handed && member_role($cid, $handed) === 'player') character_make_active($cid, $handed, (int)$c['id']);
+            }
             if ($renamed) {
                 $pdo->prepare('UPDATE encyclopedia_entries SET name=?' . entry_bump() . ' WHERE id=?')->execute([$name, $c['entry_id']]);
                 character_names_sync((int)$c['entry_id']);
@@ -620,6 +648,26 @@ function characters_action(string $action, int $cid): void {
                 }
             }
             out(['viewers' => $viewers, 'changes' => (object)$changes, 'stamp' => (string)$now]);
+
+        case 'member_link_character':
+            // A member's character from the Members tab, matched up with a sheet: the character becomes theirs (a GM
+            // can link anyone's; a player only a sheet they already play) and their active character, named by it.
+            $uid = int_in(p('user_id', $me['id']), 1);
+            if ($uid !== $me['id'] && !$isGm) fail('Only a GM can link someone else\'s character', 403);
+            $to = member_role($cid, $uid) ?? fail('Pick someone in this campaign', 404);
+            $c = character_row($cid, int_in(p('character_id'), 1), $isGm);
+            if (!$isGm && (int)$c['owner_id'] !== $me['id']) fail('Pick one of your own characters', 403);
+            if ((int)$c['entry_secret']) fail("A GM-only character can't be someone's character", 409);
+            $pdo = db();
+            $pdo->beginTransaction();
+            if ((int)$c['owner_id'] !== $uid) {
+                $pdo->prepare('UPDATE sheet_characters SET owner_id=?, party_group_id=' . ($to === 'player' ? 'NULL' : 'party_group_id') . ', version=version+1 WHERE id=?')
+                    ->execute([$uid, $c['id']]);
+                $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $uid]);
+            }
+            character_make_active($cid, $uid, (int)$c['id'], true);
+            $pdo->commit();
+            out(['ok' => true, 'character' => character_card(character_row($cid, (int)$c['id'], $isGm), $isGm)]);
 
         case 'member_active_character':
             $id = p('character_id');

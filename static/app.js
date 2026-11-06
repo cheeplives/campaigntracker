@@ -5418,16 +5418,48 @@
   let viewClocks, tableClocks, panelClocks;
 
   // ------------------------------------------------------------ members tab
-  function viewMembers() {
+  async function viewMembers() {
+    // The Characters tab's sheets, to match each member's character up with one
+    let sheets = [];
+    try { sheets = (await api('characters', { query: { cid: S.camp.id } })).characters; } catch { /* the list still works without them */ }
+    const sheetOf = m => sheets.find(c => c.id === Number(m.active_character_id));
+    /** The sheets member m could be linked to: their own and, for a GM, any no other player plays; one named as their
+     * character first. */
+    const linkable = m => {
+      const players = new Set(S.members.filter(x => x.role === 'player').map(x => Number(x.id)));
+      const name = (m.character_name || '').trim().toLowerCase();
+      return sheets.filter(c => !c.secret && (c.owner?.id === Number(m.id) || (isGM() && !(c.owner && players.has(c.owner.id)))))
+        .sort((a, b) => (b.name.toLowerCase() === name) - (a.name.toLowerCase() === name) || a.name.localeCompare(b.name));
+    };
+    const linkSheet = m => {
+      const options = linkable(m);
+      const pick = select(options.map(c => [c.id, `${c.name} (${c.kind === 'npc' ? 'NPC' : 'PC'}${c.owner ? `, ${c.owner.name}` : ', no player'})`]), options[0]?.id ?? '', { 'aria-label': 'Character sheet' });
+      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Link a character sheet' });
+      const form = el('form', { method: 'dialog' }, el('h3', {}, `${m.display_name}'s character sheet`),
+        el('p', { class: 'small muted' }, `The sheet becomes ${m.display_name}'s, and its name is the one the app shows for them.`),
+        field('Sheet', pick),
+        el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Link'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
+      d.addEventListener('close', async () => {
+        d.remove();
+        if (d.returnValue !== 'ok' || !pick.value) return;
+        try { await post('member_link_character', { user_id: m.id, character_id: Number(pick.value) }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }
+        catch (err) { toast(err.message, true); }
+      });
+      d.append(form); document.body.append(d); d.showModal();
+    };
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
+        const sheet = sheetOf(m);
+        const canLink = (self || isGM()) && !sheet && typeof Sheets !== 'undefined';
         return el('div', { class: 'listrow member' },
           el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
             el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
-            m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet')),
+            sheet ? el('a', { class: 'charname', href: `#/c/${S.camp.id}/characters/${sheet.id}`, 'data-tip': 'Open their character sheet' }, sheet.name)
+              : m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet'),
+            canLink && m.character_name ? el('span', { class: 'small muted' }, 'No sheet yet') : null),
           el('div', { class: 'actions' },
             (self || isGM()) ? btn(m.character_name ? 'Rename character' : 'Set character', async () => {
               const name = await promptDialog(self ? 'Your character\'s name in this campaign:' : `${m.display_name}'s character name:`,
@@ -5435,6 +5467,9 @@
               if (name === null) return;
               try { await post('member_character', { user_id: m.id, character_name: name }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Events and notes they add are signed with this name instead of their own') : null,
+            canLink && linkable(m).length ? btn('Link a sheet…', () => linkSheet(m), 'small', 'Match this character up with a sheet on the Characters tab') : null,
+            canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
+              'small', 'Give this character a sheet on the Characters tab, with this name') : null,
             isGM() ? btn('Remove', async () => {
               if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
               try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
@@ -6374,7 +6409,7 @@
   }
 
   // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
-  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route });
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route, reloadCampaign: () => loadCampaign(S.camp.id, true) });
 
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {
