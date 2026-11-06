@@ -1112,7 +1112,7 @@
   ];
   const TAB_TIPS = {
     calendar: 'Month and week views of days, weather, visibility, moons and events',
-    events: 'Every event in one list: search it and filter it by tag',
+    events: 'Every event in one list, searched and filtered by tag, and every reminder beside it',
     sessions: 'Each game night\'s quick notes and the summary written from them',
     clocks: 'Circles of segments that fill as something comes closer: the GM\'s plots and dangers, and the players\' own plans',
     table: 'Play from here: the shift the clock is on in a big box (what the party does, notes, its events) with End shift, and today\'s weather, shifts and events folded underneath',
@@ -2955,12 +2955,85 @@
       draw();
     };
     mount(...campaignHeader('events'), el('div', { class: 'card' },
-      el('div', { class: 'row evhead' }, el('h2', {}, 'Events'), el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl)),
+      el('div', { class: 'row evhead' }, eventsSubtabs('events'), el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl)),
       el('div', { class: 'row evfilters' }, search, when, order),
       used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
       count, list, timeline.node));
     setView(asTimeline); // drawn once it's on the page, so the timeline knows how wide it is
   }
+  /** The Events tab's two halves along the top of its card: the events, and every reminder. */
+  function eventsSubtabs(at) {
+    return el('nav', { class: 'subtabs', 'aria-label': 'Events and reminders' }, [['events', 'Events', ''], ['reminders', 'Reminders', '/reminders']].map(([k, label, path]) =>
+      el('a', { href: `#/c/${S.camp.id}/events${path}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
+  }
+
+  // ------------------------------------------------------------ reminders list (the Events tab's Reminders half)
+  /** Every reminder this member can see in one list, by when it is due, narrowed by a search, by whether it is still
+   * waiting, due or dismissed, and (for a GM) by who it is for. Each can be edited or deleted where it is, and
+   * + New reminder adds one on any day. */
+  async function viewReminders() {
+    const { reminders } = await loadReminders();
+    const st = vs().reminders || (vs().reminders = { q: '', state: 'all', who: 'any', order: 'asc' });
+    const c = cal(), n = spd(), d0 = today();
+    const stateOf = x => (!x.due ? 'waiting' : x.dismissed ? 'dismissed' : 'due');
+    const hay = new Map(reminders.map(x => [x, [x.title, x.body, x.author, x.player].filter(Boolean).join('\n').toLowerCase()]));
+
+    const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and details', 'aria-label': 'Search reminders' });
+    const state = select([['all', 'All reminders'], ['waiting', 'Still to come'], ['due', 'Due, not dismissed'], ['dismissed', 'Dismissed']], st.state,
+      { 'aria-label': 'Which reminders', 'data-tip': 'Every reminder, only those the clock hasn\'t reached yet, those it has that you haven\'t dismissed, or those you have' });
+    const who = isGM() ? select([['any', 'For anyone'], ...REMINDER_AUDIENCES], st.who, { 'aria-label': 'Who sees it', 'data-tip': 'Only reminders kept for yourself, for the GMs, or for everyone' }) : null;
+    const order = select([['asc', 'Soonest first'], ['desc', 'Latest first']], st.order, { 'aria-label': 'Order' });
+    const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
+    const list = el('div', { class: 'evlist remlist' });
+    const adder = el('div', {});
+
+    const row = (x, words) => {
+      const d = Math.floor(x.due_shift / n), s = stateOf(x);
+      const when = d < d0 ? 'past' : d > d0 ? 'future' : 'now';
+      const label = { waiting: 'Waiting', due: 'Due', dismissed: 'Dismissed' }[s];
+      const tipText = { waiting: `Pops up when the clock reaches ${E.fmtShift(c, x.due_shift)}`, due: 'The clock has reached it and you haven\'t dismissed it yet', dismissed: 'You have read this one' }[s];
+      const r = el('div', { class: `listrow evrow remrow ${when} ${s}` },
+        el('div', { class: 'evwhen' },
+          el('a', { href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': 'Open this day' }, E.fmtDate(c, d, { noWeekday: true })),
+          el('div', { class: 'small muted' }, shiftNames()[E.mod(x.due_shift, n)], ' · ', el('span', { class: `remstate ${s}`, 'data-tip': tipText }, label))),
+        el('div', { class: 'evbody' },
+          el('h4', {}, '🔔 ', words.length ? markWords(x.title, words) : linked(x.title)),
+          x.body ? el('p', { class: 'small pre' }, words.length ? markWords(x.body, words) : linked(x.body)) : null,
+          el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
+          canEditReminder(x) ? el('div', { class: 'row' },
+            btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
+            btn('Delete', async () => {
+              if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
+              try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+            }, 'small danger', 'Delete this reminder')) : null));
+      return r;
+    };
+    const draw = () => {
+      const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = reminders.filter(x => (st.state === 'all' || stateOf(x) === st.state)
+        && (!who || st.who === 'any' || x.audience === st.who)
+        && words.every(w => hay.get(x).includes(w)));
+      const noun = k => `${k} reminder${k === 1 ? '' : 's'}`;
+      count.textContent = shown.length === reminders.length ? noun(reminders.length) : `${shown.length} of ${noun(reminders.length)}`;
+      if (st.order === 'desc') shown = shown.slice().reverse();
+      list.replaceChildren(...(shown.length ? shown.map(x => row(x, words))
+        : [el('p', { class: 'muted' }, reminders.length ? 'No reminders match. Clear the search or pick All reminders to see more.' : 'No reminders yet. Add one here or from any day on the Calendar.')]));
+    };
+    search.addEventListener('input', () => { st.q = search.value; draw(); });
+    state.addEventListener('change', () => { st.state = state.value; draw(); });
+    who?.addEventListener('change', () => { st.who = who.value; draw(); });
+    order.addEventListener('change', () => { st.order = order.value; draw(); });
+    const add = btn('+ New reminder', () => { adder.replaceChildren(reminderForm(d0)); adder.querySelector('input')?.focus(); }, 'primary small',
+      `Have something pop up when the campaign reaches a ${word()}: set it on any day`);
+    mount(...campaignHeader('events'), el('div', { class: 'card' },
+      el('div', { class: 'row evhead' }, eventsSubtabs('reminders'), add),
+      el('p', { class: 'small muted' }, `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it.`),
+      adder,
+      el('div', { class: 'row evfilters' }, search, state, who, order),
+      count, list));
+    draw();
+  }
+
   const EV_VIEW_KEY = 'chronicle:evtimeline';
   function evTimelineOn() {
     try { return localStorage.getItem(EV_VIEW_KEY) === '1'; } catch { return false; }
@@ -6256,7 +6329,7 @@
         else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]));   // an old Current Day link to another day
-        else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: viewEvents, travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();
+        else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: () => (parts[3] === 'reminders' ? viewReminders() : viewEvents()), travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();
         if (rem) popDueReminders(rem);
         return;
       }

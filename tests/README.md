@@ -303,6 +303,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   it for that person only, Remind me later until the clock moves or the page reloads; moving
   it re-arms it; players keep only their own reminders and never see the GMs' or another
   player's; a time the clock has passed is refused; switching to hours moves reminders with the clock.
+  The Events tab's Reminders half (`#/c/<id>/events/reminders`) lists every reminder the person can see by when it
+  is due, narrowed by a search, by waiting / due / dismissed and (for a GM) by who sees it; one is edited, added and
+  deleted there; a player gets no who-sees-it filter and can't edit the GM's.
 - **changes**: a player's open page offers a Refresh banner after the GM saves a
   change, and Refresh loads it on the same tab; a player's own note and the GM's
   own saves don't announce themselves.

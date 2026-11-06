@@ -134,3 +134,85 @@ test("players keep their own reminders, GMs can share theirs, and only future ti
   expectNoErrors(errors);
   await pctx.close();
 });
+
+test("the Events tab's Reminders half lists every reminder, filters it, and adds, edits and deletes them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Vela"), player = person("Wim");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Reminder list ${gm.id}`); // now: shift 8 (Dawn of day 2)
+  const pctx = await newContext(browser);
+  const pp = await pctx.newPage();
+  const perrors = watchErrors(pp);
+  await signIn(pp, player);
+  await approve(browser, player.email);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  const save = async (p, r) => expect((await api(p, "reminder_save", r, cid)).status).toBe(200);
+  await save(page, { title: "The spy reports", body: "At the old mill", due_shift: 9, audience: "gm" });
+  await save(page, { title: "Market day", due_shift: 13, audience: "all" });
+  await save(page, { title: "Check the wards", due_shift: 20, audience: "me" });
+  await save(pp, { title: "Buy rope", due_shift: 10, audience: "me" });
+  sql(`UPDATE campaigns SET current_shift = 9 WHERE id = ${cid}`); // the spy's report is due now
+
+  // The Events tab has Events and Reminders along the top; Reminders has its own address.
+  await page.goto(`index.html#/c/${cid}/events`);
+  await page.locator("dialog.reminder-dialog").getByRole("button", { name: "Remind me later" }).click();
+  const sub = page.getByRole("navigation", { name: "Events and reminders" });
+  await expect(sub.getByRole("link", { name: "Events" })).toHaveAttribute("aria-current", "page");
+  await sub.getByRole("link", { name: "Reminders" }).click();
+  await expect(page).toHaveURL(/#\/c\/\d+\/events\/reminders$/);
+  await expect(page.locator(".tabs a.on")).toHaveText("Events");
+  const rows = page.locator(".remrow");
+  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports", "🔔 Market day", "🔔 Check the wards"]);
+  await expect(page.getByText("3 reminders")).toBeVisible();
+  await expect(rows.first()).toContainText("Due");
+  await expect(rows.first()).toContainText("GMs only");
+  await expect(rows.nth(1)).toContainText("Waiting");
+
+  // Search, which-reminders, who-sees-it and order narrow and turn the list.
+  const search = page.getByRole("searchbox", { name: "Search reminders" });
+  await search.fill("mill");
+  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports"]);
+  await expect(page.getByText("1 of 3 reminders")).toBeVisible();
+  await search.fill("");
+  await page.getByLabel("Which reminders").selectOption("waiting");
+  await expect(rows.locator("h4")).toHaveText(["🔔 Market day", "🔔 Check the wards"]);
+  await page.getByLabel("Who sees it").selectOption("all");
+  await expect(rows.locator("h4")).toHaveText(["🔔 Market day"]);
+  await page.getByLabel("Which reminders").selectOption("all");
+  await page.getByLabel("Who sees it").selectOption({ label: "For anyone" });
+  await page.getByLabel("Order").selectOption("desc");
+  await expect(rows.locator("h4")).toHaveText(["🔔 Check the wards", "🔔 Market day", "🔔 The spy reports"]);
+  await page.getByLabel("Order").selectOption("asc");
+
+  // Edit one where it is: the filters stay as they were.
+  await rows.filter({ hasText: "Market day" }).getByRole("button", { name: "Edit" }).click();
+  const form = page.locator("form.reminder");
+  await form.getByLabel("Title").fill("Market day at Thornbury");
+  await form.getByRole("button", { name: "Save reminder" }).click();
+  await expect(page.getByText("Reminder saved")).toBeVisible();
+  await notNow(page); // the detector offers Thornbury for the Encyclopedia
+  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports", "🔔 Market day at Thornbury", "🔔 Check the wards"]);
+
+  // + New reminder adds one on any day.
+  await page.getByRole("button", { name: "+ New reminder" }).click();
+  await form.getByLabel("Title").fill("Harvest moon");
+  await form.getByRole("button", { name: "Add reminder" }).click();
+  await expect(page.getByText("Reminder saved")).toBeVisible();
+  await expect(page.getByText("4 reminders")).toBeVisible();
+
+  // Delete asks first.
+  await rows.filter({ hasText: "Check the wards" }).getByRole("button", { name: "Delete" }).click();
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "OK" }).click();
+  await expect(rows.filter({ hasText: "Check the wards" })).toHaveCount(0);
+
+  // A player sees their own reminders and everyone's, with no who-sees-it filter, and can't edit the GM's.
+  await pp.goto(`index.html#/c/${cid}/events/reminders`);
+  const prow = pp.locator(".remrow");
+  await expect(prow.locator("h4")).toHaveText(["🔔 Buy rope", "🔔 Market day at Thornbury"]);
+  await expect(pp.getByLabel("Who sees it")).toHaveCount(0);
+  await expect(prow.filter({ hasText: "Buy rope" }).getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(prow.filter({ hasText: "Market day" }).getByRole("button", { name: "Edit" })).toHaveCount(0);
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});
