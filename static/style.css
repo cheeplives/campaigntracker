@@ -563,8 +563,17 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 .evnow { color: var(--accent); font-weight: 600; }
 /* Search matches, on the Search page and in the Events list alike: a tint of the theme's accent, not the browser's yellow */
 mark { background: color-mix(in srgb, var(--accent) 32%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
-.evhead { justify-content: space-between; margin-top: 0; }
+.evhead { justify-content: space-between; margin-top: 0; align-items: flex-end; }
 .evhead h2 { margin: 0; }
+/* The Events tab's Events / Reminders halves, styled like the Settings tabs */
+.subtabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto; border-bottom: 1px solid var(--line); }
+.subtabs a { padding: 6px 14px; margin-bottom: -1px; border-bottom: 3px solid transparent; color: var(--dim); text-decoration: none;
+  font: 600 1.05rem var(--disp); letter-spacing: .05em; text-transform: uppercase; }
+.subtabs a:hover { color: var(--text); }
+.subtabs a.on { color: var(--accent); border-bottom-color: var(--accent); }
+.remrow.dismissed { opacity: .7; }
+.remstate.due { color: var(--accent); font-weight: 600; }
+.remlist > form.reminder, .card > div > form.reminder { margin: 8px 0; }
 /* the events timeline: an SVG drawn by eventTimeline() in app.js; colours come from the theme's tokens */
 .tl-tools { margin: 0 0 8px; }
 .tl-tools select { width: auto; }
