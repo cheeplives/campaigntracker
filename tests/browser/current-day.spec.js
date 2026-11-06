@@ -26,11 +26,11 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   const today = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.weather;
   await expect.poll(async () => (await today())?.shifts?.length).toBe(4);
   expect((await today()).shift_order).toBe("dawn");
-  // The Clocks box, then today's boxes, come folded under it: Weather, Shifts, Events, Reminders. The day's notes are on its calendar page.
-  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["clocks", "table-weather", "table-shifts", "table-events", "table-reminders"]);
-  await expect(page.locator(".daybox.folded")).toHaveCount(5);
-  // Locations visited sits under the Region for this day, saves with the day and survives a weather re-roll.
-  await page.locator("[data-box=table-weather] .daybox-toggle").click();
+  // The Clocks box, then today's boxes, come folded under it: Shifts, Events, Reminders (the block up top has the weather). The day's notes are on its calendar page.
+  expect(await page.locator(".daybox").evaluateAll(b => b.map(x => x.dataset.box))).toEqual(["clocks", "table-shifts", "table-events", "table-reminders"]);
+  await expect(page.locator(".daybox.folded")).toHaveCount(4);
+  // ✎ Day in the block opens the day's editor: Locations visited sits under the Region for this day, saves with the day and survives a weather re-roll.
+  await page.locator(".tv-summary").getByRole("button", { name: "✎ Day" }).click();
   const regionTop = (await page.locator(".dayedit [name=region_id]").boundingBox()).y;
   expect((await page.getByLabel("Locations visited").boundingBox()).y).toBeGreaterThan(regionTop);
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
@@ -42,10 +42,8 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   await page.getByLabel("Locations visited").evaluate(e => { e.dataset.beforeReroll = "1"; });
   await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
   await expect(page.locator("[data-before-reroll]")).toHaveCount(0);
-  await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");
-  // the box stays unfolded in this browser
-  await page.reload();
-  await expect(page.locator("[data-box=table-weather]")).not.toHaveClass(/folded/);
+  await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");   // the editor stays open as the page redraws
+  await expect(page.locator(".tv-summary .notes-locs")).toContainText("Altdorf; the Grey Lady inn");
 
   // what the party does saves as it is typed in the big box
   await now.getByLabel("What the party does this Dawn").fill("Breakfast at the inn");
@@ -138,7 +136,8 @@ test("players see today's weather only up to the current shift", async ({ page, 
   expect((await api(page, "day_update", { abs_day: 2, notes: "", locations: "Ubersreik market" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}`);
   await expect(pp.locator(".tabs a.on")).toHaveText("At the Table");
-  await expect(pp.locator("[data-box=table-weather] .notes-locs")).toContainText("Ubersreik market"); // players read the day's locations, by the Region
+  await expect(pp.locator(".tv-summary .notes-locs")).toContainText("Ubersreik market");   // players read the day's locations in the block
+  await expect(pp.locator(".tv-summary").getByRole("button", { name: "✎ Day" })).toHaveCount(0);
   await expect(pp.locator("[data-box=notes], [data-box=table-notes]")).toHaveCount(0);             // and no Notes box under At the Table
   // Days run Dawn first, so at Dawn the player has Dawn's weather and nothing after it.
   await expect(pp.locator(".tv-now h4")).toHaveText(/^Dawn/);

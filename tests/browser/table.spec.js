@@ -392,6 +392,14 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await expect(top.locator(".tv-rem-pop")).toContainText("The ransom is due");
   await page.keyboard.press("Escape");
   await expect(top.locator(".tv-rem-pop")).toBeHidden();
+  // the header bar leaves the date and weather to the block; the shift before and after are one row of equal boxes over
+  // the big box, which takes the full width
+  await expect(page.locator(".nowbar .now-date")).toBeHidden();
+  const [prev, next, nowBox] = await Promise.all([view.locator(".tv-side.prev").boundingBox(), view.locator(".tv-side.next").boundingBox(), view.locator(".tv-now").boundingBox()]);
+  expect(prev.height).toBe(next.height);
+  expect(prev.y + prev.height).toBeLessThan(nowBox.y);
+  expect(Math.abs(prev.x - nowBox.x)).toBeLessThan(2);
+  expect(Math.abs((next.x + next.width) - (nowBox.x + nowBox.width))).toBeLessThan(2);
   // the session chips: the latest two, then +2 more
   const now = view.locator(".tv-now");
   await expect(now.locator(".sess-chips > .sess-chip")).toHaveText(["Session 3", "Session 4"]);
@@ -409,12 +417,21 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   expect(pick.y).toBeLessThan(act.y);
   // the floating bar stays on screen as the page scrolls, and ↑ goes back to the top
   const bar = view.locator(".tv-bar");
+  await page.setViewportSize({ width: 1180, height: 500 });   // short enough that the page scrolls a screen's worth
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(bar.getByRole("button", { name: /^End Midday/ })).toBeInViewport();
   await expect(bar.getByRole("button", { name: "Pass time…" })).toBeInViewport();
   await page.getByRole("button", { name: "Back to the top" }).click();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.getByRole("button", { name: "Back to the top" })).not.toHaveClass(/show/);
+  // the bar folds to one button, remembered, and opens again
+  await bar.getByRole("button", { name: "Hide the bar" }).click();
+  await expect(bar.getByRole("button", { name: /^End Midday/ })).toBeHidden();
+  await page.reload();
+  await remDialog.getByRole("button", { name: "Remind me later" }).click();
+  await expect(view.locator(".tv-bar").getByRole("button", { name: /^End Midday/ })).toBeHidden();
+  await view.locator(".tv-bar").getByRole("button", { name: "Show the bar" }).click();
+  await expect(bar.getByRole("button", { name: /^End Midday/ })).toBeVisible();
   // Encyclopedia add opens over the bar
   await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
   await expect(view.getByLabel("Entry", { exact: true })).toBeFocused();
