@@ -89,6 +89,8 @@ function upgrade_steps(): array {
         ['030_clocks.sql', fn(PDO $p) => !db_has_table($p, 'clock_ticks'), 'Added Clocks, for the GM and players to track what is coming.'],
         ['031_map_nesting.sql', fn(PDO $p) => db_has_table($p, 'map_pins') && !db_has_column($p, 'map_pins', 'child_map_id'),
             'A map pin can now open another map, so a town on the region map opens the town\'s own map.'],
+        ['032_shift_actions.sql', fn(PDO $p) => !db_has_table($p, 'shift_actions'),
+            'At the Table now has an action for each player and one for the party on every shift, listed on the session\'s page.'],
     ];
 }
 

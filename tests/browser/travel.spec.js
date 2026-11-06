@@ -203,12 +203,12 @@ test("an On the move action on a shift, or in Pass time, tags the events running
   const evening = await save("Feast", { abs_day: day + 1, shift: 2, shift_end: 3 });
   const tags = async id => (await api(page, "events", undefined, cid)).json.events.find(e => e.id === id).tags.map(t => t.name);
 
-  // Picking Navigate on the second shift tags the all-day event, not the ones in other shifts, and keeps their tags.
+  // Picking Navigate as the party's action on the second shift tags the all-day event, not the ones in other shifts, and keeps their tags.
   await page.goto(`index.html#/c/${cid}/day/${day + 1}`);
   const card = page.locator(".shiftcard").nth(1);
   await card.locator(".shift-edit > summary").click();
-  await card.locator("select.actpick").selectOption("Navigate");
-  await expect(card.locator(".shift-status")).toHaveText("Saved ✓");
+  await card.locator(".shift-actions select").first().selectOption("Navigate");
+  await expect(card.locator(".sa-status")).toHaveText("Saved ✓");
   await expect.poll(() => tags(allDay)).toEqual(["Battle", "Transit"]);
   expect(await tags(morning)).toEqual(["Battle"]);
   expect(await tags(evening)).toEqual(["Battle"]);
@@ -216,8 +216,8 @@ test("an On the move action on a shift, or in Pass time, tags the events running
   await page.goto(`index.html#/c/${cid}/day/${day + 1}`);
   const late = page.locator(".shiftcard").nth(2);
   await late.locator(".shift-edit > summary").click();
-  await late.locator("select.actpick").selectOption("Make camp");
-  await expect(late.locator(".shift-status")).toHaveText("Saved ✓");
+  await late.locator(".shift-actions select").first().selectOption("Make camp");
+  await expect(late.locator(".sa-status")).toHaveText("Saved ✓");
   expect(await tags(evening)).toEqual(["Battle"]);
 
   // Passing time with Travel tags what runs in the passed shifts.
