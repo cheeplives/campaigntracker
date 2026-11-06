@@ -1658,7 +1658,7 @@
         // At the Table already shows the shift the clock is on.
         d === today() && !table ? el('div', {}, el('span', { class: 'lbl' }, 'Now'), names[E.mod(nowShift(), spd())]) : null));
 
-    if (isGM()) overview.append(dayEditor(d, row, region, w, r));
+    if (isGM()) overview.append(dayEditor(d, row, region, w, r, undefined, grounds));
 
     // --- shifts
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
@@ -2331,13 +2331,16 @@
   /** The ✎ Day editor's "Conditions" part: the weather, temperature, wind and ground of one shift (a quarter of the day
    * in hours mode), each Auto (worked out from the forecast and the days before) or set by hand. ovs is the working copy
    * of the day's overrides, by quarter, that Save day stores with the weather. */
-  function conditionsEditor(d, region, w, ovs, q0) {
+  function conditionsEditor(d, region, w, ovs, q0, grounds) {
     const tUnit = tempUnit(), qs = quarterOptions(), open = E.openAir(region);
     let q = qs.some(([x]) => x === q0) ? q0 : qs[0][0];
     const qSel = select(qs, q, { 'aria-label': `${Word()} to set` });
     const body = el('span', { class: 'row conds' });
     const autoShifts = () => E.shiftWeather(cal(), S.camp.seed, region, d, { ...w, overrides: null });
-    let autoGround = [];   // the ground worked out for each quarter, without this quarter's own setting
+    // the ground worked out for each quarter, from what the page already has (by slot); a quarter whose ground was set by
+    // hand has it there, so its Auto choice names nothing
+    const autoGround = [];
+    (grounds || []).forEach((g, i) => { autoGround[E.slotQuarter(cal(), i)] ??= g; });
     const draw = () => {
       const auto = autoShifts()[q] || {}, o = ovs[q] || {}, def = E.WEATHER[auto.type] || {};
       const set = (k, v) => {
@@ -2353,8 +2356,8 @@
       temp.addEventListener('input', () => set('temp', temp.value === '' ? '' : Math.round(E.fromTempUnit(Number(temp.value), tUnit))));
       const wind = select([['', `Auto: ${E.WIND[auto.wind || 0]}`], ...E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, unitSystem())})`])], o.wind ?? '', { 'aria-label': 'Wind' });
       wind.addEventListener('change', () => set('wind', wind.value === '' ? '' : Number(wind.value)));
-      const ag = E.groundLabel(autoGround[q], unitSystem());
-      const ground = select([['', `Auto: ${ag ? ag.label : '…'}`], ...Object.entries(E.GROUND_PRESETS).map(([k, v]) => [k, v.label])], o.ground || '', { 'aria-label': 'Ground' });
+      const ag = (ovs[q] || {}).ground || (w.overrides && (w.overrides[q] || {}).ground) ? null : E.groundLabel(autoGround[q], unitSystem());
+      const ground = select([['', ag ? `Auto: ${ag.label}` : 'Auto'], ...Object.entries(E.GROUND_PRESETS).map(([k, v]) => [k, v.label])], o.ground || '', { 'aria-label': 'Ground' });
       ground.addEventListener('change', () => set('ground', ground.value));
       const reset = btn('Auto', () => { ovs[q] = null; draw(); }, 'small', `Put this ${word()} back to the conditions worked out from the forecast`);
       body.replaceChildren(...clean([tipped(type, 'Weather'), tipped(temp, 'Temperature'), tUnit === 'none' ? null : tempSym(tUnit),
@@ -2362,17 +2365,14 @@
     };
     qSel.addEventListener('change', () => { q = Number(qSel.value); draw(); });
     draw();
-    // the ground as worked out, leaving out what the GM set on this day, for the Auto choice
-    if (open) groundFor(d, region, { ...w, overrides: ovs.map(o => o && { ...o, ground: undefined }) })
-      .then(slots => { autoGround = []; slots.forEach((g, i) => { autoGround[E.slotQuarter(cal(), i)] ??= g; }); draw(); }).catch(() => {});
     return field('Conditions', el('span', { class: 'row' }, qSel, body), null,
       `Set any of a ${word()}'s conditions by hand: its weather, temperature${open ? ', wind and the ground underfoot' : ''}. Auto keeps what is worked out from the day's forecast${open ? ' and, for the ground, the days before' : ''}. Light is set on the ${word()}'s own card.`);
   }
 
-  function dayEditor(d, row, region, w, dayData, slot) {
+  function dayEditor(d, row, region, w, dayData, slot, grounds) {
     const ovs = [0, 1, 2, 3].map(i => (Array.isArray(w?.overrides) && w.overrides[i]) || null);
     const q0 = E.slotQuarter(cal(), slot ?? (d === today() ? E.mod(nowShift(), spd()) : 0));
-    const conds = w?.type && !w.partial ? conditionsEditor(d, region, w, ovs, q0) : null;
+    const conds = w?.type && !w.partial ? conditionsEditor(d, region, w, ovs, q0, grounds) : null;
     const regPick = regionPicker([['', '— (current region)']], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
@@ -5769,7 +5769,7 @@
     // (it stays open as the page redraws after a save or a re-roll, until ✎ Day closes it)
     const dayEdit = cur && isGM() && !S.viewAs ? el('div', { class: 'tv-dayedit', hidden: true }) : null;
     const showDayEdit = on => {
-      if (on && !dayEdit.firstChild) dayEdit.append(dayEditor(cur.d, cur.x.row, cur.x.region, cur.x.w, cur.x.r, cur.i));
+      if (on && !dayEdit.firstChild) dayEdit.append(dayEditor(cur.d, cur.x.row, cur.x.region, cur.x.w, cur.x.r, cur.i, cur.x.grounds));
       dayEdit.hidden = !on; tableDayEdit = on;
       dayEditBtn.setAttribute('aria-expanded', String(on));
     };
