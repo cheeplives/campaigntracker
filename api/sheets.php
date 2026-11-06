@@ -331,7 +331,7 @@ function character_row(int $cid, int $id, bool $isGm): array {
 /** The characters of campaign $cid this member can see (players don't see those of GM-only entries), or just $id. */
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
     $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
-            u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign
+            u.display_name AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
         WHERE c.campaign_id=?' . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
@@ -361,7 +361,8 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'owner_in_campaign' => (bool)$c['owner_in_campaign'], 'secret' => (bool)(int)$c['entry_secret'],
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
         'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
-        'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null];
+        'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null,
+        'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'owner_is_player' => $c['owner_role'] === 'player'];
 }
 /** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
  * Summary fields as this member may see them (none when the sheet is hidden from them). */
@@ -392,6 +393,43 @@ function member_role(int $cid, int $uid): ?string {
     return $st->fetchColumn() ?: null;
 }
 const PRESENCE_SECONDS = 40;
+/** The colours the PC and NPC tags are made with, the first time a campaign needs one. */
+const CHARACTER_KIND_TAGS = ['pc' => ['PC', '#2563eb'], 'npc' => ['NPC', '#7c3aed']];
+/** Tag entry $entryId PC or NPC as $kind says, taking off the other (the tags are made the first time they are needed;
+ * a campaign's own tag of that name, in any case, is the one used). */
+function character_kind_tag(int $cid, int $entryId, string $kind): void {
+    $pdo = db();
+    $ids = [];
+    foreach (CHARACTER_KIND_TAGS as $k => [$name, $color]) {
+        $st = $pdo->prepare('SELECT id FROM encyclopedia_tag_names WHERE campaign_id=? AND name=?');
+        $st->execute([$cid, $name]);
+        $id = $st->fetchColumn();
+        if ($id === false && $k !== $kind) continue;   // nothing to take off
+        if ($id === false) {
+            $pdo->prepare('INSERT INTO encyclopedia_tag_names (campaign_id, name, color) VALUES (?,?,?)')->execute([$cid, $name, $color]);
+            $id = $pdo->lastInsertId();
+        }
+        $ids[$k] = (int)$id;
+    }
+    foreach ($ids as $k => $id) {
+        if ($k === $kind) $pdo->prepare('INSERT IGNORE INTO encyclopedia_tags (entry_id, tag_id) VALUES (?,?)')->execute([$entryId, $id]);
+        else $pdo->prepare('DELETE FROM encyclopedia_tags WHERE entry_id=? AND tag_id=?')->execute([$entryId, $id]);
+    }
+}
+/** The owner a character is given, as sent: 0 for no player (GMs only), else someone in this campaign. */
+function character_owner_in(int $cid, $v, bool $isGm): ?int {
+    $owner = int_in($v, 0);
+    if ($owner === 0) {
+        if (!$isGm) fail('Only a GM can make a character with no player', 403);
+        return null;
+    }
+    if (!member_role($cid, $owner)) fail('Pick someone in this campaign');
+    return $owner;
+}
+/** Campaign $cid's main party group's id (made if there is none yet). */
+function party_main_id(int $cid): int {
+    return (int)party_rows($cid)[0]['id'];
+}
 
 /** The character actions of campaign $cid. */
 function characters_action(string $action, int $cid): void {
@@ -411,9 +449,11 @@ function characters_action(string $action, int $cid): void {
             $t = template_row(int_in(p('template_id'), 1));
             $kind = p('kind', 'pc');
             if (!in_array($kind, ['pc', 'npc'], true)) fail('A character is a PC or an NPC');
-            if (!$isGm && ($kind !== 'pc' || p('entry_id') || (p('owner_id') && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
-            $owner = p('owner_id') ? int_in(p('owner_id'), 1) : $me['id'];
-            if ($owner !== $me['id'] && !member_role($cid, $owner)) fail('Pick someone in this campaign');
+            if (!$isGm && ($kind !== 'pc' || p('entry_id') || p('party') || (p('owner_id') !== null && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
+            // no owner_id: whoever makes it; 0: no player (a GM runs it)
+            $owner = p('owner_id') === null ? $me['id'] : character_owner_in($cid, p('owner_id'), $isGm);
+            // in the party: a character with no player in this campaign travels with the main group when the GM says so
+            $party = $isGm && p('party') && ($owner === null || member_role($cid, $owner) !== 'player') ? party_main_id($cid) : null;
             $pdo = db();
             $pdo->beginTransaction();
             if (p('entry_id')) {
@@ -430,9 +470,10 @@ function characters_action(string $action, int $cid): void {
                 $entry = (int)$pdo->lastInsertId();
                 $pdo->prepare("UPDATE encyclopedia_entries SET category='person' WHERE id=?")->execute([$entry]);
             }
-            $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, sheet_public, template_version, field_values, field_stamps, hidden)
-                VALUES (?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $kind === 'pc' ? 1 : 0, $t['version']]);
+            $pdo->prepare("INSERT INTO sheet_characters (campaign_id, owner_id, template_id, entry_id, kind, party_group_id, sheet_public, template_version, field_values, field_stamps, hidden)
+                VALUES (?,?,?,?,?,?,?,?,'{}','{}','[]')")->execute([$cid, $owner, $t['id'], $entry, $kind, $party, $kind === 'pc' ? 1 : 0, $t['version']]);
             $id = (int)$pdo->lastInsertId();
+            character_kind_tag($cid, $entry, $kind);
             $pdo->commit();
             out(['ok' => true, 'character' => character_out(character_row($cid, $id, $isGm), $isGm)['character']]);
 
@@ -496,14 +537,22 @@ function characters_action(string $action, int $cid): void {
                 $set[] = 'sheet_public=?';
                 $args[] = p('sheet_public') ? 1 : 0;
             }
+            $toPlayer = $c['owner_role'] === 'player';
             if (p('owner_id') !== null) {
-                $owner = int_in(p('owner_id'), 1);
-                $to = member_role($cid, $owner);
-                if (!$to) fail('Pick someone in this campaign');
+                $owner = character_owner_in($cid, p('owner_id'), $isGm);
+                $to = $owner === null ? null : member_role($cid, $owner);
                 if (!$isGm && $to !== 'gm' && $owner !== $me['id']) fail('You can hand your sheet to a GM; only a GM can give it to another player', 403);
                 $set[] = 'owner_id=?';
                 $args[] = $owner;
-                $handed = $owner;
+                $handed = $owner ?? 0;
+                $toPlayer = $to === 'player';
+            }
+            // in the party: only for a character no player of this campaign plays (a player is in the party as themselves)
+            if ($toPlayer) $set[] = 'party_group_id=NULL';
+            elseif (p('party') !== null) {
+                if (!$isGm) fail('Only a GM can say who travels with the party', 403);
+                $set[] = 'party_group_id=?';
+                $args[] = !p('party') ? null : ($c['party_group_id'] !== null ? (int)$c['party_group_id'] : party_main_id($cid));
             }
             if (p('hidden') !== null) {
                 if ($c['owner_id'] !== null && (int)$c['owner_id'] !== $me['id']) fail('Only its player can hide or show parts of their sheet', 403);
@@ -524,6 +573,7 @@ function characters_action(string $action, int $cid): void {
                 $pdo->prepare('UPDATE encyclopedia_entries SET name=?' . entry_bump() . ' WHERE id=?')->execute([$name, $c['entry_id']]);
                 character_names_sync((int)$c['entry_id']);
             }
+            if ($kind !== $c['kind']) character_kind_tag($cid, (int)$c['entry_id'], $kind);
             $pdo->commit();
             out(['ok' => true, 'character' => character_out(character_row($cid, (int)$c['id'], $isGm), $isGm)['character']]);
 

@@ -762,6 +762,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   template_id INT UNSIGNED NOT NULL,
   entry_id INT UNSIGNED NOT NULL,
   kind ENUM('pc','npc') NOT NULL DEFAULT 'pc',
+  party_group_id INT UNSIGNED NULL,                  -- the party group a character with no player travels with (033); null: not in the party
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
   template_version INT UNSIGNED NOT NULL,
   field_values MEDIUMTEXT NOT NULL,
@@ -775,6 +776,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (template_id) REFERENCES sheet_templates(id),
+  CONSTRAINT fk_character_party_group FOREIGN KEY (party_group_id) REFERENCES party_groups(id) ON DELETE SET NULL,
   FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id) ON DELETE CASCADE   -- only with its campaign: entry_delete refuses an entry with a sheet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
