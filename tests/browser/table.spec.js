@@ -402,7 +402,7 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   expect(Math.abs((next.x + next.width) - (nowBox.x + nowBox.width))).toBeLessThan(2);
   // the session chips: the latest two, then +2 more
   const now = view.locator(".tv-now");
-  await expect(now.locator(".sess-chips > .sess-chip")).toHaveText(["Session 3", "Session 4"]);
+  await expect(now.locator(".sess-chips > .sess-chip-wrap .sess-chip")).toHaveText(["Session 3", "Session 4"]);
   await now.getByText("+2 more").click();
   await expect(now.locator(".sess-more-pop .sess-chip")).toHaveText(["Session 1", "Session 2"]);
   // the visibility pill opens its choice, and a pick saves and shows on the pill

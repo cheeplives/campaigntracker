@@ -624,8 +624,8 @@ test("+ Session… on a shift puts it in a session, Build draft gathers it in it
   const summary = page.locator(".sess-summary .ql-editor").first();
   await expect(summary).toContainText("Years ago the ford flooded");
   expect(await summary.innerText()).toMatch(/Years ago the ford flooded[\s\S]*Marching to Altdorf/);
-  await page.locator(".sess-extras-list").getByRole("button").click();
-  await expect(page.locator(".sess-extras-list")).toHaveCount(0);
+  await page.locator(".sess-extras-list").getByRole("button", { name: /^Take .* out$/ }).click();
+  await expect(page.locator(".sess-extras-list")).toContainText("Takes in no other shifts");
   expect((await one(page, cid, sid)).json.session.extra_shifts).toEqual([]);
   expectNoErrors(errors);
 });
@@ -655,5 +655,52 @@ test("+ New session asks when it starts, and Played already writes one up afterw
   const list = (await api(page, "sessions", undefined, cid)).json.sessions;
   expect(list.find(x => x.number === 2)).toMatchObject({ first_shift: 1 * 4 + 0, last_shift: 1 * 4 + 3 });
   expect((await api(page, "campaign", undefined, cid)).json.open_session).toMatchObject({ number: 1 });
+  expectNoErrors(errors);
+});
+
+test("a shift's ✕ takes it out of a session, and the session page sets its in-game dates and adds a shift", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Unlink");
+  // a session over Midday to Overnight of day 2 (shifts 9 to 11), ended
+  const sid = (await api(page, "session_save", { first_shift: 9, last_shift: 11 }, cid)).json.session.id;
+  expect((await api(page, "session_shift_add", { id: sid, abs_shift: 4 }, cid)).status).toBe(200);
+  // ✕ on a shift it takes in outside its run takes it out
+  await page.goto(`index.html#/c/${cid}/day/1`);
+  await page.getByRole("button", { name: /^Take .* out of Session 1$/ }).click();
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "OK" }).click();
+  await expect(page.locator("#toast")).toContainText("is no longer in Session 1");
+  expect((await one(page, cid, sid)).json.session.extra_shifts).toEqual([]);
+  // ✕ on the first shift of its run starts it a shift later; on the last, ends it a shift earlier
+  await page.goto(`index.html#/c/${cid}/day/2`);
+  await page.locator(".shiftcard").nth(1).getByRole("button", { name: /out of Session 1$/ }).click();
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "OK" }).click();
+  await expect(page.locator(".shiftcard").nth(1).locator(".sess-chip")).toHaveCount(0);
+  expect((await api(page, "session_shift_remove", { id: sid, abs_shift: 11 }, cid)).status).toBe(200);
+  let s = (await one(page, cid, sid)).json.session;
+  expect([s.first_shift, s.last_shift]).toEqual([10, 10]);
+  // a run of one shift taken out leaves it with no in-game dates; one in the middle of a run is refused
+  expect((await api(page, "session_save", { id: sid, first_shift: 8, last_shift: 11 }, cid)).status).toBe(200);
+  const mid = await api(page, "session_shift_remove", { id: sid, abs_shift: 9 }, cid);
+  expect(mid.status).toBe(400);
+  expect(mid.json.message).toContain("middle");
+  // In-game dates… on the session page sets the start and end by day and shift
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await page.getByRole("button", { name: "🗓 In-game dates…" }).click();
+  const d = page.locator("dialog.kit-dialog");
+  await d.getByLabel("Starts: shift").selectOption("2");
+  await d.getByLabel("Ends: day").fill("4");
+  await d.getByLabel("Ends: shift").selectOption("0");
+  await d.getByRole("button", { name: "Save" }).click();
+  await expect(d).toHaveCount(0);
+  s = (await one(page, cid, sid)).json.session;
+  expect([s.first_shift, s.last_shift, s.first_day, s.last_day]).toEqual([10, 12, 2, 3]);
+  await expect(page.locator(".sess-bar")).toContainText("Dusk, 3 Firstmonth 1 to Dawn, 4 Firstmonth 1");
+  // + Add a shift… puts one more in, outside the run
+  await page.getByRole("button", { name: "+ Add a shift…" }).click();
+  await page.locator("dialog.kit-dialog").getByLabel("Add a shift to Session 1: day").fill("2");
+  await page.locator("dialog.kit-dialog").getByLabel("Add a shift to Session 1: shift").selectOption("3");
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "Add" }).click();
+  await expect(page.locator(".sess-extras-list")).toContainText("Also takes in:");
+  expect((await one(page, cid, sid)).json.session.extra_shifts).toEqual([7]);
   expectNoErrors(errors);
 });
