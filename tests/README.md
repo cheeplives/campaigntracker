@@ -94,10 +94,11 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
-- **table** (layout): the block up top has the shift's weather and a 🔔 badge that lists the reminders; a shift in four
+- **table** (layout): the header bar leaves the date and weather to the block; the shift before and after are a row of two
+  equal boxes over the full-width big box; the block up top has the shift's weather and a 🔔 badge that lists the reminders; a shift in four
   sessions shows the latest two chips and +2 more; the visibility pill opens its choice, which saves; the action pick is
   half the box's width, above the writing; End and Pass time stay on screen in the floating bar as the page scrolls, ↑
-  goes back to the top, and Encyclopedia add opens over the bar.
+  goes back to the top, the bar folds to one button and stays folded after a reload, and Encyclopedia add opens over the bar.
 - **table** (framing): in another site's frame the panel changes nothing until "Allow changes here" is turned on for that site, which is remembered.
 - **table**: At the Table sits first under Play and shows the date, shift, weather and party in one block over the big box; End shift moves the clock, offers to start a session when none is open (Start a session starts one on the new shift; Not now isn't asked again); Pass time… skips ahead by an amount or to a date and shift, labels every shift passed with the activity, refuses a time that isn't after now, and opens the downtime dialog; an Encyclopedia lookup finds names (never a secret entry for a player); a
   player's note goes on the clock's shift from the big box, and an entry note, escaped, at the end of an entry's Public
@@ -112,14 +113,15 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Table, sees it once, and revokes it.
 - **api-keys**: a read-only key reads only its maker's campaign, with no member's email, and is refused writes, other actions, the panel link's header, both headers at once and revocation; a read/write key does what its maker may (a GM's passes time, a player's can't but adds notes signed as them and events) and stops when its maker leaves, writes included; a GM's key sent with View as player is answered as a player and changes nothing; a key request is open to any site (CORS) and nothing else is; New API key… shows the key once with a curl example and lists it.
 - **current-day**: Locations visited offers the Encyclopedia's Locations named on the day's shifts (by name or other name, whole words only, never a Person) that the box doesn't list, and a tap adds one; a campaign opens on At the Table (no Current Day tab): the clock's shift in a big box with the shift
-  before and after beside it, the GM's browser saves today's shift weather, and today's Weather, Shifts, Events and
-  Reminders boxes come folded under it and stay as left; what the party does saves as typed; End shift moves the clock
+  before and after over it, the GM's browser saves today's shift weather, and today's Shifts, Events and Reminders
+  boxes (no Weather box: the block up top has it) come folded under it; what the party does saves as typed; End shift moves the clock
   on one; a click on the shift before looks at it (no End shift there) and Back to now returns; an old Current Day link
   to another day opens its calendar page and Go to today comes back. Players get today's weather only up to the
   current shift (never the forecast), nothing for later days, and everything once allowed, in the big box, the side
   panels, the Shifts box and the days' calendar pages; they can look back but not ahead and get no End shift; there is
-  no Notes box under At the Table; the day's Locations visited sits under the Region dropdown, saves with Save day,
-  survives a re-roll and is shown to players by the Region.
+  no Notes box under At the Table; ✎ Day in the block opens the day's editor, where Locations visited sits under the
+  Region dropdown, saves with Save day, survives a re-roll (the editor staying open) and is shown in the block, to
+  players too, who get no ✎ Day.
 - **day-notes**: the GM writes bold text and a table in the Public notes and a Secret note, and they save as cleaned HTML and reopen in the editor; tables wait behind ⋯, and ⤢ Focus gives the editor the whole window until Esc; players read the formatted Public notes, never the Secret ones, the month grid previews them as plain text and the export turns them into Markdown; scripts, images, styles, attributes and javascript: links are stripped on the server, and HTML put straight into the database is still rebuilt from the allow-list in the browser; a plain note from before shows as typed; every day box folds and stays folded per account in that browser, and adding an event unfolds Events.
 - **encyclopedia**: the Proper Noun Detector finds capitalized, bold/italic and quoted names and a day's
   Locations visited, leaves out common and calendar words, members' names, shift actions and any lone word that only

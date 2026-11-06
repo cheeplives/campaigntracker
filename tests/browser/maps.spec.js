@@ -1389,7 +1389,7 @@ test("Trail: At the Table says where the party was the shift before, and the day
   await expect(pp.goto(`index.html#/c/${cid}`)).resolves.toBeTruthy();
   await expect(pp.locator(".tv-side.prev")).toContainText("Was near Burnt Ford");   // players see the trail too
   // the day's Locations visited offers Burnt Ford from the trail, though no shift names it
-  await page.locator("[data-box=table-weather] .daybox-toggle").click();
+  await page.locator(".tv-summary").getByRole("button", { name: "✎ Day" }).click();
   await expect(page.locator(".loc-suggest")).toContainText("+ Burnt Ford");
   await page.locator(".loc-suggest").getByRole("button", { name: "+ Burnt Ford" }).click();
   await expect(page.getByLabel("Locations visited")).toHaveValue("Burnt Ford");

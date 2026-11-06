@@ -1106,7 +1106,8 @@
   };
   function campaignHeader(active) {
     const c = cal(), d = today(), sh = E.mod(nowShift(), spd());
-    const head = el('section', { class: 'nowbar' });
+    // At the Table's block repeats the date, weather and light, so there the bar keeps to the campaign, View as player and ⏩
+    const head = el('section', { class: 'nowbar' + (active === 'table' ? ' on-table' : '') });
     const draw = async () => {
       let dayRow = null;
       try { dayRow = (await fetchRange(d, d)).days.get(d) || null; } catch { /* ignore */ }
@@ -1637,7 +1638,8 @@
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
-      dayBox(key('weather'), table ? 'Today\'s weather and conditions' : 'Weather', { folded: table, summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, overview),
+      // At the Table's block over the big box holds all of this, with ✎ Day for the editor
+      table ? null : dayBox(key('weather'), 'Weather', { summary: [region ? `📍 ${region.name}` : null, ' ', weatherText(w)] }, overview),
       dayBox(key('shifts'), table ? `Every ${word()} today` : `${Word()}s`, { folded: table, tip: shiftTip() }, shiftCards),
       // The day's Public and Secret notes are on its calendar page.
       table ? null : notesBox(d, row),
@@ -5448,6 +5450,7 @@
   const ENTRY_NOTE_TIP = 'Added to the end of the entry\'s Public notes, which everyone in the campaign can read';
   let tableEntries = null;   // the Encyclopedia's entries with their notes, loaded the first time one is looked up
   let tablePeek = null;      // the shift (absolute) looked at from a side panel; null: the one the clock is on
+  let tableDayEdit = false;  // At the Table's ✎ Day editor is open (kept as the page redraws)
   /** Whether event e is on shift i of day d: an all-day event on any shift of its days, else from its start shift on its
    * first day to its end shift on its last. */
   function eventCovers(e, d, i) {
@@ -5485,7 +5488,8 @@
     let partyMap = null, partyData = null;
     // its parts: the region, the pin it's near, a link to its map, a small picture of the map around it, the other groups
     const party = await (async () => {
-      const g = mainGroup, out = { region: ((g && regionById(g.region_id)) || region)?.name || null, near: null, link: null, mini: null,
+      // the region is the day's (the one its weather and light come from); the main group's own is added only when it differs
+      const g = mainGroup, gReg = g && regionById(g.region_id), out = { region: (region || gReg)?.name || null, groupRegion: gReg && region && gReg.id !== region.id ? gReg.name : null, near: null, link: null, mini: null,
         groups: groups.length > 1 ? `${groups.length} groups: ${groups.map(x => x.name).join(', ')}` : null };
       if (g?.map_id) {
         try {
@@ -5521,6 +5525,16 @@
     const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions })
       : el('div', { class: 'card shiftcard' }, el('p', { class: 'muted' }, `This ${word()} couldn't be loaded.`));
     big.classList.add('tv-now');
+    // on a wide screen the big box is two columns: the writing, and beside it everyone's notes and the events
+    const twoCols = () => {
+      if (PANEL) return;
+      const main = el('div', { class: 'tv-now-main' }), aside = el('div', { class: 'tv-now-aside' });
+      for (const n of [...big.children]) {
+        if (n.matches('.shift-edit, .shift-status, p.pre')) main.append(n);
+        else if (n.matches('.shiftnotes, .tv-here')) aside.append(n);
+      }
+      big.append(el('div', { class: 'tv-now-cols' }, main, aside));
+    };
 
     if (PANEL) {
       // the panel: the header, the clock's shift as a player reads it, what's on today and the lookup
@@ -5557,6 +5571,7 @@
         `Log something that happens on this ${word()}`)));
       big.append(here);
     }
+    twoCols();
 
     // the block over the big box, one card: the date and shift, its weather, where the party is, the moons, a badge for
     // the reminders, a small map, and the day's shifts with their weather along the foot
@@ -5570,7 +5585,23 @@
     const wx = cur?.sw ? weatherText(cur.sw, `Weather this ${names[ai]}, worked out from the day's forecast`)
       : el('span', { class: 'muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet');
     const ground = cur?.ground ? groundText(cur.ground, cur.d) : null;
-    const moonLine = moons.length ? el('span', { class: 'tv-fact tv-moon-line' }, moons.map(m => el('span', { 'data-tip': `${m.name}: ${m.label}` }, moonGlyph(m), ` ${m.name} ${m.label}`))) : null;
+    // the season, the sun and the moons on one quiet line
+    const hemi = region?.settings?.hemisphere, sea = E.season(c, d, hemi), sun = E.sunTimes(c, d, hemi);
+    const skyLine = el('span', { class: 'tv-fact tv-sky' }, clean([
+      sea.name ? el('span', { 'data-tip': 'The season, from the calendar\'s season dates (flipped for the other hemisphere)' }, sea.name) : null,
+      sun ? el('span', { class: 'sun', 'data-tip': `${fmtDaylight(sun.daylight)} of daylight` }, `☀ ${E.fmtClock(sun.sunrise)}–${E.fmtClock(sun.sunset)}`) : null,
+      ...moons.map(m => el('span', { 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)` }, moonGlyph(m), ` ${m.name} ${m.label}`))]).flatMap((x, k) => k ? [' · ', x] : [x]));
+    const locs = (cur?.x.row?.locations || '').trim();
+    // the GM's day editor (region, weather, Locations visited), which the day page's Weather box holds, opens under the block
+    // (it stays open as the page redraws after a save or a re-roll, until ✎ Day closes it)
+    const dayEdit = cur && isGM() && !S.viewAs ? el('div', { class: 'tv-dayedit', hidden: true }) : null;
+    const showDayEdit = on => {
+      if (on && !dayEdit.firstChild) dayEdit.append(dayEditor(cur.d, cur.x.row, cur.x.region, cur.x.w, cur.x.r));
+      dayEdit.hidden = !on; tableDayEdit = on;
+      dayEditBtn.setAttribute('aria-expanded', String(on));
+    };
+    const dayEditBtn = dayEdit ? btn('✎ Day', () => showDayEdit(dayEdit.hidden), 'small', 'Change the day\'s region, set or re-roll its weather, and write its Locations visited') : null;
+    if (dayEdit) showDayEdit(tableDayEdit);
     const summary = el('section', { class: 'tv-summary', 'aria-label': `This ${word()}` },
       el('div', { class: 'tv-sum-main' },
         el('div', { class: 'tv-sum-top' },
@@ -5578,15 +5609,18 @@
             el('div', { class: 'tv-date' }, E.fmtDate(c, d)),
             el('div', { class: 'tv-shift' }, hourMode() ? names[ai] : `${names[ai]} · ${n === 2 ? (ai ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][ai]} shift of 4`}`,
               ...E.holidaysOn(c, S.holidays, d).map(holidayChip))),
-          remBadge),
+          el('div', { class: 'tv-sum-acts' }, remBadge, dayEditBtn)),
         el('div', { class: 'tv-facts' },
           el('span', { class: 'tv-fact tv-wx' }, wx, ground ? el('span', { class: 'small' }, ground) : null),
-          el('span', { class: 'tv-fact tv-party' }, '📍 ', clean([party.region ? el('b', {}, party.region) : null, party.near, party.link, party.groups
-            ? el('span', { class: 'muted' }, party.groups) : null]).flatMap((x, k) => k ? [' · ', x] : [x]),
+          el('span', { class: 'tv-fact tv-party' }, '📍 ', clean([party.region ? el('b', { 'data-tip': region ? regionSummary(region) : null }, party.region) : null,
+            party.groupRegion ? el('span', { class: 'muted', 'data-tip': 'The main party group\'s own region, which differs from the day\'s' }, `group in ${party.groupRegion}`) : null,
+            party.near, party.link, party.groups ? el('span', { class: 'muted' }, party.groups) : null]).flatMap((x, k) => k ? [' · ', x] : [x]),
             party.region || party.near ? null : el('span', { class: 'muted' }, 'Party not placed')),
-          moonLine)),
+          skyLine,
+          locs ? el('span', { class: 'tv-fact notes-locs' }, el('span', { class: 'lbl', 'data-tip': LOC_TIP }, 'Visited'), el('span', {}, linked(locs))) : null),
+        cur ? dayStrip(cur.d, cur.x.sws) : null),
       party.mini ? el('div', { class: 'tv-sum-map tv-party' }, party.mini) : null,
-      cur ? dayStrip(cur.d, cur.x.sws) : null);
+      dayEdit);
 
     // the floating bar: End and Pass time for the GM on the clock's shift, and the Encyclopedia for everyone, in a pop-up over it
     const tools = [];
@@ -5615,7 +5649,25 @@
     }
     openPop(null);
     pop.addEventListener('keydown', e => { if (e.key === 'Escape') { openPop(null); } });
-    const dock = el('div', { class: 'tv-dock' }, pop, el('div', { class: 'tv-bar surface-float', role: 'toolbar', 'aria-label': 'At the Table tools' }, ...tools, lookBtn, noteBtn));
+    // it folds away to one button, like the map's toolbar, remembered on this device
+    const bar = el('div', { class: 'tv-bar surface-float', role: 'toolbar', 'aria-label': 'At the Table tools' }, ...tools, lookBtn, noteBtn);
+    const barKey = `chronicle-table-bar-${cid}`;
+    let barFolded = (() => { try { return localStorage.getItem(barKey) === 'folded'; } catch { return false; } })();
+    const barFold = btn('', () => {
+      barFolded = !barFolded;
+      try { localStorage.setItem(barKey, barFolded ? 'folded' : 'open'); } catch { /* this visit only */ }
+      syncBarFold();
+    }, 'small tv-bar-fold');
+    const syncBarFold = () => {
+      bar.classList.toggle('folded', barFolded);
+      barFold.textContent = barFolded ? '🧰' : '⟩';
+      barFold.setAttribute('aria-label', barFolded ? 'Show the bar' : 'Hide the bar');
+      barFold.setAttribute('aria-expanded', String(!barFolded));
+      if (barFolded) openPop(null);
+    };
+    bar.append(barFold);
+    syncBarFold();
+    const dock = el('div', { class: 'tv-dock' }, pop, bar);
 
     // the shift before (in hours mode the last hour with something written, back into yesterday) and the one after
     const written = y => !!(y && (y.s.activity || y.s.gm_notes || y.notes.length));
@@ -5652,7 +5704,7 @@
 
     const today0 = days.get(d0);
     view.append(summary,
-      el('div', { class: 'tv-stage' }, side(prevAbs, true), big, side(at + 1, false)),
+      el('div', { class: 'tv-stage' }, el('div', { class: 'tv-nav' }, side(prevAbs, true), side(at + 1, false)), big),
       ...(today0 ? dayBoxes(today0, true) : []),
       await tableLinksBox(), dock);
     mount(...campaignHeader('table'), view);
