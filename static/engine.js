@@ -935,7 +935,58 @@
       if ((WEATHER[type] || {}).wind) wind = Math.max(wind, WEATHER[type].wind);
       return { type, temp, wind: Math.min(wind, Math.max(w.wind || 0, (WEATHER[type] || {}).wind || 0)) };
     });
-    return [out[1], out[2], out[3], out[0]];
+    return withOverrides([out[1], out[2], out[3], out[0]], w.overrides);
+  }
+  /**
+   * A general outlook for day d (whose forecast is w) and the `days - 1` days after it, as a weather service gives one:
+   * [{ d, type, hi, lo, wind }], hi and lo in °C (null where the weather has no temperature). The days after are rolled
+   * the way passing time will roll them, from the region's climate and the day before, so it holds unless the GM re-rolls
+   * the weather or the party moves on. Today's GM overrides count in its own entry.
+   */
+  function outlook(cal, seed, region, d, w, days = 3) {
+    const out = [];
+    let cur = w && w.type ? w : null;
+    for (let k = 0; k < days; k++) {
+      if (k) cur = genWeather(cal, seed, region, d + k, cur, 0);
+      if (!cur || !cur.type) break;
+      const sh = shiftWeather(cal, seed, region, d + k, cur);
+      const temps = sh.map(x => x && x.temp).filter(t => typeof t === 'number');
+      // the forecast is the worst the day brings, unless the GM has set a shift worse by hand
+      const type = k ? cur.type : sh.reduce((a, x) => (x && worse(x.type, a) ? x.type : a), cur.type);
+      out.push({ d: d + k, type, hi: temps.length ? Math.max(...temps) : null, lo: temps.length ? Math.min(...temps) : null,
+        wind: Math.max(cur.wind || 0, ...sh.map(x => (x && x.wind) || 0)) });
+    }
+    return out;
+  }
+  /** Whether weather type a is worse (lower daytime visibility, then more wind) than b, for picking a day's headline. */
+  function worse(a, b) {
+    const A = WEATHER[a] || {}, B = WEATHER[b] || {};
+    return (A.day || 0) < (B.day || 0) || ((A.day || 0) === (B.day || 0) && (A.wind || 0) > (B.wind || 0));
+  }
+  // The outlook in words, by weather type: what a forecaster would say of a day that brings it at its worst.
+  const OUTLOOK_WORDS = {
+    clear: 'Fair and dry', partly: 'Fair, some cloud', overcast: 'Cloudy', drizzle: 'Showers likely', rain: 'Rain likely',
+    storm: 'Thunderstorms likely', fog: 'Fog likely', snow: 'Light snow likely', heavysnow: 'Heavy snow likely',
+    blizzard: 'Blizzard warning', hail: 'Hail possible', haze: 'Hot and hazy', sandstorm: 'Sandstorm warning',
+  };
+  /** One outlook day in words, e.g. 'Rain likely', falling back to the weather's own label (caves, ships). */
+  const outlookWords = type => OUTLOOK_WORDS[type] || (WEATHER[type] || {}).label || '';
+
+  /** The GM's own conditions for some quarters of a day (Dawn, Midday, Dusk, Overnight), laid over the shifts worked out
+   * from the forecast: each override may set the type, temp (°C), wind (0–3) or ground (a GROUND_PRESETS key), and
+   * whatever it leaves out stays as worked out. The ground goes in the quarter's entry, where groundConditions reads it. */
+  function withOverrides(shifts, overrides) {
+    if (!Array.isArray(overrides)) return shifts;
+    return shifts.map((q, i) => {
+      const o = overrides[i];
+      if (!q || !o || typeof o !== 'object') return q;
+      const x = { ...q };
+      if (o.type && WEATHER[o.type]) x.type = o.type;
+      if (typeof o.temp === 'number' && Number.isFinite(o.temp)) x.temp = o.temp;
+      if (Number.isInteger(o.wind) && o.wind >= 0 && o.wind < WIND.length) x.wind = o.wind;
+      if (o.ground && GROUND_PRESETS[o.ground]) x.ground = o.ground;
+      return x;
+    });
   }
 
   // ---------------------------------------------------------------- ground conditions
@@ -968,6 +1019,26 @@
     [0.5, 'Dusting of snow', 'Tracks show clearly.'],
   ];
   const noGround = clim => clim === CLIMATES.underground || clim === CLIMATES.ship || clim === CLIMATES.vacuum;
+  /** Whether region is out in the open air, with wind and ground underfoot (not a cave, a ship or open space). */
+  const openAir = region => !noGround(climateFor(region));
+  // The ground a GM can set by hand for a quarter (see withOverrides): the snow (cm) and water (mm) it holds, and whether
+  // it is frozen, each in the middle of its GROUND_SNOW or GROUND_WET band, so groundLabel names it back. The days after
+  // carry on from it as the weather comes.
+  const GROUND_PRESETS = {
+    dry: { label: 'Dry', snow: 0, wet: 2 },
+    firm: { label: 'Firm', snow: 0, wet: 10 },
+    damp: { label: 'Damp', snow: 0, wet: 20 },
+    soft: { label: 'Soft', snow: 0, wet: 30 },
+    muddy: { label: 'Muddy', snow: 0, wet: 41 },
+    waterlogged: { label: 'Waterlogged', snow: 0, wet: 54 },
+    frozen: { label: 'Frozen hard', snow: 0, wet: 10, frozen: true },
+    icyruts: { label: 'Frozen, icy ruts', snow: 0, wet: 30, frozen: true },
+    dusting: { label: 'Dusting of snow', snow: 1, wet: 20, frozen: true },
+    thinsnow: { label: 'Thin snow cover', snow: 5, wet: 20, frozen: true },
+    snow: { label: 'Snow cover', snow: 18, wet: 20, frozen: true },
+    deepsnow: { label: 'Deep snow', snow: 42, wet: 20, frozen: true },
+    verydeepsnow: { label: 'Very deep snow', snow: 80, wet: 20, frozen: true },
+  };
 
   /**
    * The ground at the end of each quarter (Dawn, Midday, Dusk, Overnight) of absolute day d in region.
@@ -1013,6 +1084,14 @@
         const drain = frozen ? 0 : Math.max(0, wet - cap) * 0.06;
         const dry = frozen || covered ? 0 : Math.max(0, t) * GROUND_RATES.drying * sun * QUARTER_SUN[i] * (1 + 0.2 * (q.wind || 0)) * Math.min(1, wet / cap);
         wet = Math.min(60, Math.max(0, wet + water - drain - dry));
+        // the GM set this quarter's ground by hand: it is that, and the quarters after carry on from it
+        const set = q.ground && GROUND_PRESETS[q.ground];
+        if (set) {
+          snow = set.snow; wet = set.wet; melt = 0;
+          soil = set.frozen ? Math.min(soil, -1) : Math.max(soil, 1);
+          if (set.snow) lastSnow = lastSnow ?? day;
+          return { snow, wet, frozen: !!set.frozen, melting: false, temp: t, lastSnow, set: true };
+        }
         return { snow: Math.round(snow * 10) / 10, wet: Math.round(wet * 10) / 10, frozen, melting: melt > 0.3, temp: t, lastSnow };
       });
       wetLog.push(wetToday);
@@ -2542,7 +2621,7 @@
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, isOnTheMove, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
     eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, RED_MOON_BANDS, holidaysOn, holidayActive,
-    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, groundConditions, groundLabel, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
+    genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, GROUND_PRESETS, groundConditions, groundLabel, openAir, withOverrides, outlook, outlookWords, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     tuningDefaults, mergeTuning, tuningChanges, tuningProblem, setTuning, OUTDOOR_WEATHER, GROUND_WET_STEPS, GROUND_SNOW_STEPS,
     travel, fmtDuration, hoursToShifts, HYPERDRIVE_CLASSES, HYPER_ROUTES, HYPER_TRIPS, SOURCES, SPEEDS, SYSTEMS, DIST_UNITS, AU, LY, GENRES, SPEED_MODES, GENRE_MODES, genreOf, speedSamples, spaceDistances, STARS, starDistance,

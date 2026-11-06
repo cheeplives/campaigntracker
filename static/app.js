@@ -299,13 +299,14 @@
       const row = days.get(d);
       if (row && row.weather) {
         // stored before shift weather was saved, or the engine has changed it since: refresh the copy players get
-        const fresh = withShiftWx(d, regionById(row.region_id) || currentRegion(), row.weather);
-        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts) || fresh.shift_order !== row.weather.shift_order) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
+        const fresh = withShiftWx(d, regionById(row.region_id) || currentRegion(), row.weather, d === to);
+        if (JSON.stringify(fresh.shifts) !== JSON.stringify(row.weather.shifts) || fresh.shift_order !== row.weather.shift_order
+          || JSON.stringify(fresh.outlook) !== JSON.stringify(row.weather.outlook)) out.push({ abs_day: d, region_id: row.region_id, weather: fresh });
         prev = row.weather; continue;
       }
       const reg = (row && regionById(row.region_id)) || region;
       const w = E.genWeather(cal(), S.camp.seed, reg, d, prev, 0);
-      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: withShiftWx(d, reg, w) });
+      out.push({ abs_day: d, region_id: reg ? reg.id : null, weather: withShiftWx(d, reg, w, d === to) });
       prev = w;
     }
     for (let i = 0; i < out.length; i += 1000) await post('days_save', { days: out.slice(i, i + 1000) }, S.camp.id);
@@ -508,9 +509,14 @@
   /** Day weather as the GM saves it: the forecast plus its four shifts, so the server can hand players
    * today's shifts one at a time without sending the forecast. shift_order records the calendar's shift
    * order they were saved in; the server ignores a copy saved in another order. */
-  function withShiftWx(d, region, w) {
-    const { shifts, shift_order, ...forecast } = w;
-    return { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast), shift_order: cal().shiftOrder || 'overnight' };
+  function withShiftWx(d, region, w, withOutlook = false) {
+    const { shifts, shift_order, outlook, ...forecast } = w;
+    const out = { ...forecast, shifts: E.shiftWeather(cal(), S.camp.seed, region, d, forecast), shift_order: cal().shiftOrder || 'overnight' };
+    // the day the clock is on keeps the general outlook for it and the next two days, for players the server sends no
+    // seed (the Weather forecast button); it is refreshed whenever the clock reaches a day or the GM opens the campaign
+    const keep = withOutlook || d === today() ? E.outlook(cal(), S.camp.seed, region, d, forecast) : null;
+    if (keep && keep.length) out.outlook = keep;
+    return out;
   }
   /** The ground in each shift (or hour) of day d in region, worked out from the weather of the days before; w is day d's
    * weather as this page has it. [] where nothing can be known: caves and ships, or a day a player may not see yet. */
@@ -534,8 +540,42 @@
       g.lastSnow !== null ? `Last snowfall: ${ago(d - g.lastSnow)}.` : null,
       `Rain or snowmelt on ${g.wetDays} of the last 7 days.`,
       g.frozen ? 'The ground is frozen.' : null,
+      g.set ? 'The GM set the ground by hand on this day; it carries on from there.' : null,
       `Worked out from the last ${E.GROUND_DAYS} days of weather here: rain and snow, how warm it was, sun and wind. Days with no weather recorded are rolled from the region's climate. A rough guide, not a rule.`];
     return el('span', { class: 'ground', 'data-tip': lines.filter(Boolean).join('\n') }, `${l.icon} ${l.label}`);
+  }
+  /** The wind this shift in a word, with its speed beside it, e.g. '💨 Windy 25–38 mph'. Null without weather. */
+  function windText(w) {
+    if (!w || !w.type) return null;
+    const lv = w.wind || 0, speed = E.windSpeed(lv, unitSystem());
+    return el('span', { class: 'wind', 'data-tip': `Wind this ${word()}: ${E.WIND[lv]}, ${speed} (Beaufort ${E.WIND_SPEEDS[lv].beaufort})` },
+      `💨 ${E.WIND[lv]}`, el('span', { class: 'small muted' }, ` ${speed}`));
+  }
+  /** A temperature rounded to the nearest 5 in the campaign's unit, the way a forecast gives it ('around 15°C'). */
+  const roughTemp = c => { const u = tempUnit(); return u === 'none' || typeof c !== 'number' ? '' : `${Math.round(E.toTempUnit(c, u) / 5) * 5}${E.TEMP_UNITS[u]?.sym || '°C'}`; };
+  /** The general outlook for day d (forecast w) and the two days after: worked out here where the page has the seed, else
+   * the copy the GM's browser saved with today's weather. [] when there is none. */
+  function outlookFor(d, region, w) {
+    if (!w || !w.type) return [];
+    if (S.camp.seed !== undefined && S.camp.seed !== null && !w.partial) return E.outlook(cal(), S.camp.seed, region, d, w);
+    return Array.isArray(w.outlook) ? w.outlook.filter(x => x && Number(x.d) >= d) : [];
+  }
+  /** The Weather forecast button and its pop-up: each day's outlook in words, its rough high and low, and the wind. */
+  function forecastButton(d, region, w) {
+    const days = outlookFor(d, region, w);
+    if (!days.length) return null;
+    const open = E.openAir(region);
+    const dayName = x => (x.d === d ? 'Today' : x.d === d + 1 ? 'Tomorrow' : E.fmtDate(cal(), x.d).split(',')[0]);
+    return el('details', { class: 'tv-rem tv-forecast' },
+      el('summary', { class: 'chip', 'data-tip': 'The general weather outlook for today and the next two days. A forecast, not a promise: the weather can turn, and it changes if the party moves on' }, '🌦 Weather forecast'),
+      el('div', { class: 'tv-fc-pop surface-float' },
+        el('ul', { class: 'forecast-list' }, days.map(x => {
+          const def = E.WEATHER[x.type] || {};
+          const temps = [x.hi !== null && roughTemp(x.hi) ? `high around ${roughTemp(x.hi)}` : null, x.lo !== null && roughTemp(x.lo) ? `low around ${roughTemp(x.lo)}` : null].filter(Boolean).join(', ');
+          return el('li', {}, el('b', {}, dayName(x)), el('span', {}, `${def.icon || ''} ${E.outlookWords(x.type)}`),
+            el('span', { class: 'small muted' }, clean([temps ? temps[0].toUpperCase() + temps.slice(1) : null, open ? `${E.WIND[x.wind || 0].toLowerCase()} (${E.windSpeed(x.wind || 0, unitSystem())})` : null]).join(' · ')));
+        })),
+        el('p', { class: 'small muted' }, 'A general outlook. The weather can turn, and it changes if the party moves on.')));
   }
   /** year / month / day picker for this campaign's calendar; getAbs() returns the absolute day */
   function datePicker(abs) {
@@ -2281,7 +2321,58 @@
     return S.encyclopedia.filter(e => ids.has(e.id));
   }
 
-  function dayEditor(d, row, region, w, dayData) {
+  /** The quarters of a day a GM can set conditions for, as [quarter, label]: the shifts, Day and Night, or in hours mode
+   * each quarter with the hours it covers. */
+  function quarterOptions() {
+    const c = cal(), names = shiftNames(), qn = E.quarterNames(c), by = new Map();
+    names.forEach((nm, i) => { const q = E.slotQuarter(c, i); if (!by.has(q)) by.set(q, []); by.get(q).push(nm); });
+    return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([q, nms]) => [q, hourMode() ? `${qn[q]} (${nms[0]}–${nms[nms.length - 1]})` : nms.join(', ')]);
+  }
+  /** The ✎ Day editor's "Conditions" part: the weather, temperature, wind and ground of one shift (a quarter of the day
+   * in hours mode), each Auto (worked out from the forecast and the days before) or set by hand. ovs is the working copy
+   * of the day's overrides, by quarter, that Save day stores with the weather. */
+  function conditionsEditor(d, region, w, ovs, q0) {
+    const tUnit = tempUnit(), qs = quarterOptions(), open = E.openAir(region);
+    let q = qs.some(([x]) => x === q0) ? q0 : qs[0][0];
+    const qSel = select(qs, q, { 'aria-label': `${Word()} to set` });
+    const body = el('span', { class: 'row conds' });
+    const autoShifts = () => E.shiftWeather(cal(), S.camp.seed, region, d, { ...w, overrides: null });
+    let autoGround = [];   // the ground worked out for each quarter, without this quarter's own setting
+    const draw = () => {
+      const auto = autoShifts()[q] || {}, o = ovs[q] || {}, def = E.WEATHER[auto.type] || {};
+      const set = (k, v) => {
+        const x = { ...(ovs[q] || {}) };
+        if (v === '' || v === null || v === undefined || Number.isNaN(v)) delete x[k]; else x[k] = v;
+        ovs[q] = Object.keys(x).length ? x : null;
+      };
+      const type = select([['', `Auto: ${def.icon || ''} ${def.label || '—'}`], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], o.type || '', { 'aria-label': 'Weather' });
+      type.addEventListener('change', () => set('type', type.value));
+      const autoT = typeof auto.temp === 'number' ? E.toTempUnit(auto.temp, tUnit, 0) : '';
+      const temp = el('input', { type: 'number', step: 'any', class: 'w-num', 'aria-label': 'Temperature', placeholder: autoT === '' ? 'Auto' : `Auto ${autoT}`,
+        value: typeof o.temp === 'number' ? E.toTempUnit(o.temp, tUnit, 1) : '' });
+      temp.addEventListener('input', () => set('temp', temp.value === '' ? '' : Math.round(E.fromTempUnit(Number(temp.value), tUnit))));
+      const wind = select([['', `Auto: ${E.WIND[auto.wind || 0]}`], ...E.WIND.map((n, i) => [i, `${n} (${E.windSpeed(i, unitSystem())})`])], o.wind ?? '', { 'aria-label': 'Wind' });
+      wind.addEventListener('change', () => set('wind', wind.value === '' ? '' : Number(wind.value)));
+      const ag = E.groundLabel(autoGround[q], unitSystem());
+      const ground = select([['', `Auto: ${ag ? ag.label : '…'}`], ...Object.entries(E.GROUND_PRESETS).map(([k, v]) => [k, v.label])], o.ground || '', { 'aria-label': 'Ground' });
+      ground.addEventListener('change', () => set('ground', ground.value));
+      const reset = btn('Auto', () => { ovs[q] = null; draw(); }, 'small', `Put this ${word()} back to the conditions worked out from the forecast`);
+      body.replaceChildren(...clean([tipped(type, 'Weather'), tipped(temp, 'Temperature'), tUnit === 'none' ? null : tempSym(tUnit),
+        open ? tipped(wind, 'Wind') : null, open ? tipped(ground, 'Ground underfoot. The days after carry on from it') : null, reset]));
+    };
+    qSel.addEventListener('change', () => { q = Number(qSel.value); draw(); });
+    draw();
+    // the ground as worked out, leaving out what the GM set on this day, for the Auto choice
+    if (open) groundFor(d, region, { ...w, overrides: ovs.map(o => o && { ...o, ground: undefined }) })
+      .then(slots => { autoGround = []; slots.forEach((g, i) => { autoGround[E.slotQuarter(cal(), i)] ??= g; }); draw(); }).catch(() => {});
+    return field('Conditions', el('span', { class: 'row' }, qSel, body), null,
+      `Set any of a ${word()}'s conditions by hand: its weather, temperature${open ? ', wind and the ground underfoot' : ''}. Auto keeps what is worked out from the day's forecast${open ? ' and, for the ground, the days before' : ''}. Light is set on the ${word()}'s own card.`);
+  }
+
+  function dayEditor(d, row, region, w, dayData, slot) {
+    const ovs = [0, 1, 2, 3].map(i => (Array.isArray(w?.overrides) && w.overrides[i]) || null);
+    const q0 = E.slotQuarter(cal(), slot ?? (d === today() ? E.mod(nowShift(), spd()) : 0));
+    const conds = w?.type && !w.partial ? conditionsEditor(d, region, w, ovs, q0) : null;
     const regPick = regionPicker([['', '— (current region)']], row.region_id ?? '', { name: 'region_id' });
     const wSel = select([['', '— none —'], ...Object.entries(E.WEATHER).map(([k, v]) => [k, `${v.icon} ${v.label}`])], w?.type || '', { name: 'wtype' });
     const tUnit = tempUnit();
@@ -2308,8 +2399,10 @@
         el('div', {},
           field('Region for this day', regPick.node, null, 'Where the party spent this day. Its climate rolls the weather and its light source and terrain set visibility. "Current region" follows wherever the party is now.'),
           field('Locations visited', locs, null, LOC_TIP), sugg),
-        field('Weather', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Wind strength')), null,
-          `Set the day's weather by hand. Rain, fog, snow and the like lower visibility; see the ${word()} cards below for the exact effect.`)),
+        el('div', {},
+          field('Day\'s forecast', el('span', { class: 'row' }, wSel, tipped(temp, 'Daytime high'), tUnit === 'none' ? '' : tempSym(tUnit), tipped(wind, 'Strongest wind')), null,
+            `Set the day's weather by hand: the worst it brings, its daytime high and its strongest wind. Each ${word()} is worked out from it. Rain, fog, snow and the like lower visibility; see the ${word()} cards for the exact effect.`),
+          conds)),
       el('div', { class: 'row' }, el('button', { class: 'primary small', 'data-tip': 'Save the region, locations visited and weather' }, 'Save day'),
         tipped(btn('🎲 Re-roll weather', async () => {
           let rid;
@@ -2330,7 +2423,9 @@
       if (wSel.value) {
         let t = temp.value === '' ? null : Number(temp.value);
         if (t !== null) t = Math.round(E.fromTempUnit(t, tUnit));
-        weather = withShiftWx(d, regionById(rid) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value) });
+        const overrides = ovs.some(Boolean) ? ovs : undefined;
+        weather = withShiftWx(d, regionById(rid) || currentRegion(), { ...(w || {}), type: wSel.value, temp: t, wind: Number(wind.value), overrides });
+        if (!overrides) delete weather.overrides;
       }
       // Locations go only when changed: saving them counts as a save of the day's notes (a co-GM's open copy goes stale).
       const locChanged = locs.value !== (row.locations || '');
@@ -5656,12 +5751,16 @@
       el('summary', { class: 'chip tv-rem-chip' + (remList.some(x => x.due && !x.dismissed) ? ' due' : ''), 'data-tip': `Reminders on this ${word()}, and any the clock has reached that you haven't dismissed. Click to read them` },
         `🔔 ${remList.length} reminder${remList.length === 1 ? '' : 's'}`),
       el('div', { class: 'tv-rem-pop surface-float' }, remList.map(x => reminderView(x, Math.floor(x.due_shift / n))))) : null;
-    const wx = cur?.sw ? weatherText(cur.sw, `Weather this ${names[ai]}, worked out from the day's forecast`)
+    // the wind has its own place on the line under it, so it isn't said twice
+    const wx = cur?.sw ? weatherText(E.openAir(region) ? { ...cur.sw, wind: 0 } : cur.sw, `Weather this ${names[ai]}, worked out from the day's forecast`)
       : el('span', { class: 'muted', 'data-tip': `Players see each ${word()}'s weather once the campaign clock reaches it` }, 'Weather not known yet');
     const ground = cur?.ground ? groundText(cur.ground, cur.d) : null;
     // the season, the sun and the moons on one quiet line
     const hemi = region?.settings?.hemisphere, sea = E.season(c, d, hemi), sun = E.sunTimes(c, d, hemi);
+    const wind = cur?.sw && E.openAir(region) ? windText(cur.sw) : null;
     const skyLine = el('span', { class: 'tv-fact tv-sky' }, clean([
+      ground ? el('span', { class: 'tv-cond' }, ground) : null,
+      wind ? el('span', { class: 'tv-cond' }, wind) : null,
       sea.name ? el('span', { 'data-tip': 'The season, from the calendar\'s season dates (flipped for the other hemisphere)' }, sea.name) : null,
       sun ? el('span', { class: 'sun', 'data-tip': `${fmtDaylight(sun.daylight)} of daylight` }, `☀ ${E.fmtClock(sun.sunrise)}–${E.fmtClock(sun.sunset)}`) : null,
       ...moons.map(m => el('span', { 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)` }, moonGlyph(m), ` ${m.name} ${m.label}`))]).flatMap((x, k) => k ? [' · ', x] : [x]));
@@ -5670,11 +5769,11 @@
     // (it stays open as the page redraws after a save or a re-roll, until ✎ Day closes it)
     const dayEdit = cur && isGM() && !S.viewAs ? el('div', { class: 'tv-dayedit', hidden: true }) : null;
     const showDayEdit = on => {
-      if (on && !dayEdit.firstChild) dayEdit.append(dayEditor(cur.d, cur.x.row, cur.x.region, cur.x.w, cur.x.r));
+      if (on && !dayEdit.firstChild) dayEdit.append(dayEditor(cur.d, cur.x.row, cur.x.region, cur.x.w, cur.x.r, cur.i));
       dayEdit.hidden = !on; tableDayEdit = on;
       dayEditBtn.setAttribute('aria-expanded', String(on));
     };
-    const dayEditBtn = dayEdit ? btn('✎ Day', () => showDayEdit(dayEdit.hidden), 'small', 'Change the day\'s region, set or re-roll its weather, and write its Locations visited') : null;
+    const dayEditBtn = dayEdit ? btn('✎ Day', () => showDayEdit(dayEdit.hidden), 'small', `Change the day's region, set or re-roll its weather, set any of this ${word()}'s conditions by hand, and write its Locations visited`) : null;
     if (dayEdit) showDayEdit(tableDayEdit);
     const summary = el('section', { class: 'tv-summary', 'aria-label': `This ${word()}` },
       el('div', { class: 'tv-sum-main' },
@@ -5683,9 +5782,9 @@
             el('div', { class: 'tv-date' }, E.fmtDate(c, d)),
             el('div', { class: 'tv-shift' }, hourMode() ? names[ai] : `${names[ai]} · ${n === 2 ? (ai ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][ai]} shift of 4`}`,
               ...E.holidaysOn(c, S.holidays, d).map(holidayChip))),
-          el('div', { class: 'tv-sum-acts' }, remBadge, dayEditBtn)),
+          el('div', { class: 'tv-sum-acts' }, forecastButton(d0, days.get(d0)?.region || currentRegion(), days.get(d0)?.w), remBadge, dayEditBtn)),
         el('div', { class: 'tv-facts' },
-          el('span', { class: 'tv-fact tv-wx' }, wx, ground ? el('span', { class: 'small' }, ground) : null),
+          el('span', { class: 'tv-fact tv-wx' }, wx),
           el('span', { class: 'tv-fact tv-party' }, '📍 ', clean([party.region ? el('b', { 'data-tip': region ? regionSummary(region) : null }, party.region) : null,
             party.groupRegion ? el('span', { class: 'muted', 'data-tip': 'The main party group\'s own region, which differs from the day\'s' }, `group in ${party.groupRegion}`) : null,
             party.near, party.link, party.groups ? el('span', { class: 'muted' }, party.groups) : null]).flatMap((x, k) => k ? [' · ', x] : [x]),

@@ -384,8 +384,11 @@ function visible_weather(?string $json, int $ad, int $currentShift, bool $hideFu
     while ($seen && end($seen) === null) array_pop($seen);
     $now = $shifts[$q] ?? null;
     if (count($shifts) !== 4 || !is_array($now) || ($w['shift_order'] ?? null) !== $shiftOrder) return null;
-    return ['type' => $now['type'] ?? null, 'temp' => $now['temp'] ?? null, 'wind' => $now['wind'] ?? 0,
+    $out = ['type' => $now['type'] ?? null, 'temp' => $now['temp'] ?? null, 'wind' => $now['wind'] ?? 0,
         'season' => $w['season'] ?? null, 'shifts' => $seen, 'partial' => true];
+    // the general outlook for today and the next two days (the Weather forecast button), which the GM's browser saves
+    if (is_array($w['outlook'] ?? null)) $out['outlook'] = array_values($w['outlook']);
+    return $out;
 }
 
 /** Tags every campaign is offered before anyone creates their own: name => colour. */
