@@ -922,7 +922,7 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
   .enc-page:not(.has-sel) > .lp-empty { display: none; } /* one column: the list is the place to start */
 }
 
-/* the Proper Noun Detector's dialog: one row per name found, Add / Ignore / Skip */
+/* the Feature Highlighter's dialog: one row per name found, Add / Ignore / Skip */
 dialog.kit-dialog.noun-dialog { width: min(760px, calc(100vw - 32px)); }
 /* Import from Scabard (Settings → Tools) */
 dialog.kit-dialog.scabard-dialog { width: min(600px, calc(100vw - 32px)); }

@@ -82,7 +82,7 @@ two sessions nothing is kept (the dates order them).
 Everything is matched by name, which Scabard keeps unique within a campaign and the Encyclopedia does too:
 
 - an entry that exists (by name or other name) is **kept**; one with nothing written in it yet is **filled in** (notes,
-  GM notes, other names), so names the Proper Noun Detector added first get their text;
+  GM notes, other names), so names the Feature Highlighter added first get their text;
 - tags and connections are **added** where missing (the connection table's unique key and a check of both orders for a
   symmetric kind);
 - a session with the same date and title is **kept**, and a cast line is appended only when the summary doesn't have it;

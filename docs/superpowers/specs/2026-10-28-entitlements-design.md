@@ -100,7 +100,7 @@ Every area of the app gets a feature key:
 | `downtime` | Downtime |
 | `holdings` | Party holdings, gear, funds, storage |
 | `reminders` | Reminders |
-| `encyclopedia` | Encyclopedia entries, connections, the Proper Noun Detector |
+| `encyclopedia` | Encyclopedia entries, connections, the Feature Highlighter |
 | `uploads` | Pictures and files on entries, the library and sessions |
 | `library` | Library tomes |
 | `sessions` | Session notes |

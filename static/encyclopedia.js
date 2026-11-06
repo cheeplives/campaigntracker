@@ -1,4 +1,4 @@
-/* encyclopedia.js — the Proper Noun Detector, and the hotlinks that join written text to the Encyclopedia tab.
+/* encyclopedia.js — the Feature Highlighter, and the hotlinks that join written text to the Encyclopedia tab.
  *
  * Plain script, no build step. Nothing here talks to the server: app.js hands it the text (what was just saved, or
  * everything in the campaign for a full scan) and the names already known, and gets back the new names to offer.

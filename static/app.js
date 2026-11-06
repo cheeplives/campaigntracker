@@ -2333,7 +2333,7 @@
       gmn.value.trim() ? el('span', { class: 'shift-gmn' }, '🔒 ', linked(gmn.value)) : null]));
     drawPreview();
     let saved = { a: act.value, g: gmn.value, o: String(ov.value) }, queue = Promise.resolve();
-    // the Proper Noun Detector asks once the GM is done with the shift (focus leaves its editor), not after every box
+    // the Feature Highlighter asks once the GM is done with the shift (focus leaves its editor), not after every box
     const nouns = {};
     const offer = () => queue.then(() => {
       const list = [nouns.a ? { text: saved.a, label: `${names[i]} activity` } : null, nouns.g ? { text: saved.g, secret: true, label: `${names[i]} GM notes` } : null].filter(Boolean);
@@ -3687,7 +3687,7 @@
       el('div', { class: 'grid2' },
         field('Name', name),
         category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,
-        field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the detector'),
+        field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the Feature Highlighter'),
         secret ? lockField(secret, 'players won\'t see this entry at all, or have its name linked') : null),
       // the notes straight under the name, where the writing is; tags, the quotes found elsewhere and Generate Summary after
       el('div', { class: 'notes-grid' },
@@ -5306,7 +5306,7 @@
             extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
-          'The Proper Noun Detector\'s list of common English words, and every other word list in the app, was written for it.',
+          'The Feature Highlighter\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
             ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
           ['Find Image on an Encyclopedia entry searches, only when asked: ', extLink({ url: 'https://openverse.org/', title: 'Openverse' }),

@@ -110,7 +110,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await dlg.getByRole("button", { name: "+ Add tag" }).click();
   await dlg.getByRole("button", { name: "Add holding" }).click();
   await expect(dlg).toHaveCount(0);
-  await notNow(pp); // the names in it go to the Proper Noun Detector
+  await notNow(pp); // the names in it go to the Feature Highlighter
 
   const card = pp.locator(".holding");
   await expect(card).toHaveCount(1);

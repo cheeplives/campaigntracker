@@ -52,7 +52,7 @@ function upgrade_steps(): array {
         ['010_day_notes_rich_text.sql', fn(PDO $p) => !db_has_column($p, 'days', 'notes_format'),
             'Day notes can now be formatted (Public and Secret notes).'],
         ['011_encyclopedia.sql', fn(PDO $p) => !db_has_table($p, 'encyclopedia_ignored'),
-            'Added the Encyclopedia tab and the Proper Noun Detector.'],
+            'Added the Encyclopedia tab and the Feature Highlighter.'],
         ['012_encyclopedia_relations.sql', fn(PDO $p) => !db_has_table($p, 'encyclopedia_relations'),
             'Encyclopedia entries can now be connected to each other.'],
         ['013_attachments.sql', fn(PDO $p) => !db_has_table($p, 'attachments'),

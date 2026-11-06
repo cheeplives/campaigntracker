@@ -1,4 +1,4 @@
-// The Encyclopedia tab and the Proper Noun Detector: saving a note, event, reminder or Locations visited list offers the
+// The Encyclopedia tab and the Feature Highlighter: saving a note, event, reminder or Locations visited list offers the
 // new names in it (capitalized, emphasized or set apart), each to Add, Ignore or Skip; added names become entries with
 // Public notes for everyone and GM notes for GMs, tags of their own, and links wherever the name is written.
 const { test, expect } = require("@playwright/test");

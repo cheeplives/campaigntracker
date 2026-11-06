@@ -1,6 +1,6 @@
 <?php
 /**
- * The Encyclopedia: entries, their aliases, tags and categories, and the words the Proper Noun Detector was told to ignore.
+ * The Encyclopedia: entries, their aliases, tags and categories, and the words the Feature Highlighter was told to ignore.
  * Helpers for the actions in api/index.php's switch, which say who may use them in api/actions.php.
  */
 declare(strict_types=1);
@@ -8,7 +8,7 @@ declare(strict_types=1);
 // ---------- the Encyclopedia ----------
 // Entries are the people, places, items and the like that turn up in play. Every member reads the entries that
 // aren't secret and can add them and write their Public notes; GM notes, secret entries and deleting other people's
-// entries are for GMs. The Proper Noun Detector (static/encyclopedia.js) runs in the browser and offers new names
+// entries are for GMs. The Feature Highlighter (static/encyclopedia.js) runs in the browser and offers new names
 // after each save; the words someone turns down are kept per campaign, one list for the GMs and one for the players.
 
 /** SQL to add to an UPDATE of an entry's name or notes, so a copy opened before it is refused when saved (entry_save). */

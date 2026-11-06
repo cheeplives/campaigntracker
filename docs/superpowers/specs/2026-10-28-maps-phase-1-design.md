@@ -73,7 +73,7 @@ the routes that aren't GM only.
   entry's pin in the same place. When an entry of that name (or other name) already exists, the card offers *Link to
   <entry>* instead, so no duplicate is made. The pin still says "Added by <character name>", and from then on it is
   the GM's to move or change, like every entry pin; the player can still edit the entry's Public notes, as with any
-  entry. The new entry goes through the Proper Noun Detector's usual check of the note's text.
+  entry. The new entry goes through the Feature Highlighter's usual check of the note's text.
 
 ### Links back
 

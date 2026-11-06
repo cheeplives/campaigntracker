@@ -114,7 +114,7 @@ test("a save from an older copy is refused, the body is cleaned, and only the au
   expect((await api(op, "tome_save", { kind: "book", title: "Intruder" }, cid)).status).toBe(403);
 });
 
-test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector, on save and in Scan campaign", async ({ page, browser }) => {
+test("names in tomes, downtime and Party Holdings go to the Feature Highlighter, on save and in Scan campaign", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Library nouns");
   const row = (p, n) => p.locator(`.noun-row[data-term="${n}"]`);
@@ -155,7 +155,7 @@ test("names in tomes, downtime and Party Holdings go to the Proper Noun Detector
   expectNoErrors(errors);
 });
 
-test("Scan on an entry or a tome runs the Proper Noun Detector over just that one", async ({ page, browser }) => {
+test("Scan on an entry or a tome runs the Feature Highlighter over just that one", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid } = await gmAndPlayer(page, browser, "Scan one");
   const row = n => page.locator(`.noun-row[data-term="${n}"]`);
@@ -186,7 +186,7 @@ test("Scan on an entry or a tome runs the Proper Noun Detector over just that on
   expect((await api(page, "terms_ignore", { terms: ["Brother Udo", "Ledger"] }, cid)).status).toBe(200);
   await page.reload();
   await page.locator(".lib-detail").getByRole("button", { name: "🔍 Scan" }).click();
-  await expect(page.getByText('No names missing: everything the detector finds in "Ledger"')).toBeVisible();
+  await expect(page.getByText('No names missing: everything the Feature Highlighter finds in "Ledger"')).toBeVisible();
   expectNoErrors(errors);
 });
 

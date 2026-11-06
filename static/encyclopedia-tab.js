@@ -1,4 +1,4 @@
-/* encyclopedia-tab.js — The Encyclopedia tab: the entry list and pages, linking names in notes to entries, the Proper Noun Detector's
+/* encyclopedia-tab.js — The Encyclopedia tab: the entry list and pages, linking names in notes to entries, the Feature Highlighter's
  * offers, and the Encyclopedia for virtual tabletops.
  *
  * Moved out of app.js as it was: app.js calls make() once with its shared helpers and state (tabCtx), and gets back
@@ -10,7 +10,7 @@
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
-    // event, reminder or Locations visited list runs the Proper Noun Detector (static/encyclopedia.js) over what was
+    // event, reminder or Locations visited list runs the Feature Highlighter (static/encyclopedia.js) over what was
     // saved and offers the new names it finds; whoever saved says Add, Ignore (never offer it again) or Skip (ask next
     // time). Names of entries are linked wherever they are written, as the text is shown: the stored text never changes.
     let encLinkMemo = null;
@@ -151,8 +151,8 @@
           el('form', { method: 'dialog' },
             el('h3', {}, scan ? '📖 Names missing from the Encyclopedia' : '📖 New names for the Encyclopedia'),
             el('p', { class: 'small muted' }, scan
-              ? `The Proper Noun Detector found ${found.length} name${found.length === 1 ? '' : 's'} in ${where} that ${found.length === 1 ? 'isn\'t' : 'aren\'t'} in the Encyclopedia. Pick Add for the ones to keep; Ignore stops a word being offered again.`
-              : 'The Proper Noun Detector found these in what you saved. Add puts one in the Encyclopedia, Ignore stops it being offered again, Skip asks next time.'),
+              ? `The Feature Highlighter found ${found.length} name${found.length === 1 ? '' : 's'} in ${where} that ${found.length === 1 ? 'isn\'t' : 'aren\'t'} in the Encyclopedia. Pick Add for the ones to keep; Ignore stops a word being offered again.`
+              : 'The Feature Highlighter found these in what you saved. Add puts one in the Encyclopedia, Ignore stops it being offered again, Skip asks next time.'),
             el('div', { class: 'row small' }, el('span', { class: 'muted' }, 'All:'), btn('Add', () => all('add'), 'link small'), btn('Ignore', () => all('ignore'), 'link small'), btn('Skip', () => all('skip'), 'link small')),
             el('div', { class: 'noun-list' }, rows.map(r => r.row)),
             el('div', { class: 'kit-dialog-actions' },
@@ -219,12 +219,12 @@
     async function fullScan(only = null, where = 'the campaign') {
       const { sources } = await api('encyclopedia_sources', { query: { cid: S.camp.id } });
       const found = Nouns.find(scanSources(only ? sources.filter(only) : sources), { ...detectorOpts(), ignored: S.encIgnored });
-      if (!found.length) { toast(`No names missing: everything the detector finds in ${where} is in the Encyclopedia or ignored`); return; }
+      if (!found.length) { toast(`No names missing: everything the Feature Highlighter finds in ${where} is in the Encyclopedia or ignored`); return; }
       await nounDialog(found.slice(0, 300), { scan: true, where });
     }
     /** A 🔍 Scan button for one entry or tome: the full scan, over only the text kept with it. */
     function scanOneBtn(what, only, where) {
-      const b = btn('🔍 Scan', null, 'small', `Run the Proper Noun Detector over just this ${what} and offer the names in it that are missing from the Encyclopedia`);
+      const b = btn('🔍 Scan', null, 'small', `Run the Feature Highlighter over just this ${what} and offer the names in it that are missing from the Encyclopedia`);
       b.addEventListener('click', busy(b, () => fullScan(only, where)));
       return b;
     }
@@ -316,7 +316,7 @@
         const onlyNone = groups.length === 1 && groups[0][0] === '';
         lists.replaceChildren(...clean([
           blank.length ? section('blank', `Blank Entries (${blank.length})`, blank,
-            'Entries with nothing written about them yet, such as names just added by the Proper Noun Detector. Open one to describe it') : null,
+            'Entries with nothing written about them yet, such as names just added by the Feature Highlighter. Open one to describe it') : null,
           shown.length ? el('p', { class: 'small muted enc-count' }, `${shown.length}${of} entries`) : null,
           shown.length && groups.length && !onlyNone ? groups.map(([k, title, list]) => section(k, `${title} (${list.length})`, list))
             : shown.length ? section('all', `All entries (${shown.length}${of})`, shown)
@@ -338,23 +338,23 @@
       ctx.draw = draw;
       search.addEventListener('input', () => { st.q = search.value; draw(); });
       draw();
-      const scanBtn = btn('🔍 Scan campaign', null, '', 'Run the Proper Noun Detector over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
+      const scanBtn = btn('🔍 Scan campaign', null, '', 'Run the Feature Highlighter over everything written in the campaign (notes, events, reminders, Locations visited, downtime, Party Holdings and the Library) and offer the names that are missing');
       scanBtn.addEventListener('click', busy(scanBtn, () => fullScan()));
       const ignored = S.encIgnored.length ? el('details', { class: 'enc-ignored' },
         el('summary', { class: 'small' }, `Ignored words (${S.encIgnored.length})`),
-        el('p', { class: 'small muted' }, isGM() ? 'Words the GMs told the detector not to offer. Restore one to have it offered again.'
-          : 'Words the players told the detector not to offer. Restore one to have it offered again.'),
+        el('p', { class: 'small muted' }, isGM() ? 'Words the GMs told the Feature Highlighter not to offer. Restore one to have it offered again.'
+          : 'Words the players told the Feature Highlighter not to offer. Restore one to have it offered again.'),
         el('div', { class: 'enc-ignored-list' }, S.encIgnored.map(t => el('span', { class: 'enc-ignored-word' }, t, ' ',
           btn('Restore', async () => {
             try { await post('term_restore', { term: t }, S.camp.id); S.encIgnored = S.encIgnored.filter(x => x !== t); route(); } catch (err) { toast(err.message, true); }
-          }, 'link small', `Have the detector offer "${t}" again`))))) : null;
+          }, 'link small', `Have the Feature Highlighter offer "${t}" again`))))) : null;
       // --- the entry picked, or the newest ones to start from
       const reader = el('section', {});
       if (!current) readerEmpty(reader, { lead: entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.',
         title: 'Newest', start: entries.filter(e => !entryBlank(e)).sort((a, b) => b.id - a.id).slice(0, 5)
           .map(e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
             encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null)),
-        help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Proper Noun Detector offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
+        help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Feature Highlighter offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
       else if (!current.id || entryBlank(current)) reader.append(entryForm(current));
       else reader.append(...entryView(current, ctx));
       // The list and the entry swap widths with Wide view, or the list folds away with Hide list, remembered in this browser.
