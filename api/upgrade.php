@@ -87,6 +87,8 @@ function upgrade_steps(): array {
         ['029_session_undated.sql', fn(PDO $p) => db_has_table($p, 'play_sessions') && !db_has_column($p, 'play_sessions', 'undated'),
             'Sessions imported from Scabard no longer sit on the day of the import: they have no in-game dates, so the shifts of that day stop showing them all.'],
         ['030_clocks.sql', fn(PDO $p) => !db_has_table($p, 'clock_ticks'), 'Added Clocks, for the GM and players to track what is coming.'],
+        ['031_map_nesting.sql', fn(PDO $p) => db_has_table($p, 'map_pins') && !db_has_column($p, 'map_pins', 'child_map_id'),
+            'A map pin can now open another map, so a town on the region map opens the town\'s own map.'],
     ];
 }
 

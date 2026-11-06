@@ -572,6 +572,7 @@ CREATE TABLE IF NOT EXISTS map_pins (
   kind ENUM('note','entry','event') NOT NULL,
   entry_id INT UNSIGNED NULL,
   event_id INT UNSIGNED NULL,
+  child_map_id INT UNSIGNED NULL,                -- the map this pin opens (a town pin opens the town's map)
   label VARCHAR(150) NOT NULL DEFAULT '',
   note VARCHAR(1000) NULL,
   icon VARCHAR(16) NULL,                         -- an emoji from MapsTab's PIN_ICONS; null: the kind's own
@@ -582,10 +583,12 @@ CREATE TABLE IF NOT EXISTS map_pins (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY ix_pin_entry (campaign_id, entry_id),
   KEY ix_pin_event (campaign_id, event_id),
+  KEY ix_pin_child_map (child_map_id),
   FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id) ON DELETE CASCADE,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (child_map_id) REFERENCES maps(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

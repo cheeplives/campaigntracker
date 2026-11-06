@@ -86,7 +86,8 @@ async function notNow(page) {
 }
 
 /** A w x h PNG, all one colour. */
-function makePng(w, h) {
+/** A w x h PNG: plain grey, or with `gray(x, y)` (0..255) giving each pixel's grey. */
+function makePng(w, h, gray) {
   const zlib = require("zlib");
   const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
   const crc = buf => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
@@ -98,7 +99,10 @@ function makePng(w, h) {
   };
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
   const raw = Buffer.alloc((w * 3 + 1) * h, 0x7f);
-  for (let y = 0; y < h; y++) raw[y * (w * 3 + 1)] = 0;
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 3 + 1)] = 0;
+    if (gray) for (let x = 0; x < w; x++) raw.fill(gray(x, y), y * (w * 3 + 1) + 1 + x * 3, y * (w * 3 + 1) + 4 + x * 3);
+  }
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 }
 /** A map (300 x 200) with its picture; returns its id. */
