@@ -485,13 +485,13 @@ test("each player and the party pick one action a shift beside the writing; + Ev
   await evForm.getByRole("button", { name: "Add event" }).click();
   await expect(page.locator("#toast")).toHaveText("Event saved");
   await expect(page.locator(".tv-now")).not.toContainText("Wolves howl");   // its place is the Events box under it
-  // (the page redraws after the save: open + Reminder on the page as it stands then)
+  // the save redraws the page, closing the bar's form; then + Reminder on the page as it stands
+  await expect(page.locator(".tv-bar-pop form.event")).toHaveCount(0);
   const remForm = page.locator(".tv-bar-pop form.reminder");
   await expect(async () => {
     if (!await remForm.isVisible()) await page.locator(".tv-bar").getByRole("button", { name: "+ Reminder" }).click();
-    await expect(remForm).toBeVisible({ timeout: 1000 });
+    await remForm.getByLabel("Title").fill("Check the traps", { timeout: 1000 });
   }).toPass();
-  await remForm.getByLabel("Title").fill("Check the traps");
   await remForm.getByRole("button", { name: "Add reminder" }).click();
   await expect(page.locator("#toast")).toHaveText("Reminder saved");
   expect(sql(`SELECT title FROM reminders WHERE campaign_id=${cid}`).trim()).toBe("Check the traps");
