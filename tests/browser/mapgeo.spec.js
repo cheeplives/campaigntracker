@@ -102,3 +102,30 @@ test("nearestPin finds the closest pin within reach, and pinName is the name it 
   expect(MapGeo.nearestPin([], { x: 0, y: 0 }, 20)).toBe(null);
   expect(pins.map(MapGeo.pinName)).toEqual(["Bree", "Weathertop", "Ambush"]);
 });
+
+// A blotchy "terrain" picture with a grid of 1.5 px dark lines every `period` px starting at `off`, or none.
+function terrain(w, h, period, off, lines = true) {
+  let seed = 7;
+  const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };   // mulberry32
+  const g = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    // blotches of 29 and 37 px give a repeating pattern of their own, so the gridless picture is plain noise instead
+    g[y * w + x] = lines ? Math.min(255, ((Math.floor(x / 37) * 7 + Math.floor(y / 29) * 13) % 5) * 30 + 60 + rnd() * 20) : 60 + rnd() * 120;
+    if (lines && (((x - off) % period + period) % period < 1.5 || ((y - off) % period + period) % period < 1.5)) g[y * w + x] = 10;
+  }
+  return g;
+}
+
+test("detectGrid finds the size and offset of a square grid drawn on a picture, and nothing on one without", () => {
+  for (const [w, h, p, o] of [[800, 600, 50, 20], [1000, 700, 70, 35], [600, 600, 32, 5], [1200, 800, 48.5, 10]]) {
+    const r = MapGeo.detectGrid(terrain(w, h, p, o), w, h);
+    expect(r, `${p}px grid`).not.toBe(null);
+    expect(Math.abs(r.px - p)).toBeLessThan(0.3);
+    expect(Math.abs(r.offset_x - o)).toBeLessThan(2);
+    expect(Math.abs(r.offset_y - o)).toBeLessThan(2);
+    expect(r.confidence).toBeGreaterThan(0.15);
+  }
+  expect(MapGeo.detectGrid(terrain(800, 600, 50, 0, false), 800, 600)).toBe(null);
+  expect(MapGeo.detectGrid(new Uint8Array(40 * 30), 40, 30)).toBe(null);   // too small to hold a grid
+  expect(MapGeo.detectGrid(new Uint8Array(800 * 600).fill(120), 800, 600)).toBe(null);   // flat colour
+});

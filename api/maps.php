@@ -128,12 +128,14 @@ function map_save(int $cid): array {
 // GM-only entry or secret event; the filter is in the SQL. Routes are drawn by GMs; a GM-only one is theirs alone.
 
 /** A pin row (from map_pins_select) as the browser gets it. */
-function pin_out(array $p): array {
+function pin_out(array $p, bool $isGm = true): array {
     $entry = $p['entry_id'] !== null && $p['e_name'] !== null
         ? ['id' => (int)$p['entry_id'], 'name' => $p['e_name'], 'category' => $p['e_category'], 'first_line' => entry_preview(rich_open($p['e_notes']))] : null;
     $event = $p['event_id'] !== null && $p['ev_title'] !== null
         ? ['id' => (int)$p['event_id'], 'abs_day' => (int)$p['ev_abs_day'], 'title' => $p['ev_title']] : null;
-    return ['id' => (int)$p['id'], 'map_id' => (int)$p['map_id'], 'x' => (float)$p['x'], 'y' => (float)$p['y'], 'kind' => $p['kind'],
+    // the map this pin opens; a player isn't told of a GM-only one (not even its name)
+    $child = ($p['child_map_id'] ?? null) !== null && ($isGm || !(int)$p['cm_secret']) ? ['id' => (int)$p['child_map_id'], 'name' => $p['cm_name']] : null;
+    return ['id' => (int)$p['id'], 'map_id' => (int)$p['map_id'], 'child_map' => $child, 'x' => (float)$p['x'], 'y' => (float)$p['y'], 'kind' => $p['kind'],
         'entry_id' => $p['entry_id'] !== null ? (int)$p['entry_id'] : null, 'event_id' => $p['event_id'] !== null ? (int)$p['event_id'] : null,
         'label' => $p['label'], 'note' => $p['note'], 'is_secret' => (bool)(int)$p['is_secret'],
         'icon' => $p['icon'] ?? null, 'color' => $p['color'] ?? null, 'is_locked' => (bool)(int)($p['is_locked'] ?? 0),
@@ -141,15 +143,25 @@ function pin_out(array $p): array {
 }
 /** The pins of campaign $cid matching $where (SQL on aliases p, e, ev), with their entry, event and author joined, oldest first. */
 function map_pins_select(int $cid, string $where, array $args): array {
-    $st = db()->prepare('SELECT p.*, e.name AS e_name, e.category AS e_category, e.notes AS e_notes, ev.abs_day AS ev_abs_day, ev.title AS ev_title, ' . AUTHOR_SQL . ' AS author
-        FROM map_pins p' . MAP_PIN_JOINS . ' LEFT JOIN users u ON u.id=p.created_by LEFT JOIN campaign_members m ON m.campaign_id=p.campaign_id AND m.user_id=p.created_by
+    $st = db()->prepare('SELECT p.*, e.name AS e_name, e.category AS e_category, e.notes AS e_notes, ev.abs_day AS ev_abs_day, ev.title AS ev_title, cm.name AS cm_name, cm.is_secret AS cm_secret, ' . AUTHOR_SQL . ' AS author
+        FROM map_pins p' . MAP_PIN_JOINS . ' LEFT JOIN maps cm ON cm.id=p.child_map_id LEFT JOIN users u ON u.id=p.created_by LEFT JOIN campaign_members m ON m.campaign_id=p.campaign_id AND m.user_id=p.created_by
         WHERE p.campaign_id=? AND ' . $where . ' ORDER BY p.id');
     $st->execute([$cid, ...$args]);
     return $st->fetchAll();
 }
 /** The pins on map $mapId that this member may see. */
 function map_pins_visible(int $cid, int $mapId, bool $isGm): array {
-    return array_map('pin_out', map_pins_select($cid, 'p.map_id=?' . map_pin_visible_sql($isGm), [$mapId]));
+    return array_map(fn($p) => pin_out($p, $isGm), map_pins_select($cid, 'p.map_id=?' . map_pin_visible_sql($isGm), [$mapId]));
+}
+/** The first pin this member may see that opens map $mapId (on a map they may see), as {pin_id, label, map_id, map_name}, or null. */
+function map_parent(int $cid, int $mapId, bool $isGm): ?array {
+    $rows = map_pins_select($cid, 'p.child_map_id=?' . map_pin_visible_sql($isGm) . ($isGm ? '' : ' AND (SELECT is_secret FROM maps WHERE id=p.map_id)=0'), [$mapId]);
+    if (!$rows) return null;
+    $p = $rows[0];
+    $st = db()->prepare('SELECT name FROM maps WHERE id=?');
+    $st->execute([$p['map_id']]);
+    $label = trim((string)$p['label']) !== '' ? $p['label'] : ($p['e_name'] ?? $p['ev_title'] ?? 'a pin');
+    return ['pin_id' => (int)$p['id'], 'label' => $label, 'map_id' => (int)$p['map_id'], 'map_name' => (string)$st->fetchColumn()];
 }
 /** Pin $id as this member may see it (a player: not on a GM-only map either), or fail as not found. */
 function pin_row(int $cid, int $id, bool $isGm): array {
@@ -204,6 +216,12 @@ function pin_save(int $cid, bool $isGm): array {
         $st->execute([$eventId, $cid]);
         if (!$st->fetchColumn()) fail('Event not found', 404);
     } elseif ($label === '') fail('Give the pin a label');
+    // GMs: the map this pin opens (any kind of pin), another map of this campaign
+    $child = $isGm && $has('child_map_id') ? ($body['child_map_id'] === null ? null : int_in($body['child_map_id'], 1)) : (isset($old['child_map_id']) ? (int)$old['child_map_id'] : null);
+    if ($child !== null) {
+        if ($child === (int)$map['id']) fail('A pin can\'t open the map it is on');
+        map_row($cid, $child, true);
+    }
     $cols = [$map['id'], $x, $y, $kind, $entryId, $eventId, $label, $note, $secret];
     if ($old) {
         db()->prepare('UPDATE map_pins SET map_id=?, x=?, y=?, kind=?, entry_id=?, event_id=?, label=?, note=?, is_secret=? WHERE id=?')->execute([...$cols, $old['id']]);
@@ -213,7 +231,7 @@ function pin_save(int $cid, bool $isGm): array {
             ->execute([...$cols, $cid, $u]);
         $id = (int)db()->lastInsertId();
     }
-    db()->prepare('UPDATE map_pins SET icon=?, color=?, is_locked=? WHERE id=?')->execute([$icon, $colour, $locked, $id]);
+    db()->prepare('UPDATE map_pins SET icon=?, color=?, is_locked=?, child_map_id=? WHERE id=?')->execute([$icon, $colour, $locked, $child, $id]);
     if ($isGm) touch_campaign($cid);   // players' pins are like their notes: they don't count as a campaign change
     return pin_out(pin_row($cid, $id, true));
 }

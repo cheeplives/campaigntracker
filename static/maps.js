@@ -290,17 +290,19 @@ const MapsTab = (() => {
       const k = lf ? 1 / lf.map.getZoomScale(lf.map.getZoom(), 0) : 1;
       gridLines.forEach((l, i) => l.setAttribute('stroke-width', String((i ? 1 : 3) * k)));
     };
+    let gridPreview = null;   // {px, ox, oy}: a grid just found on the picture, drawn before it is saved
     function drawGrid() {
       gridLayer?.remove(); gridLayer = null; gridLines = [];
       const has = map.grid_px > 0;
       gridBtn.hidden = !has || !map.image_url;
       gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
       opacityBox.hidden = !has || !map.image_url || !gridWanted();
-      if (!lf || !has || !gridWanted()) return;
+      const g = gridPreview ? { px: gridPreview.px, ox: gridPreview.ox, oy: gridPreview.oy, type: 'square' } : { px: map.grid_px, ox: map.grid_offset_x, oy: map.grid_offset_y, type: map.grid_type };
+      if (!lf || !(g.px > 0) || !(gridPreview || (has && gridWanted()))) return;
       const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
-      const t = G.gridTile(map.grid_type, map.grid_px), pid = `map-grid-${id}`;
+      const t = G.gridTile(g.type, g.px), pid = `map-grid-${id}`;
       const root = svg('svg', { viewBox: `0 0 ${map.width} ${map.height}`, preserveAspectRatio: 'none' });
-      const pattern = svg('pattern', { id: pid, patternUnits: 'userSpaceOnUse', x: map.grid_offset_x || 0, y: map.grid_offset_y || 0, width: t.w, height: t.h });
+      const pattern = svg('pattern', { id: pid, patternUnits: 'userSpaceOnUse', x: g.ox || 0, y: g.oy || 0, width: t.w, height: t.h });
       gridLines = [svg('path', { d: t.d, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.45 }), svg('path', { d: t.d, fill: 'none', stroke: '#000', 'stroke-opacity': 0.55 })];
       pattern.append(...gridLines);
       root.append(svg('defs', {}), svg('rect', { width: map.width, height: map.height, fill: `url(#${pid})` }));
@@ -336,8 +338,28 @@ const MapsTab = (() => {
     };
     function closePanel() {
       const refit = mode === 'scale';   // the picture was fitted beside (or under) the scale panel: back to the whole stage
+      if (gridPreview) { gridPreview = null; drawGrid(); }
       panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools();
       if (refit) fitPicture();
+    }
+    /** Look for a square grid in the map's picture (in the browser, on a shrunk copy): {px, offset_x, offset_y} in picture pixels, or null. */
+    async function findGrid() {
+      const img = new Image();
+      img.src = map.image_url;
+      await img.decode();
+      const f = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * f)), h = Math.max(1, Math.round(img.naturalHeight * f));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const c = cv.getContext('2d', { willReadFrequently: true });
+      c.drawImage(img, 0, 0, w, h);
+      const d = c.getImageData(0, 0, w, h).data, gray = new Uint8Array(w * h);
+      for (let i = 0; i < gray.length; i++) gray[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+      const r = G.detectGrid(gray, w, h);
+      if (!r) return null;
+      const k = map.width / w;   // back to picture pixels
+      const q = v => Math.round(v * k * 100) / 100;
+      return { px: q(r.px), offset_x: q(r.offset_x), offset_y: q(r.offset_y) };
     }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
@@ -357,6 +379,21 @@ const MapsTab = (() => {
       const way1 = btn('Two points', () => show('points'), '', 'Click two places you know the distance between');
       const way2 = btn('Grid squares', () => show('grid'), '', 'Say how big one square of the map\'s grid is');
       const body = el('div', { class: 'map-panel-body' });
+      let found = null, finding = false;   // found: the grid detected on the picture, whose offset is saved with it
+      const find = async quiet => {
+        if (finding || !map.image_url) return;
+        finding = true; findBtn.disabled = true;
+        try {
+          const r = await findGrid();
+          if (r && panel) {
+            found = r; px.value = String(r.px); show('grid');
+            gridPreview = { px: r.px, ox: r.offset_x, oy: r.offset_y }; drawGrid();
+            toast(`Found a grid of about ${Math.round(r.px * 10) / 10} px. Check it lines up, then save the scale`);
+          } else if (!quiet) toast('No grid found on the picture. Type its size, or click a run of squares', true);
+        } catch { if (!quiet) toast('Couldn\'t read the picture to look for a grid', true); } finally { finding = false; findBtn.disabled = false; }
+      };
+      const findBtn = btn('Find the grid', () => find(false), 'small', 'Look for a square grid drawn on the picture and fill in its size');
+      px.addEventListener('input', () => { found = null; if (gridPreview) { gridPreview = null; drawGrid(); } });
       const fromRun = () => {
         const n = +count.value;
         if (picks.length === 2 && n > 0) px.value = String(+(Math.hypot(picks[1].x - picks[0].x, picks[1].y - picks[0].y) / n).toPrecision(6));
@@ -371,7 +408,7 @@ const MapsTab = (() => {
         ] : [
           el('div', { class: 'row' }, field('Shape', shape, null, 'A hex\'s size is from its centre to the next one\'s, flat side to flat side'),
             el('label', { class: 'check' }, shown, ' Show the grid to everyone')),
-          el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''),
+          el('div', { class: 'row' }, field('One square is', per), field('Unit', perUnit), field('Pixels per square', px, hint ? `The file name says ${Math.round(hint.grid_px * 100) / 100} px` : ''), findBtn,
             btn(`Roll20 (${G.ROLL20.grid_px} px = ${G.ROLL20.per_square} ft)`, () => { px.value = String(G.ROLL20.grid_px); per.value = String(G.ROLL20.per_square); perUnit.value = G.ROLL20.unit; }, 'small')),
           el('p', { class: 'small' }, 'Or click the corners of a run of squares, then say how many squares that is.'),
           el('div', { class: 'row' }, field('How many squares is that?', count))
@@ -389,6 +426,7 @@ const MapsTab = (() => {
             if (!(+per.value > 0)) throw new Error('Type how far one square is');
             patch = G.scaleFromGrid(+px.value, +per.value, perUnit.value);
             Object.assign(patch, { grid_type: shape.value, grid_shown: shown.checked });
+            if (found && !picks.length) { patch.grid_offset_x = found.offset_x; patch.grid_offset_y = found.offset_y; }
             if (picks.length) { offset = { x: ((picks[0].x % patch.grid_px) + patch.grid_px) % patch.grid_px, y: ((picks[0].y % patch.grid_px) + patch.grid_px) % patch.grid_px }; patch.grid_offset_x = offset.x; patch.grid_offset_y = offset.y; }
           }
           map = (await post('map_save', { id: map.id, ...patch }, cid)).map;
@@ -402,6 +440,7 @@ const MapsTab = (() => {
       show(way);
       syncTools();
       fitPicture();
+      if (!hasGrid && !hint) find(true);   // a map with no grid yet: look for one without being asked
     }
 
     // ---- pins
@@ -550,6 +589,7 @@ const MapsTab = (() => {
         p.is_secret ? el('span', { 'data-tip': 'GM only: players don\'t see this pin' }, '🔒') : null,
         p.author ? el('small', { class: 'muted' }, `Added by ${p.author}`) : null,
         partyHere(p),
+        p.child_map ? el('a', { class: 'map-pin-opens', href: `#/c/${cid}/maps/${p.child_map.id}`, 'data-tip': 'Open the map inside this place' }, `🗺️ Open ${p.child_map.name}`) : null,
         gm && p.kind === 'note' ? el('div', { class: 'row' }, match
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), 'small', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), 'small', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
@@ -615,6 +655,14 @@ const MapsTab = (() => {
       };
       // not field(): its <label> would pass a click on one of these buttons to the first of them once the click has
       // redrawn the buttons (older Chrome does), putting the choice straight back
+      // GMs: the map this pin opens (a town pin opens the town's map); the list comes once the form is open
+      let child = old?.child_map ? old.child_map.id : null;
+      const childSel = el('select', { 'aria-label': 'Opens map' }, el('option', { value: '' }, 'No map'));
+      if (gm) api('maps', { query: { cid } }).then(r => {
+        childSel.replaceChildren(el('option', { value: '' }, 'No map'), ...r.maps.filter(m => m.id !== map.id).map(m => el('option', { value: String(m.id) }, (m.is_secret ? '🔒 ' : '') + m.name)));
+        childSel.value = child === null ? '' : String(child);
+      }).catch(() => {});
+      childSel.addEventListener('change', () => { child = childSel.value ? Number(childSel.value) : null; });
       const group = (name, box) => el('div', { class: 'field' }, el('span', { class: 'lbl', 'aria-hidden': 'true' }, name), box);
       const styleFields = el('details', { class: 'map-style-fold' }, el('summary', {}, 'Icon and colour'), group('Icon', iconBox), group('Colour', colourBox));
       const kindBtns = kinds.map(([k, l]) => btn(l, () => { kind = k; show(); }, '', k === 'note' ? 'A label and a note' : k === 'entry' ? 'Pin an Encyclopedia entry' : 'Pin an event'));
@@ -624,7 +672,7 @@ const MapsTab = (() => {
         if (working) return;
         const b = { map_id: map.id, x: xy.x, y: xy.y };
         if (old) b.id = old.id;
-        if (gm) { b.kind = kind; b.is_secret = secret.checked; }
+        if (gm) { b.kind = kind; b.is_secret = secret.checked; b.child_map_id = child; }
         b.icon = icon; b.color = colour;
         let hidden = null;
         if (kind === 'note') {
@@ -686,6 +734,7 @@ const MapsTab = (() => {
       const form = el('form', { class: 'map-panel card', role: 'dialog', 'aria-label': old ? 'Edit pin' : 'Add pin' },
         el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
         body, styleFields,
+        gm ? field('Opens map', childSel, 'Clicking this pin offers a link to that map') : null,
         gm ? lockBox(secret, 'players won\'t see this pin') : null,
         el('div', { class: 'row map-panel-actions' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
       form.addEventListener('submit', ev => { ev.preventDefault(); save(); });
@@ -1235,6 +1284,8 @@ const MapsTab = (() => {
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
       el('div', { class: 'row map-head' }, el('a', { href: `#/c/${cid}/maps`, class: 'small' }, '← Maps'), title, meta),
+      data.parent ? el('p', { class: 'small muted map-inside' }, 'Inside: ', el('strong', {}, data.parent.label), ' on ',
+        el('a', { href: `#/c/${cid}/maps/${data.parent.map_id}` }, data.parent.map_name)) : null,
       el('div', { class: 'map-body' }, stage)));
 
     if (!map.image_url || !map.width) {

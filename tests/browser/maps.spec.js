@@ -183,6 +183,98 @@ async function mapWithPicture(page, cid, extra = {}) {
   return id;
 }
 
+test("Maps: a pin can open another map; a player isn't told of a GM-only one, and the inner map knows where it sits", async ({ page, browser }) => {
+  const { cid, pp } = await setup(page, browser, "Maps nesting");
+  const region = await mapWithPicture(page, cid);
+  const town = (await api(page, "map_save", { name: "Bree" }, cid)).json.map.id;
+  const vault = (await api(page, "map_save", { name: "Hidden vault", is_secret: true }, cid)).json.map.id;
+  const pin = (await api(page, "pin_save", { map_id: region, x: 100, y: 80, kind: "note", label: "Bree town", child_map_id: town }, cid)).json.pin;
+  expect(pin.child_map).toEqual({ id: town, name: "Bree" });
+  const secretPin = (await api(page, "pin_save", { map_id: region, x: 10, y: 10, kind: "note", label: "Old ruin", child_map_id: vault }, cid)).json.pin;
+  expect(secretPin.child_map).toEqual({ id: vault, name: "Hidden vault" });
+  const bad = await api(page, "pin_save", { id: pin.id, child_map_id: region }, cid);
+  expect(bad.status).toBe(400);
+  expect(bad.json.message).toBe("A pin can't open the map it is on");
+  expect((await api(page, "pin_save", { id: pin.id, child_map_id: 999999 }, cid)).status).toBe(404);
+  // a player sees the public link, and nothing of the GM-only map, not even its name
+  const seen = (await getMap(pp, cid, region)).json.pins;
+  expect(seen.find(p => p.id === pin.id).child_map).toEqual({ id: town, name: "Bree" });
+  expect(seen.find(p => p.id === secretPin.id).child_map).toBe(null);
+  expect(JSON.stringify(seen)).not.toContain("Hidden vault");
+  expect((await api(pp, "pin_save", { id: pin.id, child_map_id: null }, cid)).status).toBe(403);
+  // the inner map says where it sits (a player only sees a parent they can see)
+  expect((await getMap(page, cid, town)).json.parent).toEqual({ pin_id: pin.id, label: "Bree town", map_id: region, map_name: "Sartar" });
+  expect((await getMap(pp, cid, town)).json.parent).toMatchObject({ map_id: region });
+  expect((await getMap(page, cid, vault)).json.parent).toMatchObject({ label: "Old ruin" });
+  expect((await getMap(page, cid, region)).json.parent).toBe(null);
+  // a GM-only parent map isn't shown to a player
+  await api(page, "map_save", { id: region, is_secret: true }, cid);
+  expect((await getMap(pp, cid, town)).json.parent).toBe(null);
+  await api(page, "map_save", { id: region, is_secret: false }, cid);
+  // changing the pin's other fields keeps the link; clearing it removes it; deleting the inner map clears it
+  expect((await api(page, "pin_save", { id: pin.id, label: "Bree" }, cid)).json.pin.child_map).toEqual({ id: town, name: "Bree" });
+  expect((await api(page, "pin_save", { id: pin.id, child_map_id: null }, cid)).json.pin.child_map).toBe(null);
+  await api(page, "pin_save", { id: pin.id, child_map_id: town }, cid);
+  expect((await api(page, "map_delete", { id: town }, cid)).status).toBe(200);
+  expect((await getMap(page, cid, region)).json.pins.find(p => p.id === pin.id).child_map).toBe(null);
+});
+
+test("Maps: a pin's card opens the map inside it, which names the place it is inside", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps inside");
+  const region = await mapWithPicture(page, cid);
+  const town = await mapWithPicture(page, cid);
+  await api(page, "map_save", { id: town, name: "Bree" }, cid);
+  // the GM makes the link in the pin form
+  await page.goto(`#/c/${cid}/maps/${region}`);
+  await expect(page.locator(".map-view .leaflet-container")).toBeVisible();
+  const pin = (await api(page, "pin_save", { map_id: region, x: 150, y: 100, kind: "note", label: "Bree town" }, cid)).json.pin;
+  await page.goto(`#/c/${cid}/maps/${region}?pin=${pin.id}`);
+  await page.getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog", { name: "Edit pin" });
+  await expect(form.getByLabel("Opens map").locator("option")).toHaveCount(2);   // No map, Bree (not this map itself)
+  await form.getByLabel("Opens map").selectOption({ label: "Bree" });
+  await form.getByRole("button", { name: "Save pin" }).click();
+  await expect(form).toBeHidden();
+  await page.reload();
+  await page.getByRole("link", { name: /Open Bree/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/maps/${town}$`));
+  await expect(page.locator(".map-inside")).toContainText("Inside: Bree town on Sartar");
+  await page.locator(".map-inside").getByRole("link", { name: "Sartar" }).click();
+  await expect(page).toHaveURL(new RegExp(`/maps/${region}$`));
+  expectNoErrors(errors);
+});
+
+test("Maps: the scale dialog finds the grid drawn on a picture, shows it before saving, and keeps its offset", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps detect");
+  const id = (await api(page, "map_save", { name: "Gridded" }, cid)).json.map.id;
+  const png = makePng(600, 400, (x, y) => ((x - 17 + 600) % 50 < 2 || (y - 17 + 400) % 50 < 2) ? 10 : 90 + ((Math.floor(x / 23) * 5 + Math.floor(y / 31) * 9) % 4) * 30);
+  const up = await upload(page, cid, "map", id, png);
+  expect((await api(page, "map_save", { id, image_id: up.json.file.id }, cid)).status).toBe(200);
+  await page.goto(`#/c/${cid}/maps/${id}?scale=1`);
+  // it looks by itself on a map with no grid, and draws what it found before anything is saved
+  await expect(page.getByLabel("Pixels per square")).toHaveValue(/^(49\.[5-9]|50(\.[0-4])?)/);
+  await expect(page.locator("svg.map-grid pattern")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Find the grid" })).toBeEnabled();
+  await page.getByLabel("Distance per square").fill("5");
+  await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("ft");
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  const m = (await api(page, "maps", undefined, cid)).json.maps[0];
+  expect(Math.abs(m.grid_px - 50)).toBeLessThan(0.6);
+  expect(Math.abs(m.grid_offset_x - 17)).toBeLessThan(2.5);
+  expect(Math.abs(m.grid_offset_y - 17)).toBeLessThan(2.5);
+  // a picture with no grid says so when asked, and cancelling takes the preview away
+  const plain = await mapWithPicture(page, cid);
+  await page.goto(`#/c/${cid}/maps/${plain}?scale=1`);
+  await page.getByRole("button", { name: "Grid squares" }).click();
+  await page.getByRole("button", { name: "Find the grid" }).click();
+  await expect(page.getByText("No grid found on the picture")).toBeVisible();
+  await expect(page.locator("svg.map-grid")).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
 test("Maps: a player adds a public pin; only they and the GM can change it", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Maps pin");

@@ -631,7 +631,7 @@ const CAMPAIGN_COPY = [
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
-    ['map_pins', 'maps' => ['map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
+    ['map_pins', 'maps' => ['map_id' => 'map', 'child_map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
     ['map_routes', 'maps' => ['map_id' => 'map']],
     ['party_groups', 'key' => 'group', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
     ['party_trail', 'maps' => ['group_id' => 'group', 'map_id' => 'map']],
@@ -1672,7 +1672,7 @@ try {
         $isGm = role($cid) === 'gm';
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
         // the party's trail: every group's that has been on this map, as a player can see this map
-        out(['map' => map_out($m), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
+        out(['map' => map_out($m), 'parent' => map_parent($cid, (int)$m['id'], $isGm), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
             'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])),
             'trail' => trail_on_map((int)$m['id'], array_map(fn($g) => $g['id'], party_groups($cid, $isGm)))]);
 
