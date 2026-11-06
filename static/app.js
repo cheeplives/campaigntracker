@@ -5856,11 +5856,17 @@
     }
     const pop = el('div', { class: 'tv-bar-pop surface-float', hidden: true });
     const lookup = tableLookup(view, () => openPop('note')), note = tableNote();
-    // + Event and + Reminder open their forms over the bar, set to the shift looked at
+    // + Event and + Reminder open their forms over the bar, set to the shift looked at (made when opened, so a closed
+    // bar holds no form)
     const canEvent = cur && (isGM() || settings().players_can_add_events) && !S.viewAs, canRem = cur && !S.viewAs;
-    const evPane = canEvent ? el('section', { class: 'tv-sec' }, el('b', {}, `New event on ${E.fmtShift(c, at)}`), eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
+    const formPane = (title, make) => {
+      const pane = el('section', { class: 'tv-sec' });
+      pane.fill = () => { if (!pane.firstChild) pane.append(el('b', {}, title), make()); };
+      return pane;
+    };
+    const evPane = canEvent ? formPane(`New event on ${E.fmtShift(c, at)}`, () => eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
       { pinAt: partyMap && mainGroup?.x !== null && mainGroup?.x !== undefined ? { map_id: partyMap.id, map_name: partyMap.name, x: mainGroup.x, y: mainGroup.y } : null })) : null;
-    const remPane = canRem ? el('section', { class: 'tv-sec' }, el('b', {}, 'New reminder'), reminderForm(cur.d)) : null;
+    const remPane = canRem ? formPane('New reminder', () => reminderForm(cur.d)) : null;
     const panes = { look: lookup, note, event: evPane, rem: remPane };
     pop.append(...clean(Object.values(panes)));
     const toggle = which => () => openPop(pop.dataset.on === which ? null : which);
@@ -5871,7 +5877,10 @@
     const popBtns = { look: lookBtn, note: noteBtn, event: evBtn, rem: remBtn };
     function openPop(which) {
       pop.hidden = !which; pop.dataset.on = which || '';
-      for (const [k, pane] of Object.entries(panes)) if (pane) pane.hidden = which !== k;
+      for (const [k, pane] of Object.entries(panes)) if (pane) {
+        pane.hidden = which !== k;
+        if (pane.fill) { if (which === k) pane.fill(); else pane.replaceChildren(); }   // a form closed is gone
+      }
       for (const [k, b] of Object.entries(popBtns)) b?.setAttribute('aria-pressed', String(which === k));
       if (which) panes[which]?.querySelector('input:not([type=checkbox])')?.focus();
     }
