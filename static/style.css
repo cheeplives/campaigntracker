@@ -1721,3 +1721,53 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 }
 @media (max-width: 899px) { .tv-now-aside .tv-here { margin-top: 12px; } }
 .tv-now-aside .shiftnotes { border-top: 0; padding-top: 0; }
+/* Clocks (static/clocks-tab.js): a circle of segments. A GM's fills in the theme's colour; a player's in a second colour
+   turned well round the colour wheel from it, with a dashed rim, so the two read apart even without colour. */
+:root { --clock-gm: var(--accent); --clock-player: #3a9fb0; }
+@supports (color: oklch(from red l c h)) { :root { --clock-player: oklch(from var(--accent) l max(c, 0.09) calc(h + 150)); } }
+.clock-face { display: inline-flex; flex: none; --clock: var(--clock-gm); }
+.clock-face.player { --clock: var(--clock-player); }
+.clock-svg { display: block; overflow: visible; }
+.clock-rim { fill: var(--panel); stroke: var(--clock); stroke-width: 3; }
+.clock-face.player .clock-rim { stroke-dasharray: 6 4; }
+.clock-face.full .clock-rim { stroke-width: 5; }
+.clock-seg { fill: var(--panel-2); stroke: var(--panel); stroke-width: 2.5; stroke-linejoin: round; }
+.clock-seg.on { fill: var(--clock); }
+.clock-seg.unknown { fill: color-mix(in srgb, var(--panel-2) 80%, var(--clock)); }
+.clock-seg[role=button] { cursor: pointer; }
+.clock-seg[role=button]:hover { fill: color-mix(in srgb, var(--panel-2) 55%, var(--clock)); }
+.clock-seg.on[role=button]:hover { fill: color-mix(in srgb, var(--clock) 75%, var(--text)); }
+.clock-seg[role=button]:focus-visible { outline: none; stroke: var(--text); stroke-width: 3; }
+.clock-q { font: 700 26px var(--disp, inherit); fill: var(--text); pointer-events: none; }
+.chip.clock-who { background: var(--clock-player); color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / .35); }
+.chip.clock-vague, .chip.clock-full { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+.chip.clock-full { border-color: var(--clock-gm); }
+.clock-head { margin-bottom: 10px; }
+.clock-filters { gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.clock-filters .tagpick { margin: 0; }
+button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-player { --tag: var(--clock-player); }
+.clock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; align-items: start; }
+.clock-card { display: flex; gap: 14px; align-items: flex-start; border-left: 4px solid var(--clock-gm); }
+.clock-card.player { border-left: 4px dashed var(--clock-player); }
+.clock-card.secret { box-shadow: inset 0 0 0 1px var(--secret), 0 1px 0 var(--line); }
+.clock-card.archived { opacity: .75; }
+.clock-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.clock-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.clock-title h3 { margin: 0; overflow-wrap: anywhere; }
+.clock-count { font-weight: 700; }
+.clock-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.clock-actions { gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.clock-pm { display: inline-flex; gap: 4px; }
+.clock-pm button { min-width: 2.4em; font-weight: 700; }
+.clock-log ul { margin: 4px 0 0; padding-left: 18px; }
+.clock-empty { grid-column: 1 / -1; max-width: 60ch; }
+.clock-mini-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px 14px; }
+.clock-mini { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: var(--panel); border-left: 3px solid var(--clock-gm); }
+.clock-mini.player { border-left: 3px dashed var(--clock-player); }
+.clock-mini-body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.clock-mini-body .chip, .clock-mini-body .secret-tag { font-size: .66rem; }
+.clock-dialog { width: min(560px, calc(100vw - 32px)); }
+.clock-dialog-row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; }
+.clock-num { width: 5em; }
+.clock-preview { margin-left: auto; }
+@media (max-width: 520px) { .clock-card { flex-direction: column; align-items: center; } .clock-card .clock-body { width: 100%; } }

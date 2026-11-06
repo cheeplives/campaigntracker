@@ -42,6 +42,8 @@ async function fill(page, cid, uid) {
     VALUES (${cid}, ${uid}, ${tpl}, ${e1}, 1, '{}', '{}', '[]');`);
   const ses = one(`INSERT INTO play_sessions (campaign_id, number, first_day) VALUES (${cid}, 1, 3)`);
   sql(`INSERT INTO session_notes (campaign_id, session_id, position, text, abs_shift) VALUES (${cid}, ${ses}, 1, 'Met Hoffmann', 13);`);
+  const clock = one(`INSERT INTO clocks (campaign_id, name, segments, filled, entry_id, created_by) VALUES (${cid}, 'Cult ritual', 6, 2, ${e1}, ${uid})`);
+  sql(`INSERT INTO clock_ticks (campaign_id, clock_id, delta, filled_after, user_id) VALUES (${cid}, ${clock}, 2, 2, ${uid});`);
   // A picture on Hoffmann, through the API so it is on disk.
   const me = await (await page.request.get("api/auth/me.php")).json();
   const res = await page.request.post(`api/index.php?a=file_upload&cid=${cid}`, { headers: { "X-CSRF-Token": me.csrf },
@@ -53,7 +55,7 @@ const TABLES = [["regions"], ["holidays"], ["days"], ["shifts"], ["shift_notes"]
   ["event_notes", ["event_id", "events"]], ["downtimes"], ["party_gear"], ["holdings"], ["holding_tag_names"], ["holding_tags", ["holding_id", "holdings"]],
   ["holding_storage", ["holding_id", "holdings"]], ["reminders"], ["party_funds"], ["encyclopedia_entries"], ["encyclopedia_tag_names"],
   ["encyclopedia_tags", ["entry_id", "encyclopedia_entries"]], ["encyclopedia_ignored"], ["encyclopedia_relation_types"], ["encyclopedia_relations"],
-  ["library_tomes"], ["play_sessions"], ["session_notes"], ["sheet_characters"], ["attachments"]];
+  ["library_tomes"], ["play_sessions"], ["session_notes"], ["clocks"], ["clock_ticks"], ["sheet_characters"], ["attachments"]];
 
 test("a GM copies a campaign from the list, with everything in it, into a new one of their own", async ({ page, browser }) => {
   const errors = watchErrors(page);

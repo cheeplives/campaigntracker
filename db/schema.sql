@@ -668,6 +668,50 @@ CREATE TABLE IF NOT EXISTS session_shifts (
   FOREIGN KEY (session_id) REFERENCES play_sessions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Clocks (db/migrations/030_clocks.sql).
+-- Clocks: a circle cut into segments that fills as something comes closer (a plot, a danger, a long job). Any member makes
+-- one; a GM's and a player's are drawn in different colours. visibility: shown (everyone sees how full it is), vague
+-- (players see it is there, not how full; its maker and GMs see all) or secret (GMs only; only a GM makes one). The maker
+-- and GMs change and fill it. entry_id: the Encyclopedia entry it is about. archived: put away, kept with its history.
+CREATE TABLE IF NOT EXISTS clocks (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  description VARCHAR(1000) NULL,
+  segments TINYINT UNSIGNED NOT NULL DEFAULT 4,
+  filled TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  visibility VARCHAR(8) NOT NULL DEFAULT 'shown',
+  by_gm TINYINT(1) NOT NULL DEFAULT 1,
+  entry_id INT UNSIGNED NULL,
+  archived TINYINT(1) NOT NULL DEFAULT 0,
+  created_by BIGINT UNSIGNED NULL,
+  updated_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY ix_clock_campaign (campaign_id, archived),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Each time a clock is filled or emptied: by how much, where it stood after, and the campaign clock's shift then, so a
+-- session can say what moved while it was played.
+CREATE TABLE IF NOT EXISTS clock_ticks (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  clock_id INT UNSIGNED NOT NULL,
+  delta SMALLINT NOT NULL,
+  filled_after TINYINT UNSIGNED NOT NULL,
+  abs_shift BIGINT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_tick_clock (clock_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (clock_id) REFERENCES clocks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Character sheets. sheet_templates are site-wide, not a campaign's: anyone can use or fork one, only its author (or a
 -- site admin) changes it; a starter template (starter_key set, from db/starter-templates/) has no author. layout is
 -- JSON: sections of typed fields, each with a permanent key (see static/sheetlayout.js).
