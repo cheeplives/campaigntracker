@@ -531,6 +531,7 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 .charname { font-style: italic; }
 .listrow.member { align-items: center; }
 .listrow.member > .who, .listrow.member > .actions { flex: 1 1 0; min-width: 0; }
+.listrow.member > .who { overflow-wrap: anywhere; }
 .member-char { flex: 1 1 0; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 .member-char .charname { font-family: var(--disp); font-size: 1.35rem; line-height: 1.2; }
 .member-char .muted { font-style: italic; }

@@ -929,6 +929,7 @@ try {
     case 'character_delete':
     case 'character_presence':
     case 'member_active_character':
+    case 'member_link_character':
         characters_action($action, cid());
 
     case 'campaigns':

@@ -42,6 +42,7 @@ const ACTIONS = [
     'character_delete' => ['who' => 'member', 'touch' => true],
     'character_presence' => ['who' => 'member'],
     'member_active_character' => ['who' => 'member'],
+    'member_link_character' => ['who' => 'member', 'touch' => true],
     'campaigns' => ['get' => true, 'who' => 'account'],
     'campaign' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
     'changed' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
