@@ -277,6 +277,15 @@ function convert_slot(int $a, ?array $from, ?array $to, bool $end = false): int 
  * $new's, after its time mode (or its hours per day, in hours mode) changes. Activities that end up in
  * the same slot are joined. All-day events and the days themselves don't move.
  */
+/** The actions picked on a day's shifts (or one shift of it): the party's (user_id 0) and each player's, with who did it. */
+function shift_actions_of(int $cid, int $day, ?int $slot = null): array {
+    $st = db()->prepare('SELECT a.shift, a.user_id, a.action, ' . AUTHOR_SQL . ' AS who
+        FROM shift_actions a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN campaign_members m ON m.campaign_id=a.campaign_id AND m.user_id=a.user_id
+        WHERE a.campaign_id=? AND a.abs_day=?' . ($slot === null ? '' : ' AND a.shift=?') . ' ORDER BY a.shift, a.user_id <> 0, who');
+    $st->execute($slot === null ? [$cid, $day] : [$cid, $day, $slot]);
+    return array_map(fn($r) => ['shift' => (int)$r['shift'], 'user_id' => (int)$r['user_id'], 'action' => $r['action'], 'who' => (int)$r['user_id'] ? $r['who'] : 'The party'], $st->fetchAll());
+}
+
 function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
     $n0 = slots_per_day($old); $n1 = slots_per_day($new);
     $split = fn(int $a) => [floordiv($a, $n1), $a - $n1 * floordiv($a, $n1)];
@@ -309,6 +318,17 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
     foreach ($st->fetchAll() as $r) {
         [$d, $s] = $split(convert_slot((int)$r['abs_day'] * $n0 + (int)$r['shift'], $old, $new));
         $up->execute([$d, $s, $r['id']]);
+    }
+
+    // each player's and the party's action: where two shifts become one, the earlier shift's action stays
+    $st = $pdo->prepare('SELECT abs_day, shift, user_id, action, updated_by FROM shift_actions WHERE campaign_id=? ORDER BY abs_day, shift');
+    $st->execute([$cid]);
+    $acts = $st->fetchAll();
+    $pdo->prepare('DELETE FROM shift_actions WHERE campaign_id=?')->execute([$cid]);
+    $ins = $pdo->prepare('INSERT IGNORE INTO shift_actions (campaign_id, abs_day, shift, user_id, action, updated_by) VALUES (?,?,?,?,?,?)');
+    foreach ($acts as $r) {
+        [$d, $s] = $split(convert_slot((int)$r['abs_day'] * $n0 + (int)$r['shift'], $old, $new));
+        $ins->execute([$cid, $d, $s, $r['user_id'], $r['action'], $r['updated_by']]);
     }
 
     $st = $pdo->prepare('SELECT id, abs_day, end_day, shift, shift_end FROM events WHERE campaign_id=? AND shift IS NOT NULL');
@@ -559,7 +579,8 @@ function need_campaign_room(): void {
 }
 /** The rows a campaign may keep in each of its biggest tables: about a century of days and their shifts. */
 const ROW_BUDGETS = ['days' => ['days_per_campaign', 40000, 'days of weather and notes'],
-    'shifts' => ['shifts_per_campaign', 200000, 'shifts'], 'events' => ['events_per_campaign', 20000, 'events']];
+    'shifts' => ['shifts_per_campaign', 200000, 'shifts'], 'events' => ['events_per_campaign', 20000, 'events'],
+    'shift_actions' => ['shift_actions_per_campaign', 200000, 'shift actions']];
 /** Refuse a change that would take campaign $cid's $table past its budget by adding up to $adding rows. */
 function need_row_room(int $cid, string $table, int $adding): void {
     [$key, $default, $what] = ROW_BUDGETS[$table];
@@ -609,6 +630,7 @@ const CAMPAIGN_COPY = [
     ['days', 'maps' => ['region_id' => 'regions']],
     ['shifts'],
     ['shift_notes'],
+    ['shift_actions'],
     ['events', 'key' => 'events'],
     ['event_tags', 'via' => ['event_id', 'events'], 'maps' => ['tag_id' => 'tags']],
     ['event_notes', 'via' => ['event_id', 'events']],
@@ -1314,7 +1336,7 @@ try {
             WHERE n.campaign_id=? AND n.abs_day=? ORDER BY n.created_at, n.id');
         $st->execute([$cid, $ad]);
         $shiftNotes = $st->fetchAll();
-        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'events' => $events, 'today' => $today,
+        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'shift_actions' => shift_actions_of($cid, $ad), 'events' => $events, 'today' => $today,
             'sessions' => day_sessions($cid, $c, $ad, $isGm)]);
 
     case 'days_save': // GM: batch upsert generated weather (+ region) — never touches notes
@@ -1406,6 +1428,32 @@ try {
         if (p('transit')) tag_transit_events($cid, $from, $to);
         db()->commit();
         out(['ok' => true]);
+
+    case 'shift_action_set': // one action per player's character and one for the party (user_id 0) on a shift; '' clears it.
+        // A GM sets any of them; a player only their own character's.
+        $cid = cid();
+        $role = role($cid);
+        $c = campaign_row($cid);
+        $maxSlot = camp_spd($c) - 1;
+        $day = int_in(p('abs_day')); $slot = int_in(p('shift'), 0, $maxSlot);
+        $uid = int_in(p('user_id') ?? 0, 0);
+        if ($role !== 'gm' && $uid !== me()['id']) fail('Only a GM picks the party\'s action or another player\'s', 403);
+        if ($uid) {
+            $st = db()->prepare("SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=? AND role='player'");
+            $st->execute([$cid, $uid]);
+            if (!$st->fetchColumn()) fail('That player is not in this campaign');
+        }
+        $act = trim((string)str_in(p('action'), 100, false));
+        if ($act === '') {
+            db()->prepare('DELETE FROM shift_actions WHERE campaign_id=? AND abs_day=? AND shift=? AND user_id=?')->execute([$cid, $day, $slot, $uid]);
+        } else {
+            need_row_room($cid, 'shift_actions', 1);
+            db()->prepare('INSERT INTO shift_actions (campaign_id, abs_day, shift, user_id, action, updated_by) VALUES (?,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE action=VALUES(action), updated_by=VALUES(updated_by)')->execute([$cid, $day, $slot, $uid, $act, me()['id']]);
+            // the party on the move (Travel, Navigate...) tags the events running then as Transit, as the activity does
+            if (!$uid && p('transit')) tag_transit_events($cid, $day * ($maxSlot + 1) + $slot, $day * ($maxSlot + 1) + $slot);
+        }
+        out(['ok' => true, 'actions' => shift_actions_of($cid, $day, $slot)]);
 
     case 'shift_note_add': // anyone in the campaign, GM or player
         $cid = cid();

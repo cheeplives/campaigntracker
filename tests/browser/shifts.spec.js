@@ -4,7 +4,7 @@ const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, openPassTime, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
-test("shift actions are picked into the activity alongside free text", async ({ page, browser }) => {
+test("a day page's shift card keeps the activity free text and its actions in the editor, one each, described on hover", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Kit");
   await signIn(page, gm);
@@ -18,27 +18,32 @@ test("shift actions are picked into the activity alongside free text", async ({ 
   await expect(card.locator(".shift-preview")).toHaveText("Nothing recorded yet.");
   await card.locator(".shift-edit > summary").click();
   const activity = card.getByLabel("What the party does this Dawn");
-  await activity.fill("Ana and Bo");
-  await card.getByLabel("Add an action").selectOption("Scout ahead");
-  await expect(activity).toHaveValue("Ana and Bo; Scout ahead");
-  await expect(card).toContainText("Scout ahead: Range ahead");
-  await card.getByLabel("Add an action").selectOption("Keep watch");
-  await expect(activity).toHaveValue("Ana and Bo; Scout ahead; Keep watch");
-  await expect(card.getByLabel("Add an action")).toHaveValue("");
-  // no Save button: each pick, and leaving a box, saves it
+  const day = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=3`)).json());
+  const saved = async () => (await day()).shifts.find(x => Number(x.shift) === 0) || {};
+  // the activity is free text; no Save button: moving to the next box, and leaving the editor, saves
+  await activity.fill("Ana and Bo; Scout ahead; Keep watch");
   await expect(card.getByRole("button", { name: "Save" })).toHaveCount(0);
-  const saved = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=3`)).json()).shifts.find(x => Number(x.shift) === 0) || {};
-  await expect.poll(async () => (await saved()).activity).toBe("Ana and Bo; Scout ahead; Keep watch");
-  await expect(card.locator(".shift-status")).toHaveText("Saved ✓");
   const gmNotes = card.getByLabel("GM-only notes for Dawn");
   await gmNotes.fill("They are being followed");
+  await expect.poll(async () => (await saved()).activity).toBe("Ana and Bo; Scout ahead; Keep watch");
   await gmNotes.blur();
   await expect.poll(async () => (await saved()).gm_notes).toBe("They are being followed");
+  await expect(card.locator(".shift-status")).toHaveText("Saved ✓");
   // leaving the editor offers the new names once, for both boxes
   const names = page.getByRole("dialog", { name: "New names for the Encyclopedia" });
   await expect(names).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(names).toHaveCount(0);
+  // the party's action is picked apart from the writing, one at a time, its description on hover only
+  const party = card.getByLabel("The party's action this Dawn");
+  await party.selectOption("Scout ahead");
+  await expect(card.locator(".sa-status")).toHaveText("Saved ✓");
+  await expect(party).toHaveAttribute("data-tip", /Scout ahead: Range ahead/);
+  await expect(card).not.toContainText("Range ahead of the group");
+  await party.selectOption("Keep watch");
+  await expect(card.locator(".sa-status")).toHaveText("Saved ✓");
+  await expect.poll(async () => (await day()).shift_actions.map(a => [a.shift, a.user_id, a.action, a.who])).toEqual([[0, 0, "Keep watch", "The party"]]);
+  expect((await saved()).activity).toBe("Ana and Bo; Scout ahead; Keep watch");
   // folded again, the summary shows what was written
   await card.locator(".shift-edit > summary").click();
   await expect(card.locator(".shift-preview")).toContainText("Ana and Bo; Scout ahead; Keep watch");

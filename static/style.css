@@ -522,11 +522,9 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 .shift-edit-label { flex: none; font-size: .8rem; color: var(--accent); white-space: nowrap; }
 .shift-edit[open] .when-closed, .shift-edit:not([open]) .when-open { display: none; }
 .shift-edit[open] > summary { justify-content: flex-end; }
-.shift-status { min-height: 1em; font-size: .78rem; color: var(--dim); }
-.shift-status.ok { color: var(--accent); } .shift-status.bad { color: var(--bad); }
+.shift-status, .sa-status { min-height: 1em; font-size: .78rem; color: var(--dim); }
+.shift-status.ok, .sa-status.ok { color: var(--accent); } .shift-status.bad, .sa-status.bad { color: var(--bad); }
 .dh-strip.hours .nowtag { font-size: .55rem; padding: 0 2px; letter-spacing: 0; }
-.shiftcard .actpick { align-self: flex-start; max-width: 100%; }
-.shiftcard .actpick + textarea + small:empty { display: none; }
 .shiftnotes { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
 .shiftnotes .enotes { margin-top: 0; }
 .shiftnotes .enotes:empty { display: none; }
@@ -1500,7 +1498,6 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .shiftcard.tv-now h4 { font-size: 1.35rem; }
 .tv-now .shift-edit textarea { min-height: 4.5em; }
 .tv-peek { justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: color-mix(in srgb, var(--accent) 12%, var(--bg)); padding: 6px 10px; border-radius: var(--radius); margin-bottom: 8px; }
-.tv-here { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 .tv-actions { margin-top: 12px; gap: 8px; flex-wrap: wrap; }
 .tv-wide > .dh-strip { max-width: none; margin-top: 0; flex: none; }
 /* the big box's editor is always open: no summary to fold it by */
@@ -1655,9 +1652,6 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .tv-rem > summary.due { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .tv-rem-pop, .tv-fc-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(420px, 86vw); max-height: 60vh; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
 /* the big box: the writing first and large, the action pick half width beside its heading */
-.tv-act-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
-.tv-act-head .lbl { margin: 0 !important; }
-.tv-act-head .actpick { width: 50%; min-width: 0; }
 .tv-now .shift-edit textarea:first-of-type { min-height: 8em; }
 /* a shift's visibility pill opens its choice */
 /* a GM's visibility pill is a select styled as the pill: Auto first, then each score */
@@ -1683,7 +1677,6 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 @media (max-width: 700px) {
   .tv-summary { grid-template-columns: 1fr; }
   .tv-sum-map .mini-map { width: 100%; max-width: 260px; }
-  .tv-act-head .actpick { width: 60%; }
 }
 /* back to the top, on any page once it has scrolled */
 .to-top { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1;
@@ -1722,13 +1715,11 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 .tv-nav .tv-side.next { justify-content: flex-end; text-align: right; }
 .tv-nav .tv-side-hint { display: none; }
 .tv-nav .tv-side-act { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 22em; }
-.tv-now-aside .tv-here { margin-top: 0; }
 @media (min-width: 900px) {
   .tv-now-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
   .tv-now-aside { border-left: 1px solid var(--line); padding-left: 18px; display: flex; flex-direction: column; gap: 10px; }
   .tv-now-aside .shiftnotes { margin-top: 6px; }
 }
-@media (max-width: 899px) { .tv-now-aside .tv-here { margin-top: 12px; } }
 .tv-now-aside .shiftnotes { border-top: 0; padding-top: 0; }
 /* Clocks (static/clocks-tab.js): a circle of segments. A GM's fills in the theme's colour; a player's in a second colour
    turned well round the colour wheel from it, with a dashed rim, so the two read apart even without colour. */
@@ -1786,3 +1777,17 @@ button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-p
 .sess-chip-off { padding: 0 3px; min-height: 0; font-size: .72rem; line-height: 1; opacity: .6; }
 .sess-chip-off:hover, .sess-chip-off:focus-visible { opacity: 1; }
 .sess-more-pop .sess-chip-wrap { margin: 1px 0; }
+
+/* a shift's actions: the party's and each player's, a name and a pick on each line */
+.shift-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.shift-actions .lbl { margin: 0 !important; }
+.shift-actions .sa-grid { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.shift-actions .sa-who { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14em; }
+.shift-actions .sa-who.party { font-weight: 600; }
+.shift-actions .sa-pick { width: 100%; min-width: 0; margin: 0; }
+.shift-actions .sa-val { font-size: .95rem; }
+.shift-actions.read { gap: 2px; }
+.tv-now-aside .shift-actions { margin-top: 0; }
+.shift-edit .shift-actions { padding-top: 8px; border-top: 1px dashed var(--line); }
+.sess-actions { margin-top: 14px; }
+.sess-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: .92rem; }

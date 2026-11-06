@@ -350,21 +350,6 @@
   function visPill(v) {
     return el('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this ${word()}.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
   }
-  /** A drop-down of the baseline shift actions. Picking one hands its name to onPick and
-   * resets, so the activity text stays free-form and several actions can be added. */
-  function actionPicker(onPick) {
-    const groups = Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, label]) => el('optgroup', { label },
-      E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`))));
-    const sel = el('select', { class: 'actpick', 'aria-label': 'Add an action',
-      'data-tip': 'Common things to spend a shift doing on a journey. Picking one adds it to the activity; you can still type anything' },
-      el('option', { value: '' }, '+ Add an action…'), groups);
-    sel.addEventListener('change', () => {
-      const a = E.SHIFT_ACTIONS.find(x => x.name === sel.value);
-      sel.value = '';
-      if (a) onPick(a);
-    });
-    return sel;
-  }
   /** A single-line activity box with its own drop-down of the baseline shift actions, filtered as you type.
    * Not a <datalist>: Android Chrome shows those as a sideways strip above the keyboard, not a list.
    * Picking an action puts its name in the box, which stays free text. */
@@ -1662,7 +1647,7 @@
 
     // --- shifts
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
-      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null, { sessions: r.sessions })));
+      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null, { sessions: r.sessions, actions: r.shift_actions || [] })));
 
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
@@ -1853,7 +1838,9 @@
     : s.last_day !== null && s.last_day !== undefined ? (Number(s.last_day) + 1) * spd() - 1 : nowShift();
   /** What was written on the shifts a session ran over (activities, players' notes, GM notes), as notes for Build draft:
    * at most a month of days from its start, so a session left open for ages doesn't load a year of days. */
-  async function sessionShiftNotes(s) {
+  /** The days a session ran over (its run, then the shifts it takes in outside it), as the day action sends them, with
+   * its runs of shifts in order: { days, runs: [[from, to]] }. */
+  async function sessionDays(s) {
     const n = spd(), from = sessionStart(s), to = s.undated ? from - 1 : Math.min(sessionEnd(s), from + 31 * n - 1);
     // an undated session (one imported without its in-game dates) has no run, only the shifts given it one at a time;
     // the shifts it takes in outside its run (a flashback, a split party's other half) too, each in its place in time
@@ -1861,9 +1848,30 @@
     const ds = new Set(extra.map(a => Math.floor(a / n)));
     for (let d = Math.floor(from / n); d <= Math.floor(to / n); d++) ds.add(d);
     const days = await Promise.all([...ds].map(d => api('day', { query: { cid: S.camp.id, d } })
-      .then(r => ({ d, shifts: r.shifts || [], shift_notes: r.shift_notes || [] }))));
+      .then(r => ({ d, shifts: r.shifts || [], shift_notes: r.shift_notes || [], shift_actions: r.shift_actions || [] }))));
     const runs = [...(to < from ? [] : [[from, to]]), ...extra.map(a => [a, a])].sort((a, b) => a[0] - b[0]);
+    return { days, runs };
+  }
+  async function sessionShiftNotes(s) {
+    const { days, runs } = await sessionDays(s);
     return runs.flatMap(([a, b]) => Sessions.shiftNotes(cal(), days, a, b));
+  }
+  /** A session page's Actions box: the party's and each player's action on every shift it ran over, picked At the
+   * Table; null when none were picked. */
+  async function sessionActionsBox(s) {
+    const { days, runs } = await sessionDays(s);
+    const n = spd(), byDay = new Map(days.map(x => [x.d, x])), rows = [];
+    for (const [a, b] of runs) for (let k = a; k <= b; k++) {
+      const acts = (byDay.get(Math.floor(k / n))?.shift_actions || []).filter(y => Number(y.shift) === E.mod(k, n));
+      if (acts.length) rows.push([k, acts]);
+    }
+    if (!rows.length) return null;
+    const find = name => E.SHIFT_ACTIONS.find(x => x.name === name);
+    return el('section', { class: 'sess-actions', 'data-box': 'actions' },
+      el('h3', {}, 'Actions', tip(`What the party and each player's character did on each ${word()} of this session, picked At the Table. Build draft writes them into the summary`)),
+      el('ul', { class: 'sess-act-list' }, rows.map(([k, acts]) => el('li', {},
+        el('span', { class: 'small muted' }, E.fmtShift(cal(), k)), el('br'),
+        acts.map((y, m) => el('span', { 'data-tip': find(y.action)?.desc || null }, m ? ' · ' : '', el('b', {}, y.who), `: ${[find(y.action)?.icon, y.action].filter(Boolean).join(' ')}`))))));
   }
   /** + New session's question, Starting when?: the clock's shift to start now, or an earlier one; Played already writes
    * one up afterwards, ended where it says, and leaves an open session open. Resolves to the new session, or null. */
@@ -2458,6 +2466,57 @@
     return b;
   }
 
+  /** A shift's actions: one for the party as a whole and one for each player's character, picked from the baseline
+   * shift actions (their descriptions on hover). A GM picks any of them, a player their own; each saves as it is picked,
+   * and a session's page and its Build draft list them. acts: the day's shift_actions. readOnly: just the ones picked. */
+  function shiftActionsBox(d, i, acts, opt = {}) {
+    const mine = (acts || []).filter(a => Number(a.shift) === i);
+    const byUser = new Map(mine.map(a => [Number(a.user_id), a]));
+    const find = name => E.SHIFT_ACTIONS.find(a => a.name === name);
+    const label = name => { const a = find(name); return a ? `${a.icon} ${a.name}` : name; };
+    const players = dtPlayers();
+    const rows = [{ uid: 0, who: 'The party' }, ...players.map(m => ({ uid: Number(m.id), who: memberName(m) })),
+      // a player who has since left keeps what they did
+      ...mine.filter(a => Number(a.user_id) && !players.some(m => Number(m.id) === Number(a.user_id))).map(a => ({ uid: Number(a.user_id), who: a.who, gone: true }))];
+    const head = el('span', { class: 'lbl' }, 'Actions', tip(`One action for the party as a whole and one for each player's character this ${word()}. Hover an action to read what it means. They go in the notes of the session this ${word()} is in`));
+    if (opt.readOnly) {
+      const set = rows.filter(r => byUser.has(r.uid));
+      if (!set.length) return null;
+      return el('div', { class: 'shift-actions read' }, head, el('div', { class: 'sa-list small' }, set.map((r, k) => {
+        const a = byUser.get(r.uid).action;
+        return el('span', { 'data-tip': find(a)?.desc || null }, k ? ' · ' : '', el('b', {}, r.who), ': ', label(a));
+      })));
+    }
+    const status = el('small', { class: 'sa-status', role: 'status' });
+    const can = r => !S.viewAs && !r.gone && (isGM() || (r.uid && r.uid === S.user.id));
+    const grid = el('div', { class: 'sa-grid' }, rows.map(r => {
+      const cur = byUser.get(r.uid)?.action || '';
+      const name = el('span', { class: 'sa-who' + (r.uid ? '' : ' party') }, r.who);
+      if (!can(r)) return [name, el('span', { class: 'sa-val' + (cur ? '' : ' muted'), 'data-tip': find(cur)?.desc || null }, cur ? label(cur) : '—')];
+      const sel = el('select', { class: 'sa-pick', 'aria-label': `${r.who}'s action this ${shiftNames()[i]}` },
+        el('option', { value: '' }, '—'),
+        Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, gl]) => el('optgroup', { label: gl },
+          E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`)))),
+        cur && !find(cur) ? el('option', { value: cur }, cur) : null);
+      sel.value = cur;
+      const tipNow = () => { const a = find(sel.value); sel.dataset.tip = a ? `${a.icon} ${a.name}: ${a.desc}` : `Pick what ${r.uid ? r.who : 'the party as a whole'} does this ${word()}`; };
+      tipNow();
+      let saved = cur;
+      sel.addEventListener('change', async () => {
+        tipNow();
+        status.textContent = 'Saving…'; status.className = 'sa-status';
+        try {
+          await post('shift_action_set', { abs_day: d, shift: i, user_id: r.uid, action: sel.value, transit: !r.uid && E.isOnTheMove(sel.value) }, S.camp.id);
+          saved = sel.value;
+          status.textContent = 'Saved ✓'; status.className = 'sa-status ok';
+        } catch (err) { sel.value = saved; tipNow(); status.textContent = 'Not saved'; status.className = 'sa-status bad'; toast(err.message, true); }
+      });
+      return [name, sel];
+    }).flat());
+    return el('div', { class: 'shift-actions' }, el('div', { class: 'row spread' }, head, status), grid,
+      players.length ? null : el('p', { class: 'small muted' }, 'Players who join the campaign get a line each.'));
+  }
+
   /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. opt: { big: the
    * shift At the Table is on (never folded, its editor open), readOnly: as a player sees it (the panel), after: what to
    * redraw once a note is added or deleted (else the page) }. */
@@ -2480,14 +2539,15 @@
       sum.append(c.firstChild); det.append(sum, ...c.childNodes);
       return det;
     };
+    // the actions: the big box's (a player picks their own there), else a line of what was picked
+    const actsBox = opt.actions && (opt.big || !isGM() || opt.readOnly) ? shiftActionsBox(d, i, opt.actions, { readOnly: opt.readOnly || !opt.big }) : null;
     if (!isGM() || opt.readOnly) {
-      card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), shiftNotes(d, i, notes, opt.after));
+      card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), actsBox || '', shiftNotes(d, i, notes, opt.after));
       return fold(card);
     }
     // The GM's editor folds to a summary of what's recorded (the shift that's now starts open), and each box saves as you
     // leave it, with Saved ✓ beside the summary: no Save button.
     const act = el('textarea', { rows: opt.big ? 6 : 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
-    const hint = el('small', { class: 'muted' });
     const gmn = el('textarea', { rows: opt.big ? 3 : 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
     // the visibility pill is itself the choice: Auto (what the light, moon, weather and terrain give) first, then each score
     const auto = E.visibility(c, region, sw, d, i, null);
@@ -2527,25 +2587,20 @@
         if (now.g !== was.g) nouns.g = true;
       } catch (err) { status.textContent = 'Not saved'; status.className = 'shift-status bad'; toast(err.message, true); }
     });
-    const pick = actionPicker(a => {
-      act.value = E.addShiftAction(act.value, a.name);
-      hint.textContent = `${a.icon} ${a.name}: ${a.desc}`;
-      act.focus();
-      save();
-    });
     for (const x of [act, gmn, ov]) x.addEventListener('change', save);
     // the visibility changes from its pill in the card's heading: a click opens the choice under it
     card.querySelector('.vis').replaceWith(ov);
     ov.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
-    // the big box: the writing is the main thing, with the actions a half-width pick beside its heading
+    // the big box: the writing is the main thing, with the actions beside it; a day page's card keeps them in its editor
     const editor = el('details', { class: 'shift-edit', open: isNow || opt.big || null },
-      el('summary', { 'data-tip': `Open to write what the party does and GM-only notes. Each box saves as you leave it` },
+      el('summary', { 'data-tip': `Open to write what the party does, pick everyone's actions and write GM-only notes. Each box saves as you leave it` },
         preview, el('span', { class: 'shift-edit-label' }, el('span', { class: 'when-closed' }, '✎ Edit'), el('span', { class: 'when-open' }, 'Done'))),
-      ...(opt.big ? [el('div', { class: 'tv-act-head' }, el('span', { class: 'lbl' }, 'What the party does'), pick)] : [pick]), act, hint,
-      opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '');
+      opt.big ? el('span', { class: 'lbl' }, 'What the party does') : null, act,
+      opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '',
+      !opt.big && opt.actions ? shiftActionsBox(d, i, opt.actions) : null);
     editor.addEventListener('focusout', e => { if (!editor.contains(e.relatedTarget)) { save(); offer(); } });
     editor.addEventListener('toggle', () => { if (!editor.open) { save(); offer(); } });
-    card.append(editor, status, shiftNotes(d, i, notes, opt.after));
+    card.append(editor, status, actsBox || '', shiftNotes(d, i, notes, opt.after));
     return fold(card);
   }
 
@@ -5691,7 +5746,7 @@
       party.link ? el('div', { class: 'small' }, party.link) : null, party.groups ? el('div', { class: 'small muted' }, party.groups) : null]) : [el('div', { class: 'muted' }, 'Not set')]));
 
     // the big box: the shift as its card on the day page shows it, made large, its editor open
-    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions })
+    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions, actions: cur.x.r.shift_actions || [] })
       : el('div', { class: 'card shiftcard' }, el('p', { class: 'muted' }, `This ${word()} couldn't be loaded.`));
     big.classList.add('tv-now');
     // on a wide screen the big box is two columns: the writing, and beside it everyone's notes and the events
@@ -5700,7 +5755,7 @@
       const main = el('div', { class: 'tv-now-main' }), aside = el('div', { class: 'tv-now-aside' });
       for (const n of [...big.children]) {
         if (n.matches('.shift-edit, .shift-status, p.pre')) main.append(n);
-        else if (n.matches('.shiftnotes, .tv-here')) aside.append(n);
+        else if (n.matches('.shift-actions, .shiftnotes')) aside.append(n);
       }
       big.append(el('div', { class: 'tv-now-cols' }, main, aside));
     };
@@ -5729,17 +5784,7 @@
       big.prepend(el('div', { class: 'tv-peek row' }, el('span', {}, `Looking at ${E.fmtShift(c, at)}. The clock is on ${names[nsh]}.`),
         btn('Back to now', () => { tablePeek = null; viewTable(); }, 'small primary', `Back to the ${word()} the campaign clock is on`)));
     }
-    // its events, and + New event set to it (its reminders are behind the badge in the block over it)
-    if (cur) {
-      const evs = cur.x.r.events.filter(e => eventCovers(e, cur.d, cur.i));
-      const here = el('div', { class: 'tv-here' }, el('span', { class: 'lbl' }, `Events this ${word()}`),
-        ...evs.map(e => eventView(e, cur.d)), evs.length ? null : el('p', { class: 'muted small' }, `No events on this ${word()}.`));
-      const canAdd = (isGM() || settings().players_can_add_events) && !S.viewAs;
-      if (canAdd) here.append(el('div', { class: 'row' }, btn('+ New event', ev => { ev.target.closest('.row').replaceWith(eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
-          { pinAt: partyMap && mainGroup?.x !== null && mainGroup?.x !== undefined ? { map_id: partyMap.id, map_name: partyMap.name, x: mainGroup.x, y: mainGroup.y } : null })); }, 'small',
-        `Log something that happens on this ${word()}`)));
-      big.append(here);
-    }
+    // (its events are in the Events box under it, and + Event and + Reminder are on the floating bar)
     twoCols();
 
     // the block over the big box, one card: the date and shift, its weather, where the party is, the moons, a badge for
@@ -5811,19 +5856,29 @@
     }
     const pop = el('div', { class: 'tv-bar-pop surface-float', hidden: true });
     const lookup = tableLookup(view, () => openPop('note')), note = tableNote();
-    pop.append(lookup, note);
-    const lookBtn = btn('🔍 Search', () => openPop(pop.dataset.on === 'look' ? null : 'look'), '', 'Look a name up in the Encyclopedia');
-    const noteBtn = btn('📝 Encyclopedia add', () => openPop(pop.dataset.on === 'note' ? null : 'note'), '', 'Add a note to the end of an Encyclopedia entry');
+    // + Event and + Reminder open their forms over the bar, set to the shift looked at
+    const canEvent = cur && (isGM() || settings().players_can_add_events) && !S.viewAs, canRem = cur && !S.viewAs;
+    const evPane = canEvent ? el('section', { class: 'tv-sec' }, el('b', {}, `New event on ${E.fmtShift(c, at)}`), eventForm(cur.d, { shift: cur.i, shift_end: cur.i },
+      { pinAt: partyMap && mainGroup?.x !== null && mainGroup?.x !== undefined ? { map_id: partyMap.id, map_name: partyMap.name, x: mainGroup.x, y: mainGroup.y } : null })) : null;
+    const remPane = canRem ? el('section', { class: 'tv-sec' }, el('b', {}, 'New reminder'), reminderForm(cur.d)) : null;
+    const panes = { look: lookup, note, event: evPane, rem: remPane };
+    pop.append(...clean(Object.values(panes)));
+    const toggle = which => () => openPop(pop.dataset.on === which ? null : which);
+    const lookBtn = btn('🔍 Search', toggle('look'), '', 'Look a name up in the Encyclopedia');
+    const noteBtn = btn('📝 Encyclopedia add', toggle('note'), '', 'Add a note to the end of an Encyclopedia entry');
+    const evBtn = evPane ? btn('+ Event', toggle('event'), '', `Log something that happens on this ${word()}`) : null;
+    const remBtn = remPane ? btn('+ Reminder', toggle('rem'), '', `Have something pop up when the campaign clock reaches a ${word()}`) : null;
+    const popBtns = { look: lookBtn, note: noteBtn, event: evBtn, rem: remBtn };
     function openPop(which) {
       pop.hidden = !which; pop.dataset.on = which || '';
-      lookup.hidden = which !== 'look'; note.hidden = which !== 'note';
-      lookBtn.setAttribute('aria-pressed', String(which === 'look')); noteBtn.setAttribute('aria-pressed', String(which === 'note'));
-      if (which) (which === 'look' ? lookup.querySelector('input') : note.querySelector('input'))?.focus();
+      for (const [k, pane] of Object.entries(panes)) if (pane) pane.hidden = which !== k;
+      for (const [k, b] of Object.entries(popBtns)) b?.setAttribute('aria-pressed', String(which === k));
+      if (which) panes[which]?.querySelector('input:not([type=checkbox])')?.focus();
     }
     openPop(null);
     pop.addEventListener('keydown', e => { if (e.key === 'Escape') { openPop(null); } });
     // it folds away to one button, like the map's toolbar, remembered on this device
-    const bar = el('div', { class: 'tv-bar surface-float', role: 'toolbar', 'aria-label': 'At the Table tools' }, ...tools, lookBtn, noteBtn);
+    const bar = el('div', { class: 'tv-bar surface-float', role: 'toolbar', 'aria-label': 'At the Table tools' }, ...tools, ...clean([evBtn, remBtn]), lookBtn, noteBtn);
     const barKey = `chronicle-table-bar-${cid}`;
     let barFolded = (() => { try { return localStorage.getItem(barKey) === 'folded'; } catch { return false; } })();
     const barFold = btn('', () => {
@@ -6147,7 +6202,7 @@
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
-    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
+    get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));

@@ -70,6 +70,7 @@ const ACTIONS = [
     'day_update' => ['who' => 'gm', 'touch' => true],
     'shift_save' => ['who' => 'gm', 'touch' => true],
     'shifts_fill' => ['who' => 'gm', 'touch' => true],
+    'shift_action_set' => ['who' => 'member', 'touch' => true],
     'shift_note_add' => ['who' => 'member', 'touch' => true, 'panel' => 'write', 'key' => 'write'],
     'shift_note_delete' => ['who' => 'member', 'touch' => true],
     'event_save' => ['who' => 'member', 'touch' => true, 'key' => 'write'],

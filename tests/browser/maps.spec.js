@@ -1404,9 +1404,9 @@ test("At the Table: the party card shows the map around the party, and a GM's ne
   await expect(mini.locator(".mm-flag")).toHaveCount(1);
   await expect(mini.locator(".mm-pin")).toHaveCount(1);
   await expect(mini).toHaveAttribute("href", `#/c/${cid}/maps/${mid}`);
-  // + New event in the big box, pinned at the party's marker
-  await page.locator(".tv-now").getByRole("button", { name: "+ New event" }).click();
-  const form = page.locator(".tv-now form.event");
+  // + Event on the floating bar, pinned at the party's marker
+  await page.locator(".tv-bar").getByRole("button", { name: "+ Event" }).click();
+  const form = page.locator(".tv-bar-pop form.event:not(.reminder)");
   await form.getByLabel("Title").fill("Ambush at the ford");
   await form.getByLabel(/Pin it where the party is/).check();
   await form.getByRole("button", { name: "Add event" }).click();

@@ -147,20 +147,21 @@ test("foldNotes writes old note rows out as the box's text, with a > line wherev
   expect(Sessions.foldNotes(c, [], 8)).toBe("");
 });
 
-test("shiftNotes turns the shifts a session ran over into notes: activities, players' notes under them, GM notes GM-only", () => {
+test("shiftNotes turns the shifts a session ran over into notes: activities, the actions and players' notes under them, GM notes GM-only", () => {
   const days = [
     { d: 2, shifts: [{ shift: 0, activity: "Before the session" }, { shift: 1, activity: "Marching to Altdorf\nRain all day", gm_notes: "Ambush waits\nTwo bandits" }, { shift: 2, activity: "? not a loose end" }],
-      shift_notes: [{ shift: 1, body: "saw a crow", author: "Pip" }, { shift: 3, body: "Kept watch", author: "Hera" }] },
+      shift_notes: [{ shift: 1, body: "saw a crow", author: "Pip" }, { shift: 3, body: "Kept watch", author: "Hera" }],
+      shift_actions: [{ shift: 1, user_id: 0, who: "The party", action: "Travel" }, { shift: 1, user_id: 7, who: "Pip", action: "Keep watch" }] },
     { d: 3, shifts: [{ shift: 0, activity: "Arrived" }], shift_notes: [] },
   ];
   const cal = calendar();
   const notes = Sessions.shiftNotes(cal, days, 9, 12);   // Midday of day 2 to Dawn of day 3
   expect(notes.map(n => [n.text, n.depth, n.abs_shift])).toEqual([
-    ["Marching to Altdorf", 0, 9], ["Rain all day", 1, 9], ["Saw a crow. (Pip)", 1, 9], ["$ Ambush waits", 0, 9], ["Two bandits", 1, 9],
+    ["Marching to Altdorf", 0, 9], ["Rain all day", 1, 9], ["Actions: The party: Travel · Pip: Keep watch", 1, 9], ["Saw a crow. (Pip)", 1, 9], ["$ Ambush waits", 0, 9], ["Two bandits", 1, 9],
     ["? not a loose end", 0, 10], ["Kept watch. (Hera)", 0, 11], ["Arrived", 0, 12]]);
   // the draft: a paragraph per shift under its day, the GM notes GM-only, and no shorthand read in an activity
   const html = Sessions.draftHtml(cal, notes);
-  expect(html).toContain("<p>Marching to Altdorf. Rain all day. Saw a crow. (Pip)</p>");
+  expect(html).toContain("<p>Marching to Altdorf. Rain all day. Actions: The party: Travel · Pip: Keep watch. Saw a crow. (Pip)</p>");
   expect(html).toContain("<p>? not a loose end.</p>");
   expect(html).toContain("<aside>Ambush waits: Two bandits</aside>");
   expect(html).not.toContain("Before the session");

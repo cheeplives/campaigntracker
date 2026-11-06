@@ -144,7 +144,8 @@
    * it indented under that with its author in brackets (a line of its own when the shift has no activity), and the GM's
    * notes on it as a $ line, so they stay GM-only. Activities and players' notes are marked plain: draftHtml reads no
    * shorthand in them. days: what the day action sends for each day, { d, shifts:
-   * [{ shift, activity, gm_notes }], shift_notes: [{ shift, body, author }] }. */
+   * [{ shift, activity, gm_notes }], shift_notes: [{ shift, body, author }], shift_actions: [{ shift, who, action }] }.
+   * The party's and the players' actions on a shift go on one plain line under its activity. */
   function shiftNotes(cal, days, from, to) {
     const n = E.slotsPerDay(cal), out = [];
     const lines = t => String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -156,6 +157,9 @@
       const act = lines(s.activity);
       // plain: written on a shift, not in the shorthand, so a ! or ? it starts with is just a character
       act.forEach((t, k) => out.push({ text: t, depth: k ? 1 : 0, abs_shift: a, plain: true }));
+      // the party's and each player's action, on one line
+      const acts = (x.shift_actions || []).filter(y => Number(y.shift) === i);
+      if (acts.length) out.push({ text: `Actions: ${acts.map(y => `${y.who}: ${y.action}`).join(' · ')}`, depth: act.length ? 1 : 0, abs_shift: a, plain: true });
       for (const m of (x.shift_notes || []).filter(y => Number(y.shift) === i)) {
         const t = lines(m.body).join(' ');
         if (t) out.push({ text: m.author ? `${sentence(t)} (${m.author})` : t, depth: act.length ? 1 : 0, abs_shift: a, plain: true });

@@ -411,10 +411,11 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await vis.selectOption("1");
   await expect(vis).toHaveClass(/\bv1\b/);
   await expect.poll(() => sql(`SELECT visibility_override FROM shifts WHERE campaign_id=${cid}`).trim()).toBe("1");
-  // the actions sit beside the heading, half the box's width
-  const [pick, act] = await Promise.all([now.getByLabel("Add an action").boundingBox(), now.getByLabel("What the party does this Midday").boundingBox()]);
-  expect(Math.abs(pick.width - act.width / 2)).toBeLessThan(30);
-  expect(pick.y).toBeLessThan(act.y);
+  // the actions are in the right-hand column beside the writing, and the shift's events are left to the Events box
+  const [pick, act] = await Promise.all([now.getByLabel("The party's action this Midday").boundingBox(), now.getByLabel("What the party does this Midday").boundingBox()]);
+  expect(pick.x).toBeGreaterThan(act.x + act.width);
+  await expect(now).not.toContainText("Events this");
+  await expect(now.getByRole("button", { name: "+ New event" })).toHaveCount(0);
   // the floating bar stays on screen as the page scrolls, and ↑ goes back to the top
   const bar = view.locator(".tv-bar");
   await page.setViewportSize({ width: 1180, height: 500 });   // short enough that the page scrolls a screen's worth
@@ -437,5 +438,64 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await expect(view.getByLabel("Entry", { exact: true })).toBeFocused();
   await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
   await expect(view.locator(".tv-bar-pop")).toBeHidden();
+  expectNoErrors(errors);
+});
+
+test("each player and the party pick one action a shift beside the writing; + Event and + Reminder are on the bar; the session lists the actions", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, player, pp } = await table(page, browser, "Acts");
+  await page.setViewportSize({ width: 1180, height: 900 });
+  const sid = (await api(page, "session_save", {}, cid)).json.session.id;   // open on the clock's shift
+  await page.goto(`index.html#/c/${cid}`);
+  const now = page.locator(".tv-now");
+  const shift = (await now.locator(".tv-now-main textarea").first().getAttribute("aria-label")).replace("What the party does this ", "");
+  const party = now.getByLabel(`The party's action this ${shift}`);
+  const theirs = now.getByLabel(`${player.name}'s action this ${shift}`);
+  await expect(now.locator(".tv-now-aside .shift-actions")).toBeVisible();
+  // the description isn't written out: it's in the hover tip
+  await party.selectOption("Navigate");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  await expect(party).toHaveAttribute("data-tip", /^🧭 Navigate: Pick the route/);
+  await expect(now).not.toContainText("Pick the route through");
+  await theirs.selectOption("Keep watch");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  // one each: picking again replaces it, and the activity text is left alone
+  await theirs.selectOption("Forage");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  await expect(now.getByLabel(`What the party does this ${shift}`)).toHaveValue("");
+  const rows = () => sql(`SELECT user_id, action FROM shift_actions WHERE campaign_id=${cid} ORDER BY user_id`).trim().split("\n").map(l => l.split("\t")[1]);
+  await expect.poll(rows).toEqual(["Navigate", "Forage"]);
+
+  // a player picks their own action, and only reads the party's
+  await pp.goto(`index.html#/c/${cid}`);
+  const pnow = pp.locator(".tv-now");
+  await expect(pnow.getByLabel(`The party's action this ${shift}`)).toHaveCount(0);
+  await expect(pnow.locator(".shift-actions")).toContainText("Navigate");
+  await pnow.getByLabel(`${player.name}'s action this ${shift}`).selectOption("Hunt / trap");
+  await expect(pnow.locator(".sa-status")).toHaveText("Saved ✓");
+  await expect.poll(rows).toEqual(["Navigate", "Hunt / trap"]);
+  const refused = await api(pp, "shift_action_set", { abs_day: 0, shift: 0, user_id: 0, action: "Rest" }, cid);
+  expect(refused.status).toBe(403);
+
+  // + Event and + Reminder open their forms over the bar, set to this shift
+  const bar = page.locator(".tv-bar");
+  await bar.getByRole("button", { name: "+ Event" }).click();
+  const evForm = page.locator(".tv-bar-pop form.event:not(.reminder)");
+  await evForm.getByLabel("Title").fill("Wolves howl");
+  await evForm.getByRole("button", { name: "Add event" }).click();
+  await expect(page.locator("#toast")).toHaveText("Event saved");
+  await expect(page.locator(".tv-now")).not.toContainText("Wolves howl");   // its place is the Events box under it
+  await page.locator(".tv-bar").getByRole("button", { name: "+ Reminder" }).click();
+  const remForm = page.locator(".tv-bar-pop form.reminder");
+  await remForm.getByLabel("Title").fill("Check the traps");
+  await remForm.getByRole("button", { name: "Add reminder" }).click();
+  await expect(page.locator("#toast")).toHaveText("Reminder saved");
+  expect(sql(`SELECT title FROM reminders WHERE campaign_id=${cid}`).trim()).toBe("Check the traps");
+
+  // the session's page lists them, and Build draft writes them in
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  const acts = page.locator(".sess-actions");
+  await expect(acts).toContainText("The party: 🧭 Navigate");
+  await expect(acts).toContainText(`${player.name}: 🏹 Hunt / trap`);
   expectNoErrors(errors);
 });
