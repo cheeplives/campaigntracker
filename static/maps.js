@@ -533,7 +533,7 @@ const MapsTab = (() => {
         MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); offerLog(g, xy); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
-            el('small', {}, g.members.map(u => memberName(u)).join(', ') || 'No one yet'),
+            el('small', {}, partyNames(g).join(', ') || 'No one yet'),
             gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
               'Pin a place where the party is now, as a new Encyclopedia entry or a note'),
               trail.some(t => t.group_id === g.id) ? btn('Clear trail', () => clearTrail(g), 'small', 'Forget where this group has been on this map, leaving where it stands now') : null) : null) });
@@ -553,6 +553,8 @@ const MapsTab = (() => {
         Object.assign(btn('✕', () => { note.textContent = ''; }, 'link small', 'Don\'t log it'), { ariaLabel: 'Don\'t log it' }));
     }
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    /** Who is in group g: its players, then the characters with no player who travel with it. */
+    const partyNames = g => [...g.members.map(memberName), ...(g.characters || []).map(c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name))];
     /** GMs: move a group to this pin. With more than one group, a small select asks which. */
     function partyHere(p) {
       if (!gm || !groups.length) return null;

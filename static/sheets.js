@@ -692,7 +692,7 @@ const Sheets = (() => {
     return el('div', { class: 'card character-card', 'data-kind': c.kind },
       el('div', { class: 'row' }, c.pic ? el('img', { src: c.pic, alt: '', class: 'character-pic', loading: 'lazy' }) : null,
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
-          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name, c.template.game].filter(Boolean).join(' · ')))),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : null, c.template.game].filter(Boolean).join(' · ')))),
       cardStats(c),
       el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
   }
@@ -717,7 +717,30 @@ const Sheets = (() => {
           button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary small'))), seg),
       list);
   }
-  /** Pick a template and a name; GMs also pick PC or NPC. */
+  /** A GM's Player and party boxes for a new character: who plays it (no one, a player or a GM) and, for one no player
+   * plays, whether it travels with the party (on to start for a PC, off for an NPC, until the GM ticks it). */
+  function whoPlays(kind) {
+    const S = ctx.S;
+    const owner = el('select', { 'aria-label': 'Player' }, el('option', { value: 0 }, 'No player (the GM runs it)'),
+      S.members.filter(m => m.role === 'player').map(m => el('option', { value: m.id }, memberName(m))),
+      S.members.filter(m => m.role === 'gm').map(m => el('option', { value: m.id }, `${memberName(m)} (GM)`)));
+    const party = el('input', { type: 'checkbox', 'aria-label': 'Travels with the party' });
+    const partyRow = el('label', { class: 'small check', 'data-tip': 'Listed with the party\'s players on Travel and the maps, and goes where the party goes. A player\'s own character is in the party with them' },
+      party, ' Travels with the party');
+    let touched = false;
+    party.addEventListener('change', () => { touched = true; });
+    const sync = () => {
+      const role = S.members.find(m => Number(m.id) === Number(owner.value))?.role;
+      partyRow.hidden = role === 'player';
+      if (!touched) party.checked = kind.value === 'pc' && !Number(owner.value);
+    };
+    owner.addEventListener('change', sync);
+    kind.addEventListener('change', sync);
+    sync();
+    return { nodes: [ctx.field('Player', owner), partyRow],
+      values: () => ({ owner_id: Number(owner.value), party: !partyRow.hidden && party.checked }) };
+  }
+  /** Pick a template and a name; GMs also pick PC or NPC, who plays it, and whether it travels with the party. */
   async function newCharacter() {
     const { templates } = await ctx.api('templates');
     if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
@@ -733,15 +756,16 @@ const Sheets = (() => {
     fill();
     const name = el('input', { maxlength: 150, 'aria-label': 'Character name', required: true, placeholder: 'Their name' });
     const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'pc' }, 'PC (a player character)'), el('option', { value: 'npc' }, 'NPC (GM only until shown)'));
+    const who = ctx.isGM() ? whoPlays(kind) : null;
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New character' },
       el('form', { method: 'dialog' }, el('h3', {}, 'New character'),
-        search, ctx.field('Template', pick), ctx.field('Name', name), ctx.isGM() ? ctx.field('Kind', kind) : null,
+        search, ctx.field('Template', pick), ctx.field('Name', name), who ? [ctx.field('Kind', kind), who.nodes] : null,
         el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Make character'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
     d.addEventListener('close', async () => {
       d.remove();
       if (d.returnValue !== 'ok') return;
       try {
-        const r = await ctx.post('character_create', { template_id: Number(pick.value), name: name.value, kind: kind.value }, cid());
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), name: name.value, kind: kind.value, ...(who ? who.values() : {}) }, cid());
         location.hash = `#/c/${cid()}/characters/${r.character.id}`;
       } catch (err) { toast(err.message, true); }
     });
@@ -756,14 +780,15 @@ const Sheets = (() => {
     if (!templates.length) return toast('There are no templates yet. Make one in Sheet templates first', true);
     const pick = el('select', { 'aria-label': 'Template', required: true }, templates.map(t => el('option', { value: t.id }, `${t.name} — ${metaLine(t)}`)));
     const kind = el('select', { 'aria-label': 'PC or NPC' }, el('option', { value: 'npc' }, 'NPC (GM only until shown)'), el('option', { value: 'pc' }, 'PC (a player character)'));
+    const who = whoPlays(kind);
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': `A character sheet for ${e.name}` },
-      el('form', { method: 'dialog' }, el('h3', {}, `A character sheet for ${e.name}`), ctx.field('Template', pick), ctx.field('Kind', kind),
+      el('form', { method: 'dialog' }, el('h3', {}, `A character sheet for ${e.name}`), ctx.field('Template', pick), ctx.field('Kind', kind), who.nodes,
         el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Add sheet'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
     d.addEventListener('close', async () => {
       d.remove();
       if (d.returnValue !== 'ok') return;
       try {
-        const r = await ctx.post('character_create', { template_id: Number(pick.value), entry_id: e.id, kind: kind.value }, cid());
+        const r = await ctx.post('character_create', { template_id: Number(pick.value), entry_id: e.id, kind: kind.value, ...who.values() }, cid());
         location.hash = `#/c/${cid()}/characters/${r.character.id}`;
       } catch (err) { toast(err.message, true); }
     });
@@ -780,15 +805,20 @@ const Sheets = (() => {
     kind.addEventListener('change', () => save({ kind: kind.value }));
     const people = S.members.filter(m => gm || m.role === 'gm' || Number(m.id) === me());
     if (ch.owner && !people.some(m => Number(m.id) === ch.owner.id)) people.push({ id: ch.owner.id, display_name: `${ch.owner.name} (left the campaign)`, role: 'player' });
-    const owner = el('select', { 'aria-label': 'Whose sheet' }, people.map(m =>
-      el('option', { value: m.id, selected: Number(m.id) === ch.owner?.id }, `${memberName(m)}${m.role === 'gm' ? ' (GM)' : ''}`)));
+    const owner = el('select', { 'aria-label': 'Whose sheet' }, gm || !ch.owner ? el('option', { value: 0, selected: !ch.owner }, 'No player (the GM runs it)') : null,
+      people.map(m => el('option', { value: m.id, selected: Number(m.id) === ch.owner?.id }, `${memberName(m)}${m.role === 'gm' ? ' (GM)' : ''}`)));
     owner.addEventListener('change', () => save({ owner_id: Number(owner.value) }));
+    // a character no player of the campaign plays can travel with the party (a player's is in it with them)
+    const party = el('input', { type: 'checkbox', checked: !!ch.party_group_id });
+    party.addEventListener('change', () => save({ party: party.checked }));
     const shown = el('input', { type: 'checkbox', checked: ch.sheet_public });
     shown.addEventListener('change', () => save({ sheet_public: shown.checked }));
     const active = S.members.find(m => Number(m.id) === me())?.active_character_id;
     return el('div', { class: 'row sheet-settings' },
       ctx.field('Name', name), ctx.field('Kind', kind), ctx.field('Player', owner),
       ch.kind === 'npc' ? el('label', { class: 'small check', 'data-tip': 'NPC sheets are for GMs only until this is on' }, shown, ' Show sheet to players') : null,
+      gm && !ch.owner_is_player ? el('label', { class: 'small check', 'data-tip': 'Listed with the party\'s players on Travel and the maps, and goes where the party goes. A player\'s own character is in the party with them' },
+        party, ' Travels with the party') : null,
       mine ? (Number(active) === ch.id ? el('span', { class: 'small muted' }, 'Your active character')
         : button('Make this my active character', async () => {
           try {
@@ -868,7 +898,7 @@ const Sheets = (() => {
         const res = await ctx.post('character_save', { id: ch.id, version: ch.version, ...changes }, cid());
         Object.assign(ch, res.character);
         if ('hidden' in changes) hidden = changes.hidden;
-        if ('name' in changes || 'kind' in changes || 'owner_id' in changes) return ctx.route();
+        if ('name' in changes || 'kind' in changes || 'owner_id' in changes || 'party' in changes) return ctx.route();
         draw();
       } catch (err) {
         toast(err.message, true);
@@ -910,7 +940,7 @@ const Sheets = (() => {
             location.hash = `#/c/${cid()}/characters`;
           } catch (err) { toast(err.message, true); }
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
-        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded

@@ -91,6 +91,8 @@ function upgrade_steps(): array {
             'A map pin can now open another map, so a town on the region map opens the town\'s own map.'],
         ['032_shift_actions.sql', fn(PDO $p) => !db_has_table($p, 'shift_actions'),
             'At the Table now has an action for each player and one for the party on every shift, listed on the session\'s page.'],
+        ['033_party_characters.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_group_id'),
+            'A character with no player can now travel with the party, and every character\'s Encyclopedia entry is tagged PC or NPC.'],
     ];
 }
 

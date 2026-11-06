@@ -463,7 +463,8 @@ function party_groups(int $cid, bool $isGm = true): array {
     $st->execute([$cid]);
     $extra = [];
     foreach ($st->fetchAll() as $e) $extra[(int)$e['id']] = $e;
-    return array_map(function ($g) use ($cid, $isGm, $extra) {
+    $chars = party_characters($cid, $isGm);
+    return array_map(function ($g) use ($cid, $isGm, $extra, $chars) {
         $e = $extra[(int)$g['id']] ?? [];
         $hideMap = !$isGm && !empty($e['map_secret']);
         $hideTok = !$isGm && !empty($e['tsecret']);
@@ -471,11 +472,22 @@ function party_groups(int $cid, bool $isGm = true): array {
         if (!$hideTok && ($e['timg'] ?? null) !== null)
             $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$e['timg']]);
         $num = fn($k) => $g[$k] !== null && !$hideMap ? (float)$g[$k] : null;
-        return ['id' => (int)$g['id'], 'name' => $g['name'], 'members' => party_members($g),
+        return ['id' => (int)$g['id'], 'name' => $g['name'], 'members' => party_members($g), 'characters' => $chars[(int)$g['id']] ?? [],
             'region_id' => $g['region_id'] !== null ? (int)$g['region_id'] : null,
             'map_id' => $g['map_id'] !== null && !$hideMap ? (int)$g['map_id'] : null, 'x' => $num('x'), 'y' => $num('y'),
             'token_id' => $g['token_id'] !== null && !$hideTok ? (int)$g['token_id'] : null, 'token_url' => $url, 'is_main' => (bool)(int)$g['is_main']];
     }, $rows);
+}
+/** The characters with no player who travel with the party, as group id => [{id, name, kind, entry_id}], A to Z. A
+ * player isn't told of one whose entry is GM only. */
+function party_characters(int $cid, bool $isGm): array {
+    $st = db()->prepare('SELECT c.id, c.kind, c.entry_id, c.party_group_id, e.name FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+        WHERE c.campaign_id=? AND c.party_group_id IS NOT NULL' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
+    $st->execute([$cid]);
+    $out = [];
+    foreach ($st->fetchAll() as $c)
+        $out[(int)$c['party_group_id']][] = ['id' => (int)$c['id'], 'name' => $c['name'], 'kind' => $c['kind'], 'entry_id' => (int)$c['entry_id']];
+    return $out;
 }
 /** Group $id of campaign $cid as a row, or fail as not found. */
 function group_row(int $cid, $id): array {
@@ -496,9 +508,11 @@ function group_split(int $cid): void {
     group_row($cid, $body['from_id'] ?? null);   // 404s a group that isn't here, and tidies the groups first
     $name = trim((string)str_in($body['name'] ?? null, 100));
     if ($name === '') fail('Give the group a name');
-    $pick = $body['members'] ?? null;
-    if (!is_array($pick) || !$pick) fail('Pick who goes from that group');
+    $pick = $body['members'] ?? [];
+    $chars = $body['characters'] ?? [];   // ids of characters with no player in that group
+    if (!is_array($pick) || !is_array($chars) || !$pick && !$chars) fail('Pick who goes from that group');
     $pick = array_values(array_unique(array_map(fn($u) => is_numeric($u) ? (int)$u : 0, $pick)));
+    $chars = array_values(array_unique(array_map(fn($c) => is_numeric($c) ? (int)$c : 0, $chars)));
     if (array_diff($pick, party_players($cid))) fail('Pick who goes from that group');
     $newRegion = array_key_exists('region_id', $body) ? [party_region_in($body['region_id'], $cid)] : null;
     db()->beginTransaction();
@@ -507,10 +521,15 @@ function group_split(int $cid): void {
         $from = party_reread($cid, $body['from_id']);   // as it is now, with the lock held
         $have = party_members($from);
         if (array_diff($pick, $have)) fail('Pick who goes from that group');
+        $st = db()->prepare('SELECT id FROM sheet_characters WHERE campaign_id=? AND party_group_id=?');
+        $st->execute([$cid, $from['id']]);
+        if (array_diff($chars, array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN)))) fail('Pick who goes from that group');
         $region = $newRegion ? $newRegion[0] : ($from['region_id'] !== null ? (int)$from['region_id'] : null);
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode(array_values(array_diff($have, $pick))), $from['id']]);
         db()->prepare('INSERT INTO party_groups (campaign_id, name, members_json, region_id, map_id, x, y, is_main) VALUES (?,?,?,?,?,?,?,0)')
             ->execute([$cid, $name, json_encode($pick), $region, $from['map_id'], $from['x'], $from['y']]);   // they start where the group was
+        if ($chars) db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE campaign_id=? AND id IN (' . implode(',', $chars) . ')')
+            ->execute([(int)db()->lastInsertId(), $cid]);
         db()->commit();
     } catch (Throwable $e) {
         if (db()->inTransaction()) db()->rollBack();
@@ -628,6 +647,7 @@ function group_merge(int $cid): void {
         $into = party_reread($cid, $into['id']);
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
             ->execute([json_encode(array_values(array_unique([...party_members($into), ...party_members($g)]))), $into['id']]);
+        db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE party_group_id=?')->execute([$into['id'], $g['id']]);
         db()->prepare('DELETE FROM party_groups WHERE id=?')->execute([$g['id']]);
         if ($g['is_main']) party_make_main($cid, (int)$into['id']);
         db()->commit();

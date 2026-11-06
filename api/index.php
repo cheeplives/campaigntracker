@@ -651,8 +651,9 @@ const CAMPAIGN_COPY = [
     ['session_shifts', 'via' => ['session_id', 'session']],
     ['clocks', 'key' => 'clock', 'maps' => ['entry_id' => 'encyclopedia']],
     ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
-    // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
-    ['sheet_characters', 'maps' => ['entry_id' => 'encyclopedia']],
+    // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character that has a player.
+    // party_group_id is set once the party groups are copied, below.
+    ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -720,7 +721,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
                     $r[$col] = $ids[$m][(int)$r[$col]];
                 }
                 foreach (array_keys($spec['later'] ?? []) as $col) if (array_key_exists($col, $r)) $r[$col] = null;
-                if ($t === 'sheet_characters') $r['owner_id'] = $me['id'];
+                if ($t === 'sheet_characters' && $r['owner_id'] !== null) $r['owner_id'] = $me['id'];   // one with no player keeps none
                 if ($t === 'attachments') {
                     $m = COPY_PARENTS[$r['parent_type']] ?? null;
                     if ($m === null || !isset($ids[$m][(int)$r['parent_id']])) continue;
@@ -1732,7 +1733,7 @@ try {
         $isGm = role($cid) === 'gm';
         out(['groups' => party_groups($cid, $isGm)]);
 
-    case 'group_split': // GMs: from_id, name, members [user ids from that group], region_id (default: the group's)
+    case 'group_split': // GMs: from_id, name, members [user ids from that group], characters [ids of its characters with no player], region_id (default: the group's)
         $cid = cid();
         need_gm($cid);
         group_split($cid);

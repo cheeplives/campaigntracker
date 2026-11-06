@@ -362,3 +362,85 @@ test("Characters: an import link is fetched only from Pathbuilder or D&D Beyond"
     expect(r.status, url).toBe(400);
   }
 });
+
+/** The names of the Encyclopedia tags on character c's entry, A to Z. */
+const entryTags = c => sql(`SELECT t.name FROM encyclopedia_tags et JOIN encyclopedia_tag_names t ON t.id=et.tag_id
+  JOIN sheet_characters c ON c.entry_id=et.entry_id WHERE c.id=${c} ORDER BY t.name`).trim().split("\n").filter(Boolean);
+
+test("Characters: each one's Encyclopedia entry is a Person tagged PC or NPC, and the tag follows the switch", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl } = await party(page, browser);
+  const pc = await make(p1, cid, { template_id: tpl.id, name: "Tagged" });
+  const npc = await make(gm, cid, { template_id: tpl.id, name: "Tagged Too", kind: "npc" });
+  expect(entryTags(pc.id)).toEqual(["PC"]);
+  expect(entryTags(npc.id)).toEqual(["NPC"]);
+  expect(sql(`SELECT e.category FROM encyclopedia_entries e JOIN sheet_characters c ON c.entry_id=e.id WHERE c.id=${pc.id}`).trim()).toBe("person");
+  expect((await api(gm, "character_save", { id: pc.id, version: pc.version, kind: "npc" }, cid)).status).toBe(200);
+  expect(entryTags(pc.id)).toEqual(["NPC"]);
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${npc.entry_id}`);
+  await expect(gm.locator("body")).toContainText("NPC");
+});
+
+test("Characters: a GM makes a PC with no player, and it travels with the party", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl } = await party(page, browser);
+  await gm.goto(`index.html#/c/${cid}/characters`);
+  await gm.getByRole("button", { name: "+ New character" }).click();
+  await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await gm.getByLabel("Character name").fill("Wanderer");
+  await expect(gm.getByLabel("Player", { exact: true })).toHaveValue("0");
+  await expect(gm.getByLabel("Travels with the party")).toBeChecked();
+  await gm.getByRole("button", { name: "Make character" }).click();
+  await expect(gm).toHaveURL(/#\/c\/\d+\/characters\/\d+$/);
+  const id = Number(gm.url().match(/characters\/(\d+)$/)[1]);
+  await expect(gm.locator(".sheet-page")).toContainText("No player · In the party");
+  expect(sql(`SELECT owner_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
+
+  // the Travel tab's party card lists it with the players, for the players too
+  await p1.goto(`index.html#/c/${cid}/travel`);
+  await expect(p1.locator(".party-members")).toContainText("Wanderer");
+
+  // the GM takes it out of the party, then hands it to a player: it is in the party with them, not on its own
+  await gm.getByLabel("Travels with the party").uncheck();
+  await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
+  await gm.getByLabel("Travels with the party").check();
+  await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).not.toBe("NULL");
+  await gm.getByLabel("Whose sheet").selectOption({ label: "Pip" });
+  await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
+  await expect(gm.getByLabel("Travels with the party")).toHaveCount(0);
+});
+
+test("Characters: the party's characters with no player split off and merge back with their group", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl, ids } = await party(page, browser);
+  const pc = await make(gm, cid, { template_id: tpl.id, name: "Absent Friend", owner_id: 0, party: true });
+  const npc = await make(gm, cid, { template_id: tpl.id, name: "Hireling", kind: "npc", owner_id: 0, party: true });
+  const secret = await make(gm, cid, { template_id: tpl.id, name: "Spy", kind: "npc", owner_id: 0, party: true });
+  sql(`UPDATE encyclopedia_entries SET is_secret=1 WHERE id=${secret.entry_id}`);
+  const lone = await make(gm, cid, { template_id: tpl.id, name: "Stay Home", kind: "npc", owner_id: 0 });
+  expect(lone.party_group_id).toBeNull();
+  // a player can't make one with no player, or put one in the party
+  expect((await api(p1, "character_create", { template_id: tpl.id, name: "Nobody's", owner_id: 0 }, cid)).status).toBe(403);
+  expect((await api(p1, "character_create", { template_id: tpl.id, name: "Tagalong", party: true }, cid)).status).toBe(403);
+
+  let groups = (await api(p1, "groups", undefined, cid)).json.groups;
+  expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Hireling"]);   // the GM-only one isn't sent
+  groups = (await api(gm, "groups", undefined, cid)).json.groups;
+  expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Hireling", "Spy"]);
+
+  await gm.goto(`index.html#/c/${cid}/travel`);
+  await gm.getByRole("button", { name: "Split the party…" }).click();
+  await gm.getByPlaceholder("e.g. Scouts").fill("Scouts");
+  await gm.locator(".party-pick label", { hasText: "Hireling (NPC)" }).locator("input").check();
+  await gm.locator(".party-pick label", { hasText: "Pip" }).locator("input").check();
+  await gm.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(gm.locator(".party-row", { hasText: "Scouts" }).locator(".party-members")).toHaveText("Pip, Hireling (NPC)");
+  groups = (await api(gm, "groups", undefined, cid)).json.groups;
+  expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Spy"]);
+  expect(groups[1].members).toEqual([ids.p1]);
+
+  expect((await api(gm, "group_merge", { id: groups[1].id, into_id: groups[0].id }, cid)).status).toBe(200);
+  groups = (await api(gm, "groups", undefined, cid)).json.groups;
+  expect(groups).toHaveLength(1);
+  expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Hireling", "Spy"]);
+  // a character from another group can't be split off this one
+  expect((await api(gm, "group_split", { from_id: groups[0].id, name: "Nope", characters: [lone.id] }, cid)).status).toBe(400);
+  void pc;
+});

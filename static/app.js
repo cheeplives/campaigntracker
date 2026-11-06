@@ -4211,6 +4211,9 @@
     }
     const partyCard = el('div', { class: 'card party-card' });
     const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    const charName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
+    /** Who is in group g: its players, then the characters with no player who travel with it. */
+    const partyNames = g => [...g.members.map(memberName), ...(g.characters || []).map(charName)];
     const reloadParty = async () => { await loadParty(); drawParty(); result = null; out.replaceChildren(); };   // Depart is offered again with the new groups
     /** A small modal form: run() does the work, and the card is redrawn after. */
     const partyDialog = (title, kids, ok, run) => {
@@ -4232,13 +4235,16 @@
       const fromGroup = () => groups.find(g => g.id === Number(from ? from.value : groups[0].id));
       const drawPick = () => {
         region.value = fromGroup().region_id ?? '';
-        pick.replaceChildren(...fromGroup().members.map(u => el('label', {}, el('input', { type: 'checkbox', value: u }), memberName(u))));
+        pick.replaceChildren(...fromGroup().members.map(u => el('label', {}, el('input', { type: 'checkbox', value: u }), memberName(u))),
+          ...(fromGroup().characters || []).map(c => el('label', {}, el('input', { type: 'checkbox', value: c.id, 'data-character': '1' }), charName(c))));
         if (!pick.children.length) pick.append(el('small', { class: 'muted' }, 'No one is in that group'));
       };
       from?.addEventListener('change', drawPick); drawPick();
       partyDialog('Split the party', [from ? field('From', from) : null, field('Group name', name), field('Who goes', pick), field('Region', region, 'Where they are now')], 'Split', async () => {
-        const members = [...pick.querySelectorAll('input:checked')].map(i => Number(i.value));
-        await post('group_split', { from_id: fromGroup().id, name: name.value, members, region_id: region.value ? Number(region.value) : null }, S.camp.id);
+        const ticked = [...pick.querySelectorAll('input:checked')];
+        const members = ticked.filter(i => !i.hasAttribute('data-character')).map(i => Number(i.value));
+        const characters = ticked.filter(i => i.hasAttribute('data-character')).map(i => Number(i.value));
+        await post('group_split', { from_id: fromGroup().id, name: name.value, members, characters, region_id: region.value ? Number(region.value) : null }, S.camp.id);
       });
     };
     const mergeParty = g => {
@@ -4260,7 +4266,7 @@
         ...groups.map(g => el('div', { class: 'party-row' },
           el('div', { class: 'party-info' },
             el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
-            el('small', { class: 'party-members muted' }, g.members.map(memberName).join(', ') || 'No one yet'),
+            el('small', { class: 'party-members muted' }, partyNames(g).join(', ') || 'No one yet'),
             el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
               ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
           isGM() ? el('div', { class: 'actions' },
