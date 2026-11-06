@@ -3976,8 +3976,19 @@
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
+    // a Person entry's character sheet, from the editor too (a blank entry opens straight here): Open sheet, or a GM's
+    // Add character sheet, shown while the Category picked is Person (or none)
+    const ch = e.id ? S.encChars?.[e.id] || null : null;
+    const sheetBtn = !e.id || typeof Sheets === 'undefined' ? null
+      : ch ? (ch.sheet_visible ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null)
+      : isGM() ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for a PC or an NPC with stats') : null;
+    if (sheetBtn && !ch) {
+      const fit = () => { sheetBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; };
+      category.addEventListener('change', fit);
+      fit();
+    }
     const f = el('form', { class: 'enc-form' },
-      el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'),
+      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), sheetBtn),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
