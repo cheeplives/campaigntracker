@@ -434,7 +434,7 @@ test("a session's page: notes beside the summary, Build draft under them fills i
   await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed Tevari ledger and 40 crowns");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator("#toast")).toHaveText("Saved");
-  await notNow(page); // the summary names Jupiter and Tevari: the Proper Noun Detector offers them
+  await notNow(page); // the summary names Jupiter and Tevari: the Feature Highlighter offers them
   // saved, the summary reads as players see it, and ✎ Edit opens the editors again
   await expect(summary).toBeHidden();
   await expect(page.locator(".sess-summary .sess-read")).toContainText("Hera handled the rest.");
@@ -501,7 +501,7 @@ test("a published session is the player's to read and export; a session deletes"
   await page.locator(".sess-summary .ql-editor").nth(2).fill("A sealed ledger from the Dulled Fang");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator("#toast")).toContainText("Saved");
-  await notNow(page); // the Proper Noun Detector offers the summary's other names
+  await notNow(page); // the Feature Highlighter offers the summary's other names
   await expect(named).toHaveText(["Tevari", "Dulled Fang"]);
   await expect(page.getByRole("button", { name: "✎ Edit" })).toBeVisible();
   await page.getByLabel("Published", { exact: true }).check();

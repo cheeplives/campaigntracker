@@ -126,7 +126,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   Region dropdown, saves with Save day, survives a re-roll (the editor staying open) and is shown in the block, to
   players too, who get no ✎ Day.
 - **day-notes**: the GM writes bold text and a table in the Public notes and a Secret note, and they save as cleaned HTML and reopen in the editor; tables wait behind ⋯, and ⤢ Focus gives the editor the whole window until Esc; players read the formatted Public notes, never the Secret ones, the month grid previews them as plain text and the export turns them into Markdown; scripts, images, styles, attributes and javascript: links are stripped on the server, and HTML put straight into the database is still rebuilt from the allow-list in the browser; a plain note from before shows as typed; every day box folds and stays folded per account in that browser, and adding an event unfolds Events.
-- **encyclopedia**: the Proper Noun Detector finds capitalized, bold/italic and quoted names and a day's
+- **encyclopedia**: the Feature Highlighter finds capitalized, bold/italic and quoted names and a day's
   Locations visited, leaves out common and calendar words, members' names, shift actions and any lone word that only
   opens a sentence or a Title Case title (unless it is also capitalized mid-sentence, or a region or holiday), keeps runs
   like "Anne of Green Gables" whole, reads each line of a holding's name and place as a name, guesses each name's tag from the words around it, and offers a name that overlaps an entry

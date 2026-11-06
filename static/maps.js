@@ -533,7 +533,7 @@ const MapsTab = (() => {
         const e = S.encyclopedia.find(x => x.id === r.entry_id);
         toast(r.created ? `Added "${e?.name || p.label}" to the Encyclopedia`
           : `Linked to "${e?.name || 'the entry'}"${e?.is_secret ? '. It is GM only, so players won\'t see the pin until the entry is shown to them' : ''}`);
-        // a new entry takes the note's text, so it goes through the Proper Noun Detector as an entry save does
+        // a new entry takes the note's text, so it goes through the Feature Highlighter as an entry save does
         if (r.created && (p.note || '').trim()) ctx.offerNouns([{ text: p.note, label: `the note on the pin "${p.label}"` }]).catch(() => {});
       } catch (err) { toast(err.message, true); }
     }

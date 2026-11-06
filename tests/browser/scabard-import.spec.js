@@ -58,7 +58,7 @@ test("a Scabard export becomes entries, tags, other names, notes, connections, s
   await signIn(page, gm);
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `Scabard ${gm.id}`);
-  // A name the Proper Noun Detector added first, with nothing written yet: the import fills it in.
+  // A name the Feature Highlighter added first, with nothing written yet: the import fills it in.
   expect((await api(page, "entries_add", { entries: [{ name: "Durendal", category: "item" }] }, cid)).status).toBe(200);
   // A tome's secret aside has nothing to do with it; a kept entry with notes stays as it is.
   expect((await api(page, "entry_save", { name: "Order of the Silver Flame", notes: "<p>Our own notes on the Order.</p>" }, cid)).status).toBe(200);

@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS encyclopedia_tags (
   FOREIGN KEY (tag_id) REFERENCES encyclopedia_tag_names(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Words the Proper Noun Detector was told to stop offering. The GMs keep one list ('gm') and the players share
+-- Words the Feature Highlighter was told to stop offering. The GMs keep one list ('gm') and the players share
 -- another ('player'), so a word a GM turned down from secret notes is never shown to players.
 CREATE TABLE IF NOT EXISTS encyclopedia_ignored (
   campaign_id INT UNSIGNED NOT NULL,
