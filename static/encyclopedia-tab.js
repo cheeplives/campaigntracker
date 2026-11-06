@@ -355,7 +355,7 @@
           .map(e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
             encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null)),
         help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Feature Highlighter offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
-      else if (!current.id || entryBlank(current)) reader.append(entryForm(current));
+      else if (!current.id || entryBlank(current)) reader.append(entryEditor(current, ctx));
       else reader.append(...entryView(current, ctx));
       // The list and the entry swap widths with Wide view, or the list folds away with Hide list, remembered in this browser.
       mount(...campaignHeader('encyclopedia'), listPage({ title: 'Encyclopedia', picked: !!current,
@@ -386,6 +386,27 @@
         try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
       }, 'small danger', 'Delete this entry. Its name stays in the text it was found in');
     }
+    /** The character card: the whole card opens the sheet; nothing of it for members the sheet is hidden from. */
+    function characterCard(e) {
+      const ch = S.encChars?.[e.id] || null;
+      if (!ch?.sheet_visible) return null;
+      const pic = (e.files || []).find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null;
+      return el('a', { class: 'card enc-character', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': 'Open the character sheet' },
+        pic ? el('img', { src: pic, alt: '', class: 'character-pic' }) : null,
+        el('div', {},
+          el('div', { class: 'row' }, el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
+            ch.kind === 'pc' && ch.owner ? el('span', {}, `Played by ${ch.owner.name}`) : null, el('span', { class: 'muted small' }, ch.game)),
+          (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small' }, `${f.label}: ${f.value}`))));
+    }
+    /** An entry's tools, on its page and in its editor alike: Copy as handout and the scan for its name. */
+    function entryTools(e, ctx) {
+      return [btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out. In the editor it copies the entry as last saved'),
+        scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`)];
+    }
+    /** The editor, with everything the entry's page offers: its tools, its character card and its connections. */
+    function entryEditor(e, ctx) {
+      return entryForm(e, e.id ? { tools: entryTools(e, ctx), extra: [characterCard(e), connectionsCard(e, ctx)] } : {});
+    }
     function entryView(e, ctx) {
       const box = el('div', { class: 'enc-mentioned' }, el('h4', {}, 'Mentioned in'), el('p', { class: 'muted small' }, 'Looking…'));
       sourcesNaming(e).then(({ sources }) => {
@@ -406,14 +427,6 @@
       const publicNote = html => revealButtons(note(html), 'entry', e.id);
       const ch = S.encChars?.[e.id] || null;
       const sheetHref = ch ? `#/c/${S.camp.id}/characters/${ch.id}` : null;
-      const pic = (e.files || []).find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null;
-      // the character card: the whole card opens the sheet; nothing of it for members the sheet is hidden from
-      const charCard = ch?.sheet_visible ? el('a', { class: 'card enc-character', href: sheetHref, 'data-tip': 'Open the character sheet' },
-        pic ? el('img', { src: pic, alt: '', class: 'character-pic' }) : null,
-        el('div', {},
-          el('div', { class: 'row' }, el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
-            ch.kind === 'pc' && ch.owner ? el('span', {}, `Played by ${ch.owner.name}`) : null, el('span', { class: 'muted small' }, ch.game)),
-          (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small' }, `${f.label}: ${f.value}`)))) : null;
       return clean([
         el('div', { class: 'row spread' },
           el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
@@ -421,12 +434,11 @@
             ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
             !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
               ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
-            btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
-            btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out'),
-            scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
+            btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
+            ...entryTools(e, ctx),
             deleteEntryBtn(e))),
         mapLinks('entry_id', e.id),
-        charCard,
+        characterCard(e),
         encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
           (e.tags || []).map(tagChip)) : null,
         e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,

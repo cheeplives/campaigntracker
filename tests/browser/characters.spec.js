@@ -494,11 +494,16 @@ test("Characters: a player's first PC becomes their character, named by it", asy
   expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(String(first.id));
 });
 
-test("Encyclopedia: a Person entry offers Add character sheet in its editor and on its page, then Open sheet", async ({ page, browser }) => {
+test("Encyclopedia: an entry's editor has every button its page has, and a Person entry offers Add character sheet, then Open sheet", async ({ page, browser }) => {
   const { cid, gm, tpl } = await party(page, browser);
   const blank = (await api(gm, "entry_save", { name: "Hoffmann", category: "person" }, cid)).json.id;
-  // a blank entry opens straight in its editor: the button is there, and only while the Category is Person (or none)
+  // a blank entry opens straight in its editor: the button is there, and only while the Category is Person (or none);
+  // the editor has everything the page has: Copy as handout, Scan and the connections
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${blank}`);
+  const form = gm.locator(".enc-form");
+  await expect(form.getByRole("button", { name: "📋 Copy as handout" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "🔍 Scan" })).toBeVisible();
+  await expect(form.getByRole("heading", { name: "Connections" })).toBeVisible();
   const add = gm.getByRole("button", { name: "Add character sheet" });
   await expect(add).toBeVisible();
   await gm.locator("select[name=category]").selectOption("location");

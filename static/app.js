@@ -3968,7 +3968,8 @@
       out);
   }
 
-  function entryForm(e) {
+  /** opt (from the Encyclopedia tab): tools, more buttons for the header; extra, cards under the notes (connections). */
+  function entryForm(e, opt = {}) {
     const name = el('input', { name: 'name', value: e.name || '', required: true, maxlength: 150, placeholder: 'e.g. The Grey Lady inn' });
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
@@ -3988,7 +3989,7 @@
       fit();
     }
     const f = el('form', { class: 'enc-form' },
-      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), sheetBtn),
+      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row' }, sheetBtn, opt.tools || [])),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
@@ -4000,6 +4001,7 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
         gm ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')), gm.node) : null),
       tags.node,
+      ...(opt.extra || []).filter(Boolean),
       e.id ? foundIn(e, pub, gm) : null,
       e.id ? wikiSummary(name, pub) : null,
       e.id && Fan ? Fan.summary(fanCtx({ name, pub })) : null,
