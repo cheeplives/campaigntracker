@@ -97,6 +97,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.
+- **table-weather**: At the Table's season line leads with the ground and the wind (always said, calm or not, with its
+  speed); the GM's ✎ Day sets this shift's weather, temperature, wind and ground by hand, each Auto until set, and a
+  player without future weather sees what was set; the Weather forecast button gives today and the next two days, the
+  same for a player (from the outlook the GM's browser saves with today's weather) as for the GM.
 - **table** (layout): the header bar leaves the date and weather to the block; the shift before and after are a row of two
   equal boxes over the full-width big box; the block up top has the shift's weather and a 🔔 badge that lists the reminders; a shift in four
   sessions shows the latest two chips and +2 more; the visibility pill is one dropdown, Auto with its score first, and a pick saves; the action pick is

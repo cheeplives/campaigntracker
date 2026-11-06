@@ -1653,7 +1653,7 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .tv-rem > summary { list-style: none; cursor: pointer; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-size: .78rem; padding: 3px 9px; }
 .tv-rem > summary::-webkit-details-marker { display: none; }
 .tv-rem > summary.due { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.tv-rem-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(420px, 86vw); max-height: 60vh; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
+.tv-rem-pop, .tv-fc-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(420px, 86vw); max-height: 60vh; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
 /* the big box: the writing first and large, the action pick half width beside its heading */
 .tv-act-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
 .tv-act-head .lbl { margin: 0 !important; }
@@ -1698,6 +1698,15 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 .tv-sum-acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .tv-sum-acts .button, .tv-sum-acts button { margin: 0; }
 .tv-sky { color: var(--dim); font-size: .9rem; }
+/* the ground underfoot and the wind lead the season line, in full colour so they catch the eye */
+.tv-sky .tv-cond { color: var(--text); font-weight: 600; font-size: .95rem; }
+.tv-sky .tv-cond .small { font-weight: 400; }
+.forecast-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.forecast-list li { display: grid; grid-template-columns: 6.5em 1fr; gap: 0 10px; align-items: baseline; }
+.forecast-list li > .small { grid-column: 2; }
+.tv-fc-pop p { margin: 0; }
+.dayedit .conds { flex-wrap: wrap; }
+.dayedit .conds .w-num { width: 6.5em; }
 .tv-facts .notes-locs { font-size: .9rem; }
 .tv-facts .notes-locs .lbl { margin-right: 4px; }
 .tv-sum-main > .dh-strip { max-width: none; margin-top: 12px; flex: none; }
