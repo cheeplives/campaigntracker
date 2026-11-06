@@ -130,7 +130,7 @@ test("Characters: the player and the GM on one sheet see each other, and the GM 
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await expect(p1.getByLabel("Strength", { exact: true })).toBeEnabled();
   await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
-  await expect(gm.locator(".sheet-viewers")).toContainText("Pip is also looking at this sheet");
+  await expect(gm.locator(".sheet-viewers")).toContainText("Watched is also looking at this sheet");   // Pip, by their first PC's name
   await expect(gm.getByLabel("Strength", { exact: true })).toBeDisabled();
 
   let checked = presenceChecked(p1);
