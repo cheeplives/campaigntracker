@@ -99,7 +99,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   view, an event saved the old way still shows, and Go to today opens today.
 - **table** (layout): the header bar leaves the date and weather to the block; the shift before and after are a row of two
   equal boxes over the full-width big box; the block up top has the shift's weather and a 🔔 badge that lists the reminders; a shift in four
-  sessions shows the latest two chips and +2 more; the visibility pill opens its choice, which saves; the action pick is
+  sessions shows the latest two chips and +2 more; the visibility pill is one dropdown, Auto with its score first, and a pick saves; the action pick is
   half the box's width, above the writing; End and Pass time stay on screen in the floating bar as the page scrolls, ↑
   goes back to the top, the bar folds to one button and stays folded after a reload, and Encyclopedia add opens over the bar.
 - **table** (framing): in another site's frame the panel changes nothing until "Allow changes here" is turned on for that site, which is remembered.

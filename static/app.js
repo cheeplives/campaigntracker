@@ -165,9 +165,9 @@
   }
 
   // a shift's visibility choice (and other small pop-ups that are <details>) shuts when a click lands elsewhere
-  document.addEventListener('click', e => document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]')
+  document.addEventListener('click', e => document.querySelectorAll('details.tv-rem[open], details.sess-more-chips[open]')
     .forEach(x => { if (!x.contains(e.target)) x.open = false; }));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.vis-pick[open], details.tv-rem[open], details.sess-more-chips[open]').forEach(x => { x.open = false; }); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.tv-rem[open], details.sess-more-chips[open]').forEach(x => { x.open = false; }); });
 
   // ------------------------------------------------------------ reminders
   // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
@@ -2394,8 +2394,17 @@
     const act = el('textarea', { rows: opt.big ? 6 : 2, value: s.activity || '', placeholder: `What the party does this ${word()}`, 'aria-label': `What the party does this ${names[i]}`, 'data-tip': 'Players can see this' });
     const hint = el('small', { class: 'muted' });
     const gmn = el('textarea', { rows: opt.big ? 3 : 2, value: s.gm_notes || '', placeholder: 'GM-only notes 🔒', 'aria-label': `GM-only notes for ${names[i]}`, 'data-tip': 'Only GMs ever see these' });
-    const ov = select([['', 'Auto'], ...E.VIS_LABELS.map((l, k) => [k, `${k} ${l}`])], s.visibility_override ?? '');
+    // the visibility pill is itself the choice: Auto (what the light, moon, weather and terrain give) first, then each score
+    const auto = E.visibility(c, region, sw, d, i, null);
+    const ov = select([['', `👁 ${auto.score} ${auto.label} · auto`], ...E.VIS_LABELS.map((l, k) => [k, `👁 ${k} ${l}`])], s.visibility_override ?? '');
     ov.setAttribute('aria-label', `Visibility for ${names[i]}`);
+    const drawVis = () => {
+      const nv = ov.value === '' ? auto : E.visibility(c, region, sw, d, i, Number(ov.value));
+      ov.className = `vis vis-select v${nv.score}`;
+      ov.dataset.tip = `Visibility ${nv.score} of 5 (${nv.label}): how well the party can see this ${word()}.\n${nv.parts.join(' · ')}\nPick a score to force it for this ${word()} (a magical darkness, a burning city), or Auto to work it out again`;
+    };
+    drawVis();
+    ov.addEventListener('change', drawVis);
     const status = el('small', { class: 'shift-status', role: 'status' });
     const preview = el('span', { class: 'shift-preview' });
     const drawPreview = () => preview.replaceChildren(...clean([
@@ -2419,7 +2428,6 @@
         const was = saved; saved = now;
         status.textContent = 'Saved ✓'; status.className = 'shift-status ok';
         drawPreview();
-        if (now.o !== was.o) card.querySelector('.vis')?.replaceWith(visPill(E.visibility(c, region, sw, d, i, now.o === '' ? null : Number(now.o))));
         if (now.a !== was.a) nouns.a = true;
         if (now.g !== was.g) nouns.g = true;
       } catch (err) { status.textContent = 'Not saved'; status.className = 'shift-status bad'; toast(err.message, true); }
@@ -2432,14 +2440,8 @@
     });
     for (const x of [act, gmn, ov]) x.addEventListener('change', save);
     // the visibility changes from its pill in the card's heading: a click opens the choice under it
-    const pill = card.querySelector('.vis');
-    const visPick = el('details', { class: 'vis-pick' });
-    pill.replaceWith(visPick);
-    visPick.append(el('summary', { 'aria-label': `Change the visibility for ${names[i]}` }, pill),
-      el('div', { class: 'vis-pop surface-float' }, el('label', { class: 'inline' }, 'Visibility ', ov),
-        tip(`Auto works it out from the light source, moonlight, weather and terrain. Pick a number to force it for this ${word()}, e.g. a magical darkness or a burning city.`)));
-    visPick.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
-    ov.addEventListener('change', () => { visPick.open = false; });
+    card.querySelector('.vis').replaceWith(ov);
+    ov.addEventListener('click', e => e.stopPropagation());   // in a folded card's summary: don't fold it as well
     // the big box: the writing is the main thing, with the actions a half-width pick beside its heading
     const editor = el('details', { class: 'shift-edit', open: isNow || opt.big || null },
       el('summary', { 'data-tip': `Open to write what the party does and GM-only notes. Each box saves as you leave it` },

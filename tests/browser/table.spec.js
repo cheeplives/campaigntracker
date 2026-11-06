@@ -405,12 +405,12 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await expect(now.locator(".sess-chips > .sess-chip-wrap .sess-chip")).toHaveText(["Session 3", "Session 4"]);
   await now.getByText("+2 more").click();
   await expect(now.locator(".sess-more-pop .sess-chip")).toHaveText(["Session 1", "Session 2"]);
-  // the visibility pill opens its choice, and a pick saves and shows on the pill
-  await now.getByLabel("Change the visibility for Midday").click();
-  await now.getByLabel("Visibility for Midday", { exact: true }).selectOption("1");
-  await expect(now.locator(".vis-pick > summary .vis")).toContainText("1");
+  // the visibility pill is one dropdown, Auto with its score first; a pick saves and colours the pill
+  const vis = now.getByLabel("Visibility for Midday", { exact: true });
+  await expect(vis.locator("option").first()).toHaveText(/^👁 \d .* · auto$/);
+  await vis.selectOption("1");
+  await expect(vis).toHaveClass(/\bv1\b/);
   await expect.poll(() => sql(`SELECT visibility_override FROM shifts WHERE campaign_id=${cid}`).trim()).toBe("1");
-  await expect(now.locator(".vis-pop")).toBeHidden();
   // the actions sit beside the heading, half the box's width
   const [pick, act] = await Promise.all([now.getByLabel("Add an action").boundingBox(), now.getByLabel("What the party does this Midday").boundingBox()]);
   expect(Math.abs(pick.width - act.width / 2)).toBeLessThan(30);

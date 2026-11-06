@@ -1660,11 +1660,11 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .tv-act-head .actpick { width: 50%; min-width: 0; }
 .tv-now .shift-edit textarea:first-of-type { min-height: 8em; }
 /* a shift's visibility pill opens its choice */
-.vis-pick { position: relative; display: inline-block; }
-.vis-pick > summary { list-style: none; cursor: pointer; display: inline-block; }
-.vis-pick > summary::-webkit-details-marker { display: none; }
-.vis-pick > summary .vis::after { content: ' ▾'; font-size: .8em; }
-.vis-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; display: flex; gap: 6px; align-items: center; padding: 8px 10px; white-space: nowrap; background: var(--panel); color: var(--text); font-size: .9rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* a GM's visibility pill is a select styled as the pill: Auto first, then each score */
+select.vis.vis-select { appearance: none; -webkit-appearance: none; width: auto; min-height: 0; height: auto; margin: 0; cursor: pointer;
+  padding: 2px 22px 2px 8px; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 11px) 55%, calc(100% - 7px) 55%; background-size: 4px 4px; background-repeat: no-repeat; }
+select.vis.vis-select option { background: var(--panel); color: var(--text); text-transform: none; font: 400 .95rem var(--body, inherit); }
 /* the session chips past the latest two */
 .sess-more-chips > summary.chip { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
 /* the floating bar at the foot of the screen */
