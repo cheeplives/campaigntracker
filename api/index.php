@@ -21,6 +21,7 @@ require __DIR__ . '/encyclopedia.php';
 require __DIR__ . '/connections.php';
 require __DIR__ . '/files.php';
 require __DIR__ . '/library.php';
+require __DIR__ . '/clocks.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/panel.php';
 require __DIR__ . '/upgrade.php';
@@ -623,6 +624,8 @@ const CAMPAIGN_COPY = [
     ['play_sessions', 'key' => 'session'],
     ['session_notes', 'maps' => ['session_id' => 'session']],
     ['session_shifts', 'via' => ['session_id', 'session']],
+    ['clocks', 'key' => 'clock', 'maps' => ['entry_id' => 'encyclopedia']],
+    ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character.
     ['sheet_characters', 'maps' => ['entry_id' => 'encyclopedia']],
     // Maps (db/migrations/019_maps.sql)
@@ -1628,6 +1631,13 @@ try {
     case 'tome_save':
     case 'tome_delete':
         library_action($action);
+
+    // ===== clocks ===== (api/clocks.php)
+    case 'clocks':
+    case 'clock_save':
+    case 'clock_tick':
+    case 'clock_delete':
+        clocks_action($action);
 
     // ===== play sessions ===== (api/sessions.php)
     case 'sessions':

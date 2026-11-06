@@ -1080,7 +1080,7 @@
   // ------------------------------------------------------------ campaign shell
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
-    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions']]],
+    ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions'], ['clocks', 'Clocks']]],
     ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
@@ -1089,6 +1089,7 @@
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list: search it and filter it by tag',
     sessions: 'Each game night\'s quick notes and the summary written from them',
+    clocks: 'Circles of segments that fill as something comes closer: the GM\'s plots and dangers, and the players\' own plans',
     table: 'Play from here: the shift the clock is on in a big box (what the party does, notes, its events) with End shift, and today\'s weather, shifts and events folded underneath',
     characters: 'Everyone\'s characters and their sheets',
     travel: 'Work out how long a journey takes, then pass that much time',
@@ -5110,6 +5111,7 @@
 
   // ------------------------------------------------------------ generators tab: static/generators-tab.js
   let viewGenerators;
+  let viewClocks, tableClocks, panelClocks;
 
   // ------------------------------------------------------------ members tab
   function viewMembers() {
@@ -5537,7 +5539,7 @@
           card('Light', el('div', { class: 'big' }, visPill(v))), moonCard, partyCard),
         big,
         el('section', { class: 'tv-sec' }, el('b', {}, 'Today'), todays.length ? el('ul', { class: 'tv-today' }, todays) : el('p', { class: 'muted small' }, 'Nothing on today')),
-        tableLookup(view), tableNote(), panelFooter());
+        (await panelClocks()) || '', tableLookup(view), tableNote(), panelFooter());
       return mount(view);
     }
 
@@ -5653,6 +5655,7 @@
     const today0 = days.get(d0);
     view.append(summary,
       el('div', { class: 'tv-stage' }, side(prevAbs, true), big, side(at + 1, false)),
+      (await tableClocks(dayBox)) || '',
       ...(today0 ? dayBoxes(today0, true) : []),
       await tableLinksBox(), dock);
     mount(...campaignHeader('table'), view);
@@ -5927,6 +5930,7 @@
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
+  ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
 
   // ------------------------------------------------------------ router
@@ -5959,6 +5963,7 @@
         else if (tab === 'encyclopedia') await viewEncyclopedia(parts[3]);
         else if (tab === 'library') await viewLibrary(parts[3]);
         else if (tab === 'sessions') await viewSessions(parts[3]);
+        else if (tab === 'clocks') await viewClocks();
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));

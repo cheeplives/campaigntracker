@@ -43,6 +43,8 @@ function fill(cid, uid) {
     INSERT INTO library_tomes (campaign_id, title, body) VALUES (${cid}, '${MARK} journal', '<p>Day one</p>');`);
   const ses = one(`INSERT INTO play_sessions (campaign_id, number, first_day, title) VALUES (${cid}, 1, 3, '${MARK} session')`);
   sql(`INSERT INTO session_notes (campaign_id, session_id, position, text, abs_shift) VALUES (${cid}, ${ses}, 1, '${MARK} met', 13);`);
+  const clock = one(`INSERT INTO clocks (campaign_id, name, segments, filled, visibility, entry_id) VALUES (${cid}, '${MARK} ritual', 6, 2, 'vague', ${e1})`);
+  sql(`INSERT INTO clock_ticks (campaign_id, clock_id, delta, filled_after) VALUES (${cid}, ${clock}, 2, 2);`);
   const map = one(`INSERT INTO maps (campaign_id, name) VALUES (${cid}, '${MARK} map')`);
   const token = one(`INSERT INTO tokens (campaign_id, name) VALUES (${cid}, '${MARK} token')`);
   sql(`INSERT INTO map_pins (campaign_id, map_id, kind, entry_id, x, y, label) VALUES (${cid}, ${map}, 'entry', ${e1}, 0.5, 0.5, '${MARK} pin');

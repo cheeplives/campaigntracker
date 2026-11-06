@@ -237,6 +237,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **tokens**: GMs upload many tokens at once, named after their files, assign them to characters, entries and the
   party, filter them, and delete them, which clears what used them; players never see the tab, a GM-only token or
   its picture.
+- **clocks**: the Clocks tab sits after Sessions; a GM makes a clock with a name, a description and 6 segments, fills it by pressing a segment and +, and its History lists the fills; a player sees it and its count but can't fill or delete it; a player makes their own clock (no Secret for them), drawn in the player colour, and fills it; the API refuses a player a secret clock; players never get a secret clock, and get no count or history for a vague one they didn't make (the card shows ? and "how full is hidden"); the GM fills a player's clock and filters to player clocks; At the Table's folded Clocks box lists the running clocks, fills one by + and by a segment and counts the full ones; a player's box has no +; a clock put away leaves the box and shows under Put away.
 - **library**: the Library tab sits just under the Encyclopedia; a player adds a journal with a title, a description and
   formatted contents, the GM opens and changes it and the player sees who changed it; search and the kind buttons narrow the
   list; a save from an older copy is refused naming who saved since, the contents are cleaned of scripts, images and unsafe
