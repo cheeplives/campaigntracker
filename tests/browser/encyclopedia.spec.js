@@ -230,6 +230,34 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   expectNoErrors(errors);
 });
 
+// A blank entry opens straight in its editor, so Delete is there too: it can go without being written in and saved first.
+test("a blank entry can be deleted from its editor, by a GM or whoever added it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Blank delete");
+  const gmBlank = (await api(page, "entry_save", { name: "Marienburg" }, cid)).json.id;
+  const mine = (await api(pp, "entry_save", { name: "Kemperbad" }, cid)).json.id;
+  // the player sees Delete on their own blank entry, not on the GM's
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${gmBlank}`);
+  await expect(pp.locator(".enc-form")).toBeVisible();
+  await expect(pp.locator(".enc-form").getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
+  await pp.goto(`index.html#/c/${cid}/encyclopedia/${mine}`);
+  await pp.locator(".enc-form").getByRole("button", { name: "Delete", exact: true }).click();
+  await pp.locator(".kit-dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/encyclopedia$`));
+  await expect(pp.locator(".enc-blank .enc-item")).toHaveText([/Marienburg/]);
+  // the GM deletes any blank entry from its editor
+  await page.goto(`index.html#/c/${cid}/encyclopedia/${gmBlank}`);
+  await page.locator(".enc-form").getByRole("button", { name: "Delete", exact: true }).click();
+  await page.locator(".kit-dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/encyclopedia$`));
+  await expect(page.locator(".enc-blank")).toHaveCount(0);
+  expect((await api(page, "encyclopedia", undefined, cid)).json.entries).toEqual([]);
+  // a new entry, not yet saved, has only Cancel
+  await page.goto(`index.html#/c/${cid}/encyclopedia/new`);
+  await expect(page.locator(".enc-form").getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
 // Connections: London "Has resident" Gunther shows on Gunther's page as "Resident of" London. One fact is one row,
 // whichever page it was made on, and players never get a GM-only connection or one that touches a GM-only entry.
 async function entry(page, cid, body) {

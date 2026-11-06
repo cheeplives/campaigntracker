@@ -377,8 +377,16 @@
       namingCache.p.catch(() => { namingCache = null; });
       return namingCache.p;
     }
+    /** Delete for entry e, for a GM or whoever added it: on its page and in its editor, so a blank entry, which opens
+     * straight in its editor, can go without being written in first. */
+    function deleteEntryBtn(e) {
+      if (!e.id || !(isGM() || e.created_by === S.user.id)) return null;
+      return btn('Delete', async () => {
+        if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
+        try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
+      }, 'small danger', 'Delete this entry. Its name stays in the text it was found in');
+    }
     function entryView(e, ctx) {
-      const canDelete = isGM() || e.created_by === S.user.id;
       const box = el('div', { class: 'enc-mentioned' }, el('h4', {}, 'Mentioned in'), el('p', { class: 'muted small' }, 'Looking…'));
       sourcesNaming(e).then(({ sources }) => {
         const linker = Nouns.linker([e], () => null), seen = new Set(), list = [];
@@ -416,10 +424,7 @@
             btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryForm(e)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
             btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out'),
             scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
-            canDelete ? btn('Delete', async () => {
-              if (!await confirmDialog(`Delete "${e.name}" from the Encyclopedia?`, { ok: 'Delete', danger: true })) return;
-              try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Delete this entry. Its name stays in the text it was found in') : null)),
+            deleteEntryBtn(e))),
         mapLinks('entry_id', e.id),
         charCard,
         encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
@@ -512,7 +517,7 @@
       d.showModal();
     }
 
-    return { encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, viewEncyclopedia, sourcesNaming, saveFile };
+    return { encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile };
   }
   root.EncyclopediaTab = { make };
 })(window);
