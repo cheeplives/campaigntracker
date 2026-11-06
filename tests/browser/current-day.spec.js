@@ -34,8 +34,11 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   const regionTop = (await page.locator(".dayedit [name=region_id]").boundingBox()).y;
   expect((await page.getByLabel("Locations visited").boundingBox()).y).toBeGreaterThan(regionTop);
   await page.getByLabel("Locations visited").fill("Altdorf; the Grey Lady inn");
+  // Save day also redraws the page: wait for that redraw too, or it can land after the re-roll's below and wipe what is typed next
+  await page.getByLabel("Locations visited").evaluate(e => { e.dataset.beforeSave = "1"; });
   await page.getByRole("button", { name: "Save day" }).click();
   await expect(page.getByText("Day saved")).toBeVisible();
+  await expect(page.locator("[data-before-save]")).toHaveCount(0);
   await notNow(page); // the detector offers Altdorf and the Grey Lady inn for the Encyclopedia
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
   // The re-roll saves, then redraws the page: wait for the redraw, so the next click doesn't land on a link it replaces.
