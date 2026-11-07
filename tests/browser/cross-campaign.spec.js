@@ -14,7 +14,7 @@ const code = fs.readdirSync(path.join(root, "api")).filter(f => f.endsWith(".php
 const ID_KEYS = [...new Set([...code.matchAll(/(?:p\(|\$_GET\[|\$body\[|body\(\)\[)'(id|\w+_id|\w*ids)'/g)].map(m => m[1]))]
   .filter(k => !["user_id", "owner_id", "member_id", "template_id"].includes(k));
 /** Left out: deleting or copying the campaign itself, and the actions that fetch from other sites. */
-const SKIP = ["campaign_delete", "campaign_copy", "image_search", "image_import", "scabard_import", "scabard_picture", "sheet_import_fetch"];
+const SKIP = ["campaign_delete", "campaign_copy", "image_search", "image_import", "scabard_import", "md_import", "scabard_picture", "sheet_import_fetch"];
 const ACTIONS = Object.keys(TABLE).filter(a => ["gm", "member"].includes(TABLE[a].who) && !a.startsWith("fanwiki_") && !SKIP.includes(a));
 
 const MARK = "Elsewhere";

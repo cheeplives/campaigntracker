@@ -13,6 +13,7 @@ require __DIR__ . '/actions.php';
 require __DIR__ . '/richtext.php';
 require __DIR__ . '/images.php';
 require __DIR__ . '/scabard.php';
+require __DIR__ . '/mdimport.php';
 require __DIR__ . '/sheets.php';
 require __DIR__ . '/maps.php';
 require __DIR__ . '/holdings.php';
@@ -1917,6 +1918,12 @@ try {
         need_gm($cid);
         rate_limit('scabard_import', (string)me()['id'], 30, 60);   // each batch is one transaction over up to 300 pages
         out(scabard_import($cid, body()));
+
+    case 'md_import': // GMs: entries and/or links from Markdown notes, in batches (api/mdimport.php)
+        $cid = cid();
+        need_gm($cid);
+        rate_limit('md_import', (string)me()['id'], 30, 60);   // each batch is one transaction over up to 200 entries
+        out(mdimport($cid, body()));
 
     case 'scabard_picture': // GMs: one imported entry's picture, fetched from scabard.com
         $cid = cid();

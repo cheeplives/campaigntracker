@@ -599,6 +599,73 @@
         document.body.append(d);
         d.showModal();
       }
+      /** Import from Markdown: pick .md files or a zip (an Obsidian vault, or our own Markdown export), say what is in
+       * them, then send the entries in batches and the links between them, saying where it has got to. */
+      async function importMarkdown() {
+        let data;
+        try {
+          const files = await MdImport.pick();
+          if (files.error) { toast(files.error, true); return; }
+          if (!files.length) return;
+          data = MdImport.parse(files);
+        } catch (err) { toast(err.message, true); return; }
+        const cid = S.camp.id;
+        const p = MdImport.plan(data);
+        const n = (c, one, many) => `${c} ${c === 1 ? one : many || `${one}s`}`;
+        const what = el('ul', { class: 'scabard-plan' }, ...clean([
+          el('li', {}, el('strong', {}, n(p.entries, 'Encyclopedia entry', 'Encyclopedia entries')), p.entries ? `: ${Object.entries(p.categories).map(([k, c]) => `${c} ${k}`).join(', ')}` : ''),
+          p.secret ? el('li', {}, n(p.secret, 'entry', 'entries'), ' with GM-only notes or marked GM only') : null,
+          p.tags ? el('li', {}, n(p.tags, 'tag'), ' (from the notes\' tags and folders)') : null,
+          el('li', {}, el('strong', {}, n(p.links, 'connection')), ' between them (from [[links]] and our export\'s Connections)'),
+          p.skipped.links || p.skipped.duplicates || p.skipped.index ? el('li', { class: 'muted' }, 'Left out: ', [p.skipped.links ? n(p.skipped.links, 'link') + ' to a note that isn\'t in the import' : '', p.skipped.duplicates ? n(p.skipped.duplicates, 'note') + ' with a name used twice' : '', p.skipped.index ? 'the export\'s index page' : ''].filter(Boolean).join(', ')) : null]));
+        const status = el('p', { class: 'small muted scabard-status', 'aria-live': 'polite' });
+        const go = el('button', { type: 'button', class: 'primary' }, 'Import');
+        const cancel = el('button', { value: 'cancel', type: 'submit' }, 'Cancel');
+        const d = el('dialog', { class: 'kit-dialog scabard-dialog', 'aria-label': 'Import from Markdown' },
+          el('form', { method: 'dialog' },
+            el('h3', {}, '⬆ Import from Markdown'),
+            el('p', { class: 'small muted' }, 'The files hold:'), what,
+            el('p', { class: 'small muted' }, 'Everything comes in by name: an entry that already has a name in the files is kept as it is (one with nothing written in it yet is filled in), and tags and connections are only added where missing. Nothing is deleted. Pictures are not brought in.'),
+            status,
+            el('div', { class: 'kit-dialog-actions' }, go, cancel)));
+        d.addEventListener('cancel', e => { if (go.disabled) e.preventDefault(); else d.returnValue = 'cancel'; });
+        d.addEventListener('close', () => d.remove());
+        const total = { entries: { added: 0, filled: 0, kept: 0 }, tags: 0, connections: 0, skipped: { entries: 0, connections: 0, unresolved: 0 } };
+        const add = r => {
+          for (const k of ['added', 'filled', 'kept']) total.entries[k] += r.entries[k];
+          total.tags += r.tags; total.connections += r.connections;
+          for (const k of ['entries', 'connections', 'unresolved']) total.skipped[k] += r.skipped[k];
+        };
+        go.addEventListener('click', busy(go, async () => {
+          cancel.disabled = true;
+          try {
+            let done = 0;
+            for (const batch of MdImport.batches(data.entries, MdImport.ENTRIES_MAX)) {
+              status.textContent = `Importing entries ${done + 1}–${done + batch.length} of ${data.entries.length}…`;
+              add(await post('md_import', { entries: batch }, cid));
+              done += batch.length;
+            }
+            done = 0;
+            for (const batch of MdImport.batches(data.links, MdImport.LINKS_MAX)) {
+              status.textContent = `Connecting ${done + 1}–${done + batch.length} of ${data.links.length}…`;
+              add(await post('md_import', { links: batch }, cid));
+              done += batch.length;
+            }
+            d.returnValue = 'done'; d.close();
+            const e = total.entries;
+            await alertDialog([`Entries: ${e.added} added, ${e.filled} filled in, ${e.kept} kept as they were.`,
+              `${n(total.connections, 'connection')} and ${n(total.tags, 'tag')} added.`].join('\n'), { title: 'Imported from Markdown' });
+            await loadCampaign(cid, true);
+            route();
+          } catch (err) {
+            status.textContent = `Stopped: ${err.message}. Import again carries on from here (nothing is added twice).`;
+            cancel.disabled = false;
+            throw err;
+          }
+        }));
+        document.body.append(d);
+        d.showModal();
+      }
       const danger = el('div', { class: 'card' }, el('h2', {}, 'Tools'),
         el('div', { class: 'row' }, presetSel, tipped(btn('Replace calendar with preset', async () => {
           if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
@@ -614,6 +681,8 @@
             'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
         el('div', { class: 'row' }, btn('⬆ Import from Scabard…', importScabard, 'small',
           'Bring a campaign over from Scabard: its Export campaign .json file becomes Encyclopedia entries with their tags, other names, notes, GM secrets, connections and pictures, and its dated session logs become Sessions. Safe to run again: nothing is added twice or deleted')),
+        el('div', { class: 'row' }, btn('⬆ Import from Markdown…', importMarkdown, 'small',
+          'Bring notes over from Obsidian or any folder of Markdown: pick .md files or a zip of them (or our own Markdown export). Each file becomes an Encyclopedia entry, with its front matter\'s other names and tags, folders as Categories or tags, and [[links]] as connections. Safe to run again: nothing is added twice or overwritten')),
         el('div', { class: 'row' }, btn('Delete this campaign', async () => {
           const typed = await promptDialog(`Type DELETE to permanently delete "${S.camp.name}" and everything in it.`, { title: 'Delete campaign', ok: 'Delete', danger: true });
           if (typed === null) return;

@@ -33,7 +33,7 @@ test("saves are kept, joined when close together, restorable, GM-only and forgot
   await approve(browser, gm.email);
   const cid = await makeCampaign(page, `History ${gm.id}`);
   const ok = async (action, body) => { const r = await api(page, action, body, cid); expect(r.status, JSON.stringify(r.json)).toBe(200); return r.json; };
-  const ageAll = () => sql("UPDATE content_versions SET saved_at = saved_at - INTERVAL 1 HOUR");
+  const ageAll = () => sql(`UPDATE content_versions SET saved_at = saved_at - INTERVAL 1 HOUR WHERE campaign_id=${cid}`);
   const read = async (action, params) => { const r = await get(page, action, params, cid); expect(r.status, JSON.stringify(r.json)).toBe(200); return r.json; };
   const list = async (kind, ref) => (await read("history_list", { kind, ref })).versions;
   const got = id => read("history_get", { id });
@@ -148,7 +148,7 @@ test("the History dialog lists the versions, shows what changed, and restores on
   const cid = await makeCampaign(page, `HistoryUI ${gm.id}`);
   const ok = async (action, body) => { const r = await api(page, action, body, cid); expect(r.status, JSON.stringify(r.json)).toBe(200); return r.json; };
   const id = (await ok("entry_save", { name: "Gunther", notes: "<p>Runs the inn</p><p>Likes ale</p>" })).id;
-  sql("UPDATE content_versions SET saved_at = saved_at - INTERVAL 1 HOUR");
+  sql(`UPDATE content_versions SET saved_at = saved_at - INTERVAL 1 HOUR WHERE campaign_id=${cid}`);
   await ok("entry_save", { id, name: "Gunther", notes: "<p>Runs the inn in Bree</p><p>Likes ale</p><p>Owes money</p>" });
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
