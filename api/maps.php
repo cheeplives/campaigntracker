@@ -399,8 +399,10 @@ function party_reread(int $cid, $id): array {
     return row_of('party_groups', $cid, (int)$id, 'Group not found');
 }
 /** The user ids of campaign $cid's players. */
+/** Campaign $cid's players who are in the party: all but those whose active character a GM took out of it. */
 function party_players(int $cid): array {
-    $st = db()->prepare("SELECT user_id FROM campaign_members WHERE campaign_id=? AND role='player' ORDER BY user_id");
+    $st = db()->prepare("SELECT m.user_id FROM campaign_members m LEFT JOIN sheet_characters c ON c.id=m.active_character_id
+        WHERE m.campaign_id=? AND m.role='player' AND COALESCE(c.party_out, 0)=0 ORDER BY m.user_id");
     $st->execute([$cid]);
     return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
 }

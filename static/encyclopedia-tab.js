@@ -242,7 +242,7 @@
       const files = { list: r.files || [], uploads: r.uploads || { ready: false } };
       S.encUploads = files.uploads;
       for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
-      S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
+      S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, category: e.category || null, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
         pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
       S.encChars = r.characters || {};
       const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
@@ -434,6 +434,8 @@
             ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
             !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
               ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
+            isGM() && typeof Sheets !== 'undefined' && (ch || !e.category || e.category === 'person')
+              ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
             btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
             ...entryTools(e, ctx),
             deleteEntryBtn(e))),

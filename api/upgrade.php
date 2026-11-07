@@ -93,6 +93,8 @@ function upgrade_steps(): array {
             'At the Table now has an action for each player and one for the party on every shift, listed on the session\'s page.'],
         ['033_party_characters.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_group_id'),
             'A character with no player can now travel with the party, and every character\'s Encyclopedia entry is tagged PC or NPC.'],
+        ['034_party_out.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_out'),
+            'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
     ];
 }
 
