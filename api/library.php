@@ -26,7 +26,7 @@ function tome_out(array $t, bool $full, bool $isGm): array {
 }
 /** Tomes of campaign $cid with who added and who last changed each (character name first); one tome when $id is given. */
 function tomes(int $cid, ?int $id = null): array {
-    $st = db()->prepare('SELECT t.*, ' . AUTHOR_SQL . ' AS author, u.display_name AS player, COALESCE(NULLIF(m2.character_name, \'\'), u2.display_name) AS editor
+    $st = db()->prepare('SELECT t.*, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player, COALESCE(NULLIF(m2.character_name, \'\'), ' . user_name_sql('u2') . ') AS editor
         FROM library_tomes t LEFT JOIN users u ON u.id=t.created_by LEFT JOIN campaign_members m ON m.campaign_id=t.campaign_id AND m.user_id=t.created_by
         LEFT JOIN users u2 ON u2.id=t.updated_by LEFT JOIN campaign_members m2 ON m2.campaign_id=t.campaign_id AND m2.user_id=t.updated_by
         WHERE t.campaign_id=?' . ($id ? ' AND t.id=?' : '') . ' ORDER BY t.title');
@@ -69,6 +69,7 @@ function library_action(string $action): void {
         $body = ($isGm ? $body : rich_keep_secrets($old['body'] ?? null, $body)) ?: null;
         $uid = me()['id'];
         if ($old) {
+            history_before($cid, 'tome', $id);
             $st = db()->prepare('UPDATE library_tomes SET kind=?, title=?, description=?, body=?, version=version+1, updated_by=? WHERE id=? AND version=?');
             $st->execute([$kind, $title, $desc, $body, $uid, $id, int_in(p('version'), 1)]);
             if (!$st->rowCount()) {
@@ -80,6 +81,7 @@ function library_action(string $action): void {
                 ->execute([$cid, $kind, $title, $desc, $body, $uid, $uid]);
             $id = (int)db()->lastInsertId();
         }
+        history_record($cid, 'tome', $id);
         out(['ok' => true, 'tome' => tome_out(tomes($cid, $id)[0], true, $isGm)]);
 
     case 'tome_delete':
@@ -88,6 +90,7 @@ function library_action(string $action): void {
         $t = tome_row($cid, int_in(p('id'), 1));
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
+        history_purge($cid, 'tome', (int)$t['id']);
         attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
         out(['ok' => true]);
     }

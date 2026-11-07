@@ -123,7 +123,8 @@
       detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
       const more = el('details', { class: 'sess-more' }, el('summary', { class: 'button small', 'aria-label': 'More', title: 'End or reopen, export with notes, delete' }, '⋯'),
         el('div', { class: 'sess-more-list' }, openClose,
-          el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'), del));
+          el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'),
+          btn('🕘 History', () => HistoryView.open({ kind: 'session', ref: s.id, title: sessionName(s), cid, api, post, onRestore: route }), 'small', 'Earlier versions of this session\'s summary, rewards, loot and notes, what each save changed, and Restore'), del));
       document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
       const bar = el('div', { class: 'row sess-bar' }, head[1],
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),

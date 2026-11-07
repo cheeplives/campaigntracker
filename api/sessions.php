@@ -220,9 +220,11 @@ function sessions_action(string $action): void {
             $set .= ", $f=?";
             $args[] = rich_html_clean((string)str_in(p($f), 2_000_000)) ?: null;
         }
+        history_before($cid, 'session', (int)$s['id']);
         $st = db()->prepare("UPDATE play_sessions SET $set, summary_format='html', version=version+1 WHERE id=? AND version=?");
         $st->execute([...$args, $s['id'], int_in(p('version'), 1)]);
         if (!$st->rowCount()) fail('This summary was saved somewhere else after you opened it. Copy what you wrote, reload, and add it again', 409, 'stale');
+        history_record($cid, 'session', (int)$s['id']);
         out(['ok' => true, 'session' => session_out(session_row($cid, (int)$s['id']), true, true)]);
 
     case 'session_notes_save': // GMs: the notes box's text, saved as it is typed. base is the text this copy last had from the
@@ -232,12 +234,14 @@ function sessions_action(string $action): void {
         $s = session_row($cid, int_in(p('id'), 1));
         $text = (string)str_in(p('notes_text'), 500_000, false);
         $base = p('base') === null ? null : (string)str_in(p('base'), 500_000, false);
+        history_before($cid, 'session', (int)$s['id']);
         $st = db()->prepare('UPDATE play_sessions SET notes_text=? WHERE id=? AND notes_text <=> ?');
         $st->execute([$text, $s['id'], $base]);
         if (!$st->rowCount()) {                       // no row changed: already this text, or changed elsewhere
             $now = session_row($cid, (int)$s['id'])['notes_text'];
             if ($now !== $text) fail('These notes were changed in another tab or on another device after this page loaded', 409, 'stale');
         }
+        history_record($cid, 'session', (int)$s['id']);
         out(['ok' => true, 'notes_text' => $text]);
 
     case 'session_end': // GMs: the open session (or the one named) ends on the current shift
@@ -295,6 +299,7 @@ function sessions_action(string $action): void {
         $cid = cid();
         need_gm($cid);
         $s = session_row($cid, int_in(p('id'), 1));
+        history_purge($cid, 'session', (int)$s['id']);
         db()->prepare('DELETE FROM play_sessions WHERE id=?')->execute([$s['id']]);
         attachments_purge($cid, 'session', (int)$s['id']);   // files have no foreign key to cascade
         out(['ok' => true]);

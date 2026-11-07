@@ -54,8 +54,12 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only after typing DELETE; players get neither button, and the API refuses them both.
 - **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
   person's own, kept in their preferences across reloads, and only on a campaign they belong to.
-- **account**: the account page lists only the campaigns you belong to, each with your role, and a
-  character name typed there is the one the Members tab shows; the None / Imperial / Metric units choice
+- **game-requests** (Chromium only, as the on/off switch is site-wide): Request a game on Sheet templates reaches Site
+  Admin's Sheets tab counted once per person per game whatever the spelling; only admins read them; switched off, the
+  button goes and the server refuses new ones while the list stays; Clear takes a game off.
+- **account**: the name and pronouns set on the account page are what the top bar, Members, Site Admin and
+  the account probe call you by, a new Google or GitHub sign-in doesn't undo them, blank goes back to the provider's
+  name, and a name over 150 characters is refused; the page no longer lists your campaigns; the None / Imperial / Metric units choice
   sets the travel planner and temperatures, None follows the campaign, an older temperature-only choice
   reads as its system, and anything else is refused; a campaign's Default units in Settings is the same
   Imperial / Metric choice with its own Show temperatures switch, and an older temperature unit there reads as its system.
@@ -95,6 +99,7 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 - **search**: the box with the tabs (a 🔍 tab on a phone) opens the Search page, which finds Encyclopedia names, aliases, tags and notes, events by title, tag and text, day notes and Library tomes, grouped and with matching titles first; every word must match; a result opens its page and Back keeps the search; a GM's secret results are marked and a player finds none of them; `/` jumps to the box.
 - **timeline**: the Events tab's List | Timeline switch is remembered; the timeline draws the events the search, tags and When leave, in lanes by tag (with Untagged) or in one lane, a one-day event as a dot and a longer one as a bar, close up an event with shifts as a bar over just those, secret events with a 🔒 dashed edge, a Sessions band and a line for now; the zoom buttons, arrow keys, wheel and drag move it; ⬇ PNG downloads a picture; an event opens its day (a second tap on touch); a player gets neither the secret event nor an unpublished session. Under Node: where an event runs in days and shifts, the lanes, the row packing, the axis's days, weeks, months, years and counts of years in the campaign's calendar and eras, the zoom buttons, and the season and holiday bands.
 - **connection-web**: *🕸 Web* on an entry draws it and its neighbours one step out, *2 steps* adds the next ring, a kind switched off takes with it the entries only it reached, a click lists the entry's connections and *Centre here* moves the web; *🌳 Family* appears only for an entry with family connections and draws children below their parents; the list's ⋯ menu opens the whole campaign's web; a player's web leaves out a GM-only connection. Under Node: the neighbourhood and its depths, kinds and counts, the cut for a large campaign, a layout that is the same every time and stays on the page, and a family in generations with partners side by side.
+- **edit-history**: every save of an entry, tome, session summary/notes and day notes is kept as a version (saves by one person within ten minutes join; the newest 50 stay); the *🕘 History* dialog lists them, shows what a save changed and how it differs from now, and Restore puts it back as a new version; something written before history began shows as a "before history" version; a restore of an entry whose name is now taken is refused; only GMs can list, read or restore, and deleting the item forgets its versions. Under Node: the word and paragraph diff.
 - **events**: an event runs from a Shift Start to a Shift End (Shift End follows
   Shift Start) or all day, takes starter and new tags whose colours show in week
   view, an event saved the old way still shows, and Go to today opens today.

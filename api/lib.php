@@ -318,7 +318,43 @@ function current_user(): ?array {
   $st->execute([$_SESSION['user_id']]);
   $row = $st->fetch();
   if ($row) $row['status'] = chronicle_status($row);
-  return $u = ($row ?: null);
+  return $u = ($row ? with_profile($row) : null);
+}
+
+/**
+ * A users row with the name and pronouns they set on their Account page (user_profiles, migration 036): display_name
+ * becomes the name Chronicle calls them by, provider_name keeps the one from Google or GitHub, and custom_name and
+ * pronouns are what they typed (null when unset). Before migration 036 it is the row as it was.
+ */
+function with_profile(array $row): array {
+  $row['provider_name'] = (string) $row['display_name'];
+  $row['custom_name'] = $row['pronouns'] = null;
+  if (!has_table('user_profiles')) return $row;
+  $st = db()->prepare('SELECT name, pronouns FROM user_profiles WHERE user_id = ?');
+  $st->execute([$row['id']]);
+  if ($p = $st->fetch()) {
+    $row['custom_name'] = $p['name'];
+    $row['pronouns'] = $p['pronouns'];
+    if ((string) $p['name'] !== '') $row['display_name'] = $p['name'];
+  }
+  return $row;
+}
+/** SQL for the name Chronicle calls the users row aliased $a: the one they set on their Account page, else their Google
+ * or GitHub name. Needs migration 036 (the API refuses to run until it is). */
+function user_name_sql(string $a = 'u'): string {
+  return "COALESCE((SELECT upn_$a.name FROM user_profiles upn_$a WHERE upn_$a.user_id = $a.id), $a.display_name)";
+}
+/** SQL for the pronouns the users row aliased $a set on their Account page (NULL when none). */
+function user_pronouns_sql(string $a = 'u'): string {
+  return "(SELECT upp_$a.pronouns FROM user_profiles upp_$a WHERE upp_$a.user_id = $a.id)";
+}
+
+/** Site-wide switches a site admin sets on Site Admin (site_settings, migration 037), and what each is when unset. */
+const SITE_SETTINGS = ['game_requests_off' => '0'];
+function site_setting(string $name): string {
+  static $all = null;
+  if ($all === null) $all = db()->query('SELECT name, value FROM site_settings')->fetchAll(PDO::FETCH_KEY_PAIR);
+  return (string)($all[$name] ?? SITE_SETTINGS[$name] ?? '');
 }
 
 function require_login(): array {
@@ -501,7 +537,7 @@ function chronicle_access_request(int $userId, bool $isAdmin, string $provider, 
   }
   if ($alert && !$isAdmin) {
     post_signup_webhook(sprintf(
-      "🆕 Campaign Chronicle access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Users in Campaign Chronicle (not Sinless).",
+      "🆕 Campaign Chronicle access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Site Admin in Campaign Chronicle (not Sinless).",
       $identity['name'] !== '' ? $identity['name'] : '(none)', $identity['email'], $provider));
   }
 }

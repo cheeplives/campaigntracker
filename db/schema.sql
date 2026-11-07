@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS user_prefs (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- user_profiles: the name and pronouns someone sets on their Account page, used in place of users.display_name (their
+-- Google or GitHub name, which every sign-in rewrites). Chronicle's own, so Sinless never sees it. Migration 036.
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id   BIGINT UNSIGNED NOT NULL,
+  name      VARCHAR(150) NULL DEFAULT NULL,   -- NULL: use users.display_name
+  pronouns  VARCHAR(40)  NULL DEFAULT NULL,
+  PRIMARY KEY (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS campaigns (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
@@ -442,6 +452,23 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Edit history (see db/migrations/039_content_versions.sql and api/history.php): the earlier versions of an Encyclopedia
+-- entry, a Library tome, a session and a day's notes, each the item's text fields as JSON. kind is entry, tome, session
+-- or day; ref_id the item's id (the day's absolute day for a day). baseline: what the item held before history began.
+CREATE TABLE IF NOT EXISTS content_versions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(12) NOT NULL,
+  ref_id BIGINT NOT NULL,
+  data MEDIUMTEXT NOT NULL,
+  saved_by BIGINT UNSIGNED NULL,
+  saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  baseline TINYINT(1) NOT NULL DEFAULT 0,
+  KEY ix_version_item (campaign_id, kind, ref_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (saved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Pictures and files attached to Encyclopedia entries and the like (see db/migrations/013_attachments.sql).
 -- One row per file. is_secret: GMs only; a file on a secret entry is never sent to players either.
 CREATE TABLE IF NOT EXISTS attachments (
@@ -772,6 +799,26 @@ CREATE TABLE IF NOT EXISTS sheet_templates (
   KEY ix_template_game (game),
   FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (forked_from_id) REFERENCES sheet_templates(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- game_requests: "Request a game" on the Sheet templates page, one row per person per game, counted by game_key on
+-- Site Admin's Sheets tab. site_settings: site-wide switches set on Site Admin (game_requests_off). Migration 037.
+CREATE TABLE IF NOT EXISTS site_settings (
+  name        VARCHAR(60)   NOT NULL,
+  value       VARCHAR(2000) NOT NULL DEFAULT '',
+  updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS game_requests (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT UNSIGNED NOT NULL,
+  game        VARCHAR(100) NOT NULL,
+  game_key    VARCHAR(100) NOT NULL,              -- lower case, spaces squeezed
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_game_request (user_id, game_key),
+  KEY ix_game_request_key (game_key),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- A character in a campaign: one filled-in copy of a template, with its own Encyclopedia entry (which holds its name).

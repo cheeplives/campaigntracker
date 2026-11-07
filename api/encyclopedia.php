@@ -148,7 +148,7 @@ function encyclopedia_action(string $action): void {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
@@ -321,6 +321,7 @@ function encyclopedia_action(string $action): void {
         }
         db()->beginTransaction();
         if ($old) {
+            history_before($cid, 'entry', $id);
             // version: the copy the editor opened. When someone else has saved since, the save is refused, as for tomes, so
             // it doesn't overwrite their words; a save without one (an older page) isn't checked.
             $stale = p('version') !== null ? ' AND version=' . int_in(p('version'), 1) : '';
@@ -341,6 +342,7 @@ function encyclopedia_action(string $action): void {
             character_kind_from_tags($cid, $id, $isGm);   // a PC or NPC tag changed here changes the character's Kind
         }
         if ($old) character_names_sync($id);
+        history_record($cid, 'entry', $id);
         $v = db()->prepare('SELECT version FROM encyclopedia_entries WHERE id=?');
         $v?->execute([$id]);
         $version = $v ? (int)$v->fetchColumn() : 1;
@@ -374,8 +376,10 @@ function encyclopedia_action(string $action): void {
             [$tag, $at] = $m[0][$i];
             $html = substr_replace($html, '<p>' . substr($tag, 7, -8) . '</p>', $at, strlen($tag));
         }
+        history_before($cid, $kind, $id);
         if ($kind === 'entry') db()->prepare('UPDATE encyclopedia_entries SET notes=?' . entry_bump() . ' WHERE id=?')->execute([$html, $id]);
         else db()->prepare('UPDATE library_tomes SET body=?, version=version+1, updated_by=? WHERE id=?')->execute([$html, me()['id'], $id]);
+        history_record($cid, $kind, $id);
         $event = null;
         if (p('log')) {
             $c = campaign_row($cid);
@@ -452,6 +456,7 @@ function encyclopedia_action(string $action): void {
         if ($st->fetchColumn()) fail('Delete its character sheet first', 409, 'has_character');
         db()->beginTransaction();
         attachments_purge($cid, 'encyclopedia', (int)$e['id']);
+        history_purge($cid, 'entry', (int)$e['id']);
         db()->prepare('DELETE FROM encyclopedia_entries WHERE id=?')->execute([$e['id']]);
         db()->commit();
         out(['ok' => true]);
