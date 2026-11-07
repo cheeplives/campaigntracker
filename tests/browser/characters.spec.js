@@ -528,8 +528,8 @@ test("Members: a character named the old way is matched up with a sheet, linked 
   await gm.goto(`index.html#/c/${cid}/members`);
   const pip = gm.locator(".member", { hasText: "Pip" });
   await expect(pip).toContainText("No sheet yet");
-  await pip.getByRole("button", { name: "Link a sheet…" }).click();
-  await expect(gm.getByLabel("Character sheet", { exact: true })).toHaveValue(String(sheet.id));   // the one with its name comes first
+  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await expect(gm.getByLabel("Character", { exact: true })).toHaveValue(`c${sheet.id}`);   // the one with its name comes first
   await gm.getByRole("button", { name: "Link", exact: true }).click();
   await expect(pip.getByRole("link", { name: "Brannoc" })).toBeVisible();
   expect(sql(`SELECT owner_id FROM sheet_characters WHERE id=${sheet.id}`).trim()).toBe(String(ids.p1));
@@ -562,6 +562,59 @@ test("Characters: a player's first PC becomes their character, named by it", asy
   const handed = await make(gm, cid, { template_id: tpl.id, name: "Handed", owner_id: 0 });
   expect((await api(gm, "character_save", { id: handed.id, version: handed.version, owner_id: ids.p1 }, cid)).status).toBe(200);
   expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(String(first.id));
+});
+
+test("Members: a GM links a member to a Person in the Encyclopedia, which gets a sheet", async ({ page, browser }) => {
+  const { cid, gm, tpl, ids } = await party(page, browser);
+  await api(gm, "member_character", { user_id: ids.p1, character_name: "Old Name" }, cid);
+  const entry = (await api(gm, "entry_save", { name: "Ser Aldric", category: "person" }, cid)).json.id;
+  await gm.goto(`index.html#/c/${cid}/members`);
+  const pip = gm.locator(".member", { hasText: "Pip" });
+  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await gm.getByLabel("Character", { exact: true }).selectOption(`e${entry}`);
+  await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
+  await expect(pip.getByRole("link", { name: "Ser Aldric" })).toBeVisible();
+  const id = sql(`SELECT id FROM sheet_characters WHERE entry_id=${entry}`).trim();
+  expect(sql(`SELECT owner_id FROM sheet_characters WHERE id=${id}`).trim()).toBe(String(ids.p1));
+  expect(sql(`SELECT CONCAT(active_character_id, ' ', character_name) FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(`${id} Ser Aldric`);
+});
+
+test("Encyclopedia: a GM links a Person entry to a member from its page or its editor", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl, ids } = await party(page, browser);
+  // an entry with no sheet: picking the member and a template makes the sheet, theirs and active
+  const entry = (await api(gm, "entry_save", { name: "Mira", category: "person", notes: "<p>A scout.</p>" }, cid)).json.id;
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${entry}`);
+  await gm.getByRole("button", { name: "Link a member…" }).click();
+  await gm.getByLabel("Member", { exact: true }).selectOption(String(ids.p2));
+  await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
+  await expect.poll(() => sql(`SELECT owner_id FROM sheet_characters WHERE entry_id=${entry}`).trim()).toBe(String(ids.p2));
+  await expect(gm.getByRole("link", { name: "Open sheet" }).first()).toBeVisible();
+  const id = sql(`SELECT id FROM sheet_characters WHERE entry_id=${entry}`).trim();
+  expect(sql(`SELECT active_character_id FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p2}`).trim()).toBe(id);
+
+  // an entry with a sheet, from its editor: the sheet goes to the member picked, with no template to pick
+  const pc = await make(gm, cid, { template_id: tpl.id, name: "Torvald", owner_id: 0 });
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${pc.entry_id}`);
+  // (the first link's page may still be drawn again once, closing an editor opened too soon: open it until it stays)
+  await expect(async () => {
+    if (!await gm.locator(".enc-form").count()) await gm.getByRole("button", { name: "Edit", exact: true }).click();
+    await gm.locator(".enc-form").getByRole("button", { name: "Link a member…" }).click({ timeout: 2000 });
+  }).toPass();
+  await expect(gm.getByLabel("Template", { exact: true })).toHaveCount(0);
+  await gm.getByLabel("Member", { exact: true }).selectOption(String(ids.p1));
+  await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
+  await expect.poll(() => sql(`SELECT owner_id FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe(String(ids.p1));
+
+  // only for a Person (or no Category), and only for GMs
+  const place = (await api(gm, "entry_save", { name: "Ferry", category: "location", notes: "<p>Wet.</p>" }, cid)).json.id;
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${place}`);
+  await expect(gm.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(gm.getByRole("button", { name: "Link a member…" })).toHaveCount(0);
+  await p1.goto(`index.html#/c/${cid}/encyclopedia/${entry}`);
+  await expect(p1.getByRole("link", { name: "Open sheet" }).first()).toBeVisible();
+  await expect(p1.getByRole("button", { name: "Link a member…" })).toHaveCount(0);
 });
 
 test("Encyclopedia: an entry's editor has every button its page has, and a Person entry offers Add character sheet, then Open sheet", async ({ page, browser }) => {

@@ -3983,13 +3983,20 @@
     const sheetBtn = !e.id || typeof Sheets === 'undefined' ? null
       : ch ? (ch.sheet_visible ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null)
       : isGM() ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for a PC or an NPC with stats') : null;
+    const memberBtn = e.id && typeof Sheets !== 'undefined' && isGM()
+      ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null;
+    if (memberBtn && !ch) {
+      const fit = () => { memberBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; };
+      category.addEventListener('change', fit);
+      fit();
+    }
     if (sheetBtn && !ch) {
       const fit = () => { sheetBtn.style.display = ['', 'person'].includes(category.value) ? '' : 'none'; };
       category.addEventListener('change', fit);
       fit();
     }
     const f = el('form', { class: 'enc-form' },
-      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row' }, sheetBtn, opt.tools || [])),
+      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row' }, sheetBtn, memberBtn, opt.tools || [])),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
@@ -5444,21 +5451,50 @@
       return sheets.filter(c => !c.secret && (c.owner?.id === Number(m.id) || (isGM() && !(c.owner && players.has(c.owner.id)))))
         .sort((a, b) => (b.name.toLowerCase() === name) - (a.name.toLowerCase() === name) || a.name.localeCompare(b.name));
     };
-    const linkSheet = m => {
-      const options = linkable(m);
-      const pick = select(options.map(c => [c.id, `${c.name} (${c.kind === 'npc' ? 'NPC' : 'PC'}${c.owner ? `, ${c.owner.name}` : ', no player'})`]), options[0]?.id ?? '', { 'aria-label': 'Character sheet' });
-      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Link a character sheet' });
-      const form = el('form', { method: 'dialog' }, el('h3', {}, `${m.display_name}'s character sheet`),
-        el('p', { class: 'small muted' }, `The sheet becomes ${m.display_name}'s, and its name is the one the app shows for them.`),
-        field('Sheet', pick),
+    /** The Person entries (or entries with no Category) with no sheet yet, which a GM can link a member to: a sheet is
+     * made for the one picked. The one named as their character comes first. */
+    const sheetEntries = new Set(sheets.map(c => c.entry_id));
+    const linkableEntries = m => {
+      if (!isGM()) return [];
+      const name = (m.character_name || '').trim().toLowerCase();
+      return S.encyclopedia.filter(e => !sheetEntries.has(e.id) && (!e.category || e.category === 'person') && (e.category === 'person' || e.name.toLowerCase() === name))
+        .sort((a, b) => (b.name.toLowerCase() === name) - (a.name.toLowerCase() === name) || a.name.localeCompare(b.name));
+    };
+    const linkSheet = async m => {
+      const options = linkable(m), entries = linkableEntries(m);
+      const name = (m.character_name || '').trim().toLowerCase();
+      // a sheet named as their character first, then an entry named so, then the rest of the sheets, then the entries
+      const named = entries.length && entries[0].name.toLowerCase() === name && !(options[0]?.name.toLowerCase() === name);
+      const sheetOpts = options.map(c => [`c${c.id}`, `${c.name} (${c.kind === 'npc' ? 'NPC' : 'PC'} sheet${c.owner ? `, ${c.owner.name}` : ', no player'})`]);
+      const entryOpts = entries.map(e => [`e${e.id}`, `${e.name} (Encyclopedia entry, no sheet yet)`]);
+      const all = named ? [entryOpts[0], ...sheetOpts, ...entryOpts.slice(1)] : [...sheetOpts, ...entryOpts];
+      const pick = select(all, all[0]?.[0] ?? '', { 'aria-label': 'Character' });
+      let tpl = null;
+      const tplRow = el('div');
+      const fit = async () => {
+        if (!pick.value.startsWith('e')) { tplRow.replaceChildren(); return; }
+        if (!tpl) tpl = await Sheets.templatePick().catch(() => null);
+        tplRow.replaceChildren(tpl ? field('Template for its sheet', tpl) : el('p', { class: 'small muted' }, 'Make a sheet template first.'));
+      };
+      pick.addEventListener('change', fit);
+      const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Link a character' });
+      const form = el('form', { method: 'dialog' }, el('h3', {}, `${m.display_name}'s character`),
+        el('p', { class: 'small muted' }, `The character becomes ${m.display_name}'s, and its name is the one the app shows for them. An Encyclopedia entry with no sheet gets one, on the template you pick.`),
+        field('Character', pick), tplRow,
         el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Link'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
       d.addEventListener('close', async () => {
         d.remove();
         if (d.returnValue !== 'ok' || !pick.value) return;
-        try { await post('member_link_character', { user_id: m.id, character_id: Number(pick.value) }, S.camp.id); await loadCampaign(S.camp.id, true); route(); }
-        catch (err) { toast(err.message, true); }
+        const id = Number(pick.value.slice(1));
+        try {
+          if (pick.value.startsWith('c')) await post('member_link_character', { user_id: m.id, character_id: id }, S.camp.id);
+          else if (!tpl) return toast('Make a sheet template first', true);
+          else await Sheets.linkToMember({ entryId: id, templateId: Number(tpl.value), uid: Number(m.id) });
+          await loadCampaign(S.camp.id, true); route();
+        } catch (err) { toast(err.message, true); }
       });
       d.append(form); document.body.append(d); d.showModal();
+      await fit();
     };
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
       S.members.map(m => {
@@ -5480,7 +5516,7 @@
               if (name === null) return;
               try { await post('member_character', { user_id: m.id, character_name: name }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Events and notes they add are signed with this name instead of their own') : null,
-            canLink && linkable(m).length ? btn('Link a sheet…', () => linkSheet(m), 'small', 'Match this character up with a sheet on the Characters tab') : null,
+            canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
             canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
               'small', 'Give this character a sheet on the Characters tab, with this name') : null,
             isGM() ? btn('Remove', async () => {

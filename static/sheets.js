@@ -777,6 +777,47 @@ const Sheets = (() => {
     (preset ? search : name).focus();
   }
 
+  /** Make member uid play a Person entry: its character (characterId), or for an entry with none a new PC sheet on
+   * template templateId. It becomes their active character, whose name the app shows for them. */
+  async function linkToMember({ entryId, characterId = null, templateId = null, uid }) {
+    let id = characterId;
+    if (!id) id = (await ctx.post('character_create', { template_id: templateId, entry_id: entryId, kind: 'pc', owner_id: uid }, cid())).character.id;
+    await ctx.post('member_link_character', { user_id: uid, character_id: id }, cid());
+    return id;
+  }
+  /** The templates to pick from for a sheet made while linking, or null (with a toast) when there are none. */
+  async function templatePick() {
+    const { templates } = await ctx.api('templates');
+    if (!templates.length) { toast('There are no templates yet. Make one in Sheet templates first', true); return null; }
+    return el('select', { 'aria-label': 'Template', required: true }, templates.map(t => el('option', { value: t.id }, `${t.name} — ${metaLine(t)}`)));
+  }
+  /** A GM links Person entry e to a member of the campaign, who then plays it (a sheet is made for an entry without one). */
+  async function linkMember(e) {
+    const S = ctx.S;
+    const ch = S.encChars?.[e.id] || null;
+    const pick = ch ? null : await templatePick();
+    if (!ch && !pick) return;
+    const people = [...S.members.filter(m => m.role === 'player'), ...S.members.filter(m => m.role === 'gm')];
+    const who = el('select', { 'aria-label': 'Member', required: true }, people.map(m =>
+      el('option', { value: m.id, selected: Number(m.id) === ch?.owner?.id }, `${m.display_name}${m.role === 'gm' ? ' (GM)' : ''}${m.character_name ? ` — now ${m.character_name}` : ''}`)));
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': `Link ${e.name} to a member` },
+      el('form', { method: 'dialog' }, el('h3', {}, `Who plays ${e.name}?`),
+        el('p', { class: 'small muted' }, `${e.name} becomes their character, and the name the app shows for them.${ch ? '' : ' It gets a character sheet on the template you pick.'}`),
+        ctx.field('Member', who), pick ? ctx.field('Template', pick) : null,
+        el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Link'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel'))));
+    d.addEventListener('close', async () => {
+      d.remove();
+      if (d.returnValue !== 'ok' || !who.value) return;
+      try {
+        await linkToMember({ entryId: e.id, characterId: ch?.id || null, templateId: pick ? Number(pick.value) : null, uid: Number(who.value) });
+        await ctx.reloadCampaign();
+        ctx.route();
+      } catch (err) { toast(err.message, true); }
+    });
+    document.body.append(d);
+    d.showModal();
+  }
+
   /** A GM gives Encyclopedia entry e a character sheet: pick a template, and PC or NPC (NPC to start). */
   async function addToEntry(e) {
     const { templates } = await ctx.api('templates');
@@ -1018,5 +1059,5 @@ const Sheets = (() => {
     return renderLibrary();
   }
 
-  return { mount, route, campaignRoute, newCharacter, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, closePdf, stopPresence };
+  return { mount, route, campaignRoute, newCharacter, renderLibrary, renderTemplate, renderEditor, renderSheetForm, renderCharacters, renderCharacter, addToEntry, linkMember, linkToMember, templatePick, closePdf, stopPresence };
 })();
