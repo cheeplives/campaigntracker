@@ -78,7 +78,7 @@
     const quick = el('div', { class: 'dice-quick', role: 'group', 'aria-label': 'Roll one die' },
       QUICK.map(q => el('button', { type: 'button', class: 'dice-chip', 'data-tip': `Roll one ${q}`, onclick: () => roll(q === 'dF' ? '1dF' : `1${q}`) }, q)));
     const sub = el('span', { class: 'dice-sub small muted' }, 'Free dice');
-    const panel = el('aside', { class: 'dice-panel', hidden: true, 'aria-label': 'Dice roller' },
+    const panel = el('section', { class: 'dice-panel', hidden: true, role: 'region', 'aria-label': 'Dice roller' },
       el('div', { class: 'dice-head' }, el('h2', {}, '🎲 Dice'), sub,
         el('button', { type: 'button', class: 'dice-x', 'aria-label': 'Close the dice roller', 'data-tip': 'Close. The log keeps everyone\'s rolls', onclick: () => setOpen(false) }, '✕')),
       log,
