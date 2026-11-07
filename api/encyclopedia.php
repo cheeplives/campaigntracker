@@ -336,7 +336,10 @@ function encyclopedia_action(string $action): void {
             $id = (int)db()->lastInsertId();
         }
         db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
-        if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'), 'entry');
+        if (array_key_exists('tags', body())) {
+            save_event_tags($cid, $id, p('tags'), 'entry');
+            character_kind_from_tags($cid, $id, $isGm);   // a PC or NPC tag changed here changes the character's Kind
+        }
         if ($old) character_names_sync($id);
         $v = db()->prepare('SELECT version FROM encyclopedia_entries WHERE id=?');
         $v?->execute([$id]);
