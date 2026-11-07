@@ -99,6 +99,42 @@ const MapsTab = (() => {
     return new Bar({ position: 'bottomleft' });
   }
 
+  // ------------------------------------------------------------ very large pictures
+
+  const BIG_PICTURE = 16e6;   // pixels (4000 x 4000), from where a picture is tiled
+
+  /** A tile layer showing the picture at `url` (w x h, in the map's own pixels): each 256 px tile is drawn from the decoded
+   * image when it is asked for, from a half, quarter... size copy (made once, on first use) when zoomed out. */
+  function bigPicture(url, w, h, bounds) {
+    const img = new Image();
+    const loaded = (img.src = url, img.decode ? img.decode().catch(() => new Promise(r => { img.onload = r; img.onerror = r; })) : new Promise(r => { img.onload = r; img.onerror = r; }));
+    const levels = new Map();   // how many halvings => the source to draw from (a promise)
+    const level = k => {
+      if (!levels.has(k)) {
+        levels.set(k, k === 0 || typeof createImageBitmap !== 'function' ? Promise.resolve(img)
+          : createImageBitmap(img, { resizeWidth: Math.max(1, Math.ceil(w / 2 ** k)), resizeHeight: Math.max(1, Math.ceil(h / 2 ** k)), resizeQuality: 'high' }).catch(() => img));
+      }
+      return levels.get(k);
+    };
+    const Tiles = L.GridLayer.extend({
+      createTile(coords, done) {
+        const tile = document.createElement("canvas");
+        tile.width = tile.height = 256;
+        const scale = 2 ** coords.z, span = 256 / scale;   // picture pixels one tile covers
+        const k = coords.z < 0 ? Math.min(Math.floor(-coords.z), 8) : 0;
+        loaded.then(() => level(k)).then(src => {
+          const f = src === img ? 1 : (src.width / w);   // the source's pixels per picture pixel
+          const sx = coords.x * span * f, sy = coords.y * span * f, sw = span * f, sh = span * f;
+          const ex = Math.min(sx + sw, src.width), ey = Math.min(sy + sh, src.height);
+          if (ex > sx && ey > sy) tile.getContext('2d').drawImage(src, sx, sy, ex - sx, ey - sy, 0, 0, Math.round(256 * (ex - sx) / sw), Math.round(256 * (ey - sy) / sh));
+          done(null, tile);
+        }).catch(err => done(err, tile));
+        return tile;
+      },
+    });
+    return new Tiles({ pane: 'mapPicture', tileSize: 256, bounds, noWrap: true, minZoom: -5, maxZoom: 4, minNativeZoom: -8, maxNativeZoom: 6, className: 'map-big-picture', keepBuffer: 1 });
+  }
+
   // ------------------------------------------------------------ the list
 
   async function list(ctx) {
@@ -1333,7 +1369,10 @@ const MapsTab = (() => {
     // the picture, then the grid over it, both under the routes and pins (overlayPane is 400, markers above)
     lmap.createPane('mapPicture').style.zIndex = 300;
     lmap.createPane('mapGrid').style.zIndex = 350;
-    L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
+    // a very large picture is drawn in tiles, cut from the image as they are needed (and from smaller copies when zoomed out),
+    // so no one huge element has to be scaled: tablets and phones refuse or blur those
+    if (map.width * map.height > BIG_PICTURE) bigPicture(map.image_url, map.width, map.height, bounds()).addTo(lmap);
+    else L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
     lmap.fitBounds(bounds());
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);

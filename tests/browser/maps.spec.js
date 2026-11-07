@@ -731,8 +731,22 @@ test("Maps: a large picture opens", async ({ page, browser }) => {
   expect(up.status, JSON.stringify(up.json)).toBe(200);
   await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
   await page.goto(`#/c/${cid}/maps/${id}`);
-  await expect.poll(() => page.locator(".map-view img.leaflet-image-layer").evaluate(i => i.naturalWidth)).toBe(6000);
+  // 24 million pixels is drawn in tiles, not as one picture
+  await expect(page.locator(".map-view .map-big-picture canvas").first()).toBeVisible();
+  await expect(page.locator(".map-view img.leaflet-image-layer")).toHaveCount(0);
+  await expect.poll(() => page.locator(".map-view .map-big-picture canvas").count()).toBeGreaterThan(0);
+  // and the tiles hold the picture (the test picture is grey): the middle tile is not blank
+  const grey = await page.locator(".map-view .map-big-picture canvas").first().evaluate(c => { const d = c.getContext("2d").getImageData(128, 128, 1, 1).data; return [d[0], d[3]]; });
+  expect(grey).toEqual([127, 255]);
+  // the grid and pins still sit on it: a pin lands at the clicked place
+  await api(page, "pin_save", { map_id: id, x: 3000, y: 2000, kind: "note", label: "Middle" }, cid);
+  await page.reload();
+  await expect(page.locator(".map-pin", { hasText: "Middle" })).toBeVisible();
   expectNoErrors(errors);
+  // a picture under that size keeps its single image
+  const small = await mapWithPicture(page, cid);
+  await page.goto(`#/c/${cid}/maps/${small}`);
+  await expect(page.locator(".map-view img.leaflet-image-layer")).toHaveCount(1);
 });
 
 test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser }) => {
