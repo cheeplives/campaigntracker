@@ -2,6 +2,7 @@
 // file name, path lengths, distance wording for ground and space maps, and matching pins to entry names.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
+const { hexGray } = require("./helpers");
 const E = require(path.join(__dirname, "..", "..", "static", "engine.js"));
 const MapGeo = require(path.join(__dirname, "..", "..", "static", "mapgeo.js"));
 const { AU, LY } = E;
@@ -128,4 +129,21 @@ test("detectGrid finds the size and offset of a square grid drawn on a picture, 
   expect(MapGeo.detectGrid(terrain(800, 600, 50, 0, false), 800, 600)).toBe(null);
   expect(MapGeo.detectGrid(new Uint8Array(40 * 30), 40, 30)).toBe(null);   // too small to hold a grid
   expect(MapGeo.detectGrid(new Uint8Array(800 * 600).fill(120), 800, 600)).toBe(null);   // flat colour
+});
+
+test("detectAnyGrid tells flat hexes, pointy hexes and squares apart, and finds nothing in noise", () => {
+  const draw = (w, h, f) => { const g = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) g[y * w + x] = f(x, y); return g; };
+  for (const [type, s, ox, oy] of [["hex_flat", 40, 10, 7], ["hex_pointy", 46, 20, 5]]) {
+    const r = MapGeo.detectAnyGrid(draw(500, 420, hexGray(type, s, ox, oy)), 500, 420);
+    expect(r, type).not.toBe(null);
+    expect(r.type).toBe(type);
+    expect(Math.abs(r.px - s)).toBeLessThan(0.6);
+    expect(Math.abs(r.offset_x - ox)).toBeLessThan(1.5);
+    expect(Math.abs(r.offset_y - oy)).toBeLessThan(1.5);
+  }
+  // squares are still squares, not hexes
+  const sq = MapGeo.detectAnyGrid(terrain(500, 420, 50, 17), 500, 420);
+  expect(sq.type).toBe("square");
+  expect(Math.abs(sq.px - 50)).toBeLessThan(0.3);
+  expect(MapGeo.detectAnyGrid(terrain(500, 420, 50, 0, false), 500, 420)).toBe(null);
 });

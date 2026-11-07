@@ -53,7 +53,8 @@ function maps_list(int $cid, bool $isGm): array {
     $st = db()->prepare('SELECT m.*, (SELECT COUNT(*) FROM map_pins p' . MAP_PIN_JOINS . ' WHERE p.map_id=m.id' . map_pin_visible_sql($isGm) . ') AS pins
         FROM maps m WHERE m.campaign_id=?' . ($isGm ? '' : ' AND m.is_secret=0') . ' ORDER BY m.id');
     $st->execute([$cid]);
-    return array_map(fn($m) => map_out($m) + ['pins' => (int)$m['pins']], $st->fetchAll());
+    // 'inside': the pin and map this one opens from, when this member may see them (see map_parent)
+    return array_map(fn($m) => map_out($m) + ['pins' => (int)$m['pins'], 'inside' => map_parent($cid, (int)$m['id'], $isGm)], $st->fetchAll());
 }
 /** A number from a request, or null when it is null or empty; fails if it isn't one. $min is the lowest allowed. */
 function map_num($v, string $what, float $min = 0.0, ?float $max = null, bool $above = false): ?float {

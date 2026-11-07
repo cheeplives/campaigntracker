@@ -108,7 +108,8 @@ const MapsTab = (() => {
     const cards = maps.map(m => el('a', { class: 'map-card' + (m.is_secret ? ' secret' : ''), href: `#/c/${cid}/maps/${m.id}` },
       m.image_url ? el('img', { src: m.image_url, alt: '', loading: 'lazy' }) : el('span', { class: 'map-card-blank muted small' }, 'No picture'),
       el('strong', {}, m.is_secret ? '🔒 ' : '', m.name),
-      el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : '')));
+      el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : ''),
+      m.inside ? el('span', { class: 'small muted map-card-inside' }, `Inside ${m.inside.label} on ${m.inside.map_name}`) : null));
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' },
       el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary small') : null),
       cards.length ? el('div', { class: 'map-grid' }, cards) : el('p', { class: 'muted' }, ctx.isGM() ? 'No maps yet. Add one with + New map.' : 'No maps yet.')));
@@ -297,7 +298,7 @@ const MapsTab = (() => {
       gridBtn.hidden = !has || !map.image_url;
       gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
       opacityBox.hidden = !has || !map.image_url || !gridWanted();
-      const g = gridPreview ? { px: gridPreview.px, ox: gridPreview.ox, oy: gridPreview.oy, type: 'square' } : { px: map.grid_px, ox: map.grid_offset_x, oy: map.grid_offset_y, type: map.grid_type };
+      const g = gridPreview ? { px: gridPreview.px, ox: gridPreview.ox, oy: gridPreview.oy, type: gridPreview.type } : { px: map.grid_px, ox: map.grid_offset_x, oy: map.grid_offset_y, type: map.grid_type };
       if (!lf || !(g.px > 0) || !(gridPreview || (has && gridWanted()))) return;
       const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
       const t = G.gridTile(g.type, g.px), pid = `map-grid-${id}`;
@@ -342,7 +343,7 @@ const MapsTab = (() => {
       panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools();
       if (refit) fitPicture();
     }
-    /** Look for a square grid in the map's picture (in the browser, on a shrunk copy): {px, offset_x, offset_y} in picture pixels, or null. */
+    /** Look for a square or hex grid in the map's picture (in the browser, on a shrunk copy): {type, px, offset_x, offset_y} in picture pixels, or null. */
     async function findGrid() {
       const img = new Image();
       img.src = map.image_url;
@@ -355,11 +356,12 @@ const MapsTab = (() => {
       c.drawImage(img, 0, 0, w, h);
       const d = c.getImageData(0, 0, w, h).data, gray = new Uint8Array(w * h);
       for (let i = 0; i < gray.length; i++) gray[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
-      const r = G.detectGrid(gray, w, h);
+      await new Promise(r => setTimeout(r, 30));   // let "Looking…" show before the work holds the page
+      const r = G.detectAnyGrid(gray, w, h);
       if (!r) return null;
       const k = map.width / w;   // back to picture pixels
       const q = v => Math.round(v * k * 100) / 100;
-      return { px: q(r.px), offset_x: q(r.offset_x), offset_y: q(r.offset_y) };
+      return { type: r.type, px: q(r.px), offset_x: q(r.offset_x), offset_y: q(r.offset_y) };
     }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
@@ -386,13 +388,14 @@ const MapsTab = (() => {
         try {
           const r = await findGrid();
           if (r && panel) {
-            found = r; px.value = String(r.px); show('grid');
-            gridPreview = { px: r.px, ox: r.offset_x, oy: r.offset_y }; drawGrid();
-            toast(`Found a grid of about ${Math.round(r.px * 10) / 10} px. Check it lines up, then save the scale`);
+            found = r; px.value = String(r.px); shape.value = r.type; show('grid');
+            gridPreview = { type: r.type, px: r.px, ox: r.offset_x, oy: r.offset_y }; drawGrid();
+            toast(`Found a ${r.type === 'square' ? 'square' : 'hex'} grid of about ${Math.round(r.px * 10) / 10} px. Check it lines up, then save the scale`);
           } else if (!quiet) toast('No grid found on the picture. Type its size, or click a run of squares', true);
         } catch { if (!quiet) toast('Couldn\'t read the picture to look for a grid', true); } finally { finding = false; findBtn.disabled = false; }
       };
       const findBtn = btn('Find the grid', () => find(false), 'small', 'Look for a square grid drawn on the picture and fill in its size');
+      shape.addEventListener('change', () => { if (found && shape.value !== found.type) found = null; if (gridPreview) { gridPreview.type = shape.value; drawGrid(); } });   // the preview follows the shape picked
       px.addEventListener('input', () => { found = null; if (gridPreview) { gridPreview = null; drawGrid(); } });
       const fromRun = () => {
         const n = +count.value;
@@ -1093,8 +1096,9 @@ const MapsTab = (() => {
         if (!res.ok) throw new Error(`The picture could not be fetched (${res.status})`);
         return new Uint8Array(await res.arrayBuffer());
       };
+      const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
       const asPicture = btn('Picture', async () => {
-        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[VTT.pictureType(bytes)] || 'img')); d.close(); }
+        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName(EXT[VTT.pictureType(bytes)] || 'img')); d.close(); }
         catch (err) { toast(err.message, true); }
       }, '', 'The map\'s picture, as it was uploaded');
       const hasGrid = map.grid_px > 0;
@@ -1103,8 +1107,16 @@ const MapsTab = (() => {
         catch (err) { toast(err.message, true); }
       }, '', 'The picture with its grid, for Foundry, Roll20, Owlbear Rodeo, MapTool or Fantasy Grounds. Pins and routes stay here');
       asUvtt.disabled = !hasGrid;
+      // Foundry reads a scene's JSON with the pins as Notes; the picture is kept beside it, so it is named in the scene
+      const asFoundry = btn('Foundry scene (.json)', async () => {
+        try {
+          const bytes = await picture(), ext = EXT[VTT.pictureType(bytes)] || 'img';
+          save(new Blob([VTT.toFoundry(map, pins.map(p => ({ x: p.x, y: p.y, text: G.pinName(p) })), fileName(ext))], { type: 'application/json' }), fileName('json'));
+          d.close(); toast(`Saved the scene. Export the picture too and keep it as ${fileName(ext)} beside it`);
+        } catch (err) { toast(err.message, true); }
+      }, '', 'The map as a Foundry scene with its pins as Notes (Import Data). Export the picture too: Foundry keeps it separate');
       d.append(el('h3', {}, `Export ${map.name}`),
-        el('div', { class: 'row' }, asPicture, asUvtt),
+        el('div', { class: 'row' }, asPicture, asUvtt, asFoundry),
         hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
           : el('p', { class: 'small' }, 'Set grid squares first (⚙ → Set scale… → Grid squares) to export a Universal VTT file.'),
         el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
