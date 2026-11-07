@@ -58,24 +58,30 @@
     if (s.length > LIMITS.length) bad(`That's too long (the most is ${LIMITS.length} characters)`);
     const hash = s.indexOf('#');
     const label = hash >= 0 ? s.slice(hash + 1).trim() : '';
-    let expr = (hash >= 0 ? s.slice(0, hash) : s).toLowerCase().replace(/[−–—]/g, '-').replace(/×/g, '*').replace(/÷/g, '/').replace(/≥/g, '>=').replace(/≤/g, '<=');
+    let head = hash >= 0 ? s.slice(0, hash) : s;
+    // A dice system's reading (static/dice-systems.js) follows an @: "7d10>=6 @pool t=6 ones=1". The dice are rolled
+    // from what comes before it; the system reads them.
+    const at = head.indexOf('@');
+    const system = at >= 0 ? head.slice(at + 1).trim() : '';
+    if (at >= 0) head = head.slice(0, at);
+    let expr = head.toLowerCase().replace(/[−–—]/g, '-').replace(/×/g, '*').replace(/÷/g, '/').replace(/≥/g, '>=').replace(/≤/g, '<=');
     for (const [re, to] of WORDS) expr = expr.replace(re, to);
     expr = expr.replace(/\s+/g, '');
-    return { expr, label };
+    return { expr, label, system };
   }
 
   /** Read a free roll into a tree, or fail with a DiceError that says what is wrong. */
   function parse(input) {
-    const { expr, label } = tidy(input);
+    const { expr, label, system } = tidy(input);
     if (!expr) bad('Type a roll, like 2d6+3');
     const rep = /^(\d+)x\((.+)\)$/.exec(expr);
     if (rep) {
       const times = Number(rep[1]);
       if (times < 1 || times > LIMITS.repeat) bad(`Repeat a roll 1 to ${LIMITS.repeat} times`);
-      return { repeat: times, node: read(rep[2]), expr, label };
+      return { repeat: times, node: read(rep[2]), expr, label, system };
     }
     if (/\dx\(/.test(expr)) bad('Repeat goes round the whole roll, like 6x(4d6kh3)');
-    return { node: read(expr), expr, label };
+    return { node: read(expr), expr, label, system };
   }
 
   function read(s) {
@@ -282,7 +288,14 @@
     const p = parse(input);
     const R = seeded(seed || newSeed());
     const results = Array.from({ length: p.repeat || 1 }, () => rollOnce(p.node, R));
-    return { expr: p.expr, label: p.label, repeat: p.repeat || 0, results, v: VERSION };
+    return { expr: p.expr, label: p.label, system: p.system, repeat: p.repeat || 0, results, v: VERSION };
+  }
+
+  /** Roll the dice part of a roll n times from one fresh seed, for working out odds: calls each(result) for every go. */
+  function simulate(input, n, each) {
+    const p = parse(input);
+    const R = seeded(newSeed(), n * LIMITS.draws);
+    for (let k = 0; k < n; k++) each(rollOnce(p.node, R));
   }
 
   /** "Is this a roll?" for the free-roll box: null when it reads, else what is wrong. */
@@ -296,7 +309,7 @@
     return r.results.map(one).join(', ');
   }
 
-  const Dice = { VERSION, LIMITS, DiceError, newSeed, seeded, parse, roll, check, summary, swapped };
+  const Dice = { VERSION, LIMITS, DiceError, newSeed, seeded, parse, roll, simulate, check, summary, swapped };
   if (typeof module !== 'undefined' && module.exports) module.exports = Dice;
   else root.Dice = Dice;
 })(typeof window !== 'undefined' ? window : globalThis);

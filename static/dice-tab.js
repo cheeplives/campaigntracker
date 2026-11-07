@@ -14,7 +14,8 @@
   'use strict';
   function make(ctx) {
     const { S, api, el, isGM, post, toast } = ctx;
-    const Dice = root.Dice;
+    const Dice = root.Dice, DS = root.DiceSystems, DiceUI = root.DiceUI;
+    const ask = ctx.promptDialog;
 
     const QUICK = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100', 'dF'];
     const POLL_MS = 4000;
@@ -47,6 +48,8 @@
     const VIS_GM = [['all', 'Everyone', 'Everyone at the table sees this roll'], ['gm', 'GMs only', 'Only the GMs see this roll']];
 
     let cid = null, rolls = [], lastId = 0, seenId = 0, settings = null, pollTimer = null, loading = null, fresh = new Set();
+    // The campaign's dice system (Settings → Dice), the numbers on the roller now, and which kind of roll is showing.
+    let sysNow = null, sysSig = '', sysP = null, mode = 'free', oddsTimer = null, busy = false;
     const store = {
       get: k => { try { return localStorage.getItem(k); } catch { return null; } },
       set: (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private window */ } },
@@ -54,12 +57,26 @@
     const openKey = () => `chronicle-dice-open-${cid}`;
     const seenKey = () => `chronicle-dice-seen-${cid}`;
     const visKey = () => `chronicle-dice-vis-${cid}`;
+    const modeKey = () => `chronicle-dice-mode-${cid}`;
+    const sysKey = () => `chronicle-dice-sys-${cid}`;
+    const MORE_KEY = 'chronicle-dice-more';
     const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ------------------------------------------------------------ the button and the panel
     const dot = el('span', { class: 'dice-dot', hidden: true, 'aria-hidden': 'true' });
     const fab = el('button', { type: 'button', class: 'dice-fab', hidden: true, 'aria-label': 'Dice roller', 'aria-expanded': 'false', 'data-tip': 'Roll dice. Everyone at the table sees the log' },
-      el('span', { 'aria-hidden': 'true' }, '🎲'), dot);
+      pileIcon(), dot);
+    /** The button's picture: a d20 with a d4 and a d6 in front of it, drawn in the theme's colours. */
+    function pileIcon() {
+      const span = el('span', { class: 'dice-pile', 'aria-hidden': 'true' });
+      span.innerHTML = `<svg viewBox="0 0 48 48" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+        <g class="pd20"><path d="M19 4 31.6 11.3v14.6L19 33.2 6.4 25.9V11.3Z"/><path d="M19 11 27.6 25 10.4 25Z M19 4v7 M6.4 11.3 19 11 M31.6 11.3 19 11 M6.4 11.3l4 13.7 M31.6 11.3l-4 13.7 M6.4 25.9l4-.9 M31.6 25.9l-4-.9 M19 33.2l-8.6-8.2 M19 33.2l8.6-8.2" fill="none"/></g>
+        <g class="pd4"><path d="M14 25.5 3.5 43 14.5 46.5 24.5 41Z"/><path d="M14 25.5 14.5 46.5" fill="none"/></g>
+        <g class="pd6"><path d="M34 22 44.5 27.2 34 32.4 23.5 27.2Z"/><path d="M23.5 27.2 34 32.4V45L23.5 39.6Z"/><path d="M34 32.4 44.5 27.2V39.6L34 45Z"/>
+          <g fill="currentColor" stroke="none"><circle cx="34" cy="27.2" r="1.6"/><circle cx="26.3" cy="32" r="1.3"/><circle cx="31.2" cy="40.2" r="1.3"/><circle cx="36.7" cy="40.2" r="1.3"/><circle cx="39.25" cy="36.1" r="1.3"/><circle cx="41.8" cy="32" r="1.3"/></g></g>
+      </svg>`;
+      return span;
+    }
     const log = el('ol', { class: 'dice-log', 'aria-live': 'polite', 'aria-label': 'Rolls, newest first' });
     const input = el('input', { type: 'text', class: 'dice-input', placeholder: 'Free roll: 1d10, 2d6+3, 4d6kh3…', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false',
       'aria-label': 'Free roll', maxlength: String(Dice.LIMITS.length) });
@@ -78,19 +95,68 @@
     const quick = el('div', { class: 'dice-quick', role: 'group', 'aria-label': 'Roll one die' },
       QUICK.map(q => el('button', { type: 'button', class: 'dice-chip', 'data-tip': `Roll one ${q}`, onclick: () => roll(q === 'dF' ? '1dF' : `1${q}`) }, q)));
     const sub = el('span', { class: 'dice-sub small muted' }, 'Free dice');
+
+    // The game roll: the campaign's dice system, its numbers, the odds, and a Roll button.
+    const tabGame = el('button', { type: 'button', role: 'tab', class: 'dice-tab', id: 'dice-tab-game', 'aria-controls': 'dice-sys' }, 'Game roll');
+    const tabFree = el('button', { type: 'button', role: 'tab', class: 'dice-tab', id: 'dice-tab-free', 'aria-controls': 'dice-free' }, 'Free roll');
+    const modes = el('div', { class: 'dice-modes', role: 'tablist', 'aria-label': 'Kind of roll', hidden: true }, tabGame, tabFree);
+    const forInput = el('input', { type: 'text', class: 'dice-for', placeholder: 'Roll for… (optional)', maxlength: '60', autocomplete: 'off', 'aria-label': 'What the roll is for' });
+    const mainBox = el('div', { class: 'dsp-grid' });
+    const moreBox = el('div', { class: 'dsp-grid' });
+    const more = el('details', { class: 'dice-more' }, el('summary', { class: 'small' }, 'More options'), moreBox);
+    const odds = DiceUI.oddsBar(el);
+    const sysNotation = el('span', { class: 'dice-sys-n mono' });
+    const sysRollBtn = el('button', { type: 'button', class: 'primary dice-go dice-sys-go' }, el('span', {}, 'Roll'), sysNotation);
+    const sysBox = el('div', { class: 'dice-sys', id: 'dice-sys', role: 'tabpanel', 'aria-labelledby': 'dice-tab-game', hidden: true },
+      mainBox, more, odds.node,
+      el('div', { class: 'dice-row' }, forInput, sysRollBtn));
+    const freeBox = el('div', { class: 'dice-free', id: 'dice-free', role: 'tabpanel', 'aria-labelledby': 'dice-tab-free' }, quick,
+      el('div', { class: 'dice-row' }, input, helpBtn, rollBtn));
+
+    // Saved rolls: this person's, in this campaign (their account prefs, so they follow them to another device).
+    const savedSel = el('select', { class: 'dice-saved', 'aria-label': 'Saved rolls' });
+    const saveBtn = el('button', { type: 'button', class: 'small dice-save', 'data-tip': 'Save the roll as it is now, with a name, to roll again later' }, '☆ Save');
+    const forgetBtn = el('button', { type: 'button', class: 'small dice-forget', hidden: true, 'aria-label': 'Forget this saved roll', 'data-tip': 'Forget this saved roll' }, '🗑');
+    const who = el('label', { class: 'dice-who small muted', 'data-tip': 'Who sees the rolls you make' }, el('span', { 'aria-hidden': 'true' }, '👁'), visSel, visFixed);
+    const savedRow = el('div', { class: 'dice-saved-row' }, savedSel, saveBtn, forgetBtn, who);
+
+    // Pinned beside the page (it moves over) or floating over it (nothing moves): 📌 switches, remembered on this device.
+    // Until someone picks, a mouse and keyboard pin it and a touch screen floats it.
+    const PIN_KEY = 'chronicle-dice-pin';
+    const pinBtn = el('button', { type: 'button', class: 'dice-pin', 'aria-label': 'Pin the roller beside the page' }, '📌');
+    const pinned = () => { const v = store.get(PIN_KEY); return v ? v === 'pin' : matchMedia('(hover: hover) and (pointer: fine)').matches; };
+    function drawPin() {
+      const on = pinned();
+      document.body.classList.toggle('dice-float', !on);
+      pinBtn.setAttribute('aria-pressed', String(on));
+      pinBtn.dataset.tip = on ? 'Pinned beside the page. Tap to float it over the page instead' : 'Floating over the page. Tap to pin it beside the page instead';
+    }
+    pinBtn.addEventListener('click', () => { store.set(PIN_KEY, pinned() ? 'float' : 'pin'); drawPin(); });
+    drawPin();
     const panel = el('section', { class: 'dice-panel', hidden: true, role: 'region', 'aria-label': 'Dice roller' },
       el('div', { class: 'dice-head' }, el('h2', {}, '🎲 Dice'), sub,
+        pinBtn,
         el('button', { type: 'button', class: 'dice-x', 'aria-label': 'Close the dice roller', 'data-tip': 'Close. The log keeps everyone\'s rolls', onclick: () => setOpen(false) }, '✕')),
       log,
-      el('div', { class: 'dice-foot' }, help, quick,
-        el('div', { class: 'dice-row' }, input, helpBtn, rollBtn),
-        err,
-        el('label', { class: 'dice-who small muted' }, el('span', {}, '👁 Who sees it'), visSel, visFixed)));
+      el('div', { class: 'dice-foot' }, help, modes, sysBox, freeBox, err, savedRow));
     document.body.append(fab, panel);
 
     fab.addEventListener('click', () => setOpen(true));
     helpBtn.addEventListener('click', () => showHelp(help.hidden));
     rollBtn.addEventListener('click', () => roll(input.value));
+    sysRollBtn.addEventListener('click', rollGame);
+    forInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rollGame(); } });
+    tabGame.addEventListener('click', () => setMode('game', true));
+    tabFree.addEventListener('click', () => setMode('free', true));
+    modes.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      setMode(mode === 'game' ? 'free' : 'game', true);
+      (mode === 'game' ? tabGame : tabFree).focus();
+    });
+    more.addEventListener('toggle', () => store.set(MORE_KEY, more.open ? '1' : null));
+    savedSel.addEventListener('change', () => useSaved(Number(savedSel.value)));
+    saveBtn.addEventListener('click', saveRoll);
+    forgetBtn.addEventListener('click', forgetRoll);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); roll(input.value); } });
     input.addEventListener('input', () => { if (err.textContent) check(); });
     visSel.addEventListener('change', () => store.set(visKey(), visSel.value));
@@ -124,7 +190,7 @@
         showHelp(false);
         load().then(() => { markSeen(); });
         startPoll();
-        if (matchMedia('(hover: hover)').matches) input.focus({ preventScroll: true });
+        if (matchMedia('(hover: hover)').matches) (mode === 'game' ? sysRollBtn : input).focus({ preventScroll: true });
       } else {
         stopPoll();
         fab.focus({ preventScroll: true });
@@ -152,6 +218,7 @@
           if (at !== cid) return;
           settings = r.settings;
           drawVis();
+          drawSys();
           take(r.rolls, !!lastId);
         } catch { /* offline for a moment: the next poll tries again */ } finally { loading = null; }
       })();
@@ -188,86 +255,52 @@
       return t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     };
     const VIS_MARK = { gm: ['🔒', 'Only the roller and the GMs see this roll'], blind: ['🙈', 'Only the GMs see what was rolled'] };
-    /** One roll in the log: who and what for, the result, what was rolled, and its dice. */
+    /** One roll in the log: who and what for, the result (as the campaign's dice system reads it, if it has one), what
+     * was rolled, and its dice. */
     function entry(r, latest) {
       const head = el('div', { class: 'dice-e-top' });
       const out = el('div', { class: 'dice-e-out' });
       const body = el('div', { class: 'dice-e-dice' });
+      const meta = el('div', { class: 'dice-e-meta small muted' });
       const mark = VIS_MARK[r.visibility];
-      let label = '', resultText = '?', words = '';
+      let label = '', big = '?', words = '', tier = null, note = null, sysName = '';
       if (r.seed === null) {
         words = 'Rolled for the GM';
         try { label = Dice.parse(r.expr).label; } catch { /* unreadable: no label either */ }
       } else {
         try {
           const res = Dice.roll(r.expr, r.seed);
+          const o = DiceUI.outcome(res, { table: sysNow?.table });
           label = res.label;
-          resultText = Dice.summary(res);
-          res.results.forEach((one, k) => body.append(resultDice(one, res.repeat ? k + 1 : 0, fresh.has(r.id) && !reduced())));
-          const m = res.results.length === 1 && res.results[0].mode === 'successes';
-          if (m) { const n = res.results[0].total; resultText = String(n); words = `success${Math.abs(n) === 1 ? '' : 'es'}`; }
+          ({ big, words, tier, note } = o);
+          if (o.sys && o.sys.id !== sysNow?.sys.id) sysName = o.sys.name;
+          body.append(...DiceUI.diceRows(el, res, { animate: fresh.has(r.id) && !reduced(), faces: o.faces }));
         } catch (e) {
-          resultText = '—';
+          big = '—';
           words = 'Can\'t read this roll';
         }
       }
       head.append(el('span', { class: 'dice-e-who' }, r.author || 'Someone', label ? el('span', { class: 'muted' }, ` · ${label}`) : null,
         mark ? el('span', { class: 'dice-e-vis', title: mark[1], 'aria-label': mark[1] }, ` ${mark[0]}`) : null));
-      out.append(el('b', {}, resultText));
-      if (words) out.append(el('small', {}, words));
-      const exprText = r.expr.split('#')[0].trim();
-      return el('li', { class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') },
-        el('div', { class: 'dice-e-main' }, head, el('div', { class: 'dice-e-meta small muted' }, el('span', { class: 'mono' }, exprText), ` · ${when(r.at)}`), body), out);
-    }
-    /** The dice of one result, term by term; a repeat says which go it was. */
-    function resultDice(one, go, animate) {
-      const row = el('div', { class: 'dice-terms' });
-      if (go) row.append(el('span', { class: 'dice-go-n small muted' }, `#${go} = ${one.total}`));
-      for (const t of one.terms) {
-        const g = el('span', { class: 'dice-term', title: t.src }, t.dice.map(d => die(d, t, animate)));
-        row.append(g);
-      }
-      return row;
-    }
-    const show = (t, v) => (t.sides === 'F' ? (v > 0 ? '+' : v < 0 ? '−' : '0') : String(v));
-    function die(d, t, animate) {
-      const cls = ['die', t.sides === 'F' ? 'dF' : `d${t.sides}`];
-      if (d.dropped) cls.push('dropped');
-      if (d.success) cls.push('hit');
-      if (d.fail) cls.push('miss');
-      if (d.exploded) cls.push('boom');
-      if (d.extra) cls.push('extra');
-      const tips = [];
-      if (d.rerolled.length) tips.push(`rerolled ${d.rerolled.join(', ')}`);
-      if (d.exploded) tips.push('exploded');
-      if (d.rolls.length > 1 && !d.note) tips.push(`rolls ${d.rolls.join(' + ')}`);
-      if (d.note) tips.push(d.note);
-      if (d.dropped) tips.push('dropped');
-      const n = el('span', { class: cls.join(' '), title: tips.join('; ') || undefined }, show(t, d.v));
-      if (animate) tumble(n, t, d);
-      return n;
-    }
-    /** A 2D die tumbling for a moment before it lands on its value (which was known before it started). */
-    function tumble(n, t, d) {
-      const faces = t.sides === 'F' ? [-1, 0, 1] : t.sides === 66 ? [11, 23, 36, 45, 52, 64] : null;
-      const any = () => (faces ? faces[Math.floor(Math.random() * faces.length)] : 1 + Math.floor(Math.random() * t.sides));
-      n.classList.add('rolling');
-      let k = 0;
-      const tick = setInterval(() => {
-        if (++k >= 7) { clearInterval(tick); n.textContent = show(t, d.v); n.classList.remove('rolling'); return; }
-        n.textContent = show(t, any());   // only the look of the tumble: the result is already set
-      }, 70);
+      out.append(el('b', {}, big));
+      if (words) out.append(el('small', { class: tier ? `tier t-${tier}` : null }, words));
+      const exprText = r.expr.split('#')[0].split('@')[0].trim();
+      meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`, ` · ${when(r.at)}`].filter(Boolean));
+      return el('li', { class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') },
+        el('div', { class: 'dice-e-main' }, head, meta, body), out);
     }
 
     // ------------------------------------------------------------ rolling
     async function roll(text) {
+      if (busy) return;
       const expr = String(text || '').trim();
       if (!expr) { err.textContent = 'Type a roll, like 2d6+3'; input.focus(); return; }
       const msg = Dice.check(expr);
       if (msg) { err.textContent = msg; input.classList.add('bad'); input.focus(); return; }
       err.textContent = '';
       input.classList.remove('bad');
-      rollBtn.disabled = true;
+      busy = true;
+      rollBtn.disabled = sysRollBtn.disabled = true;
       quick.querySelectorAll('button').forEach(b => { b.disabled = true; });
       try {
         const r = await post('dice_roll', { expr, engine: Dice.VERSION, visibility: visSel.value }, cid);
@@ -276,9 +309,139 @@
         await load();          // anything rolled since the last poll, then this one, in order
         take([r.roll], true);
       } catch (e) { toast(e.message, true); } finally {
-        rollBtn.disabled = false;
+        busy = false;
+        rollBtn.disabled = sysRollBtn.disabled = false;
         quick.querySelectorAll('button').forEach(b => { b.disabled = false; });
       }
+    }
+
+    // ------------------------------------------------------------ the game roll
+    /** Show the game roll or the free roll. A campaign with no dice system has only the free roll. */
+    function setMode(m, remember) {
+      mode = sysNow && m === 'game' ? 'game' : 'free';
+      modes.hidden = !sysNow;
+      sysBox.hidden = mode !== 'game';
+      freeBox.hidden = mode !== 'free';
+      tabGame.setAttribute('aria-selected', String(mode === 'game'));
+      tabFree.setAttribute('aria-selected', String(mode === 'free'));
+      tabGame.tabIndex = mode === 'game' ? 0 : -1;
+      tabFree.tabIndex = mode === 'free' ? 0 : -1;
+      if (mode !== 'free') showHelp(false);
+      err.textContent = '';
+      if (remember) store.set(modeKey(), mode);
+      drawSaved();
+    }
+    /** The campaign's dice system, as the server last said (settings.system): redrawn only when the GM changed it. */
+    function drawSys() {
+      const sig = JSON.stringify(settings?.system || null);
+      if (sig === sysSig) return;
+      sysSig = sig;
+      sysNow = DS.campaignSystem(settings);
+      const preset = sysNow?.game ? DS.PRESETS.find(g => g.id === sysNow.game) : null;
+      sub.textContent = sysNow ? (preset ? preset.name : sysNow.sys.name) : 'Free dice';
+      sub.title = sub.textContent;
+      if (sysNow) {
+        let mine = null;
+        try { mine = JSON.parse(store.get(sysKey()) || 'null'); } catch { /* start from the campaign's */ }
+        sysP = DS.params(sysNow.sys, sysNow.p, mine && mine.id === sysNow.sys.id ? mine.p : null);
+        drawFields();
+      }
+      setMode(store.get(modeKey()) || 'game');
+      draw();
+    }
+    function drawFields() {
+      const { sys, labels } = sysNow;
+      const main = sys.params.filter(d => d.main).map(d => d.key);
+      const rest = sys.params.filter(d => !d.main).map(d => d.key);
+      const onChange = (k, v) => { sysP = DS.params(sys, { ...sysP, [k]: v }); store.set(sysKey(), JSON.stringify({ id: sys.id, p: sysP })); refreshSys(); };
+      mainBox.replaceChildren(...DiceUI.fields(el, sys, sysP, { labels, keys: main, onChange, idPrefix: 'dice' }));
+      moreBox.replaceChildren(...DiceUI.fields(el, sys, sysP, { labels, keys: rest, onChange, idPrefix: 'dice' }));
+      more.hidden = !rest.length;
+      more.open = !!store.get(MORE_KEY);
+      refreshSys();
+    }
+    /** The dice the numbers make, and (a moment after the last change) the odds of each outcome. */
+    function refreshSys() {
+      if (!sysNow) return;
+      const text = sysNow.sys.build(sysP);
+      sysNotation.textContent = text;
+      sysRollBtn.setAttribute('aria-label', `Roll ${text}`);
+      clearTimeout(oddsTimer);
+      oddsTimer = setTimeout(() => {
+        try { odds.set(DS.odds(sysNow.sys, sysP, { table: sysNow.table }, 2000)); } catch { odds.set(null); }
+      }, 120);
+      if (savedSel.value) { const s = savedList()[Number(savedSel.value) - 1]; if (s && s.e !== gameText()) { savedSel.value = ''; forgetBtn.hidden = true; } }
+    }
+    /** The game roll as it is stored: its dice, @ the system and its numbers, # what it is for (cut to fit). */
+    function gameText() {
+      let label = forInput.value.trim();
+      let t = DS.rollText(sysNow.sys, sysP, label);
+      while (t.length > Dice.LIMITS.length && label) { label = label.slice(0, -1).trim(); t = DS.rollText(sysNow.sys, sysP, label); }
+      return t;
+    }
+    function rollGame() { if (sysNow) roll(gameText()); }
+
+    // ------------------------------------------------------------ saved rolls
+    const savedList = () => (cid && S.user?.prefs?.dice_saved?.[cid]) || [];
+    function drawSaved() {
+      const list = savedList();
+      savedSel.replaceChildren(el('option', { value: '' }, list.length ? `Saved rolls (${list.length})` : 'No saved rolls yet'),
+        ...list.map((r, k) => el('option', { value: String(k + 1) }, r.n)));
+      savedSel.disabled = !list.length;
+      forgetBtn.hidden = true;
+    }
+    /** Put a saved roll on the roller: its numbers on the game roll if it is one of this campaign's system, else in the
+     * free-roll box (which rolls anything, a roll from another system included). */
+    function useSaved(k) {
+      const r = savedList()[k - 1];
+      forgetBtn.hidden = !r;
+      if (!r) return;
+      let parsed = null;
+      try { parsed = Dice.parse(r.e); } catch { /* still goes in the box, which says what is wrong */ }
+      const d = parsed?.system ? DS.decode(parsed.system) : null;
+      if (d && sysNow && d.sys.id === sysNow.sys.id) {
+        setMode('game', true);
+        sysP = d.p;
+        store.set(sysKey(), JSON.stringify({ id: sysNow.sys.id, p: sysP }));
+        forInput.value = parsed.label || '';
+        drawFields();
+      } else {
+        setMode('free', true);
+        input.value = r.e;
+        check();
+      }
+      savedSel.value = String(k);
+      forgetBtn.hidden = false;
+    }
+    async function putSaved(list) {
+      const r = await post('prefs_save', { dice_saved: { cid, list } });
+      if (S.user) S.user.prefs = r.prefs;
+      drawSaved();
+    }
+    async function saveRoll() {
+      const e = mode === 'game' && sysNow ? gameText() : input.value.trim();
+      if (!e) { err.textContent = 'Type a roll first, then save it'; return; }
+      const msg = Dice.check(e);
+      if (msg) { err.textContent = msg; return; }
+      let guess = '';
+      try { guess = Dice.parse(e).label; } catch { /* no label */ }
+      const name = await ask('A name for this roll, to find it in the list:', { title: 'Save this roll', value: guess || e.split('#')[0].split('@')[0].trim(), ok: 'Save' });
+      if (name === null || !name.trim()) return;
+      const list = savedList().filter(r => r.n !== name.trim());
+      if (list.length >= 100) { toast('That is a lot of saved rolls: forget one first', true); return; }
+      try {
+        await putSaved([...list, { n: name.trim().slice(0, 60), e }]);
+        const k = savedList().findIndex(r => r.n === name.trim().slice(0, 60));
+        savedSel.value = String(k + 1);
+        forgetBtn.hidden = k < 0;
+        toast(`Saved "${name.trim()}"`);
+      } catch (x) { toast(x.message, true); }
+    }
+    async function forgetRoll() {
+      const k = Number(savedSel.value);
+      const r = savedList()[k - 1];
+      if (!r) return;
+      try { await putSaved(savedList().filter((_, i) => i !== k - 1)); toast(`Forgot "${r.n}"`); } catch (x) { toast(x.message, true); }
     }
 
     // ------------------------------------------------------------ keeping up
@@ -307,6 +470,7 @@
         stopPoll();
         cid = next;
         rolls = []; lastId = 0; settings = null; fresh.clear();
+        sysNow = null; sysSig = ''; sysP = null; forInput.value = '';
         log.replaceChildren();
         panel.hidden = true;
         document.body.classList.remove('dice-open');
@@ -314,6 +478,7 @@
         if (cid) {
           seenId = Number(store.get(seenKey())) || 0;
           drawVis();
+          setMode('free');
           if (store.get(openKey())) setOpen(true);
         }
       }

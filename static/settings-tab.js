@@ -285,6 +285,76 @@
       return form;
     }
 
+    /** Settings → Dice → Dice system: the game roll on everyone's roller (static/dice-systems.js). Start from a game, or
+     * pick a system; set its numbers (where each player's roller starts); see the odds and try a roll. value() is what
+     * goes in settings.dice.system, null for free dice only. */
+    function diceSystemCard(saved) {
+      const DS = window.DiceSystems, DiceUI = window.DiceUI, Dice = window.Dice;
+      const cur = { game: saved?.id ? (saved.game || 'custom') : '', id: saved?.id && DS.BY_ID[saved.id] ? saved.id : 'd20', table: saved?.table || '', labels: saved?.labels || {} };
+      cur.p = DS.params(DS.BY_ID[cur.id], saved?.id === cur.id ? saved.params : null);
+      const opt = (v, l) => el('option', { value: v, selected: v === cur.game }, l);
+      const gameSel = el('select', { id: 'dice-game' }, opt('', 'Free dice only (no game roll)'),
+        el('optgroup', { label: 'Games' }, DS.PRESETS.map(g => opt(g.id, g.name))),
+        el('optgroup', { label: 'Your own' }, opt('custom', 'Something else: pick a system')));
+      const sysSel = el('select', { id: 'dice-system' }, DS.GROUPS.map(([g, label]) => el('optgroup', { label },
+        DS.SYSTEMS.filter(x => x.group === g).map(x => el('option', { value: x.id, selected: x.id === cur.id }, `${x.name} (${x.hint})`)))));
+      const paramBox = el('div', { class: 'dsp-grid dice-set-params' });
+      const table = el('textarea', { id: 'dice-table', rows: 8, class: 'mono', value: cur.table, placeholder: '1-5 Failure (bad)\n6-10 Partial (partial)\n11+ Success (good)' });
+      const tableField = field('Result table', table, 'One row a line: a number or range, then what it means. End a row with (crit), (good), (partial), (bad) or (botch) to colour it');
+      const odds = DiceUI.oddsBar(el);
+      const tryOut = el('div', { class: 'dice-try-out', 'aria-live': 'polite' });
+      const notation = el('span', { class: 'mono small muted' });
+      const body = el('div', { class: 'dice-set-body' },
+        field('System', sysSel, 'How the dice are read. A game above picks one for you'),
+        el('div', { class: 'dice-set-sub' }, el('h4', {}, 'Numbers'), el('p', { class: 'small muted' }, 'Where each player\'s roller starts. They change them for each roll'), paramBox),
+        tableField,
+        el('div', { class: 'dice-try' }, el('h4', {}, 'Example roll'), odds.node,
+          el('div', { class: 'row' }, btn('🎲 Try a roll', tryRoll, 'small', 'Roll once with these numbers, just here: it doesn\'t go in the log'), notation), tryOut));
+      const node = el('section', { class: 'dice-set-sys' }, el('h3', {}, 'Dice system'),
+        el('p', { class: 'small muted' }, 'Gives the roller a Game roll: numbers to set, a Roll button, the odds of each outcome, and the result read the way your game reads it. The free roll is always there too.'),
+        field('Start from a game', gameSel), body);
+      let oddsTimer = null;
+      const sys = () => DS.BY_ID[cur.id];
+      function drawParams() {
+        paramBox.replaceChildren(...DiceUI.fields(el, sys(), cur.p, { labels: cur.labels, idPrefix: 'set', onChange: (k, v) => { cur.p = DS.params(sys(), { ...cur.p, [k]: v }); refresh(); } }));
+        tableField.hidden = cur.id !== 'table';
+        refresh();
+      }
+      function refresh() {
+        body.hidden = !cur.game;
+        sysSel.value = cur.id;
+        notation.textContent = `Rolls ${sys().build(cur.p)}`;
+        tryOut.replaceChildren();
+        clearTimeout(oddsTimer);
+        oddsTimer = setTimeout(() => { try { odds.set(DS.odds(sys(), cur.p, { table: cur.table }, 3000)); } catch { odds.set(null); } }, 120);
+      }
+      function tryRoll() {
+        const res = Dice.roll(DS.rollText(sys(), cur.p), Dice.newSeed());
+        const o = DiceUI.outcome(res, { table: cur.table });
+        tryOut.replaceChildren(el('div', { class: `dice-try-res${o.tier ? ` t-${o.tier}` : ''}` }, el('b', {}, o.big),
+          o.words ? el('small', { class: o.tier ? `tier t-${o.tier}` : null }, o.words) : null,
+          o.note ? el('span', { class: 'small muted' }, o.note) : null), ...DiceUI.diceRows(el, res, { faces: o.faces }));
+      }
+      gameSel.addEventListener('change', () => {
+        cur.game = gameSel.value;
+        const g = DS.PRESETS.find(x => x.id === cur.game);
+        if (g) { cur.id = g.system; cur.p = DS.params(sys(), g.params); cur.labels = g.labels || {}; }
+        drawParams();
+      });
+      sysSel.addEventListener('change', () => {
+        cur.id = sysSel.value; cur.p = DS.params(sys()); cur.labels = {};
+        cur.game = 'custom'; gameSel.value = 'custom';
+        drawParams();
+      });
+      table.addEventListener('input', () => { cur.table = table.value; refresh(); });
+      drawParams();
+      return {
+        node,
+        value: () => (cur.game ? { id: cur.id, params: cur.p, labels: cur.labels, game: cur.game === 'custom' ? null : cur.game, table: cur.id === 'table' ? cur.table.slice(0, 4000) : '' } : null),
+        problem: () => (cur.game && cur.id === 'table' && !DS.tableRows(cur.table).length ? 'Type the result table: a row a line, like "1-5 Failure"' : Dice.check(sys().build(cur.p))),
+      };
+    }
+
     /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
     const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
     function viewSettings(sub) {
@@ -553,8 +623,11 @@
       // Dice: who sees whose rolls, and how many the roll log keeps (api/dice.php reads them; static/dice-tab.js rolls).
       const dice = () => {
         const d = st.dice || {};
+        const sysCard = diceSystemCard(d.system);
         const form = el('form', { class: 'card dice-settings' }, el('h2', {}, 'Dice'),
           el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the 🎲 button at the bottom right of every page. Rolls go in a log the whole table shares.'),
+          sysCard.node,
+          el('h3', {}, 'Who sees what'),
           el('div', { class: 'grid2' },
             field('Who sees a player\'s roll', select([['all', 'Everyone'], ['gm', 'The player and the GMs'], ['blind', 'Only the GMs (the player sees they rolled, not the result)']],
               d.player_vis || 'all', { name: 'player_vis' }), 'Where a player\'s roller starts. They can change it for each roll unless you lock it'),
@@ -570,7 +643,9 @@
         form.addEventListener('submit', async e => {
           e.preventDefault();
           const v = formData(form);
-          const s = { ...settings(), dice: { player_vis: v.player_vis, keep: Number(v.keep), lock_vis: !!v.lock_vis, gm_hidden: !!v.gm_hidden } };
+          const problem = sysCard.problem();
+          if (problem) { toast(problem, true); return; }
+          const s = { ...settings(), dice: { player_vis: v.player_vis, keep: Number(v.keep), lock_vis: !!v.lock_vis, gm_hidden: !!v.gm_hidden, system: sysCard.value() } };
           try { await post('campaign_update', { settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
           catch (err) { toast(err.message, true); }
         });
