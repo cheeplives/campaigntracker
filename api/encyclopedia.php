@@ -350,15 +350,21 @@ function encyclopedia_action(string $action): void {
         out(['ok' => true, 'id' => $id, 'version' => $version]);
 
     case 'secret_reveal':
-        // GM: make a run of GM-only paragraphs public, in an entry's public notes or a tome, and (log) note it as an
+        // GM: make a run of GM-only paragraphs public, in an entry's public notes, a tome, or a session's summary, rewards or
+        // loot, and (log) note it as an
         // event on the campaign's current day. which: the indexes of those <aside>s in the stored text, with the text the
         // GM's page showed for each, so a note changed since is refused rather than the wrong paragraphs revealed.
         $cid = cid(); need_gm($cid);
         $kind = p('kind');
         $id = int_in(p('id'), 1);
+        $field = null;
         if ($kind === 'entry') { $row = entry_row($cid, $id, 'gm'); $html = (string)$row['notes']; $name = $row['name']; }
         elseif ($kind === 'tome') { $row = tome_row($cid, $id); $html = (string)$row['body']; $name = $row['title']; }
-        else fail('Pick an entry or a tome');
+        elseif ($kind === 'session') { // a session's summary, rewards or loot (id: the session)
+            $field = (string)p('field');
+            if (!in_array($field, ['summary', 'rewards', 'loot'], true)) fail('Pick the summary, rewards or loot');
+            $row = session_row($cid, $id); $html = (string)$row[$field]; $name = $row['title'] !== '' ? $row['title'] : 'Session ' . $row['number'];
+        } else fail('Pick an entry, a tome or a session');
         $which = p('which');
         if (!is_array($which) || !$which || count($which) > 200) fail('Pick the paragraphs to reveal');
         preg_match_all(RICH_SECRET_RE, $html, $m, PREG_OFFSET_CAPTURE);
@@ -378,7 +384,8 @@ function encyclopedia_action(string $action): void {
         }
         history_before($cid, $kind, $id);
         if ($kind === 'entry') db()->prepare('UPDATE encyclopedia_entries SET notes=?' . entry_bump() . ' WHERE id=?')->execute([$html, $id]);
-        else db()->prepare('UPDATE library_tomes SET body=?, version=version+1, updated_by=? WHERE id=?')->execute([$html, me()['id'], $id]);
+        elseif ($kind === 'tome') db()->prepare('UPDATE library_tomes SET body=?, version=version+1, updated_by=? WHERE id=?')->execute([$html, me()['id'], $id]);
+        else db()->prepare("UPDATE play_sessions SET $field=?, version=version+1 WHERE campaign_id=? AND id=?")->execute([$html, $cid, $id]);   // $field is one of three names, checked above
         history_record($cid, $kind, $id);
         $event = null;
         if (p('log')) {
@@ -389,6 +396,60 @@ function encyclopedia_action(string $action): void {
             $event = (int)db()->lastInsertId();
             save_event_tags($cid, $event, [['name' => 'Revealed']]);
         }
+        out(['ok' => true, 'event_id' => $event]);
+
+    case 'item_reveal':
+        // GM: make a whole GM-only entry or event public, or a day's Secret notes join its Public notes. For an entry or a
+        // day, (log) also note "Revealed: name" as an event on the
+        // campaign's current day, as revealing a paragraph does; an event is its own record, so it has no log line.
+        $cid = cid(); need_gm($cid);
+        $kind = p('kind');
+        $id = int_in(p('id'), 1);
+        $event = null;
+        if ($kind === 'entry') {
+            $row = entry_row($cid, $id, 'gm');
+            if (!(int)$row['is_secret']) fail('That entry is already public', 409, 'public');
+            db()->beginTransaction();
+            history_before($cid, 'entry', $id);
+            db()->prepare('UPDATE encyclopedia_entries SET is_secret=0' . entry_bump() . ' WHERE campaign_id=? AND id=?')->execute([$cid, $id]);
+            history_record($cid, 'entry', $id);
+            if (p('log')) {
+                $c = campaign_row($cid);
+                $today = floordiv((int)$c['current_shift'], camp_spd($c));
+                db()->prepare('INSERT INTO events (abs_day, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,0,?,?)')
+                    ->execute([$today, mb_substr('Revealed: ' . $row['name'], 0, 200), null, $cid, me()['id']]);
+                $event = (int)db()->lastInsertId();
+                save_event_tags($cid, $event, [['name' => 'Revealed']]);
+            }
+            db()->commit();
+        } elseif ($kind === 'event') {
+            $st = db()->prepare('UPDATE events SET is_secret=0 WHERE campaign_id=? AND id=? AND is_secret=1');
+            $st->execute([$cid, $id]);
+            if (!$st->rowCount()) {
+                $ex = db()->prepare('SELECT 1 FROM events WHERE campaign_id=? AND id=?');
+                $ex->execute([$cid, $id]);
+                if (!$ex->fetchColumn()) fail('Event not found', 404);
+                fail('That event is already public', 409, 'public');
+            }
+        } elseif ($kind === 'day') { // a day's Secret notes join its Public notes (id: the absolute day)
+            $st = db()->prepare('SELECT notes, notes_format, gm_notes, gm_notes_format FROM days WHERE campaign_id=? AND abs_day=? FOR UPDATE');
+            db()->beginTransaction();
+            $st->execute([$cid, $id]);
+            $row = $st->fetch() ?: fail('That day has no notes', 404);
+            if (trim((string)$row['gm_notes']) === '') fail('That day has no secret notes', 409, 'empty');
+            $rich = fn($t, $f) => $f === 'html' ? (string)$t : implode('', array_map(fn($l) => '<p>' . htmlspecialchars($l, ENT_NOQUOTES, 'UTF-8') . '</p>', array_filter(preg_split('/\R/u', (string)$t) ?: [], fn($l) => trim($l) !== '')));
+            $merged = rich_html_clean($rich($row['notes'], $row['notes_format']) . $rich($row['gm_notes'], $row['gm_notes_format']));
+            history_before($cid, 'day', $id);
+            db()->prepare("UPDATE days SET notes=?, notes_format='html', gm_notes=NULL, gm_notes_format='plain', version=version+1 WHERE campaign_id=? AND abs_day=?")->execute([$merged ?: null, $cid, $id]);
+            history_record($cid, 'day', $id);
+            if (p('log')) {
+                db()->prepare('INSERT INTO events (abs_day, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,0,?,?)')
+                    ->execute([$id, 'Revealed: secret notes for day ' . $id, null, $cid, me()['id']]);
+                $event = (int)db()->lastInsertId();
+                save_event_tags($cid, $event, [['name' => 'Revealed']]);
+            }
+            db()->commit();
+        } else fail('Pick an entry, an event or a day');
         out(['ok' => true, 'event_id' => $event]);
 
     case 'entries_add':

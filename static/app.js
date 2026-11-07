@@ -1778,7 +1778,13 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
+      el('div', { class: 'row' }, save, (row.gm_notes || '').trim() ? btn('🔓 Reveal secret notes', async () => {
+          const v = await KIT.dialog({ title: 'Reveal the secret notes to the players?', message: 'The secret notes, as last saved, join the end of the public notes and the secret notes are cleared. Anything typed here and not saved yet is left out.',
+            buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
+          if (v !== 'log' && v !== 'quiet') return;
+          try { await post('item_reveal', { kind: 'day', id: d, log: v === 'log' }, S.camp.id); toast(v === 'log' ? 'Revealed, and logged on this day\'s events' : 'Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
+        }, 'small', 'Move the secret notes onto the end of the public notes, so players read them, and optionally note it on this day\'s events') : null,
+        btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
         btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
         'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
@@ -2712,6 +2718,10 @@
       el('small', { class: 'muted' }, 'Added by ', byline(e)),
       (isGM() || mine) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
+        isGM() && Number(e.is_secret) ? btn('🔓 Reveal', async () => {
+          if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
+          try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
+        }, 'small', 'Make this GM-only event public: players see it from now on') : null,
         btn('Delete', async () => {
           if (!await confirmDialog(`Delete "${e.title}"?`)) return;
           try { await post('event_delete', { id: e.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
@@ -6437,6 +6447,7 @@
     tagsOf, tip, tipped, toast, today, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
+  tabCtx.revealButtons = revealButtons;
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));

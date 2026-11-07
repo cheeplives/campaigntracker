@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -166,9 +166,9 @@
       // and Edit opens the editors. A session with nothing written yet opens in them.
       const reading = el('div', { class: 'sess-read' });
       const drawReading = () => reading.replaceChildren(
-        el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
+        el('div', { class: 'lib-body' }, (s.summary || '').trim() ? revealButtons(linkedNote(s.summary, 'html'), 'session', s.id, { field: 'summary' }) : el('p', { class: 'muted' }, 'Nothing written yet.')),
         ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
-          el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))));
+          el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, revealButtons(linkedNote(s[k], 'html'), 'session', s.id, { field: k })))));
       const editing = el('div', { class: 'sess-editing' });
       const edit = btn('✎ Edit', () => setEditing(true), 'small', 'Open the summary, rewards and loot in editors to change them');
       const cancel = btn('Cancel', () => {

@@ -112,6 +112,7 @@ const ACTIONS = [
     'encyclopedia_sources' => ['get' => true, 'who' => 'member'],
     'entry_save' => ['who' => 'member', 'touch' => true],
     'secret_reveal' => ['who' => 'gm', 'touch' => true],
+    'item_reveal' => ['who' => 'gm', 'touch' => true],
     'entries_add' => ['who' => 'member', 'touch' => true],
     'entry_note_add' => ['who' => 'member', 'touch' => true, 'panel' => 'write', 'key' => 'write'],
     'entry_delete' => ['who' => 'member', 'touch' => true],

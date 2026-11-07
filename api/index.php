@@ -1726,6 +1726,7 @@ try {
     case 'encyclopedia_sources':
     case 'entry_save':
     case 'secret_reveal':
+    case 'item_reveal':
     case 'entries_add':
     case 'entry_note_add':
     case 'entry_delete':
