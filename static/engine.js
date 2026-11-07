@@ -1474,6 +1474,8 @@
       licence: 'Apache 2.0', url: 'https://github.com/tesseract-ocr/tessdata_best' },
     pdfjs: { title: 'PDF.js 6.4.299 PDF reader, for drafting a sheet template from a PDF (static/vendor/pdfjs)', by: 'Mozilla and the PDF.js contributors',
       licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' },
+    three: { title: 'three.js 0.186.1 3D graphics, for the 3D dice (static/vendor/three)', by: 'Ricardo Cabello (mrdoob) and the three.js authors',
+      licence: 'MIT', url: 'https://github.com/mrdoob/three.js' },
     htmlToImage: { title: 'html-to-image 1.11.13, the Report button\'s screenshot of the page (static/vendor/html-to-image)', by: 'W.Y. and the html-to-image contributors',
       licence: 'MIT', url: 'https://github.com/bubkoo/html-to-image' },
     inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },

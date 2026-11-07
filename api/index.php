@@ -868,6 +868,18 @@ try {
             if ($list) $all[(string)$dcid] = $list; else unset($all[(string)$dcid]);
             if ($all) $prefs['dice_saved'] = $all; else unset($prefs['dice_saved']);
         }
+        // dice_look: { body, ink, tex }, how their dice look (static/dice-3d.js): the dice's colour, the numbers' colour and
+        // a built-in pattern. It is theirs in every campaign, and everyone sees their rolls in it. Null goes back to the
+        // theme's dice.
+        if (array_key_exists('dice_look', body())) {
+            $dl = p('dice_look');
+            if ($dl === null) unset($prefs['dice_look']);
+            else {
+                $look = dice_look($dl);
+                if (!$look) fail('Pick a colour for the dice and one for the numbers');
+                $prefs['dice_look'] = $look;
+            }
+        }
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);

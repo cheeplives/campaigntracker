@@ -1892,6 +1892,20 @@ body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h,
 .dice-head h2 { margin: 0; font: 700 1.25rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
 .dice-sub { flex: 1; }
 .dice-x { margin: 0; padding: 4px 10px; }
+.dice-look-b { margin: 0; padding: 4px 8px; }
+.dice-look-b.on { border-color: var(--accent); background: var(--panel-2); }
+/* Your dice (🎨): a preview on the left, the choices on the right. */
+.dice-look-grid { display: grid; grid-template-columns: 104px 1fr; gap: 12px; align-items: start; margin: 4px 0 8px; }
+.dice-look-pre { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dice-look-3d { width: 96px; height: 96px; }
+.dice-look-flat .dice-terms { margin: 0; justify-content: center; }
+.dice-sws { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.dice-sw { margin: 0; width: 30px; height: 30px; padding: 0; border-radius: 7px; font: 700 .9rem var(--disp); border: 2px solid transparent; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25); }
+.dice-sw.on { border-color: var(--text); }
+.dice-look-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 6px 0; }
+.dice-look-row label { display: inline-flex; align-items: center; gap: 6px; }
+.dice-look-row input[type="color"] { width: 38px; height: 30px; padding: 2px; margin: 0; }
+.dice-look-row select { margin: 0; flex: 1; min-width: 120px; }
 .dice-log { flex: 1; overflow-y: auto; margin: 0; padding: 4px 14px; list-style: none; overscroll-behavior: contain; }
 .dice-empty { padding: 18px 0; }
 .dice-e { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); }
@@ -1918,6 +1932,20 @@ body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h,
 .die.extra { opacity: .9; }
 .die.dropped { opacity: .4; text-decoration: line-through; }
 .die.rolling { animation: dice-tumble .14s linear infinite; }
+/* A player's own dice colours and pattern (🎨 on the roller, static/dice-3d.js chip()). Hits and misses keep their meaning
+   as a coloured ring, since the die's own colour is the player's. */
+.looked .die { background: var(--die-tex, none) center / 64px, var(--die-bg); color: var(--die-ink); box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), inset 0 0 0 1px var(--die-edge);
+  text-shadow: 0 0 3px color-mix(in srgb, var(--die-bg) 80%, transparent); }
+.looked .die.hit { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #3f9a5a; }
+.looked .die.miss { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #c04848; }
+.looked .die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px var(--accent); }
+/* The 3D dice: thrown over the page beside the roller, never in the way of a click. */
+.dice-tray { position: fixed; z-index: 69; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .5s; }
+.dice-tray.on { opacity: 1; visibility: visible; transition: none; }
+.dice-tray.on.fade { opacity: 0; transition: opacity .5s; }
+/* While the 3D dice are in the air the newest roll's result waits for them to land. */
+.dice-e.landing .dice-e-out, .dice-e.landing .dice-terms { visibility: hidden; }
+.dice-e.landing .dice-e-main::after { content: 'Rolling…'; font-size: .85rem; color: var(--dim); }
 @keyframes dice-tumble { 0% { transform: rotate(0); } 50% { transform: rotate(14deg) scale(.92); } 100% { transform: rotate(0); } }
 .dice-foot { position: relative; padding: 10px 14px 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .dice-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }

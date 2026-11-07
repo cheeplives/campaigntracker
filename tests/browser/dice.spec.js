@@ -317,3 +317,56 @@ test("the roller pins beside the page or floats over it, and remembers which on 
   expect(await appMargin()).toBe("380px");
   expectNoErrors(errors);
 });
+
+test("a player picks their dice colours and pattern, everyone sees their rolls in them, and 3D dice land on the roll", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice looks");
+  const perrors = watchErrors(pp);
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await openDice(pp);
+  await pp.getByRole("button", { name: "Your dice: colours and 3D" }).click();
+  const card = pp.getByRole("dialog", { name: "Your dice" });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Emerald" }).click();
+  await card.getByRole("combobox", { name: "Pattern" }).selectOption("wood");
+  await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => (await api(pp, "dice_rolls", undefined, cid)).status).toBe(200);
+  await card.getByRole("button", { name: "Close" }).click();
+  await expect(card).toBeHidden();
+
+  // the player rolls; while 3D dice are in the air the result waits, then it shows (and matches the seed)
+  const can3d = await pp.evaluate(() => !!document.createElement("canvas").getContext("webgl2") && !matchMedia("(prefers-reduced-motion: reduce)").matches);
+  await pp.getByRole("button", { name: "d20", exact: true }).click();
+  if (can3d) await expect(pp.locator(".dice-tray.on")).toHaveCount(1);
+  const latest = pp.locator(".dice-e.latest");
+  await expect(latest).not.toHaveClass(/landing/, { timeout: 5000 });
+  const rolls = (await api(pp, "dice_rolls", undefined, cid)).json.rolls;
+  const last = rolls[rolls.length - 1];
+  await expect.poll(async () => (await api(pp, "dice_rolls", undefined, cid)).json.rolls.at(-1).look?.tex).toBe("wood");
+  await expect(latest.locator(".dice-e-out b")).toHaveText(String(Dice.roll(last.expr, last.seed).results[0].total));
+  await expect(latest.locator(".dice-terms.looked")).toHaveCount(1);
+
+  // the GM sees the player's dice in the player's colours; their own stay the theme's
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const theirs = page.locator(".dice-e").filter({ hasText: "Pip" }).first().locator(".dice-terms");
+  await expect(theirs).toHaveClass(/looked/);
+  expect(await theirs.evaluate(n => n.style.getPropertyValue("--die-bg"))).toBe("#1e7a4c");
+  await page.getByRole("button", { name: "d6", exact: true }).click();
+  await expect(page.locator(".dice-e.latest")).not.toHaveClass(/landing/, { timeout: 5000 });
+  await expect(page.locator(".dice-e.latest .dice-terms")).not.toHaveClass(/looked/);
+
+  // 3D off on this device: no dice over the page, the result shows at once
+  await pp.getByRole("button", { name: "Your dice: colours and 3D" }).click();
+  const on3d = card.getByRole("checkbox", { name: "Throw 3D dice on this device" });
+  if (can3d) {
+    await on3d.uncheck();
+    await card.getByRole("button", { name: "Close" }).click();
+    await pp.getByRole("button", { name: "d8", exact: true }).click();
+    await expect(pp.locator(".dice-e.latest .dice-e-meta")).toContainText("1d8");
+    await expect(pp.locator(".dice-e.latest")).not.toHaveClass(/landing/);
+    await expect(pp.locator(".dice-tray.on")).toHaveCount(0);
+  }
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});
