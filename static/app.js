@@ -3730,6 +3730,8 @@
     return el('section', { class: 'enc-conns' },
       el('div', { class: 'row spread' }, el('h4', {}, 'Connections', tip(`How ${e.name} is connected to other entries. Each connection shows on both pages, read from each end ("Has resident" here, "Resident of" there)`)),
         el('div', { class: 'row' },
+          list.length ? btn('🕸 Web', () => ctx.web({ center: e.id }), 'small', `Draw ${e.name}'s connections as a web, one or two steps out`) : null,
+          Web.hasFamily({ conns }, e.id) ? btn('🌳 Family', () => ctx.web({ center: e.id, mode: 'family' }), 'small', `Draw ${e.name}'s family: parents, partners, children and siblings`) : null,
           list.length ? btn('Show in list', () => { st.near = e.id; ctx.draw(); }, 'small', `List ${e.name} and the entries connected to it`) : null,
           btn('🔗 Link', () => connectDialog(e, rel), 'small primary', `Connect ${e.name} to one or more entries`))),
       rows.length ? el('div', { class: 'enc-conn-list' }, rows) : el('p', { class: 'muted small' }, 'No connections yet.'),
