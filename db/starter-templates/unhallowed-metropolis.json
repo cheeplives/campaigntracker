@@ -1,0 +1,467 @@
+{
+ "name": "Unhallowed Metropolis",
+ "game": "Unhallowed Metropolis",
+ "edition": "1st Edition (Eos Press, 2007)",
+ "source": {
+  "title": "Unhallowed Metropolis character sheet (interactive)",
+  "owner": "Eos Press",
+  "url": "https://www.drivethrurpg.com/en/publisher/134/eos-press",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "player",
+      "label": "Player",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "calling",
+      "label": "Calling",
+      "type": "text",
+      "cols": 4,
+      "summary": true
+     },
+     {
+      "key": "age_appearance",
+      "label": "Age & Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "xp_total",
+      "label": "Experience Points total",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "xp_unspent",
+      "label": "Unspent",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes (rating, cost)",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "attr_vitality",
+      "label": "Vitality",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_vitality",
+      "label": "Vitality cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attr_coordination",
+      "label": "Coordination",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_coordination",
+      "label": "Coordination cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attr_wit",
+      "label": "Wit",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_wit",
+      "label": "Wit cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attr_intellect",
+      "label": "Intellect",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_intellect",
+      "label": "Intellect cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attr_charm",
+      "label": "Charm",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_charm",
+      "label": "Charm cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "attr_will",
+      "label": "Will",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "cost_will",
+      "label": "Will cost",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "prowess",
+      "label": "Prowess (Coordination + Wit)",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "actions",
+      "label": "Actions",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "corruption",
+    "title": "Corruption",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "corr_physical",
+      "label": "Physical",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aff_physical",
+      "label": "Physical affliction",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "corr_desire",
+      "label": "Desire",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aff_desire",
+      "label": "Desire affliction",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "corr_drive",
+      "label": "Drive",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aff_drive",
+      "label": "Drive affliction",
+      "type": "text",
+      "size": "large"
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       },
+       {
+        "key": "specialties_stunts",
+        "label": "Specialties & Stunts"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "qualities",
+    "title": "Qualities, Impediments & Features",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "qualities_text",
+      "label": "Qualities, Impediments & Features",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "locations",
+    "title": "Hit Locations",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor_head",
+      "label": "Head armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_head",
+      "label": "Head wound",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_torso",
+      "label": "Torso armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_torso",
+      "label": "Torso wound",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_left_arm",
+      "label": "Left Arm armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_left_arm",
+      "label": "Left Arm wound",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_right_arm",
+      "label": "Right Arm armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_right_arm",
+      "label": "Right Arm wound",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_left_leg",
+      "label": "Left Leg armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_left_leg",
+      "label": "Left Leg wound",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_right_leg",
+      "label": "Right Leg armor",
+      "type": "text"
+     },
+     {
+      "key": "wound_right_leg",
+      "label": "Right Leg wound",
+      "type": "text",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "current",
+    "title": "Attributes (rating / current)",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "cur_vitality",
+      "label": "Vitality (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "cur_coordination",
+      "label": "Coordination (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "cur_wit",
+      "label": "Wit (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "cur_intellect",
+      "label": "Intellect (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "cur_charm",
+      "label": "Charm (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "cur_will",
+      "label": "Will (current)",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "initiative",
+      "label": "Initiative (2d10 + Prowess)",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Combat",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "skill_rating",
+        "label": "Skill Rating"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       },
+       {
+        "key": "range",
+        "label": "Range"
+       },
+       {
+        "key": "ammo",
+        "label": "Ammo"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "ammo_cost",
+        "label": "Ammo Cost"
+       },
+       {
+        "key": "features",
+        "label": "Features"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "assets",
+    "title": "Assets, Possessions & Equipment",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "assets_text",
+      "label": "Assets, Possessions & Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "wealth",
+      "label": "Wealth",
+      "type": "text"
+     },
+     {
+      "key": "savings",
+      "label": "Savings",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Combat",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

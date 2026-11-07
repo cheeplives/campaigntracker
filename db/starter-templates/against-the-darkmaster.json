@@ -1,0 +1,1382 @@
+{
+ "name": "Against the Darkmaster",
+ "game": "Against the Darkmaster",
+ "edition": "1st Edition (Open Ended Games, 2021)",
+ "source": {
+  "title": "Against the Darkmaster PC sheet (full, v1, with form fields)",
+  "owner": "Open Ended Games",
+  "url": "https://www.vsdarkmaster.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "kin",
+      "label": "Kin",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "next_level",
+      "label": "Next Level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "culture",
+      "label": "Culture",
+      "type": "text"
+     },
+     {
+      "key": "vocation",
+      "label": "Vocation",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "passions",
+    "title": "Passions",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "motivation",
+      "label": "Motivation",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "nature",
+      "label": "Nature",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "allegiance",
+      "label": "Allegiance",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "drive",
+    "title": "Drive Points & Heroic Path",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "drive_points",
+      "label": "Drive Points",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "heroic_path",
+      "label": "Heroic Path",
+      "type": "pips",
+      "size": "full",
+      "count": 30
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats (Base, Kin, Spec, Spec, Total)",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "brn_base",
+      "label": "Brawn (BRN) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "brn_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "brn_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "brn_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "brn_total",
+      "label": "Brawn total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "swi_base",
+      "label": "Swiftness (SWI) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "swi_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "swi_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "swi_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "swi_total",
+      "label": "Swiftness total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "for_base",
+      "label": "Fortitude (FOR) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "for_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "for_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "for_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "for_total",
+      "label": "Fortitude total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wit_base",
+      "label": "Wits (WIT) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wit_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wit_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wit_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wit_total",
+      "label": "Wits total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "wsd_base",
+      "label": "Wisdom (WSD) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "wsd_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wsd_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wsd_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wsd_total",
+      "label": "Wisdom total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "bea_base",
+      "label": "Bearing (BEA) base",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "bea_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "bea_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "bea_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "bea_total",
+      "label": "Bearing total",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "saves",
+    "title": "Save Rolls (Level, Stat, Kin, Spec, Spec, Total)",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "tough_level",
+      "label": "Toughness (FOR) level",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "tough_stat",
+      "label": "Stat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tough_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tough_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tough_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tough_total",
+      "label": "Toughness total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "will_level",
+      "label": "Willpower (WSP) level",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "will_stat",
+      "label": "Stat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "will_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "will_spec1",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "will_spec2",
+      "label": "Spec",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "will_total",
+      "label": "Willpower total",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "kin_traits_sec",
+    "title": "Kin Traits",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "kin_traits",
+      "label": "Kin Traits",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "background_sec",
+    "title": "Background",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "background_points",
+      "label": "Background Points",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "cat_armor",
+    "title": "Armor",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "armor_ranks",
+      "label": "Armor (None) ranks",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_total",
+      "label": "Armor (None) total",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "armor_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "cat_combat",
+    "title": "Combat",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "combat_skills",
+      "label": "Combat skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "skill_bonus",
+        "label": "Skill bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "voc",
+        "label": "Voc"
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec_1",
+        "label": "Spec 1"
+       },
+       {
+        "key": "spec_2",
+        "label": "Spec 2"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "combat_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "cat_adventuring",
+    "title": "Adventuring",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "adventuring_skills",
+      "label": "Adventuring skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "skill_bonus",
+        "label": "Skill bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "voc",
+        "label": "Voc"
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec_1",
+        "label": "Spec 1"
+       },
+       {
+        "key": "spec_2",
+        "label": "Spec 2"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "adventuring_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "cat_roguery",
+    "title": "Roguery",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "roguery_skills",
+      "label": "Roguery skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "skill_bonus",
+        "label": "Skill bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "voc",
+        "label": "Voc"
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec_1",
+        "label": "Spec 1"
+       },
+       {
+        "key": "spec_2",
+        "label": "Spec 2"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "roguery_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "cat_lore",
+    "title": "Lore",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "lore_skills",
+      "label": "Lore skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "skill_bonus",
+        "label": "Skill bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "voc",
+        "label": "Voc"
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec_1",
+        "label": "Spec 1"
+       },
+       {
+        "key": "spec_2",
+        "label": "Spec 2"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "lore_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "cat_body",
+    "title": "Body",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "body_skills",
+      "label": "Body skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "skill_bonus",
+        "label": "Skill bonus"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "voc",
+        "label": "Voc"
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec_1",
+        "label": "Spec 1"
+       },
+       {
+        "key": "spec_2",
+        "label": "Spec 2"
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "body_dp",
+      "label": "Development Points Per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "hp_move",
+    "title": "Hit Points & Movement",
+    "page": "Gear",
+    "fields": [
+     {
+      "key": "hit_points",
+      "label": "Hit Points",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "encumbrance_level",
+      "label": "Encumbrance Level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "move_rate",
+      "label": "Move Rate",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds",
+    "page": "Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bleed",
+      "label": "Bleed",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "stun",
+      "label": "Stun",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "penalties",
+      "label": "Penalties",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "conditions",
+      "label": "Conditions",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "defense",
+    "title": "Defense",
+    "page": "Gear",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "mdef_swi",
+      "label": "Melee SWI Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mdef_item",
+      "label": "Melee Item Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mdef_shield",
+      "label": "Melee Shield Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mdef_sp1",
+      "label": "Melee Special Bonus 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mdef_sp2",
+      "label": "Melee Special Bonus 2",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mdef_total",
+      "label": "Total Melee DEF",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_swi",
+      "label": "Ranged SWI Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_item",
+      "label": "Ranged Item Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_shield",
+      "label": "Ranged Shield Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_sp1",
+      "label": "Ranged Special Bonus 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_sp2",
+      "label": "Ranged Special Bonus 2",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rdef_total",
+      "label": "Total Range DEF",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "armor_shield",
+    "title": "Armor & Shield",
+    "page": "Gear",
+    "fields": [
+     {
+      "key": "armor_shield_list",
+      "label": "Armor & Shield",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armor_shield",
+        "label": "Armor/Shield"
+       },
+       {
+        "key": "type",
+        "label": "Type"
+       },
+       {
+        "key": "zones_protected",
+        "label": "Zones Protected"
+       },
+       {
+        "key": "qualities",
+        "label": "Qualities"
+       },
+       {
+        "key": "max_swi_to_def",
+        "label": "Max SWI to DEF"
+       },
+       {
+        "key": "move_penalty",
+        "label": "Move Penalty"
+       },
+       {
+        "key": "cmb_penalty",
+        "label": "CMB Penalty"
+       },
+       {
+        "key": "perception_penalty",
+        "label": "Perception Penalty"
+       },
+       {
+        "key": "melee_def_bonus",
+        "label": "Melee DEF Bonus"
+       },
+       {
+        "key": "ranged_def_bonus",
+        "label": "Ranged DEF Bonus"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Gear",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "hands",
+        "label": "Hands"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "cr",
+        "label": "CR"
+       },
+       {
+        "key": "length",
+        "label": "Length"
+       },
+       {
+        "key": "attack_table",
+        "label": "Attack Table"
+       },
+       {
+        "key": "max_result",
+        "label": "Max Result"
+       },
+       {
+        "key": "primary_critical",
+        "label": "Primary Critical"
+       },
+       {
+        "key": "alternate_critical",
+        "label": "Alternate Critical"
+       },
+       {
+        "key": "base_range",
+        "label": "Base Range"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "page": "Gear",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item_description",
+        "label": "Item & Description"
+       },
+       {
+        "key": "location",
+        "label": "Location"
+       }
+      ]
+     },
+     {
+      "key": "wealth_level",
+      "label": "Wealth Level",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "wealth_status",
+      "label": "Wealth Status",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "magic_points",
+    "title": "Magic Points",
+    "page": "Magic & Animals",
+    "fields": [
+     {
+      "key": "mp_stat",
+      "label": "Stat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_kin",
+      "label": "Kin",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_spec1",
+      "label": "Spec.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_spec2",
+      "label": "Spec.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_stat_gain",
+      "label": "Stat Gain Level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_voc_gain",
+      "label": "Voc. Gain Level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_total",
+      "label": "Total",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mp_spent",
+      "label": "Spent",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "spell_lores_sec",
+    "title": "Spell Lores",
+    "page": "Magic & Animals",
+    "fields": [
+     {
+      "key": "spell_lores",
+      "label": "Spell Lores",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell_lore",
+        "label": "Spell Lore"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "ranks",
+        "label": "# Ranks"
+       },
+       {
+        "key": "rank",
+        "label": "Rank"
+       },
+       {
+        "key": "stat_bonus",
+        "label": "Stat bonus"
+       },
+       {
+        "key": "voc",
+        "label": "Voc."
+       },
+       {
+        "key": "kin",
+        "label": "Kin"
+       },
+       {
+        "key": "spec",
+        "label": "Spec."
+       },
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     },
+     {
+      "key": "spell_dp",
+      "label": "Development Points per Level",
+      "type": "number",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "companion_animal",
+    "title": "Companion Animal",
+    "page": "Magic & Animals",
+    "width": "half",
+    "fields": [
+     {
+      "key": "companion_name",
+      "label": "Name",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "companion_type",
+      "label": "Type",
+      "type": "text"
+     },
+     {
+      "key": "companion_move",
+      "label": "Move",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "companion_at",
+      "label": "AT",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "companion_def",
+      "label": "DEF",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_tsr",
+      "label": "TSR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_wsr",
+      "label": "WSR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_hp",
+      "label": "HP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_att1",
+      "label": "1st Att.",
+      "type": "text"
+     },
+     {
+      "key": "companion_att2",
+      "label": "2nd Att.",
+      "type": "text"
+     },
+     {
+      "key": "companion_att3",
+      "label": "3rd Att.",
+      "type": "text"
+     },
+     {
+      "key": "companion_adv",
+      "label": "Adv.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_rog",
+      "label": "Rog.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_lore",
+      "label": "Lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "companion_special",
+      "label": "Special",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "riding_animal",
+    "title": "Riding Animal",
+    "page": "Magic & Animals",
+    "width": "half",
+    "fields": [
+     {
+      "key": "riding_name",
+      "label": "Name",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "riding_type",
+      "label": "Type",
+      "type": "text"
+     },
+     {
+      "key": "riding_move",
+      "label": "Move",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "riding_at",
+      "label": "AT",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "riding_def",
+      "label": "DEF",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_tsr",
+      "label": "TSR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_wsr",
+      "label": "WSR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_hp",
+      "label": "HP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_att1",
+      "label": "1st Att.",
+      "type": "text"
+     },
+     {
+      "key": "riding_att2",
+      "label": "2nd Att.",
+      "type": "text"
+     },
+     {
+      "key": "riding_att3",
+      "label": "3rd Att.",
+      "type": "text"
+     },
+     {
+      "key": "riding_adv",
+      "label": "Adv.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_rog",
+      "label": "Rog.",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_lore",
+      "label": "Lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "riding_special",
+      "label": "Special",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "xp_tracker",
+    "title": "Experience Point Tracker",
+    "page": "Magic & Animals",
+    "fields": [
+     {
+      "key": "xp_travel",
+      "label": "Explored a new location",
+      "type": "checkbox",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "xp_foes",
+      "label": "Faced dangerous foes or situations",
+      "type": "checkbox",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "xp_mission",
+      "label": "Completed a mission, quest or storyarc",
+      "type": "checkbox",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "xp_other",
+      "label": "Other experience",
+      "type": "list",
+      "columns": [
+       {
+        "key": "experience",
+        "label": "Experience"
+       },
+       {
+        "key": "done",
+        "label": "Done"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

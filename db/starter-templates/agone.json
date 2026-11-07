@@ -1,0 +1,1183 @@
+{
+ "name": "Agone",
+ "game": "Agone",
+ "edition": "1st Edition (Multisim, 1999; English edition Mongoose Publishing, 2004)",
+ "source": {
+  "title": "Agone character sheets",
+  "owner": "Multisim (English edition Mongoose Publishing)",
+  "url": "https://www.mongoosepublishing.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "birthplace",
+      "label": "Birthplace",
+      "type": "text"
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "old_age_roll",
+      "label": "Old age diff. roll",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "siz",
+      "label": "SIZ",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "move",
+      "label": "Move",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "flame_sec",
+    "title": "Flame",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "flame",
+      "label": "Flame",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dark_flame",
+      "label": "Dark Flame",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "body_sec",
+    "title": "Body",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dark_body",
+      "label": "Dark Body",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "body_bonus",
+      "label": "Body Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "agi",
+      "label": "AGIlity",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str",
+      "label": "STRength",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "per",
+      "label": "PERception",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sta",
+      "label": "STAmina",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "spirit_soul",
+    "title": "Spirit & Soul",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "spirit",
+      "label": "Spirit",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dark_spirit",
+      "label": "Dark Spirit",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spirit_bonus",
+      "label": "Spirit Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int",
+      "label": "INTelligence",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wil",
+      "label": "WILl",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dark_soul",
+      "label": "Dark Soul",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "soul_bonus",
+      "label": "Soul Bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha",
+      "label": "CHArisma",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cre",
+      "label": "CREativity",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "secondary",
+    "title": "Secondary Attributes",
+    "page": "Character",
+    "compact": true,
+    "fields": [
+     {
+      "key": "sec_melee",
+      "label": "MELee",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_aim",
+      "label": "AIM",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_damage_bonus",
+      "label": "Damage bonus",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_fortune_points",
+      "label": "Fortune (points)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_hit_points",
+      "label": "Hit points",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_art",
+      "label": "ART",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_ascendancy",
+      "label": "ASCendancy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_serious_wound_threshold",
+      "label": "Serious wound threshold",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_critical_wound_threshold",
+      "label": "Critical wound threshold",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_maximum_load",
+      "label": "Maximum load",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_half_load",
+      "label": "Half load",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "sec_daily_load",
+      "label": "Daily load",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "grp_trials",
+    "title": "Trials (-3)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "trials_alertness",
+      "label": "Alertness",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_athletics",
+      "label": "Athletics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_climb",
+      "label": "Climb",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_ride",
+      "label": "Ride",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_dodge",
+      "label": "Dodge",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_swim",
+      "label": "Swim",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_first_aid",
+      "label": "First aid",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "trials_survival",
+      "label": "Survival",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "grp_rogue",
+    "title": "Rogue (-3)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "rogue_acrobatics",
+      "label": "Acrobatics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_conceal",
+      "label": "Conceal",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_hunt",
+      "label": "Hunt",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_disguise",
+      "label": "Disguise",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_search",
+      "label": "Search",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_intrigue",
+      "label": "Intrigue",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_gambling",
+      "label": "Gambling",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_legerdemain",
+      "label": "Legerdemain",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_poisons",
+      "label": "Poisons",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "rogue_locksmith",
+      "label": "Locksmith",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "grp_courtly",
+    "title": "Courtly (-3)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "courtly_fast_talk",
+      "label": "Fast Talk",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_diplomacy",
+      "label": "Diplomacy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_eloquence",
+      "label": "Eloquence",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_stewardship",
+      "label": "Stewardship",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_trade",
+      "label": "Trade",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_painting",
+      "label": "Painting",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_poetry",
+      "label": "Poetry",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "courtly_sculpture",
+      "label": "Sculpture",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "grp_knowledge",
+    "title": "Knowledge (impossible)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "knowledge_law",
+      "label": "Law",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_medicine",
+      "label": "Medicine",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_navigation",
+      "label": "Navigation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_strategy",
+      "label": "Strategy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_beast_lore",
+      "label": "Beast lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_astronomy",
+      "label": "Astronomy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_surgery",
+      "label": "Surgery",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_geography",
+      "label": "Geography",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_plant_lore",
+      "label": "Plant lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "knowledge_history_legends",
+      "label": "History & legends",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "grp_occult",
+    "title": "Occult (impossible)",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "occult_tune",
+      "label": "Tune",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_shape",
+      "label": "Shape",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_vista",
+      "label": "Vista",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_scansion",
+      "label": "Scansion",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_dancer_lore",
+      "label": "Dancer Lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_cipher_sorcery",
+      "label": "Cipher-sorcery",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_demonology",
+      "label": "Demonology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_concord",
+      "label": "Concord",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_jornist",
+      "label": "Jornist",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_eclipsist",
+      "label": "Eclipsist",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "occult_obscurantist",
+      "label": "Obscurantist",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "other_skills",
+    "title": "Other Skills",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "other_skill_list",
+      "label": "Other skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "group",
+        "label": "Group"
+       },
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "specialty",
+        "label": "Specialty"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat",
+    "page": "Equipment & Powers",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "init",
+      "label": "Init",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "agi_dodge",
+      "label": "AGI + Dodge",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "init",
+        "label": "Init."
+       },
+       {
+        "key": "att",
+        "label": "Att."
+       },
+       {
+        "key": "def",
+        "label": "Def."
+       },
+       {
+        "key": "dom_db",
+        "label": "Dom+DB"
+       },
+       {
+        "key": "siz",
+        "label": "SIZ"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mount_sec",
+    "title": "Mount",
+    "page": "Equipment & Powers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "mount",
+      "label": "Mount",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "mount_attributes",
+      "label": "Mount attributes",
+      "type": "longtext"
+     },
+     {
+      "key": "mount_skills",
+      "label": "Mount skills",
+      "type": "longtext"
+     },
+     {
+      "key": "mount_notes",
+      "label": "Mount notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "page": "Equipment & Powers",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Equipment & Powers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "armor_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "armor_notes",
+      "label": "Armor notes",
+      "type": "longtext"
+     },
+     {
+      "key": "protection",
+      "label": "Protection",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "penalty",
+      "label": "Penalty",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "powers",
+    "title": "Seasonlings Powers",
+    "page": "Equipment & Powers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "seasonlings_powers",
+      "label": "Seasonlings powers",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "flame_powers_sec",
+    "title": "Flame Powers",
+    "page": "Equipment & Powers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "flame_powers",
+      "label": "Flame powers",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gifts_sec",
+    "title": "Gifts",
+    "page": "Equipment & Powers",
+    "width": "third",
+    "fields": [
+     {
+      "key": "gifts",
+      "label": "Gifts",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "assets_sec",
+    "title": "Assets",
+    "page": "Equipment & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "assets",
+      "label": "Assets",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "faults_sec",
+    "title": "Faults",
+    "page": "Equipment & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "faults",
+      "label": "Faults",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "darkness",
+    "title": "Darkness Sorrows",
+    "page": "Equipment & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "darkness_sorrows",
+      "label": "Darkness Sorrows",
+      "type": "longtext"
+     },
+     {
+      "key": "darkness_points",
+      "label": "Darkness points",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "blackness",
+      "label": "Blackness",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "perfidy",
+    "title": "Perfidy Sorrows",
+    "page": "Equipment & Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "perfidy_sorrows",
+      "label": "Perfidy Sorrows",
+      "type": "longtext"
+     },
+     {
+      "key": "perfidy_points",
+      "label": "Perfidy Points",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "magic",
+    "title": "Magic",
+    "page": "Magic",
+    "width": "third",
+    "fields": [
+     {
+      "key": "magic_art",
+      "label": "Art",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "magical_arts",
+      "label": "Magical Arts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "art",
+        "label": "Art"
+       },
+       {
+        "key": "mag_art_apt",
+        "label": "Mag. Art APT"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "opuses_sec",
+    "title": "Magical Art Opuses",
+    "page": "Magic",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "opuses",
+      "label": "Magical Art Opuses",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "art_instrument",
+        "label": "Art/Instrument"
+       },
+       {
+        "key": "thresh",
+        "label": "Thresh."
+       },
+       {
+        "key": "range_area_of_effect",
+        "label": "Range/Area of effect"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "time",
+        "label": "Time"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "ascendancy",
+    "title": "Ascendancy",
+    "page": "Magic",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "asc_value",
+      "label": "ASCendancy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "obedience",
+      "label": "Obedience",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "resonance",
+      "label": "Resonance",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "asc_dancer_lore",
+      "label": "Dancer Lore",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "asc_apt",
+      "label": "Ascendancy APT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "intuitive_apt",
+      "label": "Intuitive APT",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "dancers",
+    "title": "Dancer Attributes",
+    "page": "Magic",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "dancers_list",
+      "label": "Dancers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "memory",
+        "label": "Memory"
+       },
+       {
+        "key": "spells_in_memory",
+        "label": "Spells in memory"
+       },
+       {
+        "key": "ascendancy_bonus",
+        "label": "Ascendancy bonus"
+       },
+       {
+        "key": "empathy",
+        "label": "Empathy"
+       },
+       {
+        "key": "stamina",
+        "label": "Stamina"
+       },
+       {
+        "key": "active_stamina",
+        "label": "Active stamina"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells",
+    "page": "Magic",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell_name",
+        "label": "Spell Name"
+       },
+       {
+        "key": "obedience",
+        "label": "Obedience"
+       },
+       {
+        "key": "thresh",
+        "label": "Thresh."
+       },
+       {
+        "key": "range_area_of_effect",
+        "label": "Range/Area of effect"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "dance",
+        "label": "Dance"
+       },
+       {
+        "key": "spell_description",
+        "label": "Spell Description"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "artefacts",
+    "title": "Artefacts",
+    "page": "Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "artefact_list",
+      "label": "Artefacts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "description",
+        "label": "Description"
+       },
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "duration",
+        "label": "Duration"
+       },
+       {
+        "key": "activation",
+        "label": "Activation"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "contacts_sec",
+    "title": "Contacts",
+    "page": "Magic",
+    "width": "half",
+    "fields": [
+     {
+      "key": "contacts",
+      "label": "Contacts",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
