@@ -109,10 +109,13 @@
       n.textContent = show(t, any());   // only the look of the tumble: the result is already set
     }, 70);
   }
-  /** The dice of a rolled roll, term by term; a repeat says which go each row was. faces (symbol dice) replace the numbers. */
-  function diceRows(el, res, { animate = false, faces = null } = {}) {
+  /** The dice of a rolled roll, term by term; a repeat says which go each row was. faces (symbol dice) replace the numbers.
+   * look ({ body, ink, tex }, static/dice-3d.js) colours them as the roller's own dice. */
+  function diceRows(el, res, { animate = false, faces = null, look = null } = {}) {
+    const chip = look && root.Dice3D ? root.Dice3D.chip(look) : null;
     return res.results.map((one, k) => {
-      const row = el('div', { class: 'dice-terms' });
+      const row = el('div', { class: chip ? 'dice-terms looked' : 'dice-terms' });
+      if (chip) for (const [p, v] of Object.entries(chip)) row.style.setProperty(p, v);
       if (res.repeat) row.append(el('span', { class: 'dice-go-n small muted' }, `#${k + 1} = ${one.total}`));
       one.terms.forEach((t, i) => {
         row.append(el('span', { class: 'dice-term', title: t.src }, t.dice.map((d, j) => die(el, d, t, animate, k === 0 && faces?.[i]?.[j]))));

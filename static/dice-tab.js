@@ -14,7 +14,7 @@
   'use strict';
   function make(ctx) {
     const { S, api, el, isGM, post, toast } = ctx;
-    const Dice = root.Dice, DS = root.DiceSystems, DiceUI = root.DiceUI;
+    const Dice = root.Dice, DS = root.DiceSystems, DiceUI = root.DiceUI, D3 = root.Dice3D;
     const ask = ctx.promptDialog;
 
     const QUICK = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100', 'dF'];
@@ -50,6 +50,8 @@
     let cid = null, rolls = [], lastId = 0, seenId = 0, settings = null, pollTimer = null, loading = null, fresh = new Set();
     // The campaign's dice system (Settings → Dice), the numbers on the roller now, and which kind of roll is showing.
     let sysNow = null, sysSig = '', sysP = null, mode = 'free', oddsTimer = null, busy = false;
+    // The roll whose 3D dice are in the air: its result in the log waits for them to land.
+    let landingId = 0;
     const store = {
       get: k => { try { return localStorage.getItem(k); } catch { return null; } },
       set: (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private window */ } },
@@ -133,12 +135,15 @@
     }
     pinBtn.addEventListener('click', () => { store.set(PIN_KEY, pinned() ? 'float' : 'pin'); drawPin(); });
     drawPin();
+    const lookBtn = el('button', { type: 'button', class: 'dice-look-b', 'aria-label': 'Your dice: colours and 3D', 'aria-expanded': 'false', 'data-tip': 'Your dice: their colours, their pattern and 3D' }, '🎨');
+    const lookCard = el('div', { class: 'dice-help dice-look', hidden: true, role: 'dialog', 'aria-label': 'Your dice' });
+    lookBtn.addEventListener('click', () => showLook(lookCard.hidden));
     const panel = el('section', { class: 'dice-panel', hidden: true, role: 'region', 'aria-label': 'Dice roller' },
       el('div', { class: 'dice-head' }, el('h2', {}, '🎲 Dice'), sub,
-        pinBtn,
+        lookBtn, pinBtn,
         el('button', { type: 'button', class: 'dice-x', 'aria-label': 'Close the dice roller', 'data-tip': 'Close. The log keeps everyone\'s rolls', onclick: () => setOpen(false) }, '✕')),
       log,
-      el('div', { class: 'dice-foot' }, help, modes, sysBox, freeBox, err, savedRow));
+      el('div', { class: 'dice-foot' }, help, lookCard, modes, sysBox, freeBox, err, savedRow));
     document.body.append(fab, panel);
 
     fab.addEventListener('click', () => setOpen(true));
@@ -162,11 +167,12 @@
     visSel.addEventListener('change', () => store.set(visKey(), visSel.value));
     panel.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      if (!help.hidden) showHelp(false); else setOpen(false);
+      if (!help.hidden) showHelp(false); else if (!lookCard.hidden) showLook(false); else setOpen(false);
       e.stopPropagation();
     });
 
     function showHelp(on) {
+      if (on) showLook(false);
       help.hidden = !on;
       helpBtn.setAttribute('aria-expanded', String(on));
       helpBtn.classList.toggle('on', on);
@@ -193,6 +199,8 @@
         if (matchMedia('(hover: hover)').matches) (mode === 'game' ? sysRollBtn : input).focus({ preventScroll: true });
       } else {
         stopPoll();
+        showLook(false);
+        D3?.stop();
         fab.focus({ preventScroll: true });
       }
     }
@@ -227,16 +235,36 @@
     /** Add rolls from the server to the log; animate them when they are news. */
     function take(list, news) {
       const known = new Set(rolls.map(r => r.id));
+      let toss = null;
       for (const r of list) {
         if (known.has(r.id)) continue;
+        if (r.mine && S.user) r.look = myLook();     // what this page has just picked, even before the account has it
         rolls.push(r);
         if (news) fresh.add(r.id);
+        if (fresh.has(r.id) && (!toss || r.id > toss.id)) toss = r;
         lastId = Math.max(lastId, r.id);
       }
       rolls.sort((a, b) => a.id - b.id);
       if (rolls.length > 200) rolls = rolls.slice(-200);
+      if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) throw3d(toss);
       draw();
       if (isOpen()) markSeen();
+    }
+    /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
+    function throw3d(r) {
+      if (!D3 || r.seed === null) return;
+      let res;
+      try { res = Dice.roll(r.expr, r.seed); } catch { return; }
+      if (!D3.can(res)) return;
+      landingId = r.id;
+      const done = () => {
+        if (landingId !== r.id) return;
+        landingId = 0;
+        const li = log.querySelector(`[data-id="${r.id}"]`);
+        li?.classList.remove('landing');
+      };
+      D3.toss(res, r.look).then(done, done);
+      setTimeout(done, 4000);      // never leave a result hidden
     }
     function draw() {
       if (!rolls.length) {
@@ -274,7 +302,7 @@
           label = res.label;
           ({ big, words, tier, note } = o);
           if (o.sys && o.sys.id !== sysNow?.sys.id) sysName = o.sys.name;
-          body.append(...DiceUI.diceRows(el, res, { animate: fresh.has(r.id) && !reduced(), faces: o.faces }));
+          body.append(...DiceUI.diceRows(el, res, { animate: fresh.has(r.id) && !reduced() && landingId !== r.id, faces: o.faces, look: r.look }));
         } catch (e) {
           big = '—';
           words = 'Can\'t read this roll';
@@ -286,7 +314,7 @@
       if (words) out.append(el('small', { class: tier ? `tier t-${tier}` : null }, words));
       const exprText = r.expr.split('#')[0].split('@')[0].trim();
       meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`, ` · ${when(r.at)}`].filter(Boolean));
-      return el('li', { class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') },
+      return el('li', { 'data-id': String(r.id), class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') + (landingId === r.id ? ' landing' : '') },
         el('div', { class: 'dice-e-main' }, head, meta, body), out);
     }
 
@@ -442,6 +470,64 @@
       const r = savedList()[k - 1];
       if (!r) return;
       try { await putSaved(savedList().filter((_, i) => i !== k - 1)); toast(`Forgot "${r.n}"`); } catch (x) { toast(x.message, true); }
+    }
+
+    // ------------------------------------------------------------ your dice
+    // How this person's dice look: a colour, a colour for the numbers and a pattern (their account's, so every table
+    // sees their rolls in it), and whether this device throws 3D dice.
+    const myLook = () => S.user?.prefs?.dice_look || null;
+    let lookTimer = null;
+    function showLook(on) {
+      if (on) { showHelp(false); drawLook(); }
+      lookCard.hidden = !on;
+      lookBtn.setAttribute('aria-expanded', String(on));
+      lookBtn.classList.toggle('on', on);
+    }
+    function drawLook() {
+      const cur = myLook(), shown = cur || D3.themeLook();
+      const set = look => { setLook(look); drawLook(); };
+      const swatch = (look, name, current, reset) => el('button', { type: 'button', class: 'dice-sw' + (current ? ' on' : ''), 'aria-label': name, 'aria-pressed': String(!!current), 'data-tip': name,
+        style: { background: look.body, color: look.ink }, onclick: () => set(reset ? null : { ...look, tex: cur?.tex || '' }) }, '6');
+      const theme = D3.themeLook();
+      const body = el('input', { type: 'color', value: shown.body, 'aria-label': 'Colour of the dice',
+        onchange: e => set({ body: e.target.value, ink: D3.inkFor(e.target.value), tex: shown.tex || '' }) });
+      const ink = el('input', { type: 'color', value: shown.ink, 'aria-label': 'Colour of the numbers',
+        onchange: e => set({ ...shown, ink: e.target.value }) });
+      const tex = el('select', { 'aria-label': 'Pattern', onchange: e => set({ ...shown, tex: e.target.value }) },
+        D3.TEXTURES.map(([v, l]) => el('option', { value: v, selected: v === (shown.tex || '') }, l)));
+      const still = el('canvas', { class: 'dice-look-3d', width: '192', height: '192', 'aria-hidden': 'true' });
+      const flat = el('div', { class: 'dice-look-flat', 'aria-hidden': 'true' });
+      const res = { results: [{ terms: [{ src: 'd20', sides: 20, dice: [{ v: 20, rolls: [20], rerolled: [] }] }, { src: 'd6', sides: 6, dice: [{ v: 3, rolls: [3], rerolled: [] }, { v: 6, rolls: [6], rerolled: [] }] }], total: 29 }] };
+      flat.append(...DiceUI.diceRows(el, res, { look: shown }));
+      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, no3d = !D3.available();
+      const on3d = el('input', { type: 'checkbox', checked: D3.enabled() && !slow && !no3d, disabled: slow || no3d,
+        onchange: e => { D3.setEnabled(e.target.checked); drawLook(); } });
+      lookCard.replaceChildren(
+        el('div', { class: 'dice-help-h' }, el('h3', {}, 'Your dice'),
+          el('button', { type: 'button', class: 'link', 'aria-label': 'Close', onclick: () => showLook(false) }, '✕')),
+        el('p', { class: 'small muted' }, 'Everyone at the table sees your rolls in these colours, in every campaign you play in.'),
+        el('div', { class: 'dice-look-grid' },
+          el('div', { class: 'dice-look-pre' }, still, flat),
+          el('div', {},
+            el('div', { class: 'dice-sws', role: 'group', 'aria-label': 'Dice colours' },
+              swatch(theme, 'The theme\'s colours', !cur, true), ...D3.SWATCHES.map(([b, i, n]) => swatch({ body: b, ink: i }, n, cur && cur.body === b && cur.ink === i))),
+            el('div', { class: 'dice-look-row' },
+              el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
+            el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
+        el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
+          no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
+      if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
+    }
+    /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */
+    function setLook(look) {
+      if (S.user) S.user.prefs = { ...(S.user.prefs || {}), dice_look: look };
+      if (!look && S.user?.prefs) delete S.user.prefs.dice_look;
+      for (const r of rolls) if (r.mine) r.look = look;
+      draw();
+      clearTimeout(lookTimer);
+      lookTimer = setTimeout(async () => {
+        try { const r = await post('prefs_save', { dice_look: look }); if (S.user) S.user.prefs = r.prefs; } catch (x) { toast(x.message, true); }
+      }, 500);
     }
 
     // ------------------------------------------------------------ keeping up

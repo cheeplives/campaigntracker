@@ -19,6 +19,19 @@ const DICE_KEEP_MAX = 5000;
 const DICE_PAGE = 50;
 /** Engine versions static/dice.js can roll (Dice.VERSION). */
 const DICE_ENGINES = [1];
+/** The built-in patterns a player can put on their dice (TEXTURES in static/dice-3d.js, which draws them). */
+const DICE_TEXTURES = ['', 'marble', 'wood', 'stone', 'stars', 'metal', 'speckle'];
+
+/** How a player's dice look, checked: { body, ink, tex }, or null if it isn't one. */
+function dice_look($l): ?array {
+    if (!is_array($l)) return null;
+    $hex = fn($v) => is_string($v) && preg_match('/^#[0-9a-f]{6}$/i', $v) ? strtolower($v) : null;
+    $body = $hex($l['body'] ?? null);
+    $ink = $hex($l['ink'] ?? null);
+    $tex = $l['tex'] ?? '';
+    if (!$body || !$ink || !is_string($tex) || !in_array($tex, DICE_TEXTURES, true)) return null;
+    return ['body' => $body, 'ink' => $ink, 'tex' => $tex];
+}
 
 /** The campaign's Settings → Dice choices, with the defaults filled in. */
 function dice_settings(int $cid): array {
@@ -50,17 +63,20 @@ function dice_system($s): ?array {
 function dice_seen_sql(bool $isGm): string {
     return $isGm ? '1=1' : "(r.visibility='all' OR r.user_id=" . (int)me()['id'] . ')';
 }
-/** A roll as the browser gets it. A blind roll reaches its player without its seed, so their page can't work it out. */
+/** A roll as the browser gets it. A blind roll reaches its player without its seed, so their page can't work it out.
+ * look is how the roller's dice look (their account's choice now, not when they rolled), or null for the theme's. */
 function dice_out(array $r, bool $isGm): array {
     $uid = $r['user_id'] !== null ? (int)$r['user_id'] : null;
     $hidden = !$isGm && $r['visibility'] === 'blind';
     return ['id' => (int)$r['id'], 'expr' => $r['expr'], 'seed' => $hidden ? null : $r['seed'], 'engine' => (int)$r['engine'],
         'visibility' => $r['visibility'], 'by_gm' => (bool)(int)$r['by_gm'], 'mine' => $uid !== null && $uid === me()['id'],
-        'author' => $r['author'], 'abs_shift' => $r['abs_shift'] !== null ? (int)$r['abs_shift'] : null, 'at' => $r['created_at']];
+        'author' => $r['author'], 'abs_shift' => $r['abs_shift'] !== null ? (int)$r['abs_shift'] : null, 'at' => $r['created_at'],
+        'look' => dice_look((dec($r['prefs_json'] ?? null) ?: [])['dice_look'] ?? null)];
 }
 /** The rolls this member sees: newer than $after, oldest first; or with no $after, the newest page of them, oldest first. */
 function dice_list(int $cid, bool $isGm, ?int $after): array {
-    $sql = 'SELECT r.*, ' . AUTHOR_SQL . ' AS author FROM dice_rolls r LEFT JOIN users u ON u.id=r.user_id
+    $sql = 'SELECT r.*, ' . AUTHOR_SQL . ' AS author, up.prefs_json FROM dice_rolls r LEFT JOIN users u ON u.id=r.user_id
+        LEFT JOIN user_prefs up ON up.user_id=r.user_id
         LEFT JOIN campaign_members m ON m.campaign_id=r.campaign_id AND m.user_id=r.user_id
         WHERE r.campaign_id=? AND ' . dice_seen_sql($isGm);
     if ($after !== null) {
