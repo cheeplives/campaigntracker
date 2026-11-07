@@ -17,7 +17,7 @@ declare(strict_types=1);
 const RELATION_STARTER_TYPES = [
     ['Has resident', 'Resident of', '#16a34a'], ['Contains', 'Located in', '#15803d'], ['Has member', 'Member of', '#9333ea'],
     ['Rules', 'Ruled by', '#b45309'], ['Owns', 'Owned by', '#d97706'], ['Serves', 'Served by', '#2563eb'],
-    ['Worships', 'Worshipped by', '#0891b2'], ['Parent of', 'Child of', '#db2777'],
+    ['Worships', 'Worshipped by', '#0891b2'], ['Parent of', 'Child of', '#db2777'], ['Partner of', '', '#be185d'], ['Sibling of', '', '#a21caf'],
     ['Ally of', '', '#059669'], ['Enemy of', '', '#dc2626'], ['Related to', '', '#6b7280'],
 ];
 /** SQL (aliases r, a, b) for the connections of campaign ? that this member may see. */

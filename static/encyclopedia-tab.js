@@ -262,7 +262,9 @@
       const nearRow = el('div', { class: 'row small' });
       const search = el('input', { type: 'search', value: st.q, placeholder: 'Search names, notes and tags', 'aria-label': 'Search the Encyclopedia' });
       const lists = el('div', { class: 'enc-lists' });
-      const ctx = { rel, conns, entries, st, files, draw: null };
+      const byId = new Map(entries.map(e => [e.id, e]));
+      const ctx = { rel, conns, entries, st, files, draw: null,
+        web: opts => WebView.open({ conns, byId, href, campaignName: S.camp.name, ...opts }) };
       // Each entry is a small card: its name, its other names under it, and its tags along the bottom.
       const item = e => el('a', { class: 'enc-item enc-card' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
         el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name,
@@ -361,7 +363,7 @@
       mount(...campaignHeader('encyclopedia'), listPage({ title: 'Encyclopedia', picked: !!current,
         tipText: 'The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only',
         add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'),
-        more: [scanBtn, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
+        more: [scanBtn, [...conns.values()].some(l => l.length) ? btn('🕸 Campaign web', () => ctx.web({ center: null }), '', 'Draw every connection in the Encyclopedia as a web you can pan, zoom and filter by kind') : null, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
         hide: { key: 'chronicle:enchide' },
         wide: { key: 'chronicle:encwide', tips: ['Widen the list to see more of the Encyclopedia at once, and narrow the entry', 'Give the entry its room back and narrow the list'] },
         top: [search, filters, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
