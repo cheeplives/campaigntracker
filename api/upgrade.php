@@ -97,7 +97,7 @@ function upgrade_steps(): array {
             'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
         ['035_route_terrain.sql', fn(PDO $p) => db_has_table($p, 'map_routes') && !db_has_column($p, 'map_routes', 'terrain_json'),
             'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
-        ['036_content_versions.sql', fn(PDO $p) => !db_has_table($p, 'content_versions'),
+        ['039_content_versions.sql', fn(PDO $p) => !db_has_table($p, 'content_versions'),
             'Entries, tomes, session notes and day notes now keep their earlier versions, for a GM to read, compare and restore.'],
     ];
 }

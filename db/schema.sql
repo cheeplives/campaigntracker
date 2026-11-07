@@ -442,7 +442,7 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Edit history (see db/migrations/036_content_versions.sql and api/history.php): the earlier versions of an Encyclopedia
+-- Edit history (see db/migrations/039_content_versions.sql and api/history.php): the earlier versions of an Encyclopedia
 -- entry, a Library tome, a session and a day's notes, each the item's text fields as JSON. kind is entry, tome, session
 -- or day; ref_id the item's id (the day's absolute day for a day). baseline: what the item held before history began.
 CREATE TABLE IF NOT EXISTS content_versions (
