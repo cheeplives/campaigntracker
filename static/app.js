@@ -589,11 +589,11 @@
       S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
       schemePicker(),
       themeToggle(),
-      // Your name opens a menu of what is yours: the account page, the admin's Users, and signing out
+      // Your name opens a menu of what is yours: the account page, the admin's Site Admin, and signing out
       S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
         tip: `Signed in as ${S.user.email}`, items: [
-          el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your units, your character names and the map scanner key' }, 'Account'),
-          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
+          el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
+          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Site Admin') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
         : S.pending ? btn('Sign out', signOut, 'link') : null,
@@ -696,9 +696,28 @@
 
   const UNIT_OPTIONS = [['', 'None (each campaign\'s own)'], ['imperial', 'Imperial (°F, miles, inches, mph)'], ['metric', 'Metric (°C, km, cm, km/h)']];
   async function viewAccount() {
-    const { campaigns } = await api('campaigns');
+    // The name and pronouns the app calls them by, in place of the name from Google or GitHub (user_profiles, migration 035)
+    const nameIn = el('input', { name: 'name', value: S.user.custom_name || '', maxlength: 150, placeholder: S.user.provider_name || 'Your name', autocomplete: 'nickname', 'aria-label': 'Name' });
+    const pronIn = el('input', { name: 'pronouns', value: S.user.pronouns || '', maxlength: 40, placeholder: 'e.g. she/her', list: 'pronoun-ideas', 'aria-label': 'Pronouns' });
+    const ideas = el('datalist', { id: 'pronoun-ideas' }, ['she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'xe/xem', 'ze/hir', 'any pronouns'].map(v => el('option', { value: v })));
+    const profile = el('form', { class: 'card narrow' }, el('h2', {}, 'Your name'),
+      el('p', { class: 'muted' }, `Signed in as ${S.user.email}.${S.user.provider_name ? ` Google or GitHub calls you ${S.user.provider_name}.` : ''} Set a name here and Chronicle calls you that instead, everywhere in the app.`),
+      field('Name', nameIn, 'Leave it blank to use the name from Google or GitHub. A character name you set in a campaign still signs your notes there.'),
+      field('Pronouns', pronIn, 'Shown beside your name on Members and Site Admin. Optional.'), ideas,
+      el('button', { class: 'primary' }, 'Save name'));
+    profile.addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        const r = await post('profile_save', { name: nameIn.value, pronouns: pronIn.value });
+        Object.assign(S.user, { name: r.name, custom_name: r.custom_name, pronouns: r.pronouns });
+        nameIn.value = r.custom_name || ''; pronIn.value = r.pronouns || '';
+        const me = S.members?.find(x => Number(x.id) === S.user.id);
+        if (me) Object.assign(me, { display_name: r.name, pronouns: r.pronouns });
+        renderNav();
+        toast('Name saved');
+      } catch (err) { toast(err.message, true); }
+    });
     const prefs = el('form', { class: 'card narrow' }, el('h2', {}, 'Preferences'),
-      el('p', { class: 'muted' }, `Signed in as ${S.user.email}. Your name comes from your Google or GitHub account.`),
       field('Units', select(UNIT_OPTIONS, myUnits(), { name: 'units' }),
         'Every temperature, distance, depth and speed the app works out. Only changes what you see. With None you see each campaign in the units its GM picked.'),
       el('button', { class: 'primary' }, 'Save'));
@@ -707,42 +726,6 @@
       const v = formData(prefs).units;
       try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
-    // The campaigns they belong to (not every campaign an admin can open), each with their character there. A box saves when you leave it.
-    const mine = byStarThenName(campaigns.filter(c => c.member));
-    const list = el('div', { class: 'card narrow' }, el('h2', {}, 'Your campaigns'),
-      mine.length ? el('ul', { class: 'camplist account-camps' }, mine.map(c => {
-        const name = el('input', { value: c.character_name || '', maxlength: 150, placeholder: 'Your own name', 'aria-label': `Your character in ${c.name}` });
-        name.addEventListener('change', async () => {
-          try {
-            await post('member_character', { character_name: name.value }, c.id);
-            c.character_name = name.value.trim();
-            const m = S.camp?.id === c.id && S.members.find(x => Number(x.id) === S.user.id);
-            if (m) m.character_name = c.character_name;
-            toast('Saved');
-          } catch (err) { toast(err.message, true); }
-        });
-        // with character sheets, the active character's name is the one shown; picked from their own characters there
-        const pick = el('select', { 'aria-label': `Active character in ${c.name}` }, el('option', { value: '' }, 'None: use the name above'));
-        const pickField = field('Active character', pick, null, 'One of your character sheets here. Its name is shown for you, and renaming it renames it everywhere');
-        pickField.hidden = true;
-        if (typeof Sheets !== 'undefined') api('characters', { query: { cid: c.id } }).then(({ characters }) => {
-          const own = characters.filter(x => x.owner?.id === S.user.id && !x.secret);
-          if (!own.length) return;
-          pick.append(...own.map(x => el('option', { value: x.id, selected: Number(c.active_character_id) === x.id }, x.name)));
-          pickField.hidden = false;
-          pick.addEventListener('change', async () => {
-            try {
-              await post('member_active_character', { character_id: pick.value ? Number(pick.value) : null }, c.id);
-              const x = own.find(o => String(o.id) === pick.value);
-              c.active_character_id = x ? x.id : null;
-              if (x) { name.value = c.character_name = x.name; }
-              toast('Saved');
-            } catch (err) { toast(err.message, true); }
-          });
-        }).catch(() => { /* no sheets on this server, or not reachable: the name box stays */ });
-        return el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
-          field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'), pickField);
-      })) : el('p', { class: 'muted' }, 'You aren\'t in any campaigns yet.'));
     // The GM's own Anthropic API key, for Scan for names on a map. Kept in this browser only: never sent to this site's
     // server, only from the browser straight to Anthropic when they scan.
     let scanner = null;
@@ -770,7 +753,7 @@
       });
       show();
     }
-    mount(prefs, scanner, list);
+    mount(profile, prefs, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -783,7 +766,9 @@
       const legacy = u.provider === 'legacy';
       const self = Number(u.id) === S.user.id;
       return el('tr', {},
-        el('td', {}, el('strong', {}, u.display_name || '(no name)'), Number(u.is_admin) ? el('span', { class: 'role gm' }, 'Admin') : null),
+        el('td', {}, el('strong', {}, u.display_name || '(no name)'), u.pronouns ? el('span', { class: 'pronouns muted' }, ` (${u.pronouns})`) : null,
+          Number(u.is_admin) ? el('span', { class: 'role gm' }, 'Admin') : null,
+          u.provider_name && u.provider_name !== u.display_name ? el('div', { class: 'small muted' }, `${PROVIDER_LABEL[u.provider] || 'Account'} name: ${u.provider_name}`) : null),
         el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
           el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
         el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
@@ -5502,7 +5487,7 @@
         const sheet = sheetOf(m);
         const canLink = (self || isGM()) && !sheet && typeof Sheets !== 'undefined';
         return el('div', { class: 'listrow member' },
-          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.pronouns ? el('span', { class: 'pronouns muted' }, ` (${m.pronouns})`) : null, m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
             el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),

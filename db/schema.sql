@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS user_prefs (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- user_profiles: the name and pronouns someone sets on their Account page, used in place of users.display_name (their
+-- Google or GitHub name, which every sign-in rewrites). Chronicle's own, so Sinless never sees it. Migration 035.
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id   BIGINT UNSIGNED NOT NULL,
+  name      VARCHAR(150) NULL DEFAULT NULL,   -- NULL: use users.display_name
+  pronouns  VARCHAR(40)  NULL DEFAULT NULL,
+  PRIMARY KEY (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS campaigns (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
