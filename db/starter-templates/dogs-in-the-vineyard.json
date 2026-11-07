@@ -1,0 +1,188 @@
+{
+ "name": "Dogs in the Vineyard",
+ "game": "Dogs in the Vineyard",
+ "edition": "Character sheet v2",
+ "source": {
+  "title": "Dogs character sheet (v2)",
+  "owner": "Lumpley Games (D. Vincent Baker); sheet by an unknown fan",
+  "url": "https://lumpley.games/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "focus",
+      "label": "Focus",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stat_mind",
+      "label": "Mind",
+      "type": "text"
+     },
+     {
+      "key": "stat_body",
+      "label": "Body",
+      "type": "text"
+     },
+     {
+      "key": "stat_soul",
+      "label": "Soul",
+      "type": "text"
+     },
+     {
+      "key": "stat_spirit",
+      "label": "Spirit",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "traits_sec",
+    "title": "Traits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait",
+        "label": "Trait"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "relationships_sec",
+    "title": "Relationships",
+    "width": "half",
+    "fields": [
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "list",
+      "columns": [
+       {
+        "key": "relationship",
+        "label": "Relationship"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "unassigned_sec",
+    "title": "Unassigned Dice",
+    "width": "third",
+    "fields": [
+     {
+      "key": "unassigned_dice",
+      "label": "Unassigned Dice",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "powers_sec",
+    "title": "Powers",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "powers",
+      "label": "Powers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "power",
+        "label": "Power"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "consequence_sec",
+    "title": "Consequence Dice",
+    "width": "third",
+    "fields": [
+     {
+      "key": "consequence_dice",
+      "label": "Consequence Dice",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

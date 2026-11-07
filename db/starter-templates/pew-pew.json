@@ -1,0 +1,131 @@
+{
+ "name": "Pew Pew! (The Bounty Hunter Edition)",
+ "game": "Pew Pew!",
+ "edition": "The Bounty Hunter Edition (Fainting Goat Games)",
+ "source": {
+  "title": "Pew Pew! character sheets",
+  "owner": "Fainting Goat Games",
+  "url": "https://www.drivethrurpg.com/en/publisher/7076/fainting-goat-games",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "background_sec",
+    "title": "Background",
+    "width": "half",
+    "fields": [
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "you_owe_me_one",
+      "label": "You Owe Me One",
+      "type": "pips",
+      "cols": 3,
+      "count": 2,
+      "play": true
+     },
+     {
+      "key": "carefully_crafted_plan",
+      "label": "Carefully Crafted Plan",
+      "type": "pips",
+      "cols": 3,
+      "count": 1,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "drives",
+      "label": "Drives",
+      "type": "longtext",
+      "summary": true
+     },
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     },
+     {
+      "key": "scavenged_1",
+      "label": "Scavenged Gear 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "scavenged_2",
+      "label": "Scavenged Gear 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "scavenged_3",
+      "label": "Scavenged Gear 3",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "vehicle",
+    "title": "Vehicle/Companion",
+    "width": "half",
+    "fields": [
+     {
+      "key": "vehicle_name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "vehicle_damage",
+      "label": "Damage",
+      "type": "pips",
+      "cols": 3,
+      "count": 7,
+      "play": true
+     },
+     {
+      "key": "vehicle_equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

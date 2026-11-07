@@ -1,0 +1,655 @@
+{
+ "name": "Wild Talents (2nd Edition)",
+ "game": "Wild Talents",
+ "edition": "2nd Edition (Arc Dream, 2010)",
+ "source": {
+  "title": "Wild Talents character sheet",
+  "owner": "Arc Dream Publishing (Dennis Detwiller and Greg Stolze)",
+  "url": "https://www.arcdream.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name/Aliases",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "loyalty",
+      "label": "Loyalty",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "passion",
+      "label": "Passion",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "hit_locations",
+    "title": "Hit Locations",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hit_head_shock",
+      "label": "(10) Head shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "hit_head_kill",
+      "label": "(10) Head killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "hit_torso_shock",
+      "label": "(7-9) Torso shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "hit_torso_kill",
+      "label": "(7-9) Torso killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "hit_r_arm_shock",
+      "label": "(5-6) R. Arm shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_arm_kill",
+      "label": "(5-6) R. Arm killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_arm_shock",
+      "label": "(3-4) L. Arm shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_arm_kill",
+      "label": "(3-4) L. Arm killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_leg_shock",
+      "label": "(2) R. Leg shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_leg_kill",
+      "label": "(2) R. Leg killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_leg_shock",
+      "label": "(1) L. Leg shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_leg_kill",
+      "label": "(1) L. Leg killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "archetype_sec",
+    "title": "Archetype",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "cost",
+      "label": "Cost",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "sources",
+      "label": "Sources",
+      "type": "longtext"
+     },
+     {
+      "key": "permissions",
+      "label": "Permissions",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "intrinsics_sec",
+    "title": "Intrinsics",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "intrinsics",
+      "label": "Intrinsics",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_body",
+    "title": "Body",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_body",
+      "label": "Body dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_athletics",
+      "label": "Athletics",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_block",
+      "label": "Block",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_brawling",
+      "label": "Brawling",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_endurance",
+      "label": "Endurance",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_weapon_1",
+      "label": "Weapon 1",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "body_weapon_2",
+      "label": "Weapon 2",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_coordination",
+    "title": "Coordination",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_coordination",
+      "label": "Coordination dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_dodge",
+      "label": "Dodge",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_driving",
+      "label": "Driving",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_lockpicking",
+      "label": "Lockpicking",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_stealth",
+      "label": "Stealth",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_weapon_1",
+      "label": "Weapon 1",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "coordination_weapon_2",
+      "label": "Weapon 2",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_sense",
+    "title": "Sense",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_sense",
+      "label": "Sense dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "sense_empathy",
+      "label": "Empathy",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "sense_perception",
+      "label": "Perception",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "sense_scrutiny",
+      "label": "Scrutiny",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_mind",
+    "title": "Mind",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_mind",
+      "label": "Mind dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_first_aid",
+      "label": "First Aid",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_medicine",
+      "label": "Medicine",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_navigation",
+      "label": "Navigation",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_research",
+      "label": "Research",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_security_systems",
+      "label": "Security Systems",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_streetwise",
+      "label": "Streetwise",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_survival",
+      "label": "Survival",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_tactics",
+      "label": "Tactics",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_other_skill_1",
+      "label": "Other skill 1",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_other_skill_2",
+      "label": "Other skill 2",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "mind_other_skill_3",
+      "label": "Other skill 3",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_charm",
+    "title": "Charm",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_charm",
+      "label": "Charm dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "charm_lie",
+      "label": "Lie",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "charm_perform",
+      "label": "Perform",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "charm_persuasion",
+      "label": "Persuasion",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stat_sec_command",
+    "title": "Command",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_command",
+      "label": "Command dice",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "command_interrogation",
+      "label": "Interrogation",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "command_intimidation",
+      "label": "Intimidation",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "command_leadership",
+      "label": "Leadership",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "command_stability",
+      "label": "Stability",
+      "type": "text",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "will_sec",
+    "title": "Willpower",
+    "page": "Character",
+    "compact": true,
+    "fields": [
+     {
+      "key": "base_will",
+      "label": "Base Will",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "point_total",
+      "label": "Point Total",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "experience_points",
+      "label": "Experience Points",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Disadvantages, Equipment and Other Notes",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Disadvantages, Equipment and Other Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "power_1",
+    "title": "Power 1",
+    "page": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "power_1_desc",
+      "label": "Power Description and Dice",
+      "type": "longtext"
+     },
+     {
+      "key": "power_1_qualities",
+      "label": "Quality, Extras, Flaws and Cost",
+      "type": "longtext"
+     },
+     {
+      "key": "power_1_cost_die",
+      "label": "Total Cost per Die",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "power_1_cost",
+      "label": "Total Cost",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "power_2",
+    "title": "Power 2",
+    "page": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "power_2_desc",
+      "label": "Power Description and Dice",
+      "type": "longtext"
+     },
+     {
+      "key": "power_2_qualities",
+      "label": "Quality, Extras, Flaws and Cost",
+      "type": "longtext"
+     },
+     {
+      "key": "power_2_cost_die",
+      "label": "Total Cost per Die",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "power_2_cost",
+      "label": "Total Cost",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "power_3",
+    "title": "Power 3",
+    "page": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "power_3_desc",
+      "label": "Power Description and Dice",
+      "type": "longtext"
+     },
+     {
+      "key": "power_3_qualities",
+      "label": "Quality, Extras, Flaws and Cost",
+      "type": "longtext"
+     },
+     {
+      "key": "power_3_cost_die",
+      "label": "Total Cost per Die",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "power_3_cost",
+      "label": "Total Cost",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "power_4",
+    "title": "Power 4",
+    "page": "Powers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "power_4_desc",
+      "label": "Power Description and Dice",
+      "type": "longtext"
+     },
+     {
+      "key": "power_4_qualities",
+      "label": "Quality, Extras, Flaws and Cost",
+      "type": "longtext"
+     },
+     {
+      "key": "power_4_cost_die",
+      "label": "Total Cost per Die",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "power_4_cost",
+      "label": "Total Cost",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   }
+  ]
+ }
+}
