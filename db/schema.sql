@@ -821,6 +821,27 @@ CREATE TABLE IF NOT EXISTS game_requests (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- site_reports: problems reported with the Report (!) button in the top bar, read on Site Admin's Reports tab: what
+-- they wrote, the page, what the page gathered (context_json), an optional screenshot, and whether it is open, resolved
+-- without a fix, or sent to GitHub. Migration 040.
+CREATE TABLE IF NOT EXISTS site_reports (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id       BIGINT UNSIGNED NULL,
+  message       TEXT NOT NULL,
+  page          VARCHAR(500) NOT NULL DEFAULT '',
+  context_json  MEDIUMTEXT NULL,
+  shot          MEDIUMBLOB NULL,
+  shot_mime     VARCHAR(20) NULL,
+  status        ENUM('open','resolved','github') NOT NULL DEFAULT 'open',
+  github_url    VARCHAR(300) NULL,
+  closed_by     BIGINT UNSIGNED NULL,
+  closed_at     DATETIME NULL,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_site_report_status (status, created_at),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- A character in a campaign: one filled-in copy of a template, with its own Encyclopedia entry (which holds its name).
 -- field_values: JSON keyed by field key; field_stamps: who last changed each field and when, [user id, unix ms];
 -- hidden: field and section keys only the owner and GMs see. sheet_public: an NPC's sheet is GM-only until it is 1.

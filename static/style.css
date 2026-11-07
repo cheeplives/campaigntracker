@@ -739,6 +739,35 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .admin-head .subtabs { border-bottom: 0; }
 .switch-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; font-weight: 600; cursor: pointer; }
 .switch-row input { width: 18px; height: 18px; margin: 0; }
+/* Report (!) in the top bar: a round pill like light / dark beside it, its ! in the accent colour */
+#topnav .report-btn { width: 34px; padding: 0; font: 800 1.05rem/1 var(--disp); color: var(--accent); }
+dialog.kit-dialog.report-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.report-label { display: block; margin-bottom: 10px; }
+.report-label > span { display: block; font-weight: 600; margin-bottom: 4px; }
+.report-label textarea { width: 100%; font-size: 16px; resize: vertical; }
+.report-shot { margin-bottom: 8px; }
+.report-shot .switch-row { margin: 0 0 6px; }
+.report-shot-area.off { opacity: .35; }
+.report-shot-img { display: block; max-width: 100%; max-height: 200px; border: 1px solid var(--line); border-radius: 4px; }
+.report-more { margin: 6px 0 4px; }
+.report-more > summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
+.report-details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin: 6px 0 0; font-size: .82rem; }
+.report-details dt { color: var(--dim); }
+.report-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); }
+.report-error:empty { display: none; }
+.report-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.report-card { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 10px 12px; background: var(--panel); }
+.report-card.report-resolved { border-left-color: var(--line); }
+.report-card.report-github { border-left-color: var(--ok); }
+.report-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.report-head .report-status { margin-left: auto; }
+.report-status.open { color: var(--accent); border-color: var(--accent); }
+.report-status.github { color: var(--ok); border-color: var(--ok); }
+.report-msg { margin: 6px 0; }
+.report-thumb { display: inline-block; margin: 6px 0 2px; }
+.report-thumb img { display: block; max-width: min(100%, 360px); max-height: 220px; border: 1px solid var(--line); border-radius: 4px; }
+.report-actions { margin-top: 8px; }
+.report-filter { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
 .tbl.game-requests td { vertical-align: top; overflow-wrap: break-word; }
 .tbl.game-requests .num { text-align: right; width: 4.5em; font-variant-numeric: tabular-nums; }
 .tbl.game-requests td.act { text-align: right; width: 1%; white-space: nowrap; }

@@ -25,6 +25,7 @@ require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
 require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
+require __DIR__ . '/reports.php';
 require __DIR__ . '/panel.php';
 require __DIR__ . '/upgrade.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
@@ -943,6 +944,15 @@ try {
     case 'game_requests_clear':
     case 'site_setting_save':
         game_requests_action($action);
+
+    case 'report_send':
+    case 'reports':
+    case 'report_shot':
+    case 'report_status':
+    case 'report_github':
+    case 'report_github_link':
+    case 'report_delete':
+        reports_action($action);
 
     case 'characters':
     case 'character':
