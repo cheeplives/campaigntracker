@@ -1,0 +1,1445 @@
+{
+ "name": "Torchbearer (1st Edition)",
+ "game": "Torchbearer",
+ "edition": "1st Edition (Burning Wheel HQ, 2013)",
+ "source": {
+  "title": "Torchbearer character sheet and magic character sheet",
+  "owner": "Burning Wheel HQ (Luke Crane, Thor Olavsrud, Ben Morgan)",
+  "url": "https://www.torchbearerrpg.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "who",
+    "title": "Who You Are",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "stock",
+      "label": "Stock",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "home",
+      "label": "Home",
+      "type": "text"
+     },
+     {
+      "key": "raiment",
+      "label": "Raiment",
+      "type": "text"
+     },
+     {
+      "key": "parents",
+      "label": "Parents",
+      "type": "text"
+     },
+     {
+      "key": "mentor",
+      "label": "Mentor",
+      "type": "text"
+     },
+     {
+      "key": "friend",
+      "label": "Friend",
+      "type": "text"
+     },
+     {
+      "key": "enemy",
+      "label": "Enemy",
+      "type": "text"
+     },
+     {
+      "key": "alignment",
+      "label": "Alignment",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "fight_for",
+    "title": "What You Fight For",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "belief",
+      "label": "Belief",
+      "type": "longtext"
+     },
+     {
+      "key": "goal",
+      "label": "Goal",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "instinct",
+      "label": "Instinct",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "fate_persona",
+    "title": "Fate & Persona",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "fate",
+      "label": "Fate",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "fate_spent",
+      "label": "Fate total spent",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "persona",
+      "label": "Persona",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "persona_spent",
+      "label": "Persona total spent",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "conditions",
+    "title": "Conditions",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "cond_fresh",
+      "label": "Fresh",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_hungry_and_thirsty",
+      "label": "Hungry and Thirsty",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_angry",
+      "label": "Angry",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_afraid",
+      "label": "Afraid",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_exhausted",
+      "label": "Exhausted",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_injured",
+      "label": "Injured",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_sick",
+      "label": "Sick",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "cond_dead",
+      "label": "Dead",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "checks_sec",
+    "title": "Checks",
+    "page": "Character",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "checks",
+      "label": "Checks",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities",
+    "title": "Abilities",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "ab_will",
+      "label": "Will",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_will_pass",
+      "label": "Will pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "ab_will_fail",
+      "label": "Will fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "ab_health",
+      "label": "Health",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_health_pass",
+      "label": "Health pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "ab_health_fail",
+      "label": "Health fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "ab_nature",
+      "label": "Nature",
+      "type": "number",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "ab_nature_pass",
+      "label": "Nature pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 7
+     },
+     {
+      "key": "ab_nature_fail",
+      "label": "Nature fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "ab_nature_max",
+      "label": "Nature maximum",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "nature_descriptors",
+      "label": "Nature Descriptors",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "ab_resources",
+      "label": "Resources",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_resources_pass",
+      "label": "Resources pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 10
+     },
+     {
+      "key": "ab_resources_fail",
+      "label": "Resources fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 9
+     },
+     {
+      "key": "ab_circles",
+      "label": "Circles",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "ab_circles_pass",
+      "label": "Circles pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 10
+     },
+     {
+      "key": "ab_circles_fail",
+      "label": "Circles fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 9
+     },
+     {
+      "key": "might",
+      "label": "Might",
+      "type": "number",
+      "cols": 2
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills (Rating, Pass, Fail)",
+    "page": "Skills & Wises",
+    "fields": [
+     {
+      "key": "sk_alchemist",
+      "label": "Alchemist",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_alchemist_pass",
+      "label": "Alchemist pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_alchemist_fail",
+      "label": "Alchemist fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_arcanist",
+      "label": "Arcanist",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_arcanist_pass",
+      "label": "Arcanist pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_arcanist_fail",
+      "label": "Arcanist fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_armorer",
+      "label": "Armorer",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_armorer_pass",
+      "label": "Armorer pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_armorer_fail",
+      "label": "Armorer fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_cartographer",
+      "label": "Cartographer",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_cartographer_pass",
+      "label": "Cartographer pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_cartographer_fail",
+      "label": "Cartographer fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_commander",
+      "label": "Commander",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_commander_pass",
+      "label": "Commander pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_commander_fail",
+      "label": "Commander fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_cook",
+      "label": "Cook",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_cook_pass",
+      "label": "Cook pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_cook_fail",
+      "label": "Cook fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_criminal",
+      "label": "Criminal",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_criminal_pass",
+      "label": "Criminal pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_criminal_fail",
+      "label": "Criminal fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_dungeoneer",
+      "label": "Dungeoneer",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_dungeoneer_pass",
+      "label": "Dungeoneer pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_dungeoneer_fail",
+      "label": "Dungeoneer fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_fighter",
+      "label": "Fighter",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_fighter_pass",
+      "label": "Fighter pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_fighter_fail",
+      "label": "Fighter fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_haggler",
+      "label": "Haggler",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_haggler_pass",
+      "label": "Haggler pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_haggler_fail",
+      "label": "Haggler fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_healer",
+      "label": "Healer",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_healer_pass",
+      "label": "Healer pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_healer_fail",
+      "label": "Healer fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_hunter",
+      "label": "Hunter",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_hunter_pass",
+      "label": "Hunter pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_hunter_fail",
+      "label": "Hunter fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_lore_master",
+      "label": "Lore Master",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_lore_master_pass",
+      "label": "Lore Master pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_lore_master_fail",
+      "label": "Lore Master fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_manipulator",
+      "label": "Manipulator",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_manipulator_pass",
+      "label": "Manipulator pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_manipulator_fail",
+      "label": "Manipulator fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_mentor",
+      "label": "Mentor",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_mentor_pass",
+      "label": "Mentor pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_mentor_fail",
+      "label": "Mentor fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_orator",
+      "label": "Orator",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_orator_pass",
+      "label": "Orator pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_orator_fail",
+      "label": "Orator fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_pathfinder",
+      "label": "Pathfinder",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_pathfinder_pass",
+      "label": "Pathfinder pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_pathfinder_fail",
+      "label": "Pathfinder fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_persuader",
+      "label": "Persuader",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_persuader_pass",
+      "label": "Persuader pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_persuader_fail",
+      "label": "Persuader fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_rider",
+      "label": "Rider",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_rider_pass",
+      "label": "Rider pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_rider_fail",
+      "label": "Rider fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_ritualist",
+      "label": "Ritualist",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_ritualist_pass",
+      "label": "Ritualist pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_ritualist_fail",
+      "label": "Ritualist fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_scavenger",
+      "label": "Scavenger",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_scavenger_pass",
+      "label": "Scavenger pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_scavenger_fail",
+      "label": "Scavenger fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_scholar",
+      "label": "Scholar",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_scholar_pass",
+      "label": "Scholar pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_scholar_fail",
+      "label": "Scholar fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_scout",
+      "label": "Scout",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_scout_pass",
+      "label": "Scout pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_scout_fail",
+      "label": "Scout fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_survivalist",
+      "label": "Survivalist",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_survivalist_pass",
+      "label": "Survivalist pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_survivalist_fail",
+      "label": "Survivalist fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_theologian",
+      "label": "Theologian",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_theologian_pass",
+      "label": "Theologian pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_theologian_fail",
+      "label": "Theologian fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_other_1",
+      "label": "Other skill 1",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_other_1_pass",
+      "label": "Other skill 1 pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_other_1_fail",
+      "label": "Other skill 1 fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     },
+     {
+      "key": "sk_other_2",
+      "label": "Other skill 2",
+      "type": "number",
+      "cols": 2
+     },
+     {
+      "key": "sk_other_2_pass",
+      "label": "Other skill 2 pass",
+      "type": "pips",
+      "cols": 3,
+      "count": 6
+     },
+     {
+      "key": "sk_other_2_fail",
+      "label": "Other skill 2 fail",
+      "type": "pips",
+      "cols": 3,
+      "count": 5
+     }
+    ]
+   },
+   {
+    "key": "wises_sec",
+    "title": "Wises",
+    "page": "Skills & Wises",
+    "fields": [
+     {
+      "key": "wises",
+      "label": "Wises",
+      "type": "list",
+      "columns": [
+       {
+        "key": "wise",
+        "label": "Wise"
+       },
+       {
+        "key": "pass",
+        "label": "Pass"
+       },
+       {
+        "key": "fail",
+        "label": "Fail"
+       },
+       {
+        "key": "fate",
+        "label": "Fate"
+       },
+       {
+        "key": "persona",
+        "label": "Persona"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "traits_sec",
+    "title": "Traits",
+    "page": "Skills & Wises",
+    "fields": [
+     {
+      "key": "traits",
+      "label": "Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "trait_name",
+        "label": "Trait name"
+       },
+       {
+        "key": "trait_level",
+        "label": "Trait level"
+       },
+       {
+        "key": "beneficial_uses",
+        "label": "Beneficial uses"
+       },
+       {
+        "key": "checks",
+        "label": "Checks"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "allies_sec",
+    "title": "Allies and Additional Enemies",
+    "page": "Skills & Wises",
+    "fields": [
+     {
+      "key": "allies",
+      "label": "Allies and Additional Enemies",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "inv_head",
+    "title": "Head",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_head_worn",
+      "label": "Worn",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_neck",
+    "title": "Neck",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_neck_worn",
+      "label": "Worn",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_hands",
+    "title": "Hands",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_hands_worn_1",
+      "label": "Worn 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_hands_worn_2",
+      "label": "Worn 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_hands_carried_1",
+      "label": "Carried 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_hands_carried_2",
+      "label": "Carried 2",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_feet",
+    "title": "Feet",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_feet_worn",
+      "label": "Worn",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_torso",
+    "title": "Torso",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_torso_worn_1",
+      "label": "Worn 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_torso_worn_2",
+      "label": "Worn 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_torso_worn_3",
+      "label": "Worn 3",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_belt",
+    "title": "Belt",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_belt_slot_1",
+      "label": "Slot 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_belt_slot_2",
+      "label": "Slot 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_belt_slot_3",
+      "label": "Slot 3",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_pocket",
+    "title": "Pocket",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_pocket_contents",
+      "label": "Contents",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_satchel_backpack",
+    "title": "Satchel/Backpack",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_satchel_backpack_slot_1",
+      "label": "Slot 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_satchel_backpack_slot_2",
+      "label": "Slot 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_satchel_backpack_slot_3",
+      "label": "Slot 3",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_satchel_backpack_slot_4",
+      "label": "Slot 4",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_satchel_backpack_slot_5",
+      "label": "Slot 5",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_satchel_backpack_slot_6",
+      "label": "Slot 6",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_large_sack",
+    "title": "Large Sack",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_large_sack_slot_1",
+      "label": "Slot 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_large_sack_slot_2",
+      "label": "Slot 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_large_sack_slot_3",
+      "label": "Slot 3",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_large_sack_slot_4",
+      "label": "Slot 4",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_large_sack_slot_5",
+      "label": "Slot 5",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_large_sack_slot_6",
+      "label": "Slot 6",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_small_sack_1",
+    "title": "Small Sack 1",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_small_sack_1_slot_1",
+      "label": "Slot 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_small_sack_1_slot_2",
+      "label": "Slot 2",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "inv_small_sack_2",
+    "title": "Small Sack 2",
+    "page": "Inventory",
+    "width": "third",
+    "fields": [
+     {
+      "key": "inv_small_sack_2_slot_1",
+      "label": "Slot 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_small_sack_2_slot_2",
+      "label": "Slot 2",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "levels",
+    "title": "Level Requirements and Benefits",
+    "page": "Inventory",
+    "fields": [
+     {
+      "key": "level_benefits",
+      "label": "Level Benefits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "fate",
+        "label": "Fate"
+       },
+       {
+        "key": "persona",
+        "label": "Persona"
+       },
+       {
+        "key": "level_benefit",
+        "label": "Level Benefit"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "spell_inventory",
+    "title": "Spell and Prayer Mental Inventory Slots",
+    "page": "Magic",
+    "width": "third",
+    "fields": [
+     {
+      "key": "slots_first",
+      "label": "First Circle",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "slots_second",
+      "label": "Second Circle",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "slots_third",
+      "label": "Third Circle",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "slots_fourth",
+      "label": "Fourth Circle",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "slots_fifth",
+      "label": "Fifth Circle",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "memory",
+    "title": "Memory Palace & Burden",
+    "page": "Magic",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "burden",
+      "label": "Burden",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells and Prayers",
+    "page": "Magic",
+    "fields": [
+     {
+      "key": "spells",
+      "label": "Spells",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell_name",
+        "label": "Spell name"
+       },
+       {
+        "key": "known",
+        "label": "Known"
+       },
+       {
+        "key": "spell_book",
+        "label": "Spell Book"
+       },
+       {
+        "key": "mem",
+        "label": "Mem."
+       },
+       {
+        "key": "cast",
+        "label": "Cast"
+       },
+       {
+        "key": "scroll",
+        "label": "Scroll"
+       },
+       {
+        "key": "supplies",
+        "label": "Supplies"
+       },
+       {
+        "key": "effect",
+        "label": "Effect"
+       }
+      ]
+     },
+     {
+      "key": "prayers",
+      "label": "Prayers",
+      "type": "list",
+      "columns": [
+       {
+        "key": "prayer_name",
+        "label": "Prayer name"
+       },
+       {
+        "key": "alignment",
+        "label": "Alignment"
+       },
+       {
+        "key": "mem",
+        "label": "Mem."
+       },
+       {
+        "key": "cast",
+        "label": "Cast"
+       },
+       {
+        "key": "scroll",
+        "label": "Scroll"
+       },
+       {
+        "key": "supplies",
+        "label": "Supplies"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "travel_book",
+    "title": "Traveling Spell Book",
+    "page": "Magic",
+    "fields": [
+     {
+      "key": "traveling_spell_book",
+      "label": "Traveling Spell Book",
+      "type": "list",
+      "columns": [
+       {
+        "key": "spell_name",
+        "label": "Spell Name"
+       },
+       {
+        "key": "mem",
+        "label": "Mem."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "town",
+    "title": "Town",
+    "page": "Inventory",
+    "fields": [
+     {
+      "key": "lifestyle",
+      "label": "Lifestyle",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "rumors_and_leads",
+      "label": "Rumors and Leads",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
