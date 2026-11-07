@@ -21,6 +21,7 @@ declare(strict_types=1);
 
 const ACTIONS = [
     'prefs_save' => ['who' => 'account'],
+    'profile_save' => ['who' => 'account'],
     'users' => ['get' => true, 'who' => 'admin'],
     'user_status' => ['who' => 'admin'],
     'user_email' => ['who' => 'admin'],

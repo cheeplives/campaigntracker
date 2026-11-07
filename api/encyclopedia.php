@@ -148,7 +148,7 @@ function encyclopedia_action(string $action): void {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
