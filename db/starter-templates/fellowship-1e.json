@@ -1,0 +1,319 @@
+{
+ "name": "Fellowship (1st Edition)",
+ "game": "Fellowship",
+ "edition": "1st Edition (Jacob Randolph, 2016)",
+ "source": {
+  "title": "The Fellowship art-free playbooks",
+  "owner": "Jacob Randolph (Liberi Gothica)",
+  "url": "https://liberigothica.itch.io/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Hero",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "The Dwarf",
+       "The Elf",
+       "The Halfling",
+       "The Harbinger",
+       "The Heir",
+       "The Orc",
+       "The Squire",
+       "Other"
+      ],
+      "summary": true
+     },
+     {
+      "key": "people_type",
+      "label": "Type (what kind of your people you are)",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Hero",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stat_blood",
+      "label": "Blood",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_blood",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_courage",
+      "label": "Courage",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_courage",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_grace",
+      "label": "Grace",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_grace",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_sense",
+      "label": "Sense",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_sense",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_wisdom",
+      "label": "Wisdom",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_wisdom",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "pb_stat_name",
+      "label": "Playbook stat name (e.g. Iron)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "stat_playbook",
+      "label": "Playbook stat",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "dmg_playbook",
+      "label": "Damaged",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "agenda",
+    "title": "Agenda",
+    "page": "Hero",
+    "width": "half",
+    "fields": [
+     {
+      "key": "agendas",
+      "label": "Agendas",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "hope_sec",
+    "title": "Hope & Despair",
+    "page": "Hero",
+    "width": "half",
+    "fields": [
+     {
+      "key": "hope",
+      "label": "Hope",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "despair",
+      "label": "Despair",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "page": "Hero",
+    "fields": [
+     {
+      "key": "core_moves",
+      "label": "Core moves",
+      "type": "longtext"
+     },
+     {
+      "key": "custom_moves",
+      "label": "Custom moves",
+      "type": "longtext"
+     },
+     {
+      "key": "advancement",
+      "label": "Advancement",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "bonds_sec",
+    "title": "Bonds",
+    "page": "Gear & Companions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonds",
+      "label": "Bonds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bond",
+        "label": "Bond"
+       },
+       {
+        "key": "with",
+        "label": "With"
+       }
+      ]
+     },
+     {
+      "key": "unbreakable_bond",
+      "label": "Unbreakable Bond",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "gear_sec",
+    "title": "Gear",
+    "page": "Gear & Companions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "companions_sec",
+    "title": "Companions",
+    "page": "Gear & Companions",
+    "fields": [
+     {
+      "key": "companions",
+      "label": "Companions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "companion",
+        "label": "Companion"
+       },
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       },
+       {
+        "key": "bonds",
+        "label": "Bonds"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "earned",
+    "title": "Earned Fellowship",
+    "page": "Gear & Companions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "earned_fellowship",
+      "label": "Earned Fellowship moves",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Gear & Companions",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
