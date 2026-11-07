@@ -30,6 +30,8 @@ return [
   ],
   // Fan wikis ask tests/support/fanwiki-stub.php instead of Wookieepedia, Memory Alpha and Greyhawk Online.
   'fan_wikis' => ['enabled' => true, 'open_only' => false, 'stub' => __DIR__ . '/fanwiki-stub.php'],
+  // Send to GitHub (Site Admin, Reports) asks tests/support/github-stub.php instead of GitHub.
+  'github_reports' => ['repo' => 'example/chronicle', 'token' => 'stub', 'labels' => ['bug'], 'stub' => __DIR__ . '/github-stub.php'],
   'rate_limit_enabled' => true,
   'allow_install' => false,
   // Turns on tests/support/login.php. Never set this in a real config.

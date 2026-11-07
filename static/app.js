@@ -86,9 +86,11 @@
       opt.headers['X-Chronicle-Panel'] = panelCodeNow;
     } else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
     if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
-    const res = await fetch('api/index.php?' + qs, opt);
+    const noteFail = (status, msg) => { if (typeof ReportLog !== 'undefined') ReportLog.request(action, status, msg); };
+    let res;
+    try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); throw err; }
     let data;
-    try { data = await res.json(); } catch { throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
+    try { data = await res.json(); } catch { noteFail(res.status, 'not JSON'); throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
     // The panel's link was revoked (or its maker lost access): ask for a new one.
     if (PANEL && (res.status === 401 || data.error === 'not_approved')) {
       if (data.error !== 'panel_not_allowed') { forgetPanelCode(); panelAsk(data.message || 'That panel link no longer works.'); }
@@ -96,7 +98,7 @@
     }
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
-    if (!res.ok) throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status });
+    if (!res.ok) { noteFail(res.status, data.error || data.message); throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status }); }
     if (body) ownWrite();
     return data;
   }
@@ -589,11 +591,12 @@
       S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
       schemePicker(),
       themeToggle(),
+      S.user && reports ? reports.button() : null,
       // Your name opens a menu of what is yours: the account page, the admin's Site Admin, and signing out
       S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
-          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts and see game requests (site admins only)' }, 'Site Admin') : null,
+          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts, and see game requests and problem reports (site admins only)' }, 'Site Admin') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
         : S.pending ? btn('Sign out', signOut, 'link') : null,
@@ -759,7 +762,8 @@
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
   /** Site Admin's tabs along the top of the page: [key, label, tip]. A new tab is a row here and a view below. */
   const ADMIN_TABS = [['users', 'Users', 'Approve sign-ups and manage accounts'],
-    ['sheets', 'Sheets', 'Starter templates, and the games people have asked for']];
+    ['sheets', 'Sheets', 'Starter templates, and the games people have asked for'],
+    ['reports', 'Reports', 'Problems people reported with the ! button in the top bar']];
   function adminTabs(at) {
     return el('nav', { class: 'subtabs admin-tabs', 'aria-label': 'Site Admin' }, ADMIN_TABS.map(([k, label, t]) =>
       el('a', { href: `#/admin/${k}`, class: k === at ? 'on' : '', 'data-tip': t, ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
@@ -767,6 +771,7 @@
   /** #/admin[/<tab>]: Site Admin, for site admins only (the server refuses everyone else). */
   async function viewAdmin(tab) {
     if (!ADMIN_TABS.some(([k]) => k === tab)) tab = 'users';
+    if (tab === 'reports' && reports) return reports.viewReports(adminHead, mount);
     return tab === 'sheets' ? viewAdminSheets() : viewAdminUsers();
   }
   const adminHead = at => el('div', { class: 'card admin-head' }, el('h1', {}, 'Site Admin'), adminTabs(at));
@@ -5479,6 +5484,7 @@
   // ------------------------------------------------------------ generators tab: static/generators-tab.js
   let viewGenerators;
   let viewClocks, tableClocks, panelClocks;
+  let reports = null;   // Report.make() below: the ! button and Site Admin's Reports tab
 
   // ------------------------------------------------------------ members tab
   async function viewMembers() {
@@ -5734,6 +5740,8 @@
             '\'s API with the GM\'s own API key, and Claude (', (typeof MapScan !== 'undefined' ? MapScan.MODEL : 'claude-opus-5-5'), ') reads the place names on it. Under ',
             extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
+          ['The screenshot the Report (!) button offers, taken in your browser and sent only with the report, to the site admins: ', cite('htmlToImage'), '.'],
+          'Send to GitHub on Site Admin\'s Reports tab opens an issue on the app\'s GitHub repository, only when a site admin presses it. The issue carries the report\'s text and page details, never who sent it or the screenshot.',
           ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
           'The Feature Highlighter\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
@@ -6425,6 +6433,8 @@
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
+  // The Report (!) button and Site Admin's Reports tab (static/report.js; the At the Table panel doesn't load it)
+  reports = typeof Report !== 'undefined' ? Report.make({ S, api, post, btn, el, toast, confirmDialog, promptDialog, hideTip, version: APP_VERSION }) : null;
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
 
   // ------------------------------------------------------------ router

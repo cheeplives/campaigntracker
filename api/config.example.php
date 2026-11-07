@@ -168,6 +168,18 @@ return [
     'open_only' => false,
   ],
 
+  // --- Reports ---------------------------------------------------------------
+  // Site Admin's Reports tab can send a report to GitHub as an issue. repo is where issues go (owner/name).
+  // With no token, Send to GitHub opens GitHub's new issue page with the title and text filled in, for you to check
+  // and submit there. With a token (a fine-grained personal access token with Issues: Read and write on that
+  // repository only), the server opens the issue itself and keeps its link. The issue leaves out who sent the report
+  // and its screenshot, since a public repository's issues are public.
+  'github_reports' => [
+    'repo'   => 'cheeplives/campaigntracker',
+    'token'  => '',
+    'labels' => ['bug'],
+  ],
+
   // --- Limits ---------------------------------------------------------------
   // Per-IP throttling on sign-in and per-admin throttling on user changes (needs
   // the rate_limits table from db/schema.sql). Leave true; set false only to debug.

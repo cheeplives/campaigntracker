@@ -101,6 +101,8 @@ function upgrade_steps(): array {
             'Everyone can now set the name and pronouns Chronicle calls them by on their Account page.'],
         ['037_game_requests.sql', fn(PDO $p) => !db_has_table($p, 'game_requests'),
             'Sheet templates now has Request a game, and Site Admin a Sheets tab listing what people asked for, with a switch to turn requests off.'],
+        ['040_site_reports.sql', fn(PDO $p) => !db_has_table($p, 'site_reports'),
+            'Added the Report (!) button to the top bar, and a Reports tab on Site Admin to read, resolve, send to GitHub or delete what people report.'],
     ];
 }
 

@@ -54,6 +54,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only after typing DELETE; players get neither button, and the API refuses them both.
 - **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
   person's own, kept in their preferences across reloads, and only on a campaign they belong to.
+- **reports**: the ! button in the top bar sends a report with a screenshot taken in the browser and the page's details,
+  which it lists first; the server takes only a real picture and only site admins read reports or their screenshots; Site
+  Admin's Reports tab resolves one unfixed, reopens it, sends it to GitHub (a stub) without who sent it, and deletes it.
 - **game-requests** (Chromium only, as the on/off switch is site-wide): Request a game on Sheet templates reaches Site
   Admin's Sheets tab counted once per person per game whatever the spelling; only admins read them; switched off, the
   button goes and the server refuses new ones while the list stays; Clear takes a game off.
