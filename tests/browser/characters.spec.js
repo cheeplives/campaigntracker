@@ -380,6 +380,39 @@ test("Characters: each one's Encyclopedia entry is a Person tagged PC or NPC, an
   await expect(gm.locator("body")).toContainText("NPC");
 });
 
+test("Characters: a PC or NPC tag changed in the Encyclopedia changes the sheet's Kind", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl } = await party(page, browser);
+  const pc = await make(p1, cid, { template_id: tpl.id, name: "Retagged" });
+  const save = (who, tags) => api(who, "entry_save", { id: pc.entry_id, name: "Retagged", tags }, cid);
+  const kind = () => sql(`SELECT kind FROM sheet_characters WHERE id=${pc.id}`).trim();
+
+  // the GM swaps PC for NPC on the entry: the sheet is an NPC's now, its other tags kept
+  expect((await save(gm, [{ name: "NPC" }, { name: "Hero" }])).status).toBe(200);
+  expect(kind()).toBe("npc");
+  expect(entryTags(pc.id)).toEqual(["Hero", "NPC"]);
+
+  // taking both off, or putting both on, leaves the Kind as it was and its tag back on
+  expect((await save(gm, [{ name: "Hero" }])).status).toBe(200);
+  expect(kind()).toBe("npc");
+  expect(entryTags(pc.id)).toEqual(["Hero", "NPC"]);
+  expect((await save(gm, [{ name: "PC" }, { name: "NPC" }])).status).toBe(200);
+  expect(kind()).toBe("npc");
+  expect(entryTags(pc.id)).toEqual(["NPC"]);
+
+  // its player can switch it back from the Encyclopedia; another player can't, and the tag is put back
+  expect((await save(p1, [{ name: "pc" }])).status).toBe(200);
+  expect(kind()).toBe("pc");
+  expect(entryTags(pc.id)).toEqual(["PC"]);
+  expect((await save(p2, [{ name: "NPC" }])).status).toBe(200);
+  expect(kind()).toBe("pc");
+  expect(entryTags(pc.id)).toEqual(["PC"]);
+
+  // and the sheet shows the Kind the tag set
+  expect((await save(gm, [{ name: "NPC" }])).status).toBe(200);
+  await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
+  await expect(gm.getByLabel("PC or NPC")).toHaveValue("npc");
+});
+
 test("Characters: a GM makes a PC with no player, and it travels with the party", async ({ page, browser }) => {
   const { cid, gm, p1, tpl } = await party(page, browser);
   await gm.goto(`index.html#/c/${cid}/characters`);

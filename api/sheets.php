@@ -422,6 +422,30 @@ function character_kind_tag(int $cid, int $entryId, string $kind): void {
         else $pdo->prepare('DELETE FROM encyclopedia_tags WHERE entry_id=? AND tag_id=?')->execute([$entryId, $id]);
     }
 }
+/** After entry $entryId's tags were saved: when it has a character and its tags now say PC or NPC (one, not both)
+ * other than the character's Kind, the Kind follows them (as a change of Kind on the sheet would), if this user may
+ * change that sheet; otherwise, or when neither or both are on, the tag that matches the Kind is put back. */
+function character_kind_from_tags(int $cid, int $entryId, bool $isGm): void {
+    $pdo = db();
+    $st = $pdo->prepare('SELECT id, kind, owner_id FROM sheet_characters WHERE entry_id=? AND campaign_id=?');
+    $st->execute([$entryId, $cid]);
+    $c = $st->fetch();
+    if (!$c) return;
+    $on = [];
+    foreach (CHARACTER_KIND_TAGS as $k => [$name]) {
+        $t = $pdo->prepare('SELECT 1 FROM encyclopedia_tags et JOIN encyclopedia_tag_names n ON n.id=et.tag_id WHERE et.entry_id=? AND n.campaign_id=? AND n.name=?');
+        $t->execute([$entryId, $cid, $name]);
+        if ($t->fetchColumn()) $on[] = $k;
+    }
+    $kind = $c['kind'];
+    $may = $isGm || ($c['owner_id'] !== null && (int)$c['owner_id'] === me()['id']);
+    if (count($on) === 1 && $on[0] !== $kind && $may) {
+        $kind = $on[0];
+        $pdo->prepare('UPDATE sheet_characters SET kind=?, sheet_public=?, version=version+1 WHERE id=?')
+            ->execute([$kind, $kind === 'pc' ? 1 : 0, $c['id']]);
+    }
+    character_kind_tag($cid, $entryId, $kind);
+}
 /** The owner a character is given, as sent: 0 for no player (GMs only), else someone in this campaign. */
 function character_owner_in(int $cid, $v, bool $isGm): ?int {
     $owner = int_in($v, 0);
