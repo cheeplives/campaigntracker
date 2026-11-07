@@ -580,6 +580,33 @@ test("Members: a GM links a member to a Person in the Encyclopedia, which gets a
   expect(sql(`SELECT CONCAT(active_character_id, ' ', character_name) FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe(`${id} Ser Aldric`);
 });
 
+test("Linking a member to a Person entry with no sheet makes none by default: the entry's name is their character's", async ({ page, browser }) => {
+  const { cid, gm, tpl, ids } = await party(page, browser);
+  const entry = (await api(gm, "entry_save", { name: "Nessa", category: "person", notes: "<p>A bard.</p>" }, cid)).json.id;
+  await gm.goto(`index.html#/c/${cid}/encyclopedia/${entry}`);
+  await gm.getByRole("button", { name: "Link a member…" }).click();
+  const template = gm.getByLabel("Template", { exact: true });
+  await expect(template).toHaveValue("");   // None, the first choice
+  await expect(template.locator("option").first()).toHaveText("None (no sheet yet)");
+  await gm.getByLabel("Member", { exact: true }).selectOption(String(ids.p1));
+  await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
+  await expect.poll(() => sql(`SELECT character_name FROM campaign_members WHERE campaign_id=${cid} AND user_id=${ids.p1}`).trim()).toBe("Nessa");
+  expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE entry_id=${entry}`).trim()).toBe("0");
+
+  // the Members tab shows it with no sheet yet; Make a sheet later puts the sheet on that entry
+  await gm.goto(`index.html#/c/${cid}/members`);
+  const pip = gm.locator(".member", { hasText: "Pip" });
+  await expect(pip).toContainText("Nessa");
+  await expect(pip).toContainText("No sheet yet");
+  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await expect(gm.getByLabel("Character", { exact: true })).toHaveValue(`e${entry}`);
+  await expect(gm.getByLabel("Template", { exact: true })).toHaveValue("");
+  await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
+  await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
+  await expect(pip.getByRole("link", { name: "Nessa" })).toBeVisible();
+  expect(sql(`SELECT owner_id FROM sheet_characters WHERE entry_id=${entry}`).trim()).toBe(String(ids.p1));
+});
+
 test("Encyclopedia: a GM links a Person entry to a member from its page or its editor", async ({ page, browser }) => {
   const { cid, gm, p1, tpl, ids } = await party(page, browser);
   // an entry with no sheet: picking the member and a template makes the sheet, theirs and active
