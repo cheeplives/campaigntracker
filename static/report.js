@@ -6,7 +6,7 @@
  * page's recent errors and failed requests, which this file starts noting as soon as it loads. api/reports.php keeps
  * them; Site Admin's Reports tab lists them, to resolve unfixed, send to GitHub, reopen or delete.
  *
- * ReportLog is global so app.js can note a failed request from api(). Report.make(ctx) is called once by app.js with its
+ * ReportLog is global so app.js can note a failed request from api(). ChronicleReport.make(ctx) is called once by app.js with its
  * helpers and state. Plain script, no build step. */
 (function (root) {
   'use strict';
@@ -265,5 +265,5 @@
     return { button, openReport, viewReports, details };
   }
 
-  root.Report = { make };
+  root.ChronicleReport = { make };   // not window.Report: Safari has a built-in Report (the Reporting API)
 })(typeof window !== 'undefined' ? window : globalThis);

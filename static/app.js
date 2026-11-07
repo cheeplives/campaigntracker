@@ -5491,7 +5491,7 @@
   // ------------------------------------------------------------ generators tab: static/generators-tab.js
   let viewGenerators;
   let viewClocks, tableClocks, panelClocks;
-  let reports = null;   // Report.make() below: the ! button and Site Admin's Reports tab
+  let reports = null;   // ChronicleReport.make() below: the ! button and Site Admin's Reports tab
 
   // ------------------------------------------------------------ members tab
   async function viewMembers() {
@@ -6443,7 +6443,7 @@
   // The die roller (static/dice-tab.js): not in panel.html, which has no 🎲 button.
   const { diceSync, diceNotice } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {} };
   // The Report (!) button and Site Admin's Reports tab (static/report.js; the At the Table panel doesn't load it)
-  reports = typeof Report !== 'undefined' ? Report.make({ S, api, post, btn, el, toast, confirmDialog, promptDialog, hideTip, version: APP_VERSION }) : null;
+  reports = typeof ChronicleReport !== 'undefined' ? ChronicleReport.make({ S, api, post, btn, el, toast, confirmDialog, promptDialog, hideTip, version: APP_VERSION }) : null;
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
 
   // ------------------------------------------------------------ router
