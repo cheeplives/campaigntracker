@@ -5470,16 +5470,17 @@
       const all = named ? [entryOpts[0], ...sheetOpts, ...entryOpts.slice(1)] : [...sheetOpts, ...entryOpts];
       const pick = select(all, all[0]?.[0] ?? '', { 'aria-label': 'Character' });
       let tpl = null;
+      const tplLoad = Sheets.templatePick().then(t => (tpl = t)).catch(() => null);   // one picker, however often the choice changes
       const tplRow = el('div');
       const fit = async () => {
         if (!pick.value.startsWith('e')) { tplRow.replaceChildren(); return; }
-        if (!tpl) tpl = await Sheets.templatePick().catch(() => null);
-        tplRow.replaceChildren(tpl ? field('Template for its sheet', tpl) : el('p', { class: 'small muted' }, 'Make a sheet template first.'));
+        await tplLoad;
+        if (tpl && pick.value.startsWith('e') && !tplRow.firstChild) tplRow.replaceChildren(field('Template for its sheet', tpl));
       };
       pick.addEventListener('change', fit);
       const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Link a character' });
       const form = el('form', { method: 'dialog' }, el('h3', {}, `${m.display_name}'s character`),
-        el('p', { class: 'small muted' }, `The character becomes ${m.display_name}'s, and its name is the one the app shows for them. An Encyclopedia entry with no sheet gets one, on the template you pick.`),
+        el('p', { class: 'small muted' }, `The character becomes ${m.display_name}'s, and its name is the one the app shows for them. For an Encyclopedia entry with no sheet, pick a template to give it one now, or None to add one later.`),
         field('Character', pick), tplRow,
         el('div', { class: 'kit-dialog-actions' }, el('button', { value: 'ok', class: 'primary' }, 'Link'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
       d.addEventListener('close', async () => {
@@ -5488,8 +5489,7 @@
         const id = Number(pick.value.slice(1));
         try {
           if (pick.value.startsWith('c')) await post('member_link_character', { user_id: m.id, character_id: id }, S.camp.id);
-          else if (!tpl) return toast('Make a sheet template first', true);
-          else await Sheets.linkToMember({ entryId: id, templateId: Number(tpl.value), uid: Number(m.id) });
+          else await Sheets.linkToMember({ entryId: id, name: S.encyclopedia.find(e => e.id === id)?.name || '', templateId: tpl?.value ? Number(tpl.value) : null, uid: Number(m.id) });
           await loadCampaign(S.camp.id, true); route();
         } catch (err) { toast(err.message, true); }
       });
