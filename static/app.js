@@ -585,19 +585,23 @@
   // ------------------------------------------------------------ top nav
   function renderNav() {
     const n = $('#topnav');
+    // Every control in the top bar is the same pill; the page you are on has its pill lit
+    const at = (location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]) || '';
+    const navPill = (href, here, tip, text) => el('a', { href, class: 'nav-pill', 'data-tip': tip, 'aria-current': here ? 'page' : null }, text);
     n.replaceChildren(...clean([
-      S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
-      S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
+      S.user ? navPill('#/', ['', 'c', 'new'].includes(at), 'All the campaigns you play in or run', 'Campaigns') : null,
+      S.user && typeof Sheets !== 'undefined' ? navPill('#/templates', at === 'templates', 'Character sheet templates for every game: use one, fork one, or make your own', 'Sheet templates') : null,
       schemePicker(),
       themeToggle(),
       // Your name opens a menu of what is yours: the account page, the admin's Users, and signing out
-      S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
+      S.user ? KIT.menu({ label: [el('span', { class: 'nav-pill-name' }, S.user.name || S.user.email), el('span', { class: 'nav-caret', 'aria-hidden': 'true' }, '▾')],
+        ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: `account-menu${['account', 'admin'].includes(at) ? ' is-here' : ''}`,
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your units, your character names and the map scanner key' }, 'Account'),
           S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
-        : S.pending ? btn('Sign out', signOut, 'link') : null,
+        : S.pending ? btn('Sign out', signOut, 'nav-pill') : null,
     ]));
   }
 
@@ -610,7 +614,7 @@
       document.documentElement.dataset.theme = t;
       try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: just this page */ }
       b.textContent = t === 'light' ? '☀' : '🌙';
-    }, 'theme-toggle', 'Toggle light / dark mode');
+    }, 'theme-toggle nav-pill', 'Toggle light / dark mode');
     b.setAttribute('aria-label', 'Toggle light / dark mode');
     return b;
   }
@@ -640,7 +644,7 @@
   function schemePicker() {
     const cur = schemeOf(currentScheme());
     const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
-    const button = el('button', { type: 'button', class: 'scheme-btn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
+    const button = el('button', { type: 'button', class: 'scheme-btn nav-pill', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
       el('span', { class: 'scheme-dot', style: { background: cur.dot } }), el('span', { class: 'scheme-name' }, cur.name));
     let wrap = null;
     // pointerdown, not click: iPad Safari sends no click for a tap on plain page background
