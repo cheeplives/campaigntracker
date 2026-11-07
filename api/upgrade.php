@@ -99,6 +99,8 @@ function upgrade_steps(): array {
             'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
         ['036_user_profiles.sql', fn(PDO $p) => !db_has_table($p, 'user_profiles'),
             'Everyone can now set the name and pronouns Chronicle calls them by on their Account page.'],
+        ['038_dice_rolls.sql', fn(PDO $p) => !db_has_table($p, 'dice_rolls'),
+            'Added the die roller: the 🎲 button on every campaign page, with a roll log the table shares.'],
     ];
 }
 

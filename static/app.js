@@ -74,7 +74,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '27';
+  const APP_VERSION = '28';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
@@ -136,6 +136,7 @@
     const seq = writeSeq;
     try {
       const r = await api('changed', { query: { cid } });
+      diceNotice(r.last_roll);
       // a save from this page since the check started: its own stamp, not someone else's change
       if (seq === writeSeq && S.camp?.id === cid && r.changed !== S.camp.changed) { showChangeBanner(r.changed); checkReminders(); }
     } catch { /* offline for a moment: try again next time */ } finally { checking = false; }
@@ -6378,6 +6379,8 @@
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
+  // The die roller (static/dice-tab.js): not in panel.html, which has no 🎲 button.
+  const { diceSync, diceNotice } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {} };
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
 
   // ------------------------------------------------------------ router
@@ -6386,7 +6389,7 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)));
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => diceSync()));
   }
   async function routeTo() {
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');

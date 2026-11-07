@@ -95,7 +95,7 @@ test("Settings is split into tabs, each with an address of its own", async ({ pa
   const cid = await makeCampaign(page, `Tabs ${gm.id}`);
   await page.goto(`index.html#/c/${cid}/settings`);
   const tabs = page.getByRole("navigation", { name: "Settings" });
-  await expect(tabs.getByRole("link")).toHaveText(["Campaign", "Calendar", "Weather tuning", "Tools"]);
+  await expect(tabs.getByRole("link")).toHaveText(["Campaign", "Calendar", "Dice", "Weather tuning", "Tools"]);
   await expect(tabs.getByRole("link", { name: "Campaign" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("button", { name: "Save campaign settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save calendar" })).toHaveCount(0);
