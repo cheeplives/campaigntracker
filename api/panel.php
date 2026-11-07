@@ -95,7 +95,7 @@ function panel_gate(string $action, array $spec): void {
         $st->execute([(int)$link['campaign_id'], (int)$u['id']]);
         if (!(int)$u['is_admin'] && !$st->fetchColumn()) json_error(401, 'bad_panel_link', "You are no longer in this campaign, so its $what stopped working.");
         $u['status'] = chronicle_status($u);
-        $GLOBALS['panel_user'] = $u;
+        $GLOBALS['panel_user'] = with_profile($u);
     }
     // The campaign comes from the link, so a code can never reach another campaign whatever the request says.
     $_GET['cid'] = (string)$link['campaign_id'];

@@ -135,7 +135,7 @@ curl -sI https://www.discreteinfinity.com/chronicle/manifest.webmanifest      # 
 ```
 
 Then sign in with your `admin_identities` account, have a second account sign
-in (it should wait for approval), approve it under **Users**, and add it to a
+in (it should wait for approval), approve it under **Site Admin**, and add it to a
 campaign by typing its sign-in email on the **Members** tab (the list there offers a
 GM only people they already play with; a site admin sees everyone).
 
@@ -159,7 +159,7 @@ run `php tools/migrate.php` (or open `install.php`): it finds the old users tabl
 
 Every existing account is kept, approved, with its campaigns, roles and notes.
 Passwords are dropped. Sign in with your `admin_identities` email (that creates
-a new admin account), open **Users**, and press *Link email* on each old account
+a new admin account), open **Site Admin**, and press *Link email* on each old account
 to enter the email that player signs in with. Their first sign-in with it takes
 over the old account. Your own old account can be linked the same way, or deleted.
 

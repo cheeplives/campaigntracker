@@ -26,7 +26,7 @@ function tome_out(array $t, bool $full, bool $isGm): array {
 }
 /** Tomes of campaign $cid with who added and who last changed each (character name first); one tome when $id is given. */
 function tomes(int $cid, ?int $id = null): array {
-    $st = db()->prepare('SELECT t.*, ' . AUTHOR_SQL . ' AS author, u.display_name AS player, COALESCE(NULLIF(m2.character_name, \'\'), u2.display_name) AS editor
+    $st = db()->prepare('SELECT t.*, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player, COALESCE(NULLIF(m2.character_name, \'\'), ' . user_name_sql('u2') . ') AS editor
         FROM library_tomes t LEFT JOIN users u ON u.id=t.created_by LEFT JOIN campaign_members m ON m.campaign_id=t.campaign_id AND m.user_id=t.created_by
         LEFT JOIN users u2 ON u2.id=t.updated_by LEFT JOIN campaign_members m2 ON m2.campaign_id=t.campaign_id AND m2.user_id=t.updated_by
         WHERE t.campaign_id=?' . ($id ? ' AND t.id=?' : '') . ' ORDER BY t.title');

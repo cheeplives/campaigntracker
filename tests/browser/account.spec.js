@@ -1,48 +1,59 @@
-// The account page: the campaigns you belong to, with your role and your character in each, and one
-// None / Imperial / Metric choice that sets every temperature, distance, depth and speed you see.
+// The account page: the name and pronouns the app calls you by, and one None / Imperial / Metric choice that sets
+// every temperature, distance, depth and speed you see.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, ADMIN, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
-test("the account page lists your campaigns with your role, and sets your character in each", async ({ page, browser }) => {
+test("the account page sets the name and pronouns the app calls you by, over your Google or GitHub name", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Rowan"), player = person("Pip");
   await signIn(page, gm);
   await approve(browser, gm.email);
-  const mine = await makeCampaign(page, "Rowan's Table");
+  const cid = await makeCampaign(page, `Names ${gm.id}`);
   const ctx = await newContext(browser);
   const pp = await ctx.newPage();
   await signIn(pp, player);
   await approve(browser, player.email);
-  await makeCampaign(pp, "Pip's Own");
-  expect((await api(page, "member_add", { email: player.email, role: "player" }, mine)).status).toBe(200);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  const playerName = (await (await pp.request.get("api/auth/me.php")).json()).name;
 
-  await page.goto("index.html#/account");
-  const camps = page.locator(".account-camps li");
-  await expect(camps).toHaveCount(1);
-  await expect(camps.first()).toContainText("Rowan's Table");
-  await expect(camps.first().locator(".role")).toHaveText("GM");
-
-  const pErrors = watchErrors(pp);
+  // No campaign list here any more: the campaign list itself and the Members tab cover it.
   await pp.goto("index.html#/account");
-  const rows = pp.locator(".account-camps li");
-  await expect(rows).toHaveCount(2);
-  const table = rows.filter({ hasText: "Rowan's Table" });
-  await expect(table.locator(".role")).toHaveText("Player");
-  await expect(rows.filter({ hasText: "Pip's Own" }).locator(".role")).toHaveText("GM");
-  const box = pp.getByLabel("Your character in Rowan's Table");
-  await box.fill("Brannoc the Bold");
-  await box.press("Tab");
-  await expect(pp.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(pp.locator(".account-camps")).toHaveCount(0);
+  await expect(pp.getByRole("heading", { name: "Your campaigns" })).toHaveCount(0);
+  await expect(pp.getByLabel("Name", { exact: true })).toHaveAttribute("placeholder", playerName);
+  await pp.getByLabel("Name", { exact: true }).fill("  Pippa   Quill ");
+  await pp.getByLabel("Pronouns").fill("she/they");
+  await pp.getByRole("button", { name: "Save name" }).click();
+  await expect(pp.getByText("Name saved")).toBeVisible();
+  await expect(pp.locator(".account-menu")).toContainText("Pippa Quill");
+  const me = await (await pp.request.get("api/auth/me.php")).json();
+  expect(me).toMatchObject({ name: "Pippa Quill", custom_name: "Pippa Quill", pronouns: "she/they", provider_name: playerName });
 
-  // It is the same name the Members tab shows and edits.
-  await page.goto(`index.html#/c/${mine}/members`);
-  await expect(page.locator(".listrow.member").filter({ hasText: "Pip" }).locator(".charname")).toHaveText("Brannoc the Bold");
-  await pp.reload();
-  await expect(box).toHaveValue("Brannoc the Bold");
+  // Everyone else sees it too, and a new sign-in from Google or GitHub doesn't undo it.
+  await page.goto(`index.html#/c/${cid}/members`);
+  const row = page.locator(".listrow.member").filter({ hasText: "Pippa Quill" });
+  await expect(row).toContainText("(she/they)");
+  await signIn(pp, player);
+  expect((await (await pp.request.get("api/auth/me.php")).json()).name).toBe("Pippa Quill");
+  const ap = await (await newContext(browser)).newPage();
+  await signIn(ap, ADMIN);
+  await ap.goto("index.html#/admin");
+  const adminRow = ap.locator("tr").filter({ hasText: "Pippa Quill" });
+  await expect(adminRow).toContainText("(she/they)");
+  await expect(adminRow).toContainText(`name: ${playerName}`);
+
+  // Blank goes back to the provider's name.
+  await pp.goto("index.html#/account");
+  await pp.reload(); // the new sign-in above gave this page a new session
+  await pp.getByLabel("Name", { exact: true }).fill("");
+  await pp.getByLabel("Pronouns").fill("");
+  await pp.getByRole("button", { name: "Save name" }).click();
+  await expect(pp.getByText("Name saved")).toBeVisible();
+  expect(await (await pp.request.get("api/auth/me.php")).json()).toMatchObject({ name: playerName, custom_name: null, pronouns: null });
+  expect((await api(pp, "profile_save", { name: "x".repeat(151) })).status).toBe(400);
   await ctx.close();
   expectNoErrors(errors);
-  expectNoErrors(pErrors);
 });
 
 test("one units choice sets temperatures, distances and speeds, and None follows the campaign", async ({ page, browser }) => {
@@ -129,23 +140,4 @@ test("the campaign's default units are one Imperial or Metric choice, and an old
   expect(s.units).toBe("imperial");
   expect(s.temp_unit).toBeUndefined();
   expectNoErrors(errors);
-});
-
-test("the account page picks your active character, whose name the Members tab then shows", async ({ page, browser }) => {
-  const gm = person("Rowan"), player = person("Pip");
-  await signIn(page, gm);
-  await approve(browser, gm.email);
-  const cid = await makeCampaign(page, `Active ${gm.id}`);
-  const pp = await (await newContext(browser)).newPage();
-  await signIn(pp, player);
-  await approve(browser, player.email);
-  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
-  const tpl = (await api(page, "template_save", { name: "Active tpl", game: "Test RPG", layout: { sections: [{ key: "a", title: "A", fields: [{ key: "n", label: "N", type: "text" }] }] } })).json.template;
-  const c = (await api(pp, "character_create", { template_id: tpl.id, name: "Ser Whitlock" }, cid)).json.character;
-
-  await pp.goto("index.html#/account");
-  await pp.getByLabel(`Active character in Active ${gm.id}`).selectOption(String(c.id));
-  await expect(pp.getByLabel(`Your character in Active ${gm.id}`)).toHaveValue("Ser Whitlock");
-  await page.goto(`index.html#/c/${cid}/members`);
-  await expect(page.locator(".listrow.member").filter({ hasText: "Pip" }).locator(".charname")).toHaveText("Ser Whitlock");
 });
