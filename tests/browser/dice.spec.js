@@ -277,7 +277,8 @@ test("a dice system: the GM starts from a game in Settings, tries a roll, and pl
   expect((await api(pp, "prefs_save", { dice_saved: { cid, list: [{ n: "x".repeat(61), e: "d6" }] } })).status).toBe(400);
   expect((await api(pp, "prefs_save", { dice_saved: { cid, list: Array.from({ length: 101 }, (_, k) => ({ n: `r${k}`, e: "d6" })) } })).status).toBe(400);
 
-  // back to free dice only: the roller has no game roll
+  // back to free dice only: the roller has no game roll (the GM closes their roller first: on a phone it covers the form)
+  await page.getByRole("button", { name: "Close the dice roller" }).click();
   await page.goto(`index.html#/c/${cid}/settings/dice`);
   await form.locator("#dice-game").selectOption("");
   await form.getByRole("button", { name: "Save dice settings" }).click();
