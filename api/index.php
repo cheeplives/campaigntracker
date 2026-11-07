@@ -222,7 +222,7 @@ function campaign_row(int $cid): array {
 }
 /** SQL for how a writer is labelled in campaign $cid: their character name, else their account name.
  * Needs the users row joined as u and their campaign_members row LEFT JOINed as m. */
-const AUTHOR_SQL = "COALESCE(NULLIF(m.character_name, ''), u.display_name)";
+define('AUTHOR_SQL', "COALESCE(NULLIF(m.character_name, ''), " . user_name_sql() . ")");
 function campaign_settings(int $cid): array { return dec(campaign_row($cid)['settings_json']) ?: []; }
 function floordiv(int $n, int $d): int { return (int)floor($n / $d); }
 /** The calendar's shift order: 'dawn' once a day runs Dawn first, 'overnight' for the original order. */
@@ -845,6 +845,19 @@ try {
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);
 
+    case 'profile_save':
+        // The name and pronouns Chronicle calls them by, in place of their Google or GitHub name. Blank clears either one.
+        // Kept in user_profiles, as the users row is Sinless's too and every sign-in rewrites its name.
+        $u = me();
+        $clean = fn($v) => is_string($v) ? trim((string)preg_replace('/\s+/u', ' ', $v)) : fail('Expected text');
+        $name = $clean(p('name', ''));
+        $pronouns = $clean(p('pronouns', ''));
+        if (mb_strlen($name) > 150) fail('Keep the name to 150 characters');
+        if (mb_strlen($pronouns) > 40) fail('Keep the pronouns to 40 characters');
+        db()->prepare('INSERT INTO user_profiles (user_id, name, pronouns) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), pronouns=VALUES(pronouns)')
+            ->execute([$u['id'], $name === '' ? null : $name, $pronouns === '' ? null : $pronouns]);
+        out(['name' => $name === '' ? $u['provider_name'] : $name, 'custom_name' => $name === '' ? null : $name, 'pronouns' => $pronouns === '' ? null : $pronouns]);
+
     // ===== user admin =====
     // Chronicle's own queue (chronicle_access), apart from Sinless's: everyone who has signed in here, and accounts from
     // before Google/GitHub sign-in. Someone who only uses Sinless isn't listed. New sign-ins wait as 'pending'.
@@ -852,10 +865,12 @@ try {
     case 'users':
         need_admin();
         out(['users' => db()->query(has_access_table()
-            ? "SELECT u.id, u.provider, u.email, u.display_name, COALESCE(a.status, u.status) AS status, u.is_admin, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
+            ? "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
+               COALESCE(a.status, u.status) AS status, u.is_admin, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
                FROM users u LEFT JOIN chronicle_access a ON a.user_id=u.id WHERE a.user_id IS NOT NULL OR u.provider='legacy'
-               ORDER BY COALESCE(a.status, u.status) = 'pending' DESC, u.display_name"
-            : "SELECT id, provider, email, display_name, status, is_admin, created_at, last_login_at FROM users ORDER BY status = 'pending' DESC, display_name")->fetchAll()]);
+               ORDER BY COALESCE(a.status, u.status) = 'pending' DESC, display_name"
+            : "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
+               u.status, u.is_admin, u.created_at, u.last_login_at FROM users u ORDER BY u.status = 'pending' DESC, display_name")->fetchAll()]);
 
     case 'user_status':
         $admin = need_admin();
@@ -864,7 +879,7 @@ try {
         $status = p('status');
         if (!in_array($status, ['approved', 'revoked'], true)) fail('Status must be approved or revoked');
         if ($id === $admin['id']) fail("You can't change your own access");
-        $st = db()->prepare('SELECT id, email, display_name, status, is_admin FROM users WHERE id=?');
+        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, u.status, u.is_admin FROM users u WHERE u.id=?');
         $st->execute([$id]);
         $t = $st->fetch();
         if (!$t) fail('User not found', 404);
@@ -964,11 +979,12 @@ try {
         $st->execute([$cid]);
         $holidays = array_map(fn($h) => ['id' => (int)$h['id'], 'name' => $h['name'], 'rule' => dec($h['rule_json']), 'description' => $h['description'], 'color' => $h['color'], 'is_secret' => (bool)$h['is_secret']], $st->fetchAll());
         $members = [];
-        $st = db()->prepare('SELECT u.id, u.email, u.display_name, m.role, m.character_name, m.active_character_id FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, u.display_name');
+        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, ' . user_pronouns_sql() . ' AS pronouns, m.role, m.character_name, m.active_character_id
+            FROM campaign_members m JOIN users u ON u.id=m.user_id WHERE m.campaign_id=? ORDER BY m.role, display_name');
         $st->execute([$cid]);
         $members = $st->fetchAll();
         // an API key's program gets no one's email, even through a GM's key
-        if (!$isGm || api_request()) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'role' => $m['role'], 'character_name' => $m['character_name'],
+        if (!$isGm || api_request()) $members = array_map(fn($m) => ['id' => $m['id'], 'display_name' => $m['display_name'], 'pronouns' => $m['pronouns'], 'role' => $m['role'], 'character_name' => $m['character_name'],
             'active_character_id' => $m['active_character_id'] ?? null], $members);
         $tokenUrls = token_urls($cid, $isGm);
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
@@ -1103,7 +1119,7 @@ try {
         // The accounts table is shared with Sinless, so a GM who isn't a site admin is offered only people they already
         // play with in another campaign; anyone else they add by typing their sign-in email.
         $mine = me()['is_admin'] ? '' : ' AND id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';
-        $st = db()->prepare("SELECT id, email, display_name FROM users WHERE " . approved_sql() . " AND id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine ORDER BY display_name = '', display_name, email");
+        $st = db()->prepare("SELECT * FROM (SELECT u.id, u.email, " . user_name_sql() . " AS display_name FROM users u WHERE " . approved_sql('u.id') . " AND u.id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine) x ORDER BY display_name = '', display_name, email");
         $st->execute(me()['is_admin'] ? [$cid] : [$cid, me()['id']]);
         $users = $st->fetchAll();
         if (!me()['is_admin']) $users = array_values(array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']],
@@ -1317,7 +1333,7 @@ try {
         $st = db()->prepare('SELECT shift, activity, visibility_override' . ($isGm ? ', gm_notes' : '') . ' FROM shifts WHERE campaign_id=? AND abs_day=? ORDER BY shift');
         $st->execute([$cid, $ad]);
         $shifts = $st->fetchAll();
-        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, e.created_by, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT e.id, e.abs_day, e.end_day, e.shift, e.shift_end, e.title, e.body, e.is_secret, e.created_by, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
             FROM events e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=? AND e.abs_day <= ? AND COALESCE(e.end_day, e.abs_day) >= ?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.shift IS NULL DESC, e.shift, e.id');
         $st->execute([$cid, $ad, $ad]);
@@ -1325,7 +1341,7 @@ try {
         if ($events) {
             $ids = array_column($events, 'id');
             $in = implode(',', array_fill(0, count($ids), '?'));
-            $st = db()->prepare('SELECT n.id, n.event_id, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . " AS author, u.display_name AS player
+            $st = db()->prepare('SELECT n.id, n.event_id, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . " AS author, " . user_name_sql() . " AS player
                 FROM event_notes n LEFT JOIN users u ON u.id=n.user_id LEFT JOIN campaign_members m ON m.campaign_id=? AND m.user_id=n.user_id
                 WHERE n.event_id IN ($in) ORDER BY n.created_at");
             $st->execute([$cid, ...$ids]);
@@ -1335,7 +1351,7 @@ try {
             unset($e);
             attach_tags($events);
         }
-        $st = db()->prepare('SELECT n.id, n.shift, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . ' AS author, u.display_name AS player
+        $st = db()->prepare('SELECT n.id, n.shift, n.user_id, n.body, n.created_at, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
             FROM shift_notes n LEFT JOIN users u ON u.id=n.user_id LEFT JOIN campaign_members m ON m.campaign_id=n.campaign_id AND m.user_id=n.user_id
             WHERE n.campaign_id=? AND n.abs_day=? ORDER BY n.created_at, n.id');
         $st->execute([$cid, $ad]);
