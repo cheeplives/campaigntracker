@@ -31,9 +31,10 @@
       if (format === 'html') encLinker().tree(node); else node.replaceChildren(...linked(text));
       return node;
     }
-    /** GMs: a 🔓 Reveal button on each run of GM-only paragraphs in a shown entry or tome (kind 'entry' or 'tome'),
-     * which makes them public and can note it as an event on the current day. */
-    function revealButtons(node, kind, id) {
+    /** GMs: a 🔓 Reveal button on each run of GM-only paragraphs in a shown entry, tome, session field or day's notes (kind
+     * 'entry', 'tome', 'session' with extra { field }, or 'day' with the absolute day as id), which makes them public and
+     * can note it as an event on the current day. */
+    function revealButtons(node, kind, id, extra = {}) {
       if (!isGM()) return node;
       const all = [...node.querySelectorAll('aside')];
       all.forEach((a, i) => {
@@ -45,7 +46,7 @@
             buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
           if (v !== 'log' && v !== 'quiet') return;
           try {
-            await post('secret_reveal', { kind, id, which: run, log: v === 'log' }, S.camp.id);
+            await post('secret_reveal', { kind, id, ...extra, which: run, log: v === 'log' }, S.camp.id);
             toast(v === 'log' ? 'Revealed, and logged on today\'s events' : 'Revealed to the players');
             route();
           } catch (err) { toast(err.message, true); }
@@ -404,6 +405,16 @@
     function entryTools(e, ctx) {
       return [btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out. In the editor it copies the entry as last saved'),
         scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
+        isGM() && e.is_secret ? btn('🔓 Reveal entry', async () => {
+          const v = await KIT.dialog({ title: 'Reveal this entry to the players?', message: `${e.name} stops being GM only: players see it, its public notes and its pictures that aren't GM only from now on. GM notes and GM-only paragraphs stay hidden.`,
+            buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
+          if (v !== 'log' && v !== 'quiet') return;
+          try {
+            await post('item_reveal', { kind: 'entry', id: e.id, log: v === 'log' }, S.camp.id);
+            toast(v === 'log' ? 'Revealed, and logged on today\'s events' : 'Revealed to the players');
+            route();
+          } catch (err) { toast(err.message, true); }
+        }, 'small', 'Make this GM-only entry public: players see it from now on, and you can note it as an event on the current day') : null,
         isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'entry', ref: e.id, title: e.name, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this entry, what each save changed, and Restore. GMs only') : null];
     }
     /** The editor, with everything the entry's page offers: its tools, its character card and its connections. */
