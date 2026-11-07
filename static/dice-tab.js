@@ -499,8 +499,8 @@
       const flat = el('div', { class: 'dice-look-flat', 'aria-hidden': 'true' });
       const res = { results: [{ terms: [{ src: 'd20', sides: 20, dice: [{ v: 20, rolls: [20], rerolled: [] }] }, { src: 'd6', sides: 6, dice: [{ v: 3, rolls: [3], rerolled: [] }, { v: 6, rolls: [6], rerolled: [] }] }], total: 29 }] };
       flat.append(...DiceUI.diceRows(el, res, { look: shown }));
-      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const on3d = el('input', { type: 'checkbox', checked: D3.enabled() && !slow, disabled: slow,
+      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, no3d = !D3.available();
+      const on3d = el('input', { type: 'checkbox', checked: D3.enabled() && !slow && !no3d, disabled: slow || no3d,
         onchange: e => { D3.setEnabled(e.target.checked); drawLook(); } });
       lookCard.replaceChildren(
         el('div', { class: 'dice-help-h' }, el('h3', {}, 'Your dice'),
@@ -515,8 +515,8 @@
               el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
             el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
-          slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
-      if (D3.enabled() && !slow) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
+          no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
+      if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
     }
     /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */
     function setLook(look) {

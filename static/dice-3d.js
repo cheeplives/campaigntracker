@@ -325,8 +325,15 @@
   }
   let renderer = null, scene, camera, sun, floor, canvas = null, raf = 0, fadeTimer = 0, current = null, preview = null;
   const geos = new Map(), mats = new Map();
+  /** Whether this browser can draw WebGL 2 at all, asked once without three.js (which logs an error when it can't). */
+  let gl2 = null;
+  function available() {
+    if (gl2 === null) { try { gl2 = !!document.createElement('canvas').getContext('webgl2'); } catch { gl2 = false; } }
+    return gl2;
+  }
   function setup() {
     if (renderer) return true;
+    if (!available()) { broken = true; return false; }
     canvas = document.createElement('canvas');
     canvas.className = 'dice-tray';
     canvas.setAttribute('aria-hidden', 'true');
@@ -563,7 +570,7 @@
   }
 
   /** Whether toss() would throw this roll's dice (so its result can wait for them). */
-  const can = res => enabled() && !reduced() && !broken && plan(res).length > 0;
+  const can = res => enabled() && !reduced() && !broken && available() && plan(res).length > 0;
 
   /** For the tests (tests/browser/dice-3d.spec.js), with three.js handed in: what shows on top once a die of this
    * shape lands on value (a d4: the corner that points up). */
@@ -580,5 +587,5 @@
     return { text: faceText(f, labels, sides), flat: Math.max(...ys), upright: -up.z };
   }
 
-  root.Dice3D = { TEXTURES, SWATCHES, can, enabled, setEnabled, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
+  root.Dice3D = { TEXTURES, SWATCHES, can, available, enabled, setEnabled, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
 })(window);
