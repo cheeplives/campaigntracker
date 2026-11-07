@@ -784,6 +784,26 @@ CREATE TABLE IF NOT EXISTS sheet_templates (
   FOREIGN KEY (forked_from_id) REFERENCES sheet_templates(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- game_requests: "Request a game" on the Sheet templates page, one row per person per game, counted by game_key on
+-- Site Admin's Sheets tab. site_settings: site-wide switches set on Site Admin (game_requests_off). Migration 037.
+CREATE TABLE IF NOT EXISTS site_settings (
+  name        VARCHAR(60)   NOT NULL,
+  value       VARCHAR(2000) NOT NULL DEFAULT '',
+  updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS game_requests (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT UNSIGNED NOT NULL,
+  game        VARCHAR(100) NOT NULL,
+  game_key    VARCHAR(100) NOT NULL,              -- lower case, spaces squeezed
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_game_request (user_id, game_key),
+  KEY ix_game_request_key (game_key),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- A character in a campaign: one filled-in copy of a template, with its own Encyclopedia entry (which holds its name).
 -- field_values: JSON keyed by field key; field_stamps: who last changed each field and when, [user id, unix ms];
 -- hidden: field and section keys only the owner and GMs see. sheet_public: an NPC's sheet is GM-only until it is 1.

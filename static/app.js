@@ -594,7 +594,7 @@
       S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
-          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Site Admin') : null,
+          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts and see game requests (site admins only)' }, 'Site Admin') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
         : S.pending ? btn('Sign out', signOut, 'link') : null,
@@ -758,10 +758,23 @@
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
-  async function viewAdmin() {
+  /** Site Admin's tabs along the top of the page: [key, label, tip]. A new tab is a row here and a view below. */
+  const ADMIN_TABS = [['users', 'Users', 'Approve sign-ups and manage accounts'],
+    ['sheets', 'Sheets', 'Starter templates, and the games people have asked for']];
+  function adminTabs(at) {
+    return el('nav', { class: 'subtabs admin-tabs', 'aria-label': 'Site Admin' }, ADMIN_TABS.map(([k, label, t]) =>
+      el('a', { href: `#/admin/${k}`, class: k === at ? 'on' : '', 'data-tip': t, ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
+  }
+  /** #/admin[/<tab>]: Site Admin, for site admins only (the server refuses everyone else). */
+  async function viewAdmin(tab) {
+    if (!ADMIN_TABS.some(([k]) => k === tab)) tab = 'users';
+    return tab === 'sheets' ? viewAdminSheets() : viewAdminUsers();
+  }
+  const adminHead = at => el('div', { class: 'card admin-head' }, el('h1', {}, 'Site Admin'), adminTabs(at));
+  async function viewAdminUsers() {
     const { users } = await api('users');
     const act = (label, fn, cls, tipText) => btn(label, async () => {
-      try { if (await fn() !== false) viewAdmin(); } catch (err) { toast(err.message, true); }
+      try { if (await fn() !== false) viewAdminUsers(); } catch (err) { toast(err.message, true); }
     }, `small ${cls || ''}`, tipText);
     const row = u => {
       const legacy = u.provider === 'legacy';
@@ -789,20 +802,54 @@
           }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null)));
     };
     const pending = users.filter(u => u.status === 'pending').length;
-    mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
+    mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'),
-      typeof Sheets !== 'undefined' ? el('div', { class: 'card' }, el('h2', {}, 'Sheet templates'),
-        el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
-        (() => {
-          const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
-          b.addEventListener('click', busy(b, async () => {
-            const r = await post('starter_templates_load', {});
-            toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
-          }));
-          return b;
-        })()) : null);
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+  }
+  /** Site Admin's Sheets tab: load the starter templates, and the games people asked for with Request a game. */
+  async function viewAdminSheets() {
+    const { requests, off } = await api('game_requests');
+    const starters = el('div', { class: 'card' }, el('h2', {}, 'Starter templates'),
+      el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
+      (() => {
+        const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
+        b.addEventListener('click', busy(b, async () => {
+          const r = await post('starter_templates_load', {});
+          toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
+        }));
+        return b;
+      })());
+    const sw = el('input', { type: 'checkbox', checked: !off, 'aria-label': 'Let people request games' });
+    sw.addEventListener('change', async () => {
+      sw.disabled = true;
+      try {
+        await post('site_setting_save', { name: 'game_requests_off', value: !sw.checked });
+        toast(sw.checked ? 'Request a game is on' : 'Request a game is off: the button is gone from Sheet templates');
+      } catch (err) { sw.checked = !sw.checked; toast(err.message, true); }
+      sw.disabled = false;
+    });
+    const total = requests.reduce((t, r) => t + r.count, 0);
+    const when = d => new Date(String(d).replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    const row = r => el('tr', {},
+      el('td', {}, el('strong', {}, r.game)),
+      el('td', { class: 'num' }, String(r.count)),
+      el('td', { class: 'small' }, r.who.join(', ')),
+      el('td', { class: 'small muted' }, r.count > 1 && when(r.first) !== when(r.last) ? `${when(r.first)} to ${when(r.last)}` : when(r.last)),
+      el('td', { class: 'act' }, btn('Clear', async () => {
+        if (!await confirmDialog(`Clear the ${r.count === 1 ? 'request' : `${r.count} requests`} for ${r.game}? Do this once its template is in, or to drop it. People can ask for it again.`, { ok: 'Clear' })) return;
+        try { await post('game_requests_clear', { key: r.key }); toast(`Cleared ${r.game}`); viewAdminSheets(); } catch (err) { toast(err.message, true); }
+      }, 'small', 'Take this game off the list, once its template is in or to drop it')));
+    const asked = el('div', { class: 'card' }, el('h2', {}, 'Game requests'),
+      el('label', { class: 'switch-row' }, sw, el('span', {}, 'Let people request games'),
+        tip('With this off, the Request a game button is gone from Sheet templates and no new requests come in. The list below stays.')),
+      requests.length
+        ? [el('p', { class: 'muted' }, `${total} ${total === 1 ? 'request' : 'requests'} for ${requests.length} ${requests.length === 1 ? 'game' : 'games'}, most asked for first. Each person counts once per game.`),
+          el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl game-requests' },
+            el('tr', {}, el('th', {}, 'Game'), el('th', { class: 'num' }, 'Asked'), el('th', {}, 'Who'), el('th', {}, 'When'), el('th', {})),
+            requests.map(row)))]
+        : el('p', { class: 'muted' }, off ? 'No requests yet, and requests are off.' : 'No requests yet. People ask with Request a game on the Sheet templates page.'));
+    mount(adminHead('sheets'), typeof Sheets !== 'undefined' ? starters : null, asked);
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -6400,7 +6447,7 @@
     try {
       if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
-      if (parts[0] === 'admin') return await viewAdmin();
+      if (parts[0] === 'admin') return await viewAdmin(parts[1]);
       if (parts[0] === 'templates' && typeof Sheets !== 'undefined') return await Sheets.route(parts.slice(1));
       if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
       if (parts[0] === 'c') {

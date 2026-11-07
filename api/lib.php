@@ -349,6 +349,14 @@ function user_pronouns_sql(string $a = 'u'): string {
   return "(SELECT upp_$a.pronouns FROM user_profiles upp_$a WHERE upp_$a.user_id = $a.id)";
 }
 
+/** Site-wide switches a site admin sets on Site Admin (site_settings, migration 037), and what each is when unset. */
+const SITE_SETTINGS = ['game_requests_off' => '0'];
+function site_setting(string $name): string {
+  static $all = null;
+  if ($all === null) $all = db()->query('SELECT name, value FROM site_settings')->fetchAll(PDO::FETCH_KEY_PAIR);
+  return (string)($all[$name] ?? SITE_SETTINGS[$name] ?? '');
+}
+
 function require_login(): array {
   $u = current_user();
   if (!$u) json_error(401, 'not_authenticated', 'Not signed in.');
