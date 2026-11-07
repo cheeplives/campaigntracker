@@ -938,6 +938,12 @@ try {
     case 'starter_sources':
         starter_sources();
 
+    case 'game_request':
+    case 'game_requests':
+    case 'game_requests_clear':
+    case 'site_setting_save':
+        game_requests_action($action);
+
     case 'characters':
     case 'character':
     case 'character_create':
