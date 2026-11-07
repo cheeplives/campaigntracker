@@ -1,0 +1,278 @@
+{
+ "name": "Eat the Reich",
+ "game": "Eat the Reich",
+ "edition": "1st Edition (Rowan, Rook and Decard, 2023)",
+ "source": {
+  "title": "Eat the Reich character sheets (accessible)",
+  "owner": "Rowan, Rook and Decard",
+  "url": "https://rowanrookanddecard.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "vampire",
+    "title": "Vampire",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "blood_sec",
+    "title": "Blood",
+    "width": "half",
+    "fields": [
+     {
+      "key": "blood",
+      "label": "Blood",
+      "type": "counter",
+      "min": 0,
+      "max": 10,
+      "play": true
+     },
+     {
+      "key": "last_stand",
+      "label": "Last Stand",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "last_stand_used",
+      "label": "Last Stand used",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_brawl",
+      "label": "BRAWL",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_con",
+      "label": "CON",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_fix",
+      "label": "FIX",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_search",
+      "label": "SEARCH",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_shoot",
+      "label": "SHOOT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_sneak",
+      "label": "SNEAK",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_terrify",
+      "label": "TERRIFY",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "uses",
+        "label": "Uses"
+       },
+       {
+        "key": "tags",
+        "label": "Tags"
+       }
+      ]
+     },
+     {
+      "key": "loot",
+      "label": "Loot",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "abilities",
+      "label": "Abilities",
+      "type": "list",
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "advances_sec",
+    "title": "Advances",
+    "fields": [
+     {
+      "key": "advances",
+      "label": "Advances",
+      "type": "list",
+      "columns": [
+       {
+        "key": "advance",
+        "label": "Advance"
+       },
+       {
+        "key": "cost",
+        "label": "Cost"
+       },
+       {
+        "key": "taken",
+        "label": "Taken"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "injuries",
+    "title": "Injuries",
+    "fields": [
+     {
+      "key": "inj_12a",
+      "label": "Injury 1-2 (first)",
+      "type": "text"
+     },
+     {
+      "key": "inj_12a_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inj_34a",
+      "label": "Injury 3-4 (first)",
+      "type": "text"
+     },
+     {
+      "key": "inj_34a_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inj_56a",
+      "label": "Injury 5-6 (first)",
+      "type": "text"
+     },
+     {
+      "key": "inj_56a_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inj_12b",
+      "label": "Injury 1-2 (second)",
+      "type": "text"
+     },
+     {
+      "key": "inj_12b_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inj_34b",
+      "label": "Injury 3-4 (second)",
+      "type": "text"
+     },
+     {
+      "key": "inj_34b_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inj_56b",
+      "label": "Injury 5-6 (second)",
+      "type": "text"
+     },
+     {
+      "key": "inj_56b_x",
+      "label": "Taken",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

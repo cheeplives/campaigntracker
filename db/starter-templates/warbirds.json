@@ -1,0 +1,519 @@
+{
+ "name": "Warbirds",
+ "game": "Warbirds",
+ "edition": "1st Edition (Red Hen Productions, 2014)",
+ "source": {
+  "title": "Warbirds character sheet",
+  "owner": "Red Hen Productions",
+  "url": "https://www.drivethrurpg.com/en/product/129493",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "info",
+    "title": "Character Info",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "callsign",
+      "label": "Callsign",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text"
+     },
+     {
+      "key": "nationality",
+      "label": "Nationality",
+      "type": "text"
+     },
+     {
+      "key": "squadron",
+      "label": "Squadron",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance/Mannerisms",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spirit",
+      "label": "Spirit",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_points",
+      "label": "Stat Points",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "fame",
+      "label": "Fame",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "fame_points",
+      "label": "Fame Points",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "reserve",
+      "label": "Reserve",
+      "type": "text",
+      "size": "large",
+      "play": true
+     },
+     {
+      "key": "defence",
+      "label": "Defence",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "resist",
+      "label": "Resist",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "health_sec",
+    "title": "Health Track",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "health_track",
+      "label": "Health Track (0, -1, -1, -2, -2, -3, -3, -3, -3, -3)",
+      "type": "pips",
+      "size": "full",
+      "count": 10,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "weapons",
+    "title": "Personal Weapons",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "personal_weapons",
+      "label": "Personal Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "attack",
+        "label": "Attack"
+       },
+       {
+        "key": "damage",
+        "label": "Damage"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "stat",
+        "label": "Stat"
+       },
+       {
+        "key": "xp",
+        "label": "XP"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "adv",
+    "title": "Advantages & Disadvantages",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "advantages",
+      "label": "Advantages",
+      "type": "longtext"
+     },
+     {
+      "key": "disadvantages",
+      "label": "Disadvantages",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear and Notes",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "gear_notes",
+      "label": "Gear and Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "pilot",
+    "title": "Pilot Abilities",
+    "page": "Warbird",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "wb_piloting_level",
+      "label": "Piloting level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_piloting_xp",
+      "label": "Piloting XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_strafing_level",
+      "label": "Strafing level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_strafing_xp",
+      "label": "Strafing XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_gunnery_level",
+      "label": "Gunnery level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_gunnery_xp",
+      "label": "Gunnery XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_ordinance_level",
+      "label": "Ordinance level",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wb_ordinance_xp",
+      "label": "Ordinance XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "situational_awareness",
+      "label": "Situational Awareness",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "ratings",
+    "title": "Total Ratings",
+    "page": "Warbird",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "total_dogfighting",
+      "label": "Dogfighting",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "total_strafing",
+      "label": "Strafing",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "total_gunnery",
+      "label": "Gunnery",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "total_ordinance",
+      "label": "Ordinance",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "fighter",
+    "title": "Fighter Stats",
+    "page": "Warbird",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "performance",
+      "label": "Performance",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "armour",
+      "label": "Armour",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "structure",
+      "label": "Structure",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "defence_sec",
+    "title": "Defence",
+    "page": "Warbird",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "def_break",
+      "label": "Break",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "def_shoot",
+      "label": "Shoot",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "def_escape",
+      "label": "Escape",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "def_stunt",
+      "label": "Stunt",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "primary",
+    "title": "Primary Armament",
+    "page": "Warbird",
+    "width": "half",
+    "fields": [
+     {
+      "key": "prim_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "prim_acc",
+      "label": "Accuracy",
+      "type": "text"
+     },
+     {
+      "key": "prim_dmg",
+      "label": "Damage",
+      "type": "text"
+     },
+     {
+      "key": "prim_ap",
+      "label": "AP",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "prim_ammo",
+      "label": "Ammo",
+      "type": "counter",
+      "min": 0,
+      "max": 40,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "structure_sec",
+    "title": "Structure Track",
+    "page": "Warbird",
+    "width": "half",
+    "fields": [
+     {
+      "key": "structure_track",
+      "label": "Structure Track",
+      "type": "pips",
+      "size": "full",
+      "count": 15,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "heavy",
+    "title": "Heavy Weapons",
+    "page": "Warbird",
+    "width": "half",
+    "fields": [
+     {
+      "key": "heavy_type",
+      "label": "Type",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "heavy_acc",
+      "label": "Accuracy",
+      "type": "text"
+     },
+     {
+      "key": "heavy_dmg",
+      "label": "Damage",
+      "type": "text"
+     },
+     {
+      "key": "heavy_ap",
+      "label": "AP",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "heavy_ammo",
+      "label": "Ammo",
+      "type": "pips",
+      "size": "full",
+      "count": 11,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Warbird Traits",
+    "page": "Warbird",
+    "width": "half",
+    "fields": [
+     {
+      "key": "warbird_traits",
+      "label": "Warbird Traits",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "effects",
+        "label": "Effects"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "nose_art",
+    "title": "Nose Art",
+    "page": "Warbird",
+    "fields": [
+     {
+      "key": "nose_art_text",
+      "label": "Nose Art",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

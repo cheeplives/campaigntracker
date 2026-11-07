@@ -95,6 +95,8 @@ function upgrade_steps(): array {
             'A character with no player can now travel with the party, and every character\'s Encyclopedia entry is tagged PC or NPC.'],
         ['034_party_out.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_out'),
             'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
+        ['035_route_terrain.sql', fn(PDO $p) => db_has_table($p, 'map_routes') && !db_has_column($p, 'map_routes', 'terrain_json'),
+            'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
         ['038_dice_rolls.sql', fn(PDO $p) => !db_has_table($p, 'dice_rolls'),
             'Added the die roller: the 🎲 button on every campaign page, with a roll log the table shares.'],
     ];

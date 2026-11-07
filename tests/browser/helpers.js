@@ -105,6 +105,26 @@ function makePng(w, h, gray) {
   }
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 }
+/** The grey of pixel (x, y) in a picture of terrain with hex lines of `size` (flat to flat) on it, 'hex_flat' or 'hex_pointy', its
+ * pattern starting at (ox, oy): for makePng(w, h, hexGray("hex_flat", 40, 10, 7)). */
+function hexGray(type, size, ox, oy) {
+  const r = size / Math.sqrt(3), flip = type === "hex_pointy";
+  let seed = 5;
+  const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  return (x, y) => {
+    const a = flip ? y - oy : x - ox, b = flip ? x - ox : y - oy;
+    let best = 1e9;
+    const i0 = Math.floor((a - r) / (1.5 * r));
+    for (let i = i0 - 1; i <= i0 + 2; i++) {
+      const ca = r + 1.5 * r * i, jj = Math.floor((b - size / 2 - (i & 1) * size / 2) / size);
+      for (let j = jj - 1; j <= jj + 2; j++) {
+        const cb = size / 2 + size * j + (((i % 2) + 2) % 2) * size / 2, dx = Math.abs(a - ca), dy = Math.abs(b - cb);
+        best = Math.min(best, Math.abs(size / 2 - Math.max(dy, dx * Math.sqrt(3) / 2 + dy / 2)));
+      }
+    }
+    return best < 0.8 ? 8 : 60 + rnd() * 20 + ((Math.floor(x / 41) * 7 + Math.floor(y / 53) * 3) % 3) * 25;
+  };
+}
 /** A map (300 x 200) with its picture; returns its id. */
 async function mapWithPicture(page, cid, extra = {}) {
   const id = (await api(page, "map_save", { name: "Sartar", ...extra }, cid)).json.map.id;
@@ -189,4 +209,4 @@ async function openPassTime(page) {
   await row.waitFor({ state: "visible" });
 }
 
-module.exports = { openPassTime, openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+module.exports = { hexGray, openPassTime, openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

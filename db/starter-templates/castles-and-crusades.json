@@ -1,0 +1,695 @@
+{
+ "name": "Castles & Crusades",
+ "game": "Castles & Crusades",
+ "edition": "Troll Lord Games",
+ "source": {
+  "title": "Castles & Crusades fillable character sheet",
+  "owner": "Troll Lord Games",
+  "url": "https://www.trolllord.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Character Name and Rank",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "class",
+      "label": "Class",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "race",
+      "label": "Race",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "deity",
+      "label": "Deity",
+      "type": "text"
+     },
+     {
+      "key": "disposition",
+      "label": "Disposition",
+      "type": "text"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "movement",
+      "label": "Movement",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "exp_next",
+      "label": "Exp. next lvl.",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "str_score",
+      "label": "STR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_mod",
+      "label": "STR mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_prime",
+      "label": "STR prime",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "dex_score",
+      "label": "DEX",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dex_mod",
+      "label": "DEX mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "dex_prime",
+      "label": "DEX prime",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "con_score",
+      "label": "CON",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "con_mod",
+      "label": "CON mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "con_prime",
+      "label": "CON prime",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "int_score",
+      "label": "INT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_mod",
+      "label": "INT mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_prime",
+      "label": "INT prime",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wis_score",
+      "label": "WIS",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wis_mod",
+      "label": "WIS mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "wis_prime",
+      "label": "WIS prime",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "cha_score",
+      "label": "CHA",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_mod",
+      "label": "CHA mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_prime",
+      "label": "CHA prime",
+      "type": "checkbox",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "defense",
+    "title": "Armor Class & Hit Points",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "ac",
+      "label": "AC",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "ac_armor",
+      "label": "Armor",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ac_shield",
+      "label": "Shield",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ac_mod",
+      "label": "Mod",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ac_magic",
+      "label": "Magic",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "ac_misc",
+      "label": "Misc",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "armor_worn",
+      "label": "Armor Worn",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "shield_worn",
+      "label": "Shield",
+      "type": "text"
+     },
+     {
+      "key": "helm",
+      "label": "Helm",
+      "type": "text"
+     },
+     {
+      "key": "hp_by_level",
+      "label": "Hit Points by Level",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "hp",
+        "label": "HP"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Character",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "bth",
+        "label": "BtH"
+       },
+       {
+        "key": "mod",
+        "label": "Mod"
+       },
+       {
+        "key": "misc",
+        "label": "Misc"
+       },
+       {
+        "key": "magic",
+        "label": "Magic"
+       },
+       {
+        "key": "total_to_hit",
+        "label": "Total to hit"
+       },
+       {
+        "key": "dmg",
+        "label": "Dmg"
+       },
+       {
+        "key": "dmg_mod",
+        "label": "Dmg mod"
+       },
+       {
+        "key": "dmg_magic",
+        "label": "Dmg magic"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "class_abilities_sec",
+    "title": "Class Abilities",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "class_abilities",
+      "label": "Class Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "turn_undead",
+    "title": "Holy Symbol & Race Abilities",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "holy_symbol",
+      "label": "Holy Symbol",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "turning_check",
+      "label": "Turning Check",
+      "type": "text"
+     },
+     {
+      "key": "turned",
+      "label": "Turned",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "race_abilities",
+      "label": "Race Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "spells_sec",
+    "title": "Spells",
+    "page": "Character",
+    "width": "third",
+    "fields": [
+     {
+      "key": "spells_per_day",
+      "label": "Spells per Day",
+      "type": "list",
+      "columns": [
+       {
+        "key": "level",
+        "label": "Level"
+       },
+       {
+        "key": "spells",
+        "label": "Spells"
+       },
+       {
+        "key": "bonus_spells",
+        "label": "Bonus Spells"
+       },
+       {
+        "key": "total",
+        "label": "Total"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "possessions_sec",
+    "title": "Possessions",
+    "page": "Gear & Background",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "possessions",
+      "label": "Possessions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "en",
+        "label": "EN"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "consumables",
+    "title": "Ammunition & Victuals",
+    "page": "Gear & Background",
+    "width": "third",
+    "fields": [
+     {
+      "key": "arrows",
+      "label": "Arrows/Bolts",
+      "type": "pips",
+      "size": "full",
+      "count": 20,
+      "play": true
+     },
+     {
+      "key": "stones",
+      "label": "Stones/Other",
+      "type": "pips",
+      "size": "full",
+      "count": 20,
+      "play": true
+     },
+     {
+      "key": "food",
+      "label": "Food",
+      "type": "pips",
+      "size": "full",
+      "count": 20,
+      "play": true
+     },
+     {
+      "key": "water",
+      "label": "Water",
+      "type": "pips",
+      "size": "full",
+      "count": 20,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "magic_items_sec",
+    "title": "Spells/Magic Items/Scrolls/Potions",
+    "page": "Gear & Background",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "magic_items",
+      "label": "Spells/Magic Items/Scrolls/Potions",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     },
+     {
+      "key": "treasure",
+      "label": "Magic Items & Treasure (continued)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "coin",
+    "title": "Coin",
+    "page": "Gear & Background",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "platinum",
+      "label": "Platinum",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gold",
+      "label": "Gold",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "silver",
+      "label": "Silver",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "copper",
+      "label": "Copper",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "companion",
+    "title": "Horse/Animal Companion/Familiar",
+    "page": "Gear & Background",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "comp_name",
+      "label": "Name",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "comp_type",
+      "label": "Type",
+      "type": "text"
+     },
+     {
+      "key": "comp_ac",
+      "label": "AC",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "comp_move",
+      "label": "Move",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "comp_saves",
+      "label": "Saves",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "comp_hp",
+      "label": "HP",
+      "type": "counter"
+     },
+     {
+      "key": "comp_damage",
+      "label": "Damage",
+      "type": "text"
+     },
+     {
+      "key": "comp_notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "encumbrance_sec",
+    "title": "Encumbrance",
+    "page": "Gear & Background",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "enc_total",
+      "label": "Total",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "enc_penalty",
+      "label": "Penalty",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "enc_move",
+      "label": "Move",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "enc_check",
+      "label": "Attribute Check",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "enc_ac",
+      "label": "Armor Class",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "description_sec",
+    "title": "Description/Personality/Background",
+    "page": "Gear & Background",
+    "fields": [
+     {
+      "key": "place_of_origin",
+      "label": "Place of Origin",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "weight",
+      "label": "Weight",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "hair",
+      "label": "Hair",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "eyes",
+      "label": "Eyes",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "scars",
+      "label": "Notes/Scars/Etc",
+      "type": "longtext"
+     },
+     {
+      "key": "desc",
+      "label": "Description",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

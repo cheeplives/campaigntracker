@@ -119,6 +119,120 @@
     return { px: Math.round(px * 100) / 100, offset_x: Math.round((((ox + 0.5) % px) + px) % px * 100) / 100, offset_y: Math.round((((oy + 0.5) % px) + px) % px * 100) / 100, confidence: Math.min(1, best) };
   }
 
+
+  // ---- finding a hex grid, or choosing between squares and hexes
+  // Hex edges are slanted, so the column and row scores of detectGrid can't see them. Instead each candidate grid (a shape, a
+  // size and where it sits) is laid over the picture and scored by how strong the picture's edges are along its lines compared
+  // with the picture's average edge: the right grid sits on edges everywhere, a wrong one on none.
+  function edgeMap(gray, w, h) {
+    const e = new Float32Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      e[i] = Math.min(255, Math.abs(gray[i + 1] - gray[i - 1]) + Math.abs(gray[i + w] - gray[i - w]));
+    }
+    const out = new Float32Array(w * h);   // a pixel's own edge or its neighbours', so a line a pixel off still counts
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      out[i] = Math.max(e[i], e[i - 1], e[i + 1], e[i - w], e[i + w]);
+    }
+    return out;
+  }
+  // The lines of a grid of `type` and `size` whose pattern starts at (ox, oy), as segments [x1, y1, x2, y2] inside the box.
+  function gridSegments(type, size, ox, oy, box) {
+    const segs = [];
+    if (type === 'square') {
+      for (let x = box.x0 + ((ox - box.x0) % size + size) % size; x <= box.x1; x += size) segs.push([x, box.y0, x, box.y1]);
+      for (let y = box.y0 + ((oy - box.y0) % size + size) % size; y <= box.y1; y += size) segs.push([box.x0, y, box.x1, y]);
+      return segs;
+    }
+    const flip = type === 'hex_pointy', r = size / Math.sqrt(3);
+    // centres of a flat-topped lattice (turned on its side for pointy), then each hex's six sides
+    const [a0, a1, b0, b1] = flip ? [box.y0, box.y1, box.x0, box.x1] : [box.x0, box.x1, box.y0, box.y1];
+    const [pa, pb] = flip ? [oy, ox] : [ox, oy];
+    const corners = [0, 1, 2, 3, 4, 5].map(k => [r * Math.cos(k * Math.PI / 3), (size / 2) * 0 + r * Math.sin(k * Math.PI / 3)]);
+    const iMin = Math.floor((a0 - pa - r) / (1.5 * r)) - 1, iMax = Math.ceil((a1 - pa) / (1.5 * r)) + 1;
+    for (let i = iMin; i <= iMax; i++) {
+      const ca = pa + r + 1.5 * r * i;
+      const jMin = Math.floor((b0 - pb) / size) - 1, jMax = Math.ceil((b1 - pb) / size) + 1;
+      for (let j = jMin; j <= jMax; j++) {
+        const cb = pb + size / 2 + size * j + (((i % 2) + 2) % 2) * size / 2;
+        for (let k = 0; k < 6; k++) {
+          const [u1, v1] = corners[k], [u2, v2] = corners[(k + 1) % 6];
+          const p1 = flip ? [cb + v1, ca + u1] : [ca + u1, cb + v1], p2 = flip ? [cb + v2, ca + u2] : [ca + u2, cb + v2];
+          segs.push([p1[0], p1[1], p2[0], p2[1]]);
+        }
+      }
+    }
+    return segs;
+  }
+  function gridScore(edge, w, h, segs, box) {
+    let t = 0, n = 0;
+    for (const [x1, y1, x2, y2] of segs) {
+      const len = Math.hypot(x2 - x1, y2 - y1), steps = Math.max(1, Math.round(len / 2));
+      for (let k = 0; k <= steps; k++) {
+        const x = Math.round(x1 + (x2 - x1) * k / steps), y = Math.round(y1 + (y2 - y1) * k / steps);
+        if (x < box.x0 || x > box.x1 || y < box.y0 || y > box.y1 || x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
+        t += edge[y * w + x]; n++;
+      }
+    }
+    return n ? t / n : 0;
+  }
+  // The best square, flat-hex or pointy-hex grid on the picture, as { type, px, offset_x, offset_y, lift (how many times the
+  // average edge its lines sit on) }, or null when none beats 2.2 times the average. Squares come from detectGrid.
+  function detectAnyGrid(gray, w, h) {
+    const MIN_S = 14, BOX = 200;
+    const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
+    const box = { x0: Math.max(1, cx - BOX), x1: Math.min(w - 2, cx + BOX), y0: Math.max(1, cy - BOX), y1: Math.min(h - 2, cy + BOX) };
+    const edge = edgeMap(gray, w, h);
+    let mean = 0, cnt = 0;
+    for (let y = box.y0; y <= box.y1; y++) for (let x = box.x0; x <= box.x1; x++) { mean += edge[y * w + x]; cnt++; }
+    mean = (mean / cnt) || 1;
+    const maxS = Math.min(120, Math.floor(Math.min(box.x1 - box.x0, box.y1 - box.y0) / 3));
+    if (maxS <= MIN_S) return null;
+    const score = (type, s, ox, oy) => gridScore(edge, w, h, gridSegments(type, s, ox, oy, box), box) / mean;
+    const periods = type => {   // where the pattern's first line can start: one square, or a hex's repeat less its mirror
+      const r = s => s / Math.sqrt(3);
+      return type === 'square' ? s => [s, s] : type === 'hex_flat' ? s => [1.5 * r(s), s] : s => [s, 1.5 * r(s)];
+    };
+    const search = (type, sFrom, sTo, sStep, fine) => {
+      let best = { lift: 0 };
+      for (let s = sFrom; s <= sTo; s += sStep) {
+        const [px, py] = periods(type)(s);
+        const st = fine ? fine : Math.max(1, s / 6);
+        for (let ox = 0; ox < px; ox += st) for (let oy = 0; oy < py; oy += st) {
+          const lift = score(type, s, ox, oy);
+          if (lift > best.lift) best = { type, px: s, offset_x: ox, offset_y: oy, lift };
+        }
+      }
+      return best;
+    };
+    const refine = c => {
+      let b = c;
+      // first within a coarse step of where it was found, then a pixel or less around that
+      for (const [rs, ro, step, ostep] of [[2, c.px / 6, 0.5, c.px / 24], [0.6, 1, 0.15, 0.25]]) {
+        const from = b;
+        for (let s = Math.max(MIN_S, from.px - rs); s <= from.px + rs; s += step) for (let ox = from.offset_x - ro; ox <= from.offset_x + ro; ox += ostep) for (let oy = from.offset_y - ro; oy <= from.offset_y + ro; oy += ostep) {
+          const lift = score(c.type, s, ox, oy);
+          if (lift > b.lift) b = { type: c.type, px: s, offset_x: ox, offset_y: oy, lift };
+        }
+      }
+      return b;
+    };
+    // squares from detectGrid (it is exact), scored the same way as the hexes so the two can be compared
+    const sq = detectGrid(gray, w, h);
+    let best = sq ? { type: 'square', px: sq.px, offset_x: sq.offset_x, offset_y: sq.offset_y, lift: score('square', sq.px, sq.offset_x, sq.offset_y) } : null;
+    for (const type of ['hex_flat', 'hex_pointy']) {
+      const c = refine(search(type, MIN_S, maxS, 2));
+      if (c.lift && (!best || c.lift > best.lift * 1.1)) best = c;   // a hex must clearly beat the squares: slanted sides cross square lines now and then
+    }
+    if (!best || best.lift < 2.2) return null;
+    if (best.type === 'square') return { type: 'square', px: sq.px, offset_x: sq.offset_x, offset_y: sq.offset_y, lift: Math.round(best.lift * 100) / 100 };
+    const [px, py] = periods(best.type)(best.px);
+    const wrap = (v, m) => ((v % m) + m) % m;
+    const r2 = v => Math.round(v * 100) / 100;
+    return { type: best.type, px: r2(best.px), offset_x: r2(wrap(best.offset_x, px)), offset_y: r2(wrap(best.offset_y, py)), lift: r2(best.lift) };
+  }
+
   function pathPx(points) {
     let sum = 0;
     for (let i = 1; i < points.length; i++) sum += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
@@ -194,7 +308,7 @@
     return size > 0 ? Math.round(px / size) : null;
   }
 
-  const MapGeo = { UNIT_M, ROLL20, GRID_TYPES, isSpace, scaleFromPoints, scaleFromGrid, gridHint, detectGrid, pathPx, toMetres, fmtDistance, nameKey, pinFor, gridTile, squaresAlong, nearestPin, pinName };
+  const MapGeo = { UNIT_M, ROLL20, GRID_TYPES, isSpace, scaleFromPoints, scaleFromGrid, gridHint, detectGrid, detectAnyGrid, pathPx, toMetres, fmtDistance, nameKey, pinFor, gridTile, squaresAlong, nearestPin, pinName };
   if (typeof module !== 'undefined' && module.exports) module.exports = MapGeo;
   else root.MapGeo = MapGeo;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,293 @@
+{
+ "name": "Cowboy World",
+ "game": "Cowboy World",
+ "edition": "Player handout",
+ "source": {
+  "title": "Cowboy World player handout",
+  "owner": "Unknown (the handout doesn't name its maker)",
+  "url": "https://rpggeek.com/geeksearch.php?action=search&objecttype=rpg&q=Cowboy+World",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "text"
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "concept",
+    "title": "High Concept",
+    "width": "half",
+    "fields": [
+     {
+      "key": "archetype",
+      "label": "Archetype",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "twist",
+      "label": "Twist",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "history",
+      "label": "History",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "group_theme",
+      "label": "Group theme",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Attributes",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "body",
+      "label": "Body",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mind",
+      "label": "Mind",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "soul",
+      "label": "Soul",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wound_1",
+      "label": "Wound 1",
+      "type": "choice",
+      "options": [
+       "Lethal",
+       "Non-Lethal"
+      ],
+      "play": true
+     },
+     {
+      "key": "wound_2",
+      "label": "Wound 2",
+      "type": "choice",
+      "options": [
+       "Lethal",
+       "Non-Lethal"
+      ],
+      "play": true
+     },
+     {
+      "key": "wound_3",
+      "label": "Wound 3",
+      "type": "choice",
+      "options": [
+       "Lethal",
+       "Non-Lethal"
+      ],
+      "play": true
+     },
+     {
+      "key": "debility",
+      "label": "Permanent Debility",
+      "type": "text",
+      "size": "full",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "earned",
+    "title": "Earned",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "grit",
+      "label": "Grit",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "fame",
+      "label": "Fame",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "infamy",
+      "label": "Infamy",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "skills",
+    "title": "Skills",
+    "fields": [
+     {
+      "key": "starting_skills",
+      "label": "Starting skills (+2, +2, +1, +1, +1, -1, -1)",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "i_am_good_or_bad_at_this_because",
+        "label": "I am good (or bad) at this because..."
+       }
+      ]
+     },
+     {
+      "key": "new_skills",
+      "label": "New Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "i_am_good_or_bad_at_this_because",
+        "label": "I am good (or bad) at this because..."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "beliefs",
+    "title": "Beliefs, Goals and Issues",
+    "width": "half",
+    "fields": [
+     {
+      "key": "belief",
+      "label": "I believe that",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "goal",
+      "label": "Therefore my goal is to",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "issue",
+      "label": "My issue is",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "bonds_sec",
+    "title": "Bonds",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonds",
+      "label": "Bonds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "name",
+        "label": "Name"
+       },
+       {
+        "key": "points",
+        "label": "Points"
+       },
+       {
+        "key": "my_bonds_with_them_are",
+        "label": "My bonds with them are"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "gear_sec",
+    "title": "Gear and Wealth",
+    "fields": [
+     {
+      "key": "gear",
+      "label": "Gear",
+      "type": "longtext"
+     },
+     {
+      "key": "wealth",
+      "label": "Wealth",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

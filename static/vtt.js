@@ -106,7 +106,25 @@
     });
   }
 
-  const VTT = { readVtt, toUvtt, pictureType, toBase64, fromBase64, NOT_VTT };
+  /** The map as a Foundry scene's JSON (for Import Data), its pins as Notes, its picture named `pictureName` (the file the GM
+   * puts beside it). `notes` is [{ x, y, text }] in picture pixels. The canvas has no padding, so notes sit where the pins are. */
+  function toFoundry(map, notes, pictureName) {
+    const ppg = +map.grid_px;
+    const t = ppg > 0 ? (map.grid_type === 'hex_flat' ? 4 : map.grid_type === 'hex_pointy' ? 2 : 1) : 0;
+    const per = ppg > 0 && +map.scale_per_px > 0 ? +map.scale_per_px * ppg : null;
+    const unit = ['ft', 'm', 'mi', 'km'].includes(map.scale_unit) ? map.scale_unit : null;
+    const shiftX = -(+map.grid_offset_x || 0), shiftY = -(+map.grid_offset_y || 0);
+    const r = n => +(+n).toFixed(2);
+    return JSON.stringify({
+      name: map.name, width: map.width, height: map.height, padding: 0,
+      grid: { type: t, size: t ? r(ppg) : 100, ...(t && per && unit ? { distance: r(per), units: unit } : {}) },
+      background: { src: pictureName, offsetX: r(shiftX), offsetY: r(shiftY) },
+      notes: notes.map(n => ({ x: r(+n.x + shiftX), y: r(+n.y + shiftY), text: String(n.text || 'Note'), fontSize: 48, iconSize: 40 })),
+      walls: [], lights: [],
+    }, null, 2);
+  }
+
+  const VTT = { readVtt, toUvtt, toFoundry, pictureType, toBase64, fromBase64, NOT_VTT };
   if (typeof module !== 'undefined' && module.exports) module.exports = VTT;
   else root.VTT = VTT;
 })(typeof window !== 'undefined' ? window : globalThis);

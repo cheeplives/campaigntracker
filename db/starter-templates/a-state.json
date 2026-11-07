@@ -1,0 +1,525 @@
+{
+ "name": "A|State",
+ "game": "A|State",
+ "edition": "2nd Edition (Handiwork Games, 2023)",
+ "source": {
+  "title": "A|State character sheet",
+  "owner": "Handiwork Games (originally Contested Ground Studios)",
+  "url": "https://handiworkgames.co.uk/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text"
+     },
+     {
+      "key": "pronouns",
+      "label": "Pronouns",
+      "type": "text"
+     },
+     {
+      "key": "look",
+      "label": "Look/Keywords",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "origin",
+      "label": "Origin/Upbringing",
+      "type": "text"
+     },
+     {
+      "key": "backing_faction",
+      "label": "Backing Faction",
+      "type": "text"
+     },
+     {
+      "key": "escape",
+      "label": "Escape",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "playbook_sec",
+    "title": "Playbook",
+    "width": "half",
+    "fields": [
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "playbook_xp",
+      "label": "Playbook XP",
+      "type": "pips",
+      "cols": 3,
+      "count": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stress_trauma",
+    "title": "Stress & Trauma",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "size": "full",
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "trauma",
+      "label": "Trauma",
+      "type": "pips",
+      "cols": 2,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "trauma_cold",
+      "label": "Cold",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_haunted",
+      "label": "Haunted",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_obsessed",
+      "label": "Obsessed",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_paranoid",
+      "label": "Paranoid",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_reckless",
+      "label": "Reckless",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_soft",
+      "label": "Soft",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_unstable",
+      "label": "Unstable",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trauma_vicious",
+      "label": "Vicious",
+      "type": "checkbox",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "harm",
+    "title": "Harm",
+    "width": "half",
+    "fields": [
+     {
+      "key": "harm_3",
+      "label": "Harm 3",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "harm_2a",
+      "label": "Harm 2 (first)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_2b",
+      "label": "Harm 2 (second)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_1a",
+      "label": "Harm 1 (first)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "harm_1b",
+      "label": "Harm 1 (second)",
+      "type": "text",
+      "play": true
+     },
+     {
+      "key": "healing",
+      "label": "Healing",
+      "type": "pips",
+      "cols": 2,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "armour_light",
+      "label": "Armour",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "armour_heavy",
+      "label": "Heavy",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "armour_special",
+      "label": "Special",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "attr_insight",
+    "title": "Insight",
+    "width": "third",
+    "fields": [
+     {
+      "key": "insight_xp",
+      "label": "Insight XP",
+      "type": "pips",
+      "cols": 3,
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_examine",
+      "label": "Examine",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_find",
+      "label": "Find",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_scrounge",
+      "label": "Scrounge",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_tinker",
+      "label": "Tinker",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "attr_prowess",
+    "title": "Prowess",
+    "width": "third",
+    "fields": [
+     {
+      "key": "prowess_xp",
+      "label": "Prowess XP",
+      "type": "pips",
+      "cols": 3,
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_fight",
+      "label": "Fight",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_sneak",
+      "label": "Sneak",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_touch",
+      "label": "Touch",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_wreck",
+      "label": "Wreck",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "attr_resolve",
+    "title": "Resolve",
+    "width": "third",
+    "fields": [
+     {
+      "key": "resolve_xp",
+      "label": "Resolve XP",
+      "type": "pips",
+      "cols": 3,
+      "count": 6,
+      "play": true
+     },
+     {
+      "key": "act_care",
+      "label": "Care",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_command",
+      "label": "Command",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_charm",
+      "label": "Charm",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     },
+     {
+      "key": "act_persuade",
+      "label": "Persuade",
+      "type": "pips",
+      "cols": 2,
+      "count": 4
+     }
+    ]
+   },
+   {
+    "key": "teamwork",
+    "title": "Teamwork & Trust",
+    "width": "third",
+    "fields": [
+     {
+      "key": "trust_mark",
+      "label": "Trust",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "trusted_allies",
+      "label": "Trusted Allies",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "special",
+    "title": "Special Abilities",
+    "width": "third",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "contacts_sec",
+    "title": "Contacts",
+    "width": "third",
+    "fields": [
+     {
+      "key": "contacts",
+      "label": "Contacts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "contact",
+        "label": "Contact"
+       },
+       {
+        "key": "friend_or_enemy",
+        "label": "Friend or Enemy"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "load",
+    "title": "Load",
+    "compact": true,
+    "fields": [
+     {
+      "key": "load_level",
+      "label": "Load",
+      "type": "choice",
+      "options": [
+       "Light (3)",
+       "Normal (5)",
+       "Heavy (6)"
+      ],
+      "play": true
+     },
+     {
+      "key": "item_a_blade_or_two",
+      "label": "A Blade or Two",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_a_pistol",
+      "label": "A Pistol",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_a_large_weapon",
+      "label": "A Large Weapon",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_armour",
+      "label": "Armour",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_break_in_gear",
+      "label": "Break-in Gear",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_first_aid_kit",
+      "label": "First Aid Kit",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_warm_clothing",
+      "label": "Warm Clothing",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_infection_kit",
+      "label": "Infection Kit",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_a_backup_weapon",
+      "label": "A Backup Weapon",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_an_unusual_weapon",
+      "label": "An Unusual Weapon",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_tool_kit",
+      "label": "Tool Kit",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_wrecking_gear",
+      "label": "Wrecking Gear",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_climbing_gear",
+      "label": "Climbing Gear",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_navigation_tools",
+      "label": "Navigation Tools",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_survival_kit",
+      "label": "Survival Kit",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "item_lamp",
+      "label": "Lamp",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}
