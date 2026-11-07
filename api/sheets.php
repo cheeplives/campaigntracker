@@ -178,7 +178,7 @@ function templates_action(string $action): void {
                 $like = '%' . addcslashes($q, '%_\\') . '%';
                 array_push($args, $like, $like, $like);
             }
-            out(['templates' => templates_query($where, $args)]);
+            out(['templates' => templates_query($where, $args), 'requests_on' => site_setting('game_requests_off') !== '1']);
         case 'template':
             $id = int_in($_GET['id'] ?? null, 1);
             need_template_visible(template_row($id));
@@ -785,4 +785,64 @@ function starter_sources(): void {
                 'licence' => isset($s['licence']) && is_string($s['licence']) ? $s['licence'] : null]];
     }
     out(['starters' => $out]);
+}
+
+// ---------- Request a game: people ask for a starter sheet, the site admin sees the counts ----------
+
+/** A game's name as the requests are grouped by it: lower case, spaces squeezed. */
+function game_request_key(string $game): string {
+    return mb_strtolower(trim((string)preg_replace('/\s+/u', ' ', $game)));
+}
+/** The games asked for, most asked first: the name most of them typed, how many asked, who, and when last. */
+function game_requests_list(): array {
+    $rows = db()->query('SELECT r.game, r.game_key, r.created_at, ' . user_name_sql() . ' AS who
+        FROM game_requests r JOIN users u ON u.id=r.user_id ORDER BY r.created_at')->fetchAll();
+    $by = [];
+    foreach ($rows as $r) {
+        $g = &$by[$r['game_key']];
+        $g ??= ['key' => $r['game_key'], 'names' => [], 'count' => 0, 'who' => [], 'first' => $r['created_at'], 'last' => $r['created_at']];
+        $g['names'][$r['game']] = ($g['names'][$r['game']] ?? 0) + 1;
+        $g['count']++;
+        $g['who'][] = (string)$r['who'];
+        $g['last'] = $r['created_at'];
+        unset($g);
+    }
+    $out = array_map(function ($g) {
+        arsort($g['names']);
+        $g['game'] = (string)array_key_first($g['names']);
+        unset($g['names']);
+        return $g;
+    }, array_values($by));
+    usort($out, fn($a, $b) => $b['count'] <=> $a['count'] ?: strcmp($b['last'], $a['last']));
+    return $out;
+}
+
+function game_requests_action(string $action): void {
+    $me = me();
+    switch ($action) {
+        case 'game_request':
+            if (site_setting('game_requests_off') === '1') fail('Game requests are turned off just now', 403, 'requests_off');
+            $game = trim((string)preg_replace('/\s+/u', ' ', (string)str_in(p('game'), 100, false)));
+            if (mb_strlen($game) < 2) fail('Type the name of the game');
+            rate_limit('game_request', (string)$me['id'], 10, 86400, 1, 'That is a lot of requests for one day. Try again tomorrow');
+            $st = db()->prepare('INSERT IGNORE INTO game_requests (user_id, game, game_key) VALUES (?,?,?)');
+            $st->execute([$me['id'], $game, game_request_key($game)]);
+            out(['ok' => true, 'already' => !$st->rowCount()]);
+        case 'game_requests':
+            need_admin();
+            out(['requests' => game_requests_list(), 'off' => site_setting('game_requests_off') === '1']);
+        case 'game_requests_clear':
+            need_admin();
+            $key = game_request_key((string)str_in(p('key'), 100, false));
+            $st = db()->prepare('DELETE FROM game_requests WHERE game_key=?');
+            $st->execute([$key]);
+            out(['ok' => true, 'cleared' => $st->rowCount()]);
+        case 'site_setting_save':
+            need_admin();
+            $name = (string)str_in(p('name'), 60, false);
+            if (!array_key_exists($name, SITE_SETTINGS)) fail('No such setting');
+            $value = (string)str_in(is_bool(p('value')) ? (p('value') ? '1' : '0') : p('value'), 2000);
+            db()->prepare('INSERT INTO site_settings (name, value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=VALUES(value)')->execute([$name, $value]);
+            out(['ok' => true, 'name' => $name, 'value' => $value]);
+    }
 }

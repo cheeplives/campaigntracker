@@ -10,7 +10,7 @@
 'use strict';
 
 const Sheets = (() => {
-  const { el, toast, confirmDialog } = KIT;
+  const { el, toast, confirmDialog, promptDialog } = KIT;
   const L = SheetLayout, I = SheetImport;
   let ctx = null;
   /** app.js's helpers: { S, api, post, mount, field, campaignHeader, isGM, route }. */
@@ -276,15 +276,29 @@ const Sheets = (() => {
     const list = el('div', { class: 'template-grid' });
     const search = el('input', { type: 'search', placeholder: 'Name or game', 'aria-label': 'Search templates' });
     let seq = 0, timer = 0;
+    // Request a game: a name typed here reaches the site admin's Sheets tab. Shown only while requests are on.
+    const request = button('Request a game', async () => {
+      const game = await promptDialog('Which game would you like a starter sheet for? The site admin sees every request, with how many people asked for each game.',
+        { title: 'Request a game', value: search.value.trim(), placeholder: 'Game name, and edition if it matters', ok: 'Send request' });
+      if (game === null) return;
+      if (game.trim().length < 2) return toast('Type the name of the game', true);
+      try {
+        const r = await ctx.post('game_request', { game: game.trim() });
+        toast(r.already ? 'You have already asked for that game' : 'Request sent. Thanks!');
+      } catch (err) { toast(err.message, true); }
+    }, '', { 'data-tip': 'Ask for a starter template for a game that isn\'t here yet' });
+    request.style.display = 'none';
     const load = async () => {
       const n = ++seq;
-      const { templates } = await ctx.api('templates', { query: search.value.trim() ? { q: search.value.trim() } : {} });
+      const { templates, requests_on } = await ctx.api('templates', { query: search.value.trim() ? { q: search.value.trim() } : {} });
       if (n !== seq) return;
+      request.style.display = requests_on ? '' : 'none';
       list.replaceChildren(...(templates.length ? editionGroups(templates).map(card) : [el('p', { class: 'muted' }, search.value ? 'No template matches that.' : 'No templates yet.')]));
     };
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load().catch(err => toast(err.message, true)), 250); });
     ctx.mount(el('div', { class: 'card' },
-      el('div', { class: 'row spread' }, el('h1', {}, 'Sheet templates'), button('+ New template', () => (location.hash = '#/templates/new'), 'primary')),
+      el('div', { class: 'row spread' }, el('h1', {}, 'Sheet templates'),
+        el('div', { class: 'row', style: { marginTop: '0' } }, request, button('+ New template', () => (location.hash = '#/templates/new'), 'primary'))),
       el('p', { class: 'muted' }, 'Every character sheet starts from a template. Anyone can use or fork any template here; only its author changes it.'),
       search), list);
     await load();

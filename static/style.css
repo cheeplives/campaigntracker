@@ -725,6 +725,13 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: right; }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }
+.admin-head { padding-bottom: 0; } .admin-head h1 { margin: 0 0 8px; }
+.admin-head .subtabs { border-bottom: 0; }
+.switch-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; font-weight: 600; cursor: pointer; }
+.switch-row input { width: 18px; height: 18px; margin: 0; }
+.tbl.game-requests td { vertical-align: top; overflow-wrap: break-word; }
+.tbl.game-requests .num { text-align: right; width: 4.5em; font-variant-numeric: tabular-nums; }
+.tbl.game-requests td.act { text-align: right; width: 1%; white-space: nowrap; }
 @media (max-width: 720px) {
   /* Users table: one card per person on a phone instead of a table wider than the screen. */
   .tbl.users tr:first-child { display: none; }
