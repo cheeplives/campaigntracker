@@ -1801,3 +1801,84 @@ button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-p
 .shift-edit .shift-actions { padding-top: 8px; border-top: 1px dashed var(--line); }
 .sess-actions { margin-top: 14px; }
 .sess-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: .92rem; }
+
+/* ---- The die roller (static/dice-tab.js): the 🎲 button over every campaign page, and the panel it opens. On a wide
+   screen (a desktop, an iPad held sideways) the panel runs down the right and pushes the page over; narrower (an iPad
+   held upright, a phone) it is a sheet over the bottom of the screen. */
+.dice-fab { position: fixed; right: 18px; bottom: 72px; z-index: 61; width: 52px; height: 52px; padding: 0; border-radius: 50%; font-size: 26px; line-height: 1;
+  background: var(--panel-2); color: var(--text); border: 2px solid var(--accent); box-shadow: 0 8px 22px -10px rgb(0 0 0 / .7); }
+.dice-fab:hover { background: var(--accent); }
+.dice-fab[hidden] { display: none; }
+.dice-dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bad, #d05a4a); border: 2px solid var(--bg); }
+.dice-dot[hidden] { display: none; }
+.dice-panel { position: fixed; z-index: 70; right: 0; top: var(--topbar-h, 56px); bottom: 0; width: 380px; display: flex; flex-direction: column;
+  background: var(--panel); border-left: 3px solid var(--accent); box-shadow: -14px 0 30px -24px rgb(0 0 0 / .8); }
+.dice-panel[hidden] { display: none; }
+@media (min-width: 1000px) {
+  body.dice-open #app, body.dice-open .footer { margin-right: 380px; }
+  body.dice-open .to-top { right: 398px; }
+  body.dice-open .tv-dock { left: calc((100% - 380px) / 2); max-width: calc(100vw - 440px); }
+}
+@media (max-width: 999.98px) {
+  .dice-help { max-height: calc(min(68vh, 640px) - 150px); }
+  .dice-panel { top: auto; left: 0; width: auto; height: min(68vh, 640px); border-left: 0; border-top: 3px solid var(--accent); border-radius: 14px 14px 0 0;
+    box-shadow: 0 -14px 30px -18px rgb(0 0 0 / .8); }
+  body.dice-open .to-top { display: none; }
+}
+.dice-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px 8px; border-bottom: 1px solid var(--line); }
+.dice-head h2 { margin: 0; font: 700 1.25rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.dice-sub { flex: 1; }
+.dice-x { margin: 0; padding: 4px 10px; }
+.dice-log { flex: 1; overflow-y: auto; margin: 0; padding: 4px 14px; list-style: none; overscroll-behavior: contain; }
+.dice-empty { padding: 18px 0; }
+.dice-e { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.dice-e.hidden-roll { border-left: 3px solid var(--secret, #8b5cc4); padding-left: 8px; }
+.dice-e-main { flex: 1; min-width: 0; }
+.dice-e-who { font-weight: 600; overflow-wrap: anywhere; }
+.dice-e-meta { margin-top: 1px; overflow-wrap: anywhere; }
+.dice-e-out { text-align: right; flex: none; max-width: 45%; }
+.dice-e-out b { display: block; font: 700 1.5rem/1.1 var(--disp); color: var(--accent); overflow-wrap: anywhere; }
+.dice-e-out small { color: var(--dim); }
+.dice-e.latest .dice-e-out b { font-size: 2.3rem; }
+.dice-terms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; align-items: center; }
+.dice-term { display: inline-flex; flex-wrap: wrap; gap: 4px; padding-right: 6px; }
+.dice-term + .dice-term { border-left: 1px solid var(--line); padding-left: 6px; }
+.dice-go-n { width: 100%; }
+.die { min-width: 26px; height: 26px; padding: 0 4px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center;
+  font: 700 .95rem var(--disp); background: #efe6d2; color: #2b2418; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18); }
+.dice-e.latest .die { min-width: 34px; height: 34px; font-size: 1.15rem; }
+.die.d20, .die.d100 { border-radius: 9px; }
+.die.dF { font-size: 1.2rem; }
+.die.hit { background: #bfe3c8; color: #1f4a2c; }
+.die.miss { background: #f1c2c2; color: #6b1f1f; }
+.die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18), 0 0 0 2px var(--accent); }
+.die.extra { opacity: .9; }
+.die.dropped { opacity: .4; text-decoration: line-through; }
+.die.rolling { animation: dice-tumble .14s linear infinite; }
+@keyframes dice-tumble { 0% { transform: rotate(0); } 50% { transform: rotate(14deg) scale(.92); } 100% { transform: rotate(0); } }
+.dice-foot { position: relative; padding: 10px 14px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+.dice-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.dice-chip { margin: 0; padding: 5px 6px; min-width: 36px; font: 700 .95rem var(--disp); }
+.dice-row { display: flex; gap: 6px; align-items: stretch; }
+.dice-input { flex: 1; min-width: 0; font-family: var(--mono); }
+.dice-input.bad { border-color: var(--bad, #d05a4a); }
+.dice-q { margin: 0; width: 40px; padding: 0; border-radius: 50%; font-weight: 700; }
+.dice-q.on { background: var(--accent); color: var(--on-accent); }
+.dice-go { margin: 0; }
+.dice-err { color: var(--bad, #d05a4a); min-height: 0; margin-top: 4px; }
+.dice-err:empty { display: none; }
+.dice-who { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.dice-vis { width: auto; padding: 3px 6px; font-size: .85rem; }
+.dice-vis[hidden], .dice-vis-fixed[hidden] { display: none; }
+.dice-help { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); max-height: calc(100vh - var(--topbar-h, 56px) - 190px); overflow-y: auto; z-index: 2; padding: 10px 12px;
+  background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 14px 30px -10px rgb(0 0 0 / .7); }
+.dice-help[hidden] { display: none; }
+.dice-help-h { display: flex; justify-content: space-between; align-items: center; }
+.dice-help h3 { margin: 0 0 6px; font: 700 1rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.dice-help table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.dice-help td { padding: 4px 8px 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.dice-help td.w { color: var(--accent); white-space: nowrap; }
+.dice-ex { padding: 1px 6px; margin: 0; white-space: nowrap; border-radius: 4px; background: var(--bg); text-decoration: none; }
+.dice-help p { margin: 8px 0 0; }
+@media (prefers-reduced-motion: reduce) { .die.rolling { animation: none; } }
+@media print { .dice-fab, .dice-panel { display: none; } }
