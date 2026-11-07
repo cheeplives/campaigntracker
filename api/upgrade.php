@@ -103,6 +103,8 @@ function upgrade_steps(): array {
             'Sheet templates now has Request a game, and Site Admin a Sheets tab listing what people asked for, with a switch to turn requests off.'],
         ['038_dice_rolls.sql', fn(PDO $p) => !db_has_table($p, 'dice_rolls'),
             'Added the die roller: the 🎲 button on every campaign page, with a roll log the table shares.'],
+        ['039_content_versions.sql', fn(PDO $p) => !db_has_table($p, 'content_versions'),
+            'Entries, tomes, session notes and day notes now keep their earlier versions, for a GM to read, compare and restore.'],
     ];
 }
 

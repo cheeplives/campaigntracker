@@ -1927,3 +1927,25 @@ dialog.kit-dialog.web-dialog[open] { display: flex; }
 .web-fam.partner { stroke: #be185d; stroke-width: 4; } .web-fam.sibling { stroke-dasharray: 5 4; }
 .web-node:focus-visible circle, .web-person:focus-visible rect { outline: none; stroke: var(--text); stroke-width: 4; }
 @media (max-width: 760px) { .web-body { grid-template-columns: 1fr; grid-template-rows: 1fr 150px; } }
+
+/* Edit history (static/history-view.js): versions down the left, what the one picked changed on the right */
+dialog.kit-dialog.history-dialog { width: min(1100px, 96vw); height: min(84vh, 800px); max-height: 96vh; padding: 12px 14px; flex-direction: column; gap: 6px; }
+dialog.kit-dialog.history-dialog[open] { display: flex; }
+.hist-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 230px 1fr; gap: 10px; }
+.hist-side { min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.hist-list { list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column; gap: 3px; }
+.hist-ver { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; background: none; font: inherit; color: var(--text); cursor: pointer; }
+.hist-ver:hover, .hist-ver.on { background: var(--stock); border-color: var(--accent); }
+.hist-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.hist-bar { align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.hist-head { margin: 0; font-weight: 600; }
+.hist-field { border-top: 1px solid var(--line); padding-top: 4px; }
+.hist-field h5 { margin: 0 0 4px; font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .08em; color: var(--label); }
+.hist-line { margin: 0 0 4px; white-space: pre-wrap; }
+.hist-line.same { color: var(--dim); }
+.hist-line.add { background: color-mix(in srgb, #16a34a 14%, transparent); border-left: 3px solid #16a34a; padding-left: 6px; }
+.hist-line.del { background: color-mix(in srgb, #dc2626 12%, transparent); border-left: 3px solid #dc2626; padding-left: 6px; }
+.hist-line.change { border-left: 3px solid var(--accent); padding-left: 6px; }
+.hist-line ins { text-decoration: none; background: color-mix(in srgb, #16a34a 28%, transparent); border-radius: 2px; }
+.hist-line del { background: color-mix(in srgb, #dc2626 24%, transparent); border-radius: 2px; }
+@media (max-width: 760px) { .hist-body { grid-template-columns: 1fr; grid-template-rows: 150px 1fr; } }

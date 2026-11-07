@@ -1773,7 +1773,8 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
+      el('div', { class: 'row' }, save, btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
+        btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
         'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
 
@@ -4193,6 +4194,7 @@
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
           scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
+          isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
             try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
