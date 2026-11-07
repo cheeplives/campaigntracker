@@ -1,9 +1,9 @@
--- 035_dice_rolls.sql — the die roller (the 🎲 button on every campaign page) and its shared roll log.
+-- 038_dice_rolls.sql — the die roller (the 🎲 button on every campaign page) and its shared roll log.
 --
 -- dice_rolls: each roll anyone makes: what was typed, the seed the server picked for it, and who may see it.
 --
 -- Run ONCE on an install created before this change:
---   mysql -u <user> -p <database> < db/migrations/035_dice_rolls.sql
+--   mysql -u <user> -p <database> < db/migrations/038_dice_rolls.sql
 -- (deploy.sh and install.php run it for you when there is no dice_rolls table.)
 -- Fresh installs already get it from db/schema.sql.
 -- A roll: what was typed (expr, its # label included) and the 128-bit seed the server picked with random_int, from which

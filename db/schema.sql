@@ -730,7 +730,7 @@ CREATE TABLE IF NOT EXISTS clock_ticks (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- The die roller (035).
+-- The die roller (038).
 -- A roll: what was typed (expr, its # label included) and the 128-bit seed the server picked with random_int, from which
 -- every browser works out the same dice (static/dice.js, engine version `engine`). visibility: all (everyone), gm (the
 -- roller and the GMs) or blind (the GMs; the roller sees that they rolled, not what). abs_shift: the campaign clock's
