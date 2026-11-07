@@ -442,6 +442,23 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Edit history (see db/migrations/039_content_versions.sql and api/history.php): the earlier versions of an Encyclopedia
+-- entry, a Library tome, a session and a day's notes, each the item's text fields as JSON. kind is entry, tome, session
+-- or day; ref_id the item's id (the day's absolute day for a day). baseline: what the item held before history began.
+CREATE TABLE IF NOT EXISTS content_versions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(12) NOT NULL,
+  ref_id BIGINT NOT NULL,
+  data MEDIUMTEXT NOT NULL,
+  saved_by BIGINT UNSIGNED NULL,
+  saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  baseline TINYINT(1) NOT NULL DEFAULT 0,
+  KEY ix_version_item (campaign_id, kind, ref_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (saved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Pictures and files attached to Encyclopedia entries and the like (see db/migrations/013_attachments.sql).
 -- One row per file. is_secret: GMs only; a file on a secret entry is never sent to players either.
 CREATE TABLE IF NOT EXISTS attachments (
