@@ -440,7 +440,44 @@ test("Characters: a GM makes a PC with no player, and it travels with the party"
   await expect(gm.locator(".sheet-page")).toContainText("In the party");
   await gm.getByLabel("Whose sheet").selectOption({ label: "Pip" });
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
-  await expect(gm.getByLabel("Travels with the party")).toHaveCount(0);
+  // a player's character is in the party with its player: ticked, and the GM can still take it out
+  await expect(gm.getByLabel("Travels with the party")).toBeChecked();
+});
+
+test("Characters: a GM takes a player's character out of the party, and puts it back", async ({ page, browser }) => {
+  const { cid, gm, p1, tpl, ids } = await party(page, browser);
+  const pc = await make(p1, cid, { template_id: tpl.id, name: "Sir Benched" });
+  const groups = () => sql(`SELECT GROUP_CONCAT(members_json) FROM party_groups WHERE campaign_id=${cid}`).trim();
+
+  await gm.goto(`index.html#/c/${cid}/travel`);
+  await expect(gm.locator(".party-members")).toContainText("Sir Benched");
+  expect(groups()).toContain(String(ids.p1));
+
+  // the GM unticks it on the sheet: the character, and its player with it, leave the party
+  await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
+  const box = gm.getByLabel("Travels with the party");
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
+  await expect(gm.locator(".sheet-page")).toContainText("Out of the party");
+  await gm.goto(`index.html#/c/${cid}/travel`);
+  await expect(gm.locator(".party-members")).toBeVisible();
+  await expect(gm.locator(".party-members")).not.toContainText("Sir Benched");
+  expect(groups()).not.toContain(String(ids.p1));
+
+  // a player can't put it back; the GM can, and it rejoins the main group
+  const version = Number(sql(`SELECT version FROM sheet_characters WHERE id=${pc.id}`).trim());
+  expect((await api(p1, "character_save", { id: pc.id, version, party: true }, cid)).status).toBe(403);
+  await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
+  await gm.getByLabel("Travels with the party").check();
+  await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
+  await gm.goto(`index.html#/c/${cid}/travel`);
+  await expect(gm.locator(".party-members")).toContainText("Sir Benched");
+
+  // the player sees no box on their own sheet
+  await p1.goto(`index.html#/c/${cid}/characters/${pc.id}`);
+  await expect(p1.getByLabel("PC or NPC")).toBeVisible();
+  await expect(p1.getByLabel("Travels with the party")).toHaveCount(0);
 });
 
 test("Characters: the party's characters with no player split off and merge back with their group", async ({ page, browser }) => {

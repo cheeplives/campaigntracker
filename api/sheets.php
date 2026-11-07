@@ -362,7 +362,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
         'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null,
-        'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'owner_is_player' => $c['owner_role'] === 'player'];
+        'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'party_out' => (bool)(int)$c['party_out'], 'owner_is_player' => $c['owner_role'] === 'player'];
 }
 /** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
  * Summary fields as this member may see them (none when the sheet is hidden from them). */
@@ -595,11 +595,15 @@ function characters_action(string $action, int $cid): void {
                 $args[] = $owner;
                 $handed = $owner ?? 0;
                 $toPlayer = $to === 'player';
+                if (p('party') === null && $owner !== ($c['owner_id'] !== null ? (int)$c['owner_id'] : null)) $set[] = 'party_out=0';   // a new player starts in the party
             }
-            // in the party: only for a character no player of this campaign plays (a player is in the party as themselves)
-            if ($toPlayer) $set[] = 'party_group_id=NULL';
-            elseif (p('party') !== null) {
-                if (!$isGm) fail('Only a GM can say who travels with the party', 403);
+            // in the party: a character no player of this campaign plays travels in a party group of its own choosing; a
+            // player's is in the party with its player, unless a GM takes it out (party_out), which takes them out too
+            if (p('party') !== null && !$isGm) fail('Only a GM can say who travels with the party', 403);
+            if ($toPlayer) {
+                $set[] = 'party_group_id=NULL';
+                if (p('party') !== null) { $set[] = 'party_out=?'; $args[] = p('party') ? 0 : 1; }
+            } elseif (p('party') !== null) {
                 $set[] = 'party_group_id=?';
                 $args[] = !p('party') ? null : ($c['party_group_id'] !== null ? (int)$c['party_group_id'] : party_main_id($cid));
             }
@@ -685,7 +689,7 @@ function characters_action(string $action, int $cid): void {
             $pdo = db();
             $pdo->beginTransaction();
             if ((int)$c['owner_id'] !== $uid) {
-                $pdo->prepare('UPDATE sheet_characters SET owner_id=?, party_group_id=' . ($to === 'player' ? 'NULL' : 'party_group_id') . ', version=version+1 WHERE id=?')
+                $pdo->prepare('UPDATE sheet_characters SET owner_id=?, party_out=0, party_group_id=' . ($to === 'player' ? 'NULL' : 'party_group_id') . ', version=version+1 WHERE id=?')
                     ->execute([$uid, $c['id']]);
                 $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $uid]);
             }

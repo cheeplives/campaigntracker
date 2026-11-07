@@ -692,7 +692,7 @@ const Sheets = (() => {
     return el('div', { class: 'card character-card', 'data-kind': c.kind },
       el('div', { class: 'row' }, c.pic ? el('img', { src: c.pic, alt: '', class: 'character-pic', loading: 'lazy' }) : null,
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
-          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : null, c.template.game].filter(Boolean).join(' · ')))),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')))),
       cardStats(c),
       el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
   }
@@ -812,7 +812,8 @@ const Sheets = (() => {
       people.map(m => el('option', { value: m.id, selected: Number(m.id) === ch.owner?.id }, `${memberName(m)}${m.role === 'gm' ? ' (GM)' : ''}`)));
     owner.addEventListener('change', () => save({ owner_id: Number(owner.value) }));
     // a character no player of the campaign plays can travel with the party (a player's is in it with them)
-    const party = el('input', { type: 'checkbox', checked: !!ch.party_group_id });
+    // a player's character is in the party with its player until a GM takes it out (and them with it)
+    const party = el('input', { type: 'checkbox', checked: ch.owner_is_player ? !ch.party_out : !!ch.party_group_id });
     party.addEventListener('change', () => save({ party: party.checked }));
     const shown = el('input', { type: 'checkbox', checked: ch.sheet_public });
     shown.addEventListener('change', () => save({ sheet_public: shown.checked }));
@@ -820,7 +821,9 @@ const Sheets = (() => {
     return el('div', { class: 'row sheet-settings' },
       ctx.field('Name', name), ctx.field('Kind', kind), ctx.field('Player', owner),
       ch.kind === 'npc' ? el('label', { class: 'small check', 'data-tip': 'NPC sheets are for GMs only until this is on' }, shown, ' Show sheet to players') : null,
-      gm && !ch.owner_is_player ? el('label', { class: 'small check', 'data-tip': 'Listed with the party\'s players on Travel and the maps, and goes where the party goes. A player\'s own character is in the party with them' },
+      gm ? el('label', { class: 'small check', 'data-tip': ch.owner_is_player
+        ? 'Its player is in the party while this is their active character. Untick to take them out of every party group (they died, left, or sit this arc out); tick to put them back in the main group'
+        : 'Listed with the party\'s players on Travel and the maps, and goes where the party goes' },
         party, ' Travels with the party') : null,
       mine ? (Number(active) === ch.id ? el('span', { class: 'small muted' }, 'Your active character')
         : button('Make this my active character', async () => {
@@ -943,7 +946,7 @@ const Sheets = (() => {
             location.hash = `#/c/${cid()}/characters`;
           } catch (err) { toast(err.message, true); }
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
-        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player && ch.party_out ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded
