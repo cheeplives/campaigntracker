@@ -292,7 +292,7 @@ function pin_to_entry(int $cid, int $id, ?int $entryId): array {
 /** A route as the browser gets it. */
 function route_out(array $r): array {
     return ['id' => (int)$r['id'], 'map_id' => (int)$r['map_id'], 'name' => $r['name'], 'points' => dec($r['points_json']) ?: [], 'is_secret' => (bool)(int)$r['is_secret'],
-        'color' => $r['color'] ?? null, 'dash' => $r['dash'] ?? null];
+        'color' => $r['color'] ?? null, 'dash' => $r['dash'] ?? null, 'terrain' => ($r['terrain_json'] ?? null) !== null ? dec($r['terrain_json']) : null];
 }
 /** The routes on map $mapId that this member may see, oldest first. */
 function map_routes_visible(int $cid, int $mapId, bool $isGm): array {
@@ -333,7 +333,18 @@ function route_save(int $cid): array {
     $dash = $has('dash') ? $body['dash'] : ($old['dash'] ?? null);
     if ($dash === '') $dash = null;
     if ($dash !== null && !in_array($dash, MAP_DASHES, true)) fail('Pick a solid, dashed, dotted or dash-dot line');
-    db()->prepare('UPDATE map_routes SET color=?, dash=? WHERE id=?')->execute([$colour, $dash, $id]);
+    // terrain: a travel-time multiplier for each leg, 1 to 4; new points without a new list drop the old one, which no longer fits
+    $terrain = $old ? ($has('points') && !$has('terrain') && count($pts) !== count(dec($old['points_json']) ?: []) ? null : $old['terrain_json'] ?? null) : null;
+    if ($has('terrain')) {
+        $t = $body['terrain'];
+        if ($t === null) $terrain = null;
+        else {
+            if (!is_array($t) || count($t) !== count($pts) - 1) fail('Give each leg of the route a terrain');
+            foreach ($t as $m) if (!in_array($m, [1, 2, 3, 4], true)) fail('A leg\'s terrain is x1, x2, x3 or x4');
+            $terrain = in_array(true, array_map(fn($m) => $m !== 1, $t), true) ? json_encode(array_values($t)) : null;   // all x1 is no terrain at all
+        }
+    }
+    db()->prepare('UPDATE map_routes SET color=?, dash=?, terrain_json=? WHERE id=?')->execute([$colour, $dash, $terrain, $id]);
     touch_campaign($cid);
     $st = db()->prepare('SELECT * FROM map_routes WHERE id=?');
     $st->execute([$id]);

@@ -315,6 +315,41 @@ test("Travel: Plan this trip brings a map route's length and ends to the planner
   expectNoErrors(errors);
 });
 
+test("Travel: a route's terrain for each leg is set on the Maps tab and averaged by length into Plan this trip's terrain", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Mara");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Route terrain ${gm.id}`);
+  const mapId = await mapWithPicture(page, cid);
+  expect((await api(page, "map_save", { id: mapId, scale_per_px: 0.1, scale_unit: "mi" }, cid)).status).toBe(200);
+  const route = (await api(page, "route_save", { map_id: mapId, name: "Hill Road", points: [[52, 60], [100, 60], [248, 60]] }, cid)).json.route;
+  expect(route.terrain).toBe(null);
+  // each leg is 1 to 4, one for every leg
+  expect((await api(page, "route_save", { id: route.id, terrain: [2] }, cid)).status).toBe(400);
+  expect((await api(page, "route_save", { id: route.id, terrain: [2, 9] }, cid)).status).toBe(400);
+  await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
+  await openDrawer(page);
+  await page.locator(".map-route").getByRole("button", { name: "Terrain…" }).click();
+  const dlg = page.getByRole("dialog", { name: "Terrain of the route" });
+  await dlg.getByLabel("Terrain of leg 1").selectOption("3");
+  await dlg.getByRole("button", { name: "Save terrain" }).click();
+  await expect(dlg).toBeHidden();
+  await page.locator(".map-route").getByRole("button", { name: "Plan this trip" }).click();
+  await expect(page.locator("input[name=distance]")).toHaveValue("31.5");   // 196 px at 0.1 mi a pixel is 19.6 mi
+  // 48 px at x3 and 148 px at x1 average to 1.49 for the whole trip
+  await expect(page.locator("select[name=terrain]")).toHaveValue("1.49");
+  await expect(page.locator("select[name=terrain] option:checked")).toContainText("Mixed ×1.49");
+  await page.getByRole("button", { name: "Reverse" }).click();
+  await expect(page.locator("select[name=terrain]")).toHaveValue("1.49");
+  // new points without new terrain drop the old list; all x1 is none
+  expect((await api(page, "route_save", { id: route.id, points: [[52, 60], [248, 60]] }, cid)).json.route.terrain).toBe(null);
+  expect((await api(page, "route_save", { id: route.id, terrain: [1] }, cid)).json.route.terrain).toBe(null);
+  expect((await api(page, "route_save", { id: route.id, terrain: [4] }, cid)).json.route.terrain).toEqual([4]);
+  expect((await api(page, "route_save", { id: route.id, terrain: null }, cid)).json.route.terrain).toBe(null);
+  expectNoErrors(errors);
+});
+
 test("Travel: a journey along a route leaves a stop on the party's trail for each shift on the way", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Mara");

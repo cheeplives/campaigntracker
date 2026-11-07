@@ -773,6 +773,27 @@ const MapsTab = (() => {
     const endPin = pt => G.nearestPin(pins, { x: pt[0], y: pt[1] }, reach());
     /** The route dialog: its name, colour and line, and (once saved, with pins on the map) the pins it starts and ends at.
      * `r` is the route being changed, or a new one { points }; `secret` a boolean asks GM only too. Resolves the changes, or null. */
+    const TERRAINS = [[1, 'Road or open ground ×1'], [2, 'Woods, hills or ruins ×2'], [3, 'Mountains ×3'], [4, 'Swamp ×4']];
+    /** The terrain of each leg of route r, which Plan this trip takes into the travel time. */
+    function terrainDialog(r) {
+      const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': 'Terrain of the route' });
+      const legs = r.points.slice(1).map((pt, i) => {
+        const a = r.points[i], from = endPin(a), to = endPin(pt);
+        const sel = select(TERRAINS, (r.terrain && r.terrain[i]) || 1, { 'aria-label': `Terrain of leg ${i + 1}` });
+        return { sel, row: el('div', { class: 'row map-leg' }, el('span', { class: 'map-leg-name' }, `${i + 1}. ${from ? pinTitle(from) : 'Point ' + (i + 1)} → ${to ? pinTitle(to) : 'Point ' + (i + 2)}`,
+          el('span', { class: 'small muted' }, ' ' + lengthOf({ points: [a, pt] }))), sel) };
+      });
+      const form = el('form', {}, el('h3', {}, `Terrain along ${r.name}`),
+        el('p', { class: 'small muted' }, 'Slow going multiplies the travel time of that leg. Plan this trip averages the legs by their length.'),
+        el('div', { class: 'map-legs' }, legs.map(l => l.row)),
+        el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, 'Save terrain'), btn('Cancel', () => d.close())));
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        try { await post('route_save', { id: r.id, terrain: legs.map(l => Number(l.sel.value)) }, cid); d.close(); await refresh(); toast('Terrain saved'); } catch (err) { toast(err.message, true); }
+      });
+      d.addEventListener('close', () => d.remove());
+      d.append(form); document.body.append(d); d.showModal();
+    }
     function routeDialog(title, r, secret, ok) {
       return new Promise(resolve => {
         const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': title });
@@ -889,6 +910,7 @@ const MapsTab = (() => {
           el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
           gm ? el('div', { class: 'row' },
             hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
+            btn('Terrain…', () => terrainDialog(r), 'small', r.terrain ? 'The terrain of each leg (set): it changes the travel time Plan this trip works out' : 'Slow going on some legs of the route, for the travel time Plan this trip works out'),
             btn('Edit', async () => {
               const got = await routeDialog('Edit the route', r, null, 'Save');
               if (!got) return;
