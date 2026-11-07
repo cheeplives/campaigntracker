@@ -1814,7 +1814,7 @@ try {
         [$pin, $entryId, $created] = pin_to_entry($cid, int_in(p('id'), 1), p('entry_id') ? int_in(p('entry_id'), 1) : null);
         out(['ok' => true, 'pin' => $pin, 'entry_id' => $entryId, 'created' => $created]);
 
-    case 'route_save': // GMs: id (to change one), map_id, name, points [[x, y], ...], is_secret
+    case 'route_save': // GMs: id (to change one), map_id, name, points [[x, y], ...], is_secret, color, dash, terrain [1-4 for each leg]
         $cid = cid();
         need_gm($cid);
         out(['ok' => true, 'route' => route_save($cid)]);

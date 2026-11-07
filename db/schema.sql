@@ -625,6 +625,7 @@ CREATE TABLE IF NOT EXISTS map_routes (
   points_json TEXT NOT NULL,
   color VARCHAR(7) NULL,                         -- #rrggbb; null: the theme's route colour
   dash VARCHAR(8) NULL,                          -- solid, dashed, dotted or dashdot; null: dashed
+  terrain_json VARCHAR(2000) NULL,               -- a travel-time multiplier (1 to 4) for each leg, as a JSON list; null: every leg x1
   is_secret TINYINT(1) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

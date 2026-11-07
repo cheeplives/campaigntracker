@@ -1,0 +1,810 @@
+{
+ "name": "Stonetop",
+ "game": "Stonetop",
+ "edition": "1st Edition (Lampblack & Brimstone, 2023)",
+ "source": {
+  "title": "Stonetop playbooks and playbook inserts",
+  "owner": "Lampblack & Brimstone (Jeremy Strandberg)",
+  "url": "https://www.lampblackandbrimstone.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Playbook",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "The Blessed",
+       "The Fox",
+       "The Heavy",
+       "The Judge",
+       "The Lightbearer",
+       "The Marshal",
+       "The Ranger",
+       "The Seeker",
+       "The Would-Be Hero"
+      ],
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "instinct",
+      "label": "Instinct",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "origin",
+      "label": "Place of origin",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Playbook",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_str",
+      "label": "Strength (STR)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_dex",
+      "label": "Dexterity (DEX)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_int",
+      "label": "Intelligence (INT)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_wis",
+      "label": "Wisdom (WIS)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_con",
+      "label": "Constitution (CON)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stat_cha",
+      "label": "Charisma (CHA)",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "deb_weakened",
+      "label": "Weakened (STR, DEX)",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "deb_dazed",
+      "label": "Dazed (INT, WIS)",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "deb_miserable",
+      "label": "Miserable (CON, CHA)",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "vitals",
+    "title": "Damage, HP, Armor, XP & Level",
+    "page": "Playbook",
+    "fields": [
+     {
+      "key": "damage",
+      "label": "Damage",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "special_possessions",
+    "title": "Special Possessions",
+    "page": "Playbook",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_possessions_text",
+      "label": "Special possessions",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "page": "Playbook",
+    "width": "half",
+    "fields": [
+     {
+      "key": "moves_text",
+      "label": "Moves",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "intros",
+    "title": "Introductions",
+    "page": "Playbook",
+    "fields": [
+     {
+      "key": "introductions",
+      "label": "Introductions (answers)",
+      "type": "longtext"
+     },
+     {
+      "key": "tall_tales",
+      "label": "Tall tales",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "load",
+    "title": "Load",
+    "page": "Inventory",
+    "fields": [
+     {
+      "key": "load_level",
+      "label": "Load",
+      "type": "choice",
+      "options": [
+       "Light (up to 3)",
+       "Normal (4-6)",
+       "Heavy (7-9)"
+      ],
+      "play": true
+     },
+     {
+      "key": "undefined_load",
+      "label": "Undefined",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_undefined",
+      "label": "Small items undefined",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "prosperity",
+      "label": "Prosperity",
+      "type": "choice",
+      "options": [
+       "-1 dirt",
+       "+0 poor",
+       "+1 moderate",
+       "+2 wealthy"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "inventory",
+    "title": "Inventory",
+    "page": "Inventory",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "inv_supplies",
+      "label": "Supplies",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_more_supplies",
+      "label": "More supplies",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_even_more_supplies",
+      "label": "Even more supplies",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_mess_kit",
+      "label": "Mess kit",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_bedroll",
+      "label": "Bedroll",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_blanket",
+      "label": "Blanket",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_rope",
+      "label": "Rope",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_sledge",
+      "label": "Sledge",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_change_of_clothes",
+      "label": "Change of clothes",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_shovel",
+      "label": "Shovel",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_snow_shoes",
+      "label": "Snow-shoes",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_torch",
+      "label": "Torch",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_oil_lamp",
+      "label": "Oil lamp",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_extra_oil",
+      "label": "Extra oil",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_firewood",
+      "label": "Firewood",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_dagger",
+      "label": "Dagger",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_hatchet",
+      "label": "Hatchet",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_mallet",
+      "label": "Mallet",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_mattock",
+      "label": "Mattock",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_maul",
+      "label": "Maul",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_staff",
+      "label": "Staff",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_spear",
+      "label": "Spear",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_long_spear",
+      "label": "Long spear",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_javelins",
+      "label": "Javelins",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_bow_iron_arrows",
+      "label": "Bow & iron arrows",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_extra_arrows",
+      "label": "Extra arrows",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_shield",
+      "label": "Shield",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_thick_hides",
+      "label": "Thick hides",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "inv_cloak",
+      "label": "Cloak",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "small_items",
+    "title": "Small Items",
+    "page": "Inventory",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "small_knife",
+      "label": "Knife",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_sling",
+      "label": "Sling",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_rushlight",
+      "label": "Rushlight",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_tinderbox",
+      "label": "Tinderbox",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_needle_thread",
+      "label": "Needle & thread",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_handful_of_coppers",
+      "label": "Handful of coppers",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_whisky",
+      "label": "Whisky",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_awl",
+      "label": "Awl",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_chalk",
+      "label": "Chalk",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_clay_jar",
+      "label": "Clay jar",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_comb",
+      "label": "Comb",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_extra_socks",
+      "label": "Extra socks",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_little_box",
+      "label": "Little box",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_sawdust",
+      "label": "Sawdust",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_twine_cord",
+      "label": "Twine/cord",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_whetstone",
+      "label": "Whetstone",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_bowstring",
+      "label": "Bowstring",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_charcoal",
+      "label": "Charcoal",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_cloth_rag",
+      "label": "Cloth/rag",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_cup",
+      "label": "Cup",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_gloves",
+      "label": "Gloves",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_sack_empty",
+      "label": "Sack (empty)",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_tallow",
+      "label": "Tallow",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_waterskin",
+      "label": "Waterskin",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "small_whistle",
+      "label": "Whistle",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "possessions",
+    "title": "Possessions, Items, Loot & Other Things",
+    "page": "Inventory",
+    "fields": [
+     {
+      "key": "loot",
+      "label": "Possessions, items, loot",
+      "type": "longtext"
+     },
+     {
+      "key": "other_things",
+      "label": "Other things (animals, kits, stashed items, etc.)",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "follower_1",
+    "title": "Follower 1",
+    "page": "Followers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fol1_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fol1_tags",
+      "label": "Tags",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fol1_hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "fol1_armor",
+      "label": "Armor",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "fol1_damage",
+      "label": "Damage",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "fol1_instinct",
+      "label": "Instinct",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "fol1_moves",
+      "label": "Moves",
+      "type": "longtext"
+     },
+     {
+      "key": "fol1_cost",
+      "label": "Cost",
+      "type": "text"
+     },
+     {
+      "key": "fol1_loyalty",
+      "label": "Loyalty",
+      "type": "pips",
+      "cols": 2,
+      "count": 3,
+      "play": true
+     },
+     {
+      "key": "fol1_notes",
+      "label": "Gear & notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "follower_2",
+    "title": "Follower 2",
+    "page": "Followers",
+    "width": "half",
+    "fields": [
+     {
+      "key": "fol2_name",
+      "label": "Name",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fol2_tags",
+      "label": "Tags",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "fol2_hp",
+      "label": "HP",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "fol2_armor",
+      "label": "Armor",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "fol2_damage",
+      "label": "Damage",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "fol2_instinct",
+      "label": "Instinct",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "fol2_moves",
+      "label": "Moves",
+      "type": "longtext"
+     },
+     {
+      "key": "fol2_cost",
+      "label": "Cost",
+      "type": "text"
+     },
+     {
+      "key": "fol2_loyalty",
+      "label": "Loyalty",
+      "type": "pips",
+      "cols": 2,
+      "count": 3,
+      "play": true
+     },
+     {
+      "key": "fol2_notes",
+      "label": "Gear & notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

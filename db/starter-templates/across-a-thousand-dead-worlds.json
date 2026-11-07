@@ -1,0 +1,474 @@
+{
+ "name": "Across a Thousand Dead Worlds",
+ "game": "Across a Thousand Dead Worlds",
+ "edition": "1st Edition (Blackoath Entertainment, 2023)",
+ "source": {
+  "title": "Deep Diver character record (form fillable)",
+  "owner": "Blackoath Entertainment",
+  "url": "https://www.blackoathgames.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "diver",
+    "title": "Deep Diver",
+    "page": "Record",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_str",
+      "label": "STR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_dex",
+      "label": "DEX",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_con",
+      "label": "CON",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_wil",
+      "label": "WIL",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_int",
+      "label": "INT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "attr_cha",
+      "label": "CHA",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stress_sec",
+    "title": "Stress",
+    "page": "Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "nervous_tic",
+      "label": "Nervous Tic",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "obsessions",
+      "label": "Obsessions & Negative Traits",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "attributes",
+    "title": "Stamina, Trauma & Luck",
+    "page": "Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stamina",
+      "label": "Stamina",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "trauma",
+      "label": "Trauma",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "rads",
+      "label": "Rads",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Record",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "skill_arsaidh_technology",
+      "label": "Arsaidh Technology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_close_combat",
+      "label": "Close Combat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_perception",
+      "label": "Perception",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_manipulation",
+      "label": "Manipulation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_medical_aid",
+      "label": "Medical Aid",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_pilot",
+      "label": "Pilot",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_ranged_combat",
+      "label": "Ranged Combat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_resolve",
+      "label": "Resolve",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_science",
+      "label": "Science",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_survival",
+      "label": "Survival",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "skill_technology",
+      "label": "Technology",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "talents_sec",
+    "title": "Talents",
+    "page": "Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "talent_1",
+      "label": "Talent 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "talent_2",
+      "label": "Talent 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "talent_3",
+      "label": "Talent 3",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "talent_4",
+      "label": "Talent 4",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "talent_5",
+      "label": "Talent 5",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "wounds_sec",
+    "title": "Wounds & Injuries",
+    "page": "Record",
+    "width": "third",
+    "fields": [
+     {
+      "key": "wounds",
+      "label": "Wounds",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "injuries",
+      "label": "Injuries",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "emotion",
+    "title": "Emotional State",
+    "page": "Record",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "emotional_state",
+      "label": "Emotional State",
+      "type": "choice",
+      "cols": 4,
+      "options": [
+       "Hopeless",
+       "Enraged",
+       "Nervous",
+       "Composed",
+       "Calm",
+       "Hopeful",
+       "Pleased"
+      ],
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "body",
+    "title": "Worn & Held",
+    "page": "Gear & Personality",
+    "width": "half",
+    "fields": [
+     {
+      "key": "body_head",
+      "label": "Head",
+      "type": "text"
+     },
+     {
+      "key": "body_torso",
+      "label": "Torso",
+      "type": "text"
+     },
+     {
+      "key": "body_waist",
+      "label": "Waist",
+      "type": "text"
+     },
+     {
+      "key": "body_back",
+      "label": "Back",
+      "type": "text"
+     },
+     {
+      "key": "body_right_hand",
+      "label": "Right Hand",
+      "type": "text"
+     },
+     {
+      "key": "body_left_hand",
+      "label": "Left Hand",
+      "type": "text"
+     },
+     {
+      "key": "body_legs",
+      "label": "Legs",
+      "type": "text"
+     },
+     {
+      "key": "body_feet",
+      "label": "Feet",
+      "type": "text"
+     },
+     {
+      "key": "full_body_suit",
+      "label": "Full Body Suit",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "drake_coins",
+      "label": "Drake Coins",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "backpack_sec",
+    "title": "Backpack",
+    "page": "Gear & Personality",
+    "width": "half",
+    "fields": [
+     {
+      "key": "backpack",
+      "label": "Backpack",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "pockets_sec",
+    "title": "Pockets",
+    "page": "Gear & Personality",
+    "width": "half",
+    "fields": [
+     {
+      "key": "pockets",
+      "label": "Pockets",
+      "type": "list",
+      "columns": [
+       {
+        "key": "item",
+        "label": "Item"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "mannerisms",
+    "title": "Mannerisms",
+    "page": "Gear & Personality",
+    "width": "half",
+    "fields": [
+     {
+      "key": "man_confident",
+      "label": "When you are feeling confident, you",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "man_shy",
+      "label": "When you're feeling shy or lacking confidence, you",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "man_bored",
+      "label": "When you're bored, you",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "man_happy",
+      "label": "When you're feeling happy, you",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "man_frustrated",
+      "label": "When you're feeling frustrated, you",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "personality",
+    "title": "Personality",
+    "page": "Gear & Personality",
+    "fields": [
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "longtext"
+     },
+     {
+      "key": "earn_place",
+      "label": "How did you earn your place in Karum Station?",
+      "type": "longtext"
+     },
+     {
+      "key": "life_changing_event",
+      "label": "Life Changing Event",
+      "type": "longtext"
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "longtext"
+     },
+     {
+      "key": "other_details",
+      "label": "Other Details",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

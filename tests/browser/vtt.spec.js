@@ -55,3 +55,16 @@ test("toUvtt writes a map back out as Universal VTT, which reads back the same",
   expect(Array.from(back.picture.bytes)).toEqual(Array.from(PNG));
   expect(() => VTT.toUvtt({ width: 300, height: 200, grid_px: null }, PNG)).toThrow("Set grid squares first (Scale → Grid squares)");
 });
+
+test("toFoundry writes a scene with the pins as Notes, which reads back with the same grid and notes", async () => {
+  const map = { name: "Bree", width: 300, height: 200, grid_px: 50, grid_type: "hex_flat", grid_offset_x: 10, grid_offset_y: 5, scale_per_px: 0.1, scale_unit: "mi" };
+  const json = JSON.parse(VTT.toFoundry(map, [{ x: 120, y: 80, text: "Inn" }, { x: 1, y: 1, text: "" }], "bree.png"));
+  expect(json).toMatchObject({ name: "Bree", padding: 0, grid: { type: 4, size: 50, distance: 5, units: "mi" }, background: { src: "bree.png", offsetX: -10, offsetY: -5 } });
+  expect(json.notes.map(n => n.text)).toEqual(["Inn", "Note"]);
+  const back = await one([file("scene.json", JSON.stringify(json)), file("bree.png", PNG)]);
+  expect(back).toMatchObject({ grid: { type: "hex_flat", px: 50, offset_x: 10, offset_y: 5 }, scale: { per_square: 5, unit: "mi" } });
+  expect(back.notes[0]).toEqual({ x: 120, y: 80, label: "Inn" });
+  // no grid: gridless, and a space unit isn't a Foundry unit
+  const bare = JSON.parse(VTT.toFoundry({ name: "Bare", width: 10, height: 10, grid_px: null, scale_unit: "au" }, [], "b.png"));
+  expect(bare.grid).toEqual({ type: 0, size: 100 });
+});

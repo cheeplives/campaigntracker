@@ -1,0 +1,264 @@
+{
+ "name": "Rapscallion",
+ "game": "Rapscallion",
+ "edition": "1st Edition (Magpie Games, 2025)",
+ "source": {
+  "title": "Rapscallion playbooks (printer friendly)",
+  "owner": "Magpie Games",
+  "url": "https://magpiegames.com/products/core-book-rapscallion",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Pirate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "The Captain",
+       "The Chirurgeon",
+       "The Chronicler",
+       "The Gunslinger",
+       "The Matelot",
+       "The Mountebank",
+       "The Navigator",
+       "The Shiprat",
+       "The Swashbuckler"
+      ],
+      "summary": true
+     },
+     {
+      "key": "looks",
+      "label": "Looks",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "oddity",
+      "label": "Oddity",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "traits",
+    "title": "Traits",
+    "page": "Pirate",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "blood",
+      "label": "Blood",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "vinegar",
+      "label": "Vinegar",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "polish",
+      "label": "Polish",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spitfire",
+      "label": "Spitfire",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "luck_harm",
+    "title": "Luck & Harm",
+    "page": "Pirate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "luck",
+      "label": "Luck",
+      "type": "pips",
+      "cols": 2,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "harm",
+      "label": "Harm",
+      "type": "pips",
+      "cols": 3,
+      "count": 9,
+      "play": true
+     },
+     {
+      "key": "last_words",
+      "label": "Last Words spoken",
+      "type": "checkbox",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "troubles",
+    "title": "Troubles",
+    "page": "Pirate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "trouble_1",
+      "label": "Trouble 1",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "trouble_2",
+      "label": "Trouble 2",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "trouble_3",
+      "label": "Trouble 3",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "trouble_4",
+      "label": "Trouble 4",
+      "type": "text",
+      "size": "full",
+      "play": true
+     },
+     {
+      "key": "vice",
+      "label": "Vice",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "belongings_sec",
+    "title": "Belongings",
+    "page": "Pirate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "belongings",
+      "label": "Belongings",
+      "type": "longtext"
+     },
+     {
+      "key": "kit",
+      "label": "Kit",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "bonds_sec",
+    "title": "Bonds",
+    "page": "Pirate",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonds",
+      "label": "Bonds",
+      "type": "list",
+      "columns": [
+       {
+        "key": "bond",
+        "label": "Bond"
+       },
+       {
+        "key": "marks_0_3",
+        "label": "Marks (0-3)"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "experience_sec",
+    "title": "Experience & Advances",
+    "page": "Pirate",
+    "fields": [
+     {
+      "key": "experience",
+      "label": "Experience",
+      "type": "pips",
+      "size": "full",
+      "count": 15,
+      "play": true
+     },
+     {
+      "key": "base_cost",
+      "label": "Base cost",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "advances",
+      "label": "Advances",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Playbook Moves",
+    "page": "Moves & Questions",
+    "fields": [
+     {
+      "key": "playbook_moves",
+      "label": "Playbook Moves",
+      "type": "longtext"
+     },
+     {
+      "key": "unrest",
+      "label": "Unrest (Captain)",
+      "type": "pips",
+      "cols": 2,
+      "count": 3,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "questions_sec",
+    "title": "Questions",
+    "page": "Moves & Questions",
+    "fields": [
+     {
+      "key": "questions",
+      "label": "Questions (answers)",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

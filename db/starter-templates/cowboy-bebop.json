@@ -1,0 +1,206 @@
+{
+ "name": "Cowboy Bebop Roleplaying Game",
+ "game": "Cowboy Bebop Roleplaying Game",
+ "edition": "1st Edition (Mana Project Studio, 2024)",
+ "source": {
+  "title": "Cowboy Bebop character sheet",
+  "owner": "Mana Project Studio (licensed from Sunrise / Bandai Namco Filmworks)",
+  "url": "https://www.kickstarter.com/projects/manaprojectstudio/cowboy-bebop-the-roleplaying-game",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "memory_sec",
+    "title": "Memory & Weights",
+    "width": "half",
+    "fields": [
+     {
+      "key": "memory",
+      "label": "Memory",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "weight_1",
+      "label": "Weight 1",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "weight_2",
+      "label": "Weight 2",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "weight_3",
+      "label": "Weight 3",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "styles",
+    "title": "Styles",
+    "fields": [
+     {
+      "key": "style_rock",
+      "label": "Rock",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "rock_trait_1",
+      "label": "Rock trait 1",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "rock_trait_2",
+      "label": "Rock trait 2",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "style_blues",
+      "label": "Blues",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "blues_trait_1",
+      "label": "Blues trait 1",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "blues_trait_2",
+      "label": "Blues trait 2",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "style_jazz",
+      "label": "Jazz",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "jazz_trait_1",
+      "label": "Jazz trait 1",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "jazz_trait_2",
+      "label": "Jazz trait 2",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "style_dance",
+      "label": "Dance",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "dance_trait_1",
+      "label": "Dance trait 1",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "dance_trait_2",
+      "label": "Dance trait 2",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "style_tango",
+      "label": "Tango",
+      "type": "number",
+      "cols": 3
+     },
+     {
+      "key": "tango_trait_1",
+      "label": "Tango trait 1",
+      "type": "text",
+      "cols": 3
+     },
+     {
+      "key": "tango_trait_2",
+      "label": "Tango trait 2",
+      "type": "text",
+      "cols": 3
+     }
+    ]
+   },
+   {
+    "key": "groove_sec",
+    "title": "Groove & Rhythm",
+    "width": "half",
+    "fields": [
+     {
+      "key": "groove",
+      "label": "Groove",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "rhythm",
+      "label": "Rhythm",
+      "type": "pips",
+      "cols": 2,
+      "count": 6,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "ship_sec",
+    "title": "Ship",
+    "width": "half",
+    "fields": [
+     {
+      "key": "ship",
+      "label": "Ship",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "ship_trait_1",
+      "label": "Ship trait 1",
+      "type": "text"
+     },
+     {
+      "key": "ship_trait_2",
+      "label": "Ship trait 2",
+      "type": "text"
+     }
+    ]
+   }
+  ]
+ }
+}

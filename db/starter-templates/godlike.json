@@ -1,0 +1,428 @@
+{
+ "name": "Godlike",
+ "game": "Godlike",
+ "edition": "1st Edition (Arc Dream / Hawthorn Hobbies, 2001)",
+ "source": {
+  "title": "Godlike character sheet (with form fields)",
+  "owner": "Arc Dream Publishing (Dennis Detwiller and Greg Stolze)",
+  "url": "https://www.arcdream.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Front",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name/Alias",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text"
+     },
+     {
+      "key": "nation",
+      "label": "Nation/Ethnicity",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "height",
+      "label": "Ht.",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "weight",
+      "label": "Wt.",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "dob",
+      "label": "Date of Birth",
+      "type": "text"
+     },
+     {
+      "key": "manifestation",
+      "label": "Date of Manifestation",
+      "type": "text"
+     },
+     {
+      "key": "education",
+      "label": "Education",
+      "type": "text"
+     },
+     {
+      "key": "profession",
+      "label": "Profession",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "motivations",
+      "label": "Motivations",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds",
+    "page": "Front",
+    "width": "third",
+    "fields": [
+     {
+      "key": "hit_head_shock",
+      "label": "(10) Head shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "hit_head_kill",
+      "label": "(10) Head killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 4,
+      "play": true
+     },
+     {
+      "key": "hit_torso_shock",
+      "label": "(7-9) Torso shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "hit_torso_kill",
+      "label": "(7-9) Torso killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "hit_r_arm_shock",
+      "label": "(5-6) R. Arm shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_arm_kill",
+      "label": "(5-6) R. Arm killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_arm_shock",
+      "label": "(3-4) L. Arm shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_arm_kill",
+      "label": "(3-4) L. Arm killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_leg_shock",
+      "label": "(2) R. Leg shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_r_leg_kill",
+      "label": "(2) R. Leg killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_leg_shock",
+      "label": "(1) L. Leg shock",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     },
+     {
+      "key": "hit_l_leg_kill",
+      "label": "(1) L. Leg killing",
+      "type": "pips",
+      "cols": 3,
+      "count": 5,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Front",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_brains",
+      "label": "Brains",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "stat_body",
+      "label": "Body",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "stat_command",
+      "label": "Command",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "stat_coordination",
+      "label": "Coordination",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "stat_cool",
+      "label": "Cool",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "stat_sense",
+      "label": "Sense",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "base_will",
+      "label": "Base Will",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "willpower",
+      "label": "Willpower",
+      "type": "counter",
+      "min": 0,
+      "max": 50,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "page": "Front",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "attribute",
+        "label": "Attribute"
+       },
+       {
+        "key": "dice_pool",
+        "label": "Dice Pool"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "talents_sec",
+    "title": "Talents",
+    "page": "Front",
+    "fields": [
+     {
+      "key": "talents",
+      "label": "Talents",
+      "type": "list",
+      "columns": [
+       {
+        "key": "talent",
+        "label": "Talent"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       },
+       {
+        "key": "hard",
+        "label": "Hard"
+       },
+       {
+        "key": "wiggle",
+        "label": "Wiggle"
+       },
+       {
+        "key": "spent",
+        "label": "Spent"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "weapons_sec",
+    "title": "Weapons",
+    "page": "Front",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "spray",
+        "label": "Spray"
+       },
+       {
+        "key": "penet",
+        "label": "Penet."
+       },
+       {
+        "key": "area",
+        "label": "Area"
+       },
+       {
+        "key": "cap",
+        "label": "Cap."
+       },
+       {
+        "key": "dmg",
+        "label": "Dmg."
+       },
+       {
+        "key": "close_range",
+        "label": "Close Range"
+       },
+       {
+        "key": "max_range",
+        "label": "Max Range"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "armor_sec",
+    "title": "Armor",
+    "page": "Front",
+    "width": "third",
+    "fields": [
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "list",
+      "columns": [
+       {
+        "key": "armor",
+        "label": "Armor"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "appearance_sec",
+    "title": "Appearance and Personality",
+    "page": "Back",
+    "width": "half",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Appearance and Personality",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Back",
+    "width": "half",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "page": "Back",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "assets_sec",
+    "title": "Assets",
+    "page": "Back",
+    "width": "half",
+    "fields": [
+     {
+      "key": "assets",
+      "label": "Assets",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

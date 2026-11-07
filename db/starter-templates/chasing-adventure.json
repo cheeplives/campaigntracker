@@ -1,0 +1,264 @@
+{
+ "name": "Chasing Adventure",
+ "game": "Chasing Adventure",
+ "edition": "1.0 (PrimarchtheMage, 2024)",
+ "source": {
+  "title": "Chasing Adventure form-fillable playbooks",
+  "owner": "PrimarchtheMage",
+  "url": "https://primarchthemage.itch.io/chasing-adventure",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "playbook",
+      "label": "Playbook",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "Barbarian",
+       "Bard",
+       "Cleric",
+       "Druid",
+       "Fighter",
+       "Immolator",
+       "Paladin",
+       "Ranger",
+       "Thief",
+       "Wizard"
+      ],
+      "summary": true
+     },
+     {
+      "key": "background",
+      "label": "Background",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "look",
+      "label": "Look",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stat_str",
+      "label": "STR",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hurt_str",
+      "label": "STR hurt (Weakened, Nauseous)",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_dex",
+      "label": "DEX",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hurt_dex",
+      "label": "DEX hurt (Dizzy, Shaky, Stunned)",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_int",
+      "label": "INT",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hurt_int",
+      "label": "INT hurt (Dazed, Forgetful)",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_wis",
+      "label": "WIS",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hurt_wis",
+      "label": "WIS hurt (Confused, Exhausted)",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     },
+     {
+      "key": "stat_cha",
+      "label": "CHA",
+      "type": "number",
+      "cols": 4
+     },
+     {
+      "key": "hurt_cha",
+      "label": "CHA hurt (Scarred, Grumpy)",
+      "type": "checkbox",
+      "cols": 2,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "level_sec",
+    "title": "Level & Armor",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "level",
+      "label": "Level",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "xp",
+      "label": "XP",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "armor",
+      "label": "Armor",
+      "type": "counter",
+      "play": true
+     },
+     {
+      "key": "lvl_stat_1",
+      "label": "Limited Level Up Choice 1",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "lvl_stat_2",
+      "label": "Limited Level Up Choice 2",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "lvl_move_1",
+      "label": "Limited Level Up Choice 3",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "lvl_move_2",
+      "label": "Limited Level Up Choice 4",
+      "type": "checkbox",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "page": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "signature_weapon",
+      "label": "Signature Weapon",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "moves",
+    "title": "Moves",
+    "page": "Moves & Questions",
+    "fields": [
+     {
+      "key": "starting_moves",
+      "label": "Starting Moves",
+      "type": "longtext"
+     },
+     {
+      "key": "advanced_moves",
+      "label": "Advanced Moves",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "ask_answer",
+    "title": "Ask, Answer & Favor",
+    "page": "Moves & Questions",
+    "fields": [
+     {
+      "key": "ask",
+      "label": "Ask (and the answers you got)",
+      "type": "longtext"
+     },
+     {
+      "key": "answer",
+      "label": "Answer",
+      "type": "longtext"
+     },
+     {
+      "key": "favor",
+      "label": "Favor",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes",
+    "page": "Moves & Questions",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

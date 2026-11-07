@@ -4211,7 +4211,7 @@
         const r = tq.get('route') ? (d.routes || []).find(x => x.id === Number(tq.get('route'))) : null;
         const points = r ? r.points.map(([x, y]) => ({ x, y }))
           : (tq.get('path') || '').split(';').map(p => p.split(',').map(Number)).filter(a => a.length === 2 && a.every(Number.isFinite)).map(([x, y]) => ({ x, y }));
-        if (points.length > 1 && MapGeo.toMetres(1, d.map) !== null) trip = { map: d.map, pins: d.pins || [], points, name: r ? r.name : null };
+        if (points.length > 1 && MapGeo.toMetres(1, d.map) !== null) trip = { map: d.map, pins: d.pins || [], points, name: r ? r.name : null, terrain: r && Array.isArray(r.terrain) && r.terrain.length === points.length - 1 ? [...r.terrain] : null };
       } catch { /* a map that can't be read plans nothing */ }
     }
     const partyCard = el('div', { class: 'card party-card' });
@@ -4447,8 +4447,17 @@
       const reach = Math.max(trip.map.width || 0, trip.map.height || 0) * 0.03 + 10;   // a pin this close to an end is where it starts or stops
       const at = pt => { const p = MapGeo.nearestPin(trip.pins, pt, reach); return p ? MapGeo.pinName(p) : ''; };
       fromName.value = at(trip.points[0]); toName.value = at(trip.points[trip.points.length - 1]);
+      // a route with slow legs: the terrain is their average by length, so the time is each leg's own added up
+      const tsel = fieldsWrap.querySelector('[name=terrain]');
+      if (tsel && trip.terrain) {
+        let sum = 0, weighted = 0;
+        trip.terrain.forEach((t, i) => { const len = MapGeo.pathPx([trip.points[i], trip.points[i + 1]]); sum += len; weighted += len * t; });
+        const avg = sum > 0 ? Math.round(weighted / sum * 100) / 100 : 1;
+        if (![...tsel.options].some(o => Number(o.value) === avg)) tsel.append(el('option', { value: String(avg) }, `Mixed ×${avg} (from the route's legs)`));
+        tsel.value = String(avg);
+      }
       tripNote.replaceChildren(`Planning the trip along ${trip.name || 'a measured path'} on ${trip.map.name}. `,
-        btn('Reverse', () => { trip.points.reverse(); fillTrip(); out.replaceChildren(); }, 'small', 'Travel the other way: From and To swap, and Depart moves the marker to the other end'));
+        btn('Reverse', () => { trip.points.reverse(); if (trip.terrain) trip.terrain.reverse(); fillTrip(); out.replaceChildren(); }, 'small', 'Travel the other way: From and To swap, and Depart moves the marker to the other end'));
     };
     const f = el('form', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Travel planner'), units),
       field('Mode', modeSel, `Modes for a ${E.GENRES[genre]} campaign. Change the genre on the Settings tab.`, `Overland, sea and air: distance ÷ speed, travelling some of the day's ${hourMode() ? 'hours' : spd() === 2 ? 'two shifts' : 'four shifts'}. Orbital transfer: the slow, fuel-saving path between two orbits. Constant thrust: accelerate to the midpoint, flip, decelerate. Relativistic: the same, with ship time slowing near light speed. FTL: your setting's jump drive. Hyperspace: a Star Wars trip time, scaled by the hyperdrive's class and the route.`),

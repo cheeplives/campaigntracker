@@ -1,0 +1,616 @@
+{
+ "name": "Trail of Cthulhu: Cthulhu Apocalypse",
+ "game": "Trail of Cthulhu",
+ "edition": "Cthulhu Apocalypse (Pelgrane Press)",
+ "source": {
+  "title": "Cthulhu Apocalypse character sheet",
+  "owner": "Pelgrane Press (Kenneth Hite; Cthulhu Apocalypse by Graham Walmsley)",
+  "url": "https://pelgranepress.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "investigator",
+    "title": "Investigator",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Investigator Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "player",
+      "label": "Player Name",
+      "type": "text",
+      "cols": 6
+     },
+     {
+      "key": "drive",
+      "label": "Drive",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "occupational_benefits",
+      "label": "Occupational Benefits",
+      "type": "longtext"
+     },
+     {
+      "key": "pillars_of_sanity",
+      "label": "Pillars of Sanity",
+      "type": "longtext"
+     },
+     {
+      "key": "build_points",
+      "label": "Build Points",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "pools",
+    "title": "Pools",
+    "width": "third",
+    "fields": [
+     {
+      "key": "sanity",
+      "label": "Sanity",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "max": 15,
+      "play": true
+     },
+     {
+      "key": "hit_threshold",
+      "label": "Hit Threshold",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "stability",
+      "label": "Stability",
+      "type": "counter",
+      "size": "full",
+      "min": -12,
+      "max": 15,
+      "play": true
+     },
+     {
+      "key": "health",
+      "label": "Health",
+      "type": "counter",
+      "size": "full",
+      "min": -12,
+      "max": 15,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "academic",
+    "title": "Academic Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "aca_agriculture",
+      "label": "Agriculture",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_anthropology",
+      "label": "Anthropology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_archaeology",
+      "label": "Archaeology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_architecture",
+      "label": "Architecture",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_biology",
+      "label": "Biology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_botany",
+      "label": "Botany",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_cthulhu_mythos",
+      "label": "Cthulhu Mythos",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_cryptography",
+      "label": "Cryptography",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_geology",
+      "label": "Geology",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_history",
+      "label": "History",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_languages",
+      "label": "Languages",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_other_academic_1",
+      "label": "Other academic 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_other_academic_2",
+      "label": "Other academic 2",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_other_academic_3",
+      "label": "Other academic 3",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_library_use",
+      "label": "Library Use",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_medicine",
+      "label": "Medicine",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_occult",
+      "label": "Occult",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_physics",
+      "label": "Physics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_strategy",
+      "label": "Strategy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aca_theology",
+      "label": "Theology",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "interpersonal",
+    "title": "Interpersonal & Technical Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "int_assess_honesty",
+      "label": "Assess Honesty",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_bargain",
+      "label": "Bargain",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_bureaucracy",
+      "label": "Bureaucracy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_flattery",
+      "label": "Flattery",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_interrogation",
+      "label": "Interrogation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_intimidation",
+      "label": "Intimidation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_intuition",
+      "label": "Intuition",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_leadership",
+      "label": "Leadership",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_oral_history",
+      "label": "Oral History",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_reassurance",
+      "label": "Reassurance",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_streetwise",
+      "label": "Streetwise",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_seduction",
+      "label": "Seduction",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_art",
+      "label": "Art",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_astronomy",
+      "label": "Astronomy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_chemistry",
+      "label": "Chemistry",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_craft",
+      "label": "Craft",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_evidence_collection",
+      "label": "Evidence Collection",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_forensics",
+      "label": "Forensics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_locksmith",
+      "label": "Locksmith",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_navigation",
+      "label": "Navigation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_outdoorsman",
+      "label": "Outdoorsman",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_pharmacy",
+      "label": "Pharmacy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "tec_photography",
+      "label": "Photography",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "general",
+    "title": "General Abilities",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "gen_athletics",
+      "label": "Athletics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_conceal",
+      "label": "Conceal",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_disguise",
+      "label": "Disguise",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_driving",
+      "label": "Driving",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_electrical_repair",
+      "label": "Electrical Repair",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_explosives",
+      "label": "Explosives",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_filch",
+      "label": "Filch",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_firearms",
+      "label": "Firearms",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_first_aid",
+      "label": "First Aid",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_fleeing",
+      "label": "Fleeing",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_health",
+      "label": "Health",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_hypnosis",
+      "label": "Hypnosis",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_mechanical_repair",
+      "label": "Mechanical Repair",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_piloting",
+      "label": "Piloting",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_preparedness",
+      "label": "Preparedness",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_psychoanalysis",
+      "label": "Psychoanalysis",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_riding",
+      "label": "Riding",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_sanity",
+      "label": "Sanity",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_stability",
+      "label": "Stability",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_scavenging",
+      "label": "Scavenging",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_scuffling",
+      "label": "Scuffling",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_sense_trouble",
+      "label": "Sense Trouble",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_shadowing",
+      "label": "Shadowing",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "gen_weapons",
+      "label": "Weapons",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "stability_sources",
+    "title": "Sources of Stability",
+    "width": "half",
+    "fields": [
+     {
+      "key": "sources_of_stability",
+      "label": "Sources of Stability",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "psychic",
+    "title": "Psychic Abilities",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "psy_dreaming",
+      "label": "Dreaming",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_medium",
+      "label": "Medium",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_premonitions",
+      "label": "Premonitions",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_psychic_scream",
+      "label": "Psychic Scream",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_remote_viewing",
+      "label": "Remote Viewing",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_telepathy",
+      "label": "Telepathy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_mind_reading",
+      "label": "Mind Reading",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_aura_reading",
+      "label": "Aura Reading",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_control",
+      "label": "Control",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "psy_emotion_projection",
+      "label": "Emotion Projection",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   }
+  ]
+ }
+}

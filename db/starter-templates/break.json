@@ -1,0 +1,446 @@
+{
+ "name": "BREAK!!",
+ "game": "BREAK!!",
+ "edition": "1st Edition (Grand Gamers Guild, 2023)",
+ "source": {
+  "title": "BREAK!! character sheet (Adventurer)",
+  "owner": "Grand Gamers Guild (Reynaldo Madrinan and Grey Wizard)",
+  "url": "https://www.breakrpg.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "identity",
+    "title": "Identity",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "calling",
+      "label": "Calling",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "rank",
+      "label": "Rank",
+      "type": "number",
+      "size": "small",
+      "summary": true
+     },
+     {
+      "key": "species",
+      "label": "Species",
+      "type": "text"
+     },
+     {
+      "key": "size",
+      "label": "Size",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "homeland",
+      "label": "Homeland",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "languages",
+      "label": "Languages",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "history",
+      "label": "History",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "purviews",
+      "label": "Purviews (a Minor Bonus (+2) on...)",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "aptitudes",
+    "title": "Aptitudes (base, trait, bonuses)",
+    "width": "half",
+    "fields": [
+     {
+      "key": "apt_might",
+      "label": "Might",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "might_trait",
+      "label": "Might trait",
+      "type": "choice",
+      "size": "small",
+      "options": [
+       "-2",
+       "-1",
+       "0",
+       "+1",
+       "+2"
+      ]
+     },
+     {
+      "key": "might_bonuses",
+      "label": "Might bonuses/penalties",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "apt_deftness",
+      "label": "Deftness",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "deftness_trait",
+      "label": "Deftness trait",
+      "type": "choice",
+      "size": "small",
+      "options": [
+       "-2",
+       "-1",
+       "0",
+       "+1",
+       "+2"
+      ]
+     },
+     {
+      "key": "deftness_bonuses",
+      "label": "Deftness bonuses/penalties",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "apt_grit",
+      "label": "Grit",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "grit_trait",
+      "label": "Grit trait",
+      "type": "choice",
+      "size": "small",
+      "options": [
+       "-2",
+       "-1",
+       "0",
+       "+1",
+       "+2"
+      ]
+     },
+     {
+      "key": "grit_bonuses",
+      "label": "Grit bonuses/penalties",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "apt_insight",
+      "label": "Insight",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "insight_trait",
+      "label": "Insight trait",
+      "type": "choice",
+      "size": "small",
+      "options": [
+       "-2",
+       "-1",
+       "0",
+       "+1",
+       "+2"
+      ]
+     },
+     {
+      "key": "insight_bonuses",
+      "label": "Insight bonuses/penalties",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "apt_aura",
+      "label": "Aura",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "aura_trait",
+      "label": "Aura trait",
+      "type": "choice",
+      "size": "small",
+      "options": [
+       "-2",
+       "-1",
+       "0",
+       "+1",
+       "+2"
+      ]
+     },
+     {
+      "key": "aura_bonuses",
+      "label": "Aura bonuses/penalties",
+      "type": "text",
+      "cols": 4
+     }
+    ]
+   },
+   {
+    "key": "quirk_sec",
+    "title": "Quirk",
+    "width": "half",
+    "fields": [
+     {
+      "key": "quirk",
+      "label": "Quirk",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear",
+    "title": "Gear",
+    "width": "half",
+    "fields": [
+     {
+      "key": "worn_outfit",
+      "label": "Worn Outfit",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "inv_slots",
+      "label": "Inventory Slots base",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "additional_slots",
+      "label": "Additional Slots",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "inventory",
+      "label": "Inventory",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "abilities",
+      "label": "Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "wealth",
+    "title": "Wealth & XP",
+    "width": "half",
+    "fields": [
+     {
+      "key": "stones",
+      "label": "Stones",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "coins",
+      "label": "Coins",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "gems",
+      "label": "Gems",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "xp",
+      "label": "Current XP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "xp_next",
+      "label": "XP for Next Rank",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "combat",
+    "title": "Combat Values",
+    "fields": [
+     {
+      "key": "attack_bonus",
+      "label": "Attack Bonus base",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "weapons",
+      "label": "Weapons",
+      "type": "list",
+      "columns": [
+       {
+        "key": "weapon",
+        "label": "Weapon"
+       },
+       {
+        "key": "weapon_bonuses",
+        "label": "Weapon Bonuses"
+       },
+       {
+        "key": "extra_damage",
+        "label": "Extra Damage"
+       },
+       {
+        "key": "attack_bonus",
+        "label": "Attack Bonus"
+       }
+      ]
+     },
+     {
+      "key": "hearts_base",
+      "label": "Hearts total base",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "hearts",
+      "label": "Hearts",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "hearts_bonuses",
+      "label": "Hearts bonuses/penalties",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "injuries",
+      "label": "Injuries",
+      "type": "longtext",
+      "play": true
+     },
+     {
+      "key": "defense_rating",
+      "label": "Defense Rating base",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "defense_bonuses",
+      "label": "Defense bonuses/penalties",
+      "type": "text",
+      "size": "large"
+     },
+     {
+      "key": "speed_rating",
+      "label": "Speed Rating",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "Slow (0 Areas)",
+       "Average (1 Area)",
+       "Fast (2 Areas)",
+       "V. Fast (2 Areas)"
+      ]
+     },
+     {
+      "key": "speed_bonuses",
+      "label": "Speed bonuses/penalties",
+      "type": "text",
+      "size": "large"
+     }
+    ]
+   },
+   {
+    "key": "social",
+    "title": "Social Bonds & Reputations",
+    "width": "half",
+    "fields": [
+     {
+      "key": "bonds",
+      "label": "Social Bonds & Reputations",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "allegiance",
+    "title": "Allegiance",
+    "width": "half",
+    "fields": [
+     {
+      "key": "dark_points",
+      "label": "Dark Allegiance Points",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "bright_points",
+      "label": "Bright Allegiance Points",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "allegiance_choice",
+      "label": "Allegiance",
+      "type": "choice",
+      "options": [
+       "Unaligned",
+       "Dark",
+       "Twilight",
+       "Bright"
+      ]
+     },
+     {
+      "key": "gifts",
+      "label": "Gifts",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

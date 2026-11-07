@@ -1,0 +1,146 @@
+{
+ "name": "Orbital Blues",
+ "game": "Orbital Blues",
+ "edition": "1st Edition (Soul Muppet Publishing, 2022)",
+ "source": {
+  "title": "Orbital Blues character sheet (black and white)",
+  "owner": "Soul Muppet Publishing",
+  "url": "https://soulmuppet.itch.io/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "description",
+      "label": "Description",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "troubles_sec",
+    "title": "Troubles",
+    "width": "half",
+    "fields": [
+     {
+      "key": "troubles",
+      "label": "Troubles",
+      "type": "longtext",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "fields": [
+     {
+      "key": "muscle",
+      "label": "Muscle",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "savvy",
+      "label": "Savvy",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "grit",
+      "label": "Grit",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "credits",
+      "label": "Credits",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "debits",
+      "label": "Debits",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "heart_blues",
+    "title": "Heart & Blues",
+    "width": "half",
+    "fields": [
+     {
+      "key": "heart",
+      "label": "Heart",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "heart_boxes",
+      "label": "Heart boxes",
+      "type": "pips",
+      "cols": 3,
+      "count": 8,
+      "play": true
+     },
+     {
+      "key": "blues",
+      "label": "Blues",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "blues_boxes",
+      "label": "Blues boxes",
+      "type": "pips",
+      "cols": 3,
+      "count": 8,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "gambits_sec",
+    "title": "Gambits",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gambits",
+      "label": "Gambits",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "equipment_sec",
+    "title": "Equipment",
+    "width": "half",
+    "fields": [
+     {
+      "key": "equipment",
+      "label": "Equipment",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,976 @@
+{
+ "name": "Red Markets",
+ "game": "Red Markets",
+ "edition": "1st Edition (Hunters Entertainment, 2017)",
+ "source": {
+  "title": "Red Markets character sheet",
+  "owner": "Hunters Entertainment (Caleb Stokes)",
+  "url": "https://www.drivethrurpg.com/en/publisher/9806/hunters-entertainment",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "taker",
+    "title": "Taker",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Taker",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "crew",
+      "label": "Crew",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "weak_spot",
+      "label": "Weak Spot",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "soft_spot",
+      "label": "Soft Spot",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "tough_spot",
+      "label": "Tough Spot",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "dependants_sec",
+    "title": "Dependants",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "dependants",
+      "label": "Dependants",
+      "type": "list",
+      "columns": [
+       {
+        "key": "dependant",
+        "label": "Dependant"
+       },
+       {
+        "key": "needy",
+        "label": "Needy"
+       },
+       {
+        "key": "strained",
+        "label": "Strained"
+       },
+       {
+        "key": "severed",
+        "label": "Severed"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "potential_str",
+    "title": "STR",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_str",
+      "label": "STR",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "haul",
+      "label": "Haul",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_unarmed",
+      "label": "Unarmed",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_unarmed_specialty",
+      "label": "Unarmed specialty",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_melee",
+      "label": "Melee",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_melee_specialty_1",
+      "label": "Melee specialty 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_melee_specialty_2",
+      "label": "Melee specialty 2",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "str_resistance",
+      "label": "Resistance",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "potential_spd",
+    "title": "SPD",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_spd",
+      "label": "SPD",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd_shoot",
+      "label": "Shoot",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd_shoot_specialty_1",
+      "label": "Shoot specialty 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd_shoot_specialty_2",
+      "label": "Shoot specialty 2",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd_stealth",
+      "label": "Stealth",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "spd_athletics",
+      "label": "Athletics",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "potential_adp",
+    "title": "ADP",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_adp",
+      "label": "ADP",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "refresh",
+      "label": "Refresh",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "adp_awareness",
+      "label": "Awareness",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "adp_self_control",
+      "label": "Self-Control",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "adp_scavenging",
+      "label": "Scavenging",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "adp_drive",
+      "label": "Drive",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "adp_criminality",
+      "label": "Criminality",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "potential_int",
+    "title": "INT",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_int",
+      "label": "INT",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_foresight",
+      "label": "Foresight",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_research",
+      "label": "Research",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_mechanics",
+      "label": "Mechanics",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_first_aid",
+      "label": "First Aid",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_profession",
+      "label": "Profession",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_profession_specialty_1",
+      "label": "Profession specialty 1",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "int_profession_specialty_2",
+      "label": "Profession specialty 2",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "potential_cha",
+    "title": "CHA",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_cha",
+      "label": "CHA",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_networking",
+      "label": "Networking",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_persuasion",
+      "label": "Persuasion",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_sensitivity",
+      "label": "Sensitivity",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_deception",
+      "label": "Deception",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_intimidation",
+      "label": "Intimidation",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "cha_leadership",
+      "label": "Leadership",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "pot_wil_sec",
+    "title": "WIL",
+    "page": "Taker",
+    "width": "third",
+    "compact": true,
+    "fields": [
+     {
+      "key": "pot_wil",
+      "label": "WIL",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "references_sec",
+    "title": "References",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "references",
+      "label": "References",
+      "type": "list",
+      "columns": [
+       {
+        "key": "reference",
+        "label": "Reference"
+       },
+       {
+        "key": "notes",
+        "label": "Notes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "threats",
+    "title": "Threats",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "detachment",
+      "label": "Detachment",
+      "type": "pips",
+      "size": "full",
+      "count": 15,
+      "play": true
+     },
+     {
+      "key": "stress",
+      "label": "Stress",
+      "type": "pips",
+      "size": "full",
+      "count": 15,
+      "play": true
+     },
+     {
+      "key": "trauma",
+      "label": "Trauma",
+      "type": "pips",
+      "size": "full",
+      "count": 15,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "wounds",
+    "title": "Wounds",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "alt_head",
+      "label": "Head ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_head",
+      "label": "(10) Head",
+      "type": "pips",
+      "cols": 5,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "alt_torso",
+      "label": "Torso ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_torso",
+      "label": "(7-9) Torso",
+      "type": "pips",
+      "cols": 5,
+      "count": 20,
+      "play": true
+     },
+     {
+      "key": "alt_arm_5",
+      "label": "Arm (5) ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_arm_5",
+      "label": "(5) Arm",
+      "type": "pips",
+      "cols": 5,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "alt_arm_6",
+      "label": "Arm (6) ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_arm_6",
+      "label": "(6) Arm",
+      "type": "pips",
+      "cols": 5,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "alt_leg_12",
+      "label": "Leg (1-2) ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_leg_12",
+      "label": "(1-2) Leg",
+      "type": "pips",
+      "cols": 5,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "alt_leg_34",
+      "label": "Leg (3-4) ALT",
+      "type": "checkbox",
+      "size": "small"
+     },
+     {
+      "key": "wound_leg_34",
+      "label": "(3-4) Leg",
+      "type": "pips",
+      "cols": 5,
+      "count": 10,
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "backpack",
+    "title": "Backpack",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "backpack_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "backpack_charges",
+      "label": "Charges",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "backpack_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "backpack_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "rations",
+    "title": "Rations",
+    "page": "Taker",
+    "width": "half",
+    "fields": [
+     {
+      "key": "rations_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "rations_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "rations_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "rations_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "gear_1",
+    "title": "Gear 1",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_1_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_1_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_1_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_1_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_1_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_1_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_2",
+    "title": "Gear 2",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_2_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_2_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_2_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_2_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_2_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_2_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_3",
+    "title": "Gear 3",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_3_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_3_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_3_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_3_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_3_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_3_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_4",
+    "title": "Gear 4",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_4_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_4_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_4_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_4_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_4_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_4_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_5",
+    "title": "Gear 5",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_5_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_5_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_5_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_5_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_5_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_5_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_6",
+    "title": "Gear 6",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_6_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_6_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_6_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_6_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_6_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_6_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "gear_7",
+    "title": "Gear 7",
+    "page": "Gear & Upkeep",
+    "width": "half",
+    "fields": [
+     {
+      "key": "gear_7_name",
+      "label": "Item",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "gear_7_upkeep",
+      "label": "Upkeep",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "gear_7_charges",
+      "label": "Charges",
+      "type": "pips",
+      "cols": 3,
+      "count": 10,
+      "play": true
+     },
+     {
+      "key": "gear_7_effect",
+      "label": "Effect",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_7_qualities",
+      "label": "Qualities",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "gear_7_upgrades",
+      "label": "Upgrades",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "upkeep",
+    "title": "Upkeep",
+    "page": "Gear & Upkeep",
+    "fields": [
+     {
+      "key": "up_survival",
+      "label": "Sustenence: Survival",
+      "type": "text"
+     },
+     {
+      "key": "up_rent",
+      "label": "Sustenence: Rent",
+      "type": "text"
+     },
+     {
+      "key": "up_dependants",
+      "label": "Sustenence: Dependants",
+      "type": "text"
+     },
+     {
+      "key": "up_equipment",
+      "label": "Maintenance: Equipment",
+      "type": "text"
+     },
+     {
+      "key": "up_purchase",
+      "label": "Maintenance: Purchase",
+      "type": "text"
+     },
+     {
+      "key": "up_prodev",
+      "label": "Maintenance: Pro. Dev.",
+      "type": "text"
+     },
+     {
+      "key": "up_health",
+      "label": "Incidentals: Health",
+      "type": "text"
+     },
+     {
+      "key": "up_humanity",
+      "label": "Incidentals: Humanity",
+      "type": "text"
+     },
+     {
+      "key": "up_favors",
+      "label": "Incidentals: Favors",
+      "type": "text"
+     },
+     {
+      "key": "break_point",
+      "label": "Break Point",
+      "type": "text"
+     },
+     {
+      "key": "projected_earnings",
+      "label": "Projected Earnings",
+      "type": "text"
+     }
+    ]
+   },
+   {
+    "key": "retirement",
+    "title": "Retirement Milestone",
+    "page": "Gear & Upkeep",
+    "fields": [
+     {
+      "key": "retirement_milestone",
+      "label": "Retirement Milestone",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "savings",
+      "label": "Savings",
+      "type": "longtext"
+     },
+     {
+      "key": "bounty_bank",
+      "label": "Bounty Bank",
+      "type": "text",
+      "size": "large",
+      "play": true
+     }
+    ]
+   }
+  ]
+ }
+}

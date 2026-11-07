@@ -1,0 +1,145 @@
+{
+ "name": "HOL: Human Occupied Landfill",
+ "game": "HOL: Human Occupied Landfill",
+ "edition": "1st Edition (Buzzard Press, 1994)",
+ "source": {
+  "title": "HOL character sheet",
+  "owner": "Buzzard Press (Dirk Stromberg and Todd Shaughnessy)",
+  "url": "https://www.drivethrurpg.com/en/product/68626",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "character",
+    "title": "Character",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "oldness",
+      "label": "Oldness",
+      "type": "text"
+     },
+     {
+      "key": "bent",
+      "label": "Bent",
+      "type": "text",
+      "summary": true
+     },
+     {
+      "key": "sex",
+      "label": "Sex",
+      "type": "text"
+     },
+     {
+      "key": "doughnut_preference",
+      "label": "Doughnut Preference",
+      "type": "text"
+     },
+     {
+      "key": "if_i_were_suddenly_turned_into_a_mollusk",
+      "label": "If I were suddenly turned into a mollusk I would",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "stats",
+    "title": "Stats",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "greymatta",
+      "label": "Greymatta",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "meat",
+      "label": "Meat",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "mouth",
+      "label": "Mouth",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "feets",
+      "label": "Feets",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "nuts",
+      "label": "Nuts",
+      "type": "number",
+      "size": "small"
+     },
+     {
+      "key": "total_armor",
+      "label": "Total Armor",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Special Abilities",
+    "width": "half",
+    "fields": [
+     {
+      "key": "special_abilities",
+      "label": "Special Abilities",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "skills_sec",
+    "title": "Skills",
+    "width": "half",
+    "fields": [
+     {
+      "key": "skills",
+      "label": "Skills",
+      "type": "list",
+      "columns": [
+       {
+        "key": "skill",
+        "label": "Skill"
+       },
+       {
+        "key": "level",
+        "label": "Level"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "equipstuff_sec",
+    "title": "Equipstuff",
+    "fields": [
+     {
+      "key": "equipstuff",
+      "label": "Equipstuff",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
