@@ -23,6 +23,7 @@ require __DIR__ . '/files.php';
 require __DIR__ . '/library.php';
 require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
+require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/panel.php';
 require __DIR__ . '/upgrade.php';
@@ -652,6 +653,7 @@ const CAMPAIGN_COPY = [
     ['session_shifts', 'via' => ['session_id', 'session']],
     ['clocks', 'key' => 'clock', 'maps' => ['entry_id' => 'encyclopedia']],
     ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
+    ['dice_rolls'],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character that has a player.
     // party_group_id is set once the party groups are copied, below.
     ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group']],
@@ -988,7 +990,7 @@ try {
         role($cid);
         $st = db()->prepare('SELECT updated_at FROM campaigns WHERE id=?');
         $st->execute([$cid]);
-        out(['changed' => (string)$st->fetchColumn()]);
+        out(['changed' => (string)$st->fetchColumn(), 'last_roll' => dice_last_seen($cid, role($cid) === 'gm')]);
 
     case 'owlbear_manifest': // anyone: Owlbear Rodeo reads it from its own page when a GM or player adds the extension
         owlbear_manifest();
@@ -1701,6 +1703,12 @@ try {
     case 'clock_tick':
     case 'clock_delete':
         clocks_action($action);
+
+    // ===== the die roller ===== (api/dice.php)
+    case 'dice_roll':
+    case 'dice_rolls':
+    case 'dice_clear':
+        dice_action($action);
 
     // ===== play sessions ===== (api/sessions.php)
     case 'sessions':
