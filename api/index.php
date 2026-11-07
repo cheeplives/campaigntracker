@@ -21,7 +21,9 @@ require __DIR__ . '/encyclopedia.php';
 require __DIR__ . '/connections.php';
 require __DIR__ . '/files.php';
 require __DIR__ . '/library.php';
+require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
+require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/reports.php';
 require __DIR__ . '/panel.php';
@@ -652,6 +654,7 @@ const CAMPAIGN_COPY = [
     ['session_shifts', 'via' => ['session_id', 'session']],
     ['clocks', 'key' => 'clock', 'maps' => ['entry_id' => 'encyclopedia']],
     ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
+    ['dice_rolls'],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character that has a player.
     // party_group_id is set once the party groups are copied, below.
     ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group']],
@@ -1019,7 +1022,7 @@ try {
         role($cid);
         $st = db()->prepare('SELECT updated_at FROM campaigns WHERE id=?');
         $st->execute([$cid]);
-        out(['changed' => (string)$st->fetchColumn()]);
+        out(['changed' => (string)$st->fetchColumn(), 'last_roll' => dice_last_seen($cid, role($cid) === 'gm')]);
 
     case 'owlbear_manifest': // anyone: Owlbear Rodeo reads it from its own page when a GM or player adds the extension
         owlbear_manifest();
@@ -1422,6 +1425,8 @@ try {
             db()->rollBack();
             fail('Someone saved this day\'s notes after you opened them. Copy what you wrote, reload, and add it again', 409, 'stale');
         }
+        $notesWritten = $has('notes') || $has('gm_notes');
+        if ($notesWritten) history_before($cid, 'day', $ad);
         db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations) VALUES (?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE region_id=IF(?, VALUES(region_id), region_id), weather_json=COALESCE(VALUES(weather_json), weather_json),
             notes=IF(?, VALUES(notes), notes), notes_format=IF(?, VALUES(notes_format), notes_format),
@@ -1429,6 +1434,7 @@ try {
             locations=IF(?, VALUES(locations), locations), version=IF(?, version+1, version)')
             ->execute([$cid, $ad, $rid, $weather, $notes, $notesFmt, $gmNotes, $gmNotesFmt, str_in(p('locations'), 5000),
                 $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations'), $written ? 1 : 0]);
+        if ($notesWritten) history_record($cid, 'day', $ad);
         $st->execute([$cid, $ad]);
         $version = (int)$st->fetchColumn();
         db()->commit();
@@ -1717,12 +1723,24 @@ try {
     case 'tome_delete':
         library_action($action);
 
+    // ===== edit history ===== (api/history.php)
+    case 'history_list':
+    case 'history_get':
+    case 'history_restore':
+        history_action($action);
+
     // ===== clocks ===== (api/clocks.php)
     case 'clocks':
     case 'clock_save':
     case 'clock_tick':
     case 'clock_delete':
         clocks_action($action);
+
+    // ===== the die roller ===== (api/dice.php)
+    case 'dice_roll':
+    case 'dice_rolls':
+    case 'dice_clear':
+        dice_action($action);
 
     // ===== play sessions ===== (api/sessions.php)
     case 'sessions':

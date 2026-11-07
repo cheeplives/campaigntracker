@@ -79,12 +79,24 @@ h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 3px solid var(--accent); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font: 700 1.55rem var(--disp); color: var(--text); text-transform: uppercase; letter-spacing: .06em; }
 .brand::before { content: '⬢ '; color: var(--accent); }
-#topnav { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-/* the account menu in the top bar reads as a link with ▾, not a button, until it is open */
-#topnav .account-menu > summary { background: none; border-color: transparent; color: var(--accent); font: inherit; padding: 4px 6px; }
-#topnav .account-menu[open] > summary { background: var(--accent); color: var(--on-accent); }
-#topnav .account-menu .kit-menu-list { min-width: 9rem; }
-#topnav .account-menu .kit-menu-list a.button { text-decoration: none; }
+#topnav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* Every control in the top bar is the same pill: one height, one rounded edge, one border, so the links, the theme
+   picker, light / dark and your name read as one set. The page you are on (and the open menu) has its pill lit. */
+#topnav .nav-pill, #topnav .account-menu > summary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; height: 34px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 99px; background: var(--panel); color: var(--text);
+  font: 500 .95rem/1 var(--body, inherit); text-decoration: none; white-space: nowrap; }
+#topnav .nav-pill:hover, #topnav .account-menu > summary:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+#topnav .nav-pill[aria-current="page"], #topnav .account-menu.is-here > summary { border-color: var(--accent); color: var(--accent); background: var(--panel-2); }
+#topnav .account-menu[open] > summary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#topnav .theme-toggle { width: 34px; padding: 0; font-size: 1rem; }
+#topnav .nav-pill-name { max-width: 14em; overflow: hidden; text-overflow: ellipsis; }
+#topnav .nav-caret { font-size: .7em; opacity: .8; }
+/* its list opens like the theme picker's: the same panel, with plain rows that take an accent edge on hover */
+#topnav .account-menu .kit-menu-list { min-width: 11rem; top: calc(100% + 6px); gap: 2px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+#topnav .account-menu .kit-menu-list > a, #topnav .account-menu .kit-menu-list > button {
+  background: none; border: 1px solid transparent; color: var(--text); text-decoration: none; padding: 7px 10px; }
+#topnav .account-menu .kit-menu-list > a:hover, #topnav .account-menu .kit-menu-list > button:hover { border-color: var(--accent); }
 main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
 .card { background: var(--stock); border: 0; border-radius: var(--radius); padding: 16px; box-shadow: 0 1px 0 var(--line), 0 10px 24px -18px rgb(0 0 0 / .6); }
@@ -712,9 +724,7 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .status.pending { color: var(--accent); border-color: var(--accent); }
 .status.approved { color: var(--ok); border-color: var(--ok); }
 .status.revoked { color: var(--bad); border-color: var(--bad); }
-.theme-toggle { padding: 3px 8px; line-height: 1.2; }
 .scheme-pick { position: relative; }
-.scheme-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; line-height: 1.2; }
 .scheme-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
 .scheme-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; list-style: none; margin: 0; padding: 4px; min-width: 210px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
@@ -729,10 +739,8 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .admin-head .subtabs { border-bottom: 0; }
 .switch-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; font-weight: 600; cursor: pointer; }
 .switch-row input { width: 18px; height: 18px; margin: 0; }
-/* Report (!) in the top bar: a round pill like the theme picker's, in the warning colour so it reads as "something's wrong" */
-.report-btn { width: 28px; height: 28px; padding: 0; border-radius: 99px; line-height: 1; font: 800 1rem var(--disp);
-  color: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
-.report-btn:hover { background: var(--accent); color: var(--on-accent); }
+/* Report (!) in the top bar: a round pill like light / dark beside it, its ! in the accent colour */
+#topnav .report-btn { width: 34px; padding: 0; font: 800 1.05rem/1 var(--disp); color: var(--accent); }
 dialog.kit-dialog.report-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
 .report-label { display: block; margin-bottom: 10px; }
 .report-label > span { display: block; font-weight: 600; margin-bottom: 4px; }
@@ -1840,6 +1848,86 @@ button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-p
 .sess-actions { margin-top: 14px; }
 .sess-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: .92rem; }
 
+/* ---- The die roller (static/dice-tab.js): the 🎲 button over every campaign page, and the panel it opens. On a wide
+   screen (a desktop, an iPad held sideways) the panel runs down the right and pushes the page over; narrower (an iPad
+   held upright, a phone) it is a sheet over the bottom of the screen. */
+.dice-fab { position: fixed; right: 18px; bottom: 72px; z-index: 61; width: 52px; height: 52px; padding: 0; border-radius: 50%; font-size: 26px; line-height: 1;
+  background: var(--panel-2); color: var(--text); border: 2px solid var(--accent); box-shadow: 0 8px 22px -10px rgb(0 0 0 / .7); }
+.dice-fab:hover { background: var(--accent); }
+.dice-fab[hidden] { display: none; }
+.dice-dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bad, #d05a4a); border: 2px solid var(--bg); }
+.dice-dot[hidden] { display: none; }
+.dice-panel { position: fixed; z-index: 70; right: 0; top: var(--topbar-h, 56px); bottom: 0; width: 380px; display: flex; flex-direction: column;
+  background: var(--panel); border-left: 3px solid var(--accent); box-shadow: -14px 0 30px -24px rgb(0 0 0 / .8); }
+.dice-panel[hidden] { display: none; }
+@media (min-width: 1000px) {
+  body.dice-open #app, body.dice-open .footer { margin-right: 380px; }
+  body.dice-open .to-top { right: 398px; }
+  body.dice-open .tv-dock { left: calc((100% - 380px) / 2); max-width: calc(100vw - 440px); }
+}
+@media (max-width: 999.98px) {
+  .dice-help { max-height: calc(min(68vh, 640px) - 150px); }
+  .dice-panel { top: auto; left: 0; width: auto; height: min(68vh, 640px); border-left: 0; border-top: 3px solid var(--accent); border-radius: 14px 14px 0 0;
+    box-shadow: 0 -14px 30px -18px rgb(0 0 0 / .8); }
+  body.dice-open .to-top { display: none; }
+}
+.dice-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px 8px; border-bottom: 1px solid var(--line); }
+.dice-head h2 { margin: 0; font: 700 1.25rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.dice-sub { flex: 1; }
+.dice-x { margin: 0; padding: 4px 10px; }
+.dice-log { flex: 1; overflow-y: auto; margin: 0; padding: 4px 14px; list-style: none; overscroll-behavior: contain; }
+.dice-empty { padding: 18px 0; }
+.dice-e { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.dice-e.hidden-roll { border-left: 3px solid var(--secret, #8b5cc4); padding-left: 8px; }
+.dice-e-main { flex: 1; min-width: 0; }
+.dice-e-who { font-weight: 600; overflow-wrap: anywhere; }
+.dice-e-meta { margin-top: 1px; overflow-wrap: anywhere; }
+.dice-e-out { text-align: right; flex: none; max-width: 45%; }
+.dice-e-out b { display: block; font: 700 1.5rem/1.1 var(--disp); color: var(--accent); overflow-wrap: anywhere; }
+.dice-e-out small { color: var(--dim); }
+.dice-e.latest .dice-e-out b { font-size: 2.3rem; }
+.dice-terms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; align-items: center; }
+.dice-term { display: inline-flex; flex-wrap: wrap; gap: 4px; padding-right: 6px; }
+.dice-term + .dice-term { border-left: 1px solid var(--line); padding-left: 6px; }
+.dice-go-n { width: 100%; }
+.die { min-width: 26px; height: 26px; padding: 0 4px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center;
+  font: 700 .95rem var(--disp); background: #efe6d2; color: #2b2418; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18); }
+.dice-e.latest .die { min-width: 34px; height: 34px; font-size: 1.15rem; }
+.die.d20, .die.d100 { border-radius: 9px; }
+.die.dF { font-size: 1.2rem; }
+.die.hit { background: #bfe3c8; color: #1f4a2c; }
+.die.miss { background: #f1c2c2; color: #6b1f1f; }
+.die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18), 0 0 0 2px var(--accent); }
+.die.extra { opacity: .9; }
+.die.dropped { opacity: .4; text-decoration: line-through; }
+.die.rolling { animation: dice-tumble .14s linear infinite; }
+@keyframes dice-tumble { 0% { transform: rotate(0); } 50% { transform: rotate(14deg) scale(.92); } 100% { transform: rotate(0); } }
+.dice-foot { position: relative; padding: 10px 14px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+.dice-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.dice-chip { margin: 0; padding: 5px 6px; min-width: 36px; font: 700 .95rem var(--disp); }
+.dice-row { display: flex; gap: 6px; align-items: stretch; }
+.dice-input { flex: 1; min-width: 0; font-family: var(--mono); }
+.dice-input.bad { border-color: var(--bad, #d05a4a); }
+.dice-q { margin: 0; width: 40px; padding: 0; border-radius: 50%; font-weight: 700; }
+.dice-q.on { background: var(--accent); color: var(--on-accent); }
+.dice-go { margin: 0; }
+.dice-err { color: var(--bad, #d05a4a); min-height: 0; margin-top: 4px; }
+.dice-err:empty { display: none; }
+.dice-who { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.dice-vis { width: auto; padding: 3px 6px; font-size: .85rem; }
+.dice-vis[hidden], .dice-vis-fixed[hidden] { display: none; }
+.dice-help { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); max-height: calc(100vh - var(--topbar-h, 56px) - 190px); overflow-y: auto; z-index: 2; padding: 10px 12px;
+  background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 14px 30px -10px rgb(0 0 0 / .7); }
+.dice-help[hidden] { display: none; }
+.dice-help-h { display: flex; justify-content: space-between; align-items: center; }
+.dice-help h3 { margin: 0 0 6px; font: 700 1rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
+.dice-help table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.dice-help td { padding: 4px 8px 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.dice-help td.w { color: var(--accent); white-space: nowrap; }
+.dice-ex { padding: 1px 6px; margin: 0; white-space: nowrap; border-radius: 4px; background: var(--bg); text-decoration: none; }
+.dice-help p { margin: 8px 0 0; }
+@media (prefers-reduced-motion: reduce) { .die.rolling { animation: none; } }
+@media print { .dice-fab, .dice-panel { display: none; } }
 /* Connection web and family tree (static/web-view.js): a roomy dialog with the picture on the left and the selected entry's connections beside it */
 dialog.kit-dialog.web-dialog { width: min(1180px, 96vw); height: min(86vh, 820px); max-height: 96vh; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 dialog.kit-dialog.web-dialog[open] { display: flex; }
@@ -1868,3 +1956,25 @@ dialog.kit-dialog.web-dialog[open] { display: flex; }
 .web-fam.partner { stroke: #be185d; stroke-width: 4; } .web-fam.sibling { stroke-dasharray: 5 4; }
 .web-node:focus-visible circle, .web-person:focus-visible rect { outline: none; stroke: var(--text); stroke-width: 4; }
 @media (max-width: 760px) { .web-body { grid-template-columns: 1fr; grid-template-rows: 1fr 150px; } }
+
+/* Edit history (static/history-view.js): versions down the left, what the one picked changed on the right */
+dialog.kit-dialog.history-dialog { width: min(1100px, 96vw); height: min(84vh, 800px); max-height: 96vh; padding: 12px 14px; flex-direction: column; gap: 6px; }
+dialog.kit-dialog.history-dialog[open] { display: flex; }
+.hist-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 230px 1fr; gap: 10px; }
+.hist-side { min-height: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.hist-list { list-style: none; margin: 0; padding: 4px; display: flex; flex-direction: column; gap: 3px; }
+.hist-ver { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; background: none; font: inherit; color: var(--text); cursor: pointer; }
+.hist-ver:hover, .hist-ver.on { background: var(--stock); border-color: var(--accent); }
+.hist-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.hist-bar { align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.hist-head { margin: 0; font-weight: 600; }
+.hist-field { border-top: 1px solid var(--line); padding-top: 4px; }
+.hist-field h5 { margin: 0 0 4px; font: 700 .8rem var(--disp); text-transform: uppercase; letter-spacing: .08em; color: var(--label); }
+.hist-line { margin: 0 0 4px; white-space: pre-wrap; }
+.hist-line.same { color: var(--dim); }
+.hist-line.add { background: color-mix(in srgb, #16a34a 14%, transparent); border-left: 3px solid #16a34a; padding-left: 6px; }
+.hist-line.del { background: color-mix(in srgb, #dc2626 12%, transparent); border-left: 3px solid #dc2626; padding-left: 6px; }
+.hist-line.change { border-left: 3px solid var(--accent); padding-left: 6px; }
+.hist-line ins { text-decoration: none; background: color-mix(in srgb, #16a34a 28%, transparent); border-radius: 2px; }
+.hist-line del { background: color-mix(in srgb, #dc2626 24%, transparent); border-radius: 2px; }
+@media (max-width: 760px) { .hist-body { grid-template-columns: 1fr; grid-template-rows: 150px 1fr; } }

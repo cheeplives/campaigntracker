@@ -286,7 +286,7 @@
     }
 
     /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
-    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
+    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
     function viewSettings(sub) {
       if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
       const at = SETTINGS_TABS.some(([k]) => k === sub) ? sub : 'campaign';
@@ -550,9 +550,35 @@
           if (typed.trim().toUpperCase() !== 'DELETE') { toast('Not deleted: type DELETE to confirm', true); return; }
           try { await post('campaign_delete', { confirm: 'DELETE' }, S.camp.id); S.camp = null; location.hash = '#/'; } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first')));
+      // Dice: who sees whose rolls, and how many the roll log keeps (api/dice.php reads them; static/dice-tab.js rolls).
+      const dice = () => {
+        const d = st.dice || {};
+        const form = el('form', { class: 'card dice-settings' }, el('h2', {}, 'Dice'),
+          el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the 🎲 button at the bottom right of every page. Rolls go in a log the whole table shares.'),
+          el('div', { class: 'grid2' },
+            field('Who sees a player\'s roll', select([['all', 'Everyone'], ['gm', 'The player and the GMs'], ['blind', 'Only the GMs (the player sees they rolled, not the result)']],
+              d.player_vis || 'all', { name: 'player_vis' }), 'Where a player\'s roller starts. They can change it for each roll unless you lock it'),
+            field('Roll log keeps', select([100, 200, 500, 1000, 2000, 5000].map(n => [n, `The last ${n} rolls`]), d.keep || 500, { name: 'keep' }),
+              'Older rolls are deleted as new ones come in')),
+          field('Players can\'t change who sees their rolls', el('input', { type: 'checkbox', name: 'lock_vis', checked: !!d.lock_vis })),
+          field('GM rolls start hidden from players', el('input', { type: 'checkbox', name: 'gm_hidden', checked: !!d.gm_hidden }), 'A GM can still show any roll to everyone'),
+          el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save dice settings'),
+            btn('Clear the roll log…', async () => {
+              if (!await confirmDialog('Delete every roll in this campaign\'s roll log, for everyone? This can\'t be undone.', { ok: 'Clear the log', danger: true })) return;
+              try { await post('dice_clear', {}, S.camp.id); toast('The roll log is empty'); } catch (err) { toast(err.message, true); }
+            }, 'small danger', 'Delete every roll in the log, for everyone')));
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          const v = formData(form);
+          const s = { ...settings(), dice: { player_vis: v.player_vis, keep: Number(v.keep), lock_vis: !!v.lock_vis, gm_hidden: !!v.gm_hidden } };
+          try { await post('campaign_update', { settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
+          catch (err) { toast(err.message, true); }
+        });
+        return form;
+      };
       const tabs = el('nav', { class: 'settings-tabs', 'aria-label': 'Settings' }, SETTINGS_TABS.map(([k, label]) =>
         el('a', { href: `#/c/${S.camp.id}/settings${k === 'campaign' ? '' : '/' + k}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
-      const card = { campaign: () => general, calendar: () => calForm, weather: tuningCard, tools: () => danger }[at]();
+      const card = { campaign: () => general, calendar: () => calForm, dice, weather: tuningCard, tools: () => danger }[at]();
       card.prepend(tabs);
       mount(...campaignHeader('settings'), card);
     }

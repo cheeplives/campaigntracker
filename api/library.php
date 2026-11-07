@@ -69,6 +69,7 @@ function library_action(string $action): void {
         $body = ($isGm ? $body : rich_keep_secrets($old['body'] ?? null, $body)) ?: null;
         $uid = me()['id'];
         if ($old) {
+            history_before($cid, 'tome', $id);
             $st = db()->prepare('UPDATE library_tomes SET kind=?, title=?, description=?, body=?, version=version+1, updated_by=? WHERE id=? AND version=?');
             $st->execute([$kind, $title, $desc, $body, $uid, $id, int_in(p('version'), 1)]);
             if (!$st->rowCount()) {
@@ -80,6 +81,7 @@ function library_action(string $action): void {
                 ->execute([$cid, $kind, $title, $desc, $body, $uid, $uid]);
             $id = (int)db()->lastInsertId();
         }
+        history_record($cid, 'tome', $id);
         out(['ok' => true, 'tome' => tome_out(tomes($cid, $id)[0], true, $isGm)]);
 
     case 'tome_delete':
@@ -88,6 +90,7 @@ function library_action(string $action): void {
         $t = tome_row($cid, int_in(p('id'), 1));
         if ($role !== 'gm' && (int)$t['created_by'] !== me()['id']) fail('Only a GM can delete a tome someone else added', 403);
         db()->prepare('DELETE FROM library_tomes WHERE id=?')->execute([$t['id']]);
+        history_purge($cid, 'tome', (int)$t['id']);
         attachments_purge($cid, 'library', (int)$t['id']);   // files have no foreign key to cascade
         out(['ok' => true]);
     }

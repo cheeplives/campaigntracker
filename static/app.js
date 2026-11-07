@@ -74,7 +74,7 @@
   const S = { user: null, pending: null, csrf: '', camp: null, role: null, regions: [], holidays: [], members: [], tags: [], holdingTags: [], reminders: [],
     encReady: false, encyclopedia: [], encIgnored: [], encTags: [], libReady: false, libUploads: null, mapsReady: false };
   /** Build number, shown in the footer so a bug report names the build. Bump on each release. */
-  const APP_VERSION = '27';
+  const APP_VERSION = '28';
   async function api(action, { query = {}, body = null } = {}) {
     const qs = new URLSearchParams({ a: action, ...query }).toString();
     const opt = { method: body ? 'POST' : 'GET', credentials: PANEL ? 'omit' : 'same-origin', headers: { Accept: 'application/json' } };
@@ -138,6 +138,7 @@
     const seq = writeSeq;
     try {
       const r = await api('changed', { query: { cid } });
+      diceNotice(r.last_roll);
       // a save from this page since the check started: its own stamp, not someone else's change
       if (seq === writeSeq && S.camp?.id === cid && r.changed !== S.camp.changed) { showChangeBanner(r.changed); checkReminders(); }
     } catch { /* offline for a moment: try again next time */ } finally { checking = false; }
@@ -586,20 +587,24 @@
   // ------------------------------------------------------------ top nav
   function renderNav() {
     const n = $('#topnav');
+    // Every control in the top bar is the same pill; the page you are on has its pill lit
+    const at = (location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]) || '';
+    const navPill = (href, here, tip, text) => el('a', { href, class: 'nav-pill', 'data-tip': tip, 'aria-current': here ? 'page' : null }, text);
     n.replaceChildren(...clean([
-      S.user ? el('a', { href: '#/', 'data-tip': 'All the campaigns you play in or run' }, 'Campaigns') : null,
-      S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
+      S.user ? navPill('#/', ['', 'c', 'new'].includes(at), 'All the campaigns you play in or run', 'Campaigns') : null,
+      S.user && typeof Sheets !== 'undefined' ? navPill('#/templates', at === 'templates', 'Character sheet templates for every game: use one, fork one, or make your own', 'Sheet templates') : null,
       schemePicker(),
       themeToggle(),
       S.user && reports ? reports.button() : null,
       // Your name opens a menu of what is yours: the account page, the admin's Site Admin, and signing out
-      S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
+      S.user ? KIT.menu({ label: [el('span', { class: 'nav-pill-name' }, S.user.name || S.user.email), el('span', { class: 'nav-caret', 'aria-hidden': 'true' }, '▾')],
+        ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: `account-menu${['account', 'admin'].includes(at) ? ' is-here' : ''}`,
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
           S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts, and see game requests and problem reports (site admins only)' }, 'Site Admin') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
-        : S.pending ? btn('Sign out', signOut, 'link') : null,
+        : S.pending ? btn('Sign out', signOut, 'nav-pill') : null,
     ]));
   }
 
@@ -612,7 +617,7 @@
       document.documentElement.dataset.theme = t;
       try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: just this page */ }
       b.textContent = t === 'light' ? '☀' : '🌙';
-    }, 'theme-toggle', 'Toggle light / dark mode');
+    }, 'theme-toggle nav-pill', 'Toggle light / dark mode');
     b.setAttribute('aria-label', 'Toggle light / dark mode');
     return b;
   }
@@ -642,7 +647,7 @@
   function schemePicker() {
     const cur = schemeOf(currentScheme());
     const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
-    const button = el('button', { type: 'button', class: 'scheme-btn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
+    const button = el('button', { type: 'button', class: 'scheme-btn nav-pill', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
       el('span', { class: 'scheme-dot', style: { background: cur.dot } }), el('span', { class: 'scheme-name' }, cur.name));
     let wrap = null;
     // pointerdown, not click: iPad Safari sends no click for a tap on plain page background
@@ -1773,7 +1778,8 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
+      el('div', { class: 'row' }, save, btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
+        btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
         'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
   }
 
@@ -4193,6 +4199,7 @@
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
           scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
+          isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
           canDelete ? btn('Delete', async () => {
             if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
             try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
@@ -6433,6 +6440,8 @@
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
+  // The die roller (static/dice-tab.js): not in panel.html, which has no 🎲 button.
+  const { diceSync, diceNotice } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {} };
   // The Report (!) button and Site Admin's Reports tab (static/report.js; the At the Table panel doesn't load it)
   reports = typeof Report !== 'undefined' ? Report.make({ S, api, post, btn, el, toast, confirmDialog, promptDialog, hideTip, version: APP_VERSION }) : null;
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
@@ -6443,7 +6452,7 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)));
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => diceSync()));
   }
   async function routeTo() {
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');

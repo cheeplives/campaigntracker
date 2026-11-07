@@ -403,7 +403,8 @@
     /** An entry's tools, on its page and in its editor alike: Copy as handout and the scan for its name. */
     function entryTools(e, ctx) {
       return [btn('📋 Copy as handout', () => copyHandout(e, ctx), 'small', 'Copy this entry, formatted, to paste into a Roll20 handout, an Owlbear Rodeo note or a Foundry journal. GM notes and GM-only paragraphs are left out. In the editor it copies the entry as last saved'),
-        scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`)];
+        scanOneBtn('entry', s => s.kind.startsWith('entry') && s.id === e.id, `"${e.name}"`),
+        isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'entry', ref: e.id, title: e.name, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this entry, what each save changed, and Restore. GMs only') : null];
     }
     /** The editor, with everything the entry's page offers: its tools, its character card and its connections. */
     function entryEditor(e, ctx) {

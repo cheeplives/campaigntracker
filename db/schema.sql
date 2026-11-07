@@ -452,6 +452,23 @@ CREATE TABLE IF NOT EXISTS encyclopedia_relations (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Edit history (see db/migrations/039_content_versions.sql and api/history.php): the earlier versions of an Encyclopedia
+-- entry, a Library tome, a session and a day's notes, each the item's text fields as JSON. kind is entry, tome, session
+-- or day; ref_id the item's id (the day's absolute day for a day). baseline: what the item held before history began.
+CREATE TABLE IF NOT EXISTS content_versions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(12) NOT NULL,
+  ref_id BIGINT NOT NULL,
+  data MEDIUMTEXT NOT NULL,
+  saved_by BIGINT UNSIGNED NULL,
+  saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  baseline TINYINT(1) NOT NULL DEFAULT 0,
+  KEY ix_version_item (campaign_id, kind, ref_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (saved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Pictures and files attached to Encyclopedia entries and the like (see db/migrations/013_attachments.sql).
 -- One row per file. is_secret: GMs only; a file on a secret entry is never sent to players either.
 CREATE TABLE IF NOT EXISTS attachments (
@@ -738,6 +755,27 @@ CREATE TABLE IF NOT EXISTS clock_ticks (
   KEY ix_tick_clock (clock_id, id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (clock_id) REFERENCES clocks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The die roller (038).
+-- A roll: what was typed (expr, its # label included) and the 128-bit seed the server picked with random_int, from which
+-- every browser works out the same dice (static/dice.js, engine version `engine`). visibility: all (everyone), gm (the
+-- roller and the GMs) or blind (the GMs; the roller sees that they rolled, not what). abs_shift: the campaign clock's
+-- shift then. The log keeps the campaign's newest rolls only (Settings → Dice); older ones are deleted as new ones come.
+CREATE TABLE IF NOT EXISTS dice_rolls (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  by_gm TINYINT(1) NOT NULL DEFAULT 0,
+  expr VARCHAR(200) NOT NULL,
+  seed CHAR(32) NOT NULL,
+  engine TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  visibility VARCHAR(8) NOT NULL DEFAULT 'all',
+  abs_shift BIGINT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_dice_campaign (campaign_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
