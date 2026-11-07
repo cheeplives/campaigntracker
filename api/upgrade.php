@@ -97,6 +97,8 @@ function upgrade_steps(): array {
             'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
         ['035_route_terrain.sql', fn(PDO $p) => db_has_table($p, 'map_routes') && !db_has_column($p, 'map_routes', 'terrain_json'),
             'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
+        ['036_user_profiles.sql', fn(PDO $p) => !db_has_table($p, 'user_profiles'),
+            'Everyone can now set the name and pronouns Chronicle calls them by on their Account page.'],
         ['038_dice_rolls.sql', fn(PDO $p) => !db_has_table($p, 'dice_rolls'),
             'Added the die roller: the 🎲 button on every campaign page, with a roll log the table shares.'],
         ['039_content_versions.sql', fn(PDO $p) => !db_has_table($p, 'content_versions'),
@@ -157,7 +159,7 @@ function upgrade_database(PDO $pdo, string $root): array {
         if ($oldUsers) {
             run_sql_file($pdo, "$root/db/migrations/001_oauth_signin.sql");
             $done[] = 'Upgraded to Google/GitHub sign-in. Existing accounts kept their campaigns. '
-                    . 'Sign in, then enter each player\'s email under Users so their first sign-in takes over their old account.';
+                    . 'Sign in, then enter each player\'s email under Site Admin so their first sign-in takes over their old account.';
         } elseif (array_filter(schema_tables($root), fn($t) => !db_has_table($pdo, $t))) {
             run_sql_file($pdo, "$root/db/schema.sql");
             $done[] = $hasUsers ? 'Added the new tables.' : 'Tables are ready.';
