@@ -27,7 +27,24 @@ function dice_settings(int $cid): array {
     $vis = in_array($d['player_vis'] ?? 'all', DICE_VIS, true) ? $d['player_vis'] ?? 'all' : 'all';
     $keep = is_numeric($d['keep'] ?? null) ? (int)$d['keep'] : DICE_KEEP_DEFAULT;
     return ['player_vis' => $vis, 'lock_vis' => !empty($d['lock_vis']), 'gm_hidden' => !empty($d['gm_hidden']),
-        'keep' => max(DICE_KEEP_MIN, min(DICE_KEEP_MAX, $keep))];
+        'keep' => max(DICE_KEEP_MIN, min(DICE_KEEP_MAX, $keep)), 'system' => dice_system($d['system'] ?? null)];
+}
+/** The campaign's dice system (static/dice-systems.js reads it): its id, its numbers, the game it started from, its
+ * renamed numbers and, for a result table, the table. Only shapes and sizes are checked here; the browser puts each
+ * number in range. Null for free dice only. */
+function dice_system($s): ?array {
+    if (!is_array($s) || !is_string($s['id'] ?? null) || !preg_match('/^[a-z0-9]{1,20}$/', $s['id'])) return null;
+    $flat = function ($m): array {
+        $o = [];
+        foreach (is_array($m) ? array_slice($m, 0, 30, true) : [] as $k => $v) {
+            if (!is_string($k) || !preg_match('/^[a-z0-9]{1,20}$/i', $k) || !(is_scalar($v))) continue;
+            $o[$k] = is_string($v) ? mb_substr($v, 0, 40) : $v;
+        }
+        return $o;
+    };
+    $game = is_string($s['game'] ?? null) && preg_match('/^[a-z0-9]{1,20}$/', $s['game']) ? $s['game'] : null;
+    return ['id' => $s['id'], 'params' => (object)$flat($s['params'] ?? []), 'labels' => (object)$flat($s['labels'] ?? []),
+        'game' => $game, 'table' => is_string($s['table'] ?? null) ? mb_substr($s['table'], 0, 4000) : ''];
 }
 /** SQL condition on dice_rolls r for the rolls this member sees (a GM: all of them). */
 function dice_seen_sql(bool $isGm): string {

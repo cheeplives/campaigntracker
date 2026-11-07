@@ -843,6 +843,30 @@ try {
             }
             if ($ids) $prefs['starred'] = $ids; else unset($prefs['starred']);
         }
+        // dice_saved: { cid, list: [{n: name, e: roll}] }, the rolls they saved on the die roller (static/dice-tab.js) in
+        // one campaign they are in. Kept by campaign under prefs.dice_saved; an empty list forgets that campaign's.
+        if (array_key_exists('dice_saved', body())) {
+            $ds = p('dice_saved');
+            if (!is_array($ds) || !isset($ds['cid']) || !is_array($ds['list'] ?? null)) fail('Saved rolls must be a campaign and a list');
+            $dcid = int_in($ds['cid'], 1);
+            if (!$u['is_admin']) {
+                $st = db()->prepare('SELECT 1 FROM campaign_members WHERE user_id=? AND campaign_id=?');
+                $st->execute([$u['id'], $dcid]);
+                if (!$st->fetchColumn()) fail('Campaign not found', 404);
+            }
+            if (count($ds['list']) > 100) fail('That is a lot of saved rolls: 100 is the most');
+            $list = [];
+            foreach ($ds['list'] as $r) {
+                $n = trim((string)(is_array($r) ? $r['n'] ?? '' : ''));
+                $e = trim((string)(is_array($r) ? $r['e'] ?? '' : ''));
+                if ($n === '' || $e === '') continue;
+                if (mb_strlen($n) > 60 || mb_strlen($e) > 200 || preg_match('/[\x00-\x1f\x7f]/u', $n . $e)) fail('A saved roll is a short name and one line of dice');
+                $list[] = ['n' => $n, 'e' => $e];
+            }
+            $all = is_array($prefs['dice_saved'] ?? null) ? $prefs['dice_saved'] : [];
+            if ($list) $all[(string)$dcid] = $list; else unset($all[(string)$dcid]);
+            if ($all) $prefs['dice_saved'] = $all; else unset($prefs['dice_saved']);
+        }
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);

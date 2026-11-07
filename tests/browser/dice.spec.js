@@ -191,3 +191,129 @@ test("the server refuses what isn't a roll, an engine it doesn't know, and anyon
   expect((await api(op, "dice_rolls", undefined, cid)).status).toBe(403);
   expect((await api(op, "dice_roll", { expr: "d6", engine: 1 }, cid)).status).toBe(403);
 });
+
+test("a dice system: the GM starts from a game in Settings, tries a roll, and players roll it with odds and saved rolls", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice system");
+  const perrors = watchErrors(pp);
+  await page.goto(`index.html#/c/${cid}/settings/dice`);
+  const form = page.locator(".dice-settings");
+  await expect(form.locator(".dice-set-body")).toBeHidden();   // free dice only, to start with
+  await form.locator("#dice-game").selectOption("pf2");
+  await expect(form.locator("#dice-system")).toHaveValue("d20");
+  await expect(form.locator(".dice-set-params")).toContainText("DC");                       // the game's own name for the target
+  await expect(form.locator("#set-d20-margin")).toHaveValue("10");
+  await expect(form.locator(".dice-odds-key")).toContainText("Success");
+  await form.getByRole("button", { name: "🎲 Try a roll" }).click();
+  await expect(form.locator(".dice-try-res small.tier")).toHaveText(/success|failure/i);
+  await expect(form.locator(".dice-try-out .die")).toHaveCount(1);
+  await form.locator("#set-d20-tn").fill("12");
+  await form.locator("#set-d20-tn").dispatchEvent("change");
+  await form.getByRole("button", { name: "Save dice settings" }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+  const sys = (await api(pp, "dice_rolls", undefined, cid)).json.settings.system;
+  expect(sys).toMatchObject({ id: "d20", game: "pf2", labels: { tn: "DC" } });
+  expect(sys.params).toMatchObject({ tn: 12, margin: 10 });
+
+  // the player's roller has a game roll, with the game's numbers, odds, and a Roll button
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await pp.locator(".dice-fab").click();
+  await expect(pp.locator(".dice-sub")).toHaveText("Pathfinder 2nd edition");
+  await expect(pp.getByRole("tab", { name: "Game roll" })).toHaveAttribute("aria-selected", "true");
+  await expect(pp.getByRole("spinbutton", { name: "DC" })).toHaveValue("12");
+  await pp.getByRole("button", { name: "Modifier up one" }).click();
+  await pp.getByRole("button", { name: "Modifier up one" }).click();
+  await expect(pp.locator(".dice-sys-n")).toHaveText("1d20+2");
+  await expect(pp.locator(".dice-sys .dice-odds-bar span").first()).toBeVisible();
+  await pp.getByRole("textbox", { name: "What the roll is for" }).fill("Athletics");
+  await pp.locator(".dice-sys-go").click();
+  const latest = pp.locator(".dice-e.latest");
+  await expect(latest.locator(".dice-e-who")).toContainText("Athletics");
+  await expect(latest.locator(".dice-e-out small.tier")).toHaveText(/Critical success|Success|Failure|Critical failure/);
+  const roll = (await api(pp, "dice_rolls", undefined, cid)).json.rolls.at(-1);
+  expect(roll.expr).toMatch(/^1d20\+2 @d20 mod=2 tn=12 .*margin=10.* # Athletics$/);
+  const total = Dice.roll(roll.expr, roll.seed).results[0].total;
+  await expect(latest.locator(".dice-e-out b")).toHaveText(String(total));
+  await expect(latest.locator(".dice-e-meta")).toContainText(total >= 12 ? "beat 12 by" : "missed 12 by");
+  // the GM's log reads the same roll the same way
+  await page.goto(`index.html#/c/${cid}/table`);
+  await page.locator(".dice-fab").click();
+  await expect(page.locator(".dice-e.latest .dice-e-out small.tier")).toHaveText(await latest.locator(".dice-e-out small.tier").textContent());
+
+  // saving a roll: it keeps its numbers, and comes back after a reload
+  await pp.getByRole("button", { name: "Modifier down one" }).click();
+  pp.once("dialog", () => {});
+  await pp.getByRole("button", { name: "☆ Save" }).click();
+  const dlg = pp.getByRole("dialog");
+  await dlg.getByRole("textbox").fill("Climb");
+  await dlg.getByRole("button", { name: "Save" }).click();
+  await expect(pp.locator("#toast")).toContainText('Saved "Climb"');
+  await pp.reload();
+  await expect(pp.locator(".dice-panel")).toBeVisible();
+  await pp.getByRole("button", { name: "Modifier up one" }).click();
+  await expect(pp.locator(".dice-sys-n")).toHaveText("1d20+2");
+  await pp.getByRole("combobox", { name: "Saved rolls" }).selectOption({ label: "Climb" });
+  await expect(pp.locator(".dice-sys-n")).toHaveText("1d20+1");
+  await expect(pp.getByRole("textbox", { name: "What the roll is for" })).toHaveValue("Athletics");
+  // a free roll can be saved too, and loads into the free box
+  await pp.getByRole("tab", { name: "Free roll" }).click();
+  await pp.getByRole("textbox", { name: "Free roll" }).fill("8d6 # fireball");
+  await pp.getByRole("button", { name: "☆ Save" }).click();
+  await expect(dlg.getByRole("textbox")).toHaveValue("fireball");
+  await dlg.getByRole("button", { name: "Save" }).click();
+  await expect(pp.locator("#toast")).toContainText('Saved "fireball"');
+  await pp.getByRole("tab", { name: "Game roll" }).click();
+  await pp.getByRole("combobox", { name: "Saved rolls" }).selectOption({ label: "fireball" });
+  await expect(pp.getByRole("tab", { name: "Free roll" })).toHaveAttribute("aria-selected", "true");
+  await expect(pp.getByRole("textbox", { name: "Free roll" })).toHaveValue("8d6 # fireball");
+  await pp.getByRole("button", { name: "Forget this saved roll" }).click();
+  await expect(pp.locator("#toast")).toContainText('Forgot "fireball"');
+  await expect(pp.getByRole("combobox", { name: "Saved rolls" }).locator("option")).toHaveCount(2);
+  const me = await pp.evaluate(() => fetch("api/auth/me.php").then(r => r.json()));
+  expect(me.prefs.dice_saved[cid]).toEqual([{ n: "Climb", e: expect.stringMatching(/^1d20\+1 @d20 mod=1 .* # Athletics$/) }]);
+
+  // saved rolls are kept only for a campaign the person is in, and only so many, so long
+  expect((await api(pp, "prefs_save", { dice_saved: { cid: cid + 999, list: [{ n: "x", e: "d6" }] } })).status).toBe(404);
+  expect((await api(pp, "prefs_save", { dice_saved: { cid, list: [{ n: "x".repeat(61), e: "d6" }] } })).status).toBe(400);
+  expect((await api(pp, "prefs_save", { dice_saved: { cid, list: Array.from({ length: 101 }, (_, k) => ({ n: `r${k}`, e: "d6" })) } })).status).toBe(400);
+
+  // back to free dice only: the roller has no game roll (the GM closes their roller first: on a phone it covers the form)
+  await page.getByRole("button", { name: "Close the dice roller" }).click();
+  await page.goto(`index.html#/c/${cid}/settings/dice`);
+  await form.locator("#dice-game").selectOption("");
+  await form.getByRole("button", { name: "Save dice settings" }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+  expect((await api(pp, "dice_rolls", undefined, cid)).json.settings.system).toBeNull();
+  await pp.reload();
+  await expect(pp.locator(".dice-panel")).toBeVisible();
+  await expect(pp.locator(".dice-modes")).toBeHidden();
+  await expect(pp.getByRole("textbox", { name: "Free roll" })).toBeVisible();
+  // the old game roll still reads as its system said
+  await expect(pp.locator(".dice-e").filter({ hasText: "Athletics" }).locator("small.tier")).toBeVisible();
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});
+
+test("the roller pins beside the page or floats over it, and remembers which on this device", async ({ page, browser }) => {
+  test.skip(test.info().project.name !== "chromium", "one desktop size is enough for the switch");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice pin");
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const pin = page.getByRole("button", { name: "Pin the roller beside the page" });
+  const appMargin = () => page.locator("#app").evaluate(n => getComputedStyle(n).marginRight);
+  await expect(pin).toHaveAttribute("aria-pressed", "true");   // a mouse and keyboard start pinned
+  expect(await appMargin()).toBe("380px");
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  expect(await appMargin()).toBe("0px");
+  const box = await page.locator(".dice-panel").boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(1280 - 10);    // a card off the edge, over the page
+  await page.reload();
+  await expect(page.locator(".dice-panel")).toBeVisible();
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
+  await pin.click();
+  expect(await appMargin()).toBe("380px");
+  expectNoErrors(errors);
+});
