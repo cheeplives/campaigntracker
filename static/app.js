@@ -696,7 +696,7 @@
 
   const UNIT_OPTIONS = [['', 'None (each campaign\'s own)'], ['imperial', 'Imperial (°F, miles, inches, mph)'], ['metric', 'Metric (°C, km, cm, km/h)']];
   async function viewAccount() {
-    // The name and pronouns the app calls them by, in place of the name from Google or GitHub (user_profiles, migration 035)
+    // The name and pronouns the app calls them by, in place of the name from Google or GitHub (user_profiles, migration 036)
     const nameIn = el('input', { name: 'name', value: S.user.custom_name || '', maxlength: 150, placeholder: S.user.provider_name || 'Your name', autocomplete: 'nickname', 'aria-label': 'Name' });
     const pronIn = el('input', { name: 'pronouns', value: S.user.pronouns || '', maxlength: 40, placeholder: 'e.g. she/her', list: 'pronoun-ideas', 'aria-label': 'Pronouns' });
     const ideas = el('datalist', { id: 'pronoun-ideas' }, ['she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'xe/xem', 'ze/hir', 'any pronouns'].map(v => el('option', { value: v })));

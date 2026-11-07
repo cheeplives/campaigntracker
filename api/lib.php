@@ -322,9 +322,9 @@ function current_user(): ?array {
 }
 
 /**
- * A users row with the name and pronouns they set on their Account page (user_profiles, migration 035): display_name
+ * A users row with the name and pronouns they set on their Account page (user_profiles, migration 036): display_name
  * becomes the name Chronicle calls them by, provider_name keeps the one from Google or GitHub, and custom_name and
- * pronouns are what they typed (null when unset). Before migration 035 it is the row as it was.
+ * pronouns are what they typed (null when unset). Before migration 036 it is the row as it was.
  */
 function with_profile(array $row): array {
   $row['provider_name'] = (string) $row['display_name'];
@@ -340,7 +340,7 @@ function with_profile(array $row): array {
   return $row;
 }
 /** SQL for the name Chronicle calls the users row aliased $a: the one they set on their Account page, else their Google
- * or GitHub name. Needs migration 035 (the API refuses to run until it is). */
+ * or GitHub name. Needs migration 036 (the API refuses to run until it is). */
 function user_name_sql(string $a = 'u'): string {
   return "COALESCE((SELECT upn_$a.name FROM user_profiles upn_$a WHERE upn_$a.user_id = $a.id), $a.display_name)";
 }

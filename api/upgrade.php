@@ -95,7 +95,7 @@ function upgrade_steps(): array {
             'A character with no player can now travel with the party, and every character\'s Encyclopedia entry is tagged PC or NPC.'],
         ['034_party_out.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_out'),
             'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
-        ['035_user_profiles.sql', fn(PDO $p) => !db_has_table($p, 'user_profiles'),
+        ['036_user_profiles.sql', fn(PDO $p) => !db_has_table($p, 'user_profiles'),
             'Everyone can now set the name and pronouns Chronicle calls them by on their Account page.'],
     ];
 }
