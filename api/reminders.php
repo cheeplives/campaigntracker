@@ -30,7 +30,7 @@ function reminders_action(string $action): void {
         $isGm = role($cid) === 'gm';
         $uid = me()['id'];
         $now = (int)campaign_row($cid)['current_shift'];
-        $st = db()->prepare('SELECT r.id, r.due_shift, r.title, r.body, r.audience, r.created_by, ' . AUTHOR_SQL . ' AS author, u.display_name AS player,
+        $st = db()->prepare('SELECT r.id, r.due_shift, r.title, r.body, r.audience, r.created_by, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player,
                 (dm.user_id IS NOT NULL) AS dismissed
             FROM reminders r LEFT JOIN users u ON u.id=r.created_by LEFT JOIN campaign_members m ON m.campaign_id=r.campaign_id AND m.user_id=r.created_by
             LEFT JOIN reminder_dismissals dm ON dm.reminder_id=r.id AND dm.user_id=?

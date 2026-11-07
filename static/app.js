@@ -589,11 +589,11 @@
       S.user && typeof Sheets !== 'undefined' ? el('a', { href: '#/templates', 'data-tip': 'Character sheet templates for every game: use one, fork one, or make your own' }, 'Sheet templates') : null,
       schemePicker(),
       themeToggle(),
-      // Your name opens a menu of what is yours: the account page, the admin's Users, and signing out
+      // Your name opens a menu of what is yours: the account page, the admin's Site Admin, and signing out
       S.user ? KIT.menu({ label: [S.user.name || S.user.email, ' ▾'], ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: 'account-menu',
         tip: `Signed in as ${S.user.email}`, items: [
-          el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your units, your character names and the map scanner key' }, 'Account'),
-          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups and manage accounts (site admins only)' }, 'Users') : null,
+          el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
+          S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts and see game requests (site admins only)' }, 'Site Admin') : null,
           el('hr'),
           btn('Sign out', signOut, 'small')] })
         : S.pending ? btn('Sign out', signOut, 'link') : null,
@@ -696,9 +696,28 @@
 
   const UNIT_OPTIONS = [['', 'None (each campaign\'s own)'], ['imperial', 'Imperial (°F, miles, inches, mph)'], ['metric', 'Metric (°C, km, cm, km/h)']];
   async function viewAccount() {
-    const { campaigns } = await api('campaigns');
+    // The name and pronouns the app calls them by, in place of the name from Google or GitHub (user_profiles, migration 036)
+    const nameIn = el('input', { name: 'name', value: S.user.custom_name || '', maxlength: 150, placeholder: S.user.provider_name || 'Your name', autocomplete: 'nickname', 'aria-label': 'Name' });
+    const pronIn = el('input', { name: 'pronouns', value: S.user.pronouns || '', maxlength: 40, placeholder: 'e.g. she/her', list: 'pronoun-ideas', 'aria-label': 'Pronouns' });
+    const ideas = el('datalist', { id: 'pronoun-ideas' }, ['she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'xe/xem', 'ze/hir', 'any pronouns'].map(v => el('option', { value: v })));
+    const profile = el('form', { class: 'card narrow' }, el('h2', {}, 'Your name'),
+      el('p', { class: 'muted' }, `Signed in as ${S.user.email}.${S.user.provider_name ? ` Google or GitHub calls you ${S.user.provider_name}.` : ''} Set a name here and Chronicle calls you that instead, everywhere in the app.`),
+      field('Name', nameIn, 'Leave it blank to use the name from Google or GitHub. A character name you set in a campaign still signs your notes there.'),
+      field('Pronouns', pronIn, 'Shown beside your name on Members and Site Admin. Optional.'), ideas,
+      el('button', { class: 'primary' }, 'Save name'));
+    profile.addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        const r = await post('profile_save', { name: nameIn.value, pronouns: pronIn.value });
+        Object.assign(S.user, { name: r.name, custom_name: r.custom_name, pronouns: r.pronouns });
+        nameIn.value = r.custom_name || ''; pronIn.value = r.pronouns || '';
+        const me = S.members?.find(x => Number(x.id) === S.user.id);
+        if (me) Object.assign(me, { display_name: r.name, pronouns: r.pronouns });
+        renderNav();
+        toast('Name saved');
+      } catch (err) { toast(err.message, true); }
+    });
     const prefs = el('form', { class: 'card narrow' }, el('h2', {}, 'Preferences'),
-      el('p', { class: 'muted' }, `Signed in as ${S.user.email}. Your name comes from your Google or GitHub account.`),
       field('Units', select(UNIT_OPTIONS, myUnits(), { name: 'units' }),
         'Every temperature, distance, depth and speed the app works out. Only changes what you see. With None you see each campaign in the units its GM picked.'),
       el('button', { class: 'primary' }, 'Save'));
@@ -707,42 +726,6 @@
       const v = formData(prefs).units;
       try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
-    // The campaigns they belong to (not every campaign an admin can open), each with their character there. A box saves when you leave it.
-    const mine = byStarThenName(campaigns.filter(c => c.member));
-    const list = el('div', { class: 'card narrow' }, el('h2', {}, 'Your campaigns'),
-      mine.length ? el('ul', { class: 'camplist account-camps' }, mine.map(c => {
-        const name = el('input', { value: c.character_name || '', maxlength: 150, placeholder: 'Your own name', 'aria-label': `Your character in ${c.name}` });
-        name.addEventListener('change', async () => {
-          try {
-            await post('member_character', { character_name: name.value }, c.id);
-            c.character_name = name.value.trim();
-            const m = S.camp?.id === c.id && S.members.find(x => Number(x.id) === S.user.id);
-            if (m) m.character_name = c.character_name;
-            toast('Saved');
-          } catch (err) { toast(err.message, true); }
-        });
-        // with character sheets, the active character's name is the one shown; picked from their own characters there
-        const pick = el('select', { 'aria-label': `Active character in ${c.name}` }, el('option', { value: '' }, 'None: use the name above'));
-        const pickField = field('Active character', pick, null, 'One of your character sheets here. Its name is shown for you, and renaming it renames it everywhere');
-        pickField.hidden = true;
-        if (typeof Sheets !== 'undefined') api('characters', { query: { cid: c.id } }).then(({ characters }) => {
-          const own = characters.filter(x => x.owner?.id === S.user.id && !x.secret);
-          if (!own.length) return;
-          pick.append(...own.map(x => el('option', { value: x.id, selected: Number(c.active_character_id) === x.id }, x.name)));
-          pickField.hidden = false;
-          pick.addEventListener('change', async () => {
-            try {
-              await post('member_active_character', { character_id: pick.value ? Number(pick.value) : null }, c.id);
-              const x = own.find(o => String(o.id) === pick.value);
-              c.active_character_id = x ? x.id : null;
-              if (x) { name.value = c.character_name = x.name; }
-              toast('Saved');
-            } catch (err) { toast(err.message, true); }
-          });
-        }).catch(() => { /* no sheets on this server, or not reachable: the name box stays */ });
-        return el('li', {}, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
-          field('Character', name, null, 'Events and notes you add in this campaign are signed with this name instead of your own'), pickField);
-      })) : el('p', { class: 'muted' }, 'You aren\'t in any campaigns yet.'));
     // The GM's own Anthropic API key, for Scan for names on a map. Kept in this browser only: never sent to this site's
     // server, only from the browser straight to Anthropic when they scan.
     let scanner = null;
@@ -770,20 +753,35 @@
       });
       show();
     }
-    mount(prefs, scanner, list);
+    mount(profile, prefs, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
-  async function viewAdmin() {
+  /** Site Admin's tabs along the top of the page: [key, label, tip]. A new tab is a row here and a view below. */
+  const ADMIN_TABS = [['users', 'Users', 'Approve sign-ups and manage accounts'],
+    ['sheets', 'Sheets', 'Starter templates, and the games people have asked for']];
+  function adminTabs(at) {
+    return el('nav', { class: 'subtabs admin-tabs', 'aria-label': 'Site Admin' }, ADMIN_TABS.map(([k, label, t]) =>
+      el('a', { href: `#/admin/${k}`, class: k === at ? 'on' : '', 'data-tip': t, ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
+  }
+  /** #/admin[/<tab>]: Site Admin, for site admins only (the server refuses everyone else). */
+  async function viewAdmin(tab) {
+    if (!ADMIN_TABS.some(([k]) => k === tab)) tab = 'users';
+    return tab === 'sheets' ? viewAdminSheets() : viewAdminUsers();
+  }
+  const adminHead = at => el('div', { class: 'card admin-head' }, el('h1', {}, 'Site Admin'), adminTabs(at));
+  async function viewAdminUsers() {
     const { users } = await api('users');
     const act = (label, fn, cls, tipText) => btn(label, async () => {
-      try { if (await fn() !== false) viewAdmin(); } catch (err) { toast(err.message, true); }
+      try { if (await fn() !== false) viewAdminUsers(); } catch (err) { toast(err.message, true); }
     }, `small ${cls || ''}`, tipText);
     const row = u => {
       const legacy = u.provider === 'legacy';
       const self = Number(u.id) === S.user.id;
       return el('tr', {},
-        el('td', {}, el('strong', {}, u.display_name || '(no name)'), Number(u.is_admin) ? el('span', { class: 'role gm' }, 'Admin') : null),
+        el('td', {}, el('strong', {}, u.display_name || '(no name)'), u.pronouns ? el('span', { class: 'pronouns muted' }, ` (${u.pronouns})`) : null,
+          Number(u.is_admin) ? el('span', { class: 'role gm' }, 'Admin') : null,
+          u.provider_name && u.provider_name !== u.display_name ? el('div', { class: 'small muted' }, `${PROVIDER_LABEL[u.provider] || 'Account'} name: ${u.provider_name}`) : null),
         el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
           el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
         el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
@@ -803,20 +801,54 @@
           }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null)));
     };
     const pending = users.filter(u => u.status === 'pending').length;
-    mount(el('div', { class: 'card' }, el('h2', {}, 'Users'),
+    mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'),
-      typeof Sheets !== 'undefined' ? el('div', { class: 'card' }, el('h2', {}, 'Sheet templates'),
-        el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
-        (() => {
-          const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
-          b.addEventListener('click', busy(b, async () => {
-            const r = await post('starter_templates_load', {});
-            toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
-          }));
-          return b;
-        })()) : null);
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+  }
+  /** Site Admin's Sheets tab: load the starter templates, and the games people asked for with Request a game. */
+  async function viewAdminSheets() {
+    const { requests, off } = await api('game_requests');
+    const starters = el('div', { class: 'card' }, el('h2', {}, 'Starter templates'),
+      el('p', { class: 'muted' }, 'The starter library is kept with the app, one file per game in db/starter-templates. Loading adds the new ones and updates the ones that changed; templates forked from them keep their own copy.'),
+      (() => {
+        const b = btn('Load starter templates', null, 'primary', 'Add and update the starter templates from the files shipped with the app');
+        b.addEventListener('click', busy(b, async () => {
+          const r = await post('starter_templates_load', {});
+          toast(`${r.added} added, ${r.updated} updated, ${r.unchanged} unchanged`);
+        }));
+        return b;
+      })());
+    const sw = el('input', { type: 'checkbox', checked: !off, 'aria-label': 'Let people request games' });
+    sw.addEventListener('change', async () => {
+      sw.disabled = true;
+      try {
+        await post('site_setting_save', { name: 'game_requests_off', value: !sw.checked });
+        toast(sw.checked ? 'Request a game is on' : 'Request a game is off: the button is gone from Sheet templates');
+      } catch (err) { sw.checked = !sw.checked; toast(err.message, true); }
+      sw.disabled = false;
+    });
+    const total = requests.reduce((t, r) => t + r.count, 0);
+    const when = d => new Date(String(d).replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    const row = r => el('tr', {},
+      el('td', {}, el('strong', {}, r.game)),
+      el('td', { class: 'num' }, String(r.count)),
+      el('td', { class: 'small' }, r.who.join(', ')),
+      el('td', { class: 'small muted' }, r.count > 1 && when(r.first) !== when(r.last) ? `${when(r.first)} to ${when(r.last)}` : when(r.last)),
+      el('td', { class: 'act' }, btn('Clear', async () => {
+        if (!await confirmDialog(`Clear the ${r.count === 1 ? 'request' : `${r.count} requests`} for ${r.game}? Do this once its template is in, or to drop it. People can ask for it again.`, { ok: 'Clear' })) return;
+        try { await post('game_requests_clear', { key: r.key }); toast(`Cleared ${r.game}`); viewAdminSheets(); } catch (err) { toast(err.message, true); }
+      }, 'small', 'Take this game off the list, once its template is in or to drop it')));
+    const asked = el('div', { class: 'card' }, el('h2', {}, 'Game requests'),
+      el('label', { class: 'switch-row' }, sw, el('span', {}, 'Let people request games'),
+        tip('With this off, the Request a game button is gone from Sheet templates and no new requests come in. The list below stays.')),
+      requests.length
+        ? [el('p', { class: 'muted' }, `${total} ${total === 1 ? 'request' : 'requests'} for ${requests.length} ${requests.length === 1 ? 'game' : 'games'}, most asked for first. Each person counts once per game.`),
+          el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl game-requests' },
+            el('tr', {}, el('th', {}, 'Game'), el('th', { class: 'num' }, 'Asked'), el('th', {}, 'Who'), el('th', {}, 'When'), el('th', {})),
+            requests.map(row)))]
+        : el('p', { class: 'muted' }, off ? 'No requests yet, and requests are off.' : 'No requests yet. People ask with Request a game on the Sheet templates page.'));
+    mount(adminHead('sheets'), typeof Sheets !== 'undefined' ? starters : null, asked);
   }
 
   // ------------------------------------------------------------ campaign list / create
@@ -5513,7 +5545,7 @@
         const sheet = sheetOf(m);
         const canLink = (self || isGM()) && !sheet && typeof Sheets !== 'undefined';
         return el('div', { class: 'listrow member' },
-          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
+          el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.pronouns ? el('span', { class: 'pronouns muted' }, ` (${m.pronouns})`) : null, m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
             el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
@@ -6412,7 +6444,7 @@
     try {
       if (parts[0] === '') return await viewCampaigns();
       if (parts[0] === 'account') return await viewAccount(); // awaited, so a failed load lands in the catch below
-      if (parts[0] === 'admin') return await viewAdmin();
+      if (parts[0] === 'admin') return await viewAdmin(parts[1]);
       if (parts[0] === 'templates' && typeof Sheets !== 'undefined') return await Sheets.route(parts.slice(1));
       if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
       if (parts[0] === 'c') {

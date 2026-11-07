@@ -21,6 +21,7 @@ declare(strict_types=1);
 
 const ACTIONS = [
     'prefs_save' => ['who' => 'account'],
+    'profile_save' => ['who' => 'account'],
     'users' => ['get' => true, 'who' => 'admin'],
     'user_status' => ['who' => 'admin'],
     'user_email' => ['who' => 'admin'],
@@ -33,6 +34,10 @@ const ACTIONS = [
     'sheet_import_fetch' => ['who' => 'account'],
     'starter_templates_load' => ['who' => 'admin'],
     'starter_sources' => ['get' => true, 'who' => 'public'],
+    'game_request' => ['who' => 'account'],
+    'game_requests' => ['get' => true, 'who' => 'admin'],
+    'game_requests_clear' => ['who' => 'admin'],
+    'site_setting_save' => ['who' => 'admin'],
     'characters' => ['get' => true, 'who' => 'member'],
     'character' => ['get' => true, 'who' => 'member'],
     'character_create' => ['who' => 'member', 'touch' => true],

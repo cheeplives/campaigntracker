@@ -23,7 +23,10 @@ $prefs = json_decode((string) ($st->fetchColumn() ?: ''), true);
 json_out([
   'id'       => (int) $u['id'],
   'email'    => $u['email'],
-  'name'     => $u['display_name'],
+  'name'     => $u['display_name'],      // what Chronicle calls them: their own name from Account, else provider_name
+  'provider_name' => $u['provider_name'], // the name from their Google or GitHub account
+  'custom_name'   => $u['custom_name'],   // what they typed on the Account page (null: none)
+  'pronouns'      => $u['pronouns'],
   'avatar'   => $u['avatar_url'],
   'status'   => $u['status'],       // pending | approved | revoked
   'is_admin' => (bool) (int) $u['is_admin'],

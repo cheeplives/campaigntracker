@@ -54,8 +54,12 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only after typing DELETE; players get neither button, and the API refuses them both.
 - **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
   person's own, kept in their preferences across reloads, and only on a campaign they belong to.
-- **account**: the account page lists only the campaigns you belong to, each with your role, and a
-  character name typed there is the one the Members tab shows; the None / Imperial / Metric units choice
+- **game-requests** (Chromium only, as the on/off switch is site-wide): Request a game on Sheet templates reaches Site
+  Admin's Sheets tab counted once per person per game whatever the spelling; only admins read them; switched off, the
+  button goes and the server refuses new ones while the list stays; Clear takes a game off.
+- **account**: the name and pronouns set on the account page are what the top bar, Members, Site Admin and
+  the account probe call you by, a new Google or GitHub sign-in doesn't undo them, blank goes back to the provider's
+  name, and a name over 150 characters is refused; the page no longer lists your campaigns; the None / Imperial / Metric units choice
   sets the travel planner and temperatures, None follows the campaign, an older temperature-only choice
   reads as its system, and anything else is refused; a campaign's Default units in Settings is the same
   Imperial / Metric choice with its own Show temperatures switch, and an older temperature unit there reads as its system.
