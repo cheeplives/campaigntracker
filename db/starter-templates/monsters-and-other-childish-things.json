@@ -1,0 +1,455 @@
+{
+ "name": "Monsters and Other Childish Things",
+ "game": "Monsters and Other Childish Things",
+ "edition": "1st Edition (Arc Dream Publishing, 2007)",
+ "source": {
+  "title": "Permanent Record and My Monster sheets",
+  "owner": "Arc Dream Publishing (Benjamin Baugh)",
+  "url": "https://www.arcdream.com/",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "essential",
+    "title": "Essential Data",
+    "page": "Permanent Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Student's Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "parents",
+      "label": "Parents/Guardians",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "birth_date",
+      "label": "Birth Date",
+      "type": "text"
+     },
+     {
+      "key": "gender",
+      "label": "Gender",
+      "type": "choice",
+      "options": [
+       "m",
+       "f"
+      ]
+     },
+     {
+      "key": "school",
+      "label": "School",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "grade_level",
+      "label": "Grade Level",
+      "type": "choice",
+      "options": [
+       "elementary",
+       "middle",
+       "high school"
+      ],
+      "summary": true
+     },
+     {
+      "key": "homeroom",
+      "label": "Homeroom Teacher",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "monster",
+      "label": "Monster",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     }
+    ]
+   },
+   {
+    "key": "performance",
+    "title": "Performance Evaluation",
+    "page": "Permanent Record",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "stat_feet",
+      "label": "Feet (locations 1-2)",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "feet_p_e",
+      "label": "P.E.",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "feet_kicking",
+      "label": "Kicking",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "feet_dodging",
+      "label": "Dodging",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "feet_other_name",
+      "label": "Feet: other skill",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "feet_other",
+      "label": "Feet: other skill rating",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "stat_guts",
+      "label": "Guts (locations 3-6)",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "guts_wind",
+      "label": "Wind",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "guts_courage",
+      "label": "Courage",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "guts_wrestling",
+      "label": "Wrestling",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "guts_other_name",
+      "label": "Guts: other skill",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "guts_other",
+      "label": "Guts: other skill rating",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "stat_hands",
+      "label": "Hands (locations 7-8)",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "hands_shop",
+      "label": "Shop",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "hands_punching",
+      "label": "Punching",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "hands_blocking",
+      "label": "Blocking",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "hands_other_name",
+      "label": "Hands: other skill",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "hands_other",
+      "label": "Hands: other skill rating",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "stat_brains",
+      "label": "Brains (locations 9)",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "brains_out_think",
+      "label": "Out-Think",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "brains_remember",
+      "label": "Remember",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "brains_notice",
+      "label": "Notice",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "brains_other_name",
+      "label": "Brains: other skill",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "brains_other",
+      "label": "Brains: other skill rating",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "stat_face",
+      "label": "Face (locations 10)",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "face_charm",
+      "label": "Charm",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "face_putdown",
+      "label": "Putdown",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "face_connive",
+      "label": "Connive",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     },
+     {
+      "key": "face_other_name",
+      "label": "Face: other skill",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "face_other",
+      "label": "Face: other skill rating",
+      "type": "number",
+      "size": "small",
+      "min": 1,
+      "max": 5
+     }
+    ]
+   },
+   {
+    "key": "subjective",
+    "title": "Subjective Evaluation",
+    "page": "Permanent Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "appearance",
+      "label": "Appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "personality",
+      "label": "Personality",
+      "type": "longtext"
+     },
+     {
+      "key": "favorite_thing",
+      "label": "Favorite Thing",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "comments",
+      "label": "Comments",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "relationships_sec",
+    "title": "Relationships",
+    "page": "Permanent Record",
+    "width": "half",
+    "fields": [
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "list",
+      "columns": [
+       {
+        "key": "relationship",
+        "label": "Relationship"
+       },
+       {
+        "key": "rating_1_5",
+        "label": "Rating (1-5)"
+       }
+      ],
+      "play": true
+     },
+     {
+      "key": "experience_points",
+      "label": "Experience Points",
+      "type": "number",
+      "size": "small"
+     }
+    ]
+   },
+   {
+    "key": "my_monster",
+    "title": "My Monster",
+    "page": "My Monster",
+    "fields": [
+     {
+      "key": "monster_name",
+      "label": "My monster's name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "monster_appearance",
+      "label": "My monster's appearance",
+      "type": "longtext"
+     },
+     {
+      "key": "monster_personality",
+      "label": "My monster's personality",
+      "type": "longtext"
+     },
+     {
+      "key": "monster_favorite",
+      "label": "My monster's favorite thing",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "monster_hide",
+      "label": "My monster's way to hide",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "monster_relationships",
+      "label": "Relationships that my monster has stolen or borrowed",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "monster_can_do",
+    "title": "What My Monster Can Do",
+    "page": "My Monster",
+    "fields": [
+     {
+      "key": "monster_parts",
+      "label": "Parts",
+      "type": "list",
+      "columns": [
+       {
+        "key": "hit_location_numbers_and_name",
+        "label": "Hit location numbers and name"
+       },
+       {
+        "key": "dice",
+        "label": "Dice"
+       },
+       {
+        "key": "qualities_and_extras",
+        "label": "Qualities and extras"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "monster_notes_sec",
+    "title": "My Monster (notes)",
+    "page": "My Monster",
+    "fields": [
+     {
+      "key": "monster_notes",
+      "label": "Monster notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}

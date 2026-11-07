@@ -1,0 +1,184 @@
+{
+ "name": "Damn the Man, Save the Music!",
+ "game": "Damn the Man, Save the Music!",
+ "edition": "1st Edition (Turtlebun, 2019)",
+ "source": {
+  "title": "Damn the Man character sheets",
+  "owner": "Turtlebun",
+  "url": "https://turtlebun.itch.io/damntheman",
+  "licence": null
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "employee",
+    "title": "Employee Info",
+    "width": "half",
+    "fields": [
+     {
+      "key": "name",
+      "label": "Name",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "role",
+      "label": "Role",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "The Flirt",
+       "The Local Rockstar",
+       "The Aspiring Poet",
+       "The Troubled Artist",
+       "The Brain",
+       "The Overachiever",
+       "The Space Case",
+       "Other"
+      ],
+      "summary": true
+     },
+     {
+      "key": "age",
+      "label": "Age",
+      "type": "text",
+      "size": "small"
+     },
+     {
+      "key": "time_employed",
+      "label": "Time Employed",
+      "type": "text"
+     },
+     {
+      "key": "dress",
+      "label": "Style: Dress",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "tunes",
+      "label": "Style: Tunes",
+      "type": "text",
+      "size": "full"
+     }
+    ]
+   },
+   {
+    "key": "goal_sec",
+    "title": "Goal",
+    "width": "half",
+    "fields": [
+     {
+      "key": "goal",
+      "label": "Goal",
+      "type": "choice",
+      "cols": 3,
+      "options": [
+       "Confess my love",
+       "Get a promotion",
+       "Find a band",
+       "Pay back a debt",
+       "Score a gig",
+       "Find the lost cat"
+      ],
+      "summary": true
+     },
+     {
+      "key": "progress_determined",
+      "label": "I'm determined",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "progress_plan",
+      "label": "I have a plan",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "relationships",
+    "title": "Relationships",
+    "width": "half",
+    "fields": [
+     {
+      "key": "rel_1",
+      "label": "Relationship 1",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "rel_1_cool",
+      "label": "We cool?",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "rel_2",
+      "label": "Relationship 2",
+      "type": "text",
+      "cols": 4
+     },
+     {
+      "key": "rel_2_cool",
+      "label": "We cool?",
+      "type": "checkbox",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "closed",
+    "title": "Revolution Records May Be Closed Due To",
+    "width": "half",
+    "compact": true,
+    "fields": [
+     {
+      "key": "community",
+      "label": "Community",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "money",
+      "label": "Money",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "morale",
+      "label": "Morale",
+      "type": "number",
+      "size": "small",
+      "play": true
+     },
+     {
+      "key": "the_boss",
+      "label": "The Boss",
+      "type": "number",
+      "size": "small",
+      "play": true
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Notes and Doodles",
+    "fields": [
+     {
+      "key": "notes",
+      "label": "Notes and Doodles",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
