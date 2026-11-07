@@ -79,12 +79,24 @@ h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 3px solid var(--accent); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font: 700 1.55rem var(--disp); color: var(--text); text-transform: uppercase; letter-spacing: .06em; }
 .brand::before { content: '⬢ '; color: var(--accent); }
-#topnav { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-/* the account menu in the top bar reads as a link with ▾, not a button, until it is open */
-#topnav .account-menu > summary { background: none; border-color: transparent; color: var(--accent); font: inherit; padding: 4px 6px; }
-#topnav .account-menu[open] > summary { background: var(--accent); color: var(--on-accent); }
-#topnav .account-menu .kit-menu-list { min-width: 9rem; }
-#topnav .account-menu .kit-menu-list a.button { text-decoration: none; }
+#topnav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* Every control in the top bar is the same pill: one height, one rounded edge, one border, so the links, the theme
+   picker, light / dark and your name read as one set. The page you are on (and the open menu) has its pill lit. */
+#topnav .nav-pill, #topnav .account-menu > summary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; height: 34px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 99px; background: var(--panel); color: var(--text);
+  font: 500 .95rem/1 var(--body, inherit); text-decoration: none; white-space: nowrap; }
+#topnav .nav-pill:hover, #topnav .account-menu > summary:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+#topnav .nav-pill[aria-current="page"], #topnav .account-menu.is-here > summary { border-color: var(--accent); color: var(--accent); background: var(--panel-2); }
+#topnav .account-menu[open] > summary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#topnav .theme-toggle { width: 34px; padding: 0; font-size: 1rem; }
+#topnav .nav-pill-name { max-width: 14em; overflow: hidden; text-overflow: ellipsis; }
+#topnav .nav-caret { font-size: .7em; opacity: .8; }
+/* its list opens like the theme picker's: the same panel, with plain rows that take an accent edge on hover */
+#topnav .account-menu .kit-menu-list { min-width: 11rem; top: calc(100% + 6px); gap: 2px; padding: 4px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+#topnav .account-menu .kit-menu-list > a, #topnav .account-menu .kit-menu-list > button {
+  background: none; border: 1px solid transparent; color: var(--text); text-decoration: none; padding: 7px 10px; }
+#topnav .account-menu .kit-menu-list > a:hover, #topnav .account-menu .kit-menu-list > button:hover { border-color: var(--accent); }
 main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
 .card { background: var(--stock); border: 0; border-radius: var(--radius); padding: 16px; box-shadow: 0 1px 0 var(--line), 0 10px 24px -18px rgb(0 0 0 / .6); }
@@ -712,9 +724,7 @@ dialog.kit-dialog::backdrop { background: rgb(0 0 0 / .55); }
 .status.pending { color: var(--accent); border-color: var(--accent); }
 .status.approved { color: var(--ok); border-color: var(--ok); }
 .status.revoked { color: var(--bad); border-color: var(--bad); }
-.theme-toggle { padding: 3px 8px; line-height: 1.2; }
 .scheme-pick { position: relative; }
-.scheme-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; line-height: 1.2; }
 .scheme-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
 .scheme-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; list-style: none; margin: 0; padding: 4px; min-width: 210px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
