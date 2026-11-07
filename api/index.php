@@ -21,6 +21,7 @@ require __DIR__ . '/encyclopedia.php';
 require __DIR__ . '/connections.php';
 require __DIR__ . '/files.php';
 require __DIR__ . '/library.php';
+require __DIR__ . '/history.php';
 require __DIR__ . '/clocks.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/panel.php';
@@ -1390,6 +1391,8 @@ try {
             db()->rollBack();
             fail('Someone saved this day\'s notes after you opened them. Copy what you wrote, reload, and add it again', 409, 'stale');
         }
+        $notesWritten = $has('notes') || $has('gm_notes');
+        if ($notesWritten) history_before($cid, 'day', $ad);
         db()->prepare('INSERT INTO days (campaign_id, abs_day, region_id, weather_json, notes, notes_format, gm_notes, gm_notes_format, locations) VALUES (?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE region_id=IF(?, VALUES(region_id), region_id), weather_json=COALESCE(VALUES(weather_json), weather_json),
             notes=IF(?, VALUES(notes), notes), notes_format=IF(?, VALUES(notes_format), notes_format),
@@ -1397,6 +1400,7 @@ try {
             locations=IF(?, VALUES(locations), locations), version=IF(?, version+1, version)')
             ->execute([$cid, $ad, $rid, $weather, $notes, $notesFmt, $gmNotes, $gmNotesFmt, str_in(p('locations'), 5000),
                 $has('region_id'), $has('notes'), $has('notes'), $has('gm_notes'), $has('gm_notes'), $has('locations'), $written ? 1 : 0]);
+        if ($notesWritten) history_record($cid, 'day', $ad);
         $st->execute([$cid, $ad]);
         $version = (int)$st->fetchColumn();
         db()->commit();
@@ -1684,6 +1688,12 @@ try {
     case 'tome_save':
     case 'tome_delete':
         library_action($action);
+
+    // ===== edit history ===== (api/history.php)
+    case 'history_list':
+    case 'history_get':
+    case 'history_restore':
+        history_action($action);
 
     // ===== clocks ===== (api/clocks.php)
     case 'clocks':
