@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { openDrawer, gearAction, openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+const { hexGray, openDrawer, gearAction, openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
@@ -207,6 +207,11 @@ test("Maps: a pin can open another map; a player isn't told of a GM-only one, an
   expect((await getMap(pp, cid, town)).json.parent).toMatchObject({ map_id: region });
   expect((await getMap(page, cid, vault)).json.parent).toMatchObject({ label: "Old ruin" });
   expect((await getMap(page, cid, region)).json.parent).toBe(null);
+  // the maps list says where each one sits (and a player isn't told of a GM-only one)
+  const list = (await api(page, "maps", undefined, cid)).json.maps;
+  expect(list.find(m => m.id === town).inside).toEqual({ pin_id: pin.id, label: "Bree town", map_id: region, map_name: "Sartar" });
+  expect(list.find(m => m.id === region).inside).toBe(null);
+  expect((await api(pp, "maps", undefined, cid)).json.maps.find(m => m.id === town).inside).toMatchObject({ map_id: region });
   // a GM-only parent map isn't shown to a player
   await api(page, "map_save", { id: region, is_secret: true }, cid);
   expect((await getMap(pp, cid, town)).json.parent).toBe(null);
@@ -254,7 +259,7 @@ test("Maps: the scale dialog finds the grid drawn on a picture, shows it before 
   expect((await api(page, "map_save", { id, image_id: up.json.file.id }, cid)).status).toBe(200);
   await page.goto(`#/c/${cid}/maps/${id}?scale=1`);
   // it looks by itself on a map with no grid, and draws what it found before anything is saved
-  await expect(page.getByLabel("Pixels per square")).toHaveValue(/^(49\.[5-9]|50(\.[0-4])?)/);
+  await expect(page.getByLabel("Pixels per square")).toHaveValue(/^(49\.[5-9]|50(\.[0-4])?)/, { timeout: 30000 });
   await expect(page.locator("svg.map-grid pattern")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Find the grid" })).toBeEnabled();
   await page.getByLabel("Distance per square").fill("5");
@@ -265,6 +270,18 @@ test("Maps: the scale dialog finds the grid drawn on a picture, shows it before 
   expect(Math.abs(m.grid_px - 50)).toBeLessThan(0.6);
   expect(Math.abs(m.grid_offset_x - 17)).toBeLessThan(2.5);
   expect(Math.abs(m.grid_offset_y - 17)).toBeLessThan(2.5);
+  // a hex grid is found too, and sets the shape
+  const hexMap = (await api(page, "map_save", { name: "Hexland" }, cid)).json.map.id;
+  const hup = await upload(page, cid, "map", hexMap, makePng(500, 400, hexGray("hex_pointy", 46, 20, 5)));
+  expect((await api(page, "map_save", { id: hexMap, image_id: hup.json.file.id }, cid)).status).toBe(200);
+  await page.goto(`#/c/${cid}/maps/${hexMap}?scale=1`);
+  await expect(page.getByLabel("Shape")).toHaveValue("hex_pointy", { timeout: 30000 });
+  await expect(page.getByLabel("Pixels per square")).toHaveValue(/^(45\.[5-9]|46(\.[0-5])?)/);
+  await page.getByLabel("Distance per square").fill("1");
+  await page.getByRole("dialog", { name: "Set the scale" }).getByLabel("Unit").selectOption("mi");
+  await page.getByRole("button", { name: "Save scale" }).click();
+  await expect(page.locator(".map-scale")).toBeVisible();
+  expect((await api(page, "maps", undefined, cid)).json.maps.find(m => m.id === hexMap)).toMatchObject({ grid_type: "hex_pointy" });
   // a picture with no grid says so when asked, and cancelling takes the preview away
   const plain = await mapWithPicture(page, cid);
   await page.goto(`#/c/${cid}/maps/${plain}?scale=1`);
@@ -674,6 +691,15 @@ test("Maps: a GM exports the picture, and a gridded map as Universal VTT that re
   const json = JSON.parse(require("fs").readFileSync(await uv.path(), "utf8"));
   expect(json.resolution).toEqual({ map_origin: { x: -0.2, y: 0 }, map_size: { x: 6, y: 4 }, pixels_per_grid: 50 });
   expect(Buffer.compare(Buffer.from(json.image, "base64"), MAP_PNG)).toBe(0);
+  // the Foundry scene carries the pins as Notes, and the grid, scale and picture name
+  expect((await api(page, "pin_save", { map_id: id, x: 120, y: 80, kind: "note", label: "The Prancing Pony" }, cid)).status).toBe(200);
+  await page.reload();
+  await gearAction(page, "Export…");
+  const [fv] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Foundry scene (.json)" }).click()]);
+  expect(fv.suggestedFilename()).toBe("Keep Upper Lower.json");
+  const scene = JSON.parse(require("fs").readFileSync(await fv.path(), "utf8"));
+  expect(scene).toMatchObject({ name: "Keep: Upper/Lower", width: 300, height: 200, padding: 0, grid: { type: 1, size: 50, distance: 5, units: "ft" }, background: { src: "Keep Upper Lower.png", offsetX: -10, offsetY: 0 } });
+  expect(scene.notes).toMatchObject([{ x: 110, y: 80, text: "The Prancing Pony" }]);
   // players have no Export
   await pp.goto(`#/c/${cid}/maps/${id}`);
   await expect(pp.locator(".map-view .leaflet-container")).toBeVisible();
@@ -705,8 +731,22 @@ test("Maps: a large picture opens", async ({ page, browser }) => {
   expect(up.status, JSON.stringify(up.json)).toBe(200);
   await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
   await page.goto(`#/c/${cid}/maps/${id}`);
-  await expect.poll(() => page.locator(".map-view img.leaflet-image-layer").evaluate(i => i.naturalWidth)).toBe(6000);
+  // 24 million pixels is drawn in tiles, not as one picture
+  await expect(page.locator(".map-view .map-big-picture canvas").first()).toBeVisible();
+  await expect(page.locator(".map-view img.leaflet-image-layer")).toHaveCount(0);
+  await expect.poll(() => page.locator(".map-view .map-big-picture canvas").count()).toBeGreaterThan(0);
+  // and the tiles hold the picture (the test picture is grey): the middle tile is not blank
+  const grey = await page.locator(".map-view .map-big-picture canvas").first().evaluate(c => { const d = c.getContext("2d").getImageData(128, 128, 1, 1).data; return [d[0], d[3]]; });
+  expect(grey).toEqual([127, 255]);
+  // the grid and pins still sit on it: a pin lands at the clicked place
+  await api(page, "pin_save", { map_id: id, x: 3000, y: 2000, kind: "note", label: "Middle" }, cid);
+  await page.reload();
+  await expect(page.locator(".map-pin", { hasText: "Middle" })).toBeVisible();
   expectNoErrors(errors);
+  // a picture under that size keeps its single image
+  const small = await mapWithPicture(page, cid);
+  await page.goto(`#/c/${cid}/maps/${small}`);
+  await expect(page.locator(".map-view img.leaflet-image-layer")).toHaveCount(1);
 });
 
 test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser }) => {

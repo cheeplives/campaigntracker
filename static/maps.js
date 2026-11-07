@@ -99,6 +99,42 @@ const MapsTab = (() => {
     return new Bar({ position: 'bottomleft' });
   }
 
+  // ------------------------------------------------------------ very large pictures
+
+  const BIG_PICTURE = 16e6;   // pixels (4000 x 4000), from where a picture is tiled
+
+  /** A tile layer showing the picture at `url` (w x h, in the map's own pixels): each 256 px tile is drawn from the decoded
+   * image when it is asked for, from a half, quarter... size copy (made once, on first use) when zoomed out. */
+  function bigPicture(url, w, h, bounds) {
+    const img = new Image();
+    const loaded = (img.src = url, img.decode ? img.decode().catch(() => new Promise(r => { img.onload = r; img.onerror = r; })) : new Promise(r => { img.onload = r; img.onerror = r; }));
+    const levels = new Map();   // how many halvings => the source to draw from (a promise)
+    const level = k => {
+      if (!levels.has(k)) {
+        levels.set(k, k === 0 || typeof createImageBitmap !== 'function' ? Promise.resolve(img)
+          : createImageBitmap(img, { resizeWidth: Math.max(1, Math.ceil(w / 2 ** k)), resizeHeight: Math.max(1, Math.ceil(h / 2 ** k)), resizeQuality: 'high' }).catch(() => img));
+      }
+      return levels.get(k);
+    };
+    const Tiles = L.GridLayer.extend({
+      createTile(coords, done) {
+        const tile = document.createElement("canvas");
+        tile.width = tile.height = 256;
+        const scale = 2 ** coords.z, span = 256 / scale;   // picture pixels one tile covers
+        const k = coords.z < 0 ? Math.min(Math.floor(-coords.z), 8) : 0;
+        loaded.then(() => level(k)).then(src => {
+          const f = src === img ? 1 : (src.width / w);   // the source's pixels per picture pixel
+          const sx = coords.x * span * f, sy = coords.y * span * f, sw = span * f, sh = span * f;
+          const ex = Math.min(sx + sw, src.width), ey = Math.min(sy + sh, src.height);
+          if (ex > sx && ey > sy) tile.getContext('2d').drawImage(src, sx, sy, ex - sx, ey - sy, 0, 0, Math.round(256 * (ex - sx) / sw), Math.round(256 * (ey - sy) / sh));
+          done(null, tile);
+        }).catch(err => done(err, tile));
+        return tile;
+      },
+    });
+    return new Tiles({ pane: 'mapPicture', tileSize: 256, bounds, noWrap: true, minZoom: -5, maxZoom: 4, minNativeZoom: -8, maxNativeZoom: 6, className: 'map-big-picture', keepBuffer: 1 });
+  }
+
   // ------------------------------------------------------------ the list
 
   async function list(ctx) {
@@ -108,7 +144,8 @@ const MapsTab = (() => {
     const cards = maps.map(m => el('a', { class: 'map-card' + (m.is_secret ? ' secret' : ''), href: `#/c/${cid}/maps/${m.id}` },
       m.image_url ? el('img', { src: m.image_url, alt: '', loading: 'lazy' }) : el('span', { class: 'map-card-blank muted small' }, 'No picture'),
       el('strong', {}, m.is_secret ? '🔒 ' : '', m.name),
-      el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : '')));
+      el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : ''),
+      m.inside ? el('span', { class: 'small muted map-card-inside' }, `Inside ${m.inside.label} on ${m.inside.map_name}`) : null));
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' },
       el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary small') : null),
       cards.length ? el('div', { class: 'map-grid' }, cards) : el('p', { class: 'muted' }, ctx.isGM() ? 'No maps yet. Add one with + New map.' : 'No maps yet.')));
@@ -297,7 +334,7 @@ const MapsTab = (() => {
       gridBtn.hidden = !has || !map.image_url;
       gridBtn.setAttribute('aria-pressed', String(has && gridWanted()));
       opacityBox.hidden = !has || !map.image_url || !gridWanted();
-      const g = gridPreview ? { px: gridPreview.px, ox: gridPreview.ox, oy: gridPreview.oy, type: 'square' } : { px: map.grid_px, ox: map.grid_offset_x, oy: map.grid_offset_y, type: map.grid_type };
+      const g = gridPreview ? { px: gridPreview.px, ox: gridPreview.ox, oy: gridPreview.oy, type: gridPreview.type } : { px: map.grid_px, ox: map.grid_offset_x, oy: map.grid_offset_y, type: map.grid_type };
       if (!lf || !(g.px > 0) || !(gridPreview || (has && gridWanted()))) return;
       const NS = 'http://www.w3.org/2000/svg', svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
       const t = G.gridTile(g.type, g.px), pid = `map-grid-${id}`;
@@ -342,7 +379,7 @@ const MapsTab = (() => {
       panel = null; panelBox.replaceChildren(); picks = []; pickLayer?.clearLayers(); if (mode === 'scale' || mode === 'pin' || mode === 'label') mode = null; syncTools();
       if (refit) fitPicture();
     }
-    /** Look for a square grid in the map's picture (in the browser, on a shrunk copy): {px, offset_x, offset_y} in picture pixels, or null. */
+    /** Look for a square or hex grid in the map's picture (in the browser, on a shrunk copy): {type, px, offset_x, offset_y} in picture pixels, or null. */
     async function findGrid() {
       const img = new Image();
       img.src = map.image_url;
@@ -355,11 +392,12 @@ const MapsTab = (() => {
       c.drawImage(img, 0, 0, w, h);
       const d = c.getImageData(0, 0, w, h).data, gray = new Uint8Array(w * h);
       for (let i = 0; i < gray.length; i++) gray[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
-      const r = G.detectGrid(gray, w, h);
+      await new Promise(r => setTimeout(r, 30));   // let "Looking…" show before the work holds the page
+      const r = G.detectAnyGrid(gray, w, h);
       if (!r) return null;
       const k = map.width / w;   // back to picture pixels
       const q = v => Math.round(v * k * 100) / 100;
-      return { px: q(r.px), offset_x: q(r.offset_x), offset_y: q(r.offset_y) };
+      return { type: r.type, px: q(r.px), offset_x: q(r.offset_x), offset_y: q(r.offset_y) };
     }
     function openScale(hint) {
       if (mode === 'pin') note.textContent = '';
@@ -386,13 +424,14 @@ const MapsTab = (() => {
         try {
           const r = await findGrid();
           if (r && panel) {
-            found = r; px.value = String(r.px); show('grid');
-            gridPreview = { px: r.px, ox: r.offset_x, oy: r.offset_y }; drawGrid();
-            toast(`Found a grid of about ${Math.round(r.px * 10) / 10} px. Check it lines up, then save the scale`);
+            found = r; px.value = String(r.px); shape.value = r.type; show('grid');
+            gridPreview = { type: r.type, px: r.px, ox: r.offset_x, oy: r.offset_y }; drawGrid();
+            toast(`Found a ${r.type === 'square' ? 'square' : 'hex'} grid of about ${Math.round(r.px * 10) / 10} px. Check it lines up, then save the scale`);
           } else if (!quiet) toast('No grid found on the picture. Type its size, or click a run of squares', true);
         } catch { if (!quiet) toast('Couldn\'t read the picture to look for a grid', true); } finally { finding = false; findBtn.disabled = false; }
       };
       const findBtn = btn('Find the grid', () => find(false), 'small', 'Look for a square grid drawn on the picture and fill in its size');
+      shape.addEventListener('change', () => { if (found && shape.value !== found.type) found = null; if (gridPreview) { gridPreview.type = shape.value; drawGrid(); } });   // the preview follows the shape picked
       px.addEventListener('input', () => { found = null; if (gridPreview) { gridPreview = null; drawGrid(); } });
       const fromRun = () => {
         const n = +count.value;
@@ -770,6 +809,27 @@ const MapsTab = (() => {
     const endPin = pt => G.nearestPin(pins, { x: pt[0], y: pt[1] }, reach());
     /** The route dialog: its name, colour and line, and (once saved, with pins on the map) the pins it starts and ends at.
      * `r` is the route being changed, or a new one { points }; `secret` a boolean asks GM only too. Resolves the changes, or null. */
+    const TERRAINS = [[1, 'Road or open ground ×1'], [2, 'Woods, hills or ruins ×2'], [3, 'Mountains ×3'], [4, 'Swamp ×4']];
+    /** The terrain of each leg of route r, which Plan this trip takes into the travel time. */
+    function terrainDialog(r) {
+      const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': 'Terrain of the route' });
+      const legs = r.points.slice(1).map((pt, i) => {
+        const a = r.points[i], from = endPin(a), to = endPin(pt);
+        const sel = select(TERRAINS, (r.terrain && r.terrain[i]) || 1, { 'aria-label': `Terrain of leg ${i + 1}` });
+        return { sel, row: el('div', { class: 'row map-leg' }, el('span', { class: 'map-leg-name' }, `${i + 1}. ${from ? pinTitle(from) : 'Point ' + (i + 1)} → ${to ? pinTitle(to) : 'Point ' + (i + 2)}`,
+          el('span', { class: 'small muted' }, ' ' + lengthOf({ points: [a, pt] }))), sel) };
+      });
+      const form = el('form', {}, el('h3', {}, `Terrain along ${r.name}`),
+        el('p', { class: 'small muted' }, 'Slow going multiplies the travel time of that leg. Plan this trip averages the legs by their length.'),
+        el('div', { class: 'map-legs' }, legs.map(l => l.row)),
+        el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, 'Save terrain'), btn('Cancel', () => d.close())));
+      form.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        try { await post('route_save', { id: r.id, terrain: legs.map(l => Number(l.sel.value)) }, cid); d.close(); await refresh(); toast('Terrain saved'); } catch (err) { toast(err.message, true); }
+      });
+      d.addEventListener('close', () => d.remove());
+      d.append(form); document.body.append(d); d.showModal();
+    }
     function routeDialog(title, r, secret, ok) {
       return new Promise(resolve => {
         const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': title });
@@ -886,6 +946,7 @@ const MapsTab = (() => {
           el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
           gm ? el('div', { class: 'row' },
             hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
+            btn('Terrain…', () => terrainDialog(r), 'small', r.terrain ? 'The terrain of each leg (set): it changes the travel time Plan this trip works out' : 'Slow going on some legs of the route, for the travel time Plan this trip works out'),
             btn('Edit', async () => {
               const got = await routeDialog('Edit the route', r, null, 'Save');
               if (!got) return;
@@ -1093,8 +1154,9 @@ const MapsTab = (() => {
         if (!res.ok) throw new Error(`The picture could not be fetched (${res.status})`);
         return new Uint8Array(await res.arrayBuffer());
       };
+      const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
       const asPicture = btn('Picture', async () => {
-        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[VTT.pictureType(bytes)] || 'img')); d.close(); }
+        try { const bytes = await picture(); save(new Blob([bytes], { type: VTT.pictureType(bytes) || 'application/octet-stream' }), fileName(EXT[VTT.pictureType(bytes)] || 'img')); d.close(); }
         catch (err) { toast(err.message, true); }
       }, '', 'The map\'s picture, as it was uploaded');
       const hasGrid = map.grid_px > 0;
@@ -1103,8 +1165,16 @@ const MapsTab = (() => {
         catch (err) { toast(err.message, true); }
       }, '', 'The picture with its grid, for Foundry, Roll20, Owlbear Rodeo, MapTool or Fantasy Grounds. Pins and routes stay here');
       asUvtt.disabled = !hasGrid;
+      // Foundry reads a scene's JSON with the pins as Notes; the picture is kept beside it, so it is named in the scene
+      const asFoundry = btn('Foundry scene (.json)', async () => {
+        try {
+          const bytes = await picture(), ext = EXT[VTT.pictureType(bytes)] || 'img';
+          save(new Blob([VTT.toFoundry(map, pins.map(p => ({ x: p.x, y: p.y, text: G.pinName(p) })), fileName(ext))], { type: 'application/json' }), fileName('json'));
+          d.close(); toast(`Saved the scene. Export the picture too and keep it as ${fileName(ext)} beside it`);
+        } catch (err) { toast(err.message, true); }
+      }, '', 'The map as a Foundry scene with its pins as Notes (Import Data). Export the picture too: Foundry keeps it separate');
       d.append(el('h3', {}, `Export ${map.name}`),
-        el('div', { class: 'row' }, asPicture, asUvtt),
+        el('div', { class: 'row' }, asPicture, asUvtt, asFoundry),
         hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
           : el('p', { class: 'small' }, 'Set grid squares first (⚙ → Set scale… → Grid squares) to export a Universal VTT file.'),
         el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
@@ -1299,7 +1369,10 @@ const MapsTab = (() => {
     // the picture, then the grid over it, both under the routes and pins (overlayPane is 400, markers above)
     lmap.createPane('mapPicture').style.zIndex = 300;
     lmap.createPane('mapGrid').style.zIndex = 350;
-    L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
+    // a very large picture is drawn in tiles, cut from the image as they are needed (and from smaller copies when zoomed out),
+    // so no one huge element has to be scaled: tablets and phones refuse or blur those
+    if (map.width * map.height > BIG_PICTURE) bigPicture(map.image_url, map.width, map.height, bounds()).addTo(lmap);
+    else L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
     lmap.fitBounds(bounds());
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);
