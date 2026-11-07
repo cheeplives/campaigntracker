@@ -165,6 +165,7 @@ const ACTIONS = [
     'token_save' => ['who' => 'gm'],
     'token_delete' => ['who' => 'gm'],
     'scabard_import' => ['who' => 'gm', 'touch' => true],
+    'md_import' => ['who' => 'gm', 'touch' => true],
     'scabard_picture' => ['who' => 'gm', 'touch' => true],
     'fanwiki_wikis' => ['get' => true, 'who' => 'public'],
     'fanwiki_search' => ['get' => true, 'who' => 'member'],
