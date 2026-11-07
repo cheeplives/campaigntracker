@@ -731,6 +731,27 @@ CREATE TABLE IF NOT EXISTS clock_ticks (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- The die roller (038).
+-- A roll: what was typed (expr, its # label included) and the 128-bit seed the server picked with random_int, from which
+-- every browser works out the same dice (static/dice.js, engine version `engine`). visibility: all (everyone), gm (the
+-- roller and the GMs) or blind (the GMs; the roller sees that they rolled, not what). abs_shift: the campaign clock's
+-- shift then. The log keeps the campaign's newest rolls only (Settings → Dice); older ones are deleted as new ones come.
+CREATE TABLE IF NOT EXISTS dice_rolls (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  by_gm TINYINT(1) NOT NULL DEFAULT 0,
+  expr VARCHAR(200) NOT NULL,
+  seed CHAR(32) NOT NULL,
+  engine TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  visibility VARCHAR(8) NOT NULL DEFAULT 'all',
+  abs_shift BIGINT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_dice_campaign (campaign_id, id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Character sheets. sheet_templates are site-wide, not a campaign's: anyone can use or fork one, only its author (or a
 -- site admin) changes it; a starter template (starter_key set, from db/starter-templates/) has no author. layout is
 -- JSON: sections of typed fields, each with a permanent key (see static/sheetlayout.js).
