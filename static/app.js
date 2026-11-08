@@ -6453,7 +6453,7 @@
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
   ({ viewClocks, tableClocks, panelClocks } = ClocksTab.make(tabCtx));
   // The die roller (static/dice-tab.js): not in panel.html, which has no 🎲 button.
-  const { diceSync, diceNotice } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {} };
+  const { diceSync, diceNotice, diceFromSheet } = !PANEL && typeof DiceTab !== 'undefined' ? DiceTab.make(tabCtx) : { diceSync: () => {}, diceNotice: () => {}, diceFromSheet: null };
   // The Report (!) button and Site Admin's Reports tab (static/report.js; the At the Table panel doesn't load it)
   reports = typeof ChronicleReport !== 'undefined' ? ChronicleReport.make({ S, api, post, btn, el, toast, confirmDialog, promptDialog, hideTip, version: APP_VERSION }) : null;
   ({ SEASON_LABELS, seasonChip, seasonEditor, viewSettings } = SettingsTab.make(tabCtx));
@@ -6532,7 +6532,7 @@
   }
 
   // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
-  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route, reloadCampaign: () => loadCampaign(S.camp.id, true) });
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route, rollFromSheet: diceFromSheet, reloadCampaign: () => loadCampaign(S.camp.id, true) });
 
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {

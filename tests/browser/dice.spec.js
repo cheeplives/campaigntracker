@@ -549,3 +549,66 @@ test("a session's page lists the rolls made during it, as far as each member may
   await expect(pp.locator(".sess-rolls summary")).toContainText("Rolls this session (1)");
   expectNoErrors(errors);
 });
+
+test("rolling from a character sheet: numbers, dice written on it and an attack's row roll on the dice roller", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice sheet");
+  const perrors = watchErrors(pp);
+  const layout = { sections: [
+    { key: "stats", title: "Stats", fields: [{ key: "str", label: "Strength", type: "number" }, { key: "age", label: "Age", type: "number" },
+      { key: "dmg", label: "Unarmed", type: "text" }] },
+    { key: "gear", title: "Gear", fields: [{ key: "atk", label: "Attacks", type: "list", columns: [{ key: "name", label: "Name" }, { key: "dmg", label: "Damage" }] }] },
+  ] };
+  const tpl = (await api(page, "template_save", { name: `Rolling sheet ${Date.now()}`, game: "Test RPG", layout })).json.template;
+  const ch = (await api(pp, "character_create", { template_id: tpl.id, name: "Wren" }, cid)).json.character;
+  await pp.goto(`index.html#/c/${cid}/characters/${ch.id}`);
+  // the floating roller can sit over the sheet on a small screen: close it after each roll (the next one opens it)
+  const close = () => pp.getByRole("button", { name: "Close the dice roller" }).click();
+  const lastRoll = async () => { const r = (await api(pp, "dice_rolls", undefined, cid)).json.rolls; return r[r.length - 1]?.expr; };
+
+  const sheet = pp.locator(".sheet-form");
+  await expect(sheet.getByRole("button", { name: "Roll Strength" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Roll Age" })).toHaveCount(0);       // an age is never rolled
+  await expect(sheet.getByRole("button", { name: "Roll Unarmed" })).toBeHidden();      // no dice written in it yet
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  await expect(pp.locator("#toast")).toContainText("Fill in Strength first");
+  await sheet.getByLabel("Strength", { exact: true }).fill("3");
+  await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  // free dice only: a d20 plus the number, named for the character, on the open roller
+  await expect(pp.locator(".dice-panel")).toBeVisible();
+  await expect.poll(lastRoll).toBe("1d20+3 # Strength");
+  await expect(pp.locator(".dice-e.latest")).toContainText("Wren · Strength");
+  await close();
+
+  await sheet.getByLabel("Unarmed", { exact: true }).fill("1d3+1 bludgeoning");
+  await sheet.getByLabel("Unarmed", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Unarmed" }).click();
+  await expect.poll(lastRoll).toBe("1d3+1 # Unarmed");
+  await close();
+
+  await sheet.getByRole("button", { name: "+ Row" }).click();
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).fill("Longsword");
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).dispatchEvent("change");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).fill("1d8+3 slashing");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll 1d8+3 for Longsword" }).click();
+  await expect.poll(lastRoll).toBe("1d8+3 # Longsword, Damage");
+  await close();
+
+  // with Pathfinder 2e as the campaign's game, Strength is a score: 16 rolls the game roll with its +3
+  const s = (await api(page, "campaign", undefined, cid)).json;
+  const settings = { ...(s.campaign?.settings || {}), dice: { player_vis: "all", keep: 100, system: { id: "d20", game: "pf2", params: { tn: 15, crit: 20, fumble: true, margin: 10 }, labels: { tn: "DC" } } } };
+  expect((await api(page, "campaign_update", { settings }, cid)).status).toBe(200);
+  await pp.reload();
+  await sheet.getByLabel("Strength", { exact: true }).fill("16");
+  await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  await expect.poll(lastRoll).toMatch(/^1d20\+3 @d20 .* # Strength \(\+3\)$/);
+  // the GM rolls from it too, named for the character; the log names the GM as who rolled
+  await page.goto(`index.html#/c/${cid}/characters/${ch.id}`);
+  await page.locator(".sheet-form").getByRole("button", { name: "Roll Unarmed" }).click();
+  await expect.poll(lastRoll).toBe("1d3+1 # Wren: Unarmed");
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});

@@ -1471,6 +1471,10 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .sheet-label > span { min-width: 0; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .sheet-field[data-cols="1"] .sheet-label { font-size: .72rem; letter-spacing: .01em; }
 .sheet-eye { padding: 0 4px; font-size: .85rem; }
+.sheet-roll { padding: 0 4px; font-size: .85rem; line-height: 1; }
+.sheet-roll[hidden] { display: none; }
+.play-label .sheet-roll { margin-left: 4px; }
+.sheet-roll-cell { width: 1%; white-space: nowrap; }
 .sheet-counter-box { display: flex; gap: 6px; align-items: center; }
 .sheet-counter-box input { width: 5em; }
 .sheet-pips { display: flex; flex-wrap: wrap; gap: 4px; }

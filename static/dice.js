@@ -348,7 +348,17 @@
     return r.results.map(one).join(', ');
   }
 
-  const Dice = { VERSION, LIMITS, DiceError, newSeed, seeded, parse, roll, simulate, check, summary, swapped };
+  /** The first roll written in a bit of text, as a character sheet has it ("1d8+3 slashing" is 1d8+3, "2d6 fire" is
+   * 2d6), or null when it has none. Dice and plus or minus numbers or dice after them, with keep or drop. */
+  const FIND = /(?:^|[^\w])(\d*d(?:\d+|%|F)(?:(?:kh|kl|dh|dl)\d+)?(?:\s*[+\-\u2212]\s*(?:\d*d(?:\d+|%|F)(?:(?:kh|kl|dh|dl)\d+)?|\d+)(?![\w%]))*)(?![\w%])/i;
+  function find(text) {
+    const m = FIND.exec(String(text ?? ''));
+    if (!m) return null;
+    const e = m[1].replace(/\s+/g, '').replace(/\u2212/g, '-');
+    return check(e) ? null : e;
+  }
+
+  const Dice = { VERSION, LIMITS, DiceError, newSeed, seeded, parse, roll, simulate, check, summary, swapped, find };
   if (typeof module !== 'undefined' && module.exports) module.exports = Dice;
   else root.Dice = Dice;
 })(typeof window !== 'undefined' ? window : globalThis);

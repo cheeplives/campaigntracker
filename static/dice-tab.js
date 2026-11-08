@@ -635,7 +635,39 @@
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden && isOpen()) load(); });
 
-    return { diceSync: sync, diceNotice: notice };
+    /** A roll from a character sheet (static/sheets.js): x = { kind: 'num'|'dice', value, label }. A number goes into the
+     * campaign's game roll (DiceSystems.sheetKey: the modifier, stat, skill or pool) and rolls with the rest of the
+     * roller's numbers as they are; with free dice only, it is a d20 plus the number. Dice written on the sheet roll as
+     * written. The panel opens with the roll on it, so it can be changed and rolled again. */
+    async function fromSheet(x) {
+      if (!cid) return;
+      if (!isOpen()) setOpen(true);
+      if (!settings) await load();
+      const label = String(x.label || '').replace(/[#@\n]/g, '').trim().slice(0, 80);
+      if (x.kind === 'num') {
+        const n = Math.round(Number(x.value));
+        if (x.value === null || x.value === '' || !isFinite(n)) { toast(`Fill in ${label || 'that number'} first`, true); return; }
+        const key = sysNow && DS.sheetKey(sysNow.sys);
+        if (key) {
+          const got = DS.sheetNumber(sysNow, x.field || label, n);
+          setMode('game', true);
+          sysP = DS.params(sysNow.sys, { ...sysP, [key]: got.n });
+          store.set(sysKey(), JSON.stringify({ id: sysNow.sys.id, p: sysP }));
+          forInput.value = got.note ? `${label} (${got.note})` : label;
+          drawFields();
+          return rollGame();
+        }
+        x = { kind: 'dice', value: `1d20${n > 0 ? `+${n}` : n < 0 ? n : ''}` };
+      }
+      if (gameOnly()) { toast('The GM has turned free rolls off: use the Game roll', true); return; }
+      setMode('free', true);
+      let text = `${x.value}${label ? ` # ${label}` : ''}`;
+      while (text.length > Dice.LIMITS.length && text.includes('#')) text = text.slice(0, -1).replace(/\s*#\s*$/, '');
+      input.value = text;
+      return roll(text);
+    }
+
+    return { diceSync: sync, diceNotice: notice, diceFromSheet: fromSheet };
   }
   root.DiceTab = { make };
 })(window);
