@@ -1212,7 +1212,7 @@ const MapsTab = (() => {
       const way = (title, text, action) => el('div', { class: 'map-scan-way' }, el('div', {}, el('strong', {}, title), el('p', { class: 'small muted' }, text)), action);
       d.append(el('h3', {}, `Scan ${map.name} for place names`),
         way('Read with Claude', key
-          ? 'Sends the picture to Anthropic, where Claude reads it with your own API key. Reads fancy and slanted lettering well. Costs your Anthropic account a few cents a scan.'
+          ? 'Sends the picture to Anthropic, where Claude reads it with your own API key. Reads fancy and slanted lettering well, and a numbered legend: each numbered spot is named from the legend. Costs your Anthropic account a few cents a scan.'
           : 'Claude reads fancy and slanted lettering well, using your own Anthropic API key. Add your key on your account page to use it.',
         key ? btn('Read with Claude', () => run('claude'), 'primary') : el('a', { class: 'button', href: '#/account', onclick: () => d.close() }, 'Add your key')),
         way('Read on this device', 'Free, and the picture stays on your device, but it only reads plain printed lettering. The first scan downloads the scanner (about 7 MB), which your browser keeps.',
@@ -1258,7 +1258,7 @@ const MapsTab = (() => {
           say();
           const row = el('div', { class: 'map-scan-row' + (already ? ' already' : '') }, box,
             el('img', { src: MapScan.crop(canvas, k, c.box), alt: `Where "${c.name}" was read`, class: 'map-scan-crop' }),
-            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, c.conf === null ? null : el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
+            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, c.num ? el('small', { class: 'muted' }, ` · number ${c.num} in the legend`) : null, c.conf === null ? null : el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
           return { c, box, name, row };
         });
         const go = el('button', { class: 'primary', type: 'button' });
