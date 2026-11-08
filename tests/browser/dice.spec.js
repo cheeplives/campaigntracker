@@ -3,7 +3,7 @@
 // and who sees a roll (everyone, the roller and GMs, or the GMs alone) is the server's to enforce.
 const { test, expect } = require("@playwright/test");
 const path = require("path");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, sql, makePng } = require("./helpers");
 const Dice = require(path.join(__dirname, "..", "..", "static", "dice.js"));
 test.afterEach(closeContexts);
 
@@ -315,6 +315,60 @@ test("the roller pins beside the page or floats over it, and remembers which on 
   await expect(pin).toHaveAttribute("aria-pressed", "false");
   await pin.click();
   expect(await appMargin()).toBe("380px");
+  expectNoErrors(errors);
+});
+
+test("the floating roller and its 3D dice sit over a map, with the dice at the top of the panel and the log under them", async ({ page, browser }) => {
+  test.skip(!["chromium", "ipad"].includes(test.info().project.name), "a desktop and an iPad are enough for where things sit");
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice map");
+  const id = (await api(page, "map_save", { name: "Sartar" }, cid)).json.map.id;
+  const me = await (await page.request.get("api/auth/me.php")).json();
+  const up = await (await page.request.post(`api/index.php?${new URLSearchParams({ a: "file_upload", cid })}`, {
+    headers: { "X-CSRF-Token": me.csrf },
+    multipart: { parent_type: "map", parent_id: String(id), file: { name: "map.png", mimeType: "image/png", buffer: makePng(1600, 1200) } },
+  })).json();
+  expect((await api(page, "map_save", { id, image_id: up.file.id }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/maps/${id}`);
+  await expect(page.locator(".map-stage .leaflet-pane").first()).toBeAttached();
+  await openDice(page);
+  const pin = page.getByRole("button", { name: "Pin the roller beside the page" });
+  if (await pin.getAttribute("aria-pressed") === "true") await pin.click();
+  await expect(page.locator("body")).toHaveClass(/dice-float/);
+  for (let i = 0; i < 3; i++) await page.locator(".map-stage .leaflet-control-zoom-in").click();   // the picture under the panel too
+  // whatever is drawn at a point of the panel is the panel's own, not the map's picture, pins or buttons
+  const covered = () => page.evaluate(() => {
+    const r = document.querySelector(".dice-panel").getBoundingClientRect(), out = [];
+    for (let fy = 0.025; fy < 1; fy += 0.05) for (let fx = 0.025; fx < 1; fx += 0.05) {
+      const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy);
+      if (hit && !hit.closest(".dice-panel")) out.push(hit.className || hit.tagName);
+    }
+    return out;
+  });
+  expect(await covered()).toEqual([]);
+  // the dice come first, under the header, and the log is under them
+  const foot = await page.locator(".dice-foot").boundingBox(), log = await page.locator(".dice-log").boundingBox();
+  expect(foot.y + foot.height).toBeLessThanOrEqual(log.y + 1);
+  const d20 = page.getByRole("button", { name: "d20", exact: true });
+  const before = (await d20.boundingBox()).y;
+  await d20.click();
+  await expect(page.locator(".dice-e")).toHaveCount(1);
+  await d20.click();
+  await expect(page.locator(".dice-e")).toHaveCount(2);
+  expect((await d20.boundingBox()).y).toBe(before);           // rolling doesn't move the dice
+  // the 3D tray is over the map, not under it
+  const tray = page.locator(".dice-tray");
+  if (await tray.count()) {
+    const z = await page.evaluate(() => {
+      const t = document.querySelector(".dice-tray"), r = document.querySelector(".map-stage").getBoundingClientRect();
+      const was = t.style.cssText;
+      t.style.cssText += ";left:0;top:0;width:100vw;height:100vh;opacity:1;visibility:visible;pointer-events:auto"   // it lets clicks through, so make it catch this one;
+      const hit = document.elementFromPoint(r.left + 40, r.top + r.height / 2);
+      t.style.cssText = was;
+      return hit === t;
+    });
+    expect(z).toBe(true);
+  }
   expectNoErrors(errors);
 });
 
