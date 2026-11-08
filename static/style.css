@@ -1946,6 +1946,15 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
    as a coloured ring, since the die's own colour is the player's. */
 .looked .die { background: var(--die-tex, none) center / 64px, var(--die-bg); color: var(--die-ink); box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), inset 0 0 0 1px var(--die-edge);
   text-shadow: 0 0 3px color-mix(in srgb, var(--die-bg) 80%, transparent); }
+/* Animated patterns on the flat dice: the moving layer (--die-glow) over the pattern, lit like light. */
+.looked.anim .die { background: var(--die-glow) 0 0 / 40px, var(--die-tex, none) center / 64px, var(--die-bg); background-blend-mode: screen, normal, normal; }
+.looked.anim-sparkle .die { animation: die-sparkle 1s steps(6) infinite; }
+.looked.anim-drift .die { animation: die-drift 14s linear infinite; }
+.looked.anim-glow .die { animation: die-glow 2.4s ease-in-out infinite alternate; }
+@keyframes die-sparkle { to { background-position: 97px 61px, center, 0 0; } }
+@keyframes die-drift { to { background-position: 40px 20px, center, 0 0; } }
+@keyframes die-glow { from { filter: brightness(.9); } to { filter: brightness(1.25) saturate(1.2); } }
+@media (prefers-reduced-motion: reduce) { .looked.anim .die { animation: none; } }
 .looked .die.hit { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #3f9a5a; }
 .looked .die.miss { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #c04848; }
 .looked .die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px var(--accent); }

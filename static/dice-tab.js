@@ -264,7 +264,7 @@
     }
     /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
     function throw3d(r, only = null) {
-      if (!D3 || r.seed === null) return;
+      if (!D3 || r.seed === null || settings?.flat) return;     // the GM can make the dice flat for the whole table
       let res;
       try { res = Dice.roll(r.expr, r.seed, rerollsFor(r)); } catch { return; }
       if (!D3.can(res, only)) return;
@@ -402,9 +402,11 @@
 
     // ------------------------------------------------------------ the game roll
     /** Show the game roll or the free roll. A campaign with no dice system has only the free roll. */
+    /** A player in a campaign whose GM turned free rolls off (Settings → Dice) has only the game roll. */
+    const gameOnly = () => !!(sysNow && settings?.no_free && !isGM());
     function setMode(m, remember) {
-      mode = sysNow && m === 'game' ? 'game' : 'free';
-      modes.hidden = !sysNow;
+      mode = sysNow && (m === 'game' || gameOnly()) ? 'game' : 'free';
+      modes.hidden = !sysNow || gameOnly();
       sysBox.hidden = mode !== 'game';
       freeBox.hidden = mode !== 'free';
       tabGame.setAttribute('aria-selected', String(mode === 'game'));
@@ -418,7 +420,7 @@
     }
     /** The campaign's dice system, as the server last said (settings.system): redrawn only when the GM changed it. */
     function drawSys() {
-      const sig = JSON.stringify(settings?.system || null);
+      const sig = JSON.stringify([settings?.system || null, !!settings?.no_free, !!settings?.hide_odds]);
       if (sig === sysSig) return;
       sysSig = sig;
       sysNow = DS.campaignSystem(settings);
@@ -453,6 +455,7 @@
       sysRollBtn.setAttribute('aria-label', `Roll ${text}`);
       clearTimeout(oddsTimer);
       oddsTimer = setTimeout(() => {
+        if (settings?.hide_odds && !isGM()) { odds.set(null); return; }      // the GM keeps the odds from players
         try { odds.set(DS.odds(sysNow.sys, sysP, { table: sysNow.table }, 2000)); } catch { odds.set(null); }
       }, 120);
       if (savedSel.value) { const s = savedList()[Number(savedSel.value) - 1]; if (s && s.e !== gameText()) { savedSel.value = ''; forgetBtn.hidden = true; } }
@@ -556,7 +559,7 @@
       const flat = el('div', { class: 'dice-look-flat', 'aria-hidden': 'true' });
       const res = { results: [{ terms: [{ src: 'd20', sides: 20, dice: [{ v: 20, rolls: [20], rerolled: [] }] }, { src: 'd6', sides: 6, dice: [{ v: 3, rolls: [3], rerolled: [] }, { v: 6, rolls: [6], rerolled: [] }] }], total: 29 }] };
       flat.append(...DiceUI.diceRows(el, res, { look: shown }));
-      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, no3d = !D3.available();
+      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, gmFlat = !!settings?.flat, no3d = !D3.available() || gmFlat;
       const on3d = el('input', { type: 'checkbox', checked: D3.enabled() && !slow && !no3d, disabled: slow || no3d,
         onchange: e => { D3.setEnabled(e.target.checked); drawLook(); } });
       lookCard.replaceChildren(
@@ -572,7 +575,7 @@
               el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
             el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
-          no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
+          gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
       if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
     }
     /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */

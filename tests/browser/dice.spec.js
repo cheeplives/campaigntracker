@@ -471,3 +471,46 @@ test("rerolling by hand: the roller picks dice from their roll and rolls them ag
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("Settings → Dice at the table: the GM turns off players' free rolls and odds, and makes the dice flat", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice table");
+  const perrors = watchErrors(pp);
+  await page.goto(`index.html#/c/${cid}/settings/dice`);
+  const form = page.locator(".dice-settings");
+  await form.locator("#dice-game").selectOption("pf2");
+  await form.getByRole("checkbox", { name: "Players can make free rolls" }).uncheck();
+  await form.getByRole("checkbox", { name: "Players see the odds" }).uncheck();
+  await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+  await form.getByRole("button", { name: "Save dice settings" }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+  const set = (await api(pp, "dice_rolls", undefined, cid)).json.settings;
+  expect(set).toMatchObject({ no_free: true, hide_odds: true, flat: true });
+
+  // the player has only the game roll, without odds; the server refuses their free roll and takes the game roll
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await openDice(pp);
+  await expect(pp.locator(".dice-sys")).toBeVisible();
+  await expect(pp.locator(".dice-modes")).toBeHidden();
+  await expect(pp.getByRole("textbox", { name: "Free roll" })).toBeHidden();
+  await pp.waitForTimeout(300);
+  await expect(pp.locator(".dice-panel .dice-odds")).toBeHidden();
+  const free = await api(pp, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid);
+  expect(free.status).toBe(400);
+  expect(free.json.message).toMatch(/free rolls off/);
+  await pp.locator(".dice-sys-go").click();
+  await expect(pp.locator(".dice-e.latest small.tier")).toBeVisible();
+  await expect(pp.locator(".dice-tray.on")).toHaveCount(0);        // flat dice for everyone
+  await pp.getByRole("button", { name: "Your dice: colours and 3D" }).click();
+  await expect(pp.getByRole("checkbox", { name: "Throw 3D dice on this device" })).toBeDisabled();
+  await expect(pp.getByRole("dialog", { name: "Your dice" })).toContainText("the GM has set flat dice");
+
+  // the GM keeps the free roll and the odds
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  await expect(page.locator(".dice-modes")).toBeVisible();
+  await expect(page.locator(".dice-panel .dice-odds")).toBeVisible();
+  expect((await api(page, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid)).status).toBe(200);
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});

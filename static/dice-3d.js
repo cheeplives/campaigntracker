@@ -17,9 +17,14 @@
   const LIB = 'static/vendor/three/three.dice.min.mjs';
   const SETTING = 'chronicle-dice-3d';      // 'off' on this device turns the 3D dice off
   const MAX_DICE = 30;                       // more than this in one roll: flat dice only
-  /** The patterns a player can pick (DICE_TEXTURES in api/dice.php checks the same list). */
+  /** The patterns a player can pick (DICE_TEXTURES in api/dice.php checks the same list). The animated ones move: glitter
+   * that sparkles, stars that drift and twinkle inside the die, embers that glow. */
   const TEXTURES = [['', 'Plain'], ['marble', 'Marble'], ['wood', 'Wood'], ['stone', 'Stone'], ['stars', 'Starfield'],
-    ['metal', 'Brushed metal'], ['speckle', 'Speckled']];
+    ['metal', 'Brushed metal'], ['speckle', 'Speckled'], ['swirl', 'Resin swirl'], ['pearl', 'Pearl'], ['scales', 'Dragon scales'],
+    ['carbon', 'Carbon fibre'], ['ice', 'Cracked ice'], ['lava', 'Lava'],
+    ['glitter', 'Glitter (animated)'], ['galaxy', 'Galaxy (animated)'], ['ember', 'Embers (animated)']];
+  /** The patterns that move, and what moves. */
+  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow' };
   /** Colours offered first on the picker (any colour can still be chosen). [body, ink, name] */
   const SWATCHES = [['#f3ecdc', '#2b2418', 'Ivory'], ['#1d1d22', '#f2f2f2', 'Black'], ['#a3222d', '#fff4e0', 'Crimson'],
     ['#1f4fa3', '#ffffff', 'Royal blue'], ['#1e7a4c', '#fff6d8', 'Emerald'], ['#5b2a86', '#f4d27a', 'Amethyst'],
@@ -72,6 +77,56 @@
     const layers = Array.from({ length: octaves }, (_, k) => noise(seed + k * 101, base << k));
     return (x, y) => { let v = 0, w = 0.5, tot = 0; for (const n of layers) { v += n(x, y) * w; tot += w; w *= 0.5; } return v / tot; };
   }
+  /** Distances to the nearest and next-nearest of n random points, wrapping at the tile's edges (cracked ice). */
+  function voronoi(seed, n) {
+    const R = rng(seed), pts = Array.from({ length: n }, () => [R(), R()]);
+    return (u, v) => {
+      let a = 9, b = 9;
+      for (const [px, py] of pts) {
+        let dx = Math.abs(u - px), dy = Math.abs(v - py);
+        dx = Math.min(dx, 1 - dx); dy = Math.min(dy, 1 - dy);
+        const d = Math.hypot(dx, dy);
+        if (d < a) { b = a; a = d; } else if (d < b) b = d;
+      }
+      return [a, b];
+    };
+  }
+  const glows = new Map();
+  /** The moving part of an animated pattern, drawn on its own tile and laid over the die as light it gives off: glitter
+   * flakes, stars, the glowing cracks of embers. Black is "no light". */
+  function glowLayer(look, size = 256) {
+    const k = keyOf(look);
+    if (glows.has(k)) return glows.get(k);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, size, size);
+    const S = rng(41), tint = toHex(mix(hex(look.body), WHITE, 0.7));
+    if (look.tex === 'glitter') {
+      for (let i = 0; i < 320; i++) {
+        const x = S() * size, y = S() * size, r = 0.8 + S() * 1.4;
+        const grd = g.createRadialGradient(x, y, 0, x, y, r * 2.2);
+        grd.addColorStop(0, S() < 0.5 ? '#ffffff' : tint); grd.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grd; g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.fill();
+      }
+    } else if (look.tex === 'galaxy') {
+      for (let i = 0; i < 160; i++) {
+        const x = S() * size, y = S() * size, r = S() < 0.1 ? 1.8 : 0.6 + S() * 0.7;
+        g.fillStyle = `rgba(255,255,255,${0.5 + S() * 0.5})`;
+        g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      }
+    } else if (look.tex === 'ember') {
+      const img = g.getImageData(0, 0, size, size), px = img.data, f = fbm(7, 4, 5);
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const ridge = Math.pow(1 - Math.abs(2 * f(x / size, y / size) - 1), 22), o = (y * size + x) * 4;
+        px[o] = 255 * ridge; px[o + 1] = 110 * ridge; px[o + 2] = 20 * ridge;
+      }
+      g.putImageData(img, 0, 0);
+    }
+    glows.set(k, cv);
+    return cv;
+  }
   const patterns = new Map();
   /** The look's pattern as a square tile (size px), in its body colour. */
   function pattern(look, size = 256) {
@@ -88,6 +143,8 @@
       const img = g.createImageData(size, size), px = img.data;
       const f = fbm(7, 4, 5), f2 = fbm(19, 8, 4), R = rng(3);
       const light = mix(body, WHITE, 0.55), dark = mix(body, BLACK, 0.45);
+      const cells = look.tex === 'ice' ? voronoi(23, 18) : null;
+      const HOT = [255, 140, 40];
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
           const u = x / size, v = y / size;
@@ -111,6 +168,41 @@
             const n = noise(31, 4)(u, v * 0.02) * 0.5 + noise(37, 64)(u * 0.05, v) * 0.5;
             const sheen = 0.5 + 0.5 * Math.cos((u * 0.7 + v * 0.3) * Math.PI * 2);
             c = mix(mix(dark, light, 0.35 + n * 0.4), WHITE, sheen * 0.18);
+          } else if (look.tex === 'swirl') {
+            // poured resin: the dice colour folded through with a lighter one and thin streaks of the number colour
+            const w = f(u, v) * 3 + f2(u + 0.3, v) * 1.5;
+            const band = 0.5 + 0.5 * Math.sin((u * 2 + w) * Math.PI * 2);
+            c = mix(body, mix(body, WHITE, 0.5), Math.pow(band, 3));
+            c = mix(c, ink, Math.pow(1 - Math.abs(Math.sin((v * 2 + w * 1.3) * Math.PI * 2)), 24) * 0.6);
+          } else if (look.tex === 'pearl') {
+            const n = f(u, v), sh = (n * 3 + u + v) * Math.PI * 2;
+            c = mix(body, WHITE, 0.35 + n * 0.25);
+            c = [c[0] + Math.sin(sh) * 22, c[1] + Math.sin(sh + 2.1) * 22, c[2] + Math.sin(sh + 4.2) * 22];
+          } else if (look.tex === 'scales') {
+            // overlapping rows of round scales, each lit from its top and shadowed at its rim
+            const rows = 16, yy = v * rows, row = Math.floor(yy), xx = u * rows + (row % 2 ? 0.5 : 0);
+            const lx = xx - Math.floor(xx) - 0.5, ly = yy - row;
+            const d = Math.min(1, Math.hypot(lx, ly * 0.9 - 0.1) * 1.6);
+            c = mix(mix(light, body, 0.4 + ly * 0.4), dark, Math.pow(d, 4));
+          } else if (look.tex === 'carbon') {
+            const k = 24, a = Math.floor(u * k), b = Math.floor(v * k), across = (a + b) % 2 === 0;
+            const t = across ? (u * k) % 1 : (v * k) % 1;
+            c = mix(mix(body, BLACK, 0.55), mix(body, WHITE, 0.15), 0.25 + 0.6 * Math.sin(t * Math.PI));
+          } else if (look.tex === 'ice') {
+            const [d1, d2] = cells(u, v), edge = 1 - Math.min(1, (d2 - d1) * 40);
+            c = mix(mix(body, WHITE, 0.45 + f2(u, v) * 0.2), WHITE, Math.pow(edge, 2) * 0.85);
+          } else if (look.tex === 'lava' || look.tex === 'ember') {
+            // dark rock with glowing cracks (embers: the cracks glow in the animated layer as well)
+            const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 22);
+            c = mix(mix(body, BLACK, 0.6), mix(HOT, WHITE, 0.15), ridge);
+          } else if (look.tex === 'galaxy') {
+            const n = Math.pow(f(u, v), 1.8), m = f2(u * 0.5, v * 0.5);
+            c = mix(mix(body, BLACK, 0.78), mix(mix(body, [120, 60, 200], 0.4), WHITE, 0.1), n * 1.5);
+            c = mix(c, [40, 160, 220], Math.max(0, m - 0.55) * 0.9);
+          } else if (look.tex === 'glitter') {
+            c = mix(body, mix(body, WHITE, 0.25), f2(u, v) * 0.4);
+            const r = R();
+            if (r < 0.06) c = mix(c, WHITE, 0.35 + R() * 0.3); else if (r < 0.1) c = mix(c, BLACK, 0.2);
           } else {   // speckle
             c = mix(body, light, f2(u, v) * 0.25);
             const r = R();
@@ -121,7 +213,7 @@
         }
       }
       g.putImageData(img, 0, 0);
-      if (look.tex === 'stars') {
+      if (look.tex === 'stars' || look.tex === 'galaxy') {
         const S = rng(11);
         for (let k = 0; k < size * size / 450; k++) {
           const x = S() * size, y = S() * size, r = S() < 0.08 ? 1.6 : 0.7 + S() * 0.5;
@@ -141,6 +233,8 @@
     if (!chips.has(k)) {
       const st = { '--die-bg': look.body, '--die-ink': look.ink, '--die-edge': toHex(mix(hex(look.body), BLACK, 0.35)) };
       if (look.tex) { try { st['--die-tex'] = `url(${pattern(look, 96).toDataURL('image/png')})`; } catch { /* a canvas that can't export: plain colour */ } }
+      // an animated pattern's moving layer, for the flat dice to sparkle, drift or glow too (style.css .looked.anim)
+      if (ANIMATED[look.tex]) { try { st['--die-glow'] = `url(${glowLayer(look).toDataURL('image/png')})`; } catch { /* still dice */ } }
       chips.set(k, st);
     }
     return chips.get(k);
@@ -379,13 +473,26 @@
     const sh = shape(sides);
     const k = `${sides}|${labels ? labels.faces.join(',') : ''}|${keyOf(look)}`;
     if (!mats.has(k)) {
-      if (mats.size > 40) { for (const m of mats.values()) { m.map?.dispose(); m.dispose(); } mats.clear(); geos.forEach(g => g.dispose()); geos.clear(); }
+      if (mats.size > 40) { for (const m of mats.values()) { m.map?.dispose(); m.emissiveMap?.dispose(); m.dispose(); } mats.clear(); geos.forEach(g => g.dispose()); geos.clear(); }
       const { cv, uv } = atlas(sh, look, labels);
       const map = new T.CanvasTexture(cv);
       map.colorSpace = T.SRGBColorSpace;
       map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       const metal = look.tex === 'metal';
-      mats.set(k, new T.MeshStandardMaterial({ map, roughness: metal ? 0.32 : look.tex === 'marble' ? 0.28 : 0.42, metalness: metal ? 0.35 : 0.02 }));
+      const shiny = ['marble', 'pearl', 'ice', 'glitter', 'galaxy'].includes(look.tex);
+      const mat = new T.MeshStandardMaterial({ map, roughness: metal || look.tex === 'carbon' ? 0.32 : shiny ? 0.26 : 0.42, metalness: metal ? 0.35 : look.tex === 'pearl' ? 0.12 : 0.02 });
+      if (ANIMATED[look.tex]) {
+        // the moving layer: its own tile, repeated over the die, lit from within and changed each frame (animate())
+        const glow = new T.CanvasTexture(glowLayer(look));
+        glow.colorSpace = T.SRGBColorSpace;
+        glow.wrapS = glow.wrapT = T.RepeatWrapping ?? 1000;
+        glow.repeat.set(look.tex === 'ember' ? 1 : 3, look.tex === 'ember' ? 1 : 3);
+        mat.emissiveMap = glow;
+        mat.emissive.setRGB(1, 1, 1);
+        mat.emissiveIntensity = 0.8;
+        mat.userData.anim = ANIMATED[look.tex];
+      }
+      mats.set(k, mat);
       const gk = `${sides}|${labels ? labels.faces.join(',') : ''}|${sh.faces.length}`;
       if (!geos.has(gk)) geos.set(gk, geometry(sh, uv));
       mats.get(k).userData.geo = gk;
@@ -428,6 +535,28 @@
     return { x: 0, y: 0, w: vw, h: vh };
   }
 
+  let lastSpark = 0;
+  /** Move the animated patterns of the dice on show: glitter flakes jump to new spots (so they sparkle), stars drift
+   * and twinkle, embers pulse. t is seconds since the throw. */
+  function animate(list, t) {
+    const seen = new Set();
+    for (const d of list) {
+      const m = d.m.material;
+      if (!m.userData.anim || seen.has(m.emissiveMap)) continue;
+      seen.add(m.emissiveMap);
+      const g = m.emissiveMap;
+      if (m.userData.anim === 'sparkle') {
+        if (t - lastSpark > 0.11) { g.offset.set(Math.random(), Math.random()); lastSpark = t; }
+        m.emissiveIntensity = 1.4 + 0.4 * Math.sin(t * 9);
+      } else if (m.userData.anim === 'drift') {
+        g.offset.set(t * 0.015, t * 0.006);
+        m.emissiveIntensity = 0.75 + 0.25 * Math.sin(t * 3.1) * Math.sin(t * 1.7);
+      } else {
+        m.emissiveIntensity = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.3) * Math.sin(t * 0.9 + 1));
+      }
+    }
+  }
+  const moving = list => !reduced() && list.some(d => d.m.material.userData.anim);
   function stop() {
     cancelAnimationFrame(raf); raf = 0;
     clearTimeout(fadeTimer);
@@ -520,6 +649,7 @@
           qs.setFromAxisAngle(Y, d.spin * (1 - e) * (1 - e));
           d.m.quaternion.copy(q).multiply(qs).multiply(d.end);
         }
+        animate(dice, t);
         renderer.render(scene, camera);
         if (all && !landed) {
           landed = true;
@@ -529,8 +659,8 @@
             canvas.classList.add('fade');
             fadeTimer = setTimeout(() => { if (current?.dice === dice) { current.done = () => {}; stop(); } }, 600);
           }, 2600);
-          raf = 0;
-          return;
+          // still dice need no more frames; animated patterns keep moving until the dice fade
+          if (!moving(dice)) { raf = 0; return; }
         }
         raf = requestAnimationFrame(frame);
       };
@@ -588,5 +718,5 @@
     return { text: faceText(f, labels, sides), flat: Math.max(...ys), upright: -up.z };
   }
 
-  root.Dice3D = { TEXTURES, SWATCHES, can, available, enabled, setEnabled, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
+  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, can, available, enabled, setEnabled, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
 })(window);

@@ -27,7 +27,8 @@ const DICE_REROLL_DICE = 100;
 /** Engine versions static/dice.js can roll (Dice.VERSION). */
 const DICE_ENGINES = [1];
 /** The built-in patterns a player can put on their dice (TEXTURES in static/dice-3d.js, which draws them). */
-const DICE_TEXTURES = ['', 'marble', 'wood', 'stone', 'stars', 'metal', 'speckle'];
+const DICE_TEXTURES = ['', 'marble', 'wood', 'stone', 'stars', 'metal', 'speckle', 'swirl', 'pearl', 'scales', 'carbon', 'ice', 'lava',
+    'glitter', 'galaxy', 'ember'];
 
 /** How a player's dice look, checked: { body, ink, tex }, or null if it isn't one. */
 function dice_look($l): ?array {
@@ -47,7 +48,9 @@ function dice_settings(int $cid): array {
     $vis = in_array($d['player_vis'] ?? 'all', DICE_VIS, true) ? $d['player_vis'] ?? 'all' : 'all';
     $keep = is_numeric($d['keep'] ?? null) ? (int)$d['keep'] : DICE_KEEP_DEFAULT;
     return ['player_vis' => $vis, 'lock_vis' => !empty($d['lock_vis']), 'gm_hidden' => !empty($d['gm_hidden']),
-        'keep' => max(DICE_KEEP_MIN, min(DICE_KEEP_MAX, $keep)), 'system' => dice_system($d['system'] ?? null)];
+        'keep' => max(DICE_KEEP_MIN, min(DICE_KEEP_MAX, $keep)), 'system' => dice_system($d['system'] ?? null),
+        // At the table: players roll only the game roll (when there is one), players don't see the odds, flat dice for all
+        'no_free' => !empty($d['no_free']), 'hide_odds' => !empty($d['hide_odds']), 'flat' => !empty($d['flat'])];
 }
 /** The campaign's dice system (static/dice-systems.js reads it): its id, its numbers, the game it started from, its
  * renamed numbers and, for a result table, the table. Only shapes and sizes are checked here; the browser puts each
@@ -124,6 +127,9 @@ function dice_action(string $action): void {
         $engine = int_in(p('engine', 1), 1, 255);
         if (!in_array($engine, DICE_ENGINES, true)) fail('Reload the page to roll with the current dice');
         $set = dice_settings($cid);
+        // With free rolls turned off, a player's roll has to be the campaign's game roll
+        if (!$isGm && $set['no_free'] && $set['system'] && !preg_match('/@' . preg_quote($set['system']['id'], '/') . '(?![a-z0-9])/', $expr))
+            fail('The GM has turned free rolls off: use the Game roll');
         $vis = (string)p('visibility', $isGm ? ($set['gm_hidden'] ? 'gm' : 'all') : $set['player_vis']);
         if (!in_array($vis, DICE_VIS, true)) fail('Pick who sees the roll: all, gm or blind');
         if ($isGm && $vis === 'blind') $vis = 'gm';                      // a GM's roll hidden from players is simply theirs

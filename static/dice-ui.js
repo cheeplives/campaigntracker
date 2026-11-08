@@ -123,6 +123,7 @@
     return res.results.map((one, k) => {
       const row = el('div', { class: chip ? 'dice-terms looked' : 'dice-terms' });
       if (chip) for (const [p, v] of Object.entries(chip)) row.style.setProperty(p, v);
+      if (chip?.['--die-glow']) row.classList.add('anim', `anim-${root.Dice3D.ANIMATED[look.tex]}`);
       if (res.repeat) row.append(el('span', { class: 'dice-go-n small muted' }, `#${k + 1} = ${one.total}`));
       one.terms.forEach((t, i) => {
         row.append(el('span', { class: 'dice-term', title: t.src }, t.dice.map((d, j) => die(el, d, t, animate instanceof Set ? animate.has(d.i) : animate, k === 0 && faces?.[i]?.[j]))));
