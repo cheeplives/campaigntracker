@@ -73,6 +73,11 @@
     try { got = DS.read(res, ctx); } catch { got = null; }
     if (got) return { big: String(got.big), words: got.words || '', tier: got.tier || null, note: got.note || null, faces: got.faces || null, sys: got.sys };
     const one = res.results.length === 1 ? res.results[0] : null;
+    if (one && one.mode === 'sets') {
+      const [best, ...rest] = one.sets;
+      if (!best) return { big: '—', words: 'No set', tier: 'bad' };
+      return { big: `${best.w}×${best.h}`, words: rest.length ? `also ${rest.map(x => `${x.w}×${x.h}`).join(', ')}` : 'one set', tier: best.w >= 4 ? 'crit' : 'good' };
+    }
     if (one && one.mode === 'successes') return { big: String(one.total), words: `success${Math.abs(one.total) === 1 ? '' : 'es'}`, tier: null };
     return { big: Dice.summary(res), words: '', tier: null };
   }
@@ -90,12 +95,13 @@
     const tips = [];
     if (face) tips.push(`rolled ${d.v}`);
     if (d.rerolled.length) tips.push(`rerolled ${d.rerolled.join(', ')}`);
+    if (d.byHand) { cls.push('byhand'); tips.push(`rerolled by hand, was ${d.byHand.map(v => show(t, v)).join(', then ')}`); }
     if (d.exploded) tips.push('exploded');
     if (d.rolls.length > 1 && !d.note) tips.push(`rolls ${d.rolls.join(' + ')}`);
     if (d.note) tips.push(d.note);
     if (d.dropped) tips.push('dropped');
     const final = face || show(t, d.v);
-    const n = el('span', { class: cls.join(' '), title: tips.join('; ') || undefined }, final);
+    const n = el('span', { class: cls.join(' '), title: tips.join('; ') || undefined, 'data-i': d.i !== undefined ? String(d.i) : undefined }, final);
     if (animate) tumble(n, t, final);
     return n;
   }
@@ -110,6 +116,7 @@
     }, 70);
   }
   /** The dice of a rolled roll, term by term; a repeat says which go each row was. faces (symbol dice) replace the numbers.
+   * animate: true tumbles every die, or a Set of die numbers (d.i) tumbles only those (dice just rerolled).
    * look ({ body, ink, tex }, static/dice-3d.js) colours them as the roller's own dice. */
   function diceRows(el, res, { animate = false, faces = null, look = null } = {}) {
     const chip = look && root.Dice3D ? root.Dice3D.chip(look) : null;
@@ -118,7 +125,7 @@
       if (chip) for (const [p, v] of Object.entries(chip)) row.style.setProperty(p, v);
       if (res.repeat) row.append(el('span', { class: 'dice-go-n small muted' }, `#${k + 1} = ${one.total}`));
       one.terms.forEach((t, i) => {
-        row.append(el('span', { class: 'dice-term', title: t.src }, t.dice.map((d, j) => die(el, d, t, animate, k === 0 && faces?.[i]?.[j]))));
+        row.append(el('span', { class: 'dice-term', title: t.src }, t.dice.map((d, j) => die(el, d, t, animate instanceof Set ? animate.has(d.i) : animate, k === 0 && faces?.[i]?.[j]))));
       });
       return row;
     });

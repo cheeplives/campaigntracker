@@ -424,3 +424,50 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("rerolling by hand: the roller picks dice from their roll and rolls them again, and everyone sees the new result", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice reroll");
+  const perrors = watchErrors(pp);
+  await pp.addInitScript(() => { try { localStorage.setItem("chronicle-dice-3d", "off"); } catch { /* */ } });
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await openDice(pp);
+  const box = pp.getByRole("textbox", { name: "Free roll" });
+  await box.fill("5d6kh3 # damage");
+  await box.press("Enter");
+  const latest = pp.locator(".dice-e.latest");
+  await expect(latest.locator(".die")).toHaveCount(5);
+  await latest.getByRole("button", { name: "Reroll some of these dice" }).click();
+  await expect(latest.getByRole("button", { name: "Pick dice to reroll" })).toBeDisabled();
+  await latest.locator(".die").nth(0).click();
+  await latest.locator(".die").nth(3).press("Enter");
+  await expect(latest.locator(".die.picked")).toHaveCount(2);
+  await latest.getByRole("button", { name: "Reroll 2 dice" }).click();
+  await expect(latest.locator(".dice-e-meta")).toContainText("rerolled");
+  await expect(pp.locator(".dice-e")).toHaveCount(1);       // the same roll, not a new one
+
+  // the result is the one the stored seeds give, with the picked dice changed and marked
+  const all = (await api(pp, "dice_rolls", undefined, cid)).json.rolls;
+  const orig = all.find(r => r.expr === "5d6kh3 # damage");
+  const re = all.find(r => r.expr.startsWith("~"));
+  expect(re.expr).toBe(`~${orig.id}:0,3`);
+  const want = Dice.roll(orig.expr, orig.seed, [{ seed: re.seed, dice: [0, 3] }]).results[0];
+  await expect(latest.locator(".dice-e-out b")).toHaveText(String(want.total));
+  await expect(latest.locator(".die.byhand")).toHaveCount(2);
+
+  // the GM sees the same result; the GM may reroll it too; another member and a typed "~" may not
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  await expect(page.locator(".dice-e.latest .dice-e-out b")).toHaveText(String(want.total));
+  expect((await api(page, "dice_reroll", { id: orig.id, dice: [1] }, cid)).status).toBe(200);
+  const gmRoll = (await api(page, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid)).json.roll;
+  expect((await api(pp, "dice_reroll", { id: gmRoll.id, dice: [0] }, cid)).status).toBe(403);
+  expect((await api(pp, "dice_roll", { expr: `~${gmRoll.id}:0`, engine: Dice.VERSION }, cid)).status).toBe(400);
+  expect((await api(pp, "dice_reroll", { id: orig.id, dice: [] }, cid)).status).toBe(400);
+  const blind = (await api(pp, "dice_roll", { expr: "1d6", engine: Dice.VERSION, visibility: "blind" }, cid)).json.roll;
+  expect((await api(pp, "dice_reroll", { id: blind.id, dice: [0] }, cid)).status).toBe(403);
+  // the player's page picks up the GM's reroll of their roll
+  await expect(pp.locator(".dice-e").filter({ hasText: "damage" }).locator(".dice-e-meta")).toContainText("rerolled ×2", { timeout: 10000 });
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});

@@ -37,6 +37,7 @@
       ['roN', 'Reroll once', 'd20ro1'],
       ['>=N', 'Count successes instead of a total', '7d10>=6'],
       ['fN · f<=N', 'Each failure cancels a success', '7d10>=6f1'],
+      ['sets', 'Matching sets (One-Roll Engine): width × height, so four 6s is 4×6', '6d10sets'],
       ['d100bN · d100pN', 'Bonus / penalty dice: N extra tens dice, keep the best / worst', 'd100b1'],
       ['d100flip', 'Flip-flop: read both ways round, keep the lower', 'd100flip'],
       ['d100swap', 'Read the digits the other way round (73 is 37)', 'd100swap'],
@@ -53,6 +54,12 @@
     let sysNow = null, sysSig = '', sysP = null, mode = 'free', oddsTimer = null, busy = false;
     // The roll whose 3D dice are in the air: its result in the log waits for them to land.
     let landingId = 0;
+    // Rerolling by hand: the roll whose dice are being picked, and the dice picked so far (their numbers, d.i).
+    let pickId = 0, picked = new Set();
+    /** A reroll's log entry ("~<roll id>:<die numbers>", api/dice.php): which roll and dice, or null for a roll. */
+    const rerollOf = r => { const m = /^~(\d+):([\d,]+)$/.exec(r.expr); return m ? { id: Number(m[1]), dice: m[2].split(',').map(Number) } : null; };
+    /** The rerolls of roll r so far, oldest first, as Dice.roll takes them. */
+    const rerollsFor = r => rolls.filter(x => x.seed && rerollOf(x)?.id === r.id).map(x => ({ seed: x.seed, dice: rerollOf(x).dice, id: x.id, gm: x.by_gm }));
     const store = {
       get: k => { try { return localStorage.getItem(k); } catch { return null; } },
       set: (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private window */ } },
@@ -247,16 +254,20 @@
       }
       rolls.sort((a, b) => a.id - b.id);
       if (rolls.length > 200) rolls = rolls.slice(-200);
-      if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) throw3d(toss);
+      if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) {
+        const re = rerollOf(toss), target = re && rolls.find(x => x.id === re.id);
+        if (!re) throw3d(toss);
+        else if (target) { fresh.add(target.id); throw3d(target, new Set(re.dice)); }
+      }
       draw();
       if (isOpen()) markSeen();
     }
     /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
-    function throw3d(r) {
+    function throw3d(r, only = null) {
       if (!D3 || r.seed === null) return;
       let res;
-      try { res = Dice.roll(r.expr, r.seed); } catch { return; }
-      if (!D3.can(res)) return;
+      try { res = Dice.roll(r.expr, r.seed, rerollsFor(r)); } catch { return; }
+      if (!D3.can(res, only)) return;
       landingId = r.id;
       const done = () => {
         if (landingId !== r.id) return;
@@ -264,7 +275,7 @@
         const li = log.querySelector(`[data-id="${r.id}"]`);
         li?.classList.remove('landing');
       };
-      D3.toss(res, r.look).then(done, done);
+      D3.toss(res, r.look, only).then(done, done);
       setTimeout(done, 4000);      // never leave a result hidden
     }
     function draw() {
@@ -272,7 +283,9 @@
         log.replaceChildren(el('li', { class: 'dice-empty muted' }, 'No rolls yet. Tap a die above, or type a roll and press Roll.'));
         return;
       }
-      log.replaceChildren(...rolls.slice().reverse().map((r, k) => entry(r, k === 0)));
+      const shown = rolls.filter(r => !rerollOf(r)).reverse();
+      if (!shown.length) { log.replaceChildren(); return; }
+      log.replaceChildren(...shown.map((r, k) => entry(r, k === 0)));
       fresh.clear();
     }
     const when = at => {
@@ -292,18 +305,28 @@
       const body = el('div', { class: 'dice-e-dice' });
       const meta = el('div', { class: 'dice-e-meta small muted' });
       const mark = VIS_MARK[r.visibility];
-      let label = '', big = '?', words = '', tier = null, note = null, sysName = '';
+      let label = '', big = '?', words = '', tier = null, note = null, sysName = '', rerolled = 0, tools = null;
       if (r.seed === null) {
         words = 'Rolled for the GM';
         try { label = Dice.parse(r.expr).label; } catch { /* unreadable: no label either */ }
       } else {
         try {
-          const res = Dice.roll(r.expr, r.seed);
+          const rr = rerollsFor(r);
+          const res = Dice.roll(r.expr, r.seed, rr);
           const o = DiceUI.outcome(res, { table: sysNow?.table });
           label = res.label;
           ({ big, words, tier, note } = o);
           if (o.sys && o.sys.id !== sysNow?.sys.id) sysName = o.sys.name;
-          body.append(...DiceUI.diceRows(el, res, { animate: fresh.has(r.id) && !reduced() && landingId !== r.id, faces: o.faces, look: r.look }));
+          // just rerolled: only those dice tumble
+          const last = rr[rr.length - 1];
+          const anim = fresh.has(r.id) && !reduced() && landingId !== r.id && (last && fresh.has(last.id) ? new Set(last.dice) : true);
+          body.append(...DiceUI.diceRows(el, res, { animate: anim, faces: o.faces, look: r.look }));
+          if (rr.length) rerolled = rr.length;
+          if (pickId === r.id) picking(body, r);
+          else if ((r.mine || isGM()) && !(r.visibility === 'blind' && !isGM())) {
+            tools = el('button', { type: 'button', class: 'link dice-re', 'aria-label': 'Reroll some of these dice', 'data-tip': 'Pick dice from this roll and roll them again',
+              onclick: () => { pickId = r.id; picked = new Set(); draw(); log.querySelector(`[data-id="${r.id}"] .die`)?.focus(); } }, '↻ Reroll');
+          }
         } catch (e) {
           big = '—';
           words = 'Can\'t read this roll';
@@ -314,9 +337,42 @@
       out.append(el('b', {}, big));
       if (words) out.append(el('small', { class: tier ? `tier t-${tier}` : null }, words));
       const exprText = r.expr.split('#')[0].split('@')[0].trim();
-      meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`, ` · ${when(r.at)}`].filter(Boolean));
+      meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`,
+        rerolled && ` · rerolled${rerolled > 1 ? ` ×${rerolled}` : ''}`, ` · ${when(r.at)}`, tools && ' · ', tools].filter(Boolean));
       return el('li', { 'data-id': String(r.id), class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') + (landingId === r.id ? ' landing' : '') },
         el('div', { class: 'dice-e-main' }, head, meta, body), out);
+    }
+
+    /** Roll r's dice in the log become buttons to pick; a bar under them rerolls the picked dice or cancels. */
+    function picking(body, r) {
+      const go = el('button', { type: 'button', class: 'primary small dice-re-go', disabled: !picked.size },
+        picked.size ? `Reroll ${picked.size} ${picked.size === 1 ? 'die' : 'dice'}` : 'Pick dice to reroll');
+      const stop = el('button', { type: 'button', class: 'small', onclick: () => { pickId = 0; picked = new Set(); draw(); } }, 'Cancel');
+      for (const n of body.querySelectorAll('.die[data-i]')) {
+        const i = Number(n.dataset.i);
+        n.classList.add('pick');
+        n.classList.toggle('picked', picked.has(i));
+        n.setAttribute('role', 'button');
+        n.setAttribute('tabindex', '0');
+        n.setAttribute('aria-pressed', String(picked.has(i)));
+        n.setAttribute('aria-label', `Die showing ${n.textContent}${picked.has(i) ? ', picked' : ''}`);
+        const flip = () => { if (picked.has(i)) picked.delete(i); else picked.add(i); draw(); log.querySelector(`[data-id="${r.id}"] .die[data-i="${i}"]`)?.focus(); };
+        n.addEventListener('click', flip);
+        n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+      }
+      go.addEventListener('click', () => reroll(r, [...picked]));
+      body.append(el('div', { class: 'dice-re-bar small' }, el('span', { class: 'muted' }, 'Tap the dice to roll again'), go, stop));
+    }
+    async function reroll(r, dice) {
+      if (busy || !dice.length) return;
+      busy = true;
+      try {
+        const res = await post('dice_reroll', { id: r.id, dice }, cid);
+        pickId = 0; picked = new Set();
+        fresh.add(res.roll.id);
+        await load();
+        take([res.roll], true);
+      } catch (e) { toast(e.message, true); } finally { busy = false; }
     }
 
     // ------------------------------------------------------------ rolling

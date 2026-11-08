@@ -234,12 +234,13 @@
   /** What each 3D die is: a shape, the labels on its faces, and which face lands on top. From a rolled roll
    * (Dice.roll), every kept or dropped die, an exploded die once per roll. Dice that have no shape here (a d2, a d7)
    * are left out. */
-  function plan(res) {
+  function plan(res, only = null) {
     const out = [];
     const add = (sides, label, value, dim, labels) => out.push({ sides, label, value, dim, labels });
     for (const one of res.results.slice(0, 1)) {
       for (const t of one.terms) {
         for (const d of t.dice) {
+          if (only && !only.has(d.i)) continue;      // only the dice just rerolled
           const dim = !!d.dropped;
           if (t.sides === 'F') { add(6, 'F', d.v, dim, FUDGE); continue; }
           if (t.sides === 66) { add(6, 'd6', Math.floor(d.v / 10), dim); add(6, 'd6', d.v % 10, dim); continue; }
@@ -441,11 +442,11 @@
   /**
    * Throw the dice of a rolled roll (Dice.roll) in a look, over the page. Resolves true when they have landed, or
    * false at once when they can't be shown (3D off, no WebGL, a roll with no dice that have a shape), so the caller can
-   * show the result then. A new throw clears the last one.
+   * show the result then. A new throw clears the last one. only: a Set of die numbers (d.i) to throw just those.
    */
-  async function toss(res, look) {
+  async function toss(res, look, only = null) {
     if (!enabled() || reduced() || broken) return false;
-    const list = plan(res);
+    const list = plan(res, only);
     if (!list.length) return false;
     try { await lib(); } catch { return false; }
     if (!setup()) return false;
@@ -570,7 +571,7 @@
   }
 
   /** Whether toss() would throw this roll's dice (so its result can wait for them). */
-  const can = res => enabled() && !reduced() && !broken && available() && plan(res).length > 0;
+  const can = (res, only) => enabled() && !reduced() && !broken && available() && plan(res, only).length > 0;
 
   /** For the tests (tests/browser/dice-3d.spec.js), with three.js handed in: what shows on top once a die of this
    * shape lands on value (a d4: the corner that points up). */

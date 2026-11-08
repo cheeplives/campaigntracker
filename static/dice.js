@@ -143,7 +143,8 @@
       if (t.sides === 66 && !t.fudge) t.d66 = true;
       const once = k => { if (t[k] !== undefined) bad(`Say ${k} once per dice`); };
       for (;;) {
-        if (eat('kh') || (peek() === 'k' && /^k\d/.test(s.slice(i)) && eat('k'))) { once('keep'); t.keep = { hi: true, n: num('after kh') }; }
+        if (eat('sets')) { once('sets'); t.sets = true; }
+        else if (eat('kh') || (peek() === 'k' && /^k\d/.test(s.slice(i)) && eat('k'))) { once('keep'); t.keep = { hi: true, n: num('after kh') }; }
         else if (eat('kl')) { once('keep'); t.keep = { hi: false, n: num('after kl') }; }
         else if (eat('dh')) { once('keep'); t.drop = { hi: true, n: num('after dh') }; t.keep = null; }
         else if (eat('dl')) { once('keep'); t.drop = { hi: false, n: num('after dl') }; t.keep = null; }
@@ -164,6 +165,7 @@
         }
       }
       if (t.keep === null) delete t.keep;
+      if (t.sets && (t.success || t.fudge)) bad('sets looks for matching dice, so it doesn\'t go with a success target or Fudge dice');
       if (t.fail && !t.success) bad('Failures (f) cancel successes, so give a success target too, like 7d10>=6f1');
       if ((t.flip || t.tens !== undefined) && t.sides !== 100) bad('flip, swap, b and p are for d100 (or d%)');
       if (t.flip && t.tens !== undefined) bad('Use flip or swap, or bonus and penalty dice, not both');
@@ -233,8 +235,9 @@
     return d;
   }
 
-  /** Roll a dice term: its dice (an exploded die adds another die after it), which are kept, and what it comes to. */
-  function rollTerm(t, R) {
+  /** Roll a dice term: its dice (an exploded die adds another die after it), which are kept, and what it comes to.
+   * ctx numbers every die of the roll in order (d.i) and applies dice rerolled by hand (roll()'s rerolls) to them. */
+  function rollTerm(t, R, ctx) {
     const dice = [];
     for (let k = 0; k < t.count; k++) {
       let d = oneDie(t, R);
@@ -242,6 +245,16 @@
       if (t.explode && !t.explode.compound) {
         let n = 0;
         while (test(t.explode.when, d.v) && n++ < LIMITS.chain) { d.exploded = true; d = oneDie(t, R); d.extra = true; dice.push(d); }
+      }
+    }
+    if (ctx) for (const d of dice) {
+      d.i = ctx.n++;
+      // Rerolled by hand: each reroll draws its dice from its own seed, in die order, so every device gets the same.
+      for (const rr of ctx.rerolls) {
+        if (!rr.set.has(d.i)) continue;
+        const was = d.v, now = oneDie(t, rr.R);
+        (d.byHand = d.byHand || []).push(was);
+        Object.assign(d, { v: now.v, rolls: now.rolls, note: now.note, exploded: d.exploded && !t.explode?.compound ? d.exploded : now.exploded });
       }
     }
     const order = dice.map((d, k) => k).sort((x, y) => dice[x].v - dice[y].v || x - y);   // low to high
@@ -260,15 +273,25 @@
       }
       value = successes - failures;
     } else value = kept.reduce((sum, d) => sum + d.v, 0);
-    return { src: t.src, sides: t.fudge ? 'F' : t.sides, dice, value, successes, failures, counts: !!t.success };
+    let sets = null;
+    if (t.sets) {
+      // The One-Roll Engine: dice that match make a set, read width × height (how many matched × the number they show),
+      // widest first, then highest. The term's value is the best set's width (0 for none).
+      const count = new Map();
+      for (const d of kept) count.set(d.v, (count.get(d.v) || 0) + 1);
+      sets = [...count].filter(([, w]) => w >= 2).map(([h, w]) => ({ w, h })).sort((a, b) => b.w - a.w || b.h - a.h);
+      for (const d of kept) if (count.get(d.v) >= 2) d.success = true;
+      value = sets.length ? sets[0].w : 0;
+    }
+    return { src: t.src, sides: t.fudge ? 'F' : t.sides, dice, value, successes, failures, counts: !!t.success, sets };
   }
 
-  function evalNode(node, R, terms) {
+  function evalNode(node, R, terms, ctx) {
     if ('num' in node) return node.num;
-    if (node.dice) { const r = rollTerm(node, R); terms.push(r); return r.value; }
-    const a = evalNode(node.a, R, terms);
+    if (node.dice) { const r = rollTerm(node, R, ctx); terms.push(r); return r.value; }
+    const a = evalNode(node.a, R, terms, ctx);
     if (node.op === 'neg') return -a;
-    const b = evalNode(node.b, R, terms);
+    const b = evalNode(node.b, R, terms, ctx);
     if (node.op === '+') return a + b;
     if (node.op === '-') return a - b;
     if (node.op === '*') return a * b;
@@ -277,17 +300,21 @@
   }
 
   /** One result: the total, and each dice term with its dice. mode is 'successes' when the dice count successes. */
-  function rollOnce(node, R) {
+  function rollOnce(node, R, ctx) {
     const terms = [];
-    const total = evalNode(node, R, terms);
-    return { total, terms, mode: terms.length && terms.every(t => t.counts) ? 'successes' : 'total' };
+    const total = evalNode(node, R, terms, ctx);
+    const mode = terms.length === 1 && terms[0].sets && node.dice ? 'sets' : terms.length && terms.every(t => t.counts) ? 'successes' : 'total';
+    return { total, terms, mode, sets: mode === 'sets' ? terms[0].sets : undefined };
   }
 
-  /** Roll a free roll from a seed. Same input and seed, same result, on every device. Fails with a DiceError. */
-  function roll(input, seed) {
+  /** Roll a free roll from a seed. Same input and seed, same result, on every device. Fails with a DiceError.
+   * rerolls: dice picked and rerolled by hand afterwards, in order, each [{ seed, dice: [die numbers (d.i)] }]; their new
+   * faces replace the old (kept in d.byHand) before anything is kept, dropped, counted or added up. */
+  function roll(input, seed, rerolls = []) {
     const p = parse(input);
     const R = seeded(seed || newSeed());
-    const results = Array.from({ length: p.repeat || 1 }, () => rollOnce(p.node, R));
+    const ctx = { n: 0, rerolls: rerolls.map(r => ({ set: new Set(r.dice), R: seeded(r.seed) })) };
+    const results = Array.from({ length: p.repeat || 1 }, () => rollOnce(p.node, R, ctx));
     return { expr: p.expr, label: p.label, system: p.system, repeat: p.repeat || 0, results, v: VERSION };
   }
 
@@ -303,9 +330,11 @@
     try { parse(input); return null; } catch (e) { if (e instanceof DiceError) return e.message; throw e; }
   }
 
-  /** The result in a few words: "14", "3 successes", "1 success", or "18, 12, 15…" for a repeat. */
+  /** How a sets roll reads: "4×6", or "no set". */
+  const setsText = sets => (sets.length ? `${sets[0].w}×${sets[0].h}` : 'no set');
+  /** The result in a few words: "14", "3 successes", "1 success", "4×6", or "18, 12, 15…" for a repeat. */
   function summary(r) {
-    const one = x => (x.mode === 'successes' ? `${x.total} success${Math.abs(x.total) === 1 ? '' : 'es'}` : String(x.total));
+    const one = x => (x.mode === 'sets' ? setsText(x.sets) : x.mode === 'successes' ? `${x.total} success${Math.abs(x.total) === 1 ? '' : 'es'}` : String(x.total));
     return r.results.map(one).join(', ');
   }
 

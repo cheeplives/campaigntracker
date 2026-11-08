@@ -6,6 +6,10 @@
  * The server never rolls the dice itself. It picks each roll's seed with random_int (128 bits), stores it with what was
  * typed, and every browser works out the same dice from them with static/dice.js. So nobody can choose their own
  * result: the seed only exists once the roll is asked for, and it can't be changed after.
+ *
+ * Rerolling some of a roll's dice by hand is a log entry of its own, written "~<roll id>:<die numbers>" with a new seed;
+ * every browser folds it into that roll (static/dice.js roll()'s rerolls), so the roll's result changes for everyone and
+ * the old faces stay in its history. Only the server writes these: a typed roll can't start with ~.
  */
 declare(strict_types=1);
 
@@ -17,6 +21,9 @@ const DICE_KEEP_DEFAULT = 500;
 const DICE_KEEP_MIN = 50;
 const DICE_KEEP_MAX = 5000;
 const DICE_PAGE = 50;
+/** Rerolls of one roll at most, and dice in one reroll at most. */
+const DICE_REROLLS_MAX = 20;
+const DICE_REROLL_DICE = 100;
 /** Engine versions static/dice.js can roll (Dice.VERSION). */
 const DICE_ENGINES = [1];
 /** The built-in patterns a player can put on their dice (TEXTURES in static/dice-3d.js, which draws them). */
@@ -113,6 +120,7 @@ function dice_action(string $action): void {
         $expr = trim((string)str_in(p('expr'), 200, false));
         if ($expr === '') fail('Type a roll, like 2d6+3');
         if (preg_match('/[\x00-\x1f\x7f]/u', $expr)) fail('A roll is one line of text');
+        if ($expr[0] === '~') fail('A roll starts with dice or a number, like 2d6+3');
         $engine = int_in(p('engine', 1), 1, 255);
         if (!in_array($engine, DICE_ENGINES, true)) fail('Reload the page to roll with the current dice');
         $set = dice_settings($cid);
@@ -129,6 +137,34 @@ function dice_action(string $action): void {
         $st->execute([$cid]);
         $cut = $st->fetchColumn();
         if ($cut) db()->prepare('DELETE FROM dice_rolls WHERE campaign_id=? AND id<=?')->execute([$cid, (int)$cut]);
+        $roll = array_values(array_filter(dice_list($cid, $isGm, $id - 1), fn($r) => $r['id'] === $id))[0] ?? fail('Roll not found', 404);
+        out(['ok' => true, 'roll' => $roll]);
+
+    case 'dice_reroll':
+        // Reroll some of a roll's dice: the roller's own roll, or any roll for a GM, that they can see the dice of.
+        rate_limit('dice', 'u' . me()['id'], 120, 60, 1, 'That is a lot of rolls. Wait a minute and roll again.');
+        $rid = int_in(p('id'), 1);
+        $st = db()->prepare('SELECT * FROM dice_rolls WHERE id=? AND campaign_id=?');
+        $st->execute([$rid, $cid]);
+        $orig = $st->fetch() ?: fail('Roll not found', 404);
+        $mine = $orig['user_id'] !== null && (int)$orig['user_id'] === me()['id'];
+        if (!$isGm && !$mine) fail('Only the roller or a GM can reroll a roll', 403);
+        if (!$isGm && $orig['visibility'] === 'blind') fail('Only the GMs can reroll a blind roll', 403);
+        if ($orig['expr'][0] === '~') fail('That is a reroll; reroll the roll itself');
+        $dice = p('dice');
+        if (!is_array($dice) || !$dice || count($dice) > DICE_REROLL_DICE) fail('Pick the dice to reroll');
+        $dice = array_values(array_unique(array_map(fn($v) => int_in($v, 0, 1999), $dice)));
+        sort($dice);
+        $st = db()->prepare("SELECT COUNT(*) FROM dice_rolls WHERE campaign_id=? AND expr LIKE ?");
+        $st->execute([$cid, '~' . $rid . ':%']);
+        if ((int)$st->fetchColumn() >= DICE_REROLLS_MAX) fail('That roll has been rerolled enough: roll again instead');
+        $expr = '~' . $rid . ':' . implode(',', $dice);
+        if (strlen($expr) > 200) fail('Pick fewer dice to reroll at once');
+        $seed = bin2hex(random_bytes(16));
+        db()->prepare('INSERT INTO dice_rolls (campaign_id, user_id, by_gm, expr, seed, engine, visibility, abs_shift) VALUES (?,?,?,?,?,?,?,?)')
+            // filed under the roller (so whoever sees their roll sees its reroll); by_gm says a GM did it
+            ->execute([$cid, $orig['user_id'], $isGm ? 1 : 0, $expr, $seed, (int)$orig['engine'], $orig['visibility'], (int)campaign_row($cid)['current_shift']]);
+        $id = (int)db()->lastInsertId();
         $roll = array_values(array_filter(dice_list($cid, $isGm, $id - 1), fn($r) => $r['id'] === $id))[0] ?? fail('Roll not found', 404);
         out(['ok' => true, 'roll' => $roll]);
 
