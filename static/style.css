@@ -1260,7 +1260,8 @@ dialog.token-dialog { width: min(720px, calc(100vw - 32px)); }
 .map-head .map-meta { margin-left: 2px; }
 /* the stage runs from under the header to the window's bottom edge (maps.js writes --map-top, where it starts on the
    page), never under 320px: on a very short window the page scrolls instead */
-.map-stage { position: relative; height: max(320px, calc(100vh - var(--map-top, 260px) - 16px)); height: max(320px, calc(100dvh - var(--map-top, 260px) - 16px)); border-radius: var(--radius); overflow: hidden; background: var(--panel-2); }
+.map-stage { position: relative; height: max(320px, calc(100vh - var(--map-top, 260px) - 16px)); height: max(320px, calc(100dvh - var(--map-top, 260px) - 16px)); border-radius: var(--radius); overflow: hidden; background: var(--panel-2);
+  isolation: isolate; }   /* Leaflet's panes (400) and controls (1000), and our map bars (1001+), stay inside the map, under the floating dice roller, the top bar and the to-top button */
 .map-canvas { position: absolute; inset: 0; }
 .map-stage.picking { cursor: crosshair; }
 .map-stage.picking .leaflet-grab { cursor: crosshair; }
@@ -1874,7 +1875,6 @@ button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-p
   body.dice-open:not(.dice-float) .tv-dock { left: calc((100% - 380px) / 2); max-width: calc(100vw - 440px); }
 }
 @media (max-width: 999.98px) {
-  body:not(.dice-float) .dice-help { max-height: calc(min(68vh, 640px) - 150px); }
   body:not(.dice-float) .dice-panel { top: auto; left: 0; width: auto; height: min(68vh, 640px); border-left: 0; border-top: 3px solid var(--accent); border-radius: 14px 14px 0 0;
     box-shadow: 0 -14px 30px -18px rgb(0 0 0 / .8); }
   body.dice-open:not(.dice-float) .footer { padding-bottom: min(68vh, 640px); }
@@ -1882,7 +1882,6 @@ button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-p
 }
 body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12px; bottom: auto; height: min(760px, calc(100vh - var(--topbar-h, 56px) - 24px));
   border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 14px; overflow: hidden; box-shadow: 0 18px 44px -14px rgb(0 0 0 / .65); }
-body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h, 56px) - 24px) - 170px); }
 @media (max-width: 600px) {
   body.dice-float .dice-panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: min(68vh, 640px); border-radius: 14px 14px 0 0; }
 }
@@ -1906,6 +1905,9 @@ body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h,
 .dice-look-row label { display: inline-flex; align-items: center; gap: 6px; }
 .dice-look-row input[type="color"] { width: 38px; height: 30px; padding: 2px; margin: 0; }
 .dice-look-row select { margin: 0; flex: 1; min-width: 120px; }
+/* The dice are at the top, under the header, and stay put; the log fills the rest below them, and the ? and 🎨 cards
+   open over the log. */
+.dice-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .dice-log { flex: 1; overflow-y: auto; margin: 0; padding: 4px 14px; list-style: none; overscroll-behavior: contain; }
 .dice-empty { padding: 18px 0; }
 .dice-e { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); }
@@ -1947,7 +1949,7 @@ body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h,
 .dice-e.landing .dice-e-out, .dice-e.landing .dice-terms { visibility: hidden; }
 .dice-e.landing .dice-e-main::after { content: 'Rolling…'; font-size: .85rem; color: var(--dim); }
 @keyframes dice-tumble { 0% { transform: rotate(0); } 50% { transform: rotate(14deg) scale(.92); } 100% { transform: rotate(0); } }
-.dice-foot { position: relative; padding: 10px 14px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+.dice-foot { padding: 10px 14px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex: none; max-height: 60%; overflow-y: auto; overscroll-behavior: contain; }
 .dice-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 .dice-chip { margin: 0; padding: 5px 6px; min-width: 36px; font: 700 .95rem var(--disp); }
 .dice-row { display: flex; gap: 6px; align-items: stretch; }
@@ -1961,7 +1963,7 @@ body.dice-float .dice-help { max-height: calc(min(760px, 100vh - var(--topbar-h,
 .dice-who { display: flex; align-items: center; gap: 4px; margin: 0; flex: none; max-width: 40%; }
 .dice-vis { width: auto; padding: 3px 6px; font-size: .85rem; }
 .dice-vis[hidden], .dice-vis-fixed[hidden] { display: none; }
-.dice-help { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); max-height: calc(100vh - var(--topbar-h, 56px) - 190px); overflow-y: auto; z-index: 2; padding: 10px 12px;
+.dice-help { position: absolute; left: 8px; right: 8px; top: 6px; max-height: calc(100% - 12px); overflow-y: auto; z-index: 2; padding: 10px 12px;
   background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 14px 30px -10px rgb(0 0 0 / .7); }
 .dice-help[hidden] { display: none; }
 .dice-help-h { display: flex; justify-content: space-between; align-items: center; }

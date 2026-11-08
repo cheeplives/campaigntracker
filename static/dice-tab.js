@@ -2,7 +2,8 @@
  *
  * The panel sits along the right of a wide screen (a desktop, an iPad held sideways) and pushes the page over, and is a
  * sheet over the bottom of a narrower one (an iPad held upright, a phone). Its roll log is the table's: everyone's rolls,
- * newest first, as far as each person may see them (api/dice.php). At the bottom: one tap rolls a single d4 to d100 or
+ * newest first, as far as each person may see them (api/dice.php). At the top, over the log, so they stay put as the
+ * log grows: one tap rolls a single d4 to d100 or
  * a Fudge die, and the free-roll box takes anything the ? card lists.
  *
  * A roll is asked of the server, which picks its seed; static/dice.js works the dice out from it, the same on every
@@ -142,8 +143,8 @@
       el('div', { class: 'dice-head' }, el('h2', {}, '🎲 Dice'), sub,
         lookBtn, pinBtn,
         el('button', { type: 'button', class: 'dice-x', 'aria-label': 'Close the dice roller', 'data-tip': 'Close. The log keeps everyone\'s rolls', onclick: () => setOpen(false) }, '✕')),
-      log,
-      el('div', { class: 'dice-foot' }, help, lookCard, modes, sysBox, freeBox, err, savedRow));
+      el('div', { class: 'dice-foot' }, modes, sysBox, freeBox, err, savedRow),
+      el('div', { class: 'dice-body' }, log, help, lookCard));
     document.body.append(fab, panel);
 
     fab.addEventListener('click', () => setOpen(true));
@@ -268,7 +269,7 @@
     }
     function draw() {
       if (!rolls.length) {
-        log.replaceChildren(el('li', { class: 'dice-empty muted' }, 'No rolls yet. Tap a die below, or type a roll and press Roll.'));
+        log.replaceChildren(el('li', { class: 'dice-empty muted' }, 'No rolls yet. Tap a die above, or type a roll and press Roll.'));
         return;
       }
       log.replaceChildren(...rolls.slice().reverse().map((r, k) => entry(r, k === 0)));
