@@ -100,6 +100,19 @@ function dice_list(int $cid, bool $isGm, ?int $after): array {
     }
     return array_map(fn($r) => dice_out($r, $isGm), $rows);
 }
+/** The rolls this member sees that were made on these shifts (a session's run [first, last] and its other shifts),
+ * oldest first, at most DICE_SESSION of them (the newest), reroll entries included for the browser to fold in. */
+const DICE_SESSION = 300;
+function dice_in_shifts(int $cid, bool $isGm, array $span, array $extra): array {
+    $extra = array_values(array_map('intval', $extra));
+    $or = $extra ? ' OR r.abs_shift IN (' . implode(',', array_fill(0, count($extra), '?')) . ')' : '';
+    $st = db()->prepare('SELECT r.*, ' . AUTHOR_SQL . ' AS author, up.prefs_json FROM dice_rolls r LEFT JOIN users u ON u.id=r.user_id
+        LEFT JOIN user_prefs up ON up.user_id=r.user_id
+        LEFT JOIN campaign_members m ON m.campaign_id=r.campaign_id AND m.user_id=r.user_id
+        WHERE r.campaign_id=? AND ' . dice_seen_sql($isGm) . " AND (r.abs_shift BETWEEN ? AND ?$or) ORDER BY r.id DESC LIMIT " . DICE_SESSION);
+    $st->execute([$cid, (int)$span[0], (int)$span[1], ...$extra]);
+    return array_map(fn($r) => dice_out($r, $isGm), array_reverse($st->fetchAll()));
+}
 /** The newest roll this member may see, for the 'changed' poll (0 when none), so a closed roller can show that someone rolled. */
 function dice_last_seen(int $cid, bool $isGm): int {
     $st = db()->prepare('SELECT COALESCE(MAX(r.id), 0) FROM dice_rolls r WHERE r.campaign_id=? AND ' . dice_seen_sql($isGm));

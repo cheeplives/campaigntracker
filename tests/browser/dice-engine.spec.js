@@ -147,6 +147,15 @@ test("dice rerolled by hand: only the picked dice change, from their own seed, b
   expect(s.total).toBe(Math.max(0, ...Object.values(cnt).filter(w => w >= 2)));
 });
 
+test("dice tagged with where they came from keep the tag as written, and the dice roll the same", () => {
+  const r = one("3d6[Strength] + 2d6!>=6[Athletics] + 1 # climb");
+  expect(r.terms.map(t => [t.tag, t.src])).toEqual([["Strength", "3d6"], ["Athletics", "2d6!>=6"]]);
+  expect(Dice.roll("3d6[Strength]+2d6[Athletics]", SEED).results[0].total).toBe(Dice.roll("3d6+2d6", SEED).results[0].total);
+  expect(Dice.parse("3d6[Strength] # climb").label).toBe("climb");
+  expect(one("4d6kh3").terms[0].tag).toBeNull();
+  for (const bad of ["2d6[]", "2d6[abc", "2d6]", `2d6[${"x".repeat(25)}]`, "[x]2d6"]) expect(Dice.check(bad)).not.toBeNull();
+});
+
 test("percentile tricks: bonus and penalty dice, flip-flop and swap", () => {
   expect(Dice.swapped(73)).toBe(37);
   expect(Dice.swapped(40)).toBe(4);

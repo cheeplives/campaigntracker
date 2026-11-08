@@ -42,6 +42,7 @@
       ['d100flip', 'Flip-flop: read both ways round, keep the lower', 'd100flip'],
       ['d100swap', 'Read the digits the other way round (73 is 37)', 'd100swap'],
       ['Nx(…)', 'Repeat the roll N times', '6x(4d6kh3)'],
+      ['[text]', 'Say where dice came from: each source gets its own colour', '3d6[Strength]+2d6[Athletics]'],
       ['# text', 'Label the roll', 'd8+3 # longsword'],
     ];
     const VIS_PLAYER = [['all', 'Everyone', 'Everyone at the table sees this roll'],

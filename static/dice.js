@@ -64,27 +64,36 @@
     const at = head.indexOf('@');
     const system = at >= 0 ? head.slice(at + 1).trim() : '';
     if (at >= 0) head = head.slice(0, at);
+    // Where dice come from, in square brackets after them ("3d6[Strength]+2d6[Athletics]"): kept as written, read as tags.
+    const tags = [];
+    head = head.replace(/\[([^\[\]]*)\]/g, (_, t) => {
+      const tag = t.trim();
+      if (!tag || tag.length > 24) bad('Say where dice come from in up to 24 letters, like 2d6[Athletics]');
+      tags.push(tag);
+      return `[${tags.length - 1}]`;
+    });
+    if (/[\[\]]/.test(head.replace(/\[\d+\]/g, ''))) bad('A [ needs its ]');
     let expr = head.toLowerCase().replace(/[−–—]/g, '-').replace(/×/g, '*').replace(/÷/g, '/').replace(/≥/g, '>=').replace(/≤/g, '<=');
     for (const [re, to] of WORDS) expr = expr.replace(re, to);
     expr = expr.replace(/\s+/g, '');
-    return { expr, label, system };
+    return { expr, label, system, tags };
   }
 
   /** Read a free roll into a tree, or fail with a DiceError that says what is wrong. */
   function parse(input) {
-    const { expr, label, system } = tidy(input);
+    const { expr, label, system, tags } = tidy(input);
     if (!expr) bad('Type a roll, like 2d6+3');
     const rep = /^(\d+)x\((.+)\)$/.exec(expr);
     if (rep) {
       const times = Number(rep[1]);
       if (times < 1 || times > LIMITS.repeat) bad(`Repeat a roll 1 to ${LIMITS.repeat} times`);
-      return { repeat: times, node: read(rep[2]), expr, label, system };
+      return { repeat: times, node: read(rep[2], tags), expr, label, system };
     }
     if (/\dx\(/.test(expr)) bad('Repeat goes round the whole roll, like 6x(4d6kh3)');
-    return { node: read(expr), expr, label, system };
+    return { node: read(expr, tags), expr, label, system };
   }
 
-  function read(s) {
+  function read(s, tags = []) {
     let i = 0;
     const peek = (n = 1) => s.slice(i, i + n);
     const eat = t => (s.startsWith(t, i) ? ((i += t.length), true) : false);
@@ -179,6 +188,7 @@
       }
       if (t.reroll && all(t.reroll.when)) bad('Every face would be rerolled, forever');
       t.src = s.slice(start, i);
+      if (eat('[')) { t.tag = tags[num('')]; if (!eat(']') || t.tag === undefined) bad('A [ needs its ]'); }
       return t;
     }
     const tree = expr();
@@ -283,7 +293,7 @@
       for (const d of kept) if (count.get(d.v) >= 2) d.success = true;
       value = sets.length ? sets[0].w : 0;
     }
-    return { src: t.src, sides: t.fudge ? 'F' : t.sides, dice, value, successes, failures, counts: !!t.success, sets };
+    return { src: t.src, sides: t.fudge ? 'F' : t.sides, dice, value, successes, failures, counts: !!t.success, sets, tag: t.tag || null };
   }
 
   function evalNode(node, R, terms, ctx) {

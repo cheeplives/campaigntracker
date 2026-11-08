@@ -514,3 +514,38 @@ test("Settings → Dice at the table: the GM turns off players' free rolls and o
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("dice tagged with where they came from show each source over its dice", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice tags");
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const box = page.getByRole("textbox", { name: "Free roll" });
+  await box.fill("3d6[Strength] + 2d6[Athletics] # climb");
+  await box.press("Enter");
+  const latest = page.locator(".dice-e.latest");
+  await expect(latest.locator(".dice-tag")).toHaveText(["Strength", "Athletics"]);
+  await expect(latest.locator(".dice-term.tagged").nth(0).locator(".die")).toHaveCount(3);
+  await expect(latest.locator(".dice-term.tagged").nth(1)).toHaveClass(/tag-1/);
+  expectNoErrors(errors);
+});
+
+test("a session's page lists the rolls made during it, as far as each member may see them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice session");
+  const sid = (await api(page, "session_save", {}, cid)).json.session.id;
+  expect((await api(page, "dice_roll", { expr: "2d6 # sneak", engine: Dice.VERSION }, cid)).status).toBe(200);
+  expect((await api(page, "dice_roll", { expr: "1d20 # secret", engine: Dice.VERSION, visibility: "gm" }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  const card = page.locator(".sess-rolls");
+  await expect(card.locator("summary")).toContainText("Rolls this session (2)");
+  await card.locator("summary").click();
+  await expect(card.locator(".dice-hist-e")).toHaveCount(2);
+  await expect(card.locator(".dice-hist-e").first()).toContainText("sneak");
+  await expect(card.locator(".dice-hist-e").first().locator(".die")).toHaveCount(2);
+  // the player sees their GM's open roll, not the secret one
+  await api(page, "session_save", { id: sid, is_published: true }, cid);
+  await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(pp.locator(".sess-rolls summary")).toContainText("Rolls this session (1)");
+  expectNoErrors(errors);
+});

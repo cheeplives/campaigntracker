@@ -115,6 +115,8 @@
       n.textContent = show(t, any());   // only the look of the tumble: the result is already set
     }, 70);
   }
+  /** The different sources a roll's dice were tagged with, in the order they first come. */
+  const tags = res => [...new Set(res.results.flatMap(o => o.terms.map(t => t.tag).filter(Boolean)))];
   /** The dice of a rolled roll, term by term; a repeat says which go each row was. faces (symbol dice) replace the numbers.
    * animate: true tumbles every die, or a Set of die numbers (d.i) tumbles only those (dice just rerolled).
    * look ({ body, ink, tex }, static/dice-3d.js) colours them as the roller's own dice. */
@@ -126,11 +128,43 @@
       if (chip?.['--die-glow']) row.classList.add('anim', `anim-${root.Dice3D.ANIMATED[look.tex]}`);
       if (res.repeat) row.append(el('span', { class: 'dice-go-n small muted' }, `#${k + 1} = ${one.total}`));
       one.terms.forEach((t, i) => {
-        row.append(el('span', { class: 'dice-term', title: t.src }, t.dice.map((d, j) => die(el, d, t, animate instanceof Set ? animate.has(d.i) : animate, k === 0 && faces?.[i]?.[j]))));
+        // a tagged term ("2d6[Athletics]") says where its dice came from, each source in its own colour
+        const tagged = t.tag ? ` tagged tag-${tags(res).indexOf(t.tag) % 6}` : '';
+        row.append(el('span', { class: 'dice-term' + tagged, title: t.tag ? `${t.tag}: ${t.src}` : t.src },
+          t.tag ? el('span', { class: 'dice-tag' }, t.tag) : null,
+          t.dice.map((d, j) => die(el, d, t, animate instanceof Set ? animate.has(d.i) : animate, k === 0 && faces?.[i]?.[j]))));
       });
       return row;
     });
   }
 
-  root.DiceUI = { TIER_NAME, labelOf, fields, oddsBar, outcome, diceRows };
+  /** A reroll's log entry ("~<roll id>:<die numbers>", api/dice.php): which roll and dice, or null for a roll. */
+  const rerollOf = r => { const m = /^~(\d+):([\d,]+)$/.exec(r.expr); return m ? { id: Number(m[1]), dice: m[2].split(',').map(Number) } : null; };
+  /** The rerolls of roll r among rolls, oldest first, as Dice.roll takes them. */
+  const rerollsFor = (rolls, r) => rolls.filter(x => x.seed && rerollOf(x)?.id === r.id).map(x => ({ seed: x.seed, dice: rerollOf(x).dice, id: x.id }));
+
+  /** A list of rolls to read back (a session's page): who rolled what, the result and the dice, oldest first, each
+   * reroll folded into its roll. ctx.table: the campaign's result table, for a table system's rolls. */
+  function rollList(el, rolls, ctx = {}) {
+    const fmt = at => { const t = new Date(String(at).replace(' ', 'T')); return isFinite(t) ? t.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; };
+    return el('ol', { class: 'dice-hist' }, rolls.filter(r => !rerollOf(r)).map(r => {
+      let label = '', big = '?', words = '', tier = null, dice = null;
+      if (r.seed === null) {
+        words = 'Rolled for the GM';
+        try { label = Dice.parse(r.expr).label; } catch { /* unreadable */ }
+      } else {
+        try {
+          const rr = rerollsFor(rolls, r), res = Dice.roll(r.expr, r.seed, rr), o = outcome(res, ctx);
+          label = res.label; big = o.big; words = o.words + (rr.length ? `${o.words ? ' · ' : ''}rerolled` : ''); tier = o.tier;
+          dice = diceRows(el, res, { faces: o.faces, look: r.look });
+        } catch { big = '—'; words = 'Can\'t read this roll'; }
+      }
+      return el('li', { class: 'dice-hist-e' + (tier ? ` t-${tier}` : '') },
+        el('div', {}, el('b', {}, r.author || 'Someone'), label ? el('span', { class: 'muted' }, ` · ${label}`) : null,
+          el('div', { class: 'small muted' }, el('span', { class: 'mono' }, r.expr.split('#')[0].split('@')[0].trim()), ` · ${fmt(r.at)}`), dice),
+        el('div', { class: 'dice-hist-out' }, el('b', {}, big), words ? el('small', { class: tier ? `tier t-${tier}` : null }, words) : null));
+    }));
+  }
+
+  root.DiceUI = { TIER_NAME, labelOf, fields, oddsBar, outcome, diceRows, rerollOf, rerollsFor, rollList };
 })(window);
