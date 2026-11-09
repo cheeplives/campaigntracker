@@ -1207,7 +1207,7 @@ const Sheets = (() => {
     function draw() {
       if (editBtn) { editBtn.textContent = editing ? 'Done' : 'Edit'; editBtn.className = editing ? 'small primary' : 'small'; }
       if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
-      if (capsBtn) { capsBtn.textContent = capping ? 'Done' : 'Track maximums'; capsBtn.className = capping ? 'small primary' : 'small'; capsBtn.setAttribute('aria-pressed', String(capping)); }
+      if (capsBtn) capsBtn.setAttribute('aria-pressed', String(capping));
       if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v), rollHere, caps));
       form = renderSheetForm(ch.layout, values, {
         mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
@@ -1218,7 +1218,9 @@ const Sheets = (() => {
       });
       fill(body,
         ch.can_edit ? settingsStrip(ch, mine, save) : null,
-        capping ? el('p', { class: 'notice sheet-caps-note' }, `Pick how many of each dot or box track ${ch.name} has. The rest are greyed out on the sheet and can't be ticked. Press Done when you're finished.`) : null,
+        // Track maximums lives in the ⋯ menu, so the way out of it is a Done right on the notice, not back in the menu
+        capping ? el('div', { class: 'notice sheet-caps-note row spread' }, el('span', {}, `Pick how many of each dot or box track ${ch.name} has. The rest are greyed out on the sheet and can't be ticked.`),
+          button('Done', () => { capping = false; draw(); }, 'small primary', { 'data-tip': 'Finished setting the maximums' })) : null,
         form,
         ch.old?.length ? el('div', { class: 'card sheet-old' }, el('h3', {}, 'Old fields'),
           el('p', { class: 'small muted' }, 'Values the template no longer has a place for. They are kept, so nothing is lost.'),
