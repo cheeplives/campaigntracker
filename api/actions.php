@@ -136,6 +136,7 @@ const ACTIONS = [
     'clock_delete' => ['who' => 'member', 'touch' => true],
     'dice_rolls' => ['get' => true, 'who' => 'member'],
     'dice_roll' => ['who' => 'member'],
+    'dice_reroll' => ['who' => 'member'],
     'dice_clear' => ['who' => 'gm'],
     'sessions' => ['get' => true, 'who' => 'member'],
     'session' => ['get' => true, 'who' => 'member'],

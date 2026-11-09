@@ -424,3 +424,191 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("rerolling by hand: the roller picks dice from their roll and rolls them again, and everyone sees the new result", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice reroll");
+  const perrors = watchErrors(pp);
+  await pp.addInitScript(() => { try { localStorage.setItem("chronicle-dice-3d", "off"); } catch { /* */ } });
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await openDice(pp);
+  const box = pp.getByRole("textbox", { name: "Free roll" });
+  await box.fill("5d6kh3 # damage");
+  await box.press("Enter");
+  const latest = pp.locator(".dice-e.latest");
+  await expect(latest.locator(".die")).toHaveCount(5);
+  await latest.getByRole("button", { name: "Reroll some of these dice" }).click();
+  await expect(latest.getByRole("button", { name: "Pick dice to reroll" })).toBeDisabled();
+  await latest.locator(".die").nth(0).click();
+  await latest.locator(".die").nth(3).press("Enter");
+  await expect(latest.locator(".die.picked")).toHaveCount(2);
+  await latest.getByRole("button", { name: "Reroll 2 dice" }).click();
+  await expect(latest.locator(".dice-e-meta")).toContainText("rerolled");
+  await expect(pp.locator(".dice-e")).toHaveCount(1);       // the same roll, not a new one
+
+  // the result is the one the stored seeds give, with the picked dice changed and marked
+  const all = (await api(pp, "dice_rolls", undefined, cid)).json.rolls;
+  const orig = all.find(r => r.expr === "5d6kh3 # damage");
+  const re = all.find(r => r.expr.startsWith("~"));
+  expect(re.expr).toBe(`~${orig.id}:0,3`);
+  const want = Dice.roll(orig.expr, orig.seed, [{ seed: re.seed, dice: [0, 3] }]).results[0];
+  await expect(latest.locator(".dice-e-out b")).toHaveText(String(want.total));
+  await expect(latest.locator(".die.byhand")).toHaveCount(2);
+
+  // the GM sees the same result; the GM may reroll it too; another member and a typed "~" may not
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  await expect(page.locator(".dice-e.latest .dice-e-out b")).toHaveText(String(want.total));
+  expect((await api(page, "dice_reroll", { id: orig.id, dice: [1] }, cid)).status).toBe(200);
+  const gmRoll = (await api(page, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid)).json.roll;
+  expect((await api(pp, "dice_reroll", { id: gmRoll.id, dice: [0] }, cid)).status).toBe(403);
+  expect((await api(pp, "dice_roll", { expr: `~${gmRoll.id}:0`, engine: Dice.VERSION }, cid)).status).toBe(400);
+  expect((await api(pp, "dice_reroll", { id: orig.id, dice: [] }, cid)).status).toBe(400);
+  const blind = (await api(pp, "dice_roll", { expr: "1d6", engine: Dice.VERSION, visibility: "blind" }, cid)).json.roll;
+  expect((await api(pp, "dice_reroll", { id: blind.id, dice: [0] }, cid)).status).toBe(403);
+  // the player's page picks up the GM's reroll of their roll
+  await expect(pp.locator(".dice-e").filter({ hasText: "damage" }).locator(".dice-e-meta")).toContainText("rerolled ×2", { timeout: 10000 });
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});
+
+test("Settings → Dice at the table: the GM turns off players' free rolls and odds, and makes the dice flat", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice table");
+  const perrors = watchErrors(pp);
+  await page.goto(`index.html#/c/${cid}/settings/dice`);
+  const form = page.locator(".dice-settings");
+  await form.locator("#dice-game").selectOption("pf2");
+  await form.getByRole("checkbox", { name: "Players can make free rolls" }).uncheck();
+  await form.getByRole("checkbox", { name: "Players see the odds" }).uncheck();
+  await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+  await form.getByRole("button", { name: "Save dice settings" }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+  const set = (await api(pp, "dice_rolls", undefined, cid)).json.settings;
+  expect(set).toMatchObject({ no_free: true, hide_odds: true, flat: true });
+
+  // the player has only the game roll, without odds; the server refuses their free roll and takes the game roll
+  await pp.goto(`index.html#/c/${cid}/table`);
+  await openDice(pp);
+  await expect(pp.locator(".dice-sys")).toBeVisible();
+  await expect(pp.locator(".dice-modes")).toBeHidden();
+  await expect(pp.getByRole("textbox", { name: "Free roll" })).toBeHidden();
+  await pp.waitForTimeout(300);
+  await expect(pp.locator(".dice-panel .dice-odds")).toBeHidden();
+  const free = await api(pp, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid);
+  expect(free.status).toBe(400);
+  expect(free.json.message).toMatch(/free rolls off/);
+  await pp.locator(".dice-sys-go").click();
+  await expect(pp.locator(".dice-e.latest small.tier")).toBeVisible();
+  await expect(pp.locator(".dice-tray.on")).toHaveCount(0);        // flat dice for everyone
+  await pp.getByRole("button", { name: "Your dice: colours and 3D" }).click();
+  await expect(pp.getByRole("checkbox", { name: "Throw 3D dice on this device" })).toBeDisabled();
+  await expect(pp.getByRole("dialog", { name: "Your dice" })).toContainText("the GM has set flat dice");
+
+  // the GM keeps the free roll and the odds
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  await expect(page.locator(".dice-modes")).toBeVisible();
+  await expect(page.locator(".dice-panel .dice-odds")).toBeVisible();
+  expect((await api(page, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid)).status).toBe(200);
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});
+
+test("dice tagged with where they came from show each source over its dice", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice tags");
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const box = page.getByRole("textbox", { name: "Free roll" });
+  await box.fill("3d6[Strength] + 2d6[Athletics] # climb");
+  await box.press("Enter");
+  const latest = page.locator(".dice-e.latest");
+  await expect(latest.locator(".dice-tag")).toHaveText(["Strength", "Athletics"]);
+  await expect(latest.locator(".dice-term.tagged").nth(0).locator(".die")).toHaveCount(3);
+  await expect(latest.locator(".dice-term.tagged").nth(1)).toHaveClass(/tag-1/);
+  expectNoErrors(errors);
+});
+
+test("a session's page lists the rolls made during it, as far as each member may see them", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice session");
+  const sid = (await api(page, "session_save", {}, cid)).json.session.id;
+  expect((await api(page, "dice_roll", { expr: "2d6 # sneak", engine: Dice.VERSION }, cid)).status).toBe(200);
+  expect((await api(page, "dice_roll", { expr: "1d20 # secret", engine: Dice.VERSION, visibility: "gm" }, cid)).status).toBe(200);
+  await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  const card = page.locator(".sess-rolls");
+  await expect(card.locator("summary")).toContainText("Rolls this session (2)");
+  await card.locator("summary").click();
+  await expect(card.locator(".dice-hist-e")).toHaveCount(2);
+  await expect(card.locator(".dice-hist-e").first()).toContainText("sneak");
+  await expect(card.locator(".dice-hist-e").first().locator(".die")).toHaveCount(2);
+  // the player sees their GM's open roll, not the secret one
+  await api(page, "session_save", { id: sid, is_published: true }, cid);
+  await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await expect(pp.locator(".sess-rolls summary")).toContainText("Rolls this session (1)");
+  expectNoErrors(errors);
+});
+
+test("rolling from a character sheet: numbers, dice written on it and an attack's row roll on the dice roller", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Dice sheet");
+  const perrors = watchErrors(pp);
+  const layout = { sections: [
+    { key: "stats", title: "Stats", fields: [{ key: "str", label: "Strength", type: "number" }, { key: "age", label: "Age", type: "number" },
+      { key: "dmg", label: "Unarmed", type: "text" }] },
+    { key: "gear", title: "Gear", fields: [{ key: "atk", label: "Attacks", type: "list", columns: [{ key: "name", label: "Name" }, { key: "dmg", label: "Damage" }] }] },
+  ] };
+  const tpl = (await api(page, "template_save", { name: `Rolling sheet ${Date.now()}`, game: "Test RPG", layout })).json.template;
+  const ch = (await api(pp, "character_create", { template_id: tpl.id, name: "Wren" }, cid)).json.character;
+  await pp.goto(`index.html#/c/${cid}/characters/${ch.id}`);
+  // the floating roller can sit over the sheet on a small screen: close it after each roll (the next one opens it)
+  const close = () => pp.getByRole("button", { name: "Close the dice roller" }).click();
+  const lastRoll = async () => { const r = (await api(pp, "dice_rolls", undefined, cid)).json.rolls; return r[r.length - 1]?.expr; };
+
+  const sheet = pp.locator(".sheet-form");
+  await expect(sheet.getByRole("button", { name: "Roll Strength" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Roll Age" })).toHaveCount(0);       // an age is never rolled
+  await expect(sheet.getByRole("button", { name: "Roll Unarmed" })).toBeHidden();      // no dice written in it yet
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  await expect(pp.locator("#toast")).toContainText("Fill in Strength first");
+  await sheet.getByLabel("Strength", { exact: true }).fill("3");
+  await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  // free dice only: a d20 plus the number, named for the character, on the open roller
+  await expect(pp.locator(".dice-panel")).toBeVisible();
+  await expect.poll(lastRoll).toBe("1d20+3 # Strength");
+  await expect(pp.locator(".dice-e.latest")).toContainText("Wren · Strength");
+  await close();
+
+  await sheet.getByLabel("Unarmed", { exact: true }).fill("1d3+1 bludgeoning");
+  await sheet.getByLabel("Unarmed", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Unarmed" }).click();
+  await expect.poll(lastRoll).toBe("1d3+1 # Unarmed");
+  await close();
+
+  await sheet.getByRole("button", { name: "+ Row" }).click();
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).fill("Longsword");
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).dispatchEvent("change");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).fill("1d8+3 slashing");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll 1d8+3 for Longsword" }).click();
+  await expect.poll(lastRoll).toBe("1d8+3 # Longsword, Damage");
+  await close();
+
+  // with Pathfinder 2e as the campaign's game, Strength is a score: 16 rolls the game roll with its +3
+  const s = (await api(page, "campaign", undefined, cid)).json;
+  const settings = { ...(s.campaign?.settings || {}), dice: { player_vis: "all", keep: 100, system: { id: "d20", game: "pf2", params: { tn: 15, crit: 20, fumble: true, margin: 10 }, labels: { tn: "DC" } } } };
+  expect((await api(page, "campaign_update", { settings }, cid)).status).toBe(200);
+  await pp.reload();
+  await sheet.getByLabel("Strength", { exact: true }).fill("16");
+  await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Strength" }).click();
+  await expect.poll(lastRoll).toMatch(/^1d20\+3 @d20 .* # Strength \(\+3\)$/);
+  // the GM rolls from it too, named for the character; the log names the GM as who rolled
+  await page.goto(`index.html#/c/${cid}/characters/${ch.id}`);
+  await page.locator(".sheet-form").getByRole("button", { name: "Roll Unarmed" }).click();
+  await expect.poll(lastRoll).toBe("1d3+1 # Wren: Unarmed");
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+});

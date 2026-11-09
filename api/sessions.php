@@ -158,8 +158,13 @@ function sessions_action(string $action): void {
         $st = db()->prepare("SELECT * FROM attachments WHERE campaign_id=? AND parent_type='session' AND parent_id=?" . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY id');
         $st->execute([$cid, (int)$s['id']]);
         $files = array_map('attachment_out', $st->fetchAll());
+        // the rolls made during it (api/dice.php): those on its shifts that this member may see
+        $c = campaign_row($cid);
+        // (an undated session covers only the shifts it was added to one at a time)
+        $span = (int)($s['undated'] ?? 0) ? [1, 0] : session_span($s, slots_per_day(dec($c['calendar_json'])), (int)$c['current_shift']);
+        $rolls = dice_in_shifts($cid, $isGm, $span, session_extras([(int)$s['id']])[(int)$s['id']] ?? []);
         // GMs get the old note rows too while the notes haven't been saved as text, for the page to fold in
-        out(['session' => session_out($s, true, $isGm) + ['files' => $files], 'uploads' => upload_info()]
+        out(['session' => session_out($s, true, $isGm) + ['files' => $files, 'rolls' => $rolls], 'uploads' => upload_info()]
             + ($isGm ? ['notes' => ($s['notes_text'] ?? null) === null ? snotes((int)$s['id']) : []] : []));
 
     case 'session_save': // GMs: a new session, or a change to one's title, dates or publishing; reopen makes it the open one

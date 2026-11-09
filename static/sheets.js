@@ -32,14 +32,46 @@ const Sheets = (() => {
   // leaving the editor lets go of the PDF: it was never saved, so it is gone
   window.addEventListener('hashchange', () => { if (!/^#\/templates\/(new|\d+\/edit)$/.test(location.hash)) closePdf(); });
 
+  // ------------------------------------------------------------ rolling from a sheet
+  // Numbers that are never rolled (an age, a level, coins, armour, hit points): no 🎲 beside them.
+  const NOT_ROLLED = /\b(age|height|weight|size|siz|xp|exp|experience( points)?|level|lvl|rank|tier|gold|silver|copper|platinum|electrum|gp|sp|cp|pp|ep|coins?|money|cash|credits|wealth|speed|move(ment)?|run|armou?r( class| rating| bonus| penalty)?|ac|ar|defen[cs]e|hit points|hp|health|wounds|damage taken|temporary hp|encumbrance|load|year|years|total( spent)?|max( ranks)?|points?|spent|cost|ranks|dc|passive)\b/i;
+  /** What a field holds that can be rolled: a number (not one of NOT_ROLLED), or dice written in its text. */
+  function rollOf(f, value) {
+    if (f.type === 'number' || f.type === 'pips') {
+      if (NOT_ROLLED.test(f.label || '')) return undefined;          // never rolled: no button at all
+      return value === null || value === undefined || value === '' ? null : { kind: 'num', value: Number(value) };
+    }
+    if (f.type === 'text' || f.type === 'choice') {
+      const d = typeof Dice !== 'undefined' ? Dice.find(value) : null;
+      return d ? { kind: 'dice', value: d } : null;
+    }
+    return undefined;
+  }
+  /** The 🎲 beside a field that rolls it: roll(x) gets { kind, value, label, field }. Text shows it only while it has
+   * dice in it (it.update() checks again after a change). null for a field that is never rolled. */
+  function rollButton(f, read, roll, label = f.label) {
+    if (rollOf(f, read()) === undefined) return null;
+    const b = button('🎲', () => {
+      const x = rollOf(f, read());
+      if (!x) return toast(`Fill in ${label} first`, true);
+      roll({ ...x, label, field: f.label });
+    }, 'icon-btn sheet-roll', { 'aria-label': `Roll ${label}`, 'data-tip': f.type === 'number' || f.type === 'pips' ? `Roll ${label} on the dice roller` : `Roll the dice in ${label}` });
+    b.update = () => { if (f.type === 'text' || f.type === 'choice') b.hidden = !rollOf(f, read()); };
+    b.update();
+    return b;
+  }
+
   // ------------------------------------------------------------ a sheet drawn from a layout
   /** A sheet: layout's sections and fields with values (by key). opts: { mode: 'edit'|'view'|'preview', hidden: keys
-   * hidden from the party, canHide, onChange(key, value), onHide(key, hidden) }. 'view' can't be changed; 'preview'
-   * can be tried out but saves nothing. */
+   * hidden from the party, canHide, onChange(key, value), onHide(key, hidden), onRoll(x) }. 'view' can't be changed;
+   * 'preview' can be tried out but saves nothing. With onRoll, numbers and dice on the sheet have a 🎲 that rolls them
+   * (rollButton). */
   function renderSheetForm(layout, values = {}, opts = {}) {
     const mode = opts.mode || 'preview', off = mode === 'view', live = mode === 'edit';
     const hidden = new Set(opts.hidden || []);
-    const change = (k, v) => { values[k] = v; opts.onChange?.(k, v); };
+    const dice = new Map();   // the 🎲 of each field that has one
+    const change = (k, v) => { values[k] = v; opts.onChange?.(k, v); dice.get(k)?.update(); };
+    const roll = opts.onRoll || null;
     const eye = (key, what) => opts.canHide ? button(hidden.has(key) ? '🙈' : '👁', () => opts.onHide?.(key, !hidden.has(key)), 'icon-btn sheet-eye',
       { 'aria-pressed': String(hidden.has(key)), 'aria-label': hidden.has(key) ? `Show ${what} to the party` : `Hide ${what} from the party`,
         'data-tip': hidden.has(key) ? 'Hidden from the rest of the party. Tap to show it' : 'Seen by the party. Tap to hide it' }) : null;
@@ -52,11 +84,13 @@ const Sheets = (() => {
         // its width in half-columns: medium is two, small one, large four, or the number the template gives; full is all
         const wide = f.type === 'longtext' || f.type === 'list' || f.size === 'full';
         const cols = wide ? null : Number.isInteger(f.cols) ? f.cols : { small: 1, large: 4 }[f.size] ?? null;
-        const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live));
+        const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live, roll));
+        const die = roll ? rollButton(f, () => values[f.key], roll) : null;
+        if (die) dice.set(f.key, die);
         const note = el('div', { class: 'sheet-conflict', hidden: true });
         slots.set(f.key, { f, slot, note });
         return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : '') + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key, 'data-cols': cols },
-          el('div', { class: 'sheet-label' }, el('span', {}, f.label), eye(f.key, f.label)), slot, note);
+          el('div', { class: 'sheet-label' }, el('span', {}, f.label), die, eye(f.key, f.label)), slot, note);
       }))));
     // pages: a tab for each, only the open one's sections shown
     const pages = L.pages(layout);
@@ -79,7 +113,8 @@ const Sheets = (() => {
       if (!x) return;
       values[key] = v;
       x.note.hidden = true;
-      x.slot.replaceChildren(control(x.f, v, nv => change(key, nv), off, live));
+      x.slot.replaceChildren(control(x.f, v, nv => change(key, nv), off, live, roll));
+      dice.get(key)?.update();
     };
     /** Someone else changed a field this person is typing in: let them pick. */
     form.conflict = (key, v, by, send) => {
@@ -102,7 +137,7 @@ const Sheets = (() => {
   const numOrNull = s => (String(s).trim() === '' ? null : Number(s));
   /** The input for one field, sending the new value to set(v) as it changes. */
   const CUSTOM = '__custom';
-  function control(f, value, set, off, live) {
+  function control(f, value, set, off, live, roll = null) {
     const label = f.label;
     // while typing, the value is sent 400 ms after the last key, as well as on leaving the box
     const typed = (node, read) => {
@@ -170,13 +205,35 @@ const Sheets = (() => {
     let rows = Array.isArray(value) ? value.map(r => ({ ...r })) : [];
     const table = el('div', { class: 'sheet-list' });
     const send = () => set(rows.filter(r => cols.some(c => String(r[c.key] ?? '').trim() !== '')));
+    // with roll, a row with dice in it (an attack's damage, a spell's) has a 🎲 that rolls the first dice it has,
+    // named by the row's first cell
+    const rowDice = (r, ri) => {
+      if (!roll || typeof Dice === 'undefined') return null;
+      const hit = () => cols.map(c => [c, Dice.find(r[c.key])]).find(([, d]) => d);
+      const name = () => String(r[cols[0]?.key] ?? '').trim();
+      const b = button('🎲', () => {
+        const h = hit();
+        if (h) roll({ kind: 'dice', value: h[1], label: [name() || `${label} row ${ri + 1}`, h[0] !== cols[0] ? h[0].label : null].filter(Boolean).join(', ') });
+      }, 'icon-btn sheet-roll');
+      b.update = () => {
+        const h = hit();
+        b.hidden = !h;
+        b.setAttribute('aria-label', h ? `Roll ${h[1]}${name() ? ` for ${name()}` : ''}` : 'Nothing to roll');
+      };
+      b.update();
+      return b;
+    };
     const draw = () => fill(table, 
-      el('table', { class: 'tbl' }, el('tr', {}, cols.map(c => el('th', {}, c.label)), off ? null : el('th', {})),
-        rows.map((r, ri) => el('tr', {}, cols.map(c => {
-          const i = el('input', { value: r[c.key] ?? '', maxlength: L.LIMITS.text, 'aria-label': `${label} row ${ri + 1} ${c.label}`, disabled: off });
-          i.addEventListener('change', () => { r[c.key] = i.value; send(); });
-          return el('td', {}, i);
-        }), off ? null : el('td', {}, button('×', () => { rows.splice(ri, 1); draw(); send(); }, 'icon-btn', { 'aria-label': `Remove row ${ri + 1}` }))))),
+      el('table', { class: 'tbl' }, el('tr', {}, cols.map(c => el('th', {}, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
+        rows.map((r, ri) => {
+          const die = rowDice(r, ri);
+          return el('tr', {}, cols.map(c => {
+            const i = el('input', { value: r[c.key] ?? '', maxlength: L.LIMITS.text, 'aria-label': `${label} row ${ri + 1} ${c.label}`, disabled: off });
+            i.addEventListener('change', () => { r[c.key] = i.value; send(); die?.update(); });
+            return el('td', {}, i);
+          }), roll ? el('td', { class: 'sheet-roll-cell' }, die) : null,
+          off ? null : el('td', {}, button('×', () => { rows.splice(ri, 1); draw(); send(); }, 'icon-btn', { 'aria-label': `Remove row ${ri + 1}` })));
+        })),
       off || rows.length >= L.LIMITS.rows ? null : button('+ Row', () => { rows.push({}); draw(); }, 'small'));
     draw();
     return table;
@@ -971,14 +1028,20 @@ const Sheets = (() => {
       }
     }
     const canChange = () => mine || (gmOnOthers && editing);
+    // its player and the GMs roll from it on the dice roller, named for the character (the log already names the
+    // roller's active character as who rolled)
+    const playing = () => Number(ctx.S.members?.find(m => Number(m.id) === me())?.active_character_id) === ch.id;
+    const rollHere = ctx.rollFromSheet && (mine || ch.can_edit)
+      ? x => ctx.rollFromSheet({ ...x, label: playing() ? x.label : `${ch.name}: ${x.label}` }) : null;
     function draw() {
       if (editBtn) { editBtn.textContent = editing ? 'Done' : 'Edit'; editBtn.className = editing ? 'small primary' : 'small'; }
       if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
-      if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v)));
+      if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v), rollHere));
       form = renderSheetForm(ch.layout, values, {
         mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
+        onRoll: rollHere,
       });
       fill(body,
         ch.can_edit ? settingsStrip(ch, mine, save) : null,
@@ -1029,7 +1092,7 @@ const Sheets = (() => {
 
   /** Only the Play fields, for a phone at the table: big + and − on counters, tappable pips, toggles. Each tap shows
    * and sends the new value at once. */
-  function playView(ch, values, can, send) {
+  function playView(ch, values, can, send, roll = null) {
     const fields = L.fields(ch.layout);
     const playFields = [...fields.values()].map(x => x.field).filter(f => f.play);
     if (!playFields.length) return el('p', { class: 'muted' }, 'This template has no Play fields. Its author can mark fields Play in the template editor.');
@@ -1056,7 +1119,9 @@ const Sheets = (() => {
           'play-toggle' + (values[f.key] ? ' on' : ''), { 'aria-pressed': String(!!values[f.key]), disabled: !can });
         return t;
       }
-      return el('div', { class: 'play-other' }, el('div', { class: 'play-label' }, f.label), control(f, values[f.key], v => set(f.key, v), !can, true));
+      const die = roll ? rollButton(f, () => values[f.key], roll) : null;
+      return el('div', { class: 'play-other' }, el('div', { class: 'play-label' }, f.label, die),
+        control(f, values[f.key], v => { set(f.key, v); die?.update(); }, !can, true, roll));
     }));
   }
 

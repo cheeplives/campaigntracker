@@ -704,6 +704,12 @@
               'Older rolls are deleted as new ones come in')),
           field('Players can\'t change who sees their rolls', el('input', { type: 'checkbox', name: 'lock_vis', checked: !!d.lock_vis })),
           field('GM rolls start hidden from players', el('input', { type: 'checkbox', name: 'gm_hidden', checked: !!d.gm_hidden }), 'A GM can still show any roll to everyone'),
+          el('h3', {}, 'At the table'),
+          field('Players can make free rolls', el('input', { type: 'checkbox', name: 'free_roll', checked: !d.no_free }),
+            'Off: with a dice system set, players roll only the Game roll (saved rolls of it included). GMs can always free-roll'),
+          field('Players see the odds', el('input', { type: 'checkbox', name: 'show_odds', checked: !d.hide_odds }), 'The bar of chances above the Roll button. GMs always see it'),
+          field('3D dice', select([['', 'Each person chooses (on unless they turn it off)'], ['flat', 'Flat dice only, for everyone']], d.flat ? 'flat' : '', { name: 'flat' }),
+            'Flat dice still show each player\'s colours and patterns'),
           el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save dice settings'),
             btn('Clear the roll log…', async () => {
               if (!await confirmDialog('Delete every roll in this campaign\'s roll log, for everyone? This can\'t be undone.', { ok: 'Clear the log', danger: true })) return;
@@ -714,7 +720,8 @@
           const v = formData(form);
           const problem = sysCard.problem();
           if (problem) { toast(problem, true); return; }
-          const s = { ...settings(), dice: { player_vis: v.player_vis, keep: Number(v.keep), lock_vis: !!v.lock_vis, gm_hidden: !!v.gm_hidden, system: sysCard.value() } };
+          const s = { ...settings(), dice: { player_vis: v.player_vis, keep: Number(v.keep), lock_vis: !!v.lock_vis, gm_hidden: !!v.gm_hidden, system: sysCard.value(),
+            no_free: !v.free_roll, hide_odds: !v.show_odds, flat: v.flat === 'flat' } };
           try { await post('campaign_update', { settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
           catch (err) { toast(err.message, true); }
         });

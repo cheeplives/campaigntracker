@@ -527,7 +527,29 @@
     return { sys, p: params(sys, s.params), labels: s.labels || {}, game: s.game || null, table: s.table || '' };
   }
 
-  const DiceSystems = { SYSTEMS, BY_ID, GROUPS, PRESETS, TIERS, SYMBOL, params, encode, decode, rollText, read, odds, tableRows, campaignSystem };
+  /** The number a character sheet's number fills in on a system's game roll: its first main number (a modifier, a
+   * stat, a skill, a pool), except a sum of dice, where a sheet's number is the modifier rather than how many dice.
+   * null for a system with none (the oracle). */
+  function sheetKey(sys) {
+    if (sys.id === 'sum') return 'mod';
+    return sys.params.find(d => d.main && d.type === 'num')?.key || null;
+  }
+
+  /** What a number on a character sheet adds to a game roll. In the d20 games whose sheets keep ability scores (D&D,
+   * Pathfinder), a score such as Strength 16 rolls with its modifier, +3; anything else rolls as it is.
+   * cs is campaignSystem's answer. Gives { n, note }, note saying how a score was read ("+3"), or ''. */
+  const SCORE_GAMES = new Set(['dnd5e', 'pf1', 'pf2']);
+  const ABILITY = /^(str(ength)?|dex(terity)?|con(stitution)?|int(elligence)?|wis(dom)?|cha(risma)?)(\s*score)?$/i;
+  function sheetNumber(cs, label, value) {
+    const n = Math.round(Number(value));
+    if (cs && SCORE_GAMES.has(cs.game) && ABILITY.test(String(label || '').trim())) {
+      const m = Math.floor((n - 10) / 2);
+      return { n: m, note: sign(m) || '+0' };
+    }
+    return { n, note: '' };
+  }
+
+  const DiceSystems = { SYSTEMS, BY_ID, GROUPS, PRESETS, TIERS, SYMBOL, params, encode, decode, rollText, read, odds, tableRows, campaignSystem, sheetKey, sheetNumber };
   if (typeof module !== 'undefined' && module.exports) module.exports = DiceSystems;
   else root.DiceSystems = DiceSystems;
 })(typeof window !== 'undefined' ? window : globalThis);

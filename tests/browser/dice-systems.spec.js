@@ -165,3 +165,18 @@ test("a campaign's system comes from its settings, or there is none", () => {
   expect(c.labels.n).toBe("Dice pool");
   expect(c.game).toBe("v20");
 });
+
+test("a character sheet's numbers and dice: which number they fill in, ability scores as modifiers, and dice found in text", () => {
+  expect(DS.sheetKey(DS.BY_ID.d20)).toBe("mod");
+  expect(DS.sheetKey(DS.BY_ID.sum)).toBe("mod");          // a sheet's number adds to the dice, not how many
+  expect(DS.sheetKey(DS.BY_ID.percent)).toBe("skill");
+  expect(DS.sheetKey(DS.BY_ID.pool)).toBe("n");
+  expect(DS.sheetKey(DS.BY_ID.oracle)).toBeNull();
+  const pf2 = DS.campaignSystem({ system: { id: "d20", game: "pf2" } }), plain = DS.campaignSystem({ system: { id: "d20" } });
+  expect(DS.sheetNumber(pf2, "Strength", 16)).toEqual({ n: 3, note: "+3" });
+  expect(DS.sheetNumber(pf2, "DEX", 9)).toEqual({ n: -1, note: "-1" });
+  expect(DS.sheetNumber(pf2, "Athletics", 7)).toEqual({ n: 7, note: "" });
+  expect(DS.sheetNumber(plain, "Strength", 16)).toEqual({ n: 16, note: "" });
+  for (const [text, want] of [["1d8+3 slashing", "1d8+3"], ["2d6 fire", "2d6"], ["see 4d6kh3 + 2", "4d6kh3+2"], ["d%", "d%"],
+    ["1d6 − 1", "1d6-1"], ["Longsword", null], ["12", null], ["", null], [null, null]]) expect(Dice.find(text)).toBe(want);
+});
