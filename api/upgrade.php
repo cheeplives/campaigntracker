@@ -124,6 +124,8 @@ function upgrade_steps(): array {
             'A character sheet\'s dot and box tracks can now have the character\'s own maximum: the dots past it are greyed out and can\'t be ticked.'],
         ['043_character_portraits.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'portrait_id'),
             'A character can now have a portrait, picked or uploaded on its sheet and shown on its card, its sheet and its Play view.'],
+        ['044_downtime_party.sql', fn(PDO $p) => db_has_table($p, 'downtimes') && !db_has_column($p, 'downtimes', 'group_id'),
+            'A rest or downtime can be for one group of a split party, and characters with no player can be put on its activities.'],
     ];
 }
 

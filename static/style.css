@@ -654,6 +654,7 @@ details summary { cursor: pointer; color: var(--accent); margin: 8px 0; }
 .downtime[data-kind=short_rest] { border-left-color: var(--line); }
 .downtime[data-kind=downtime] { border-left-color: var(--ok); }
 .dt-title { font-weight: 400; }
+.dt-group { margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--panel-2); font-size: .8rem; font-weight: 400; }
 .dt-acts { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; padding: 0; list-style: none; }
 .dt-act { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 3px 8px; border-radius: 6px; }
 .dt-act.on { background: var(--panel-2); }
