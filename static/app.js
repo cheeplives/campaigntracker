@@ -2994,6 +2994,29 @@
     }, 'small pin-btn', on ? 'Take this out of the Pinned list in the Legend' : 'Put this in the Pinned list at the top of the Legend, for everyone in the campaign');
     return b;
   }
+  /** The Encyclopedia entries (kind 'entry') or Library tomes ('tome') this person starred in this campaign, oldest star
+   * first. Kept in their preferences (prefs.stars), so each member stars their own. */
+  const starsOf = kind => (S.camp && S.user?.prefs?.stars?.[S.camp.id]?.[kind] || []).map(Number);
+  /** The ☆ that stars or unstars an entry or tome for this person, then `after` redraws (route() when not given). inLink:
+   * it sits inside a card's link, so it is a span acting as a button, and a press doesn't follow the link. */
+  function itemStar(kind, id, name, { after, inLink = false } = {}) {
+    const on = starsOf(kind).includes(Number(id));
+    const what = kind === 'tome' ? 'Library' : 'Encyclopedia';
+    const b = el(inLink ? 'span' : 'button', { class: 'item-star' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': on ? `Unstar ${name}` : `Star ${name}`,
+      'data-tip': on ? `Unstar: take it off your Starred list on the ${what}'s first page` : `Star: list it under Starred on the ${what}'s first page, for you alone`,
+      ...(inLink ? { role: 'button', tabindex: 0 } : { type: 'button' }) });   // the ☆ or ★ is drawn by the stylesheet, so a heading's text stays its name
+    let busyNow = false;
+    const press = async ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (busyNow) return;
+      busyNow = true; b.classList.add('busy');
+      try { S.user.prefs = (await post('prefs_save', { star: { cid: S.camp.id, kind, id: Number(id), on: !on } })).prefs; hideTip(); (after || route)(); }
+      catch (err) { toast(err.message, true); busyNow = false; b.classList.remove('busy'); }
+    };
+    b.addEventListener('click', press);
+    if (inLink) b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') press(ev); });
+    return b;
+  }
   /** The Legend's Pinned and Recent groups (nothing when both are off or empty). */
   function legendQuick() {
     if (quickOn('pinned') && pinsOf().some(p => p.kind === 'session')) loadPinSessions();
@@ -4528,10 +4551,12 @@
   }
   /** The reader with nothing picked: a line, then a few items to start from (the open session, the newest entries, the
    * tomes last changed) as links, then the help. On one column (a phone, an iPad upright) it's left out, as the list is enough. */
-  function readerEmpty(reader, { lead, title = '', start = [], help = '' }) {
+  function readerEmpty(reader, { lead, title = '', start = [], more = [], help = '' }) {
     reader.classList.add('lp-empty');
+    // more: further groups of cards under the first, each { title, start, cls }, left out when empty
     reader.append(...clean([el('p', { class: 'muted lp-lead' }, lead),
       start.length ? el('div', { class: 'lp-start' }, el('h3', {}, title), start) : null,
+      ...more.map(g => g.start.length ? el('div', { class: `lp-start${g.cls ? ` ${g.cls}` : ''}` }, el('h3', {}, g.title), g.start) : null),
       help ? el('p', { class: 'small muted' }, help) : null]));
     return reader;
   }
@@ -4555,7 +4580,10 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and descriptions', 'aria-label': 'Search the Library' });
     const kindRow = el('div', { class: 'tagpick' });
     const list = el('div', { class: 'lib-list' });
-    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+    const starred = starsOf('tome');
+    // the list's cards carry a ☆ to star the tome; the start page's don't
+    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item has-star '}enc-card ${cls}` + (current?.id === t.id ? ' on' : '') + (starred.includes(t.id) ? ' starred' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+      cls === 'lp-start-item' ? null : itemStar('tome', t.id, t.title, { inLink: true }),
       el('span', { class: 'enc-name' }, el('span', { 'aria-hidden': 'true' }, `${tomeKind(t.kind)[2]} `), t.title),
       t.description ? el('small', { class: 'lib-desc' }, t.description) : null);
     const draw = () => {
@@ -4579,6 +4607,8 @@
     if (sel && sel !== 'new' && !current) reader.append(el('p', { class: 'muted' }, 'That tome isn\'t in the Library any more.'));
     else if (!current) readerEmpty(reader, { lead: tomes.length ? 'Pick a tome to read it.' : 'Nothing on the shelves yet.',
       title: 'Last changed', start: [...tomes].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)) || b.id - a.id).slice(0, 5).map(t => item(t, 'lp-start-item')),
+      // the ones this person starred, newest star first
+      more: [{ title: '★ Starred', cls: 'lp-starred', start: [...starred].reverse().map(id => tomes.find(t => t.id === id)).filter(Boolean).map(t => item(t, 'lp-start-item')) }],
       help: 'A tome is a book the party found, a character\'s journal, or a note passed across the table. Give it a title and a line about it, then write it out in full.' });
     else if (!current.id) reader.append(tomeForm(current));
     else reader.append(...tomeView(current));
@@ -4597,7 +4627,7 @@
     return clean([
       trail(['Library', `#/c/${S.camp.id}/library`], [label], [t.title]),
       el('div', { class: 'row spread' },
-        el('h2', {}, t.title),
+        el('h2', {}, t.title, itemStar('tome', t.id, t.title)),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
           pinButton({ kind: 'tome', id: t.id, name: t.title }),
@@ -6828,7 +6858,7 @@
   // Everything the moved tabs use from here, built once everything above exists. A tab's own exports that another tab
   // uses are getters, as they are filled in just below.
   const tabCtx = {
-    DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, api, attachmentsCard, btn, busy, byline,
+    DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, itemStar, starsOf, api, attachmentsCard, btn, busy, byline,
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,

@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { DOWNTIME_KINDS, E, trail, pinButton, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
+    const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
@@ -248,8 +248,11 @@
       S.encChars = r.characters || {};
       const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
       // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.
-      const st = vs().enc || (vs().enc = { q: '', tagsOff: new Set(), relsOff: new Set(), catsOff: new Set(), folded: new Set() });
+      const st = vs().enc || (vs().enc = { q: '', tagsOff: new Set(), relsOff: new Set(), catsOff: new Set(), folded: new Set(['blank']) });
       if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
+      // Blank Entries starts folded; it opens while one of them is the entry open, so the list shows where you are
+      const current0 = sel && sel !== 'new' ? entries.find(e => e.id === Number(sel)) : null;
+      if (current0 && entryBlank(current0)) st.folded.delete('blank');
       // ?cat=<key> (the trail's Category step) shows that Category alone; the address then drops it, so Back is the list
       const qcat = new URLSearchParams(location.hash.split('?')[1] || '').get('cat');
       if (qcat !== null && !sel) {
@@ -274,7 +277,9 @@
       const ctx = { rel, conns, entries, st, files, draw: null,
         web: opts => WebView.open({ conns, byId, href, campaignName: S.camp.name, ...opts }) };
       // Each entry is a small card: its name, its other names under it, and its tags along the bottom.
-      const item = e => el('a', { class: 'enc-item enc-card' + (current?.id === e.id ? ' on' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
+      const starred = new Set(starsOf('entry'));
+      const item = e => el('a', { class: 'enc-item enc-card has-star' + (current?.id === e.id ? ' on' : '') + (starred.has(e.id) ? ' starred' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
+        itemStar('entry', e.id, e.name, { inLink: true }),
         el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name,
           chars[e.id]?.sheet_visible ? el('span', { class: 'enc-sheet', role: 'link', tabindex: 0, 'aria-label': `Open ${e.name}'s sheet`, 'data-tip': 'Open the character sheet',
             onclick: ev => { ev.preventDefault(); ev.stopPropagation(); location.hash = `#/c/${S.camp.id}/characters/${chars[e.id].id}`; },
@@ -336,7 +341,8 @@
         const groups = [...ENC_CATEGORIES, ['', 'No category', '']].map(([k, name, icon]) => [k, `${icon ? `${icon} ` : ''}${name}`, shown.filter(e => (e.category || '') === k)]).filter(g => g[2].length);
         const onlyNone = groups.length === 1 && groups[0][0] === '';
         lists.replaceChildren(...clean([
-          blank.length ? section('blank', `Blank Entries (${blank.length})`, blank,
+          // Blank Entries starts folded (st.folded), with a red count of the backlog, so the GM sees how many are waiting
+          blank.length ? section('blank', ['Blank Entries', el('span', { class: 'count-badge', 'aria-label': `${blank.length} blank` }, String(blank.length))], blank,
             'Entries with nothing written about them yet, such as names just added by the Feature Highlighter. Open one to describe it') : null,
           shown.length ? el('p', { class: 'small muted enc-count' }, `${shown.length}${of} entries`) : null,
           shown.length && groups.length && !onlyNone ? groups.map(([k, title, list]) => section(k, `${title} (${list.length})`, list))
@@ -379,10 +385,12 @@
           }, 'small', `Have the Feature Highlighter offer "${t}" again`))))) : null;
       // --- the entry picked, or the newest ones to start from
       const reader = el('section', {});
+      const startCard = e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
+        encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null);
       if (!current) readerEmpty(reader, { lead: entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.',
-        title: 'Newest', start: entries.filter(e => !entryBlank(e)).sort((a, b) => b.id - a.id).slice(0, 5)
-          .map(e => el('a', { class: 'enc-card lp-start-item', href: href(e.id) }, el('span', { class: 'enc-name' }, e.name),
-            encCat(e.category) ? el('small', { class: 'enc-alias' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null)),
+        title: 'Newest', start: entries.filter(e => !entryBlank(e)).sort((a, b) => b.id - a.id).slice(0, 5).map(startCard),
+        // the ones this person starred, newest star first
+        more: [{ title: '★ Starred', cls: 'lp-starred', start: starsOf('entry').reverse().map(id => byId.get(id)).filter(Boolean).map(startCard) }],
         help: 'When you save a note, an event, a reminder, a day\'s Locations visited, a downtime card, a holding or a tome, the Feature Highlighter offers any new names it finds: capitalized words, words in bold, italics or underline, and words set apart *like this* or in "quote marks".' });
       else if (!current.id || entryBlank(current)) reader.append(entryEditor(current, ctx));
       else reader.append(...entryView(current, ctx));
@@ -470,7 +478,7 @@
       return clean([
         trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1], `#/c/${S.camp.id}/encyclopedia?cat=${encodeURIComponent(e.category)}`] : null, [e.name]),
         el('div', { class: 'row spread' },
-          el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
+          el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name, itemStar('entry', e.id, e.name)),
           el('div', { class: 'row' },
             ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
             !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
