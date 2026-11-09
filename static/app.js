@@ -4384,7 +4384,7 @@
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
-    encCat, genre: () => E.genreOf(settings()), offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
+    encCat, genre: () => E.genreOf(settings()), genres: E.GENRES, creditLine, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
     nowShift, slotWord: word, logOnShift, ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
@@ -6344,6 +6344,9 @@
             extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', and ',
             extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA are copied, ',
             'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
+          ['Game icons and the starter tokens on the Tokens tab: ', extLink({ url: 'https://game-icons.net/', title: 'game-icons.net' }),
+            ', over 4,000 icons by Lorc, Delapouite and other artists under ', extLink({ url: 'https://creativecommons.org/licenses/by/3.0/', title: 'CC BY 3.0' }),
+            ' (Viscious Speed\'s and Zeromancer\'s under CC0), copied into the app. A token made from one is drawn in your browser and keeps its icon\'s title, artist and licence, shown when the token is edited.'],
           fanAbout ? [fanAbout.used] : null,
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
