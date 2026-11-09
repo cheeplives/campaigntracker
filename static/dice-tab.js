@@ -37,10 +37,12 @@
       ['roN', 'Reroll once', 'd20ro1'],
       ['>=N', 'Count successes instead of a total', '7d10>=6'],
       ['fN · f<=N', 'Each failure cancels a success', '7d10>=6f1'],
+      ['sets', 'Matching sets (One-Roll Engine): width × height, so four 6s is 4×6', '6d10sets'],
       ['d100bN · d100pN', 'Bonus / penalty dice: N extra tens dice, keep the best / worst', 'd100b1'],
       ['d100flip', 'Flip-flop: read both ways round, keep the lower', 'd100flip'],
       ['d100swap', 'Read the digits the other way round (73 is 37)', 'd100swap'],
       ['Nx(…)', 'Repeat the roll N times', '6x(4d6kh3)'],
+      ['[text]', 'Say where dice came from: each source gets its own colour', '3d6[Strength]+2d6[Athletics]'],
       ['# text', 'Label the roll', 'd8+3 # longsword'],
     ];
     const VIS_PLAYER = [['all', 'Everyone', 'Everyone at the table sees this roll'],
@@ -53,6 +55,12 @@
     let sysNow = null, sysSig = '', sysP = null, mode = 'free', oddsTimer = null, busy = false;
     // The roll whose 3D dice are in the air: its result in the log waits for them to land.
     let landingId = 0;
+    // Rerolling by hand: the roll whose dice are being picked, and the dice picked so far (their numbers, d.i).
+    let pickId = 0, picked = new Set();
+    /** A reroll's log entry ("~<roll id>:<die numbers>", api/dice.php): which roll and dice, or null for a roll. */
+    const rerollOf = r => { const m = /^~(\d+):([\d,]+)$/.exec(r.expr); return m ? { id: Number(m[1]), dice: m[2].split(',').map(Number) } : null; };
+    /** The rerolls of roll r so far, oldest first, as Dice.roll takes them. */
+    const rerollsFor = r => rolls.filter(x => x.seed && rerollOf(x)?.id === r.id).map(x => ({ seed: x.seed, dice: rerollOf(x).dice, id: x.id, gm: x.by_gm }));
     const store = {
       get: k => { try { return localStorage.getItem(k); } catch { return null; } },
       set: (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private window */ } },
@@ -247,16 +255,20 @@
       }
       rolls.sort((a, b) => a.id - b.id);
       if (rolls.length > 200) rolls = rolls.slice(-200);
-      if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) throw3d(toss);
+      if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) {
+        const re = rerollOf(toss), target = re && rolls.find(x => x.id === re.id);
+        if (!re) throw3d(toss);
+        else if (target) { fresh.add(target.id); throw3d(target, new Set(re.dice)); }
+      }
       draw();
       if (isOpen()) markSeen();
     }
     /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
-    function throw3d(r) {
-      if (!D3 || r.seed === null) return;
+    function throw3d(r, only = null) {
+      if (!D3 || r.seed === null || settings?.flat) return;     // the GM can make the dice flat for the whole table
       let res;
-      try { res = Dice.roll(r.expr, r.seed); } catch { return; }
-      if (!D3.can(res)) return;
+      try { res = Dice.roll(r.expr, r.seed, rerollsFor(r)); } catch { return; }
+      if (!D3.can(res, only)) return;
       landingId = r.id;
       const done = () => {
         if (landingId !== r.id) return;
@@ -264,7 +276,7 @@
         const li = log.querySelector(`[data-id="${r.id}"]`);
         li?.classList.remove('landing');
       };
-      D3.toss(res, r.look).then(done, done);
+      D3.toss(res, r.look, only).then(done, done);
       setTimeout(done, 4000);      // never leave a result hidden
     }
     function draw() {
@@ -272,7 +284,9 @@
         log.replaceChildren(el('li', { class: 'dice-empty muted' }, 'No rolls yet. Tap a die above, or type a roll and press Roll.'));
         return;
       }
-      log.replaceChildren(...rolls.slice().reverse().map((r, k) => entry(r, k === 0)));
+      const shown = rolls.filter(r => !rerollOf(r)).reverse();
+      if (!shown.length) { log.replaceChildren(); return; }
+      log.replaceChildren(...shown.map((r, k) => entry(r, k === 0)));
       fresh.clear();
     }
     const when = at => {
@@ -292,18 +306,28 @@
       const body = el('div', { class: 'dice-e-dice' });
       const meta = el('div', { class: 'dice-e-meta small muted' });
       const mark = VIS_MARK[r.visibility];
-      let label = '', big = '?', words = '', tier = null, note = null, sysName = '';
+      let label = '', big = '?', words = '', tier = null, note = null, sysName = '', rerolled = 0, tools = null;
       if (r.seed === null) {
         words = 'Rolled for the GM';
         try { label = Dice.parse(r.expr).label; } catch { /* unreadable: no label either */ }
       } else {
         try {
-          const res = Dice.roll(r.expr, r.seed);
+          const rr = rerollsFor(r);
+          const res = Dice.roll(r.expr, r.seed, rr);
           const o = DiceUI.outcome(res, { table: sysNow?.table });
           label = res.label;
           ({ big, words, tier, note } = o);
           if (o.sys && o.sys.id !== sysNow?.sys.id) sysName = o.sys.name;
-          body.append(...DiceUI.diceRows(el, res, { animate: fresh.has(r.id) && !reduced() && landingId !== r.id, faces: o.faces, look: r.look }));
+          // just rerolled: only those dice tumble
+          const last = rr[rr.length - 1];
+          const anim = fresh.has(r.id) && !reduced() && landingId !== r.id && (last && fresh.has(last.id) ? new Set(last.dice) : true);
+          body.append(...DiceUI.diceRows(el, res, { animate: anim, faces: o.faces, look: r.look }));
+          if (rr.length) rerolled = rr.length;
+          if (pickId === r.id) picking(body, r);
+          else if ((r.mine || isGM()) && !(r.visibility === 'blind' && !isGM())) {
+            tools = el('button', { type: 'button', class: 'link dice-re', 'aria-label': 'Reroll some of these dice', 'data-tip': 'Pick dice from this roll and roll them again',
+              onclick: () => { pickId = r.id; picked = new Set(); draw(); log.querySelector(`[data-id="${r.id}"] .die`)?.focus(); } }, '↻ Reroll');
+          }
         } catch (e) {
           big = '—';
           words = 'Can\'t read this roll';
@@ -314,13 +338,46 @@
       out.append(el('b', {}, big));
       if (words) out.append(el('small', { class: tier ? `tier t-${tier}` : null }, words));
       const exprText = r.expr.split('#')[0].split('@')[0].trim();
-      meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`, ` · ${when(r.at)}`].filter(Boolean));
+      meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`,
+        rerolled && ` · rerolled${rerolled > 1 ? ` ×${rerolled}` : ''}`, ` · ${when(r.at)}`, tools && ' · ', tools].filter(Boolean));
       // ⧉ copies the roll as a line of text, for a chat window or a VTT's
       const line = `${r.author || 'Someone'}${label ? ` (${label})` : ''}: ${exprText} = ${big}${words ? ` · ${words}` : ''}`;
       meta.append(' ', el('button', { type: 'button', class: 'link small dice-copy', 'aria-label': 'Copy this roll', title: 'Copy this roll as text',
         onclick: async () => { try { await navigator.clipboard.writeText(line); toast('Roll copied'); } catch { toast('This browser would not copy it', true); } } }, '⧉'));
       return el('li', { 'data-id': String(r.id), class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') + (landingId === r.id ? ' landing' : '') },
         el('div', { class: 'dice-e-main' }, head, meta, body), out);
+    }
+
+    /** Roll r's dice in the log become buttons to pick; a bar under them rerolls the picked dice or cancels. */
+    function picking(body, r) {
+      const go = el('button', { type: 'button', class: 'primary small dice-re-go', disabled: !picked.size },
+        picked.size ? `Reroll ${picked.size} ${picked.size === 1 ? 'die' : 'dice'}` : 'Pick dice to reroll');
+      const stop = el('button', { type: 'button', class: 'small', onclick: () => { pickId = 0; picked = new Set(); draw(); } }, 'Cancel');
+      for (const n of body.querySelectorAll('.die[data-i]')) {
+        const i = Number(n.dataset.i);
+        n.classList.add('pick');
+        n.classList.toggle('picked', picked.has(i));
+        n.setAttribute('role', 'button');
+        n.setAttribute('tabindex', '0');
+        n.setAttribute('aria-pressed', String(picked.has(i)));
+        n.setAttribute('aria-label', `Die showing ${n.textContent}${picked.has(i) ? ', picked' : ''}`);
+        const flip = () => { if (picked.has(i)) picked.delete(i); else picked.add(i); draw(); log.querySelector(`[data-id="${r.id}"] .die[data-i="${i}"]`)?.focus(); };
+        n.addEventListener('click', flip);
+        n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+      }
+      go.addEventListener('click', () => reroll(r, [...picked]));
+      body.append(el('div', { class: 'dice-re-bar small' }, el('span', { class: 'muted' }, 'Tap the dice to roll again'), go, stop));
+    }
+    async function reroll(r, dice) {
+      if (busy || !dice.length) return;
+      busy = true;
+      try {
+        const res = await post('dice_reroll', { id: r.id, dice }, cid);
+        pickId = 0; picked = new Set();
+        fresh.add(res.roll.id);
+        await load();
+        take([res.roll], true);
+      } catch (e) { toast(e.message, true); } finally { busy = false; }
     }
 
     // ------------------------------------------------------------ rolling
@@ -350,9 +407,11 @@
 
     // ------------------------------------------------------------ the game roll
     /** Show the game roll or the free roll. A campaign with no dice system has only the free roll. */
+    /** A player in a campaign whose GM turned free rolls off (Settings → Dice) has only the game roll. */
+    const gameOnly = () => !!(sysNow && settings?.no_free && !isGM());
     function setMode(m, remember) {
-      mode = sysNow && m === 'game' ? 'game' : 'free';
-      modes.hidden = !sysNow;
+      mode = sysNow && (m === 'game' || gameOnly()) ? 'game' : 'free';
+      modes.hidden = !sysNow || gameOnly();
       sysBox.hidden = mode !== 'game';
       freeBox.hidden = mode !== 'free';
       tabGame.setAttribute('aria-selected', String(mode === 'game'));
@@ -366,7 +425,7 @@
     }
     /** The campaign's dice system, as the server last said (settings.system): redrawn only when the GM changed it. */
     function drawSys() {
-      const sig = JSON.stringify(settings?.system || null);
+      const sig = JSON.stringify([settings?.system || null, !!settings?.no_free, !!settings?.hide_odds]);
       if (sig === sysSig) return;
       sysSig = sig;
       sysNow = DS.campaignSystem(settings);
@@ -401,6 +460,7 @@
       sysRollBtn.setAttribute('aria-label', `Roll ${text}`);
       clearTimeout(oddsTimer);
       oddsTimer = setTimeout(() => {
+        if (settings?.hide_odds && !isGM()) { odds.set(null); return; }      // the GM keeps the odds from players
         try { odds.set(DS.odds(sysNow.sys, sysP, { table: sysNow.table }, 2000)); } catch { odds.set(null); }
       }, 120);
       if (savedSel.value) { const s = savedList()[Number(savedSel.value) - 1]; if (s && s.e !== gameText()) { savedSel.value = ''; forgetBtn.hidden = true; } }
@@ -504,7 +564,7 @@
       const flat = el('div', { class: 'dice-look-flat', 'aria-hidden': 'true' });
       const res = { results: [{ terms: [{ src: 'd20', sides: 20, dice: [{ v: 20, rolls: [20], rerolled: [] }] }, { src: 'd6', sides: 6, dice: [{ v: 3, rolls: [3], rerolled: [] }, { v: 6, rolls: [6], rerolled: [] }] }], total: 29 }] };
       flat.append(...DiceUI.diceRows(el, res, { look: shown }));
-      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, no3d = !D3.available();
+      const slow = matchMedia('(prefers-reduced-motion: reduce)').matches, gmFlat = !!settings?.flat, no3d = !D3.available() || gmFlat;
       const on3d = el('input', { type: 'checkbox', checked: D3.enabled() && !slow && !no3d, disabled: slow || no3d,
         onchange: e => { D3.setEnabled(e.target.checked); drawLook(); } });
       lookCard.replaceChildren(
@@ -520,7 +580,7 @@
               el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
             el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
-          no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
+          gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
       if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
     }
     /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */
@@ -579,7 +639,39 @@
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden && isOpen()) load(); });
 
-    return { diceSync: sync, diceNotice: notice };
+    /** A roll from a character sheet (static/sheets.js): x = { kind: 'num'|'dice', value, label }. A number goes into the
+     * campaign's game roll (DiceSystems.sheetKey: the modifier, stat, skill or pool) and rolls with the rest of the
+     * roller's numbers as they are; with free dice only, it is a d20 plus the number. Dice written on the sheet roll as
+     * written. The panel opens with the roll on it, so it can be changed and rolled again. */
+    async function fromSheet(x) {
+      if (!cid) return;
+      if (!isOpen()) setOpen(true);
+      if (!settings) await load();
+      const label = String(x.label || '').replace(/[#@\n]/g, '').trim().slice(0, 80);
+      if (x.kind === 'num') {
+        const n = Math.round(Number(x.value));
+        if (x.value === null || x.value === '' || !isFinite(n)) { toast(`Fill in ${label || 'that number'} first`, true); return; }
+        const key = sysNow && DS.sheetKey(sysNow.sys);
+        if (key) {
+          const got = DS.sheetNumber(sysNow, x.field || label, n);
+          setMode('game', true);
+          sysP = DS.params(sysNow.sys, { ...sysP, [key]: got.n });
+          store.set(sysKey(), JSON.stringify({ id: sysNow.sys.id, p: sysP }));
+          forInput.value = got.note ? `${label} (${got.note})` : label;
+          drawFields();
+          return rollGame();
+        }
+        x = { kind: 'dice', value: `1d20${n > 0 ? `+${n}` : n < 0 ? n : ''}` };
+      }
+      if (gameOnly()) { toast('The GM has turned free rolls off: use the Game roll', true); return; }
+      setMode('free', true);
+      let text = `${x.value}${label ? ` # ${label}` : ''}`;
+      while (text.length > Dice.LIMITS.length && text.includes('#')) text = text.slice(0, -1).replace(/\s*#\s*$/, '');
+      input.value = text;
+      return roll(text);
+    }
+
+    return { diceSync: sync, diceNotice: notice, diceFromSheet: fromSheet };
   }
   root.DiceTab = { make };
 })(window);

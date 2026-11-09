@@ -92,6 +92,70 @@ test("success counting, with failures cancelling", () => {
   expect(one("2d6+3").mode).toBe("total");
 });
 
+test("sets: matching dice read width × height (One-Roll Engine), widest first, then highest", () => {
+  many("8d10sets", 300, r => {
+    expect(r.mode).toBe("sets");
+    const count = {};
+    for (const v of vals(r)) count[v] = (count[v] || 0) + 1;
+    const want = Object.entries(count).filter(([, w]) => w >= 2).map(([h, w]) => ({ w, h: Number(h) })).sort((a, b) => b.w - a.w || b.h - a.h);
+    expect(r.sets).toEqual(want);
+    expect(r.total).toBe(want.length ? want[0].w : 0);
+    // the dice in a set are marked, the rest aren't
+    for (const d of r.terms[0].dice) expect(!!d.success).toBe(count[d.v] >= 2);
+    expect(Dice.summary({ results: [r] })).toBe(want.length ? `${want[0].w}×${want[0].h}` : "no set");
+  });
+  // four 6s beat three 10s: width first
+  let seen = false;
+  for (let k = 0; k < 4000 && !seen; k++) {
+    const r = Dice.roll("10d10sets", Dice.newSeed()).results[0];
+    if (r.sets.length > 1 && r.sets[0].w === r.sets[1].w) { expect(r.sets[0].h).toBeGreaterThan(r.sets[1].h); seen = true; }
+  }
+  expect(seen).toBe(true);
+  expect(Dice.check("6d10sets # attack")).toBeNull();
+  expect(Dice.check("5d10sets>=6")).toMatch(/success target/);
+  expect(Dice.check("4dFsets")).toMatch(/Fudge/);
+  expect(one("6d10sets+1").mode).toBe("total");   // sets with maths around it is a plain total
+});
+
+test("dice rerolled by hand: only the picked dice change, from their own seed, before keep, drop and totals", () => {
+  const S2 = "ffffffffffffffffffffffffffffffff", S3 = "00000000000000000000000000000001";
+  many("5d6kh3", 200, () => {
+    const seed = Dice.newSeed();
+    const a = Dice.roll("5d6kh3", seed).results[0];
+    const b = Dice.roll("5d6kh3", seed, [{ seed: S2, dice: [1, 3] }]).results[0];
+    const da = a.terms[0].dice, db = b.terms[0].dice;
+    expect(db.map(d => d.i)).toEqual([0, 1, 2, 3, 4]);
+    for (const k of [0, 2, 4]) { expect(db[k].v).toBe(da[k].v); expect(db[k].byHand).toBeUndefined(); }
+    for (const k of [1, 3]) expect(db[k].byHand).toEqual([da[k].v]);
+    // kept and total follow the new faces
+    expect(b.total).toBe(db.map(d => d.v).sort((x, y) => y - x).slice(0, 3).reduce((s, v) => s + v, 0));
+    expect(db.filter(d => d.dropped)).toHaveLength(2);
+    // the same rerolls give the same dice every time; a second reroll stacks on the first
+    expect(Dice.roll("5d6kh3", seed, [{ seed: S2, dice: [1, 3] }]).results[0].terms[0].dice.map(d => d.v)).toEqual(db.map(d => d.v));
+    const c = Dice.roll("5d6kh3", seed, [{ seed: S2, dice: [1, 3] }, { seed: S3, dice: [3] }]).results[0].terms[0].dice;
+    expect(c[1].v).toBe(db[1].v);
+    expect(c[3].byHand).toEqual([da[3].v, db[3].v]);
+  });
+  // dice are numbered across terms and repeats, so any die can be picked
+  const r = Dice.roll("2d6+1d8", SEED, [{ seed: S2, dice: [2] }]);
+  expect(r.results[0].terms[1].dice[0].i).toBe(2);
+  expect(r.results[0].terms[1].dice[0].byHand).toHaveLength(1);
+  // sets and success counts read the rerolled faces
+  const s = Dice.roll("6d10sets", SEED, [{ seed: S2, dice: [0, 1, 2, 3, 4, 5] }]).results[0];
+  const cnt = {};
+  for (const d of s.terms[0].dice) cnt[d.v] = (cnt[d.v] || 0) + 1;
+  expect(s.total).toBe(Math.max(0, ...Object.values(cnt).filter(w => w >= 2)));
+});
+
+test("dice tagged with where they came from keep the tag as written, and the dice roll the same", () => {
+  const r = one("3d6[Strength] + 2d6!>=6[Athletics] + 1 # climb");
+  expect(r.terms.map(t => [t.tag, t.src])).toEqual([["Strength", "3d6"], ["Athletics", "2d6!>=6"]]);
+  expect(Dice.roll("3d6[Strength]+2d6[Athletics]", SEED).results[0].total).toBe(Dice.roll("3d6+2d6", SEED).results[0].total);
+  expect(Dice.parse("3d6[Strength] # climb").label).toBe("climb");
+  expect(one("4d6kh3").terms[0].tag).toBeNull();
+  for (const bad of ["2d6[]", "2d6[abc", "2d6]", `2d6[${"x".repeat(25)}]`, "[x]2d6"]) expect(Dice.check(bad)).not.toBeNull();
+});
+
 test("percentile tricks: bonus and penalty dice, flip-flop and swap", () => {
   expect(Dice.swapped(73)).toBe(37);
   expect(Dice.swapped(40)).toBe(4);

@@ -84,7 +84,7 @@ test("a player's dice colours: kept on their account, sent with each of their ro
   await signIn(page, pip);
   await approve(browser, pip.email);
   const cid = await makeCampaign(page, `Looks ${pip.id}`);
-  const bad = [{ body: "red", ink: "#ffffff", tex: "" }, { body: "#112233", ink: "#ffffff", tex: "lava" }, { body: "#112233" }, "green"];
+  const bad = [{ body: "red", ink: "#ffffff", tex: "" }, { body: "#112233", ink: "#ffffff", tex: "plasma" }, { body: "#112233" }, "green"];
   for (const look of bad) expect((await api(page, "prefs_save", { dice_look: look })).status).toBe(400);
   const ok = await api(page, "prefs_save", { dice_look: { body: "#1E7A4C", ink: "#fff6d8", tex: "wood" } });
   expect(ok.status).toBe(200);

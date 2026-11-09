@@ -72,6 +72,12 @@
       const placesFrom = notesText => sessionPlaces([asText(s.summary), asText(s.rewards), asText(s.loot), notesText || ''].join('\n'))
         .then(n => places.replaceChildren(...(n ? [n] : []))).catch(() => {});
       const where = trail(['Sessions', `#/c/${S.camp.id}/sessions`], [sessionName(s)]);
+      // the rolls made during it: on its shifts, as far as this member may see them (api/dice.php dice_in_shifts)
+      const DiceUI = root.DiceUI, DiceSystems = root.DiceSystems; // loaded after this file
+      const shown = (s.rolls || []).filter(r => !DiceUI.rerollOf(r));
+      const rollsCard = shown.length ? el('details', { class: 'card sess-rolls' },
+        el('summary', {}, el('h3', {}, `🎲 Rolls this session (${shown.length})`)),
+        DiceUI.rollList(el, s.rolls, { table: DiceSystems.campaignSystem(S.camp?.settings?.dice ? { system: S.camp.settings.dice.system } : null)?.table })) : null;
       const head = [el('h2', {}, sessionName(s)),
         el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
       if (!gm) {
@@ -79,7 +85,7 @@
         return [where, head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
           el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
           ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
-            el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), places, pictures];
+            el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), rollsCard, places, pictures];
       }
 
       // --- details: title, date played, publishing, open or ended
@@ -256,7 +262,7 @@
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
             `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })]), ' ', addShift);
       placesFrom(entry.text());
-      return [where, head[0], bar, extras, details, cols, places, pictures];
+      return [where, head[0], bar, extras, details, cols, rollsCard, places, pictures];
     }
 
     return { viewSessions };

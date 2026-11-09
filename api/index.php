@@ -1776,6 +1776,7 @@ try {
 
     // ===== the die roller ===== (api/dice.php)
     case 'dice_roll':
+    case 'dice_reroll':
     case 'dice_rolls':
     case 'dice_clear':
         dice_action($action);
