@@ -147,7 +147,7 @@ const MapsTab = (() => {
       el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : ''),
       m.inside ? el('span', { class: 'small muted map-card-inside' }, `Inside ${m.inside.label} on ${m.inside.map_name}`) : null));
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' },
-      el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary small') : null),
+      el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary new-btn', 'Add a map: a picture and a name, then set its scale') : null),
       cards.length ? el('div', { class: 'map-grid' }, cards) : el('p', { class: 'muted' }, ctx.isGM() ? 'No maps yet. Add one with + New map.' : 'No maps yet.')));
   }
 
@@ -953,9 +953,9 @@ const MapsTab = (() => {
             el('button', { type: 'button', class: 'link map-route-name', 'data-tip': 'Show this route on the map', onclick: () => { if (hid.has('r' + r.id)) setHidden('r' + r.id, false); lf.map.fitBounds(routeLines.get(r.id).getBounds().pad(0.2)); } }, swatch, r.is_secret ? '🔒 ' : '', r.name)),
           a || z ? el('span', { class: 'small map-route-ends' }, a ? pinTitle(a) : '…', ' → ', z ? pinTitle(z) : '…') : null,
           el('span', { class: 'small muted map-route-len' }, lengthOf(r)),
+          // Plan this trip and Edit stay out; the terrain, GM only and Delete wait in the shared ⋯ (KIT.menu)
           gm ? el('div', { class: 'row' },
             hasScale() ? btn('Plan this trip', () => { location.hash = tripLink(`route=${r.id}`); }, 'small', 'Work out the travel time along this route on the Travel tab') : null,
-            btn('Terrain…', () => terrainDialog(r), 'small', r.terrain ? 'The terrain of each leg (set): it changes the travel time Plan this trip works out' : 'Slow going on some legs of the route, for the travel time Plan this trip works out'),
             btn('Edit', async () => {
               const got = await routeDialog('Edit the route', r, null, 'Save');
               if (!got) return;
@@ -964,17 +964,22 @@ const MapsTab = (() => {
                 await refresh();
               } catch (err) { toast(err.message, true); }
             }, 'small', 'Its name, colour and line, and the pins it starts and ends at'),
-            (() => {
-              const b = lockBtn(async () => {
-                try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
-              }, 'players never see a GM only route', 'small');
-              b.setAttribute('aria-pressed', String(r.is_secret));
-              return b;
-            })(),
-            btn('Delete', async () => {
-              if (!await ctx.confirmDialog(`Delete the route "${r.name}"?`, { ok: 'Delete', danger: true })) return;
-              try { await post('route_delete', { id: r.id }, cid); await refresh(); toast('Route deleted'); } catch (err) { toast(err.message, true); }
-            }, 'small danger')) : null);
+            KIT.menu({ label: '⋯', ariaLabel: `More for ${r.name}`, tip: 'More: the terrain, GM only, delete', cls: 'more-menu', items: [
+              btn('Terrain…', () => terrainDialog(r), 'small', r.terrain ? 'The terrain of each leg (set): it changes the travel time Plan this trip works out' : 'Slow going on some legs of the route, for the travel time Plan this trip works out'),
+              (() => {
+                // in the menu the lock gets its words, and a tick while it is on
+                const b = btn([r.is_secret ? '🔒 ' : '🔓 ', 'GM only', r.is_secret ? ' ✓' : ''], async () => {
+                  try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
+                }, 'small', r.is_secret ? 'GM only: players never see this route. Press to show it to them' : 'Players see this route. Press to make it GM only');
+                b.setAttribute('aria-label', 'GM only');
+                b.setAttribute('aria-pressed', String(r.is_secret));
+                return b;
+              })(),
+              el('hr'),
+              btn('Delete', async () => {
+                if (!await ctx.confirmDialog(`Delete the route "${r.name}"?`, { ok: 'Delete', danger: true })) return;
+                try { await post('route_delete', { id: r.id }, cid); await refresh(); toast('Route deleted'); } catch (err) { toast(err.message, true); }
+              }, 'small danger')] })) : null);
       });
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
         const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));

@@ -1,7 +1,7 @@
 // Calendar reminders: set on a day and shift from the day page, they pop up once the campaign
 // clock reaches them, for whoever they are meant for, until each person dismisses them.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, openPassTime, notNow, newContext, closeContexts, goTab } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, openPassTime, notNow, newContext, closeContexts, goTab, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("a GM's reminder pops up for the GM and an open player page when time passes to it", async ({ page, browser }) => {
@@ -202,7 +202,7 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   await expect(page.getByText("4 reminders")).toBeVisible();
 
   // Delete goes at once, with Undo in the toast for a few seconds.
-  await rows.filter({ hasText: "Check the wards" }).getByRole("button", { name: "Delete" }).click();
+  await moreIn(rows.filter({ hasText: "Check the wards" }), "Delete");
   await expect(rows.filter({ hasText: "Check the wards" })).toBeHidden();
 
   // A player sees their own reminders and everyone's, with no who-sees-it filter, and can't edit the GM's.

@@ -190,6 +190,10 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   await nounRow(page, "Marienburg").getByText("Add").click();
   await nounRow(page, "Captain Rolf").getByText("Add").click();
   await dlg.getByRole("button", { name: "Save choices" }).click();
+  // Blank Entries starts folded, its red badge counting them
+  await expect(page.locator(".enc-blank .count-badge")).toHaveText("2");
+  await expect(page.locator(".enc-blank .enc-item")).toHaveCount(0);
+  await page.locator(".enc-blank button.enc-fold").click();
   await expect(page.locator(".enc-blank .enc-item")).toHaveText([/Captain Rolf/, /Marienburg/]);
   // "Rolf" overlaps the new Captain Rolf entry, so the next scan offers it as another name for him.
   await pressMore(page, "Encyclopedia", "🔍 Scan campaign");

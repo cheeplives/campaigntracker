@@ -179,7 +179,7 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   expectNoErrors(errors);
 });
 
-test("a GM picks a player they already play with from the list; only approved non-members are offered, and only to GMs", async ({ page, browser }) => {
+test("a GM finds a player they already play with by searching; nobody is listed before a search, and only GMs can search", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Kit"), player = person("Lark"), waiting = person("Moss");
   // the picker shows a GM names only (just a site admin sees emails), so give each a name no other test uses
@@ -194,36 +194,50 @@ test("a GM picks a player they already play with from the list; only approved no
   await approve(browser, player.email);
   const wctx = await newContext(browser);
   await signIn(await wctx.newPage(), waiting);
+  /** member_candidates for search q, as whoever pg is signed in as */
+  const find = async (pg, q) => {
+    const res = await pg.request.get(`api/index.php?${new URLSearchParams({ a: "member_candidates", cid, ...(q === undefined ? {} : { q }) })}`);
+    return { status: res.status(), json: await res.json() };
+  };
 
   // Accounts are shared with Sinless, so a stranger's name isn't offered to a GM who isn't a site admin...
-  expect((await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.display_name)).not.toContain(player.name);
+  expect((await find(page, player.id)).json.users.map(u => u.display_name)).not.toContain(player.name);
   // ...only someone they already play with, here in another of their campaigns
   const other = await makeCampaign(page, `Picker other ${gm.id}`);
   expect((await api(page, "member_add", { email: player.email, role: "player" }, other)).status).toBe(200);
-  const offered = (await api(page, "member_candidates", undefined, cid)).json.users;
-  const names = offered.map(u => u.display_name);
-  expect(names).toContain(player.name);
-  expect(names).not.toContain(waiting.name);     // not approved
-  expect(names).not.toContain(gm.name);          // already in the campaign
-  // a GM who isn't a site admin gets no one's email
+  const offered = (await find(page, player.id)).json.users;
+  expect(offered.map(u => u.display_name)).toContain(player.name);
+  expect((await find(page, waiting.id)).json.users).toEqual([]);   // not approved
+  expect((await find(page, gm.id)).json.users).toEqual([]);        // already in the campaign
+  // a GM who isn't a site admin gets no one's email, and can't find anyone by one
   expect(offered.filter(u => "email" in u)).toEqual([]);
-  // the site admin does
+  expect((await find(page, player.email)).json.users).toEqual([]);
+  // nothing is listed without a search of at least two letters, for anyone, so no one can see who uses the site
+  expect((await find(page)).json.users).toEqual([]);
+  expect((await find(page, "")).json.users).toEqual([]);
+  expect((await find(page, "L")).json.users).toEqual([]);
+  // the site admin finds people by name or email, but also only by searching
   const actx = await newContext(browser);
   const ap = await actx.newPage();
   await signIn(ap, ADMIN);
-  expect((await api(ap, "member_candidates", undefined, cid)).json.users.map(u => u.email)).toContain(player.email);
+  expect((await find(ap)).json.users).toEqual([]);
+  expect((await find(ap, player.email)).json.users.map(u => u.email)).toContain(player.email);
   await actx.close();
 
+  // the page lists no one until the GM types
   await page.goto(`index.html#/c/${cid}/members`);
+  const picker = page.getByRole("list", { name: "People matching your search" });
+  await expect(picker).toBeAttached();
+  await expect(picker.getByRole("listitem")).toHaveCount(0);
   await page.getByPlaceholder("Search people, or type their sign-in email").fill(player.id);
   const row = page.getByRole("listitem").filter({ hasText: player.name });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText(`(${player.email})`)).toBeVisible();
 
-  // Players can't list everyone's accounts.
-  expect((await api(pp, "member_candidates", undefined, cid)).status).toBe(403);
-  expect((await api(page, "member_candidates", undefined, cid)).json.users.map(u => u.display_name)).not.toContain(player.name);
+  // Players can't search the site's accounts, and someone already in the campaign isn't offered again.
+  expect((await find(pp, player.id)).status).toBe(403);
+  expect((await find(page, player.id)).json.users.map(u => u.display_name)).not.toContain(player.name);
   await pctx.close();
   await wctx.close();
   expectNoErrors(errors);

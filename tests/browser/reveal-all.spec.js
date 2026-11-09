@@ -2,7 +2,7 @@
 // today's events), a day's Secret notes joining its Public notes, and the GM-only paragraphs of a session's summary,
 // rewards and loot.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
@@ -69,7 +69,7 @@ test("a GM-only event is revealed from its card, and players then see it", async
   const ev = (await api(page, "event_save", { abs_day: 2, title: "The cult meets", body: "Under the mill.", is_secret: true }, cid)).json.id;
   expect((await get(pp, `a=events&cid=${cid}`)).events).toHaveLength(0);
   await page.goto(`index.html#/c/${cid}/day/2`);
-  await page.getByRole("button", { name: "🔓 Reveal" }).click();
+  await pressMore(page, "The cult meets", "🔓 Reveal");
   await page.getByRole("button", { name: "Reveal", exact: true }).last().click();
   await expect(page.getByText("Revealed to the players")).toBeVisible();
   await expect(page.getByRole("button", { name: "🔓 Reveal" })).toHaveCount(0);
@@ -105,7 +105,7 @@ test("GM-only paragraphs of a session's summary, rewards and loot, and a day's S
   // a day's Secret notes join its Public notes
   expect((await get(pp, `a=day&cid=${cid}&d=2`)).day.notes).toBe("Rain.");
   await page.goto(`index.html#/c/${cid}/day/2`);
-  await page.getByRole("button", { name: "🔓 Reveal secret notes" }).click();
+  await pressMore(page, "this day's notes", "🔓 Reveal secret notes");
   await page.getByRole("button", { name: "Reveal and log it today" }).click();
   await expect(page.getByText("Revealed, and logged on this day's events")).toBeVisible();
   expect((await get(pp, `a=day&cid=${cid}&d=2`)).day.notes).toBe("<p>Rain.</p><p>The spy slipped away.</p>");

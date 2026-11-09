@@ -54,6 +54,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only after typing DELETE; players get neither button, and the API refuses them both.
 - **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
   person's own, kept in their preferences across reloads, and only on a campaign they belong to.
+- **item-stars**: Encyclopedia entries and Library tomes are starred from the ☆ on a list card (which doesn't open it,
+  and works from the keyboard) or by the name on their page, and listed under ★ Starred on the tab's first page, newest
+  star first; stars are each person's own, kept in their preferences, only in a campaign they belong to; a deleted entry
+  drops off. Blank Entries starts folded with a red count of the blanks.
 - **reports**: the ! button in the top bar sends a report with a screenshot taken in the browser and the page's details,
   which it lists first; the server takes only a real picture and only site admins read reports or their screenshots; Site
   Admin's Reports tab resolves one unfixed, reopens it, sends it to GitHub (a stub) without who sent it, and deletes it.
@@ -73,8 +77,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email: an approved account joins at once, any other address is an invitation
   taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; players never
-  receive secret events; a GM picks people they already play with from the approved accounts not yet in
-  the campaign, which only GMs can list.
+  receive secret events; a GM finds people they already play with among the approved accounts not yet in
+  the campaign by searching (two letters or more; a site admin also by email), which only GMs can do; nobody is listed
+  before a search, so no one sees who else uses the site.
 - **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,
   festival days outside them, Shieldmeet every fourth year and Selûne's known
   full moons; Eberron's months all start on Sul, with its twelve moons and
@@ -214,10 +219,13 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   current one; downtime covers whole days and its label comes off when deleted; the GM
   picks activities, custom ones and players; players see them and edit only the public
   notes, never the GM notes.
-- **holdings**: Party Funds keeps one line per currency with where it is kept, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the last row, ticks its count (never
-  below 0) and edits its boxes, and the GM sees and removes it; the Add holding dialog
+- **holdings**: Party Funds keeps one line per currency with where it is kept, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the one box under the list, claims it for someone in
+  the party or a Custom… name (clearing which goes back to the list), ticks its count (never below 0) and edits its
+  boxes, and the GM sees and removes it; the Add holding dialog
   shows each type's own fields, takes a custom construction type, a custom holding
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
+  A holding's card closes to its name, type and amount (a new one opens), stays as it was left across a reload, and
+  Expand all opens every card.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
 - **map-styles**: a GM's new pin starts as an Encyclopedia entry and can have its own icon and colour; pins are listed
@@ -360,6 +368,12 @@ only works when the config sets `'test_login' => true` and the request comes
 from this machine, and `.htaccess` returns 404 for `tests/` on a real site.
 
 ## Running locally (needs Node 18+, PHP 8 with pdo_mysql, and MySQL or MariaDB)
+
+On Ubuntu 24.04 as root (a Claude Code cloud container, say), `tools/test-all.sh` does all of this: it installs
+MySQL 8.0, PHP's extensions, the Node packages and the browsers if they're missing (`tools/test-setup.sh`), then runs
+everything CI runs. Arguments go to `npx playwright test`, e.g. `tools/test-all.sh --project=firefox`.
+
+By hand, anywhere:
 
 ```sh
 cd tests

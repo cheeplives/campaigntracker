@@ -2,7 +2,7 @@
 // server cleans to an allow-list and the browser rebuilds from the same list; players read the Public notes only.
 // Every box on the page folds, and stays folded in that browser for that account.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 const dayRow = async (page, cid, d = 2) => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=${d}`)).json()).day;
@@ -79,7 +79,7 @@ test("the GM formats Public and Secret notes; players read only the Public ones"
   expect(range.notes[0].items[0].text).toMatch(/^Gunther runs the inn\nRope/);
   expect(JSON.stringify(range.notes)).not.toContain("<");
   await page.reload();
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "⬇ Export" }).click()]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "⬇ Export")]);
   const md = require("fs").readFileSync(await dl.path(), "utf8");
   expect(md).toContain("**Gunther** runs the inn");
   expect(md).toContain("| Rope |  |  |");

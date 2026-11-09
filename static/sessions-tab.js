@@ -25,7 +25,7 @@
       const add = isGM() ? btn('+ New session', async () => {
         const made = await newSessionDialog();
         if (made) location.hash = href(made.id);
-      }, 'primary small', 'Start a session at the campaign\'s clock or another shift, or write one up afterwards, then take your notes in it') : null;
+      }, 'primary new-btn', 'Start a session at the campaign\'s clock or another shift, or write one up afterwards, then take your notes in it') : null;
       // the list, and a search over the sessions' names and dates once there are a few
       const list = el('div', { class: 'lib-list' });
       const search = sessions.length > 4 ? el('input', { type: 'search', value: sessQuery, placeholder: 'Search names and dates', 'aria-label': 'Search the sessions' }) : null;
@@ -128,14 +128,19 @@
       },
         'small', 'Change the title, the date you played, and the in-game days and shifts it covers');
       detailsBtn.setAttribute('aria-expanded', String(!details.hidden));
-      const more = el('details', { class: 'sess-more' }, el('summary', { class: 'button small', 'aria-label': 'More', title: 'End or reopen, export with notes, delete' }, '⋯'),
-        el('div', { class: 'sess-more-list' }, openClose,
-          el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'),
-          btn('🕘 History', () => HistoryView.open({ kind: 'session', ref: s.id, title: sessionName(s), cid, api, post, onRestore: route }), 'small', 'Earlier versions of this session\'s summary, rewards, loot and notes, what each save changed, and Restore'), del));
-      document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
+      // the shared ⋯ (KIT.menu): closes when an item is picked, on a click elsewhere and on Escape
+      const more = KIT.menu({ label: '⋯', ariaLabel: `More for ${sessionName(s)}`, tip: 'End or reopen, export, pin, history, delete', cls: 'more-menu', items: [
+        openClose,
+        el('hr'),
+        el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'),
+        exportBtn,
+        pinButton({ kind: 'session', id: s.id, name: sessionName(s) }),
+        btn('🕘 History', () => HistoryView.open({ kind: 'session', ref: s.id, title: sessionName(s), cid, api, post, onRestore: route }), 'small', 'Earlier versions of this session\'s summary, rewards, loot and notes, what each save changed, and Restore'),
+        el('hr'),
+        del] });
       const bar = el('div', { class: 'row sess-bar' }, head[1],
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
-        el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, pinButton({ kind: 'session', id: s.id, name: sessionName(s) }), more);
+        el('span', { class: 'sess-bar-gap' }), detailsBtn, more);
 
       // --- the notes: one text box, saved as it is typed (notesEntry in app.js); Build draft under it writes the summary
       const notesHead = el('h3', {}, 'Notes', tip('Your notes from the game, a line each. They save as you type. Build draft writes the summary from them. The ? button under the box lists what each mark does'));

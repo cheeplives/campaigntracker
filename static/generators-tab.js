@@ -135,7 +135,7 @@
       mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
         el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
           el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
-          el('div', { class: 'row' }, field('Genre', genre), secret))),
+          el('div', { class: 'row gen-head-tools' }, el('label', { class: 'gen-genre' }, el('span', { class: 'lbl' }, 'Genre'), genre), secret))),
         names, taverns, companies, rumors, towns));
     }
 

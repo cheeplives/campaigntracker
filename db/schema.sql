@@ -237,11 +237,14 @@ CREATE TABLE IF NOT EXISTS event_notes (
 -- Rests and downtime (the Downtime tab), one card each. Times are absolute shifts
 -- (abs_day * shifts per day + shift), first and last inclusive; a short rest that
 -- costs no shift has start_shift = end_shift = the shift it was taken in and slots = 0.
--- activities_json: [{"name": "Tend to Wounds", "members": [user ids]}]. gm_notes never reach players.
+-- activities_json: [{"name": "Tend to Wounds", "members": [user ids], "characters": [sheet_characters ids]}], the
+-- characters being ones with no player. group_id: the party group it is for (party_groups.id), NULL for the whole
+-- party. gm_notes never reach players.
 CREATE TABLE IF NOT EXISTS downtimes (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   kind VARCHAR(16) NOT NULL,                        -- short_rest | long_rest | downtime
+  group_id INT UNSIGNED NULL,                       -- the party group it is for; NULL: the whole party
   title VARCHAR(200) NOT NULL DEFAULT '',
   start_shift BIGINT NOT NULL,
   end_shift BIGINT NOT NULL,

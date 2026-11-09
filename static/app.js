@@ -54,7 +54,11 @@
   /** The ⋯ beside a row's everyday buttons: the rarer and riskier actions (Copy, Delete) wait behind it, as on a map's ⚙ */
   /** A row of choice buttons (Month / Week / Year): the one with class "on" is also aria-pressed, as on the map's toolbar */
   const pressedSeg = seg => { seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on')))); return seg; };
-  const moreMenu = (name, ...items) => KIT.menu({ label: '⋯', ariaLabel: `More for ${name}`, tip: 'More: copy, delete and the like', items, cls: 'more-menu' });
+  /** null when nothing is left in it (KIT.menu drops null items and stray dividers), so a row shows no empty ⋯ */
+  const moreMenu = (name, ...items) => {
+    const m = KIT.menu({ label: '⋯', ariaLabel: `More for ${name}`, tip: 'More: the actions done now and then', items, cls: 'more-menu' });
+    return m.querySelector('.kit-menu-list').childElementCount ? m : null;
+  };
   function formData(form) {
     const o = {};
     for (const f of form.elements) {
@@ -895,20 +899,23 @@
         el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
           el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
         el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
+        // Approve is the admin's everyday press; linking an email, revoking and removing wait in ⋯
         el('td', { class: 'act' }, el('div', { class: 'actions' },
-          legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
-            const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
-            if (email === null) return false;
-            await post('user_email', { id: u.id, email });
-          }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
           !self && u.status !== 'approved' ? act('Approve', () => post('user_status', { id: u.id, status: 'approved' }), 'primary', 'Let them in. A GM can then add them to a campaign by email') : null,
-          !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
-          !self ? act(legacy ? 'Delete' : 'Remove', async () => {
-            if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
-              : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
-              { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
-            await post('user_delete', { id: u.id });
-          }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null)));
+          moreMenu(u.display_name || u.email || 'this account',
+            legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
+              const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
+              if (email === null) return false;
+              await post('user_email', { id: u.id, email });
+            }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
+            el('hr'),
+            !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
+            !self ? act(legacy ? 'Delete' : 'Remove', async () => {
+              if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
+                : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
+                { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
+              await post('user_delete', { id: u.id });
+            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null))));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
@@ -986,7 +993,7 @@
     const { campaigns } = await api('campaigns');
     S.camp = null;
     const draw = () => mount(el('div', { class: 'card' },
-      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary')),
+      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary new-btn')),
       campaigns.length ? el('ul', { class: 'camplist' }, byStarThenName(campaigns).map(c =>
         el('li', { class: 'camp-row' + (starredIds().has(Number(c.id)) ? ' starred' : '') },
           starButton(c, draw),
@@ -1903,7 +1910,7 @@
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
       toCalendar,
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/table`, 'data-tip': 'Open At the Table, on the campaign\'s current day' }, 'Go to today'),
-      exportBtn);
+      moreMenu('this day', exportBtn));
     // the trail: Calendar › Firstmonth 1492 › this day. The month step opens the calendar on this day's month.
     const mp = E.fromAbs(c, d);
     const toMonth = ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; vs().anchor = d; vs().mode = 'month'; };
@@ -1947,7 +1954,7 @@
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
       folded: table,
-      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'small', 'Log something that happened (or will happen) on this day') : null,
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'new-btn', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
@@ -1955,7 +1962,7 @@
     const remBox = dayBox(key('reminders'), 'Reminders', {
       folded: table,
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
-      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'new-btn', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
@@ -2031,7 +2038,9 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, (row.gm_notes || '').trim() ? btn('🔓 Reveal secret notes', async () => {
+      // Save is the everyday press; revealing, history and importing wait in ⋯
+      el('div', { class: 'row' }, save, moreMenu('this day\'s notes',
+        (row.gm_notes || '').trim() ? btn('🔓 Reveal secret notes', async () => {
           const v = await KIT.dialog({ title: 'Reveal the secret notes to the players?', message: 'The secret notes, as last saved, join the end of the public notes and the secret notes are cleared. Anything typed here and not saved yet is left out.',
             buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
           if (v !== 'log' && v !== 'quiet') return;
@@ -2039,7 +2048,7 @@
         }, 'small', 'Move the secret notes onto the end of the public notes, so players read them, and optionally note it on this day\'s events') : null,
         btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
         btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
-        'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
+          'Copy these notes, as they are written now, into a session\'s notes to write its summary from'))));
   }
 
   /** A day's notes as lines for a session's notes: { pub: [{ text, depth }], sec: [...] }. Paragraphs, headings and list items become
@@ -2452,9 +2461,12 @@
       else if (ev.key === 'Escape') box.dataset.freeTab = '1';   // the next Tab leaves the box, as a keyboard user needs
       if (ev.key !== 'Escape') delete box.dataset.freeTab;
     });
+    // The tap keeps the box focused (no blur): the blur would start a save, whose Saving… in the bar at the top can
+    // wrap that bar onto another line and move this button from under the finger before the tap ends.
     const phone = (glyph, label, dir) => {
       const b = btn(glyph, () => { indent(dir); box.focus(); }, 'small snote-phone', label);
       b.setAttribute('aria-label', label);
+      b.addEventListener('pointerdown', ev => ev.preventDefault());
       return b;
     };
     const helpBtn = btn('?', () => { help.hidden = !help.hidden; }, 'small', 'Show the shorthand this box understands');
@@ -2994,6 +3006,29 @@
     }, 'small pin-btn', on ? 'Take this out of the Pinned list in the Legend' : 'Put this in the Pinned list at the top of the Legend, for everyone in the campaign');
     return b;
   }
+  /** The Encyclopedia entries (kind 'entry') or Library tomes ('tome') this person starred in this campaign, oldest star
+   * first. Kept in their preferences (prefs.stars), so each member stars their own. */
+  const starsOf = kind => (S.camp && S.user?.prefs?.stars?.[S.camp.id]?.[kind] || []).map(Number);
+  /** The ☆ that stars or unstars an entry or tome for this person, then `after` redraws (route() when not given). inLink:
+   * it sits inside a card's link, so it is a span acting as a button, and a press doesn't follow the link. */
+  function itemStar(kind, id, name, { after, inLink = false } = {}) {
+    const on = starsOf(kind).includes(Number(id));
+    const what = kind === 'tome' ? 'Library' : 'Encyclopedia';
+    const b = el(inLink ? 'span' : 'button', { class: 'item-star' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': on ? `Unstar ${name}` : `Star ${name}`,
+      'data-tip': on ? `Unstar: take it off your Starred list on the ${what}'s first page` : `Star: list it under Starred on the ${what}'s first page, for you alone`,
+      ...(inLink ? { role: 'button', tabindex: 0 } : { type: 'button' }) });   // the ☆ or ★ is drawn by the stylesheet, so a heading's text stays its name
+    let busyNow = false;
+    const press = async ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (busyNow) return;
+      busyNow = true; b.classList.add('busy');
+      try { S.user.prefs = (await post('prefs_save', { star: { cid: S.camp.id, kind, id: Number(id), on: !on } })).prefs; hideTip(); (after || route)(); }
+      catch (err) { toast(err.message, true); busyNow = false; b.classList.remove('busy'); }
+    };
+    b.addEventListener('click', press);
+    if (inLink) b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') press(ev); });
+    return b;
+  }
   /** The Legend's Pinned and Recent groups (nothing when both are off or empty). */
   function legendQuick() {
     if (quickOn('pinned') && pinsOf().some(p => p.kind === 'session')) loadPinSessions();
@@ -3118,11 +3153,13 @@
       el('small', { class: 'muted' }, 'Added by ', byline(e)),
       (isGM() || mine) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
-        isGM() && Number(e.is_secret) ? btn('🔓 Reveal', async () => {
-          if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
-          try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
-        }, 'small', 'Make this GM-only event public: players see it from now on') : null,
-        btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes')) : null,
+        moreMenu(e.title,
+          isGM() && Number(e.is_secret) ? btn('🔓 Reveal', async () => {
+            if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
+            try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
+          }, 'small', 'Make this GM-only event public: players see it from now on') : null,
+          el('hr'),
+          btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes'))) : null,
       notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
@@ -3139,7 +3176,7 @@
       el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
       canEditReminder(x) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-        btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null);
+        moreMenu(x.title, btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null);
     return box;
   }
 
@@ -3281,9 +3318,12 @@
     allDay.addEventListener('change', syncAllDay); syncAllDay();
     const tags = tagPicker(e.tags || []);
     const pinIt = !e.id && opt.pinAt && isGM() ? el('input', { type: 'checkbox', name: 'pin_it' }) : null;
+    // added from the Events tab rather than from a day, it asks which day it starts on (today to begin with)
+    const dayPick = opt.pickDay ? datePicker(start) : null;
     const f = el('form', { class: 'event editing' },
       el('div', { class: 'grid2' },
         field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
+        dayPick ? field('Starts on', dayPick, null, 'The day the event happens, or its first day if it lasts longer') : null,
         field('All day', allDay, null, `For things that fill the whole day. Untick to pick the ${word()}s it starts and ends in`),
         startField, endField,
         field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
@@ -3298,8 +3338,9 @@
       const timed = !allDay.checked;
       if (timed && n === 1 && Number(shiftEnd.value) < Number(shiftStart.value)) { toast(`${Word()} End is before ${Word()} Start`, true); return; }
       const picked = tags.get();
+      const from = dayPick ? dayPick.getAbs() : start;
       try {
-        const saved = await post('event_save', { id: e.id, abs_day: start, end_day: n > 1 ? start + n - 1 : null,
+        const saved = await post('event_save', { id: e.id, abs_day: from, end_day: n > 1 ? from + n - 1 : null,
           shift: timed ? shiftStart.value : null, shift_end: timed ? shiftEnd.value : null,
           title: v.title, body: v.body, is_secret: v.is_secret, tags: picked }, S.camp.id);
         if (pinIt?.checked) {
@@ -3370,7 +3411,7 @@
         && (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase())))
         && words.every(w => hay.get(e).includes(w)));
       count.textContent = shown.length === events.length ? `${events.length} event${events.length === 1 ? '' : 's'}` : `${shown.length} of ${events.length} events`;
-      const none = el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.');
+      const none = el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one here, or from any day on the Calendar.');
       timeline.node.hidden = !asTimeline || !shown.length;
       order.hidden = asTimeline;
       if (asTimeline) {
@@ -3401,8 +3442,16 @@
       asTl.classList.toggle('on', on); asTl.setAttribute('aria-pressed', String(on));
       draw();
     };
+    // + New event, as on a day: the form opens above the list, asking for the day too
+    const adder = el('div', {});
+    const add = isGM() || settings().players_can_add_events ? btn('+ New event', () => {
+      adder.replaceChildren(eventForm(d0, {}, { pickDay: true }));
+      adder.querySelector('input')?.focus();
+    }, 'primary new-btn', 'Log something that happened, or will happen, on any day') : null;
     mount(...campaignHeader('events'), el('div', { class: 'card' },
-      el('div', { class: 'row evhead' }, eventsSubtabs('events'), el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl)),
+      el('div', { class: 'row evhead' }, eventsSubtabs('events'),
+        el('div', { class: 'row evhead-actions' }, el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl), add)),
+      adder,
       el('div', { class: 'row evfilters' }, search, when, order),
       used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
       count, list, timeline.node));
@@ -3449,7 +3498,7 @@
           el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
           canEditReminder(x) ? el('div', { class: 'row' },
             btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-            btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null));
+            moreMenu(x.title, btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null));
       return r;
     };
     const draw = () => {
@@ -3467,7 +3516,7 @@
     state.addEventListener('change', () => { st.state = state.value; draw(); });
     who?.addEventListener('change', () => { st.who = who.value; draw(); });
     order.addEventListener('change', () => { st.order = order.value; draw(); });
-    const add = btn('+ New reminder', () => { adder.replaceChildren(reminderForm(d0)); adder.querySelector('input')?.focus(); }, 'primary small',
+    const add = btn('+ New reminder', () => { adder.replaceChildren(reminderForm(d0)); adder.querySelector('input')?.focus(); }, 'primary new-btn',
       `Have something pop up when the campaign reaches a ${word()}: set it on any day`);
     mount(...campaignHeader('events'), el('div', { class: 'card' },
       el('div', { class: 'row evhead' }, eventsSubtabs('reminders'), add),
@@ -4530,10 +4579,12 @@
   }
   /** The reader with nothing picked: a line, then a few items to start from (the open session, the newest entries, the
    * tomes last changed) as links, then the help. On one column (a phone, an iPad upright) it's left out, as the list is enough. */
-  function readerEmpty(reader, { lead, title = '', start = [], help = '' }) {
+  function readerEmpty(reader, { lead, title = '', start = [], more = [], help = '' }) {
     reader.classList.add('lp-empty');
+    // more: further groups of cards under the first, each { title, start, cls }, left out when empty
     reader.append(...clean([el('p', { class: 'muted lp-lead' }, lead),
       start.length ? el('div', { class: 'lp-start' }, el('h3', {}, title), start) : null,
+      ...more.map(g => g.start.length ? el('div', { class: `lp-start${g.cls ? ` ${g.cls}` : ''}` }, el('h3', {}, g.title), g.start) : null),
       help ? el('p', { class: 'small muted' }, help) : null]));
     return reader;
   }
@@ -4557,7 +4608,10 @@
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and descriptions', 'aria-label': 'Search the Library' });
     const kindRow = el('div', { class: 'tagpick' });
     const list = el('div', { class: 'lib-list' });
-    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item '}enc-card ${cls}` + (current?.id === t.id ? ' on' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+    const starred = starsOf('tome');
+    // the list's cards carry a ☆ to star the tome; the start page's don't
+    const item = (t, cls = 'lib-item') => el('a', { class: `${cls === 'lp-start-item' ? '' : 'enc-item has-star '}enc-card ${cls}` + (current?.id === t.id ? ' on' : '') + (starred.includes(t.id) ? ' starred' : ''), href: href(t.id), 'aria-current': current?.id === t.id ? 'page' : null },
+      cls === 'lp-start-item' ? null : itemStar('tome', t.id, t.title, { inLink: true }),
       el('span', { class: 'enc-name' }, el('span', { 'aria-hidden': 'true' }, `${tomeKind(t.kind)[2]} `), t.title),
       t.description ? el('small', { class: 'lib-desc' }, t.description) : null);
     const draw = () => {
@@ -4581,12 +4635,14 @@
     if (sel && sel !== 'new' && !current) reader.append(el('p', { class: 'muted' }, 'That tome isn\'t in the Library any more.'));
     else if (!current) readerEmpty(reader, { lead: tomes.length ? 'Pick a tome to read it.' : 'Nothing on the shelves yet.',
       title: 'Last changed', start: [...tomes].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)) || b.id - a.id).slice(0, 5).map(t => item(t, 'lp-start-item')),
+      // the ones this person starred, newest star first
+      more: [{ title: '★ Starred', cls: 'lp-starred', start: [...starred].reverse().map(id => tomes.find(t => t.id === id)).filter(Boolean).map(t => item(t, 'lp-start-item')) }],
       help: 'A tome is a book the party found, a character\'s journal, or a note passed across the table. Give it a title and a line about it, then write it out in full.' });
     else if (!current.id) reader.append(tomeForm(current));
     else reader.append(...tomeView(current));
     mount(...campaignHeader('library'), listPage({ cls: 'lib-page', title: 'Library', picked: !!(current || sel),
       tipText: 'The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them',
-      add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
+      add: el('a', { class: 'button primary new-btn', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
       hide: { key: 'chronicle:libhide' },
       wide: { key: 'chronicle:libwide', tips: ['Widen the list to see more of the Library at once, and narrow the tome', 'Give the tome its room back and narrow the list'] },
       top: [search, el('div', { class: 'enc-filters' }, kindRow)], list, reader }));
@@ -4599,16 +4655,18 @@
     return clean([
       trail(['Library', `#/c/${S.camp.id}/library`], [label], [t.title]),
       el('div', { class: 'row spread' },
-        el('h2', {}, t.title),
+        el('div', { class: 'title-star' }, el('h2', {}, t.title), itemStar('tome', t.id, t.title)),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
-          pinButton({ kind: 'tome', id: t.id, name: t.title }),
-          scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
-          isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
-          canDelete ? btn('Delete', async () => {
-            if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
-            try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
-          }, 'small danger', 'Delete this tome and everything written in it') : null)),
+          moreMenu(t.title,
+            pinButton({ kind: 'tome', id: t.id, name: t.title }),
+            scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
+            isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
+            el('hr'),
+            canDelete ? btn('Delete', async () => {
+              if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
+              try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
+            }, 'small danger', 'Delete this tome and everything written in it') : null))),
       el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
       t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
       el('div', { class: 'lib-body' }, (t.body || '').trim() ? revealButtons(linkedNote(t.body, 'html'), 'tome', t.id) : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
@@ -4740,17 +4798,20 @@
             el('small', { class: 'party-members muted' }, partyNames(g).join(', ') || 'No one yet'),
             el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
               ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
+          // Make main group is what gets pressed as the party moves; naming, the token and merging wait in ⋯
           isGM() ? el('div', { class: 'actions' },
-            btn('Rename', async () => {
-              const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
-              if (!name || !name.trim()) return;
-              try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
-            }, 'small'),
             g.is_main ? null : btn('Make main group', async () => {
               try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reloadParty(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
-            groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null,
-            btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps')) : null)));
+            moreMenu(g.name,
+              btn('Rename', async () => {
+                const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
+                if (!name || !name.trim()) return;
+                try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
+              }, 'small'),
+              btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps'),
+              el('hr'),
+              groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null)) : null)));
     };
     drawParty();
     const genre = E.genreOf(settings());
@@ -5035,7 +5096,7 @@
   function viewRegions() {
     const cur = settings().current_region;
     const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Regions'),
-      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary small', 'Add a place with its own climate, light source and terrain') : null),
+      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary new-btn', 'Add a place with its own climate, light source and terrain') : null),
       S.regions.map(r => el('div', { class: 'listrow' },
         el('div', {}, el('strong', {}, r.name), r.id === Number(cur) ? el('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
           el('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? el('div', { class: 'small pre' }, r.description) : null),
@@ -5273,7 +5334,7 @@
   }
   function viewHolidays() {
     const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Holidays & recurring days'),
-      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary small', 'Add a festival, feast day or any other recurring date') : null),
+      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary new-btn', 'Add a festival, feast day or any other recurring date') : null),
       S.holidays.length ? S.holidays.map(x => el('div', { class: 'listrow' },
         el('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
           el('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? el('div', { class: 'small pre' }, x.description) : null),
@@ -5409,14 +5470,18 @@
     : kind === 'long_rest' ? [...REST_ACTIVITIES, ['Work on Project', 'Put a few hours into a long-term project']] : REST_ACTIVITIES;
   const dtPlayers = () => S.members.filter(m => m.role === 'player');
   const memberName = m => m.character_name || m.display_name || m.email;
+  /** A character with no player, as a downtime names it: an NPC says so. */
+  const dtCharName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
+  /** The party's groups, main first, or [] if they can't be had (the cards then offer every player). */
+  const dtGroups = () => api('groups', { query: { cid: S.camp.id } }).then(r => r.groups || [], () => []);
 
   async function viewDowntime() {
-    const { downtimes } = await api('downtimes', { query: { cid: S.camp.id } });
+    const [{ downtimes, characters }, groups] = await Promise.all([api('downtimes', { query: { cid: S.camp.id } }), dtGroups()]);
     const head = el('div', { class: 'card' }, el('div', { class: 'row spread' },
       el('h2', {}, 'Downtime', tip('Rests and stretches of downtime, one card each. Making one writes Long Rest, Short Rest or Downtime into the activity of the shifts it covers, and can move the clock to its end. Pick what the party does on each card and who does it.')),
-      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary small', 'Start a long rest, a short rest or some days of downtime') : null),
+      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary new-btn', 'Start a long rest, a short rest or some days of downtime') : null),
       downtimes.length ? null : el('p', { class: 'muted' }, isGM() ? 'No rests or downtime yet. Press New downtime to add one.' : 'No rests or downtime yet.'));
-    mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(downtimeCard)));
+    mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(x => downtimeCard(x, groups, characters || {}))));
   }
 
   /** The dialog a new downtime card starts from: what kind, how long, and whether to move the clock. */
@@ -5432,6 +5497,15 @@
     const startDay = datePicker(today()), endDay = datePicker(today() + 6);
     const dayFields = el('div', {}, field('Start date', startDay), field('End date', endDay, 'Every shift from the start of the first day to the end of the last'));
     const title = el('input', { name: 'title', maxlength: 200, placeholder: 'e.g. Back at the Grey Lady inn' });
+    // which group it is for, once the party has split: only that group's players and characters are offered for it
+    const party = el('select', { name: 'group', 'aria-label': 'Party' });
+    const partyField = field('Party', party, 'Only this group\'s players and characters can be put on its activities');
+    partyField.hidden = true;
+    dtGroups().then(gs => {
+      if (gs.length < 2) return;
+      party.replaceChildren(...gs.map(g => el('option', { value: g.id, selected: g.is_main }, g.name)), el('option', { value: '' }, 'The whole party (every group)'));
+      partyField.hidden = false;
+    });
     const moveClock = el('input', { type: 'checkbox', name: 'move', checked: true });
     const moveLbl = el('span');
     const err = el('p', { class: 'bad small', hidden: true });
@@ -5457,6 +5531,7 @@
         el('h3', {}, 'New downtime'),
         el('div', { class: 'field', role: 'radiogroup', 'aria-label': 'Kind' }, el('span', { class: 'lbl' }, 'Kind'), el('div', { class: 'row' }, kinds)),
         restField, dayFields,
+        partyField,
         field('Title (optional)', title),
         el('label', { class: 'inline' }, moveClock, moveLbl),
         err,
@@ -5467,6 +5542,7 @@
       e.preventDefault();
       err.hidden = true;
       const k = kind(), body = { kind: k, title: title.value };
+      if (!partyField.hidden && party.value) body.group_id = Number(party.value);
       if (k === 'downtime') {
         body.start_day = startDay.getAbs(); body.end_day = endDay.getAbs();
         if (body.end_day < body.start_day) { err.textContent = 'The end date is before the start date.'; err.hidden = false; return; }
@@ -5500,15 +5576,27 @@
     return `${E.fmtShift(c, x.start_shift)}${x.slots > 1 ? ` → ${E.fmtShift(c, x.end_shift)}` : ''} · ${x.slots} ${dtWord(x.slots)}`;
   }
 
-  /** One downtime card. The GM picks its activities and who takes part; the public notes are open to everyone. */
-  function downtimeCard(x) {
+  /** One downtime card. The GM picks the party group it is for (once the party has split), its activities and who
+   * takes part: that group's players and characters with no player. The public notes are open to everyone.
+   * chars: id => {name, kind} of the characters its activities name. */
+  function downtimeCard(x, groups = [], chars = {}) {
     const k = DOWNTIME_KINDS[x.kind] || { label: x.kind, icon: '' };
     const going = nowShift() >= x.start_shift && nowShift() <= x.end_shift;
     const players = dtPlayers();
     const byId = new Map(S.members.map(m => [Number(m.id), m]));
+    const charById = new Map(groups.flatMap(g => g.characters || []).map(c => [c.id, c]));
+    for (const [id, c] of Object.entries(chars)) if (!charById.has(Number(id))) charById.set(Number(id), { id: Number(id), ...c });
+    // who is on an activity: 'u' + a player's user id, or 'c' + a character's id
+    const nameOf = key => {
+      const id = Number(key.slice(1));
+      if (key[0] === 'c') return charById.has(id) ? dtCharName(charById.get(id)) : null;
+      return byId.has(id) ? memberName(byId.get(id)) : null;
+    };
+    const keysOf = a => [...a.members.map(id => `u${id}`), ...(a.characters || []).map(id => `c${id}`)];
     const card = el('section', { class: 'card downtime', 'data-kind': x.kind },
       el('div', { class: 'row spread' },
         el('h3', {}, `${k.icon} ${k.label}`, x.title ? el('span', { class: 'dt-title' }, ` · ${x.title}`) : null,
+          x.group_name ? el('span', { class: 'dt-group', 'data-tip': 'The party group this is for' }, `👥 ${x.group_name}`) : null,
           going ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is inside this one' }, 'NOW') : null),
         el('small', { class: 'muted' }, downtimeWhen(x))));
     const notes = el('textarea', { rows: 3, value: x.notes || '', 'aria-label': 'Notes', placeholder: 'Notes for everyone',
@@ -5517,7 +5605,7 @@
     if (!isGM()) {
       card.append(el('span', { class: 'lbl' }, 'Activities'),
         x.activities.length ? el('ul', { class: 'dt-acts' }, x.activities.map(a => {
-          const who = a.members.map(id => byId.get(Number(id))).filter(Boolean).map(memberName);
+          const who = keysOf(a).map(nameOf).filter(Boolean);
           return el('li', {}, el('strong', {}, a.name), who.length ? el('span', { class: 'muted' }, ` · ${who.join(', ')}`) : null);
         })) : el('p', { class: 'muted' }, 'No activities picked yet.'));
       const save = btn('Save notes', null, 'small primary', 'Save the notes on this card');
@@ -5529,24 +5617,47 @@
       return card;
     }
 
-    // picked: name -> Set of member ids; the offered activities first, then custom ones in the order they were added
-    const picked = new Map(x.activities.map(a => [a.name, new Set(a.members.map(Number))]));
+    // The party group it is for (null: the whole party), and who that offers: its players, then its characters with
+    // no player. Without groups to go on, every player.
+    let gid = x.group_id;
+    const offeredPeople = () => {
+      if (!groups.length) return players.map(m => `u${m.id}`);
+      const gs = gid ? groups.filter(g => g.id === gid) : groups;
+      return [...gs.flatMap(g => g.members).filter(id => byId.get(Number(id))?.role === 'player').map(id => `u${id}`),
+        ...gs.flatMap(g => g.characters || []).map(c => `c${c.id}`)];
+    };
+    // picked: name -> Set of who; the offered activities first, then custom ones in the order they were added
+    const picked = new Map(x.activities.map(a => [a.name, new Set(keysOf(a))]));
     const offered = dtOffered(x.kind);
     const custom = x.activities.map(a => a.name).filter(nm => !offered.some(([o]) => o === nm));
     const list = el('div', { class: 'dt-acts' });
-    const row = (name, desc) => {
+    const row = (name, desc, people) => {
       const on = picked.has(name);
       const box = el('input', { type: 'checkbox', checked: on, 'aria-label': name, onchange: () => { box.checked ? picked.set(name, new Set()) : picked.delete(name); draw(); } });
-      const who = on && players.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, players.map(m => {
-        const id = Number(m.id), sel = picked.get(name).has(id);
+      // someone already on it who isn't in the group any more stays, so a GM sees and can take them off
+      const here = on ? [...people, ...[...picked.get(name)].filter(p => !people.includes(p) && nameOf(p))] : [];
+      const who = here.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, here.map(p => {
+        const sel = picked.get(name).has(p), nm = nameOf(p);
         return el('button', { type: 'button', class: 'dt-member' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
-          'data-tip': sel ? `${memberName(m)} is doing this. Click to take them off` : `Click to put ${memberName(m)} on this`,
-          onclick: () => { const s = picked.get(name); s.has(id) ? s.delete(id) : s.add(id); draw(); } }, memberName(m));
+          'data-tip': sel ? `${nm} is doing this. Click to take them off` : `Click to put ${nm} on this`,
+          onclick: () => { const s = picked.get(name); s.has(p) ? s.delete(p) : s.add(p); draw(); } }, nm);
       })) : null;
       return el('div', { class: 'dt-act' + (on ? ' on' : '') }, el('label', { class: 'inline', 'data-tip': desc || 'A custom activity' }, box, name), who);
     };
-    const draw = () => list.replaceChildren(...offered.map(([n, desc]) => row(n, desc)), ...custom.map(n => row(n, null)));
+    const draw = () => {
+      const people = offeredPeople().filter(nameOf);
+      list.replaceChildren(...offered.map(([n, desc]) => row(n, desc, people)), ...custom.map(n => row(n, null, people)));
+    };
     draw();
+    // Picking another group takes off anyone who isn't in it.
+    const party = groups.length > 1 || gid ? select([...groups.map(g => [g.id, g.name]), ['', 'The whole party (every group)']], gid ?? '',
+      { 'aria-label': 'Party', 'data-tip': 'Which group of the party this is for. Only its players and characters can be put on the activities' }) : null;
+    party?.addEventListener('change', () => {
+      gid = party.value ? Number(party.value) : null;
+      const people = new Set(offeredPeople());
+      for (const s of picked.values()) for (const p of [...s]) if (!people.has(p)) s.delete(p);
+      draw();
+    });
     const customIn = el('input', { maxlength: 100, placeholder: 'Custom activity', 'aria-label': 'Custom activity', class: 'grow' });
     const addCustom = () => {
       const n = customIn.value.trim();
@@ -5559,10 +5670,13 @@
     customIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); addCustom(); } });
     const title = el('input', { maxlength: 200, value: x.title || '', 'aria-label': 'Title', placeholder: 'Title (optional)' });
     const gmn = el('textarea', { rows: 3, value: x.gm_notes || '', 'aria-label': 'GM notes', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
-    const save = btn('Save', null, 'small primary', 'Save this card\'s title, activities and notes');
+    const save = btn('Save', null, 'small primary', 'Save this card\'s party, title, activities and notes');
     save.addEventListener('click', busy(save, async () => {
-      const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => ({ name: n, members: [...picked.get(n)] }));
-      await post('downtime_save', { id: x.id, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+      const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => {
+        const who = [...picked.get(n)];
+        return { name: n, members: who.filter(p => p[0] === 'u').map(p => Number(p.slice(1))), characters: who.filter(p => p[0] === 'c').map(p => Number(p.slice(1))) };
+      });
+      await post('downtime_save', { id: x.id, group_id: gid, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
       toast(`${k.label} saved`); route();
       offerNouns([{ text: `${title.value}\n${custom.filter(n => picked.has(n)).join('\n')}`, title: true, label: `${k.label} title and activities` },
         { text: notes.value, label: `${k.label} notes` }, { text: gmn.value, secret: true, label: `${k.label} GM notes` }]);
@@ -5571,13 +5685,15 @@
       if (!await confirmDialog(`Delete this ${k.label.toLowerCase()}? Its label comes off the shifts it covered; the clock stays where it is.`, { ok: 'Delete', danger: true })) return;
       try { await post('downtime_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
     }, 'small danger', 'Delete this card');
+    const anyone = offeredPeople().some(nameOf);
     card.append(
-      field('Title', title),
-      el('span', { class: 'lbl' }, 'Activities', tip(players.length ? 'Tick what the party does, then pick which players do each one' : 'Tick what the party does. Add players on the Members tab to put them on activities')),
+      party ? el('div', { class: 'grid2' }, field('Title', title), field('Party', party)) : field('Title', title),
+      el('span', { class: 'lbl' }, 'Activities', tip(anyone ? 'Tick what the party does, then pick who does each one: its players, and its characters with no player'
+        : 'Tick what the party does. Add players on the Members tab, or tick Travels with the party on a character, to put them on activities')),
       list,
       el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small primary', 'Add your own activity to this card')),
       el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
-      el('div', { class: 'row' }, save, del));
+      el('div', { class: 'row' }, save, moreMenu(x.title || `this ${k.label.toLowerCase()}`, del)));
     return card;
   }
 
@@ -5627,16 +5743,66 @@
     return { node: el('div', { class: 'ticker' }, minus, box, plus), get: () => n };
   }
 
+  /** Who can claim an item: everyone in the party's groups (players by character name, then the characters with no
+   * player who travel with it), or the campaign's players when it has no groups yet. */
+  function partyClaimants(groups) {
+    const memberName = m => m.character_name || m.display_name;
+    const byId = new Map(S.members.map(m => [Number(m.id), m]));
+    const names = (groups || []).flatMap(g => [...g.members.map(id => byId.get(Number(id))).filter(Boolean).map(memberName), ...(g.characters || []).map(c => c.name)]);
+    if (!names.length) names.push(...S.members.filter(m => m.role === 'player').map(memberName));
+    return [...new Set(names.filter(Boolean))];
+  }
+
+  /** The holdings whose cards are open, kept per person and campaign in this browser. Every card starts closed. */
+  const HOLD_OPEN_KEY = 'chronicle-holdings-open';
+  const holdOpen = {
+    key: () => `${HOLD_OPEN_KEY}:${S.user?.id}:${S.camp?.id}`,
+    all() { try { return new Set(JSON.parse(localStorage.getItem(this.key())) || []); } catch { return new Set(); } },
+    set(id, open) {
+      const ids = this.all();
+      open ? ids.add(id) : ids.delete(id);
+      try { localStorage.setItem(this.key(), JSON.stringify([...ids])); } catch { /* private mode: just this page */ }
+    },
+  };
+
   async function viewHoldings() {
-    const { funds, gear, holdings, tags } = await api('holdings', { query: { cid: S.camp.id } });
+    const [{ funds, gear, holdings, tags }, groups] = await Promise.all([api('holdings', { query: { cid: S.camp.id } }),
+      api('groups', { query: { cid: S.camp.id } }).then(r => r.groups).catch(() => [])]);
     S.holdingTags = tags || [];
+    const cards = holdings.map(holdingCard);
+    const toggleAll = btn('', () => {
+      const open = !cards.every(c => c.isOpen());
+      cards.forEach(c => c.setOpen(open));
+      showToggle();
+    }, 'small', 'Open or close every holding card');
+    const showToggle = () => { toggleAll.textContent = cards.every(c => c.isOpen()) ? 'Collapse all' : 'Expand all'; };
+    cards.forEach(c => c.node.addEventListener('holding-toggle', showToggle));
+    showToggle();
     const right = el('div', { class: 'holdings-col' },
       el('div', { class: 'card' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
-        btn('+ New holding', () => holdingDialog(), 'primary small', 'Add a vehicle, animal, building, asset or a type of your own')),
+        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. Press a holding\'s name to open it and see its details and storage. The GM and every player can add and change them.')),
+        el('div', { class: 'inline' }, cards.length > 1 ? toggleAll : null,
+          btn('+ New holding', () => holdingDialog(), 'primary new-btn', 'Add a vehicle, animal, building, asset or a type of your own'))),
         holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
-      holdings.map(holdingCard));
-    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear)), right));
+      cards.map(c => c.node));
+    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear, partyClaimants(groups))), right));
+  }
+
+  /** The one-box row under a ledger that adds a line: type a name and press Enter or + Add. The box clears before
+   * saving, so anything typed while it saves isn't lost, and what was typed comes back if the save fails. add(text)
+   * saves it and puts the new line in. */
+  function addLine(placeholder, label, tipText, add) {
+    const box = el('input', { maxlength: 200, placeholder, 'aria-label': label });
+    const go = btn('+ Add', null, 'small primary', tipText);
+    go.addEventListener('click', busy(null, async () => {
+      const typed = box.value;
+      if (!typed.trim()) { box.focus(); toast('Type a name first', true); return; }
+      box.value = '';
+      box.focus();
+      try { await add(typed.trim()); } catch (err) { if (!box.value) box.value = typed; throw err; }
+    }));
+    box.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); go.click(); } });
+    return el('div', { class: 'add-line' }, box, go);
   }
 
   /** Party Funds: a ledger of the party's money, one line per currency, where it is kept and how much
@@ -5659,84 +5825,92 @@
       return row;
     };
     rows.append(...funds.map(line));
-    const nCur = el('input', { maxlength: 60, placeholder: 'Currency, e.g. Gold pieces', 'aria-label': 'New currency' });
-    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'Where the new currency is kept' });
-    const nAmt = amountBox('', 'Amount of the new currency');
-    const add = btn('+ Add', null, 'small primary', 'Add this to Party Funds');
-    // As in Storage: clear the boxes before saving so nothing typed meanwhile is lost, and put them back if it fails.
-    add.addEventListener('click', busy(null, async () => {
-      if (!nCur.value.trim()) { nCur.focus(); toast('Name the currency first', true); return; }
-      const typed = [nCur.value, nLoc.value, nAmt.value];
-      const f = { currency: typed[0].trim(), location: typed[1].trim(), amount: typed[2] === '' ? 0 : Number(typed[2]) };
-      nCur.value = nLoc.value = nAmt.value = '';
-      nCur.focus();
-      try { f.id = (await post('funds_save', { currency: f.currency, location: f.location, amount: typed[2] }, S.camp.id)).id; }
-      catch (err) { if (!nCur.value && !nLoc.value && !nAmt.value) [nCur.value, nLoc.value, nAmt.value] = typed; throw err; }
+    const add = addLine('Add a currency, e.g. Gold pieces', 'New currency', 'Add this currency to Party Funds, then fill in where it is kept and how much', async currency => {
+      const f = { currency, location: '', amount: 0 };
+      f.id = (await post('funds_save', { currency, location: '', amount: 0 }, S.camp.id)).id;
       rows.append(line(f));
-    }));
-    for (const i of [nCur, nLoc, nAmt]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    });
     return el('section', { class: 'card funds' },
       el('h2', {}, 'Party Funds', tip('The party\'s money, one line per currency, with where it is kept: gold in a strongbox, credits in a bank. Type in a box and it saves when you leave it. The GM and every player can edit it.')),
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Location'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
-      rows,
-      el('div', { class: 'ledger-row ledger-new' }, nCur, nLoc, nAmt, add));
+      rows, add);
   }
 
-  /** The Gear and Loot list: item, who claimed it and where it is, all free text, and how many. Each box saves when you leave it. */
-  function gearCard(gear) {
+  /** Who claimed an item: a list of the party (names), Nobody, or Custom… with a box for any other name. A name not in
+   * the list opens as Custom. onChange() saves; get() is the name, or '' for nobody. Clearing the custom box goes back
+   * to the list. */
+  function claimPicker(value, names, label, onChange) {
+    const CUSTOM = '__custom';
+    const v = (value || '').trim();
+    const listed = !v || names.includes(v);
+    const sel = select([['', '—'], ...names.map(n => [n, n]), [CUSTOM, 'Custom…']], listed ? v : CUSTOM, { 'aria-label': label });
+    const box = el('input', { maxlength: 200, value: listed ? '' : v, placeholder: 'Who?', 'aria-label': `${label}, custom`,
+      'data-tip': 'Anyone not in the list. Clear the box to pick from the party again' });
+    const get = () => (sel.value === CUSTOM ? box.value.trim() : sel.value);
+    const show = () => { const custom = sel.value === CUSTOM; sel.hidden = custom; box.hidden = !custom; };
+    sel.addEventListener('change', () => {
+      show();
+      if (sel.value === CUSTOM) { box.focus(); return; }
+      onChange?.();
+    });
+    box.addEventListener('change', () => {
+      const t = box.value.trim();
+      if (!t || names.includes(t)) { sel.value = t; box.value = ''; show(); }
+      onChange?.();
+    });
+    box.addEventListener('blur', () => { if (!box.value.trim() && sel.value === CUSTOM) { sel.value = ''; show(); } });
+    show();
+    return { node: el('div', { class: 'claim' }, sel, box), get };
+  }
+
+  /** The Gear and Loot list: the item, who in the party claimed it (or anyone else, as Custom), where it is, and how
+   * many. Each box saves when you leave it; the one-box row at the foot adds an item. */
+  function gearCard(gear, names) {
     const rows = el('div', { class: 'gear-rows' });
+    const empty = el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.');
+    empty.hidden = gear.length > 0;
     const gearRow = g => {
       const text = (name, label, ph) => el('input', { name, value: g[name] || '', maxlength: 200, 'aria-label': label, placeholder: ph });
-      const item = text('item', 'Item', 'Item'), claimed = text('claimed_by', 'Claimed by', 'Claimed by'), loc = text('location', 'Location', 'Location');
+      const item = text('item', 'Item', 'Item'), loc = text('location', 'Location', 'Location');
+      item.classList.add('gear-item');
+      const fields = () => ({ id: g.id, item: item.value, claimed_by: claimed.get(), location: loc.value });
       const save = async () => {
-        try { await post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value }, S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await post('gear_save', fields(), S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
-      [item, claimed, loc].forEach(i => i.addEventListener('change', save));
+      const claimed = claimPicker(g.claimed_by, names, 'Claimed by', save);
+      [item, loc].forEach(i => i.addEventListener('change', save));
       const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
         onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
-        onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
-      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed, loc, amount.node,
+        onSet: n => post('gear_save', { ...fields(), amount: n }, S.camp.id) });
+      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed.node, loc, amount.node,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
           undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...gear.map(gearRow));
-    // The last row adds an item; Enter in any of its boxes adds it too.
-    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': 'New item' });
-    const nClaimed = el('input', { maxlength: 200, placeholder: 'Claimed by', 'aria-label': 'New item claimed by' });
-    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'New item location' });
-    const nAmount = amountTicker(1, { label: 'How many of the new item' });
-    const add = btn('+ Add', null, 'small primary', 'Add this item to the list');
-    add.addEventListener('click', busy(null, async () => {
-      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      // As in Storage: clear the boxes first, and put them back if the save fails.
-      const typed = [nItem.value, nClaimed.value, nLoc.value];
-      const g = { item: typed[0].trim(), claimed_by: typed[1].trim(), location: typed[2].trim(), amount: nAmount.get() };
-      nItem.value = nClaimed.value = nLoc.value = '';
-      nItem.focus();
-      try { g.id = (await post('gear_save', g, S.camp.id)).id; }
-      catch (err) { if (!nItem.value && !nClaimed.value && !nLoc.value) [nItem.value, nClaimed.value, nLoc.value] = typed; throw err; }
+    const add = addLine('Add an item', 'New item', 'Add this item to the list, then fill in who claimed it, where it is and how many', async item => {
+      const g = { item, claimed_by: '', location: '', amount: 1 };
+      g.id = (await post('gear_save', g, S.camp.id)).id;
       rows.append(gearRow(g));
-    }));
-    for (const i of [nItem, nClaimed, nLoc]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+      empty.hidden = true;
+    });
     return el('section', { class: 'card gear' },
-      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. The GM and every player can edit the list.')),
+      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. Claimed by lists the party, or pick Custom… for anyone else. The GM and every player can edit the list.')),
       el('div', { class: 'gear-row gear-head', 'aria-hidden': 'true' }, ['Item', 'Claimed by', 'Location', 'Amount', ''].map(h => el('span', { class: 'lbl' }, h))),
-      rows,
-      gear.length ? null : el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.'),
-      el('div', { class: 'gear-row gear-new' }, nItem, nClaimed, nLoc, nAmount.node, add));
+      rows, empty, add);
   }
 
-  /** One holding's card: its type, amount, location, description, fields and tags, with Edit and Delete. */
+  /** One holding's card. Closed, it is one line: its name, type and amount. Open, it shows its location, tags,
+   * description, fields and storage too, with Edit and Delete. Which cards are open is remembered in this browser.
+   * Returns { node, isOpen, setOpen }; the node fires holding-toggle when it opens or closes. */
   function holdingCard(h) {
     const k = HOLDING_KINDS[h.kind] || HOLDING_KINDS.custom;
     const amount = amountTicker(h.amount, { label: `How many ${h.name}`, onTick: delta => post('holding_tick', { id: h.id, delta }, S.camp.id) });
     const stats = k.fields.filter(f => h.stats?.[f]).map(f => el('div', {}, el('span', { class: 'lbl' }, HOLDING_FIELDS[f]), el('span', {}, h.stats[f])));
-    return el('section', { class: 'card holding', 'data-kind': h.kind },
-      el('div', { class: 'row spread' },
-        el('h3', {}, `${k.icon} ${h.name}`),
-        el('div', { class: 'inline' }, el('span', { class: 'lbl' }, 'Amount'), amount.node)),
-      el('small', { class: 'muted' }, holdingType(h), h.location ? ` · 📍 ${h.location}` : ''),
+    const toggle = el('button', { type: 'button', class: 'hold-toggle', 'data-tip': 'Show or hide its details and storage' },
+      el('span', { class: 'hold-caret', 'aria-hidden': 'true' }, '▸'), `${k.icon} ${h.name}`);
+    const body = el('div', { class: 'hold-body' },
+      h.location ? el('small', { class: 'muted' }, `📍 ${h.location}`) : null,
       h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
       h.description ? el('p', { class: 'pre' }, h.description) : null,
       stats.length ? el('div', { class: 'hold-stats' }, stats) : null,
@@ -5747,6 +5921,21 @@
           if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
           try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Delete this holding'))));
+    const node = el('section', { class: 'card holding', 'data-kind': h.kind },
+      el('div', { class: 'hold-head' },
+        el('h3', {}, toggle),
+        el('span', { class: 'hold-type muted' }, holdingType(h)),
+        amount.node),
+      body);
+    const setOpen = open => {
+      body.hidden = !open;
+      node.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      holdOpen.set(h.id, open);
+    };
+    toggle.addEventListener('click', () => { setOpen(body.hidden); node.dispatchEvent(new Event('holding-toggle')); });
+    setOpen(holdOpen.all().has(h.id));
+    return { node, isOpen: () => !body.hidden, setOpen };
   }
 
   /** The first number in a text such as "1,200 lb" or "2.5 tons", or null. */
@@ -5784,33 +5973,19 @@
       return row;
     };
     lines.append(...(h.storage || []).map(line));
-    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': `New item in ${h.name}'s storage` });
-    const nWeight = wInput('');
-    nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
-    const add = btn('+ Add', null, 'small primary', 'Put this item in storage');
-    // Not disabled while saving, so a quick second item (Enter, Enter) is added too.
-    add.addEventListener('click', busy(null, async () => {
-      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      // Clear the boxes before saving, so anything typed while it saves isn't wiped; put it back if the save fails.
-      const typed = [nItem.value, nWeight.value];
-      const s = { item: typed[0].trim(), weight: typed[1] === '' ? null : Number(typed[1]) };
-      nItem.value = nWeight.value = '';
-      nItem.focus();
-      try { s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: typed[1] }, S.camp.id)).id; }
-      catch (err) { if (!nItem.value && !nWeight.value) [nItem.value, nWeight.value] = typed; throw err; }
+    const add = addLine('Put an item in storage', `New item in ${h.name}'s storage`, 'Put this item in storage, then fill in its weight', async item => {
+      const s = { item, weight: null };
+      s.id = (await post('storage_save', { holding_id: h.id, item, weight: '' }, S.camp.id)).id;
       lines.append(line(s));
       sum();
-    }));
-    for (const i of [nItem, nWeight]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    });
     sum();
     return el('div', { class: 'storage' },
       el('span', { class: 'lbl' }, 'Storage', tip(cap !== null
         ? `What is kept in ${h.name}, and what each item weighs. The total is checked against its Cargo (${h.stats.cargo}), so give weights in the same unit`
         : `What is kept in ${h.name}, and what each item weighs. Give the holding a Cargo value to be warned when it is overloaded`)),
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Item'), el('span', { class: 'lbl' }, 'Weight'), el('span')),
-      lines,
-      el('div', { class: 'ledger-row ledger-new' }, nItem, nWeight, add),
-      total);
+      lines, add, total);
   }
 
   /** Add a holding, or edit one (h): the common fields, then the fields of the type picked. */
@@ -5875,8 +6050,9 @@
       const stats = Object.fromEntries(HOLDING_KINDS[kind].fields.map(f => [f, boxes[f].get().trim()]).filter(([, v]) => v));
       const picked = tags.get();
       try {
-        await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
+        const r = await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
           location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked }, S.camp.id);
+        if (!h.id && r?.id) holdOpen.set(r.id, true);   // a new holding opens, so its storage is ready to fill
       } catch (x) { return fail(x.message); }
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
@@ -5965,6 +6141,7 @@
             sheet ? el('a', { class: 'charname', href: `#/c/${S.camp.id}/characters/${sheet.id}`, 'data-tip': 'Open their character sheet' }, sheet.name)
               : m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet'),
             canLink && m.character_name ? el('span', { class: 'small muted' }, 'No sheet yet') : null),
+          // the character's name is the everyday change; a sheet is linked or made once, and Remove is rare, so they wait in ⋯
           el('div', { class: 'actions' },
             (self || isGM()) ? btn(m.character_name ? 'Rename character' : 'Set character', async () => {
               const name = await promptDialog(self ? 'Your character\'s name in this campaign:' : `${m.display_name}'s character name:`,
@@ -5972,20 +6149,23 @@
               if (name === null) return;
               try { await post('member_character', { user_id: m.id, character_name: name }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Events and notes they add are signed with this name instead of their own') : null,
-            canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
-            canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
-              'small', 'Give this character a sheet on the Characters tab, with this name') : null,
-            isGM() ? btn('Remove', async () => {
-              if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
-              try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Take them out of this campaign. Their account stays') : null));
+            moreMenu(m.display_name || m.email,
+              canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
+              canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
+                'small', 'Give this character a sheet on the Characters tab, with this name') : null,
+              el('hr'),
+              isGM() ? btn('Remove', async () => {
+                if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
+                try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+              }, 'small danger', 'Take them out of this campaign. Their account stays') : null)));
       }));
     if (isGM()) {
-      // Pick from the site's approved accounts, or type a full email for someone not in the list.
-      let candidates = [];
+      // Search for someone to add, or type a full email for anyone else. Nobody is listed until the GM types: the page
+      // never shows who else has access to the site.
+      let candidates = [], more = false, asked = '', timer = 0;
       const q = el('input', { name: 'q', type: 'search', placeholder: 'Search people, or type their sign-in email', autocomplete: 'off', 'aria-label': 'Find a person to add', class: 'grow' });
       const role = select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'aria-label': 'Role', 'data-tip': 'A co-GM has the same powers as you, including secrets' });
-      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'Registered people' });
+      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'People matching your search' });
       const add = async body => {
         try {
           const r = await post('member_add', { ...body, role: role.value }, S.camp.id);
@@ -5993,20 +6173,26 @@
           await loadCampaign(S.camp.id, true); route();
         } catch (err) { toast(err.message, true); }
       };
-      const matches = () => {
-        const t = q.value.trim().toLowerCase();
-        return t ? candidates.filter(u => (u.display_name || '').toLowerCase().includes(t) || (u.email || '').toLowerCase().includes(t)) : candidates;
-      };
+      const term = () => q.value.trim();
+      const matches = () => term() === asked ? candidates : [];
       const renderList = () => {
-        const m = matches();
-        list.replaceChildren(...clean([m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
+        const t = term(), m = matches();
+        list.replaceChildren(...clean([t.length < 2 || t !== asked ? [] : m.length ? m.map(u => el('div', { class: 'listrow', role: 'listitem' },
           el('div', {}, el('strong', {}, u.display_name || u.email || 'Unnamed account'), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
           el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email || 'them'} to this campaign`))))
-          // With nobody to pick from, the note under the form already says to add people by email: no empty-list message
-          : candidates.length ? [el('p', { class: 'muted' }, 'Nobody registered matches. Type their full sign-in email and press Add by email.')] : [],
-          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null]));
+          : t.includes('@') ? [] : [el('p', { class: 'muted' }, 'Nobody you can add matches. Type their full sign-in email and press Add by email.')],
+          more && t === asked ? el('small', { class: 'muted' }, 'More people match. Type more to narrow the search.') : null]));
       };
-      q.addEventListener('input', renderList);
+      const search = async () => {
+        const t = term();
+        if (t.length < 2) { candidates = []; more = false; asked = t; renderList(); return; }
+        try {
+          const r = await api('member_candidates', { query: { cid: S.camp.id, q: t } });
+          if (term() !== t) return;   // they've typed on since
+          candidates = r.users; more = !!r.more; asked = t; renderList();
+        } catch (err) { toast(err.message, true); }
+      };
+      q.addEventListener('input', () => { clearTimeout(timer); renderList(); timer = setTimeout(search, 250); });
       const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
@@ -6023,9 +6209,8 @@
         el('div', { class: 'actions' }, btn('Cancel invitation', async () => {
           try { await post('member_remove', { email: i.email }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'They won\'t join this campaign when they sign in')))));
-      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Everyone who has signed in and been approved by the site admin is listed. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
-        : 'People you play with in your other campaigns are listed by name. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
-      api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Search by name or email for anyone approved on the site. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
+        : 'Search by name for people you play with in your other campaigns. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
     }
     mount(...campaignHeader('members'), card);
   }
@@ -6830,7 +7015,7 @@
   // Everything the moved tabs use from here, built once everything above exists. A tab's own exports that another tab
   // uses are getters, as they are filled in just below.
   const tabCtx = {
-    DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, api, attachmentsCard, btn, busy, byline,
+    DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, itemStar, starsOf, api, attachmentsCard, btn, busy, byline,
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
