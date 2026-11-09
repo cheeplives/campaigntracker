@@ -126,6 +126,8 @@ function upgrade_steps(): array {
             'A character can now have a portrait, picked or uploaded on its sheet and shown on its card, its sheet and its Play view.'],
         ['044_downtime_party.sql', fn(PDO $p) => db_has_table($p, 'downtimes') && !db_has_column($p, 'downtimes', 'group_id'),
             'A rest or downtime can be for one group of a split party, and characters with no player can be put on its activities.'],
+        ['045_invite_links.sql', fn(PDO $p) => db_has_table($p, 'campaign_invites') && !db_has_column($p, 'campaign_invites', 'token'),
+            'An invitation now has a link: the site emails it to the person invited (when account emails are on), and the GM can copy it from the Members tab.'],
     ];
 }
 

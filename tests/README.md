@@ -76,7 +76,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   with its own length, and a week of its own length and day names; a custom calendar takes leap days in a month and a leap rule
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email: an approved account joins at once, any other address is an invitation
-  taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; players never
+  taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; an invitation
+  has a link, emailed to them (to a test outbox file) and copied from the Invited row by GMs only, which whoever opens
+  it joins with once, whatever email they signed in with, and which is kept through waiting for approval; players never
   receive secret events; a GM finds people they already play with among the approved accounts not yet in
   the campaign by searching (two letters or more; a site admin also by email), which only GMs can do; nobody is listed
   before a search, so no one sees who else uses the site.

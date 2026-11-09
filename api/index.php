@@ -634,6 +634,20 @@ function claim_invites(?int $cid = null): bool {
     db()->prepare("DELETE FROM campaign_invites WHERE email=?$only")->execute([$email]);
     return true;
 }
+/** The code of campaign $cid's invitation to $email (its link is index.html#/join/<code>), or null if there is none. */
+function invite_token(int $cid, string $email): ?string {
+    $st = db()->prepare('SELECT token FROM campaign_invites WHERE campaign_id=? AND email=?');
+    $st->execute([$cid, $email]);
+    $t = $st->fetchColumn();
+    return $t === false || $t === null ? null : (string)$t;
+}
+/** The signed-in user's name as the app shows it (their own name, else Google's or GitHub's). */
+function me_name(): ?string {
+    $st = db()->prepare('SELECT ' . user_name_sql() . ' FROM users u WHERE u.id=?');
+    $st->execute([me()['id']]);
+    $n = $st->fetchColumn();
+    return $n === false ? null : (string)$n;
+}
 // ---------- routing ----------
 $action = $_GET['a'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -1268,14 +1282,50 @@ try {
             $st->execute([$email]);
             $uid = $st->fetchColumn();
             if (!$uid) {
-                db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, invited_by) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')
-                    ->execute([$cid, $email, $role, me()['id']]);
-                out(['ok' => true, 'invited' => true]);
+                // An invitation, with its link (#/join/<token>), emailed to them when the site's account emails are on.
+                // Inviting the same address again sends the email again. A day's invitation emails are capped per
+                // GM, so the site can't be used to send mail to anyone at all in bulk.
+                if ($max = limit_of('invites_per_day', 50)) rate_limit('invite', 'u' . me()['id'], $max, 86400, 1, 'You have sent a lot of invitations today. The rest can wait until tomorrow');
+                db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, token, invited_by) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role), token=COALESCE(token, VALUES(token))')
+                    ->execute([$cid, $email, $role, bin2hex(random_bytes(16)), me()['id']]);
+                $token = invite_token($cid, $email);
+                $st = db()->prepare('SELECT name FROM campaigns WHERE id=?');
+                $st->execute([$cid]);
+                $emailed = send_invite_email($email, (string)$st->fetchColumn(), (string)(me_name() ?? ''), $role, $token);
+                out(['ok' => true, 'invited' => true, 'emailed' => $emailed, 'token' => $token]);
             }
             db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $email]);
         }
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
         out(['ok' => true]);
+
+    case 'invite_link':
+        // The link of an invitation not taken up yet (index.html#/join/<token>), for the GM to send however they like.
+        // An invitation from before migration 045 gets its code now.
+        $cid = cid(); need_gm($cid);
+        $email = mb_strtolower(trim((string)str_in(p('email'), 191, false)));
+        db()->prepare('UPDATE campaign_invites SET token=? WHERE campaign_id=? AND email=? AND token IS NULL')->execute([bin2hex(random_bytes(16)), $cid, $email]);
+        $token = invite_token($cid, $email);
+        if ($token === null) fail('That invitation has been taken up or cancelled', 404);
+        out(['token' => $token]);
+
+    case 'invite_accept':
+        // Someone opened an invite link, signed in and approved: they join the campaign as the invitation says, whatever
+        // email they signed in with, and the invitation (and so the link) is used up. Already a member, they stay as
+        // they are. The code is 128 random bits, so links can't be guessed; tries are rate-limited all the same.
+        rate_limit('invite_accept', 'u' . me()['id'], 30, 3600);
+        $token = (string)str_in(p('token'), 64, false);
+        if (!preg_match('/^[0-9a-f]{32}$/', $token)) fail('That invite link is not complete. Copy the whole link and try again.', 404, 'invite_gone');
+        $st = db()->prepare('SELECT campaign_id, email, role FROM campaign_invites WHERE token=?');
+        $st->execute([$token]);
+        $inv = $st->fetch();
+        if (!$inv) fail('This invite link has already been used or was cancelled. Ask your GM for a new one.', 404, 'invite_gone');
+        $cid = (int)$inv['campaign_id'];
+        db()->prepare('INSERT IGNORE INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?)')->execute([$cid, me()['id'], $inv['role']]);
+        db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $inv['email']]);
+        $st = db()->prepare('SELECT name FROM campaigns WHERE id=?');
+        $st->execute([$cid]);
+        out(['ok' => true, 'cid' => $cid, 'name' => $st->fetchColumn()]);
 
     case 'member_remove':
         $cid = cid(); need_gm($cid);

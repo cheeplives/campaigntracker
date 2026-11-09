@@ -599,11 +599,6 @@ function http_request(string $method, string $url, array $opts = []): array {
  * the address is validated and never placed in a header. */
 function send_account_email(string $kind, string $toEmail, string $displayName): void {
   $cfg = (array) cfg('approval_email', []);
-  if (empty($cfg['enabled']) || empty($cfg['from'])) return;
-  $toEmail = trim($toEmail);
-  if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) return;
-
-  $from   = (string) $cfg['from'];
   $appUrl = rtrim((string) cfg('base_url', ''), '/') . '/';
   $name   = trim($displayName) !== '' ? trim($displayName) : 'there';
 
@@ -618,7 +613,39 @@ function send_account_email(string $kind, string $toEmail, string $displayName):
           . "Your Campaign Chronicle account has been approved. Sign in here:\n\n"
           . "  $appUrl\n";
   }
+  send_site_email("account email ($kind)", $toEmail, $subject, $body);
+}
 
+/** Email someone a GM invited to a campaign its invite link (index.html#/join/<token>). Sent through the same
+ * 'approval_email' settings as the account emails, and off with them. Returns whether it was handed to mail(). */
+function send_invite_email(string $toEmail, string $campaignName, string $inviterName, string $role, string $token): bool {
+  $cfg = (array) cfg('approval_email', []);
+  $base = rtrim((string) cfg('base_url', ''), '/');
+  if ($base === '') return false;
+  $link = "$base/#/join/$token";
+  // The campaign's and the GM's names are typed by people: kept to one line each and short, and only in the body.
+  $one = fn(string $v, int $max) => mb_substr(trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $v)), 0, $max);
+  $camp = $one($campaignName, 150);
+  $who  = $one($inviterName, 150);
+  $as   = $role === 'gm' ? 'a co-GM' : 'a player';
+  $subject = (string) ($cfg['invite_subject'] ?? 'You\'re invited to a campaign on Campaign Chronicle');
+  $body = "Hi,\n\n"
+        . ($who !== '' ? "$who has" : 'A GM has') . " invited you to join the campaign \"$camp\" on Campaign Chronicle as $as.\n\n"
+        . "Open this link and sign in with Google or GitHub to join:\n\n"
+        . "  $link\n\n"
+        . "If you're new to the site, an administrator approves your account first, and you join the campaign as soon as they do.\n"
+        . "If you weren't expecting this, you can ignore this email.\n";
+  return send_site_email('invite email', $toEmail, $subject, $body);
+}
+
+/** Send a plain-text email with PHP mail(), as 'approval_email' sets up. Off unless it has enabled=true and a 'from'.
+ * Never throws; the address is validated and never placed in a header. Returns whether mail() took it. */
+function send_site_email(string $what, string $toEmail, string $subject, string $body): bool {
+  $cfg = (array) cfg('approval_email', []);
+  if (empty($cfg['enabled']) || empty($cfg['from'])) return false;
+  $toEmail = trim($toEmail);
+  if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) return false;
+  $from = (string) $cfg['from'];
   $envelope = $from;
   if (preg_match('/<([^>]+)>/', $from, $m)) $envelope = $m[1];
   $headers = [
@@ -630,14 +657,20 @@ function send_account_email(string $kind, string $toEmail, string $displayName):
     'X-Auto-Response-Suppress: All',
   ];
   if (!empty($cfg['reply_to'])) $headers[] = 'Reply-To: ' . (string) $cfg['reply_to'];
-
+  // Test configs write the mail to a file instead (tests/browser/campaign.spec.js reads it).
+  if (($file = (string) ($cfg['test_outbox'] ?? '')) !== '' && cfg('test_login')) {
+    return file_put_contents($file, json_encode(['to' => $toEmail, 'subject' => $subject, 'body' => $body]) . "\n", FILE_APPEND | LOCK_EX) !== false;
+  }
   try {
     $params = filter_var($envelope, FILTER_VALIDATE_EMAIL) ? '-f' . $envelope : '';
     if (@mail($toEmail, $subject, $body, implode("\r\n", $headers), $params) === false) {
-      error_log("account email ($kind): mail() returned false for " . $toEmail);
+      error_log("$what: mail() returned false for " . $toEmail);
+      return false;
     }
+    return true;
   } catch (Throwable $e) {
-    error_log("account email ($kind) failed: " . $e->getMessage());
+    error_log("$what failed: " . $e->getMessage());
+    return false;
   }
 }
 
