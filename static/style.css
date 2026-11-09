@@ -135,7 +135,7 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .datepick { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 
 .tbl { width: 100%; border-collapse: collapse; } .tbl td, .tbl th { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); }
-.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .camplist { list-style: none; padding: 0; margin: 0; }
 .camplist li { padding: 10px 0; border-bottom: 1px solid var(--line); }
 .camplist a { display: flex; gap: 10px; align-items: center; font-size: 1.1rem; }
@@ -705,6 +705,9 @@ button.dt-member.on { background: var(--accent); border-color: var(--accent); co
   display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 11rem; padding: 8px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5); }
 .kit-menu-right > .kit-menu-list { right: 0; } .kit-menu-left > .kit-menu-list { left: 0; }
+/* flipped (kit.js) when the list would run off the edge of the screen */
+.kit-menu-right.kit-menu-flip > .kit-menu-list { right: auto; left: 0; } .kit-menu-left.kit-menu-flip > .kit-menu-list { left: auto; right: 0; }
+.kit-menu-list { max-width: calc(100vw - 16px); }
 .kit-menu-list > * { text-align: left; white-space: nowrap; }
 .kit-menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 2px 4px; width: auto; }
 .kit-menu-list [hidden] { display: none; }
@@ -1146,10 +1149,6 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .sess-bar-gap { flex: 1; }
 .sess-pub { gap: 4px; padding: 1px 8px; font-size: .85rem; cursor: pointer; border: 1px solid var(--line); border-radius: 99px; }
 .sess-pub:has(input:checked) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.sess-more { position: relative; }
-.sess-more > summary { list-style: none; cursor: pointer; } .sess-more > summary::-webkit-details-marker { display: none; }
-.sess-more-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
-  min-width: 200px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgb(0 0 0 / .25); }
 .sess-fields[hidden], .sess-sumhead [hidden] { display: none; }
 .sess-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .sess-fields .field { max-width: 28em; }

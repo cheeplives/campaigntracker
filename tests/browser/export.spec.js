@@ -2,11 +2,11 @@
 // file holds only what that player can see.
 const fs = require("fs");
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function exportDay(page) {
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "⬇ Export" }).click()]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "⬇ Export")]);
   expect(dl.suggestedFilename()).toMatch(/\.md$/);
   return fs.readFileSync(await dl.path(), "utf8");
 }

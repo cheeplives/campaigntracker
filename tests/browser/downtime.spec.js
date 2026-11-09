@@ -2,7 +2,7 @@
 // which labels the shifts it covers and can move the clock; each is its own card, with
 // activities, players put on them, public notes and GM-only notes.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, sql, makeCampaign, newContext, closeContexts, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 const activities = cid => sql(`SELECT abs_day, shift, activity FROM shifts WHERE campaign_id = ${cid} ORDER BY abs_day, shift`).trim().split("\n").filter(Boolean);
@@ -136,7 +136,7 @@ test("a short rest costs no shift, and downtime covers whole days and comes off 
   for (const a of ["Work on Project", "Crafting", "Career Pursuits", "Research", "Recuperate", "Train", "Networking", "Acquire an Asset", "Indulge or Carouse"]) await expect(dt.getByLabel(a, { exact: true })).toBeVisible();
   await expect(dt.getByLabel("Tend to Wounds", { exact: true })).toHaveCount(0);
 
-  await dt.getByRole("button", { name: "Delete" }).click();
+  await moreIn(dt, "Delete");
   await page.locator(".kit-dialog").getByRole("button", { name: "Delete" }).click();
   await expect(cards).toHaveCount(1);
   expect(activities(cid).filter(r => r.endsWith("Downtime"))).toEqual([]);

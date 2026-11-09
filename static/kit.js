@@ -144,19 +144,58 @@ const KIT = (() => {
   }
 
   // ------------------------------------------------------------ menu
-  /** A small drop-down of actions behind one button (⋯ or ⚙): the things done now and then, kept off the page.
+  /** A small drop-down of actions behind one button (⋯ or ⚙): the things done now and then, kept off the page. The
+   * everyday action (Edit, Save, Approve) stays out beside it; the rest, and always Delete, wait inside.
    * KIT.menu({ label: '⋯', ariaLabel: 'More for Waterdeep', tip, items: [button, el('hr'), button], cls, listCls, align: 'right' })
-   * returns a <details>. It closes when an item is picked, on a click anywhere else and on Escape (focus goes back to its
-   * button); its document listeners exist only while it is open, so nothing is left behind when the page changes. */
+   * returns a <details>. Items that are null or false are skipped, and an <hr> with nothing on one side of it goes too,
+   * so a caller lists its items conditionally. It closes when an item is picked, on a click anywhere else, when focus
+   * moves out of it (Tab) and on Escape (focus goes back to its button); the arrow keys, Home and End walk its items, and
+   * an arrow on the closed button opens it; a list that would run off the edge of the screen opens the other way. Its
+   * document listeners exist only while it is open, so nothing is left behind when the page changes. */
+  let menuSeq = 0;
   function menu({ label = '⋯', ariaLabel = '', tip: tipText = '', items = [], cls = '', listCls = '', align = 'right' } = {}) {
-    const summary = el('summary', { class: 'button small', 'aria-label': ariaLabel || null, 'data-tip': tipText || null }, label);
-    const list = el('div', { class: `kit-menu-list ${listCls}`.trim() }, items);
+    // null, false and a divider with nothing on one side of it are dropped, so callers can list items conditionally
+    const kids = items.flat(Infinity).filter(Boolean);
+    const isHr = n => n instanceof Element && n.tagName === 'HR';
+    const clean = [];
+    for (const n of kids) { if (isHr(n) && (!clean.length || isHr(clean[clean.length - 1]))) continue; clean.push(n); }
+    while (clean.length && isHr(clean[clean.length - 1])) clean.pop();
+    // The items keep their own roles (buttons, links, a checkbox): the list is a disclosure of ordinary controls, which a
+    // screen reader walks as such, rather than an ARIA menu, whose menuitems would need their own key handling everywhere.
+    const id = `kit-menu-${++menuSeq}`;
+    const summary = el('summary', { class: 'button small', 'aria-label': ariaLabel || null, 'data-tip': tipText || null, 'aria-expanded': 'false', 'aria-controls': id }, label);
+    const list = el('div', { id, class: `kit-menu-list ${listCls}`.trim(), role: 'group' }, clean);
     const d = el('details', { class: `kit-menu kit-menu-${align} ${cls}`.trim() }, summary, list);
+    // the items the arrow keys walk: anything in the list that takes focus (buttons, links, a checkbox in a label)
+    const focusables = () => [...list.querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && !x.closest('[hidden]') && x.offsetParent !== null);
+    const focusAt = i => { const f = focusables(); if (f.length) f[(i + f.length) % f.length].focus(); };
     const outside = ev => { if (!d.contains(ev.target)) d.open = false; };
-    const keys = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); d.open = false; summary.focus(); } };
+    const keys = ev => {
+      if (ev.key === 'Escape') { ev.stopPropagation(); d.open = false; summary.focus(); return; }
+      if (!d.contains(ev.target)) return;
+      const f = focusables(), at = f.indexOf(document.activeElement);
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); focusAt(at < 0 ? 0 : at + 1); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); focusAt(at < 0 ? -1 : at - 1); }
+      else if (ev.key === 'Home') { ev.preventDefault(); focusAt(0); }
+      else if (ev.key === 'End') { ev.preventDefault(); focusAt(-1); }
+    };
+    // Tab out of the menu closes it (only when focus lands somewhere else: a tap on iPad Safari gives a button no focus,
+    // so a bare blur must not close the menu before the tap's click reaches the item)
+    const away = ev => { if (ev.relatedTarget && !d.contains(ev.relatedTarget)) d.open = false; };
+    // keep the list on screen: a right-aligned list that would run off the left edge opens to the right instead, and the other way round
+    const place = () => {
+      d.classList.remove('kit-menu-flip');
+      const r = list.getBoundingClientRect();
+      if ((align === 'right' && r.left < 4 && r.right + (4 - r.left) <= innerWidth) || (align === 'left' && r.right > innerWidth - 4 && r.left - (r.right - innerWidth + 4) >= 0)) d.classList.add('kit-menu-flip');
+    };
     d.addEventListener('toggle', () => {
-      if (d.open) { if (tipEl === summary) hideTip(); document.addEventListener('click', outside, true); document.addEventListener('keydown', keys, true); }
-      else { document.removeEventListener('click', outside, true); document.removeEventListener('keydown', keys, true); }
+      summary.setAttribute('aria-expanded', String(d.open));
+      if (d.open) { if (tipEl === summary) hideTip(); place(); document.addEventListener('click', outside, true); document.addEventListener('keydown', keys, true); d.addEventListener('focusout', away); }
+      else { document.removeEventListener('click', outside, true); document.removeEventListener('keydown', keys, true); d.removeEventListener('focusout', away); }
+    });
+    // Arrow down on the closed button opens the menu on its first item (Enter and Space open it as a <summary> does)
+    summary.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); if (!d.open) d.open = true; focusAt(ev.key === 'ArrowDown' ? 0 : -1); }
     });
     list.addEventListener('click', ev => { if (ev.target.closest('button, a')) d.open = false; });
     return d;

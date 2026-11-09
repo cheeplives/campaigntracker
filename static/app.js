@@ -54,7 +54,11 @@
   /** The ⋯ beside a row's everyday buttons: the rarer and riskier actions (Copy, Delete) wait behind it, as on a map's ⚙ */
   /** A row of choice buttons (Month / Week / Year): the one with class "on" is also aria-pressed, as on the map's toolbar */
   const pressedSeg = seg => { seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on')))); return seg; };
-  const moreMenu = (name, ...items) => KIT.menu({ label: '⋯', ariaLabel: `More for ${name}`, tip: 'More: copy, delete and the like', items, cls: 'more-menu' });
+  /** null when nothing is left in it (KIT.menu drops null items and stray dividers), so a row shows no empty ⋯ */
+  const moreMenu = (name, ...items) => {
+    const m = KIT.menu({ label: '⋯', ariaLabel: `More for ${name}`, tip: 'More: the actions done now and then', items, cls: 'more-menu' });
+    return m.querySelector('.kit-menu-list').childElementCount ? m : null;
+  };
   function formData(form) {
     const o = {};
     for (const f of form.elements) {
@@ -895,20 +899,23 @@
         el('td', {}, legacy ? (u.email || el('span', { class: 'muted' }, 'not linked yet')) : u.email,
           el('div', { class: 'small muted' }, legacy ? 'Account from before Google/GitHub sign-in' : `${PROVIDER_LABEL[u.provider] || u.provider}`)),
         el('td', {}, el('span', { class: `status ${u.status}` }, STATUS_LABEL[u.status] || u.status)),
+        // Approve is the admin's everyday press; linking an email, revoking and removing wait in ⋯
         el('td', { class: 'act' }, el('div', { class: 'actions' },
-          legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
-            const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
-            if (email === null) return false;
-            await post('user_email', { id: u.id, email });
-          }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
           !self && u.status !== 'approved' ? act('Approve', () => post('user_status', { id: u.id, status: 'approved' }), 'primary', 'Let them in. A GM can then add them to a campaign by email') : null,
-          !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
-          !self ? act(legacy ? 'Delete' : 'Remove', async () => {
-            if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
-              : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
-              { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
-            await post('user_delete', { id: u.id });
-          }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null)));
+          moreMenu(u.display_name || u.email || 'this account',
+            legacy ? act(u.email ? 'Change email' : 'Link email', async () => {
+              const email = await promptDialog(`Their Google or GitHub email. When ${u.display_name} first signs in with it, they take over this account and keep their campaigns.`, { title: 'Link account', value: u.email || '', placeholder: 'name@example.com', ok: 'Save' });
+              if (email === null) return false;
+              await post('user_email', { id: u.id, email });
+            }, '', 'Connect this older account to the player\'s Google or GitHub email') : null,
+            el('hr'),
+            !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
+            !self ? act(legacy ? 'Delete' : 'Remove', async () => {
+              if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
+                : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
+                { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
+              await post('user_delete', { id: u.id });
+            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null))));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
@@ -1903,7 +1910,7 @@
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/day/${d + 1}` }, 'Next day ▶'),
       toCalendar,
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/table`, 'data-tip': 'Open At the Table, on the campaign\'s current day' }, 'Go to today'),
-      exportBtn);
+      moreMenu('this day', exportBtn));
     // the trail: Calendar › Firstmonth 1492 › this day. The month step opens the calendar on this day's month.
     const mp = E.fromAbs(c, d);
     const toMonth = ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; vs().anchor = d; vs().mode = 'month'; };
@@ -2031,7 +2038,9 @@
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip(PUBLIC_TIP)), pub.node),
         el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 Secret notes', tip(SECRET_TIP)), sec.node)),
       mentionRow([row.notes, row.notes_format], [row.gm_notes, row.gm_notes_format]),
-      el('div', { class: 'row' }, save, (row.gm_notes || '').trim() ? btn('🔓 Reveal secret notes', async () => {
+      // Save is the everyday press; revealing, history and importing wait in ⋯
+      el('div', { class: 'row' }, save, moreMenu('this day\'s notes',
+        (row.gm_notes || '').trim() ? btn('🔓 Reveal secret notes', async () => {
           const v = await KIT.dialog({ title: 'Reveal the secret notes to the players?', message: 'The secret notes, as last saved, join the end of the public notes and the secret notes are cleared. Anything typed here and not saved yet is left out.',
             buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
           if (v !== 'log' && v !== 'quiet') return;
@@ -2039,7 +2048,7 @@
         }, 'small', 'Move the secret notes onto the end of the public notes, so players read them, and optionally note it on this day\'s events') : null,
         btn('🕘 History', () => HistoryView.open({ kind: 'day', ref: d, title: `day ${d}'s notes`, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this day\'s notes, what each save changed, and Restore'),
         btn('Import to a session…', () => importToSession(d, pub.value(), sec.value()), 'small',
-        'Copy these notes, as they are written now, into a session\'s notes to write its summary from')));
+          'Copy these notes, as they are written now, into a session\'s notes to write its summary from'))));
   }
 
   /** A day's notes as lines for a session's notes: { pub: [{ text, depth }], sec: [...] }. Paragraphs, headings and list items become
@@ -3118,11 +3127,13 @@
       el('small', { class: 'muted' }, 'Added by ', byline(e)),
       (isGM() || mine) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(eventForm(d, e)), 'small', 'Change this event'),
-        isGM() && Number(e.is_secret) ? btn('🔓 Reveal', async () => {
-          if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
-          try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
-        }, 'small', 'Make this GM-only event public: players see it from now on') : null,
-        btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes')) : null,
+        moreMenu(e.title,
+          isGM() && Number(e.is_secret) ? btn('🔓 Reveal', async () => {
+            if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
+            try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
+          }, 'small', 'Make this GM-only event public: players see it from now on') : null,
+          el('hr'),
+          btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes'))) : null,
       notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
@@ -3139,7 +3150,7 @@
       el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
       canEditReminder(x) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-        btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null);
+        moreMenu(x.title, btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null);
     return box;
   }
 
@@ -3449,7 +3460,7 @@
           el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
           canEditReminder(x) ? el('div', { class: 'row' },
             btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-            btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null));
+            moreMenu(x.title, btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null));
       return r;
     };
     const draw = () => {
@@ -4600,13 +4611,15 @@
         el('h2', {}, t.title),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
-          pinButton({ kind: 'tome', id: t.id, name: t.title }),
-          scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
-          isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
-          canDelete ? btn('Delete', async () => {
-            if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
-            try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
-          }, 'small danger', 'Delete this tome and everything written in it') : null)),
+          moreMenu(t.title,
+            pinButton({ kind: 'tome', id: t.id, name: t.title }),
+            scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
+            isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
+            el('hr'),
+            canDelete ? btn('Delete', async () => {
+              if (!await confirmDialog(`Delete "${t.title}" from the Library?`, { ok: 'Delete', danger: true })) return;
+              try { await post('tome_delete', { id: t.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/library`; } catch (err) { toast(err.message, true); }
+            }, 'small danger', 'Delete this tome and everything written in it') : null))),
       el('div', { class: 'lib-kind small' }, el('span', { 'aria-hidden': 'true' }, `${icon} `), label, t.words ? el('span', { class: 'muted' }, ` · ${t.words.toLocaleString()} word${t.words === 1 ? '' : 's'}`) : null),
       t.description ? el('p', { class: 'lib-blurb' }, t.description) : null,
       el('div', { class: 'lib-body' }, (t.body || '').trim() ? revealButtons(linkedNote(t.body, 'html'), 'tome', t.id) : el('p', { class: 'muted' }, 'Nothing written in it yet. Press Edit to start.')),
@@ -4738,17 +4751,20 @@
             el('small', { class: 'party-members muted' }, partyNames(g).join(', ') || 'No one yet'),
             el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
               ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
+          // Make main group is what gets pressed as the party moves; naming, the token and merging wait in ⋯
           isGM() ? el('div', { class: 'actions' },
-            btn('Rename', async () => {
-              const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
-              if (!name || !name.trim()) return;
-              try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
-            }, 'small'),
             g.is_main ? null : btn('Make main group', async () => {
               try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reloadParty(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
-            groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null,
-            btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps')) : null)));
+            moreMenu(g.name,
+              btn('Rename', async () => {
+                const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
+                if (!name || !name.trim()) return;
+                try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
+              }, 'small'),
+              btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps'),
+              el('hr'),
+              groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null)) : null)));
     };
     drawParty();
     const genre = E.genreOf(settings());
@@ -5575,7 +5591,7 @@
       list,
       el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small primary', 'Add your own activity to this card')),
       el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
-      el('div', { class: 'row' }, save, del));
+      el('div', { class: 'row' }, save, moreMenu(x.title || `this ${k.label.toLowerCase()}`, del)));
     return card;
   }
 
@@ -5963,6 +5979,7 @@
             sheet ? el('a', { class: 'charname', href: `#/c/${S.camp.id}/characters/${sheet.id}`, 'data-tip': 'Open their character sheet' }, sheet.name)
               : m.character_name ? el('span', { class: 'charname' }, m.character_name) : el('span', { class: 'muted' }, 'none yet'),
             canLink && m.character_name ? el('span', { class: 'small muted' }, 'No sheet yet') : null),
+          // the character's name is the everyday change; a sheet is linked or made once, and Remove is rare, so they wait in ⋯
           el('div', { class: 'actions' },
             (self || isGM()) ? btn(m.character_name ? 'Rename character' : 'Set character', async () => {
               const name = await promptDialog(self ? 'Your character\'s name in this campaign:' : `${m.display_name}'s character name:`,
@@ -5970,13 +5987,15 @@
               if (name === null) return;
               try { await post('member_character', { user_id: m.id, character_name: name }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Events and notes they add are signed with this name instead of their own') : null,
-            canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
-            canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
-              'small', 'Give this character a sheet on the Characters tab, with this name') : null,
-            isGM() ? btn('Remove', async () => {
-              if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
-              try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Take them out of this campaign. Their account stays') : null));
+            moreMenu(m.display_name || m.email,
+              canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
+              canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
+                'small', 'Give this character a sheet on the Characters tab, with this name') : null,
+              el('hr'),
+              isGM() ? btn('Remove', async () => {
+                if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
+                try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+              }, 'small danger', 'Take them out of this campaign. Their account stays') : null)));
       }));
     if (isGM()) {
       // Pick from the site's approved accounts, or type a full email for someone not in the list.

@@ -1238,17 +1238,22 @@ const Sheets = (() => {
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
         el('div', { class: 'sheet-head' }, face, el('div', { class: 'sheet-head-main' },
-        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, capsBtn,
-          ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
-          ch.can_edit ? button('Delete character', async () => {
-          if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
-          try {
-            await ctx.post('character_delete', { id: ch.id }, cid());
-            for (const m of ctx.S.members) if (Number(m.active_character_id) === ch.id) m.active_character_id = null;
-            toast(`${ch.name}'s sheet is deleted`);
-            location.hash = `#/c/${cid()}/characters`;
-          } catch (err) { toast(err.message, true); }
-        }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
+        // Edit is the everyday press; the maximums, an import and Delete wait in the shared ⋯ (KIT.menu)
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, (() => {
+          const more = KIT.menu({ label: '⋯', ariaLabel: `More for ${ch.name}`, tip: 'More: the maximums, an import, delete', cls: 'more-menu', items: [capsBtn,
+            ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
+            el('hr'),
+            ch.can_edit ? button('Delete character', async () => {
+              if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
+              try {
+                await ctx.post('character_delete', { id: ch.id }, cid());
+                for (const m of ctx.S.members) if (Number(m.active_character_id) === ch.id) m.active_character_id = null;
+                toast(`${ch.name}'s sheet is deleted`);
+                location.hash = `#/c/${cid()}/characters`;
+              } catch (err) { toast(err.message, true); }
+            }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null] });
+          return more.querySelector('.kit-menu-list').childElementCount ? more : null;
+        })())),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player && ch.party_out ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         summaryLine(ch))),
         portraits,

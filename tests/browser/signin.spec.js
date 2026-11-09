@@ -2,7 +2,7 @@
 // admin, approval lets them in, revoking locks them out, and accounts from the
 // username/password days are taken over by matching email.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql } = require("./helpers");
+const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, moreIn } = require("./helpers");
 
 test("signed out: shows the sign-in card with both providers", async ({ page }) => {
   const errors = watchErrors(page);
@@ -91,7 +91,7 @@ test("an account from before OAuth is taken over by its linked email", async ({ 
   await signIn(admin, ADMIN);
   await admin.goto("index.html#/admin");
   const row = admin.getByRole("row").filter({ hasText: "Old Lena" });
-  await row.getByRole("button", { name: "Link email" }).click();
+  await moreIn(row, "Link email");
   const dialog = admin.getByRole("dialog");
   await dialog.getByRole("textbox").fill(who.email);
   await dialog.getByRole("button", { name: "Save" }).click();

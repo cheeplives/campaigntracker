@@ -190,6 +190,11 @@ async function pressMore(page, name, item) {
   await page.getByLabel(`More for ${name}`, { exact: true }).click();
   await page.locator(".kit-menu[open] .kit-menu-list").getByRole("button", { name: item }).click();
 }
+/** Open the one ⋯ menu inside `scope` (a row, card or page section) and press one of its items. */
+async function moreIn(scope, item) {
+  await scope.locator(".kit-menu > summary").click();
+  await scope.locator(".kit-menu[open] .kit-menu-list").getByRole("button", { name: item }).click();
+}
 /** Open a map's ⚙ menu (Map settings) and press one of its items. */
 async function gearAction(page, name) {
   await page.getByLabel("Map settings").click();
@@ -209,4 +214,4 @@ async function openPassTime(page) {
   await row.waitFor({ state: "visible" });
 }
 
-module.exports = { hexGray, openPassTime, openDrawer, gearAction, pressMore, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };
+module.exports = { hexGray, openPassTime, openDrawer, gearAction, pressMore, moreIn, openLegend, goTab, newContext, closeContexts, makePng, mapWithPicture, settledBox, tokenUpload, notNow, watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, makeCampaign };

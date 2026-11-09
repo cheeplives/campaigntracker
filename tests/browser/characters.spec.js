@@ -3,7 +3,7 @@
 // another player, and two people on one sheet (each named in the other's bar, the GM pressing Edit first, and a
 // change showing up on the other open sheet at the next check).
 const { test, expect } = require("@playwright/test");
-const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, makePng } = require("./helpers");
+const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, makePng, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 const LAYOUT = () => ({ sections: [
@@ -241,10 +241,10 @@ test("Characters: the player deletes a character from its sheet; its Encyclopedi
   await expect(p2.getByRole("button", { name: "Delete character" })).toHaveCount(0);
 
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
-  await p1.getByRole("button", { name: "Delete character" }).click();
+  await moreIn(p1.locator(".sheet-head"), "Delete character");
   await p1.getByRole("button", { name: "Cancel" }).click();
   expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("1");
-  await p1.getByRole("button", { name: "Delete character" }).click();
+  await moreIn(p1.locator(".sheet-head"), "Delete character");
   await p1.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(p1).toHaveURL(new RegExp(`#/c/${cid}/characters$`));
   await expect(p1.locator(".character-card", { hasText: "Doomed" })).toHaveCount(0);
@@ -256,7 +256,7 @@ test("Characters: a GM deletes a player's character from its sheet", async ({ pa
   const { cid, gm, p1, tpl } = await party(page, browser);
   const c = await make(p1, cid, { template_id: tpl.id, name: "Removed" });
   await gm.goto(`index.html#/c/${cid}/characters/${c.id}`);
-  await gm.getByRole("button", { name: "Delete character" }).click();
+  await moreIn(gm.locator(".sheet-head"), "Delete character");
   await gm.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(gm).toHaveURL(new RegExp(`#/c/${cid}/characters$`));
   expect(sql(`SELECT COUNT(*) FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("0");
@@ -320,7 +320,7 @@ test("Characters: a Pathbuilder export pasted in fills the sheet, after asking",
   await expect(p2.getByRole("button", { name: "Import" })).toHaveCount(0);
 
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
-  await p1.getByRole("button", { name: "Import" }).click();
+  await moreIn(p1.locator(".sheet-head"), "Import");
   await p1.getByLabel("Link or JSON to import").fill("not json at all");
   await p1.getByRole("button", { name: "Read it" }).click();
   await expect(p1.locator(".sheet-import")).toContainText("Paste a Pathbuilder 2e Export JSON link");
@@ -528,7 +528,7 @@ test("Members: a character named the old way is matched up with a sheet, linked 
   await gm.goto(`index.html#/c/${cid}/members`);
   const pip = gm.locator(".member", { hasText: "Pip" });
   await expect(pip).toContainText("No sheet yet");
-  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await moreIn(pip, "Link a character…");
   await expect(gm.getByLabel("Character", { exact: true })).toHaveValue(`c${sheet.id}`);   // the one with its name comes first
   await gm.getByRole("button", { name: "Link", exact: true }).click();
   await expect(pip.getByRole("link", { name: "Brannoc" })).toBeVisible();
@@ -538,7 +538,7 @@ test("Members: a character named the old way is matched up with a sheet, linked 
   // Quin makes their own sheet from their row: it goes on the entry already called Quinella
   await p2.goto(`index.html#/c/${cid}/members`);
   const quin = p2.locator(".member", { hasText: "Quin" });
-  await quin.getByRole("button", { name: "Make a sheet" }).click();
+  await moreIn(quin, "Make a sheet");
   await expect(p2.getByLabel("Character name")).toHaveValue("Quinella");
   await p2.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
   await p2.getByRole("button", { name: "Make character" }).click();
@@ -570,7 +570,7 @@ test("Members: a GM links a member to a Person in the Encyclopedia, which gets a
   const entry = (await api(gm, "entry_save", { name: "Ser Aldric", category: "person" }, cid)).json.id;
   await gm.goto(`index.html#/c/${cid}/members`);
   const pip = gm.locator(".member", { hasText: "Pip" });
-  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await moreIn(pip, "Link a character…");
   await gm.getByLabel("Character", { exact: true }).selectOption(`e${entry}`);
   await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
   await gm.getByRole("dialog").getByRole("button", { name: "Link", exact: true }).click();
@@ -598,7 +598,7 @@ test("Linking a member to a Person entry with no sheet makes none by default: th
   const pip = gm.locator(".member", { hasText: "Pip" });
   await expect(pip).toContainText("Nessa");
   await expect(pip).toContainText("No sheet yet");
-  await pip.getByRole("button", { name: "Link a character…" }).click();
+  await moreIn(pip, "Link a character…");
   await expect(gm.getByLabel("Character", { exact: true })).toHaveValue(`e${entry}`);
   await expect(gm.getByLabel("Template", { exact: true })).toHaveValue("");
   await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
@@ -788,7 +788,7 @@ test("Characters: a track's maximum is the character's own: the pips past it are
   await expect(p1.getByRole("button", { name: "Luck 3", exact: true })).toHaveAttribute("aria-pressed", "true");
   // the Max pickers show only while Track maximums is open
   await expect(p1.getByLabel("Luck maximum")).toHaveCount(0);
-  await p1.getByRole("button", { name: "Track maximums" }).click();
+  await moreIn(p1.locator(".sheet-head"), "Track maximums");
   await expect(p1.getByLabel("Luck maximum")).toHaveValue("3");
   await p1.getByLabel("Luck maximum").selectOption("2");
   await expect(p1.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();

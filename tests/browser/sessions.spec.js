@@ -2,7 +2,7 @@
 // session's page on the Sessions tab with the summary written from them, Build draft, publishing to players and the
 // Markdown export. Players never get the notes, an unpublished session, or the summary's GM-only paragraphs.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, sql, makeCampaign, notNow, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, sql, makeCampaign, notNow, newContext, closeContexts, pressMore } = require("./helpers");
 test.afterEach(closeContexts);
 
 async function gmAndPlayer(page, browser, label) {
@@ -304,7 +304,7 @@ test("Import to a session on a day's calendar page adds the day's Public and Sec
     notes: "<p>Docked at Iapetus</p><ul><li>Hera called<ul><li>Harbormaster answered</li></ul></li></ul><aside>Essen is a spy</aside>",
     gm_notes: "<p>The seal is forged</p>" }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/day/${today}`);
-  await page.getByRole("button", { name: "Import to a session…" }).click();
+  await pressMore(page, "this day's notes", "Import to a session…");
   const dlg = page.locator("dialog");
   await expect(dlg.getByLabel("Session to add the notes to")).toHaveValue("new");
   await expect(dlg).toContainText("Public notes (3 lines)");
@@ -317,7 +317,7 @@ test("Import to a session on a day's calendar page adds the day's Public and Sec
   expect(text.replace(/ · .*/, "")).toBe("Docked at Iapetus\nHera called\n  Harbormaster answered\n$ Secret notes\n  Essen is a spy\n  The seal is forged");
 
   // into a session that is there, public notes only, at the end
-  await page.getByRole("button", { name: "Import to a session…" }).click();
+  await pressMore(page, "this day's notes", "Import to a session…");
   await expect(dlg.getByLabel("Session to add the notes to")).toHaveValue(String(list[0].id));
   await dlg.getByLabel(/Secret notes/).uncheck();
   await dlg.getByRole("button", { name: "Import" }).click();
@@ -527,7 +527,7 @@ test("a published session is the player's to read and export; a session deletes"
   expect(md).not.toContain("Hidden bonus");
 
   // the GM's export can take the notes as a list
-  await page.locator(".sess-more > summary").click(); // Include notes waits in the ⋯ menu
+  await page.locator(".sess-bar .kit-menu > summary").click(); // Include notes and Export wait in the ⋯ menu
   await page.getByLabel("Include notes").check();
   const [gdl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Export/ }).click()]);
   const gmd = require("fs").readFileSync(await gdl.path(), "utf8");
@@ -546,7 +546,7 @@ test("a published session is the player's to read and export; a session deletes"
   await page.goto(`index.html#/c/${cid}/sessions/${other}`);
   // the page can be drawn again just after it opens (the move above changed the campaign), closing the ⋯ menu: open it until it stays
   await expect(async () => {
-    if (!await page.locator(".sess-more").evaluate(d => d.open)) await page.locator(".sess-more > summary").click();
+    if (!await page.locator(".sess-bar .kit-menu").evaluate(d => d.open)) await page.locator(".sess-bar .kit-menu > summary").click();
     await page.getByRole("button", { name: "Delete session" }).click({ timeout: 2000 });
   }).toPass();
   await page.locator("dialog").getByRole("button", { name: "Delete" }).click();
