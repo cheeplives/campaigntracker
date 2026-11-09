@@ -42,15 +42,15 @@ const MapsTab = (() => {
     return el('label', { class: 'lock-toggle', 'data-tip': `GM only: ${tipText}` }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
   }
   const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
-  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick }) {
+  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick, badge }) {
     const tint = color && !image;
     const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' })
       : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
-    const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, label ? el('span', { class: 'map-marker-label' }, label) : null);
+    const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, badge || null, label ? el('span', { class: 'map-marker-label' }, label) : null);
     node.style.setProperty('--marker-size', sizePx + 'px');
     if (color) node.style.setProperty('--pin-colour', color);
     const m = L.marker(toLatLng(x, y), { icon: L.divIcon({ html: node, className: 'map-marker-box', iconSize: [sizePx, sizePx], iconAnchor: [sizePx / 2, sizePx / 2] }),
-      draggable, title: label || '', keyboard: true, riseOnHover: true });
+      draggable, title: label || '', keyboard: true, riseOnHover: true, sizePx });
     if (onOpen) {
       // pad: { tl, br }, the room a card keeps from the map's edges ([x, y] arrays, read each time a card opens)
       m.bindPopup(() => onOpen(), { className: 'map-card-popup', minWidth: 160, ...(pad ? { autoPanPaddingTopLeft: pad.tl, autoPanPaddingBottomRight: pad.br } : {}) });
@@ -490,6 +490,8 @@ const MapsTab = (() => {
     const pinTitle = p => (p.kind === 'entry' && p.entry ? p.entry.name : p.kind === 'event' && p.event ? p.event.title : p.label) || 'Pin';
     const kindIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
     const pinIcon = p => p.icon || kindIcon(p);
+    /** The small badge a pin that opens another map wears, on the map and in the list of locations. */
+    const opensBadge = p => p.child_map ? el('span', { class: 'map-opens-badge', title: `Opens the map ${p.child_map.name}` }, el('span', { class: 'visually-hidden' }, ` (opens the map ${p.child_map.name})`)) : null;
     // Routes and locations hidden from the picture: the viewer's own choice, kept on this device for this map. The lists still show them.
     function hiddenIds() { try { return new Set(JSON.parse(localStorage.getItem(`chronicle-map-hidden-${map.id}`) || '[]')); } catch { return new Set(); } }
     function setHidden(id, hide) {
@@ -522,9 +524,10 @@ const MapsTab = (() => {
       pinLayer.clearLayers(); pinMarkers.clear();
       const hid = hiddenIds();
       for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
-        className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : ''),
+        className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : '') + (p.child_map ? ' opens-map' : ''), badge: opensBadge(p),
         draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p), pad: cardPad,
         onPick: () => pickAt(p) }));
+      spreadParty();
     }
     /** Centre the map on pin p and open its card. */
     const showPin = p => { if (hiddenIds().has('p' + p.id)) setHidden('p' + p.id, false); const m = pinMarkers.get(p.id); if (!m || !lf) return; lf.map.setView(toLatLng(p.x, p.y), Math.max(lf.map.getZoom(), 0)); m.openPopup(); };
@@ -565,18 +568,34 @@ const MapsTab = (() => {
       try { await post('trail_clear', { map_id: map.id, id: g.id }, cid); lmap_close(); await refresh(); toast('Trail cleared'); }
       catch (err) { toast(err.message, true); }
     };
+    // A group standing on a pin (as "Party is here" puts it) would cover it, so its marker steps aside, up and to the right,
+    // with a short stalk back to the spot, and each can be clicked. Only how it is drawn moves: where it stands is unchanged.
+    // Checked again at each zoom, since what overlaps depends on it.
+    let groupMarkers = [];
+    function spreadParty() {
+      if (!lf) return;
+      const pinAt = [...pinMarkers.values()].map(m => lf.map.latLngToContainerPoint(m.getLatLng()));
+      for (const m of groupMarkers) {
+        const node = m.options.icon.options.html, at = lf.map.latLngToContainerPoint(m.getLatLng());
+        const near = (m.options.sizePx || 28) / 2 + 12;
+        const beside = pinAt.some(p => p.distanceTo(at) < near);
+        node.classList.toggle('beside', beside);
+        m.getElement()?.classList.toggle('party-beside', beside);   // its box, left on the spot, lets clicks through to the pin
+      }
+    }
     const drawGroups = () => {
-      groupLayer.clearLayers();
+      groupLayer.clearLayers(); groupMarkers = [];
       drawTrail();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
-        MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
-          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); offerLog(g, xy); },
+        groupMarkers.push(MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
+          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); spreadParty(); offerLog(g, xy); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             el('small', {}, partyNames(g).join(', ') || 'No one yet'),
             gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
               'Pin a place where the party is now, as a new Encyclopedia entry or a note'),
-              trail.some(t => t.group_id === g.id) ? btn('Clear trail', () => clearTrail(g), 'small', 'Forget where this group has been on this map, leaving where it stands now') : null) : null) });
+              trail.some(t => t.group_id === g.id) ? btn('Clear trail', () => clearTrail(g), 'small', 'Forget where this group has been on this map, leaving where it stands now') : null) : null) }));
       }
+      spreadParty();
     };
     /** The main group was moved on this map: offer, under the toolbar, to write it on the clock's shift ("Moved to Tarsk",
      * by the pin nearest where it now stands). Nothing is written unless Log it is pressed. */
@@ -986,7 +1005,7 @@ const MapsTab = (() => {
         if (p.color) face.style.setProperty('--pin-colour', p.color);
         return el('div', { class: 'map-place-row', 'data-name': pinTitle(p) }, showTick('p' + p.id, pinTitle(p), hid),
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
-            face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
+            face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), opensBadge(p), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
       sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows, routes.map(r => 'r' + r.id)) : null,
         pins.length ? section('places', 'Locations', placeRows, pins.map(p => 'p' + p.id)) : null].filter(Boolean));
@@ -1423,11 +1442,12 @@ const MapsTab = (() => {
         });
         return b;
       })() : null,
+      pins.some(p => p.child_map) ? el('span', { class: 'map-legend-item' }, el('i', { class: 'map-opens-badge', 'aria-hidden': 'true' }), 'Opens a map') : null,
       el('span', { class: 'map-legend-item' }, el('i', { class: 'map-legend-gm', 'aria-hidden': 'true' }), 'GM only')));
     // pins' names show once zoomed in well past the fit the page opened at (as well as on hover, on the open card, and with Labels)
     let baseZoom = lmap.getZoom();
     const syncZoom = () => stage.classList.toggle('zoomed-in', lmap.getZoom() >= baseZoom + 1.5);
-    lmap.on('zoomend', syncZoom);
+    lmap.on('zoomend', syncZoom).on('zoomend', spreadParty);
     syncZoom();
     syncTools();
     lmap.on('click', onClick);

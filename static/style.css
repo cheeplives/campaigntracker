@@ -1456,7 +1456,26 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-pin.selected .map-marker-icon { filter: var(--glyph-filter, none) drop-shadow(0 0 0 var(--accent)) drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--halo, #fff)); }
 .map-pin.selected.has-colour .map-marker-icon.tinted { filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--halo, #fff)); }
 .map-pin.secret .map-marker-icon { opacity: .8; }
+/* a pin that opens another map wears a small badge at its lower right, on the map and in the list of locations: two stacked
+   sheets on a disc of the accent colour, ringed with the genre's halo so it reads on any picture */
+.map-opens-badge { --badge: 14px; display: inline-block; flex: none; width: var(--badge); height: var(--badge); border-radius: 50%; vertical-align: middle;
+  background: var(--accent); box-shadow: 0 0 0 1.5px var(--halo, var(--panel)), 0 1px 2px rgb(0 0 0 / .4); position: relative; }
+.map-opens-badge::before { content: ''; position: absolute; inset: 2px; background: var(--on-accent, #fff);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1 15 5 8 9 1 5z'/%3E%3Cpath d='M2.6 8.1 8 11.2l5.4-3.1L15 9l-7 4-7-4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1 15 5 8 9 1 5z'/%3E%3Cpath d='M2.6 8.1 8 11.2l5.4-3.1L15 9l-7 4-7-4z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.map-pin .map-opens-badge { position: absolute; right: -4px; bottom: -3px; z-index: 1; pointer-events: none; transition: transform .12s; }
+.map-pin:hover .map-opens-badge, .map-pin.selected .map-opens-badge { transform: translate(2px, 2px); }
+.map-place-row .map-opens-badge { margin-left: 6px; }
+.map-legend-item .map-opens-badge { margin-right: 5px; vertical-align: -2px; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
+/* a group standing on a pin steps aside, up and to the right, so both can be clicked; a stalk runs back to the spot */
+.map-party { --beside: calc(var(--marker-size) / 2 + 12px); transition: translate .15s; }
+.leaflet-marker-icon.party-beside { pointer-events: none; }
+.leaflet-marker-icon.party-beside > .map-party { pointer-events: auto; }
+.map-party.beside { translate: var(--beside) calc(-1 * var(--beside)); }
+.map-party.beside .map-marker-label { top: auto; bottom: 100%; margin: 0 0 1px; }   /* its name above it, clear of the pin below */
+.map-party.beside::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(var(--beside) * 1.414 - 13px); height: 2px; transform-origin: 0 50%;
+  transform: rotate(135deg); background: var(--accent); box-shadow: 0 0 0 1px var(--halo, var(--panel)); border-radius: 1px; z-index: -1; pointer-events: none; }
 .map-body { position: relative; }
 /* the drawer: over the map's right edge, under GM only and ⚙, sliding away to its tab (so the map never changes size) */
 .map-routes { position: absolute; top: 56px; right: 0; bottom: 0; z-index: 1001; width: 300px; display: flex; flex-direction: column;

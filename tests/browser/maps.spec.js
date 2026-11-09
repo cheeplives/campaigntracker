@@ -1480,6 +1480,54 @@ test("Map page: moving the main group offers to log it on the clock's shift, by 
   expectNoErrors(errors);
 });
 
+test("Map page: a pin that opens another map wears a badge, on the map, in the list of locations and in the legend", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps badge");
+  const region = await mapWithPicture(page, cid);
+  const town = (await api(page, "map_save", { name: "Bree" }, cid)).json.map.id;
+  await api(page, "pin_save", { map_id: region, x: 100, y: 80, kind: "note", label: "Bree town", child_map_id: town }, cid);
+  await api(page, "pin_save", { map_id: region, x: 200, y: 120, kind: "note", label: "Weathertop" }, cid);
+  await page.goto(`index.html#/c/${cid}/maps/${region}`);
+  await expect(page.locator(".map-pin.opens-map")).toHaveCount(1);
+  await expect(page.locator(".map-pin.opens-map")).toContainText("Bree town");
+  await expect(page.locator(".map-pin.opens-map .map-opens-badge")).toBeVisible();
+  await expect(page.locator(".map-pin", { hasText: "Weathertop" }).locator(".map-opens-badge")).toHaveCount(0);
+  await expect(page.locator(".map-place-row", { hasText: "Bree town" }).locator(".map-opens-badge")).toHaveCount(1);
+  await expect(page.locator(".map-place-row", { hasText: "Weathertop" }).locator(".map-opens-badge")).toHaveCount(0);
+  await expect(page.locator(".map-legend")).toContainText("Opens a map");
+  expectNoErrors(errors);
+});
+
+test("Map page: a group standing on a pin steps aside, so the pin and the group can each be clicked", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Party on pin");
+  const mid = await mapWithPicture(page, cid);
+  await notePins(page, cid, mid, ["Burnt Ford"]);
+  const pin = (await getMap(page, cid, mid)).json.pins[0];
+  await page.goto(`index.html#/c/${cid}/maps/${mid}`);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Party is here" }).click();
+  const party = page.locator(".map-party");
+  await expect(party).toHaveClass(/\bbeside\b/);
+  // it stands where it was put, only drawn beside the pin
+  const g = (await api(page, "groups", undefined, cid)).json.groups[0];
+  expect([Number(g.x), Number(g.y)]).toEqual([pin.x, pin.y]);
+  const card = page.locator(".leaflet-popup");
+  await expect(card).toHaveCount(0);
+  await page.locator(".map-pin", { hasText: "Burnt Ford" }).locator(".map-marker-icon").click();
+  await expect(card).toContainText("Burnt Ford");
+  await card.locator(".leaflet-popup-close-button").click();
+  await expect(card).toHaveCount(0);
+  await party.locator(".map-marker-icon").click();
+  await expect(card).toContainText("The main group");
+  // moved off the pin, it is drawn where it stands again
+  await api(page, "group_move", { id: g.id, map_id: mid, x: 250, y: 160 }, cid);
+  await page.reload();
+  await expect(page.locator(".map-party")).toBeVisible();
+  await expect(page.locator(".map-party")).not.toHaveClass(/\bbeside\b/);
+  expectNoErrors(errors);
+});
+
 test("Sessions: a session's page shows the pinned places it names, on their map", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Session places");
