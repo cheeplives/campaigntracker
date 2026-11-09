@@ -109,6 +109,8 @@ function upgrade_steps(): array {
             'Added the Report (!) button to the top bar, and a Reports tab on Site Admin to read, resolve, send to GitHub or delete what people report.'],
         ['041_shift_action_characters.sql', fn(PDO $p) => db_has_table($p, 'shift_actions') && !db_has_column($p, 'shift_actions', 'character_id'),
             'Characters with no player who travel with the party now get their own action on every shift At the Table.'],
+        ['042_pip_caps.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'pip_caps'),
+            'A character sheet\'s dot and box tracks can now have the character\'s own maximum: the dots past it are greyed out and can\'t be ticked.'],
         ['043_character_portraits.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'portrait_id'),
             'A character can now have a portrait, picked or uploaded on its sheet and shown on its card, its sheet and its Play view.'],
     ];

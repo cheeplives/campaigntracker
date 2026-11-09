@@ -862,6 +862,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   field_values MEDIUMTEXT NOT NULL,
   field_stamps MEDIUMTEXT NOT NULL,
   hidden TEXT NOT NULL,
+  pip_caps TEXT NULL,                                -- this character's own maximum on its dot/box tracks (042): {field key: pips}; NULL or a key left out: all of them
   version INT UNSIGNED NOT NULL DEFAULT 1,           -- the settings' (name, kind, owner, hidden) version; values save field by field
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
