@@ -478,10 +478,15 @@ test("Settings → Dice at the table: the GM turns off players' free rolls and o
   const perrors = watchErrors(pp);
   await page.goto(`index.html#/c/${cid}/settings/dice`);
   const form = page.locator(".dice-settings");
-  await form.locator("#dice-game").selectOption("pf2");
-  await form.getByRole("checkbox", { name: "Players can make free rolls" }).uncheck();
-  await form.getByRole("checkbox", { name: "Players see the odds" }).uncheck();
-  await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+  // filled in again if the page draws itself afresh meanwhile (a campaign change check can redraw it in Firefox)
+  await expect(async () => {
+    await form.locator("#dice-game").selectOption("pf2");
+    await form.getByRole("checkbox", { name: "Players can make free rolls" }).setChecked(false, { timeout: 2000 });
+    await form.getByRole("checkbox", { name: "Players see the odds" }).setChecked(false, { timeout: 2000 });
+    await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+    await expect(form.locator("#dice-system")).toHaveValue("d20", { timeout: 1000 });
+    await expect(form.getByRole("checkbox", { name: "Players can make free rolls" })).not.toBeChecked({ timeout: 1000 });
+  }).toPass({ timeout: 20000 });
   await form.getByRole("button", { name: "Save dice settings" }).click();
   await expect(page.locator("#toast")).toContainText("Saved");
   const set = (await api(pp, "dice_rolls", undefined, cid)).json.settings;
