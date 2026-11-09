@@ -1201,6 +1201,15 @@ const MapsTab = (() => {
       if (!await ctx.confirmDialog(`Delete the map "${map.name}", with its pins and routes?`, { ok: 'Delete', danger: true })) return;
       try { await post('map_delete', { id: map.id }, cid); toast('Map deleted'); await ctx.reloadCampaign(); location.hash = `#/c/${cid}/maps`; } catch (err) { toast(err.message, true); }
     }, 'danger') : null;
+    // wipe a map's pins and/or routes in one go (the Encyclopedia entries and Events the pins pointed to stay)
+    const clearAll = (what, label) => btn(label, async () => {
+      const n = what.pins ? pins.length : routes.length;
+      if (!n) { toast(`This map has no ${what.pins ? 'pins' : 'routes'}`); return; }
+      const word = what.pins ? (n === 1 ? 'pin' : 'pins') : (n === 1 ? 'route' : 'routes');
+      if (!await ctx.confirmDialog(`Delete all ${n} ${word} on "${map.name}"?${what.pins ? ' Their Encyclopedia entries and Events stay.' : ''}`, { ok: `Delete ${n} ${word}`, danger: true })) return;
+      try { await post('map_clear', { map_id: map.id, ...what }, cid); await refresh(); toast(`Deleted ${n} ${word}`); } catch (err) { toast(err.message, true); }
+    }, 'danger', what.pins ? 'Remove every pin from this map, players\' notes too' : 'Remove every route from this map');
+    const clearPins = gm ? clearAll({ pins: true }, 'Delete all pins…') : null, clearRoutes = gm ? clearAll({ routes: true }, 'Delete all routes…') : null;
     const swap = gm ? el('label', { class: 'button file-add', 'data-tip': 'Replace the map\'s picture' }, el('input', { type: 'file', accept: PICTURES, class: 'file-input', 'aria-label': 'Change the map picture',
       onchange: async ev => {
         const f = ev.target.files[0];
@@ -1312,8 +1321,8 @@ const MapsTab = (() => {
     const off = new AbortController();   // the page's own listeners on the document, taken down when it is left
     window.addEventListener('hashchange', () => off.abort(), { once: true });
     // KIT.menu closes it when an item is picked, on a click anywhere else and on Escape
-    const gear = gm ? KIT.menu({ label: '⚙', ariaLabel: 'Map settings', tip: 'Scale, scanning, export, and changing, renaming or deleting this map',
-      cls: 'map-gear', listCls: 'map-gear-menu', items: [scaleBtn, opacityBox, scanBtn, exportBtn, el('hr'), swap, btn('Rename', rename), el('hr'), del] }) : null;
+    const gear = gm ? KIT.menu({ label: '⚙', ariaLabel: 'Map settings', tip: 'Scale, scanning, export, and changing, renaming, clearing or deleting this map',
+      cls: 'map-gear', listCls: 'map-gear-menu', items: [scaleBtn, opacityBox, scanBtn, exportBtn, el('hr'), swap, btn('Rename', rename), el('hr'), clearPins, clearRoutes, del] }) : null;
     gear?.querySelector('input[type=file]').addEventListener('change', () => { gear.open = false; });
     // keys, until the page is left: P Add pin, L Quick label, M Measure/Route, T Place party, Escape out of what is open.
     // Not while typing, nor while a dialog is open over the page.

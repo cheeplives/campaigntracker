@@ -1168,7 +1168,7 @@ test("Map page: setup lives in the Map settings menu, in order, and players have
   await page.getByLabel("Map settings").click();
   const menu = page.locator(".map-gear-menu");
   const names = await menu.locator("button:visible, label:visible").allTextContents();
-  expect(names.map(t => t.trim())).toEqual(["Set scale…", "Scan for names…", "Export…", "Change picture", "Rename", "Delete map"]);   // no grid yet, so no opacity slider
+  expect(names.map(t => t.trim())).toEqual(["Set scale…", "Scan for names…", "Export…", "Change picture", "Rename", "Delete all pins…", "Delete all routes…", "Delete map"]);   // no grid yet, so no opacity slider
   await menu.getByRole("button", { name: "Scale" }).click();
   await expect(page.getByRole("dialog", { name: "Set the scale" })).toBeVisible();
   await expect(menu).toBeHidden();
