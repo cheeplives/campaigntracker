@@ -1324,7 +1324,7 @@
     };
     draw();
     const folds = legendFolds();
-    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
+    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), legendQuick(), TAB_GROUPS.map(([g, gTip, ts]) => {
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
@@ -2783,6 +2783,97 @@
     }));
     return el('div', { class: 'shiftnotes' }, list.length ? el('span', { class: 'lbl' }, 'Notes') : null, el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
+
+  // Recent and Pinned in the Legend: each campaign's own choice, off unless a GM turns them on in Settings. Recent is the
+  // last five things you opened, kept in this browser. Pinned is the GMs' short list for tonight (an entry, a tome, a session,
+  // a map), kept in the campaign's settings, so everyone in the campaign sees it; entries a member can't see are left out.
+  const quickOn = k => !!settings()[`legend_${k}`];
+  const RECENT_MAX = 5;
+  const recentKey = () => `chronicle:recent:${S.user?.id}:${S.camp?.id}`;
+  const recentList = () => { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch { return []; } };
+  const QUICK_KIND = { encyclopedia: ['entry', '📖'], library: ['tome', '📜'], sessions: ['session', '📝'], maps: ['map', '🗺'], day: ['day', '📅'] };
+  function noteRecent() {
+    if (!S.camp || !quickOn('recent')) return;
+    const m = location.hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
+    if (!m || Number(m[1]) !== S.camp.id) return;
+    const label = m[2] === 'day' ? E.fmtDate(cal(), Number(m[3]), { noWeekday: true })
+      : (app().querySelector('.enc-detail h2, .map-head h2, main h2')?.textContent || '').trim();
+    if (!label) return;
+    const list = [{ hash: location.hash, label, icon: QUICK_KIND[m[2]][1] }, ...recentList().filter(x => x.hash !== location.hash)].slice(0, RECENT_MAX);
+    try { localStorage.setItem(recentKey(), JSON.stringify(list)); } catch { /* private mode: no Recent */ }
+  }
+  const pinsOf = () => (Array.isArray(settings().legend_pins) ? settings().legend_pins : []);
+  const pinHref = p => `#/c/${S.camp.id}/${{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]}/${p.id}`;
+  /** A pin's name as this member may see it, or null to leave it out (an entry that is GM only, or gone). */
+  const pinLabel = p => (p.kind === 'entry' ? S.encyclopedia.find(e => e.id === p.id)?.name || null : p.name || null);
+  /** 📌 Pin / Unpin for a GM, when Pinned is on: puts the thing in (or takes it out of) the Legend's Pinned list. */
+  function pinButton(p) {
+    if (!isGM() || !quickOn('pinned')) return null;
+    const on = pinsOf().some(x => x.kind === p.kind && x.id === p.id);
+    const b = btn(on ? '📌 Unpin' : '📌 Pin', async () => {
+      const pins = on ? pinsOf().filter(x => !(x.kind === p.kind && x.id === p.id)) : [...pinsOf(), { kind: p.kind, id: p.id, ...(p.kind === 'entry' ? {} : { name: p.name }) }].slice(-8);
+      try { await post('campaign_update', { settings: { ...settings(), legend_pins: pins } }, S.camp.id); settings().legend_pins = pins; closePeek(); route(); }
+      catch (err) { toast(err.message, true); }
+    }, 'small pin-btn', on ? 'Take this out of the Pinned list in the Legend' : 'Put this in the Pinned list at the top of the Legend, for everyone in the campaign');
+    return b;
+  }
+  /** The Legend's Pinned and Recent groups (nothing when both are off or empty). */
+  function legendQuick() {
+    const quick = (cls, title, items) => items.length ? [el('span', { class: `legend-quick-h ${cls}` }, title),
+      items.map(([href, icon, label]) => el('a', { href, class: 'legend-quick', 'data-tip': label }, el('span', { class: 'lq-icon', 'aria-hidden': 'true' }, icon), el('span', { class: 'lq-name' }, label)))] : [];
+    const pins = quickOn('pinned') ? pinsOf().map(p => [pinHref(p), QUICK_KIND[{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]][1], pinLabel(p)]).filter(x => x[2]) : [];
+    const here = location.hash;
+    const recent = quickOn('recent') ? recentList().filter(x => x.hash !== here && x.hash.startsWith(`#/c/${S.camp.id}/`)).slice(0, RECENT_MAX).map(x => [x.hash, x.icon, x.label]) : [];
+    return [...quick('pinned', '📌 Pinned', pins), ...quick('recent', 'Recent', recent)].flat();
+  }
+
+  // Peek: a click (or tap) on an Encyclopedia name written in a note opens a small card about it on the spot, with Open,
+  // Show on map and Pin, instead of leaving the page you are running. Ctrl/⌘-click, a middle click or the card's Open still go there.
+  let peekCard = null;
+  const closePeek = () => { if (!peekCard) return; peekCard._from?.removeAttribute('aria-expanded'); peekCard.remove(); peekCard = null; document.removeEventListener('pointerdown', peekOutside, true); document.removeEventListener('keydown', peekKeys, true); };
+  const peekOutside = ev => { if (peekCard && !peekCard.contains(ev.target) && !ev.target.closest?.('a.enc-link')) closePeek(); };
+  const peekKeys = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); const a = peekCard?._from; closePeek(); a?.focus(); } };
+  function openPeek(a, e) {
+    closePeek(); hideTip();
+    const cat = encCat(e.category);
+    const href = `#/c/${S.camp.id}/encyclopedia/${e.id}`;
+    const pins = (S.mapIndex || []).filter(p => p.entry_id === e.id);
+    const card = el('div', { class: 'peek surface-float', role: 'dialog', 'aria-label': e.name },
+      el('div', { class: 'peek-head' },
+        e.pic ? el('img', { class: 'peek-pic', src: e.pic, alt: '' }) : el('div', { class: 'peek-pic peek-icon', 'aria-hidden': 'true' }, cat ? cat[2] : '📖'),
+        el('div', {}, el('a', { class: 'peek-name', href, onclick: closePeek }, e.name),
+          el('div', { class: 'etags' }, cat ? el('span', { class: 'chip enc-cat' }, `${cat[2]} ${cat[1]}`) : null, e.is_secret ? secretTag() : null))),
+      el('p', { class: e.preview ? 'peek-text' : 'peek-text muted' }, e.preview || 'Nothing written about it yet.'),
+      el('div', { class: 'row peek-acts' },
+        el('a', { class: 'button small primary', href, onclick: closePeek }, 'Open'),
+        pins.length ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/maps/${pins[0].map_id}?pin=${pins[0].pin_id}`, onclick: closePeek,
+          'data-tip': `Open ${pins[0].map_name} at its pin` }, '🗺 Show on map') : null,
+        quickOn('pinned') ? pinButton({ kind: 'entry', id: e.id }) : null));
+    card._from = a;
+    a.setAttribute('aria-expanded', 'true');
+    document.body.append(card);
+    const r = a.getBoundingClientRect(), w = card.offsetWidth;
+    const left = Math.max(8, Math.min(r.left + scrollX - 16, scrollX + document.documentElement.clientWidth - w - 8));
+    const below = r.bottom + card.offsetHeight + 12 < innerHeight || r.top < card.offsetHeight + 12;
+    card.style.left = `${left}px`;
+    card.style.top = `${(below ? r.bottom + 8 : r.top - card.offsetHeight - 8) + scrollY}px`;
+    card.classList.toggle('above', !below);
+    card.style.setProperty('--peek-arrow', `${Math.max(14, Math.min(w - 26, r.left + scrollX - left + Math.min(r.width / 2, 40)))}px`);
+    peekCard = card;
+    document.addEventListener('pointerdown', peekOutside, true);
+    document.addEventListener('keydown', peekKeys, true);
+    card.querySelector('.peek-acts a')?.focus({ preventScroll: true });
+  }
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest?.('a.enc-link');
+    if (!a || PANEL || ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey || a.closest('[contenteditable="true"], .peek')) return;
+    const m = (a.getAttribute('href') || '').match(/^#\/c\/(\d+)\/encyclopedia\/(\d+)$/);
+    const e = m && Number(m[1]) === S.camp?.id ? (S.encyclopedia || []).find(x => x.id === Number(m[2])) : null;
+    if (!e) return;
+    ev.preventDefault();
+    if (peekCard?._from === a) closePeek(); else openPeek(a, e);
+  });
+  addEventListener('hashchange', closePeek);
 
   /** "📍 On the map: <map>" links, one per pin this member can see that points at entry or event `id` (key: 'entry_id' or 'event_id'). */
   const mapLinks = (key, id) => {
@@ -4302,6 +4393,7 @@
         el('h2', {}, t.title),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
+          pinButton({ kind: 'tome', id: t.id, name: t.title }),
           scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
           isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
           canDelete ? btn('Delete', async () => {
@@ -6535,7 +6627,7 @@
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
-    tagsOf, tip, tipped, toast, today, trail, copyButton, vs
+    tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
@@ -6554,7 +6646,7 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); keepPlace(); }));
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); keepPlace(); noteRecent(); }));
   }
   // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
   // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.

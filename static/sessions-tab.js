@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, trail, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, trail, pinButton, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -129,7 +129,7 @@
       document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
       const bar = el('div', { class: 'row sess-bar' }, head[1],
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
-        el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, more);
+        el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, pinButton({ kind: 'session', id: s.id, name: sessionName(s) }), more);
 
       // --- the notes: one text box, saved as it is typed (notesEntry in app.js); Build draft under it writes the summary
       const notesHead = el('h3', {}, 'Notes', tip('Your notes from the game, a line each. They save as you type. Build draft writes the summary from them. The ? button under the box lists what each mark does'));

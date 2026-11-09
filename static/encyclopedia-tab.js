@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { DOWNTIME_KINDS, E, trail, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
+    const { DOWNTIME_KINDS, E, trail, pinButton, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
@@ -470,6 +470,7 @@
             isGM() && typeof Sheets !== 'undefined' && (ch || !e.category || e.category === 'person')
               ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
             btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
+            e.is_secret ? null : pinButton({ kind: 'entry', id: e.id }),
             ...entryTools(e, ctx),
             deleteEntryBtn(e))),
         mapLinks('entry_id', e.id),
