@@ -210,7 +210,7 @@ test("Map pins: the badge follows the campaign's genre, and the pin card is slim
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(page.locator(".map-stage")).toHaveClass(/map-genre-(fantasy|modern|scifi)/);
   const pin = page.locator(".map-pin", { hasText: "Ford" });
-  const badge = async () => pin.evaluate(el => getComputedStyle(el, "::before").backgroundColor);
+  const badge = async () => pin.evaluate(el => getComputedStyle(el.querySelector(".map-marker-icon")).filter);
   const before = await badge();
   await page.locator(".map-stage").evaluate(el => { el.className = "map-stage map-genre-fantasy"; });
   const fantasy = await badge();

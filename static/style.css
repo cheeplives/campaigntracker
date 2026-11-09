@@ -1288,24 +1288,18 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-stage.labels-on .map-marker-label, .map-stage.zoomed-in:not(.labels-off) .map-marker-label, .map-marker:hover .map-marker-label,
 .map-marker-box:focus-visible .map-marker-label, .map-marker.selected .map-marker-label, .map-party .map-marker-label { opacity: 1; }
 .map-marker.secret .map-marker-label { border-style: dashed; }
-/* a pin is a small flat badge with its glyph in one ink, in the style of the campaign's genre (the stage's map-genre-*):
-   parchment and ink for fantasy, a lit panel for sci-fi, a plain map-app disc for modern. A pin's own colour fills or inks it. */
-.map-genre-fantasy { --badge-bg: #eadcb8; --badge-edge: #4b3320; --badge-radius: 50%; --badge-shadow: 0 1px 2px rgb(0 0 0 / .55), inset 0 0 0 1.5px #c9a24f;
-  --glyph-filter: grayscale(1) sepia(1) saturate(.8) brightness(.42) contrast(1.3); }
-.map-genre-fantasy .map-pin.has-colour { --badge-bg: color-mix(in srgb, var(--pin-colour) 58%, #eadcb8); --badge-edge: color-mix(in srgb, var(--pin-colour) 35%, #2a1a0c); }
-.map-genre-modern { --badge-bg: #fff; --badge-edge: #2d333b; --badge-radius: 50%; --badge-shadow: 0 1px 3px rgb(0 0 0 / .45);
-  --glyph-filter: grayscale(1) brightness(.3) contrast(1.4); }
-.map-genre-modern .map-pin.has-colour { --badge-bg: var(--pin-colour); --badge-edge: color-mix(in srgb, var(--pin-colour) 55%, #000); --glyph-filter: grayscale(1) brightness(0) invert(1) drop-shadow(0 0 1px rgb(0 0 0 / .5)); }
-.map-genre-scifi { --badge-bg: #0d1b26; --badge-edge: #38d6ff; --badge-radius: 32%; --badge-shadow: 0 0 6px rgb(56 214 255 / .5);
-  --glyph-filter: grayscale(1) brightness(1.8) sepia(1) hue-rotate(150deg) saturate(4); }
-.map-genre-scifi .map-pin.has-colour { --badge-edge: var(--pin-colour); --badge-shadow: 0 0 7px color-mix(in srgb, var(--pin-colour) 70%, transparent); }
-.map-pin::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(var(--marker-size) * .9); height: calc(var(--marker-size) * .9); transform: translate(-50%, -50%);
-  border-radius: var(--badge-radius, 50%); background: var(--badge-bg, #fff); border: 1.5px solid var(--badge-edge, #333); box-shadow: var(--badge-shadow, none); box-sizing: border-box;
-  transition: transform .12s, box-shadow .12s; }
-.map-pin .map-marker-icon, .map-pin .map-marker-icon.tinted { position: relative; width: auto; height: auto; font-size: calc(var(--marker-size) * .5); color: inherit; filter: var(--glyph-filter, none); }
-.map-pin .map-marker-icon.tinted::before, .map-pin .map-marker-icon.tinted::after { content: none; }
-.map-pin:hover::before, .map-pin.selected::before { transform: translate(-50%, -50%) scale(1.12); box-shadow: 0 0 0 2px var(--accent), var(--badge-shadow, none); }
-.map-pin.secret::before { border-style: dashed; }
+/* a pin is just its glyph, inked and haloed in the style of the campaign's genre (the stage's map-genre-*), with no disc behind it:
+   ink on parchment for fantasy, plain dark on white for modern, a lit cyan for sci-fi. A pin's own colour inks it instead. */
+.map-genre-fantasy { --glyph-filter: grayscale(1) sepia(1) saturate(.8) brightness(.42) contrast(1.3); --halo: #f3e8c8; }
+.map-genre-modern { --glyph-filter: grayscale(1) brightness(.3) contrast(1.4); --halo: #fff; }
+.map-genre-scifi { --glyph-filter: grayscale(1) brightness(1.8) sepia(1) hue-rotate(150deg) saturate(4); --halo: #06121b; }
+.map-pin .map-marker-icon, .map-pin .map-marker-icon.tinted { position: relative; width: auto; height: auto; font-size: calc(var(--marker-size) * .75); color: inherit; transition: transform .12s;
+  filter: var(--glyph-filter, none) drop-shadow(0 0 1px var(--halo, #fff)) drop-shadow(0 0 2px var(--halo, #fff)) drop-shadow(0 1px 2px rgb(0 0 0 / .45)); }
+.map-pin.has-colour .map-marker-icon.tinted { filter: drop-shadow(0 0 1px var(--halo, #fff)) drop-shadow(0 0 2px var(--halo, #fff)) drop-shadow(0 1px 2px rgb(0 0 0 / .45)); }
+.map-pin:hover .map-marker-icon, .map-pin.selected .map-marker-icon { transform: scale(1.15); }
+.map-pin.selected .map-marker-icon { filter: var(--glyph-filter, none) drop-shadow(0 0 0 var(--accent)) drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--halo, #fff)); }
+.map-pin.selected.has-colour .map-marker-icon.tinted { filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--halo, #fff)); }
+.map-pin.secret .map-marker-icon { opacity: .8; }
 .map-party img.map-marker-icon { border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
 .map-body { position: relative; }
 /* the drawer: over the map's right edge, under GM only and ⚙, sliding away to its tab (so the map never changes size) */
