@@ -27,8 +27,11 @@ test("a whole GM-only entry is revealed in one click, with or without a line on 
   expect(await seen(pp, a)).toBeUndefined();
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${a}`);
-  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Reveal entry waits in the entry's ⋯ menu
-  await page.getByRole("button", { name: "🔓 Reveal entry" }).click();
+  // Reveal entry waits in the entry's ⋯ menu (the page may be drawn again once after it opens, closing the menu: open it until it stays)
+  await expect(async () => {
+    await page.locator(".enc-detail").getByLabel(/^More for /).click({ timeout: 2000 });
+    await page.getByRole("button", { name: "🔓 Reveal entry" }).click({ timeout: 2000 });
+  }).toPass();
   await page.getByRole("button", { name: "Reveal and log it today" }).click();
   await expect(page.getByText("Revealed, and logged on today's events")).toBeVisible();
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // public now: the menu no longer offers it
@@ -42,8 +45,11 @@ test("a whole GM-only entry is revealed in one click, with or without a line on 
   expect(events.map(e => [e.title, e.tags.map(t => t.name)])).toEqual([["Revealed: Black Barrow", ["Revealed"]]]);
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${b}`);
-  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Reveal entry waits in the entry's ⋯ menu
-  await page.getByRole("button", { name: "🔓 Reveal entry" }).click();
+  // Reveal entry waits in the entry's ⋯ menu (the page may be drawn again once after it opens, closing the menu: open it until it stays)
+  await expect(async () => {
+    await page.locator(".enc-detail").getByLabel(/^More for /).click({ timeout: 2000 });
+    await page.getByRole("button", { name: "🔓 Reveal entry" }).click({ timeout: 2000 });
+  }).toPass();
   await page.getByRole("button", { name: "Just reveal" }).click();
   await expect(page.getByText("Revealed to the players")).toBeVisible();
   await page.locator(".enc-detail").getByLabel(/^More for /).click();
