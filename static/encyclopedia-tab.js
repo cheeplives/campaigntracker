@@ -523,8 +523,16 @@
           ...entryTools(e, ctx)], deleteEntryBtn(e)));
       const portrait = pic ? el(ch?.sheet_visible ? 'a' : 'div', { class: 'enc-portrait' + (ch || e.category === 'person' ? ' tall' : ''), href: ch?.sheet_visible ? sheetHref : null, 'data-tip': ch?.sheet_visible ? 'Open the character sheet' : null },
         el('img', { src: pic, alt: ch?.sheet_visible ? `${e.name}'s portrait` : '' })) : null;
-      const head = el('header', { class: 'enc-hero' + (portrait ? ' has-pic' : '') },
-        portrait,
+      // Behind the text (the "behind" class, style.css): on a wide entry the portrait sits faded down the right of the
+      // head, under the buttons and the line ends; its tab at the left edge, hovered or pressed, brings it forward whole.
+      // Pressed again (or Escape) tucks it back. Drop the class and the tab to go back to the portrait in its own column.
+      const peek = portrait ? el('button', { type: 'button', class: 'enc-portrait-peek', 'aria-label': 'Show the portrait', 'aria-pressed': 'false',
+        'data-tip': 'Bring the portrait forward; press again to tuck it back',
+        onclick: ev => { const on = head.classList.toggle('portrait-out'); ev.currentTarget.setAttribute('aria-pressed', String(on)); },
+        onkeydown: ev => { if (ev.key === 'Escape' && head.classList.contains('portrait-out')) { ev.stopPropagation(); ev.currentTarget.click(); } } },
+        el('span', { 'aria-hidden': 'true' }, '‹')) : null;
+      const head = el('header', { class: 'enc-hero' + (portrait ? ' has-pic behind' : '') },
+        portrait, peek,
         el('div', { class: 'enc-hero-body' },
           el('div', { class: 'enc-hero-head' },
             el('div', { class: 'enc-kicker enc-kind' }, entryKind(e), e.is_secret ? secretTag() : null),

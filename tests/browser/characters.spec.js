@@ -716,8 +716,19 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await expect(p1.locator(".sheet-head img.character-pic")).toBeVisible();
   const first = sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim();
   expect(Number(first)).toBeGreaterThan(0);
-  // the picture went on the character's Encyclopedia entry
+  // the picture went on the character's Encyclopedia entry, whose page leads with it: faded behind the head, forward
+  // while its tab is pressed
   expect(sql(`SELECT parent_id FROM attachments WHERE id=${first}`).trim()).toBe(String(c.entry_id));
+  await p1.setViewportSize({ width: 1280, height: 800 });
+  await p1.goto(`index.html#/c/${cid}/encyclopedia/${c.entry_id}`);
+  const hero = p1.locator(".enc-hero.has-pic");
+  await expect(hero.locator(".enc-portrait img")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+  const peek = hero.getByRole("button", { name: "Show the portrait" });
+  await peek.click();
+  await expect(hero).toHaveClass(/portrait-out/);
+  await expect(peek).toHaveAttribute("aria-pressed", "true");
+  await peek.click();
+  await expect(hero).not.toHaveClass(/portrait-out/);
 
   await p1.goto(`index.html#/c/${cid}/characters`);
   await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
