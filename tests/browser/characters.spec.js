@@ -586,6 +586,7 @@ test("Linking a member to a Person entry with no sheet makes none by default: th
   const { cid, gm, tpl, ids } = await party(page, browser);
   const entry = (await api(gm, "entry_save", { name: "Nessa", category: "person", notes: "<p>A bard.</p>" }, cid)).json.id;
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${entry}`);
+  await gm.locator(".enc-detail").getByLabel(/^More for /).click();   // Link a member waits in the entry's ⋯ menu
   await gm.getByRole("button", { name: "Link a member…" }).click();
   const template = gm.getByLabel("Template", { exact: true });
   await expect(template).toHaveValue("");   // None, the first choice
@@ -614,6 +615,7 @@ test("Encyclopedia: a GM links a Person entry to a member from its page or its e
   // an entry with no sheet: picking the member and a template makes the sheet, theirs and active
   const entry = (await api(gm, "entry_save", { name: "Mira", category: "person", notes: "<p>A scout.</p>" }, cid)).json.id;
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${entry}`);
+  await gm.locator(".enc-detail").getByLabel(/^More for /).click();   // Link a member waits in the entry's ⋯ menu
   await gm.getByRole("button", { name: "Link a member…" }).click();
   await gm.getByLabel("Member", { exact: true }).selectOption(String(ids.p2));
   await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
@@ -629,6 +631,7 @@ test("Encyclopedia: a GM links a Person entry to a member from its page or its e
   // (the first link's page may still be drawn again once, closing an editor opened too soon: open it until it stays)
   await expect(async () => {
     if (!await gm.locator(".enc-form").count()) await gm.getByRole("button", { name: "Edit", exact: true }).click();
+    await gm.locator(".enc-form").getByLabel(/^More for /).click({ timeout: 2000 });
     await gm.locator(".enc-form").getByRole("button", { name: "Link a member…" }).click({ timeout: 2000 });
   }).toPass();
   await expect(gm.getByLabel("Template", { exact: true })).toHaveCount(0);
@@ -650,9 +653,12 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   const { cid, gm, tpl } = await party(page, browser);
   const blank = (await api(gm, "entry_save", { name: "Hoffmann", category: "person" }, cid)).json.id;
   // a blank entry opens straight in its editor: the button is there, and only while the Category is Person (or none);
-  // the editor has everything the page has: Copy as handout, Scan and the connections
+  // the editor has everything the page has, behind its ⋯ menu: Copy as handout, Scan and Add character sheet, and the connections
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${blank}`);
   const form = gm.locator(".enc-form");
+  const more = form.locator(".enc-actions .kit-menu");
+  const openMore = async () => { if (!await more.evaluate(d => d.open)) await more.locator("summary").click(); };
+  await openMore();
   await expect(form.getByRole("button", { name: "📋 Copy as handout" })).toBeVisible();
   await expect(form.getByRole("button", { name: "🔍 Scan" })).toBeVisible();
   await expect(form.getByRole("heading", { name: "Connections" })).toBeVisible();
@@ -661,6 +667,7 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   await gm.locator("select[name=category]").selectOption("location");
   await expect(add).toBeHidden();
   await gm.locator("select[name=category]").selectOption("person");
+  await openMore();
   await add.click();
   await gm.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
   await gm.getByRole("button", { name: "Add sheet" }).click();
@@ -668,6 +675,7 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   // with notes it opens on its page, which has the button too; once it has a sheet, both say Open sheet
   const written = (await api(gm, "entry_save", { name: "Greta", category: "person", notes: "<p>Runs the ferry.</p>" }, cid)).json.id;
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${written}`);
+  await gm.locator(".enc-detail").getByLabel(/^More for /).click();
   await expect(gm.getByRole("button", { name: "Add character sheet" })).toBeVisible();
   await gm.goto(`index.html#/c/${cid}/encyclopedia/${blank}`);
   await expect(gm.getByRole("link", { name: "Open sheet" })).toBeVisible();
@@ -710,8 +718,19 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await expect(p1.locator(".sheet-head img.character-pic")).toBeVisible();
   const first = sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim();
   expect(Number(first)).toBeGreaterThan(0);
-  // the picture went on the character's Encyclopedia entry
+  // the picture went on the character's Encyclopedia entry, whose page leads with it: faded behind the head, forward
+  // while its tab is pressed
   expect(sql(`SELECT parent_id FROM attachments WHERE id=${first}`).trim()).toBe(String(c.entry_id));
+  await p1.setViewportSize({ width: 1280, height: 800 });
+  await p1.goto(`index.html#/c/${cid}/encyclopedia/${c.entry_id}`);
+  const hero = p1.locator(".enc-hero.has-pic");
+  await expect(hero.locator(".enc-portrait img")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+  const peek = hero.getByRole("button", { name: "Show the portrait" });
+  await peek.click();
+  await expect(hero).toHaveClass(/portrait-out/);
+  await expect(peek).toHaveAttribute("aria-pressed", "true");
+  await peek.click();
+  await expect(hero).not.toHaveClass(/portrait-out/);
 
   await p1.goto(`index.html#/c/${cid}/characters`);
   await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));

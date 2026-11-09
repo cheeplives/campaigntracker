@@ -393,14 +393,15 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => character_pic($c, $isGm, $pics), 'portrait_id' => $c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']) ? (int)$c['portrait_file'] : null,
         'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'party_out' => (bool)(int)$c['party_out'], 'owner_is_player' => $c['owner_role'] === 'player'];
 }
-/** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
+/** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary, pic}: the
  * Summary fields as this member may see them (none when the sheet is hidden from them). */
 function characters_by_entry(int $cid, bool $isGm): array {
     $out = [];
     foreach (character_rows($cid, $isGm) as $c) {
         $card = character_card($c, $isGm);
         $out[$card['entry_id']] = ['id' => $card['id'], 'kind' => $card['kind'], 'sheet_visible' => $card['sheet_visible'],
-            'owner' => $card['owner'], 'game' => $card['template']['game'], 'summary' => $card['summary']];
+            'owner' => $card['owner'], 'game' => $card['template']['game'], 'summary' => $card['summary'],
+            'pic' => $card['pic']];   // the portrait picked on the sheet (null: the entry's first picture stands in)
     }
     return $out;
 }

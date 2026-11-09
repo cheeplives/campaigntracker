@@ -423,17 +423,34 @@
         try { await post('entry_delete', { id: e.id }, S.camp.id); location.hash = `#/c/${S.camp.id}/encyclopedia`; } catch (err) { toast(err.message, true); }
       }, 'small danger', 'Delete this entry. Its name stays in the text it was found in');
     }
-    /** The character card: the whole card opens the sheet; nothing of it for members the sheet is hidden from. */
+    /** The character strip under the name: PC or NPC, who plays it, the game and its Summary fields, the whole strip
+     * opening the sheet; nothing of it for members the sheet is hidden from. (The portrait is the page's, above.) */
     function characterCard(e) {
       const ch = S.encChars?.[e.id] || null;
       if (!ch?.sheet_visible) return null;
-      const pic = (e.files || []).find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null;
+      const facts = (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object');
       return el('a', { class: 'card enc-character', href: `#/c/${S.camp.id}/characters/${ch.id}`, 'data-tip': 'Open the character sheet' },
-        pic ? el('img', { src: pic, alt: '', class: 'character-pic' }) : null,
-        el('div', {},
-          el('div', { class: 'row' }, el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
-            ch.kind === 'pc' && ch.owner ? el('span', {}, `Played by ${ch.owner.name}`) : null, el('span', { class: 'muted small' }, ch.game)),
-          (ch.summary || []).filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small' }, `${f.label}: ${f.value}`))));
+        el('span', { class: `chip kind-${ch.kind}` }, ch.kind === 'npc' ? 'NPC' : 'PC'),
+        ch.kind === 'pc' && ch.owner ? el('span', {}, `Played by ${ch.owner.name}`) : null,
+        el('span', { class: 'muted small' }, ch.game),
+        facts.map(f => el('span', { class: 'small enc-fact' }, `${f.label}: ${f.value}`)));
+    }
+    /** What the page calls the entry, over its name: its character's kind, else its Category. */
+    function entryKind(e) {
+      const ch = S.encChars?.[e.id] || null;
+      if (ch) return ch.kind === 'pc' ? 'Player character' : 'Non-player character';
+      return encCat(e.category)?.[1] || 'Entry';
+    }
+    /** The picture the page leads with: the portrait picked on the character's sheet, else the entry's first picture. */
+    function entryPic(e) {
+      const ch = S.encChars?.[e.id] || null;
+      return ch?.pic || e.pic || (e.files || []).find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null;
+    }
+    /** The ⋯ beside an entry's everyday buttons (Open sheet, Edit): the rarer actions wait behind it, with Delete last. */
+    function entryMenu(e, items, last = null) {
+      const list = clean(items);
+      if (last) list.push(list.length ? el('hr') : null, last);
+      return list.filter(Boolean).length ? KIT.menu({ label: '⋯', ariaLabel: `More for ${e.name}`, tip: 'More: link a member, copy as handout, scan, history and the like', items: list.filter(Boolean), cls: 'more-menu' }) : null;
     }
     /** An entry's tools, on its page and in its editor alike: Copy as handout and the scan for its name. */
     function entryTools(e, ctx) {
@@ -455,6 +472,28 @@
     function entryEditor(e, ctx) {
       return entryForm(e, e.id ? { tools: entryTools(e, ctx), extra: [characterCard(e), connectionsCard(e, ctx)] } : {});
     }
+    /** The sentences across the campaign that name the entry, as the page's highlights: each linked to where it was
+     * written, with the other entries in it linked inline. Filled in once the sources arrive; gone when there are none. */
+    function highlights(e, others) {
+      const box = el('div', { class: 'enc-highlights', hidden: true }, el('h4', { class: 'enc-kicker' }, 'Across the campaign',
+        tip('Sentences written anywhere in the campaign that name this entry, newest last. Each one links to where it was written')));
+      sourcesNaming(e).then(({ sources }) => {
+        const names = Nouns.namesOf(e), rows = [];
+        for (const s of sources) {
+          if (s.kind.startsWith('entry') && s.id === e.id) continue;
+          const [label, to] = sourceLabel(s);
+          for (const q of Nouns.excerpts(Nouns.plain(s.text, s.format), names).slice(0, 2)) {
+            if (rows.length >= 8) break;
+            rows.push(el('li', {}, s.secret ? el('span', { class: 'enc-hl-lock', 'data-tip': 'From GM-only text' }, '🔒 ') : null, ...others.text(q), ' ',
+              el('a', { href: to, class: 'enc-hl-src small muted' }, label)));
+          }
+        }
+        if (!rows.length) { box.remove(); return; }
+        box.append(el('ul', {}, rows));
+        box.hidden = false;
+      }).catch(() => box.remove());
+      return box;
+    }
     function entryView(e, ctx) {
       const box = el('div', { class: 'enc-mentioned' }, el('h4', {}, 'Mentioned in'), el('p', { class: 'muted small' }, 'Looking…'));
       sourcesNaming(e).then(({ sources }) => {
@@ -475,28 +514,51 @@
       const publicNote = html => revealButtons(note(html), 'entry', e.id);
       const ch = S.encChars?.[e.id] || null;
       const sheetHref = ch ? `#/c/${S.camp.id}/characters/${ch.id}` : null;
+      const canSheet = isGM() && typeof Sheets !== 'undefined';
+      // The head: the portrait down the left; the kind, the name and the buttons to its right. Open sheet (or Edit, for
+      // an entry with no sheet) is the one everyday button; Edit stays beside it, and the rest wait in the ⋯ menu.
+      const pic = entryPic(e);
+      const edit = btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry');
+      const actions = el('div', { class: 'row enc-actions' },
+        ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
+        edit,
+        entryMenu(e, [
+          !ch && canSheet && (!e.category || e.category === 'person')
+            ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
+          canSheet && (ch || !e.category || e.category === 'person')
+            ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
+          e.is_secret ? null : pinButton({ kind: 'entry', id: e.id }),
+          ...entryTools(e, ctx)], deleteEntryBtn(e)));
+      const portrait = pic ? el(ch?.sheet_visible ? 'a' : 'div', { class: 'enc-portrait' + (ch || e.category === 'person' ? ' tall' : ''), href: ch?.sheet_visible ? sheetHref : null, 'data-tip': ch?.sheet_visible ? 'Open the character sheet' : null },
+        el('img', { src: pic, alt: ch?.sheet_visible ? `${e.name}'s portrait` : '' })) : null;
+      // Behind the text (the "behind" class, style.css): on a wide entry the portrait sits faded down the right of the
+      // head, under the buttons and the line ends; its tab at the left edge, hovered or pressed, brings it forward whole.
+      // Pressed again (or Escape) tucks it back. Drop the class and the tab to go back to the portrait in its own column.
+      const peek = portrait ? el('button', { type: 'button', class: 'enc-portrait-peek', 'aria-label': 'Show the portrait', 'aria-pressed': 'false',
+        'data-tip': 'Bring the portrait forward; press again to tuck it back',
+        onclick: ev => { const on = head.classList.toggle('portrait-out'); ev.currentTarget.setAttribute('aria-pressed', String(on)); },
+        onkeydown: ev => { if (ev.key === 'Escape' && head.classList.contains('portrait-out')) { ev.stopPropagation(); ev.currentTarget.click(); } } },
+        el('span', { 'aria-hidden': 'true' }, '‹')) : null;
+      const head = el('header', { class: 'enc-hero' + (portrait ? ' has-pic behind' : '') },
+        portrait, peek,
+        el('div', { class: 'enc-hero-body' },
+          el('div', { class: 'enc-hero-head' },
+            el('div', { class: 'enc-kicker enc-kind' }, entryKind(e), e.is_secret ? secretTag() : null),
+            el('div', { class: 'row spread enc-title-row' },
+              // the star sits beside the heading, not in it, so the heading's name stays the entry's
+              el('div', { class: 'title-star' }, el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.name), itemStar('entry', e.id, e.name)),
+              actions)),
+          characterCard(e),
+          e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,   // the Category is the kicker over the name
+          e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
+          mapLinks('entry_id', e.id),
+          // the Public notes read as the entry's summary beside the portrait, the highlights after them
+          el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
+            (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
+          highlights(e, others)));
       return clean([
         trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1], `#/c/${S.camp.id}/encyclopedia?cat=${encodeURIComponent(e.category)}`] : null, [e.name]),
-        el('div', { class: 'row spread' },
-          // the star sits beside the heading, not in it, so the heading's name stays the entry's
-          el('div', { class: 'title-star' }, el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name), itemStar('entry', e.id, e.name)),
-          el('div', { class: 'row' },
-            ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
-            !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
-              ? btn('Add character sheet', () => Sheets.addToEntry(e).catch(err => toast(err.message, true)), 'small', 'Give this person a character sheet, for an NPC with stats') : null,
-            isGM() && typeof Sheets !== 'undefined' && (ch || !e.category || e.category === 'person')
-              ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
-            btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry'),
-            e.is_secret ? null : pinButton({ kind: 'entry', id: e.id }),
-            ...entryTools(e, ctx),
-            deleteEntryBtn(e))),
-        mapLinks('entry_id', e.id),
-        characterCard(e),
-        encCat(e.category) || e.tags?.length ? el('div', { class: 'etags' }, encCat(e.category) ? el('span', { class: 'chip enc-cat', 'data-tip': 'Category' }, `${encCat(e.category)[2]} ${encCat(e.category)[1]}`) : null,
-          (e.tags || []).map(tagChip)) : null,
-        e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
-        el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
-          (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
+        head,
         isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
           (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
         connectionsCard(e, ctx),
@@ -582,7 +644,7 @@
       d.showModal();
     }
 
-    return { encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile };
+    return { encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile };
   }
   root.EncyclopediaTab = { make };
 })(window);

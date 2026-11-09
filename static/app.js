@@ -3882,7 +3882,7 @@
   }
 
   // ------------------------------------------------------------ encyclopedia: static/encyclopedia-tab.js
-  let encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile;
+  let encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile;
 
   // ------------------------------------------------------------ pictures and files
   // A portrait on a character, a map on a location: pictures show on the page, other files are downloaded. The server
@@ -4527,7 +4527,9 @@
       fit();
     }
     const f = el('form', { class: 'enc-form' },
-      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row' }, sheetBtn, memberBtn, opt.tools || [])),
+      // Open sheet stays beside the title; Add character sheet, Link a member and the tools wait in the ⋯ menu, as on the page
+      el('div', { class: 'row spread' }, el('h2', {}, e.id ? `Edit ${e.name}` : 'New entry'), el('div', { class: 'row enc-actions' }, ch ? sheetBtn : null,
+        e.id ? entryMenu(e, [ch ? null : sheetBtn, memberBtn, ...(opt.tools || [])]) : null)),
       e.id ? mapLinks('entry_id', e.id) : null,   // a blank entry opens here, so its pins are linked here too
       el('div', { class: 'grid2' },
         field('Name', name),
@@ -7062,7 +7064,7 @@
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
-  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
+  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));
