@@ -51,6 +51,7 @@ const ACTIONS = [
     'character_field' => ['who' => 'member'],
     'character_values' => ['who' => 'member'],
     'character_save' => ['who' => 'member', 'touch' => true],
+    'character_portrait' => ['who' => 'member', 'touch' => true],
     'character_delete' => ['who' => 'member', 'touch' => true],
     'character_presence' => ['who' => 'member'],
     'member_active_character' => ['who' => 'member'],

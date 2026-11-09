@@ -347,9 +347,12 @@ function character_row(int $cid, int $id, bool $isGm): array {
 /** The characters of campaign $cid this member can see (players don't see those of GM-only entries), or just $id. */
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
     $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
-            ' . user_name_sql() . ' AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role
+            ' . user_name_sql() . ' AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role,
+            pa.id AS portrait_file, pa.is_secret AS portrait_secret
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
+        LEFT JOIN attachments pa ON pa.id=c.portrait_id AND pa.campaign_id=c.campaign_id AND pa.parent_type=\'encyclopedia\' AND pa.parent_id=c.entry_id
+            AND (pa.kind=\'image\' OR (pa.kind=\'embed\' AND pa.embed_src IS NOT NULL))
         WHERE c.campaign_id=?' . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . ($id !== null ? ' AND c.id=?' : '') . ' ORDER BY c.id');
     $st->execute(array_merge([$cid], $isGm ? [] : [(int)me()['id']], $id !== null ? [$id] : []));
     return $st->fetchAll();
@@ -358,7 +361,14 @@ function character_rows(int $cid, bool $isGm, ?int $id = null): array {
 function character_full(array $c, bool $isGm): bool {
     return $isGm || ($c['owner_id'] !== null && (int)$c['owner_id'] === me()['id']);
 }
-/** The card: who and what it is, its Play and Summary fields as this member may see them. */
+/** A character's portrait as this member may see it: the picture picked for it (portrait_id), while it is still one of
+ * its entry's pictures and not GM only to a player, else its entry's first picture ($pics, from entry_pics()). */
+function character_pic(array $c, bool $isGm, array $pics): ?string {
+    if ($c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']))
+        return 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$c['campaign_id'], 'id' => (int)$c['portrait_file']]);
+    return $pics[(int)$c['entry_id']] ?? null;
+}
+/** The card: who and what it is, its portrait, its Play and Summary fields as this member may see them. */
 function character_card(array $c, bool $isGm, array $pics = []): array {
     $full = character_full($c, $isGm);
     $visible = $full || $c['kind'] === 'pc' || (int)$c['sheet_public'];
@@ -380,7 +390,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'owner_in_campaign' => (bool)$c['owner_in_campaign'], 'secret' => (bool)(int)$c['entry_secret'],
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
         'play' => $play, 'has_play' => $hasPlay, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
-        'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null,
+        'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => character_pic($c, $isGm, $pics), 'portrait_id' => $c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']) ? (int)$c['portrait_file'] : null,
         'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'party_out' => (bool)(int)$c['party_out'], 'owner_is_player' => $c['owner_role'] === 'player'];
 }
 /** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary}: the
@@ -682,6 +692,19 @@ function characters_action(string $action, int $cid): void {
             $pdo->commit();
             out(['ok' => true, 'character' => character_out(character_row($cid, (int)$c['id'], $isGm), $isGm)['character']]);
 
+        case 'character_portrait': // file_id: one of the pictures on the character's entry; 0 goes back to the entry's first
+            $c = character_row($cid, int_in(p('id'), 1), $isGm);
+            if (!character_full($c, $isGm)) fail('Only its player or a GM can change this sheet', 403);
+            $file = int_in(p('file_id', 0), 0);
+            if ($file) {
+                $st = db()->prepare("SELECT id FROM attachments WHERE id=? AND campaign_id=? AND parent_type='encyclopedia' AND parent_id=?
+                    AND (kind='image' OR (kind='embed' AND embed_src IS NOT NULL))" . ($isGm ? '' : ' AND is_secret=0'));
+                $st->execute([$file, $cid, $c['entry_id']]);
+                if (!$st->fetchColumn()) fail('Pick one of the pictures on this character\'s Encyclopedia entry', 404);
+            }
+            db()->prepare('UPDATE sheet_characters SET portrait_id=? WHERE id=?')->execute([$file ?: null, $c['id']]);
+            out(['ok' => true, 'character' => character_out(character_row($cid, (int)$c['id'], $isGm), $isGm)['character']]);
+
         case 'character_delete':
             $c = character_row($cid, int_in(p('id'), 1), $isGm);
             if (!character_full($c, $isGm)) fail('Only its player or a GM can delete this sheet', 403);
@@ -767,7 +790,7 @@ function character_out(array $c, bool $isGm, bool $seen = false): array {
     $layout = json_decode($c['layout'], true);
     [$values, $old] = sheet_reconcile($layout, json_decode($c['field_values'], true) ?: []);
     $hidden = json_decode($c['hidden'], true) ?: [];
-    $card = character_card($c, $isGm);
+    $card = character_card($c, $isGm, entry_pics((int)$c['campaign_id'], $isGm));
     $changed = (int)$c['template_version'] !== (int)$c['tversion'];
     if ($seen && $full && $changed) db()->prepare('UPDATE sheet_characters SET template_version=? WHERE id=?')->execute([$c['tversion'], $c['id']]);
     // the rest of the party isn't told which fields and sections are hidden, or that they exist

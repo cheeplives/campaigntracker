@@ -662,8 +662,8 @@ const CAMPAIGN_COPY = [
     ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
     ['dice_rolls'],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character that has a player.
-    // party_group_id is set once the party groups are copied, below.
-    ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group']],
+    // party_group_id and portrait_id are set once the party groups and files are copied, below.
+    ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group', 'portrait_id' => 'attachments']],
     // after the characters: a party character's action points at its sheet (character_id 0: the party's or a player's)
     ['shift_actions', 'maps' => ['character_id' => 'character']],
     // Maps (db/migrations/019_maps.sql)
@@ -1004,6 +1004,7 @@ try {
     case 'character_field':
     case 'character_values':
     case 'character_save':
+    case 'character_portrait':
     case 'character_delete':
     case 'character_presence':
     case 'member_active_character':

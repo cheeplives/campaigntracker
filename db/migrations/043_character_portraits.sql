@@ -1,0 +1,11 @@
+-- 043_character_portraits.sql — a character's portrait: the picture on its card, at the top of its sheet and its Play
+-- view. sheet_characters.portrait_id is one of the pictures on the character's own Encyclopedia entry (attachments.id,
+-- parent_type 'encyclopedia', parent_id = entry_id), picked or uploaded from the sheet. NULL (or a picture since
+-- removed) falls back to the entry's first picture, as before. No foreign key, as with maps.image_id: removing the
+-- picture clears it, and a read only trusts it while it is still one of the entry's pictures.
+--
+-- Run ONCE on an install created before this change:
+--   mysql -u <user> -p <database> < db/migrations/043_character_portraits.sql
+-- (deploy.sh and install.php run it for you when sheet_characters has no portrait_id column.)
+-- Fresh installs already get the column from db/schema.sql.
+ALTER TABLE sheet_characters ADD COLUMN portrait_id INT UNSIGNED NULL AFTER sheet_public;
