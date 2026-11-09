@@ -15,7 +15,7 @@ line, the Playwright suite in all six projects (Chromium, Firefox, WebKit, iPhon
 deprecations. The first run on a fresh cloud machine installs MySQL 8.0, PHP's extensions and the browsers through
 `tools/test-setup.sh` (a few minutes); later runs skip what is already there.
 
-- The whole suite takes about 40 minutes. While working, run the specs you touched, in the projects that matter,
+- The whole suite takes about an hour on a cloud machine. While working, run the specs you touched, in the projects that matter,
   for example `tools/test-all.sh browser/clocks.spec.js --project=chromium --project=ipad`, and the whole suite once
   before the pull request.
 - A test that fails here and on `main` alike is not yours to hide: say so in the pull request, don't skip it.
