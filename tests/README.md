@@ -215,10 +215,13 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   current one; downtime covers whole days and its label comes off when deleted; the GM
   picks activities, custom ones and players; players see them and edit only the public
   notes, never the GM notes.
-- **holdings**: Party Funds keeps one line per currency with where it is kept, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the last row, ticks its count (never
-  below 0) and edits its boxes, and the GM sees and removes it; the Add holding dialog
+- **holdings**: Party Funds keeps one line per currency with where it is kept, saved as you leave each box, for players and the GM; a player adds Gear and Loot from the one box under the list, claims it for someone in
+  the party or a Custom… name (clearing which goes back to the list), ticks its count (never below 0) and edits its
+  boxes, and the GM sees and removes it; the Add holding dialog
   shows each type's own fields, takes a custom construction type, a custom holding
   type and tags of its own (apart from the events'), and its card ticks, edits and deletes for GM and players alike.
+  A holding's card closes to its name, type and amount (a new one opens), stays as it was left across a reload, and
+  Expand all opens every card.
   Each holding's Storage ledger adds up its items' weights and warns when the total
   is over the holding's Cargo.
 - **map-styles**: a GM's new pin starts as an Encyclopedia entry and can have its own icon and colour; pins are listed
