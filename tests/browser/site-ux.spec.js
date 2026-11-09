@@ -95,44 +95,48 @@ test("Ctrl K jumps to an entry by name, and ? lists the keys", async ({ page, br
   expectNoErrors(errors);
 });
 
-test("At the Table's campaign bar links to its boxes and opens a folded one; the bar says Saved after a change", async ({ page, browser }) => {
-  const errors = watchErrors(page);
-  const { cid } = await gmCampaign(page, browser, "Jo");
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`index.html#/c/${cid}/table`);
-  const jump = page.locator(".nowbar .jump-links");
-  await expect(jump.getByRole("link", { name: "Now" })).toBeVisible();
-  const events = page.locator('section.daybox[data-box="table-events"]');
-  await expect(events).toHaveClass(/folded/);
-  await jump.getByRole("link", { name: /^Events/ }).click();
-  await expect(events).not.toHaveClass(/folded/);
+// The service worker would see the page's requests first, and in WebKit page.route() then never fakes the refused save.
+test.describe("the campaign bar", () => {
+  test.use({ serviceWorkers: "block" });
+  test("At the Table's campaign bar links to its boxes and opens a folded one; the bar says Saved after a change", async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    const { cid } = await gmCampaign(page, browser, "Jo");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`index.html#/c/${cid}/table`);
+    const jump = page.locator(".nowbar .jump-links");
+    await expect(jump.getByRole("link", { name: "Now" })).toBeVisible();
+    const events = page.locator('section.daybox[data-box="table-events"]');
+    await expect(events).toHaveClass(/folded/);
+    await jump.getByRole("link", { name: /^Events/ }).click();
+    await expect(events).not.toHaveClass(/folded/);
 
-  // a narrow screen gets one Jump to ▾ menu instead
-  await page.setViewportSize({ width: 820, height: 1180 });
-  await expect(jump.getByRole("link", { name: "Now" })).toBeHidden();
-  await expect(jump.locator(".jump-menu > summary")).toBeVisible();
+    // a narrow screen gets one Jump to ▾ menu instead
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await expect(jump.getByRole("link", { name: "Now" })).toBeHidden();
+    await expect(jump.locator(".jump-menu > summary")).toBeVisible();
 
-  // the box you are in is marked for a screen reader too, not by its tint alone
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await jump.getByRole("link", { name: /^Events/ }).click();
-  await expect(jump.locator("a[aria-current]")).toHaveCount(1);
+    // the box you are in is marked for a screen reader too, not by its tint alone
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await jump.getByRole("link", { name: /^Events/ }).click();
+    await expect(jump.locator("a[aria-current]")).toHaveCount(1);
 
-  // nothing is claimed until something changes; then ✓ Saved, or Not saved when the server refuses
-  const status = page.locator(".nowbar .save-state");
-  await expect(status).toHaveText("");
-  const now = page.locator(".tv-now");
-  await now.getByRole("button", { name: "+ Note" }).click();
-  await now.getByRole("textbox", { name: /^Notes for/ }).fill("The bell tolls");
-  await now.getByRole("button", { name: "Add note" }).click();
-  await expect(now.getByText("The bell tolls")).toBeVisible();
-  await expect(status).toHaveText("✓ Saved");
-  await page.route(/a=shift_note_add/, r => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "boom" }) }));
-  await now.getByRole("button", { name: "+ Note" }).click();
-  await now.getByRole("textbox", { name: /^Notes for/ }).fill("This one fails");
-  await now.getByRole("button", { name: "Add note" }).click();
-  await expect(status).toHaveText("Not saved");
-  await page.unroute(/a=shift_note_add/);
-  expectNoErrors(errors.filter(e => !/status of 500/.test(e)));   // the refused save logs its 500, as it should
+    // nothing is claimed until something changes; then ✓ Saved, or Not saved when the server refuses
+    const status = page.locator(".nowbar .save-state");
+    await expect(status).toHaveText("");
+    const now = page.locator(".tv-now");
+    await now.getByRole("button", { name: "+ Note" }).click();
+    await now.getByRole("textbox", { name: /^Notes for/ }).fill("The bell tolls");
+    await now.getByRole("button", { name: "Add note" }).click();
+    await expect(now.getByText("The bell tolls")).toBeVisible();
+    await expect(status).toHaveText("✓ Saved");
+    await page.route(/a=shift_note_add/, r => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "boom" }) }));
+    await now.getByRole("button", { name: "+ Note" }).click();
+    await now.getByRole("textbox", { name: /^Notes for/ }).fill("This one fails");
+    await now.getByRole("button", { name: "Add note" }).click();
+    await expect(status).toHaveText("Not saved");
+    await page.unroute(/a=shift_note_add/);
+    expectNoErrors(errors.filter(e => !/status of 500/.test(e)));   // the refused save logs its 500, as it should
+  });
 });
 
 test("the Encyclopedia shows the filters in force as chips, and ✕ drops one", async ({ page, browser }) => {
