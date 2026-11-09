@@ -147,7 +147,7 @@ const MapsTab = (() => {
       el('span', { class: 'small muted' }, m.is_secret ? '🔒 GM only' : '', m.is_secret && m.pins ? ' · ' : '', m.pins ? `${m.pins} pin${m.pins === 1 ? '' : 's'}` : ''),
       m.inside ? el('span', { class: 'small muted map-card-inside' }, `Inside ${m.inside.label} on ${m.inside.map_name}`) : null));
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' },
-      el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary small') : null),
+      el('div', { class: 'row map-list-head' }, el('h2', {}, 'Maps'), ctx.isGM() ? btn('+ New map', () => newMap(ctx), 'primary new-btn', 'Add a map: a picture and a name, then set its scale') : null),
       cards.length ? el('div', { class: 'map-grid' }, cards) : el('p', { class: 'muted' }, ctx.isGM() ? 'No maps yet. Add one with + New map.' : 'No maps yet.')));
   }
 

@@ -44,6 +44,8 @@ const gmEditing = (gm, cid, id) => api(gm, "character_presence", { id, editing: 
 test("Characters: a player makes one, fills it in, finds it again, and hides a section", async ({ page, browser }) => {
   const { cid, p1, p2, tpl } = await party(page, browser);
   await p1.goto(`index.html#/c/${cid}/characters`);
+  // Sheet templates is in the top bar, so the Characters header keeps to + New character
+  await expect(p1.locator("main").getByRole("link", { name: "Sheet templates" })).toHaveCount(0);
   await p1.getByRole("button", { name: "+ New character" }).click();
   await p1.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
   await p1.getByLabel("Character name").fill("Brannoc");

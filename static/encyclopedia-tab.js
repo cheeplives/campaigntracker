@@ -397,7 +397,7 @@
       // The list and the entry swap widths with Wide view, or the list folds away with Hide list, remembered in this browser.
       mount(...campaignHeader('encyclopedia'), listPage({ title: 'Encyclopedia', picked: !!current,
         tipText: 'The people, places, items, groups and the like that turn up in play. Every name here is linked wherever it is written in the campaign. Everyone can add entries and write their Public notes; GM notes are for GMs only',
-        add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'),
+        add: el('a', { class: 'button primary new-btn', href: href('new'), 'data-tip': 'Start an entry by hand' }, '+ New entry'),
         more: [scanBtn, [...conns.values()].some(l => l.length) ? btn('🕸 Campaign web', () => ctx.web({ center: null }), '', 'Draw every connection in the Encyclopedia as a web you can pan, zoom and filter by kind') : null, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
         hide: { key: 'chronicle:enchide' },
         wide: { key: 'chronicle:encwide', tips: ['Widen the list to see more of the Encyclopedia at once, and narrow the entry', 'Give the entry its room back and narrow the list'] },

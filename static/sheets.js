@@ -390,7 +390,7 @@ const Sheets = (() => {
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load().catch(err => toast(err.message, true)), 250); });
     ctx.mount(el('div', { class: 'card' },
       el('div', { class: 'row spread' }, el('h1', {}, 'Sheet templates'),
-        el('div', { class: 'row', style: { marginTop: '0' } }, request, button('+ New template', () => (location.hash = '#/templates/new'), 'primary'))),
+        el('div', { class: 'row', style: { marginTop: '0' } }, request, button('+ New template', () => (location.hash = '#/templates/new'), 'primary new-btn'))),
       el('p', { class: 'muted' }, 'Every character sheet starts from a template. Anyone can use or fork any template here; only its author changes it.'),
       search), list);
     await load();
@@ -891,8 +891,7 @@ const Sheets = (() => {
     draw();
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Characters'),
-        el('div', { class: 'row' }, el('a', { href: '#/templates', class: 'small', 'data-tip': 'Every template, to use, fork or change' }, 'Sheet templates'),
-          button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary small'))), seg),
+        button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary new-btn', { 'data-tip': 'Make a PC or an NPC from a sheet template' })), seg),
       list);
   }
   /** A GM's Player and party boxes for a new character: who plays it (no one, a player or a GM) and, for one no player
