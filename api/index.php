@@ -1881,6 +1881,16 @@ try {
         if ($isGm) touch_campaign($cid);   // a player's pin is like their notes: not a campaign change
         out(['ok' => true]);
 
+    case 'map_clear': // GMs: map_id, pins and/or routes (true) to delete all of a map's pins and/or routes. Encyclopedia entries and Events stay
+        $cid = cid();
+        need_gm($cid);
+        $m = map_row($cid, int_in(p('map_id'), 1), true);
+        $pins = $routes = 0;
+        if (p('pins')) { $st = db()->prepare('DELETE FROM map_pins WHERE map_id=? AND campaign_id=?'); $st->execute([$m['id'], $cid]); $pins = $st->rowCount(); }
+        if (p('routes')) { $st = db()->prepare('DELETE FROM map_routes WHERE map_id=? AND campaign_id=?'); $st->execute([$m['id'], $cid]); $routes = $st->rowCount(); }
+        if ($pins || $routes) touch_campaign($cid);
+        out(['ok' => true, 'pins' => $pins, 'routes' => $routes]);
+
     case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)
         $cid = cid();
         need_gm($cid);
