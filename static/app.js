@@ -2895,8 +2895,10 @@
     if (!S.camp) return;   // kept even with Recent off in the Legend: Ctrl K lists it
     const m = location.hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
     if (!m || Number(m[1]) !== S.camp.id) return;
+    const head = app().querySelector('.enc-detail h2') || app().querySelector('.map-page h2, .map-head h2, h2');
+    const text = node => { const c = node?.cloneNode(true); c?.querySelectorAll('.tip, .secret-tag, img').forEach(x => x.remove()); return (c?.textContent || '').trim(); };
     const label = m[2] === 'day' ? E.fmtDate(cal(), Number(m[3]), { noWeekday: true })
-      : (app().querySelector('.enc-detail h2, .map-head h2, main h2')?.textContent || '').trim();
+      : m[2] === 'encyclopedia' ? S.encyclopedia.find(e => e.id === Number(m[3]))?.name || '' : text(head);
     if (!label) return;
     const list = [{ hash: location.hash, label, icon: QUICK_KIND[m[2]][1] }, ...recentList().filter(x => x.hash !== location.hash)].slice(0, RECENT_MAX);
     try { localStorage.setItem(recentKey(), JSON.stringify(list)); } catch { /* private mode: no Recent */ }
