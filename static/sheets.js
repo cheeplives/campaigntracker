@@ -187,6 +187,8 @@ const Sheets = (() => {
     }
     if (f.type === 'choice') {
       // Custom… opens a box beside the list for anything the options don't have
+      // a number kept from before the field was a list (a template changed a number to a rating) shows as typed
+      if (typeof value === 'number') value = String(value);
       const opts = f.options || [], own = typeof value === 'string' && value !== '' && !opts.includes(value);
       const s = el('select', { 'aria-label': label, disabled: off }, el('option', { value: '' }, '—'),
         opts.map(o => el('option', { value: o, selected: o === value }, o)), el('option', { value: CUSTOM, selected: own }, 'Custom…'));
