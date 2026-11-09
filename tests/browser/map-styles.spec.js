@@ -201,3 +201,26 @@ test("Map tools: the grid's opacity is each person's own, and the ⚙ menu holds
   await expect(menu).toBeHidden();
   expectNoErrors(errors);
 });
+
+test("Map pins: the badge follows the campaign's genre, and the pin card is slim with its kind and who added it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Pin genre");
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "note", label: "Ford" }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-stage")).toHaveClass(/map-genre-(fantasy|modern|scifi)/);
+  const pin = page.locator(".map-pin", { hasText: "Ford" });
+  const badge = async () => pin.evaluate(el => getComputedStyle(el, "::before").backgroundColor);
+  const before = await badge();
+  await page.locator(".map-stage").evaluate(el => { el.className = "map-stage map-genre-fantasy"; });
+  const fantasy = await badge();
+  await page.locator(".map-stage").evaluate(el => { el.className = "map-stage map-genre-modern"; });
+  expect(await badge()).not.toBe(fantasy);
+  expect(before).toBeTruthy();
+  await pin.click();
+  const card = page.locator(".leaflet-popup .mpc-head");
+  await expect(card).toContainText("Ford");
+  await expect(card.locator(".mpc-sub")).toContainText("Note");
+  expect((await page.locator(".leaflet-popup-content-wrapper").boundingBox()).width).toBeLessThan(330);
+  expectNoErrors(errors);
+});
