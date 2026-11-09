@@ -5625,16 +5625,66 @@
     return { node: el('div', { class: 'ticker' }, minus, box, plus), get: () => n };
   }
 
+  /** Who can claim an item: everyone in the party's groups (players by character name, then the characters with no
+   * player who travel with it), or the campaign's players when it has no groups yet. */
+  function partyClaimants(groups) {
+    const memberName = m => m.character_name || m.display_name;
+    const byId = new Map(S.members.map(m => [Number(m.id), m]));
+    const names = (groups || []).flatMap(g => [...g.members.map(id => byId.get(Number(id))).filter(Boolean).map(memberName), ...(g.characters || []).map(c => c.name)]);
+    if (!names.length) names.push(...S.members.filter(m => m.role === 'player').map(memberName));
+    return [...new Set(names.filter(Boolean))];
+  }
+
+  /** The holdings whose cards are open, kept per person and campaign in this browser. Every card starts closed. */
+  const HOLD_OPEN_KEY = 'chronicle-holdings-open';
+  const holdOpen = {
+    key: () => `${HOLD_OPEN_KEY}:${S.user?.id}:${S.camp?.id}`,
+    all() { try { return new Set(JSON.parse(localStorage.getItem(this.key())) || []); } catch { return new Set(); } },
+    set(id, open) {
+      const ids = this.all();
+      open ? ids.add(id) : ids.delete(id);
+      try { localStorage.setItem(this.key(), JSON.stringify([...ids])); } catch { /* private mode: just this page */ }
+    },
+  };
+
   async function viewHoldings() {
-    const { funds, gear, holdings, tags } = await api('holdings', { query: { cid: S.camp.id } });
+    const [{ funds, gear, holdings, tags }, groups] = await Promise.all([api('holdings', { query: { cid: S.camp.id } }),
+      api('groups', { query: { cid: S.camp.id } }).then(r => r.groups).catch(() => [])]);
     S.holdingTags = tags || [];
+    const cards = holdings.map(holdingCard);
+    const toggleAll = btn('', () => {
+      const open = !cards.every(c => c.isOpen());
+      cards.forEach(c => c.setOpen(open));
+      showToggle();
+    }, 'small', 'Open or close every holding card');
+    const showToggle = () => { toggleAll.textContent = cards.every(c => c.isOpen()) ? 'Collapse all' : 'Expand all'; };
+    cards.forEach(c => c.node.addEventListener('holding-toggle', showToggle));
+    showToggle();
     const right = el('div', { class: 'holdings-col' },
       el('div', { class: 'card' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
-        btn('+ New holding', () => holdingDialog(), 'primary small', 'Add a vehicle, animal, building, asset or a type of your own')),
+        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. Press a holding\'s name to open it and see its details and storage. The GM and every player can add and change them.')),
+        el('div', { class: 'inline' }, cards.length > 1 ? toggleAll : null,
+          btn('+ New holding', () => holdingDialog(), 'primary small', 'Add a vehicle, animal, building, asset or a type of your own'))),
         holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
-      holdings.map(holdingCard));
-    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear)), right));
+      cards.map(c => c.node));
+    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear, partyClaimants(groups))), right));
+  }
+
+  /** The one-box row under a ledger that adds a line: type a name and press Enter or + Add. The box clears before
+   * saving, so anything typed while it saves isn't lost, and what was typed comes back if the save fails. add(text)
+   * saves it and puts the new line in. */
+  function addLine(placeholder, label, tipText, add) {
+    const box = el('input', { maxlength: 200, placeholder, 'aria-label': label });
+    const go = btn('+ Add', null, 'small primary', tipText);
+    go.addEventListener('click', busy(null, async () => {
+      const typed = box.value;
+      if (!typed.trim()) { box.focus(); toast('Type a name first', true); return; }
+      box.value = '';
+      box.focus();
+      try { await add(typed.trim()); } catch (err) { if (!box.value) box.value = typed; throw err; }
+    }));
+    box.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); go.click(); } });
+    return el('div', { class: 'add-line' }, box, go);
   }
 
   /** Party Funds: a ledger of the party's money, one line per currency, where it is kept and how much
@@ -5657,84 +5707,92 @@
       return row;
     };
     rows.append(...funds.map(line));
-    const nCur = el('input', { maxlength: 60, placeholder: 'Currency, e.g. Gold pieces', 'aria-label': 'New currency' });
-    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'Where the new currency is kept' });
-    const nAmt = amountBox('', 'Amount of the new currency');
-    const add = btn('+ Add', null, 'small primary', 'Add this to Party Funds');
-    // As in Storage: clear the boxes before saving so nothing typed meanwhile is lost, and put them back if it fails.
-    add.addEventListener('click', busy(null, async () => {
-      if (!nCur.value.trim()) { nCur.focus(); toast('Name the currency first', true); return; }
-      const typed = [nCur.value, nLoc.value, nAmt.value];
-      const f = { currency: typed[0].trim(), location: typed[1].trim(), amount: typed[2] === '' ? 0 : Number(typed[2]) };
-      nCur.value = nLoc.value = nAmt.value = '';
-      nCur.focus();
-      try { f.id = (await post('funds_save', { currency: f.currency, location: f.location, amount: typed[2] }, S.camp.id)).id; }
-      catch (err) { if (!nCur.value && !nLoc.value && !nAmt.value) [nCur.value, nLoc.value, nAmt.value] = typed; throw err; }
+    const add = addLine('Add a currency, e.g. Gold pieces', 'New currency', 'Add this currency to Party Funds, then fill in where it is kept and how much', async currency => {
+      const f = { currency, location: '', amount: 0 };
+      f.id = (await post('funds_save', { currency, location: '', amount: 0 }, S.camp.id)).id;
       rows.append(line(f));
-    }));
-    for (const i of [nCur, nLoc, nAmt]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    });
     return el('section', { class: 'card funds' },
       el('h2', {}, 'Party Funds', tip('The party\'s money, one line per currency, with where it is kept: gold in a strongbox, credits in a bank. Type in a box and it saves when you leave it. The GM and every player can edit it.')),
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Location'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
-      rows,
-      el('div', { class: 'ledger-row ledger-new' }, nCur, nLoc, nAmt, add));
+      rows, add);
   }
 
-  /** The Gear and Loot list: item, who claimed it and where it is, all free text, and how many. Each box saves when you leave it. */
-  function gearCard(gear) {
+  /** Who claimed an item: a list of the party (names), Nobody, or Custom… with a box for any other name. A name not in
+   * the list opens as Custom. onChange() saves; get() is the name, or '' for nobody. Clearing the custom box goes back
+   * to the list. */
+  function claimPicker(value, names, label, onChange) {
+    const CUSTOM = '__custom';
+    const v = (value || '').trim();
+    const listed = !v || names.includes(v);
+    const sel = select([['', '—'], ...names.map(n => [n, n]), [CUSTOM, 'Custom…']], listed ? v : CUSTOM, { 'aria-label': label });
+    const box = el('input', { maxlength: 200, value: listed ? '' : v, placeholder: 'Who?', 'aria-label': `${label}, custom`,
+      'data-tip': 'Anyone not in the list. Clear the box to pick from the party again' });
+    const get = () => (sel.value === CUSTOM ? box.value.trim() : sel.value);
+    const show = () => { const custom = sel.value === CUSTOM; sel.hidden = custom; box.hidden = !custom; };
+    sel.addEventListener('change', () => {
+      show();
+      if (sel.value === CUSTOM) { box.focus(); return; }
+      onChange?.();
+    });
+    box.addEventListener('change', () => {
+      const t = box.value.trim();
+      if (!t || names.includes(t)) { sel.value = t; box.value = ''; show(); }
+      onChange?.();
+    });
+    box.addEventListener('blur', () => { if (!box.value.trim() && sel.value === CUSTOM) { sel.value = ''; show(); } });
+    show();
+    return { node: el('div', { class: 'claim' }, sel, box), get };
+  }
+
+  /** The Gear and Loot list: the item, who in the party claimed it (or anyone else, as Custom), where it is, and how
+   * many. Each box saves when you leave it; the one-box row at the foot adds an item. */
+  function gearCard(gear, names) {
     const rows = el('div', { class: 'gear-rows' });
+    const empty = el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.');
+    empty.hidden = gear.length > 0;
     const gearRow = g => {
       const text = (name, label, ph) => el('input', { name, value: g[name] || '', maxlength: 200, 'aria-label': label, placeholder: ph });
-      const item = text('item', 'Item', 'Item'), claimed = text('claimed_by', 'Claimed by', 'Claimed by'), loc = text('location', 'Location', 'Location');
+      const item = text('item', 'Item', 'Item'), loc = text('location', 'Location', 'Location');
+      item.classList.add('gear-item');
+      const fields = () => ({ id: g.id, item: item.value, claimed_by: claimed.get(), location: loc.value });
       const save = async () => {
-        try { await post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value }, S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await post('gear_save', fields(), S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
-      [item, claimed, loc].forEach(i => i.addEventListener('change', save));
+      const claimed = claimPicker(g.claimed_by, names, 'Claimed by', save);
+      [item, loc].forEach(i => i.addEventListener('change', save));
       const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
         onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
-        onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
-      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed, loc, amount.node,
+        onSet: n => post('gear_save', { ...fields(), amount: n }, S.camp.id) });
+      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed.node, loc, amount.node,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
           undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...gear.map(gearRow));
-    // The last row adds an item; Enter in any of its boxes adds it too.
-    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': 'New item' });
-    const nClaimed = el('input', { maxlength: 200, placeholder: 'Claimed by', 'aria-label': 'New item claimed by' });
-    const nLoc = el('input', { maxlength: 200, placeholder: 'Location', 'aria-label': 'New item location' });
-    const nAmount = amountTicker(1, { label: 'How many of the new item' });
-    const add = btn('+ Add', null, 'small primary', 'Add this item to the list');
-    add.addEventListener('click', busy(null, async () => {
-      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      // As in Storage: clear the boxes first, and put them back if the save fails.
-      const typed = [nItem.value, nClaimed.value, nLoc.value];
-      const g = { item: typed[0].trim(), claimed_by: typed[1].trim(), location: typed[2].trim(), amount: nAmount.get() };
-      nItem.value = nClaimed.value = nLoc.value = '';
-      nItem.focus();
-      try { g.id = (await post('gear_save', g, S.camp.id)).id; }
-      catch (err) { if (!nItem.value && !nClaimed.value && !nLoc.value) [nItem.value, nClaimed.value, nLoc.value] = typed; throw err; }
+    const add = addLine('Add an item', 'New item', 'Add this item to the list, then fill in who claimed it, where it is and how many', async item => {
+      const g = { item, claimed_by: '', location: '', amount: 1 };
+      g.id = (await post('gear_save', g, S.camp.id)).id;
       rows.append(gearRow(g));
-    }));
-    for (const i of [nItem, nClaimed, nLoc]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+      empty.hidden = true;
+    });
     return el('section', { class: 'card gear' },
-      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. The GM and every player can edit the list.')),
+      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. Claimed by lists the party, or pick Custom… for anyone else. The GM and every player can edit the list.')),
       el('div', { class: 'gear-row gear-head', 'aria-hidden': 'true' }, ['Item', 'Claimed by', 'Location', 'Amount', ''].map(h => el('span', { class: 'lbl' }, h))),
-      rows,
-      gear.length ? null : el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.'),
-      el('div', { class: 'gear-row gear-new' }, nItem, nClaimed, nLoc, nAmount.node, add));
+      rows, empty, add);
   }
 
-  /** One holding's card: its type, amount, location, description, fields and tags, with Edit and Delete. */
+  /** One holding's card. Closed, it is one line: its name, type and amount. Open, it shows its location, tags,
+   * description, fields and storage too, with Edit and Delete. Which cards are open is remembered in this browser.
+   * Returns { node, isOpen, setOpen }; the node fires holding-toggle when it opens or closes. */
   function holdingCard(h) {
     const k = HOLDING_KINDS[h.kind] || HOLDING_KINDS.custom;
     const amount = amountTicker(h.amount, { label: `How many ${h.name}`, onTick: delta => post('holding_tick', { id: h.id, delta }, S.camp.id) });
     const stats = k.fields.filter(f => h.stats?.[f]).map(f => el('div', {}, el('span', { class: 'lbl' }, HOLDING_FIELDS[f]), el('span', {}, h.stats[f])));
-    return el('section', { class: 'card holding', 'data-kind': h.kind },
-      el('div', { class: 'row spread' },
-        el('h3', {}, `${k.icon} ${h.name}`),
-        el('div', { class: 'inline' }, el('span', { class: 'lbl' }, 'Amount'), amount.node)),
-      el('small', { class: 'muted' }, holdingType(h), h.location ? ` · 📍 ${h.location}` : ''),
+    const toggle = el('button', { type: 'button', class: 'hold-toggle', 'data-tip': 'Show or hide its details and storage' },
+      el('span', { class: 'hold-caret', 'aria-hidden': 'true' }, '▸'), `${k.icon} ${h.name}`);
+    const body = el('div', { class: 'hold-body' },
+      h.location ? el('small', { class: 'muted' }, `📍 ${h.location}`) : null,
       h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
       h.description ? el('p', { class: 'pre' }, h.description) : null,
       stats.length ? el('div', { class: 'hold-stats' }, stats) : null,
@@ -5745,6 +5803,21 @@
           if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
           try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Delete this holding'))));
+    const node = el('section', { class: 'card holding', 'data-kind': h.kind },
+      el('div', { class: 'hold-head' },
+        el('h3', {}, toggle),
+        el('span', { class: 'hold-type muted' }, holdingType(h)),
+        amount.node),
+      body);
+    const setOpen = open => {
+      body.hidden = !open;
+      node.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      holdOpen.set(h.id, open);
+    };
+    toggle.addEventListener('click', () => { setOpen(body.hidden); node.dispatchEvent(new Event('holding-toggle')); });
+    setOpen(holdOpen.all().has(h.id));
+    return { node, isOpen: () => !body.hidden, setOpen };
   }
 
   /** The first number in a text such as "1,200 lb" or "2.5 tons", or null. */
@@ -5782,33 +5855,19 @@
       return row;
     };
     lines.append(...(h.storage || []).map(line));
-    const nItem = el('input', { maxlength: 200, placeholder: 'New item', 'aria-label': `New item in ${h.name}'s storage` });
-    const nWeight = wInput('');
-    nWeight.setAttribute('aria-label', `Weight of the new item in ${h.name}'s storage`);
-    const add = btn('+ Add', null, 'small primary', 'Put this item in storage');
-    // Not disabled while saving, so a quick second item (Enter, Enter) is added too.
-    add.addEventListener('click', busy(null, async () => {
-      if (!nItem.value.trim()) { nItem.focus(); toast('Name the item first', true); return; }
-      // Clear the boxes before saving, so anything typed while it saves isn't wiped; put it back if the save fails.
-      const typed = [nItem.value, nWeight.value];
-      const s = { item: typed[0].trim(), weight: typed[1] === '' ? null : Number(typed[1]) };
-      nItem.value = nWeight.value = '';
-      nItem.focus();
-      try { s.id = (await post('storage_save', { holding_id: h.id, item: s.item, weight: typed[1] }, S.camp.id)).id; }
-      catch (err) { if (!nItem.value && !nWeight.value) [nItem.value, nWeight.value] = typed; throw err; }
+    const add = addLine('Put an item in storage', `New item in ${h.name}'s storage`, 'Put this item in storage, then fill in its weight', async item => {
+      const s = { item, weight: null };
+      s.id = (await post('storage_save', { holding_id: h.id, item, weight: '' }, S.camp.id)).id;
       lines.append(line(s));
       sum();
-    }));
-    for (const i of [nItem, nWeight]) i.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add.click(); } });
+    });
     sum();
     return el('div', { class: 'storage' },
       el('span', { class: 'lbl' }, 'Storage', tip(cap !== null
         ? `What is kept in ${h.name}, and what each item weighs. The total is checked against its Cargo (${h.stats.cargo}), so give weights in the same unit`
         : `What is kept in ${h.name}, and what each item weighs. Give the holding a Cargo value to be warned when it is overloaded`)),
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Item'), el('span', { class: 'lbl' }, 'Weight'), el('span')),
-      lines,
-      el('div', { class: 'ledger-row ledger-new' }, nItem, nWeight, add),
-      total);
+      lines, add, total);
   }
 
   /** Add a holding, or edit one (h): the common fields, then the fields of the type picked. */
@@ -5873,8 +5932,9 @@
       const stats = Object.fromEntries(HOLDING_KINDS[kind].fields.map(f => [f, boxes[f].get().trim()]).filter(([, v]) => v));
       const picked = tags.get();
       try {
-        await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
+        const r = await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
           location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked }, S.camp.id);
+        if (!h.id && r?.id) holdOpen.set(r.id, true);   // a new holding opens, so its storage is ready to fill
       } catch (x) { return fail(x.message); }
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
