@@ -220,6 +220,11 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
     if (r.request().method() === "OPTIONS") return r.fulfill({ status: 204, headers: CORS });
     sent.push({ headers: r.request().headers(), body: r.request().postDataJSON() });
     // the picture is 900x600, sent as it is (under Claude's 2576px), so these are the map's own pixels
+    if (r.request().postDataJSON().output_config.format.schema.required.includes("seen")) {
+      // the close-up pass: picture 0 is a 600px window at (110,0), shown at 1000px, so the number printed at (430,520) is at (533,867) in it
+      return r.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" },
+        body: JSON.stringify({ id: "msg_2", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ seen: [{ picture: 0, found: true, x: 533, y: 867 }] }) }] }) });
+    }
     const answer = { labels: [{ name: "Ravenhold", x0: 80, y0: 110, x1: 290, y1: 152 }, { name: "Mirewood", x0: 520, y0: 290, x1: 720, y1: 332 }],
       legend: [{ number: "1", name: "Garrison" }], markers: [{ number: "1", x0: 400, y0: 500, x1: 420, y1: 520 }] };
     return r.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" },
@@ -230,8 +235,11 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await d.getByRole("button", { name: "Read with Claude" }).click();
   await expect(d.getByRole("heading")).toContainText("Found 3 names");   // two labels and the legend's number 1
-  expect(sent).toHaveLength(1);
+  expect(sent).toHaveLength(2);   // the whole map, then a close-up of each numbered marker
   const { headers, body } = sent[0];
+  const closeup = sent[1].body.messages[0].content;
+  expect(closeup.filter(c => c.type === "image")).toHaveLength(1);
+  expect(closeup.map(c => c.text || "").join(" ")).toContain("Picture 0: the marker numbered 1");
   expect(headers["x-api-key"]).toBe(KEY);
   expect(headers["anthropic-dangerous-direct-browser-access"]).toBe("true");
   expect(headers["anthropic-version"]).toBeTruthy();
@@ -255,7 +263,7 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
   const raven = map.pins.find(p => p.entry.name === "Ravenhold");
   expect([Math.round(raven.x), Math.round(raven.y)]).toEqual([185, 131]);
   const gar = map.pins.find(p => p.entry.name === "Garrison");
-  expect([Math.round(gar.x), Math.round(gar.y)]).toEqual([410, 510]);   // where its number is printed
+  expect([Math.round(gar.x), Math.round(gar.y)]).toEqual([430, 520]);   // where the close-up found its number printed, not the first guess
   expectNoErrors(errors);
 });
 
