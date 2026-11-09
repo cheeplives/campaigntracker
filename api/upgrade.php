@@ -107,6 +107,8 @@ function upgrade_steps(): array {
             'Entries, tomes, session notes and day notes now keep their earlier versions, for a GM to read, compare and restore.'],
         ['040_site_reports.sql', fn(PDO $p) => !db_has_table($p, 'site_reports'),
             'Added the Report (!) button to the top bar, and a Reports tab on Site Admin to read, resolve, send to GitHub or delete what people report.'],
+        ['042_pip_caps.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'pip_caps'),
+            'A character sheet\'s dot and box tracks can now have the character\'s own maximum: the dots past it are greyed out and can\'t be ticked.'],
     ];
 }
 

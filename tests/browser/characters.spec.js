@@ -672,3 +672,47 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   await gm.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(gm.locator(".enc-form").getByRole("link", { name: "Open sheet" })).toBeVisible();
 });
+
+test("Characters: a track's maximum is the character's own: the pips past it are greyed out, can't be ticked, and the party sees it", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Capped" });
+  await api(p1, "character_field", { id: c.id, key: "luck", value: 3 }, cid);
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p1.getByRole("button", { name: "Luck 3", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // the Max pickers show only while Track maximums is open
+  await expect(p1.getByLabel("Luck maximum")).toHaveCount(0);
+  await p1.getByRole("button", { name: "Track maximums" }).click();
+  await expect(p1.getByLabel("Luck maximum")).toHaveValue("3");
+  await p1.getByLabel("Luck maximum").selectOption("2");
+  await expect(p1.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  // ticked past the new maximum: it comes down to it, on screen and saved
+  await expect(p1.getByRole("button", { name: "Luck 2", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => stored(c.id, "luck")).toBe(2);
+  await p1.getByRole("button", { name: "Done" }).click();
+  await expect(p1.getByLabel("Luck maximum")).toHaveCount(0);
+  await p1.reload();
+  await expect(p1.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await p1.getByRole("button", { name: "Luck 1", exact: true }).click();
+  await expect.poll(() => stored(c.id, "luck")).toBe(1);
+
+  // the server holds to it too
+  expect((await api(p1, "character_field", { id: c.id, key: "luck", value: 3 }, cid)).status).toBe(400);
+  expect((await api(p1, "character_field", { id: c.id, key: "luck", value: 2 }, cid)).status).toBe(200);
+  // only a track takes a maximum, and only up to its pips
+  const v = () => sql(`SELECT version FROM sheet_characters WHERE id=${c.id}`).trim();
+  expect((await api(p1, "character_save", { id: c.id, version: Number(v()), pip_caps: { str: 2 } }, cid)).status).toBe(400);
+  expect((await api(p1, "character_save", { id: c.id, version: Number(v()), pip_caps: { luck: 4 } }, cid)).status).toBe(400);
+  // the party sees which are out of reach, on the sheet, the Play view and the card
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p2.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await expect(p2.getByRole("button", { name: "Track maximums" })).toHaveCount(0);
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}/play`);
+  await expect(p2.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await p2.goto(`index.html#/c/${cid}/characters`);
+  await expect(p2.locator(".character-card", { hasText: "Capped" })).toContainText("Luck ●●○");
+  // a GM changes it too, and All puts every pip back
+  expect((await api(gm, "character_save", { id: c.id, version: Number(v()), pip_caps: { luck: null } }, cid)).status).toBe(200);
+  await p1.reload();
+  await expect(p1.getByRole("button", { name: "Luck 3", exact: true })).toBeEnabled();
+  expect(sql(`SELECT pip_caps FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("NULL");
+});

@@ -320,6 +320,16 @@ function sheet_visible(array $layout, array $values, array $hidden, bool $full):
     return $out;
 }
 
+/** A character's own maximums on its dot/box tracks, as stored: field key => pips, kept only for a pips field of
+ * the layout now and below its count (a template that changed leaves the rest out, so they read as the full count). */
+function sheet_caps(array $layout, ?string $stored): array {
+    $f = sheet_fields($layout);
+    $out = [];
+    foreach (json_decode((string)$stored, true) ?: [] as $k => $n)
+        if (isset($f[$k]) && $f[$k][0]['type'] === 'pips' && is_int($n) && $n >= 0 && $n < $f[$k][0]['count']) $out[(string)$k] = $n;
+    return $out;
+}
+
 // ---------- Characters ----------
 
 /** A character of campaign $cid with its entry's name and secrecy and its template; 404 when this member can't see it. */
@@ -349,11 +359,12 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
     $layout = json_decode($c['layout'], true);
     [$values] = sheet_reconcile($layout, json_decode($c['field_values'], true) ?: []);
     $values = $visible ? sheet_visible($layout, $values, json_decode($c['hidden'], true) ?: [], $full) : [];
+    $caps = sheet_caps($layout, $c['pip_caps'] ?? null);
     $play = [];
     $summary = [];
     if ($visible) foreach (sheet_fields($layout) as $k => [$f]) {
         if (!array_key_exists($k, $values)) continue;
-        if (!empty($f['play'])) $play[] = ['key' => $k, 'label' => $f['label'], 'type' => $f['type'], 'value' => $values[$k]] + (isset($f['count']) ? ['count' => $f['count']] : []);
+        if (!empty($f['play'])) $play[] = ['key' => $k, 'label' => $f['label'], 'type' => $f['type'], 'value' => $values[$k]] + (isset($f['count']) ? ['count' => $f['count']] : []) + (isset($caps[$k]) ? ['cap' => $caps[$k]] : []);
         if (!empty($f['summary'])) $summary[] = ['key' => $k, 'label' => $f['label'], 'value' => $values[$k]];
     }
     return ['id' => (int)$c['id'], 'entry_id' => (int)$c['entry_id'], 'name' => $c['name'], 'kind' => $c['kind'],
@@ -537,6 +548,7 @@ function characters_action(string $action, int $cid): void {
                 if (!$st->fetchColumn()) fail('Press Edit first', 409, 'not_editing');
             }
             $fields = sheet_fields(json_decode($c['layout'], true));
+            $caps = sheet_caps(json_decode($c['layout'], true), $c['pip_caps']);
             // one field as it is typed, or (values) many at once, as an import fills them: all of them fit, or none is kept
             $in = $action === 'character_field' ? [(string)p('key') => p('value')] : p('values');
             if (!is_array($in) || !$in || array_is_list($in) || count($in) > SHEET_LIMITS['fields']) fail('Send the values by field key');
@@ -546,6 +558,7 @@ function characters_action(string $action, int $cid): void {
                 if (!isset($fields[$key])) fail('This sheet has no such field');
                 [$ok, $set[$key]] = sheet_value($fields[$key][0], $raw);
                 if (!$ok) fail("That doesn't fit the field " . $fields[$key][0]['label']);
+                if (isset($caps[$key]) && $set[$key] > $caps[$key]) fail("{$c['name']} has {$caps[$key]} of {$fields[$key][0]['label']} at most. Change it with Track maximums");
             }
             $pdo = db();
             $pdo->beginTransaction();
@@ -616,11 +629,39 @@ function characters_action(string $action, int $cid): void {
                 $set[] = 'hidden=?';
                 $args[] = json_encode(array_values(array_unique(array_filter($h, fn($k) => is_string($k) && isset($known[$k])))));
             }
+            // pip_caps: {field key: how many of its pips this character has, or null for all of them}, merged into what is set
+            $clamp = [];
+            if (p('pip_caps') !== null) {
+                $in = p('pip_caps');
+                if (!is_array($in) || ($in && array_is_list($in)) || count($in) > SHEET_LIMITS['fields']) fail('Send the track maximums by field key');
+                $layout = json_decode($c['layout'], true);
+                $fields = sheet_fields($layout);
+                $caps = sheet_caps($layout, $c['pip_caps']);
+                foreach ($in as $k => $n) {
+                    $k = (string)$k;
+                    $f = $fields[$k][0] ?? null;
+                    if (!$f || $f['type'] !== 'pips') fail('This sheet has no such track');
+                    if ($n === null || $n === $f['count']) { unset($caps[$k]); continue; }
+                    if (!is_int($n) || $n < 0 || $n > $f['count']) fail("{$f['label']} has 0 to {$f['count']} available");
+                    $caps[$k] = $n;
+                }
+                $set[] = 'pip_caps=?';
+                $args[] = $caps ? json_encode((object)$caps) : null;
+                // a track already ticked past its new maximum comes down to it
+                $stored = json_decode($c['field_values'], true) ?: [];
+                foreach ($caps as $k => $n) if (is_int($stored[$k] ?? null) && $stored[$k] > $n) $clamp[$k] = $n;
+            }
             $pdo = db();
             $pdo->beginTransaction();
             $st = $pdo->prepare('UPDATE sheet_characters SET ' . implode(', ', array_merge($set, ['version=version+1'])) . ' WHERE id=? AND version=?');
             $st->execute(array_merge($args, [$c['id'], int_in(p('version'), 1)]));
             if (!$st->rowCount()) { $pdo->rollBack(); fail('Someone changed this sheet\'s settings after you opened it. Reload it and try again', 409, 'stale'); }
+            $stamp = (int)floor(microtime(true) * 1000);
+            foreach ($clamp as $k => $n) {
+                $path = '$."' . $k . '"';
+                $pdo->prepare('UPDATE sheet_characters SET field_values=JSON_SET(field_values, ?, CAST(? AS JSON)), field_stamps=JSON_SET(field_stamps, ?, JSON_ARRAY(?, ?)) WHERE id=?')
+                    ->execute([$path, (string)$n, $path, $me['id'], $stamp, $c['id']]);
+            }
             if ($handed !== null) {
                 $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $handed]);
                 if ($handed && member_role($cid, $handed) === 'player') character_make_active($cid, $handed, (int)$c['id']);
@@ -727,7 +768,7 @@ function character_out(array $c, bool $isGm, bool $seen = false): array {
     }
     $layout['sections'] = array_values($layout['sections']);
     $out = $card + ['layout' => $layout, 'values' => $card['sheet_visible'] ? (object)sheet_visible($layout, $values, $hidden, $full) : null,
-        'old' => $full ? $old : []];
+        'old' => $full ? $old : [], 'pip_caps' => (object)($card['sheet_visible'] ? sheet_caps($layout, $c['pip_caps']) : [])];
     if ($full) $out['hidden'] = $hidden;
     return ['character' => $out, 'template_changed' => $full && $changed];
 }
