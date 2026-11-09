@@ -187,6 +187,8 @@ const Sheets = (() => {
     }
     if (f.type === 'choice') {
       // Custom… opens a box beside the list for anything the options don't have
+      // a number kept from before the field was a list (a template changed a number to a rating) shows as typed
+      if (typeof value === 'number') value = String(value);
       const opts = f.options || [], own = typeof value === 'string' && value !== '' && !opts.includes(value);
       const s = el('select', { 'aria-label': label, disabled: off }, el('option', { value: '' }, '—'),
         opts.map(o => el('option', { value: o, selected: o === value }, o)), el('option', { value: CUSTOM, selected: own }, 'Custom…'));
@@ -765,7 +767,33 @@ const Sheets = (() => {
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
           el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')))),
       cardStats(c),
-      el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
+      // at the card's foot, so every card's buttons line up whatever is above them
+      el('div', { class: 'row character-card-foot' }, el('a', { href, class: 'button small' }, 'Sheet'),
+        c.sheet_visible && c.has_play ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null,
+        ctx.isGM() && c.can_edit ? partyToggle(c) : null));
+  }
+  /** A GM's Party switch on a character's card: the sheet's Travels with the party. A player's character is in the party
+   * with its player (off takes them out of every party group); one with no player travels with the main group. */
+  function partyToggle(c) {
+    const on = () => (c.owner_is_player ? !c.party_out : !!c.party_group_id);
+    const box = el('input', { type: 'checkbox', checked: on() });
+    box.addEventListener('change', async () => {
+      box.disabled = true;
+      try {
+        const res = await ctx.post('character_save', { id: c.id, version: c.version, party: box.checked }, cid());
+        Object.assign(c, res.character);
+        toast(on() ? `${c.name} travels with the party` : `${c.name} is out of the party`);
+        ctx.route();   // the card's line under the name says In the party or not
+      } catch (err) {
+        box.checked = on();
+        toast(err.message, true);
+        if (err.status === 409) ctx.route();
+      } finally { box.disabled = false; }
+    });
+    return el('label', { class: 'small check character-party', 'data-tip': c.owner_is_player
+      ? 'Travels with the party. Its player is in the party while this is their active character; untick to take them out of every party group'
+      : 'Travels with the party: listed with the party\'s players on Travel and the maps, gets its own action each shift At the Table, and goes where the party goes' },
+    box, ' Party');
   }
   const FILTER_KEY = 'chronicle:characters-filter';
   async function renderCharacters() {

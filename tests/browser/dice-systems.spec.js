@@ -18,7 +18,7 @@ function fake(terms, extra = 0) {
 const read = (id, r, p = {}, ctx = {}) => { const sys = DS.BY_ID[id]; return sys.read(r, DS.params(sys, p), ctx); };
 
 test("every system and preset builds dice that roll, and its numbers go round the @ and back", () => {
-  expect(DS.SYSTEMS.length).toBe(18);
+  expect(DS.SYSTEMS.length).toBe(19);
   for (const g of DS.GROUPS) expect(DS.SYSTEMS.some(s => s.group === g[0])).toBe(true);
   const setups = [...DS.SYSTEMS.map(s => [s, {}]), ...DS.PRESETS.map(g => [DS.BY_ID[g.system], g.params])];
   for (const [sys, given] of setups) {
@@ -179,4 +179,16 @@ test("a character sheet's numbers and dice: which number they fill in, ability s
   expect(DS.sheetNumber(plain, "Strength", 16)).toEqual({ n: 16, note: "" });
   for (const [text, want] of [["1d8+3 slashing", "1d8+3"], ["2d6 fire", "2d6"], ["see 4d6kh3 + 2", "4d6kh3+2"], ["d%", "d%"],
     ["1d6 − 1", "1d6-1"], ["Longsword", null], ["12", null], ["", null], [null, null]]) expect(Dice.find(text)).toBe(want);
+});
+
+test("Twilight: 2000 4e: an attribute die and a skill die, 6+ a success and 10+ two, each 6 on the ammo dice one more", () => {
+  const p = DS.params(DS.BY_ID.yzstep, DS.PRESETS.find(g => g.id === "t2k4").params);
+  expect(DS.BY_ID.yzstep.build({ ...p, attr: 12, skill: 8, ammo: 3 })).toBe("1d12+1d8+3d6");
+  expect(DS.BY_ID.yzstep.build({ ...p, attr: 10, skill: 0, ammo: 0 })).toBe("1d10");
+  expect(read("yzstep", fake([[11], [6]]), { attr: 12, skill: 8 })).toMatchObject({ big: 3, words: "successes", tier: "crit" });
+  expect(read("yzstep", fake([[10], [3]]), { attr: 10, skill: 6 })).toMatchObject({ big: 2, tier: "good" });
+  expect(read("yzstep", fake([[5], [1]]), { attr: 8, skill: 6 })).toMatchObject({ big: 0, tier: "bad", note: "a 1 on the attribute and skill dice" });
+  expect(read("yzstep", fake([[4], [2], [6, 6, 1]]), { attr: 8, skill: 6, ammo: 3 })).toMatchObject({ big: 2, note: "a 1 on the ammo dice" });
+  expect(read("yzstep", fake([[7], [5]]), { attr: 8, skill: 6, need: 2 })).toMatchObject({ big: 1, tier: "partial" });
+  expect(DS.sheetKey(DS.BY_ID.yzstep)).toBeNull();
 });

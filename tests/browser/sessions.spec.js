@@ -230,7 +230,8 @@ test("a session's old note rows and lines never added go into its box, in order 
   const folded = "Arrived at Iapetus\n  Listening station is quiet\n>+1\nFlip and burn\n>+2\nMoved to day five\n  ! +2 Sensor Roll\nTyped and never added";
   await expect(box(page)).toHaveValue(folded);
   await savedAs(page, cid, sid, folded);   // saved as text at once
-  await expect.poll(() => page.evaluate(([u, s]) => localStorage.getItem(`chronicle:snotes-draft:${u}:${s}`), [uid, sid])).toBeNull();   // once the save's answer is in
+  // the browser lets go of the old draft once the save's answer is back, a moment after the server has it
+  await expect.poll(() => page.evaluate(([u, s]) => localStorage.getItem(`chronicle:snotes-draft:${u}:${s}`), [uid, sid])).toBeNull();
   // the old rows stay where they were
   expect(sql(`SELECT COUNT(*) FROM session_notes WHERE session_id=${sid}`).trim()).toBe("6");
   // and the draft still puts each under its day
