@@ -140,8 +140,12 @@
   };
 
   const LABELS = {
-    type: 'object', additionalProperties: false, required: ['labels'],
+    type: 'object', additionalProperties: false, required: ['labels', 'legend', 'markers'],
     properties: {
+      // a legend or key that lists numbered locations ("1. Garrison"), and where each number is printed on the map
+      legend: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['number', 'name'], properties: { number: { type: 'string' }, name: { type: 'string' } } } },
+      markers: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['number', 'x0', 'y0', 'x1', 'y1'],
+        properties: { number: { type: 'string' }, x0: { type: 'integer' }, y0: { type: 'integer' }, x1: { type: 'integer' }, y1: { type: 'integer' } } } },
       labels: {
         type: 'array',
         items: {
@@ -157,12 +161,14 @@
 - Write each name as a person would type it, in normal capitalisation (a label in small capitals or all capitals becomes Title Case), with its own spelling, accents and apostrophes. Join the words of one label that run over two lines or bend along a river or a coast.
 - Give the box around each label's lettering in this picture's own pixels: x0, y0 its top left corner and x1, y1 its bottom right, with x across from the left edge and y down from the top. For a label that slants or curves, give the box that holds all of it.
 - If one name is printed in more than one place, list each place it is printed.
-- If there are no place names, return an empty list.`;
+- If there are no place names, return an empty list.
+- Some maps number their locations with small circled numbers or badges, and list them in a legend or key ("1. Garrison", "2. Museum"). When this map does, put each legend line in legend (the number as printed, and the location's name written as a person would type it), and every numbered marker you can see on the map in markers (the number as printed, and the box round the marker, as for a label). A marker that is printed more than once is listed each time. Leave the legend's own lines, and the numbers themselves, out of labels. If the map has no numbered legend, legend and markers are empty lists.`;
 
   /**
    * Claude's answer ({ labels: [{ name, x0, y0, x1, y1 }] }, in the pixels of the picture it was sent, which was the
    * map scaled by k) as candidates in the map's own pixels, in reading order (top to bottom, then left to right).
-   * Labels with no letters, or a box outside the picture, are dropped; conf is null (Claude gives none).
+   * Labels with no letters, or a box outside the picture, are dropped; conf is null (Claude gives none). A numbered
+   * marker whose number is in the legend becomes a candidate named as the legend names it, with num set.
    */
   function fromClaude(answer, k = 1, w = Infinity, h = Infinity) {
     const out = [];
@@ -175,7 +181,25 @@
       if (x1 <= x0 || y1 <= y0) continue;
       out.push({ name, conf: null, x: (x0 + x1) / 2 / k, y: (y0 + y1) / 2 / k, box: { x: x0 / k, y: y0 / k, w: (x1 - x0) / k, h: (y1 - y0) / k } });
     }
-    return out.sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
+    // numbered locations: each marker takes the name the legend gives its number, and wins over a label of the same name
+    const num = n => String(n == null ? '' : n).replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+    const legend = new Map();
+    for (const l of (answer && answer.legend) || []) {
+      const name = String(l && l.name || '').replace(/\s+/g, ' ').trim().slice(0, 150);
+      if (name && LETTER.test(name) && num(l.number)) legend.set(num(l.number), name);
+    }
+    const numbered = [];
+    for (const m of (answer && answer.markers) || []) {
+      const name = legend.get(num(m && m.number));
+      if (!name) continue;
+      let x0 = Math.min(m.x0, m.x1), x1 = Math.max(m.x0, m.x1), y0 = Math.min(m.y0, m.y1), y1 = Math.max(m.y0, m.y1);
+      if (![x0, x1, y0, y1].every(Number.isFinite)) continue;
+      x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(w, x1); y1 = Math.min(h, y1);
+      if (x1 <= x0 || y1 <= y0) continue;
+      numbered.push({ name, conf: null, num: String(m.number).trim(), x: (x0 + x1) / 2 / k, y: (y0 + y1) / 2 / k, box: { x: x0 / k, y: y0 / k, w: (x1 - x0) / k, h: (y1 - y0) / k } });
+    }
+    const taken = new Set(numbered.map(c => key(c.name)));
+    return [...out.filter(c => !taken.has(key(c.name))), ...numbered].sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
   }
 
   /** What went wrong with a call to Anthropic, said for a GM rather than a programmer. */

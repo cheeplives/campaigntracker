@@ -3944,7 +3944,7 @@
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
-    encCat, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
+    encCat, genre: () => E.genreOf(settings()), offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
     nowShift, slotWord: word, logOnShift, ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {

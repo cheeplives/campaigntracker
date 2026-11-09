@@ -251,7 +251,7 @@ const MapsTab = (() => {
     await loadGroups().catch(() => {});
 
     // the stage fills the window under the header; the Leaflet canvas and every control floating on the map are its children
-    const stage = el('div', { class: 'map-stage' });
+    const stage = el('div', { class: `map-stage map-genre-${ctx.genre ? ctx.genre() : 'fantasy'}` });
     const host = el('div', { class: 'map-canvas' });
     stage.append(host);
     const note = el('p', { class: 'small map-note', role: 'status' });
@@ -598,7 +598,7 @@ const MapsTab = (() => {
     function partyHere(p) {
       if (!gm || !groups.length) return null;
       const which = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id, { 'aria-label': 'Which group' }) : null;
-      return el('div', { class: 'row' }, which, btn('Party is here', async () => {
+      return el('span', { class: 'mpc-party' }, which, btn('Party is here', async () => {
         const g = groups.find(q => q.id === Number(which ? which.value : groups[0].id));
         try {
           await post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid);
@@ -617,34 +617,42 @@ const MapsTab = (() => {
         if (r.created && (p.note || '').trim()) ctx.offerNouns([{ text: p.note, label: `the note on the pin "${p.label}"` }]).catch(() => {});
       } catch (err) { toast(err.message, true); }
     }
+    /** How far pin p is from the party's marker on this map, said in the map's units, or null (no scale, or the party isn't here). */
+    function fromParty(p) {
+      const g = here.find(q => q.map_id === map.id && q.x !== null && q.y !== null);
+      if (!g || !hasScale() || (g.x === p.x && g.y === p.y)) return null;
+      const m = G.toMetres(Math.hypot(g.x - p.x, g.y - p.y), map);
+      return m === null ? null : `${G.fmtDistance(m, system(), G.isSpace(map))} from ${g.name}`;
+    }
     function pinCard(p) {
-      const cardIcon = pinIcon(p);
-      const head = p.kind === 'entry' && p.entry ? el('a', { href: `#/c/${cid}/encyclopedia/${p.entry.id}`, 'data-tip': 'Open this entry' }, `${cardIcon} ${p.entry.name}`)
-        : el('span', {}, `${cardIcon} ${pinTitle(p)}`);
+      const kindName = p.kind === 'entry' ? ctx.encCat(p.entry?.category)?.[1] || 'Entry' : p.kind === 'event' ? 'Event' : 'Note';
+      const name = p.kind === 'entry' && p.entry ? el('a', { href: `#/c/${cid}/encyclopedia/${p.entry.id}`, 'data-tip': 'Open this entry' }, pinTitle(p)) : el('span', {}, pinTitle(p));
+      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.author ? `Added by ${p.author}` : null, p.is_locked ? 'Locked in place' : null].filter(Boolean).join(' · ');
       const match = gm && p.kind === 'note' ? entryNamed(p.label) : null;
+      const dist = fromParty(p);
+      const facts = [dist ? el('span', {}, dist) : null,
+        p.kind === 'event' && p.event ? el('a', { href: `#/c/${cid}/day/${p.event.abs_day}`, 'data-tip': 'Open this day' }, ctx.fmtDay(p.event.abs_day)) : null,
+        p.child_map ? el('a', { class: 'map-pin-opens', href: `#/c/${cid}/maps/${p.child_map.id}`, 'data-tip': 'Open the map inside this place' }, `🗺️ Open ${p.child_map.name}`) : null].filter(Boolean);
+      const acts = [partyHere(p),
+        gm && p.kind === 'note' ? (match
+          ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), '', 'Pin this to the entry that already has this name, without making another')
+          : btn('Add to Encyclopedia', () => toEntry(p), '', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
+        mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null,
+        mine(p) ? btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
+          try { await post('pin_save', { id: p.id, is_locked: !p.is_locked }, cid); lmap_close(); await refresh(); toast(p.is_locked ? 'Pin unlocked' : 'Pin locked in place'); }
+          catch (err) { toast(err.message, true); }
+        }, '', p.is_locked ? 'Let this pin be dragged again' : 'Stop this pin being dragged by accident') : null,
+        mine(p) ? btn('Delete', async () => {
+          if (!await ctx.confirmDialog(`Delete the pin "${pinTitle(p)}"?`, { ok: 'Delete', danger: true })) return;
+          try { await post('pin_delete', { id: p.id }, cid); await refresh(); toast('Pin deleted'); } catch (err) { toast(err.message, true); }
+        }, 'danger') : null].filter(Boolean);
       return el('div', { class: 'map-pin-card' },
-        el('strong', {}, p.is_secret ? '🔒 ' : '', head),
-        p.kind === 'entry' && p.entry?.first_line ? el('p', { class: 'small' }, p.entry.first_line) : null,
-        p.kind === 'event' && p.event ? el('p', { class: 'small' }, el('a', { href: `#/c/${cid}/day/${p.event.abs_day}`, 'data-tip': 'Open this day' }, ctx.fmtDay(p.event.abs_day))) : null,
-        p.kind === 'note' && p.note ? el('p', { class: 'small pre' }, p.note) : null,
-        p.is_secret ? el('span', { 'data-tip': 'GM only: players don\'t see this pin' }, '🔒') : null,
-        p.author ? el('small', { class: 'muted' }, `Added by ${p.author}`) : null,
-        partyHere(p),
-        p.child_map ? el('a', { class: 'map-pin-opens', href: `#/c/${cid}/maps/${p.child_map.id}`, 'data-tip': 'Open the map inside this place' }, `🗺️ Open ${p.child_map.name}`) : null,
-        gm && p.kind === 'note' ? el('div', { class: 'row' }, match
-          ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), 'small', 'Pin this to the entry that already has this name, without making another')
-          : btn('Add to Encyclopedia', () => toEntry(p), 'small', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
-        p.is_locked ? el('small', { class: 'muted' }, 'Locked in place') : null,
-        mine(p) ? el('div', { class: 'row' },
-          btn('Edit', () => { lmap_close(); pinForm(p, p); }, 'small'),
-          btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
-            try { await post('pin_save', { id: p.id, is_locked: !p.is_locked }, cid); lmap_close(); await refresh(); toast(p.is_locked ? 'Pin unlocked' : 'Pin locked in place'); }
-            catch (err) { toast(err.message, true); }
-          }, 'small', p.is_locked ? 'Let this pin be dragged again' : 'Stop this pin being dragged by accident'),
-          btn('Delete', async () => {
-            if (!await ctx.confirmDialog(`Delete the pin "${pinTitle(p)}"?`, { ok: 'Delete', danger: true })) return;
-            try { await post('pin_delete', { id: p.id }, cid); await refresh(); toast('Pin deleted'); } catch (err) { toast(err.message, true); }
-          }, 'small danger')) : null);
+        el('div', { class: 'mpc-head' }, el('span', { class: 'mpc-glyph', 'aria-hidden': 'true' }, el('span', {}, pinIcon(p))),
+          el('div', { class: 'mpc-title' }, el('strong', {}, name), el('span', { class: 'mpc-sub' }, sub))),
+        p.kind === 'entry' && p.entry?.first_line ? el('p', { class: 'mpc-text' }, p.entry.first_line) : null,
+        p.kind === 'note' && p.note ? el('p', { class: 'mpc-text pre' }, p.note) : null,
+        facts.length ? el('div', { class: 'mpc-facts' }, facts) : null,
+        acts.length ? el('div', { class: 'mpc-actions' }, acts) : null);
     }
     const lmap_close = () => lf?.map.closePopup();
 
@@ -1212,7 +1220,7 @@ const MapsTab = (() => {
       const way = (title, text, action) => el('div', { class: 'map-scan-way' }, el('div', {}, el('strong', {}, title), el('p', { class: 'small muted' }, text)), action);
       d.append(el('h3', {}, `Scan ${map.name} for place names`),
         way('Read with Claude', key
-          ? 'Sends the picture to Anthropic, where Claude reads it with your own API key. Reads fancy and slanted lettering well. Costs your Anthropic account a few cents a scan.'
+          ? 'Sends the picture to Anthropic, where Claude reads it with your own API key. Reads fancy and slanted lettering well, and a numbered legend: each numbered spot is named from the legend. Costs your Anthropic account a few cents a scan.'
           : 'Claude reads fancy and slanted lettering well, using your own Anthropic API key. Add your key on your account page to use it.',
         key ? btn('Read with Claude', () => run('claude'), 'primary') : el('a', { class: 'button', href: '#/account', onclick: () => d.close() }, 'Add your key')),
         way('Read on this device', 'Free, and the picture stays on your device, but it only reads plain printed lettering. The first scan downloads the scanner (about 7 MB), which your browser keeps.',
@@ -1258,7 +1266,7 @@ const MapsTab = (() => {
           say();
           const row = el('div', { class: 'map-scan-row' + (already ? ' already' : '') }, box,
             el('img', { src: MapScan.crop(canvas, k, c.box), alt: `Where "${c.name}" was read`, class: 'map-scan-crop' }),
-            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, c.conf === null ? null : el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
+            el('div', { class: 'map-scan-name' }, name, el('span', {}, what, c.num ? el('small', { class: 'muted' }, ` · number ${c.num} in the legend`) : null, c.conf === null ? null : el('small', { class: 'muted' }, ` · ${c.conf}% sure`))));
           return { c, box, name, row };
         });
         const go = el('button', { class: 'primary', type: 'button' });

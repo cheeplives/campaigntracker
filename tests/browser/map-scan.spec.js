@@ -174,6 +174,22 @@ test("MapScan.fromClaude turns Claude's boxes into names in the map's own pixels
   expect(MapScan.fromClaude(null)).toEqual([]);
 });
 
+test("MapScan.fromClaude names each numbered marker from the legend, and a numbered spot wins over a label of the same name", () => {
+  const found = MapScan.fromClaude({
+    labels: [{ name: "Old Garrison", x0: 10, y0: 10, x1: 60, y1: 30 }, { name: "Bevline River", x0: 700, y0: 100, x1: 800, y1: 130 }],
+    legend: [{ number: "1.", name: "Old Garrison" }, { number: "2", name: "Museum" }, { number: "3", name: "Hunters" }],
+    markers: [
+      { number: "2", x0: 90, y0: 400, x1: 110, y1: 420 }, { number: "1", x0: 20, y0: 300, x1: 40, y1: 320 },
+      { number: "9", x0: 5, y0: 5, x1: 15, y1: 15 },        // not in the legend
+      { number: "3", x0: 5000, y0: 5, x1: 5010, y1: 15 },   // off the picture
+    ],
+  }, 2, 1000, 800);
+  expect(found.map(c => [c.name, c.num || null])).toEqual([["Bevline River", null], ["Old Garrison", "1"], ["Museum", "2"]]);
+  expect(found[2]).toEqual({ name: "Museum", conf: null, num: "2", x: 50, y: 205, box: { x: 45, y: 200, w: 10, h: 10 } });
+  // no legend at all: markers name nothing
+  expect(MapScan.fromClaude({ labels: [], legend: [], markers: [{ number: "1", x0: 0, y0: 0, x1: 10, y1: 10 }] })).toEqual([]);
+});
+
 /** A GM's campaign with a map whose picture is printedMap(): { cid, mapId }. */
 async function mapReady(page, browser, label) {
   const gm = person(label);
@@ -204,7 +220,8 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
     if (r.request().method() === "OPTIONS") return r.fulfill({ status: 204, headers: CORS });
     sent.push({ headers: r.request().headers(), body: r.request().postDataJSON() });
     // the picture is 900x600, sent as it is (under Claude's 2576px), so these are the map's own pixels
-    const answer = { labels: [{ name: "Ravenhold", x0: 80, y0: 110, x1: 290, y1: 152 }, { name: "Mirewood", x0: 520, y0: 290, x1: 720, y1: 332 }] };
+    const answer = { labels: [{ name: "Ravenhold", x0: 80, y0: 110, x1: 290, y1: 152 }, { name: "Mirewood", x0: 520, y0: 290, x1: 720, y1: 332 }],
+      legend: [{ number: "1", name: "Garrison" }], markers: [{ number: "1", x0: 400, y0: 500, x1: 420, y1: 520 }] };
     return r.fulfill({ status: 200, headers: { ...CORS, "content-type": "application/json" },
       body: JSON.stringify({ id: "msg_1", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(answer) }] }) });
   });
@@ -212,7 +229,7 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
   await gearAction(page, "Scan for names…");
   const d = page.getByRole("dialog", { name: "Scan for place names" });
   await d.getByRole("button", { name: "Read with Claude" }).click();
-  await expect(d.getByRole("heading")).toContainText("Found 2 names");
+  await expect(d.getByRole("heading")).toContainText("Found 3 names");   // two labels and the legend's number 1
   expect(sent).toHaveLength(1);
   const { headers, body } = sent[0];
   expect(headers["x-api-key"]).toBe(KEY);
@@ -228,11 +245,17 @@ test("Scan for names: Read with Claude sends the picture to Anthropic with the G
   await expect(mire).toContainText("Pins the entry Mirewood");
   await expect(mire).not.toContainText("% sure");   // Claude gives no confidence
   await expect(mire.getByRole("checkbox")).toBeChecked();
-  await d.getByRole("button", { name: "Add 2 pins" }).click();
-  await expect(page.locator("#toast")).toContainText("Added 2 pins, with 1 new Location in the Encyclopedia");
+  const garrison = d.locator(".map-scan-row").filter({ has: page.getByRole("checkbox", { name: "Add Garrison", exact: true }) });
+  await expect(garrison).toContainText("number 1 in the legend");
+  expect(body.output_config.format.schema.required).toEqual(["labels", "legend", "markers"]);
+  expect(body.messages[0].content.find(c => c.type === "text").text).toContain("legend or key");
+  await d.getByRole("button", { name: "Add 3 pins" }).click();
+  await expect(page.locator("#toast")).toContainText("Added 3 pins, with 2 new Locations in the Encyclopedia");
   const map = await (await page.request.get(`api/index.php?a=map&cid=${cid}&id=${mapId}`)).json();
   const raven = map.pins.find(p => p.entry.name === "Ravenhold");
   expect([Math.round(raven.x), Math.round(raven.y)]).toEqual([185, 131]);
+  const gar = map.pins.find(p => p.entry.name === "Garrison");
+  expect([Math.round(gar.x), Math.round(gar.y)]).toEqual([410, 510]);   // where its number is printed
   expectNoErrors(errors);
 });
 
