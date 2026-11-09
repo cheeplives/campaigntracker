@@ -24,14 +24,26 @@ test("an event gets a shift range and tags, shown in day and week view", async (
   await form.getByRole("combobox", { name: /^Shift Start/ }).selectOption({ label: "Dawn" });
   await expect(form.getByRole("combobox", { name: /^Shift End/ })).toHaveValue("0");   // follows Shift Start
   await form.getByRole("combobox", { name: /^Shift End/ }).selectOption({ label: "Midday" });
+  // the tags fold: nothing picked yet on its summary; open it to pick and to add
+  const fold = form.locator("details.tagfold");
+  await expect(fold.locator(".tagfold-picked")).toHaveText("None yet");
+  await fold.locator("summary").click();
   const battle = form.getByRole("button", { name: "Battle", exact: true });
   await expect(battle).toHaveCSS("border-color", "rgb(185, 28, 28)");      // each tag shows its colour
   await expect(battle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await battle.click();
   await expect(battle).toHaveCSS("background-color", "rgb(185, 28, 28)");  // and fills in when picked
-  await form.getByLabel("New tag name").fill("Siege");
+  // the search box narrows the tags, and adds the one typed when none matches
+  const find = form.getByLabel("Search or add a tag");
+  await find.fill("bat");
+  await expect(form.locator(".tagpick .tagopt")).toHaveText(["✓ Battle"]);
+  await find.fill("battle");                                            // a tag that exists: nothing to add
+  await expect(form.getByRole("button", { name: "+ Add tag" })).toBeHidden();
+  await find.fill("Siege");
+  await expect(form.locator(".tagpick .tagopt")).toHaveCount(0);
   await form.getByRole("button", { name: "+ Add tag" }).click();
   await expect(form.getByRole("button", { name: "Siege", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(fold.locator(".tagfold-picked .chip")).toHaveText(["Battle", "Siege"]);
   await form.getByRole("button", { name: "Add event" }).click();
   await expect(page.getByText("Event saved")).toBeVisible();
 
@@ -80,6 +92,7 @@ test("a player who may add events can tag them", async ({ page, browser }) => {
   await page.getByRole("button", { name: "+ New event" }).click();
   const form = page.locator("form.event");
   await form.getByLabel("Title", { exact: true }).fill("Harvest dance");
+  await form.locator("details.tagfold > summary").click();
   const party = form.getByRole("button", { name: "Party", exact: true });
   await party.click();
   await expect(party).toHaveAttribute("aria-pressed", "true");

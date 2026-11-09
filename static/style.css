@@ -114,6 +114,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-dir
 .field > .row { margin-top: 0; }   /* a row inside a field lines up with the plain boxes beside it */
 .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--label); font-weight: 600; }
 .inline { display: inline-flex; gap: 6px; align-items: center; }
+/* a checkbox field: the box beside its label, the hint under both */
+.check-field { gap: 2px; }
+.check-row { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.check-row input[type=checkbox] { flex: none; margin: 0; }
 
 input, select, textarea, button, .button {
   font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; max-width: 100%;
@@ -338,6 +342,30 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .etags { margin: 2px 0 4px; }
 .weekrow .chip.tag { margin-top: 3px; }
 .tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+/* the tag picker folds: its label and the tags picked on the summary, the search box and every tag inside */
+details.tagfold { display: block; }
+details.tagfold > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: inherit; padding: 4px 0; }
+details.tagfold > summary::-webkit-details-marker { display: none; }
+details.tagfold > summary:hover .lbl, details.tagfold > summary:focus-visible .lbl { color: var(--accent); }
+details.tagfold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.tagfold-picked { display: inline-flex; flex-wrap: wrap; gap: 2px; align-items: center; }
+.tagfold-caret { color: var(--dim); font-size: .8rem; transition: transform .15s; }
+details.tagfold[open] > summary .tagfold-caret { transform: rotate(180deg); }
+.tagfold-body { padding: 4px 0 2px; }
+.tagfold-find { margin: 0 0 8px; }
+.tagfold-find .tagfind { flex: 1 1 200px; max-width: 320px; }
+.tagfold-find [hidden] { display: none; }
+/* the event form: title, day and length on one line; the time of day and GM only on the next */
+.event.editing .ev-top { display: flex; flex-wrap: wrap; gap: 0 16px; align-items: flex-start; }
+.ev-top .ev-title { flex: 1 1 160px; min-width: 0; }
+.ev-top .ev-title input { width: 100%; }
+.ev-top .datepick { flex-wrap: nowrap; }
+.ev-top .w-lasts { width: 6.5em; }
+.ev-when { gap: 4px 16px; align-items: flex-end; margin-top: 0; }
+.ev-when .field { margin: 4px 0; }
+.ev-when .check-field { padding-bottom: 7px; }   /* the box level with the selects beside it */
+.ev-secret { gap: 8px; margin-bottom: 4px; }
+.ev-secret .lock-toggle { align-self: center; }
 /* Unpicked: an outline in the tag's colour, dimmed. Picked: filled with the colour, bold, ticked. */
 button.tagopt { padding: 2px 10px; font-size: .8rem; border-radius: 99px; border: 2px solid var(--tag); background: transparent; color: var(--dim); opacity: .75; }
 button.tagopt:hover { opacity: 1; color: var(--text); }

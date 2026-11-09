@@ -38,7 +38,11 @@
   fitTopbar();
   function mount(...kids) { hideTip(); const a = app(); a.replaceChildren(...clean(kids)); window.scrollTo(0, 0); }
   function field(label, input, hint, tipText) {
-    return el('label', { class: 'field' }, el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null), input, hint ? el('small', { class: 'muted' }, hint) : null);
+    const lbl = el('span', { class: 'lbl' }, label, tipText ? tip(tipText) : null);
+    const help = hint ? el('small', { class: 'muted' }, hint) : null;
+    // a checkbox sits beside its label rather than under it, so a run of on/off settings reads as a list
+    if (input?.type === 'checkbox') return el('label', { class: 'field check-field' }, el('span', { class: 'check-row' }, input, lbl), help);
+    return el('label', { class: 'field' }, lbl, input, help);
   }
   function select(options, value, attrs) {
     return el('select', attrs || {}, options.map(([v, l]) => el('option', { value: v, selected: String(v) === String(value) }, l)));
@@ -3216,30 +3220,56 @@
     const known = new Map(tags.map(t => [key(t), t]));
     for (const t of picked) if (!known.has(key(t))) known.set(key(t), t);
     const on = new Set(picked.map(key));
+    // Folded: the Tags label and the tags picked, as chips. Open: a box that searches the tags (or adds the one typed),
+    // then every tag as a button to press on or off.
     const list = el('div', { class: 'tagpick' });
-    const draw = () => list.replaceChildren(...[...known.values()].sort((a, b) => a.name.localeCompare(b.name)).map(t => {
-      const k = key(t), sel = on.has(k);
-      const b = el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
-        'data-tip': sel ? `Tagged ${t.name}. Click to take it off` : `Click to tag this ${noun} ${t.name}`,
-        onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, sel ? '✓ ' : ''), t.name);
-      b.style.setProperty('--tag', t.color); // el()'s style object can't set custom properties
-      return b;
-    }));
+    const chosen = el('span', { class: 'tagfold-picked' });
     const PALETTE = ['#2563eb', '#0891b2', '#16a34a', '#9333ea', '#e11d48', '#ea580c', '#4d7c0f', '#0f766e'];
-    const name = el('input', { maxlength: 40, placeholder: 'New tag', 'aria-label': 'New tag name' });
+    const find = el('input', { type: 'search', maxlength: 40, class: 'tagfind', placeholder: 'Search tags, or type a new one', 'aria-label': 'Search or add a tag' });
     const color = el('input', { type: 'color', value: PALETTE[known.size % PALETTE.length], 'aria-label': 'New tag colour', 'data-tip': 'Colour for the new tag' });
+    const addBtn = btn('+ Add tag', () => add(), 'small', `Create the tag typed and put it on the ${noun}`);
+    const sorted = () => [...known.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const draw = () => {
+      const q = find.value.trim().toLowerCase();
+      const shown = sorted().filter(t => !q || key(t).includes(q));
+      list.replaceChildren(...shown.map(t => {
+        const k = key(t), sel = on.has(k);
+        const b = el('button', { type: 'button', class: 'tagopt' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
+          'data-tip': sel ? `Tagged ${t.name}. Click to take it off` : `Click to tag this ${noun} ${t.name}`,
+          onclick: () => { sel ? on.delete(k) : on.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, sel ? '✓ ' : ''), t.name);
+        b.style.setProperty('--tag', t.color); // el()'s style object can't set custom properties
+        return b;
+      }), ...(shown.length ? [] : [el('span', { class: 'muted small' }, known.size ? 'No tag like that yet. Press + Add tag to make it.' : 'No tags yet. Type one and press + Add tag.')]));
+      // + Add tag is offered while what's typed isn't a tag already
+      addBtn.hidden = !q || known.has(q);
+      addBtn.textContent = q ? `+ Add tag “${find.value.trim()}”` : '+ Add tag';
+      const picked = sorted().filter(t => on.has(key(t)));
+      chosen.replaceChildren(...(picked.length ? picked.map(tagChip) : [el('span', { class: 'muted small' }, 'None yet')]));
+    };
     const add = () => {
-      const n = name.value.trim();
+      const n = find.value.trim();
       if (!n) return;
       const k = n.toLowerCase();
       if (!known.has(k)) known.set(k, { name: n, color: color.value });
-      on.add(k); name.value = ''; color.value = PALETTE[known.size % PALETTE.length]; draw();
+      on.add(k); find.value = ''; color.value = PALETTE[known.size % PALETTE.length]; draw();
     };
-    name.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
+    // Enter: the one tag that matches goes on; anything else typed becomes a tag
+    find.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const q = find.value.trim().toLowerCase();
+      if (!q) return;
+      if (known.has(q)) { on.add(q); find.value = ''; draw(); } else add();
+    });
+    find.addEventListener('input', draw);
     draw();
-    const node = el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip(noun === 'event' ? 'Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Make your own with New tag'
-      : `Group ${nouns} by kind. These tags are the ${nouns}' own, apart from the events' tags. Make your own with New tag`)),
-      list, el('div', { class: 'row' }, name, color, btn('+ Add tag', add, 'small', `Create this tag and put it on the ${noun}`)));
+    const sum = el('summary', { class: 'tagfold-sum' },
+      el('span', { class: 'lbl' }, 'Tags', tip(noun === 'event' ? 'Group events by kind. Each tag has a colour, shown on the days that carry it in week view. Open to pick tags, or type a new one'
+        : `Group ${nouns} by kind. These tags are the ${nouns}' own, apart from the events' tags. Open to pick tags, or type a new one`)),
+      chosen, el('span', { class: 'tagfold-caret', 'aria-hidden': 'true' }, '▾'));
+    const node = el('details', { class: 'field tagfold' }, sum,
+      el('div', { class: 'tagfold-body' }, el('div', { class: 'row tagfold-find' }, find, color, addBtn), list));
+    node.addEventListener('toggle', () => { if (node.open) find.focus(); });
     return { node, get: () => [...on].map(k => ({ name: known.get(k).name, color: known.get(k).color })) };
   }
 
@@ -3320,14 +3350,19 @@
     const pinIt = !e.id && opt.pinAt && isGM() ? el('input', { type: 'checkbox', name: 'pin_it' }) : null;
     // added from the Events tab rather than from a day, it asks which day it starts on (today to begin with)
     const dayPick = opt.pickDay ? datePicker(start) : null;
+    const title = field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 }));
+    title.classList.add('ev-title');
+    const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }) : null;
+    // Two short lines above the tags: what and when (the title, the day, how long), then the time of day and GM only
     const f = el('form', { class: 'event editing' },
-      el('div', { class: 'grid2' },
-        field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
+      el('div', { class: 'ev-top' },
+        title,
         dayPick ? field('Starts on', dayPick, null, 'The day the event happens, or its first day if it lasts longer') : null,
+        field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts, class: 'w-lasts' }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage')),
+      el('div', { class: 'row ev-when' },
         field('All day', allDay, null, `For things that fill the whole day. Untick to pick the ${word()}s it starts and ends in`),
         startField, endField,
-        field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
-        isGM() ? lockField(el('input', { type: 'checkbox', name: 'is_secret', checked: !!Number(e.is_secret) }), 'players won\'t see this event or its notes') : null),
+        secret ? el('span', { class: 'inline ev-secret' }, lockBox(secret, 'players won\'t see this event or its notes'), el('span', { class: 'lbl' }, 'GM only')) : null),
       tags.node,
       field('Details', el('textarea', { name: 'body', rows: 4, value: e.body || '' })),
       pinIt ? el('label', { class: 'inline small', 'data-tip': `Put a pin for this event on ${opt.pinAt.map_name}, at the party's marker` }, pinIt, ` 📍 Pin it where the party is, on ${opt.pinAt.map_name}`) : null,
