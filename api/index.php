@@ -875,6 +875,31 @@ try {
             if ($list) $all[(string)$dcid] = $list; else unset($all[(string)$dcid]);
             if ($all) $prefs['dice_saved'] = $all; else unset($prefs['dice_saved']);
         }
+        // star: { cid, kind: 'entry'|'tome', id, on }, star or unstar one Encyclopedia entry or Library tome for this person
+        // alone. Kept by campaign under prefs.stars as { "<cid>": { entry: [ids], tome: [ids] } }, newest star last. The
+        // Encyclopedia and Library list a person's starred ones on their start pages. One star at a time, so two tabs
+        // starring at once don't undo each other.
+        if (array_key_exists('star', body())) {
+            $s = p('star');
+            if (!is_array($s) || !in_array($s['kind'] ?? null, ['entry', 'tome'], true)) fail('A star is an entry or a tome');
+            $scid = int_in($s['cid'] ?? null, 1);
+            $sid = int_in($s['id'] ?? null, 1);
+            if (!$u['is_admin']) {
+                $st = db()->prepare('SELECT 1 FROM campaign_members WHERE user_id=? AND campaign_id=?');
+                $st->execute([$u['id'], $scid]);
+                if (!$st->fetchColumn()) fail('Campaign not found', 404);
+            }
+            $all = is_array($prefs['stars'] ?? null) ? $prefs['stars'] : [];
+            $mine = is_array($all[(string)$scid] ?? null) ? $all[(string)$scid] : [];
+            $ids = array_values(array_filter(array_map('intval', is_array($mine[$s['kind']] ?? null) ? $mine[$s['kind']] : []), fn($i) => $i > 0 && $i !== $sid));
+            if (!empty($s['on'])) {
+                if (count($ids) >= 500) fail('That is a lot of stars: 500 is the most');
+                $ids[] = $sid;
+            }
+            if ($ids) $mine[$s['kind']] = $ids; else unset($mine[$s['kind']]);
+            if ($mine) $all[(string)$scid] = $mine; else unset($all[(string)$scid]);
+            if ($all) $prefs['stars'] = $all; else unset($prefs['stars']);
+        }
         // dice_look: { body, ink, tex }, how their dice look (static/dice-3d.js): the dice's colour, the numbers' colour and
         // a built-in pattern. It is theirs in every campaign, and everyone sees their rolls in it. Null goes back to the
         // theme's dice.

@@ -54,6 +54,10 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   only after typing DELETE; players get neither button, and the API refuses them both.
 - **campaign-stars**: the campaign list is sorted by name (ignoring case) with starred campaigns first; a star is each
   person's own, kept in their preferences across reloads, and only on a campaign they belong to.
+- **item-stars**: Encyclopedia entries and Library tomes are starred from the ☆ on a list card (which doesn't open it,
+  and works from the keyboard) or by the name on their page, and listed under ★ Starred on the tab's first page, newest
+  star first; stars are each person's own, kept in their preferences, only in a campaign they belong to; a deleted entry
+  drops off. Blank Entries starts folded with a red count of the blanks.
 - **reports**: the ! button in the top bar sends a report with a screenshot taken in the browser and the page's details,
   which it lists first; the server takes only a real picture and only site admins read reports or their screenshots; Site
   Admin's Reports tab resolves one unfixed, reopens it, sends it to GitHub (a stub) without who sent it, and deletes it.
