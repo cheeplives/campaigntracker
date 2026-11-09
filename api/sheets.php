@@ -362,7 +362,9 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
     $caps = sheet_caps($layout, $c['pip_caps'] ?? null);
     $play = [];
     $summary = [];
+    $hasPlay = false;   // the template has Play fields, filled in or not: the card offers its Play view
     if ($visible) foreach (sheet_fields($layout) as $k => [$f]) {
+        if (!empty($f['play'])) $hasPlay = true;
         if (!array_key_exists($k, $values)) continue;
         if (!empty($f['play'])) $play[] = ['key' => $k, 'label' => $f['label'], 'type' => $f['type'], 'value' => $values[$k]] + (isset($f['count']) ? ['count' => $f['count']] : []) + (isset($caps[$k]) ? ['cap' => $caps[$k]] : []);
         if (!empty($f['summary'])) $summary[] = ['key' => $k, 'label' => $f['label'], 'value' => $values[$k]];
@@ -371,7 +373,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'owner' => $c['owner_id'] !== null ? ['id' => (int)$c['owner_id'], 'name' => (string)$c['owner_name']] : null,
         'owner_in_campaign' => (bool)$c['owner_in_campaign'], 'secret' => (bool)(int)$c['entry_secret'],
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
-        'play' => $play, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
+        'play' => $play, 'has_play' => $hasPlay, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => $pics[(int)$c['entry_id']] ?? null,
         'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'party_out' => (bool)(int)$c['party_out'], 'owner_is_player' => $c['owner_role'] === 'player'];
 }
@@ -680,6 +682,7 @@ function characters_action(string $action, int $cid): void {
             $pdo = db();
             $pdo->beginTransaction();
             $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=?')->execute([$c['id']]);
+            $pdo->prepare('DELETE FROM shift_actions WHERE campaign_id=? AND character_id=?')->execute([$cid, $c['id']]);   // its At the Table actions
             $pdo->prepare('DELETE FROM sheet_characters WHERE id=?')->execute([$c['id']]);
             $pdo->commit();
             out(['ok' => true]);
