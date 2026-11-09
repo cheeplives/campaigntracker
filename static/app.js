@@ -93,6 +93,7 @@
     let res;
     try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); if (tracked) SaveState.end(err.message); throw err; }
     if (tracked) SaveState.end(res.ok ? null : `Not saved (${res.status})`);
+    if (res.ok && (action === 'session_save' || action === 'session_delete' || action === 'session_start')) forgetPinSessions();   // the Legend's pinned names
     let data;
     try { data = await res.json(); } catch { noteFail(res.status, 'not JSON'); throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
     // The panel's link was revoked (or its maker lost access): ask for a new one.
@@ -125,26 +126,30 @@
   // One line in the campaign bar says whether everything you changed has reached the server: ✓ Saved, Saving…, Not saved
   // (with what went wrong in its tooltip) or Offline. It follows every change the page sends.
   const SaveState = (() => {
-    const node = el('span', { class: 'save-state', role: 'status', 'aria-live': 'polite' });
-    let busy = 0, failed = null;
+    const node = el('span', { class: 'save-state', role: 'status' });
+    let busy = 0, failed = null, sent = false;   // nothing is claimed as saved until something has been changed
     const show = () => {
       const off = navigator.onLine === false;
       node.className = 'save-state' + (off || failed ? ' bad' : busy ? ' busy' : '');
-      node.textContent = off ? 'Offline' : busy ? 'Saving…' : failed ? 'Not saved' : '✓ Saved';
+      node.textContent = off ? 'Offline' : busy ? 'Saving…' : failed ? 'Not saved' : sent ? '✓ Saved' : '';
       node.dataset.tip = off ? 'This device is offline. Changes made now will not reach the campaign until it is back online'
         : failed ? `The last change did not save: ${failed}. Try it again` : busy ? 'Sending your change' : 'Everything you changed on this page is saved';
     };
     addEventListener('online', show); addEventListener('offline', show);
+    addEventListener('hashchange', () => { if (!busy && !failed) { sent = false; show(); } });   // a new page has changed nothing yet
     show();
-    return { node, begin() { busy++; show(); }, end(err) { busy = Math.max(0, busy - 1); failed = err || (busy ? failed : null); show(); } };
+    return { node, begin() { busy++; sent = true; show(); }, end(err) { busy = Math.max(0, busy - 1); failed = err || (busy ? failed : null); show(); } };
   })();
 
   // Undo instead of "Are you sure?": a delete takes the thing off the page at once and says so with an Undo button, and the
-  // server is only told 8 seconds later (or sooner: when another delete starts, the page changes or the tab closes).
-  // undoable({ label, hide, restore, commit }) — hide/restore show and hide the row, commit tells the server.
+  // server is only told 8 seconds later (or sooner: when another delete starts, you go to another page or the tab closes).
+  // A redraw of the same page (after a save somewhere on it) keeps the Undo and its time, and hides the row again.
+  // Each row that can go this way carries data-undo="<action>:<id>", so a redrawn copy of it is found and hidden too.
   const Undo = (() => {
     let pending = null, bar = null;
-    const close = () => { if (bar) bar.classList.remove('show'); };
+    // closed: back to the foot of the screen (it may have been lifted over At the Table's bar), so it slides out of sight
+    const close = () => { if (bar) { bar.classList.remove('show'); bar.style.bottom = ''; } };
+    const rows = p => [...document.querySelectorAll(`[data-undo="${CSS.escape(p.key)}"]`)];
     async function flush() {
       const p = pending; if (!p) return;
       pending = null; clearTimeout(p.timer); close();
@@ -152,17 +157,37 @@
     }
     function start(p) {
       if (pending) flush();
+      const had = document.activeElement;
+      p.hash = location.hash;
       p.hide();
       pending = p;
-      if (!bar) document.body.append(bar = el('div', { id: 'undo-toast', role: 'status', 'aria-live': 'polite' }));
-      const undo = el('button', { type: 'button', class: 'undo-btn' }, 'Undo');
-      undo.addEventListener('click', () => { if (pending !== p) return; pending = null; clearTimeout(p.timer); close(); p.restore(); });
+      if (!bar) document.body.append(bar = el('div', { id: 'undo-toast', role: 'status' }));
+      const undo = el('button', { type: 'button', class: 'undo-btn', 'aria-label': `Undo: ${p.label}` }, 'Undo');
+      undo.addEventListener('click', () => {
+        if (pending !== p) return;
+        pending = null; clearTimeout(p.timer); close(); p.restore();
+        // focus goes back to the row's own Delete (a redraw may have made a new one)
+        const again = had?.isConnected && !had.closest('[hidden]') ? had
+          : rows(p).find(r => r.isConnected)?.querySelector('button.danger');
+        again?.focus();
+      });
       bar.replaceChildren(el('span', {}, p.label), undo, el('span', { class: 'undo-bar' }));
+      // above At the Table's floating bar, however many rows it wraps to (two on an iPad held upright)
+      const tb = document.querySelector('.tv-bar'), tr = tb?.getBoundingClientRect();
+      bar.style.bottom = tr && tr.height ? `${Math.max(20, innerHeight - tr.top + 12)}px` : '';
       bar.classList.remove('show'); void bar.offsetWidth; bar.classList.add('show');
+      // a toast that comes meanwhile sits above the Undo bar
+      document.documentElement.style.setProperty('--undo-clear', `${(parseFloat(getComputedStyle(bar).bottom) || 20) + bar.offsetHeight + 8}px`);
+      // the Delete pressed is now hidden, so focus would fall to the page: put it on Undo instead
+      if (had && (had === document.body || had.closest('[hidden], .undo-gone'))) undo.focus({ preventScroll: true });
       p.timer = setTimeout(flush, 8000);
     }
+    /** True while a delete waits for its Undo on the page now showing: a redraw then keeps it. */
+    const samePage = () => !!pending && pending.hash === location.hash;
+    /** After a redraw of the same page: hide the redrawn copy of the row that is waiting to go. */
+    function reapply() { if (samePage()) pending.hide(); }
     addEventListener('pagehide', () => { flush(); });
-    return { start, flush };
+    return { start, flush, samePage, reapply, rows };
   })();
   /** A small ⧉ Copy button that puts `text` on the clipboard (what it is, for the toast and its tooltip). */
   const copyButton = (text, what) => btn('⧉ Copy', async () => {
@@ -174,11 +199,24 @@
     href && i < a.length - 1 ? el('a', { href }, label) : el('span', { 'aria-current': i === a.length - 1 ? 'page' : null }, label),
     i < a.length - 1 ? el('span', { class: 'trail-sep', 'aria-hidden': 'true' }, '›') : null]).flat());
   const shortText = (t, n = 40) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t; };
-  /** Take `box` off the page and delete it on the server after the Undo has had its time. */
-  const undoDelete = (box, label, action, body, done, changed) => Undo.start({
-    label, hide: () => { box.hidden = true; box.classList.add('undo-gone'); changed?.(); }, restore: () => { box.hidden = false; box.classList.remove('undo-gone'); changed?.(); },
-    commit: async () => { await post(action, body, S.camp.id); if (done) done(); },
-  });
+  /** Take `box` off the page and delete it on the server after the Undo has had its time. `changed` runs after the row
+   *  goes or comes back (a ledger's total); it is handed the ledger the row is in, which a redraw may have made anew. */
+  const undoDelete = (box, label, action, body, done, changed) => {
+    const key = `${action}:${body.id}`;
+    box.dataset.undo = key;
+    const set = gone => {
+      for (const r of new Set([box, ...Undo.rows(p)])) {
+        r.hidden = gone; r.classList.toggle('undo-gone', gone);
+        // a storage ledger's total: a redrawn ledger counts again through its own weight boxes
+        if (r !== box) r.closest('.ledger-rows')?.querySelector('.ledger-row:not([hidden]) input.ledger-w')?.dispatchEvent(new Event('input'));
+      }
+      changed?.();
+    };
+    const p = { key, label,
+      hide: () => set(true), restore: () => set(false),
+      commit: async () => { await post(action, body, S.camp.id); if (done) done(); } };
+    Undo.start(p);
+  };
   addEventListener('unhandledrejection', e => { if (leaving && e.reason instanceof TypeError) e.preventDefault(); });
 
   // ------------------------------------------------------------ change notices
@@ -1258,7 +1296,10 @@
       if (sec.classList.contains('folded') && t) t.click();
       sec.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     };
-    const links = targets.map(([sec, name]) => el('a', { href: '#', onclick: ev => { ev.preventDefault(); go(sec); } }, name));
+    // the app routes by the address's hash, so a link can't be #box: it names this page (a new tab opens the page, not a
+    // blank one), and the click opens and scrolls to the box. aria-controls says which box it moves to.
+    targets.forEach(([sec, name], i) => { if (!sec.id) sec.id = `box-${(sec.dataset.box || name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${i}`; });
+    const links = targets.map(([sec, name]) => el('a', { href: location.hash || '#', 'aria-controls': sec.id, onclick: ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; ev.preventDefault(); go(sec); } }, name));
     const menu = KIT.menu({ label: 'Jump to ▾', ariaLabel: 'Jump to a part of this page', items: targets.map(([sec, name]) => btn(name, () => go(sec))), cls: 'jump-menu', align: 'left' });
     nav.replaceChildren(el('span', { class: 'jump-inline' }, links), menu);
     nav.hidden = false;
@@ -1267,7 +1308,7 @@
       const line = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0) + 90;
       let on = 0;
       targets.forEach(([sec], i) => { if (sec.isConnected && sec.getBoundingClientRect().top <= line) on = i; });
-      links.forEach((a, i) => a.classList.toggle('on', i === on));
+      links.forEach((a, i) => { a.classList.toggle('on', i === on); if (i === on) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
     };
     let queued = false;
     jumpScroll = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; mark(); }); } };
@@ -1424,18 +1465,19 @@
   let jumpBox = null;
   function openJumpBox(seed = '') {
     if (!S.camp || jumpBox) return;
+    const from = document.activeElement;
     hideTip(); closePeek();
     const input = el('input', { type: 'text', class: 'jb-input', placeholder: 'Jump to a name or a tab, or type a roll like 2d6+3', 'aria-label': 'Jump to or do',
       autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'jb-list', value: seed });
     const list = el('div', { class: 'jb-list', id: 'jb-list', role: 'listbox' });
-    const box = el('div', { class: 'jb-box surface-float', role: 'dialog', 'aria-label': 'Jump to' },
+    const box = el('div', { class: 'jb-box surface-float', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Jump to' },
       el('div', { class: 'jb-in' }, el('span', { 'aria-hidden': 'true' }, '🔍'), input, el('kbd', {}, 'Esc')), list,
       el('div', { class: 'jb-foot' }, el('span', {}, el('kbd', {}, '↑'), ' ', el('kbd', {}, '↓'), ' move'), el('span', {}, el('kbd', {}, 'Enter'), ' go'),
         el('span', {}, el('kbd', {}, '?'), ' every key')));
     const scrim = el('div', { class: 'jb-scrim', onclick: () => close() });
     let items = [], sel = 0;
-    const close = () => { scrim.remove(); box.remove(); jumpBox = null; };
-    const go = it => { close(); it.run(); };
+    const close = (back = true) => { scrim.remove(); box.remove(); jumpBox = null; if (back && from?.isConnected) from.focus({ preventScroll: true }); };
+    const go = it => { close(false); it.run(); };
     const cid = S.camp.id;
     const tabs = TAB_GROUPS.flatMap(([g, , ts]) => ts.map(([k, l]) => [k, l, g])).filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined'));
     const draw = () => {
@@ -1471,14 +1513,15 @@
           onpointerdown: ev => ev.preventDefault(), onclick: () => go(it) },
           el('span', { class: 'jb-icon', 'aria-hidden': 'true' }, it.icon), el('span', { class: 'jb-name' }, it.name), el('small', {}, it.hint));
       }))) : [el('p', { class: 'muted jb-none' }, 'Nothing matches. Press Enter to search everything.')]));
-      input.setAttribute('aria-activedescendant', items.length ? `jb-${sel}` : '');
+      if (items.length) input.setAttribute('aria-activedescendant', `jb-${sel}`); else input.removeAttribute('aria-activedescendant');
       list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
     };
     input.addEventListener('input', () => { sel = 0; draw(); });
     input.addEventListener('keydown', ev => {
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); if (items.length) { sel = (sel + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; draw(); } }
-      else if (ev.key === 'Enter') { ev.preventDefault(); if (items[sel]) go(items[sel]); else if (input.value.trim()) { close(); location.hash = searchHref(input.value.trim()); } }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (items[sel]) go(items[sel]); else if (input.value.trim()) { close(false); location.hash = searchHref(input.value.trim()); } }
       else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); }
+      else if (ev.key === 'Tab') ev.preventDefault();   // the box is modal: its one field keeps the focus (↑ ↓ move through the list)
     });
     document.body.append(scrim, box);
     jumpBox = box;
@@ -1861,7 +1904,12 @@
       toCalendar,
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/table`, 'data-tip': 'Open At the Table, on the campaign\'s current day' }, 'Go to today'),
       exportBtn);
-    mount(...campaignHeader('calendar'), nav, ...dayBoxes(x));
+    // the trail: Calendar › Firstmonth 1492 › this day. The month step opens the calendar on this day's month.
+    const mp = E.fromAbs(c, d);
+    const toMonth = ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; vs().anchor = d; vs().mode = 'month'; };
+    const where = trail(['Calendar', `#/c/${S.camp.id}/calendar`], [`${c.months[mp.month].name} ${E.yearLabel(c, mp.year)}`, `#/c/${S.camp.id}/calendar`], [E.fmtDate(c, d, { noWeekday: true })]);
+    where.querySelectorAll('a')[1]?.addEventListener('click', toMonth);
+    mount(...campaignHeader('calendar'), where, nav, ...dayBoxes(x));
   }
 
   /** A day's boxes: Weather, Shifts (or Hours), Notes, Events and Reminders. table: under At the Table, where they start
@@ -2866,11 +2914,11 @@
 
   /** Free notes at the foot of a shift card, separate from events. Anyone in the campaign can add one. */
   function shiftNotes(d, i, notes, after = route) {
-    const list = notes.map(n => el('div', { class: 'enote' },
+    const list = notes.map(n => el('div', { class: 'enote', 'data-undo': `shift_note_delete:${n.id}` },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
         (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
-          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'shift_note_delete', { id: n.id }), 'small note-del'), 'Delete this note') : null)));
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'shift_note_delete', { id: n.id }), 'small danger note-del'), 'Delete this note') : null)));
     // the box stays closed behind + Note until it's wanted
     const input = el('textarea', { rows: 3, placeholder: 'Your note', hidden: true, 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
     const add = btn('+ Note', null, 'small', `Add your note to this ${word()}, signed with your character name`);
@@ -2905,21 +2953,44 @@
   }
   const pinsOf = () => (Array.isArray(settings().legend_pins) ? settings().legend_pins : []);
   const pinHref = p => `#/c/${S.camp.id}/${{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]}/${p.id}`;
-  /** A pin's name as this member may see it, or null to leave it out (an entry that is GM only, or gone). */
-  const pinLabel = p => (p.kind === 'entry' ? S.encyclopedia.find(e => e.id === p.id)?.name || null : p.name || null);
+  // A session's title is never kept in the pin: the campaign's settings reach players, and an unpublished session's title
+  // must not. Its name comes from the sessions list this member may read (a player: the published ones), loaded once.
+  let pinSessions = null, pinSessionsCid = null, pinSessionsLoading = null;
+  function loadPinSessions() {
+    const cid = S.camp.id;
+    if (pinSessionsCid === cid && (pinSessions || pinSessionsLoading)) return pinSessionsLoading;
+    pinSessionsCid = cid; pinSessions = null;
+    return (pinSessionsLoading = api('sessions', { query: { cid } }).then(r => {
+      if (S.camp?.id !== cid) return;
+      pinSessions = new Map((r.sessions || []).map(x => [x.id, sessionName(x)]));
+      document.querySelectorAll('.legend-quick-wrap').forEach(w => w.replaceChildren(...legendQuickItems()));
+    }).catch(() => {}).finally(() => { pinSessionsLoading = null; }));
+  }
+  /** Drop what the Legend knows of sessions, after one is saved, published or deleted. */
+  const forgetPinSessions = () => { pinSessions = null; pinSessionsCid = null; };
+  /** A pin's name as this member may see it, or null to leave it out (an entry that is GM only or gone, an unpublished session). */
+  const pinLabel = p => (p.kind === 'entry' ? S.encyclopedia.find(e => e.id === p.id)?.name || null
+    : p.kind === 'session' ? (pinSessionsCid === S.camp.id ? pinSessions?.get(p.id) : null) || null
+    : p.name || null);
   /** 📌 Pin / Unpin for a GM, when Pinned is on: puts the thing in (or takes it out of) the Legend's Pinned list. */
   function pinButton(p) {
     if (!isGM() || !quickOn('pinned')) return null;
     const on = pinsOf().some(x => x.kind === p.kind && x.id === p.id);
     const b = btn(on ? '📌 Unpin' : '📌 Pin', async () => {
-      const pins = on ? pinsOf().filter(x => !(x.kind === p.kind && x.id === p.id)) : [...pinsOf(), { kind: p.kind, id: p.id, ...(p.kind === 'entry' ? {} : { name: p.name }) }].slice(-8);
-      try { await post('campaign_update', { settings: { ...settings(), legend_pins: pins } }, S.camp.id); settings().legend_pins = pins; closePeek(); route(); }
+      const pins = on ? pinsOf().filter(x => !(x.kind === p.kind && x.id === p.id)) : [...pinsOf(), { kind: p.kind, id: p.id, ...(p.kind === 'entry' || p.kind === 'session' ? {} : { name: p.name }) }].slice(-8);
+      // (this sends the campaign's settings as this browser has them, so a second GM's Settings save at the same moment
+      // can be overwritten; Settings and pins are both rare, so a merge on the server isn't worth it yet)
+      try { await post('campaign_update', { settings: { ...settings(), legend_pins: pins } }, S.camp.id); settings().legend_pins = pins; forgetPinSessions(); closePeek(); route(); }
       catch (err) { toast(err.message, true); }
     }, 'small pin-btn', on ? 'Take this out of the Pinned list in the Legend' : 'Put this in the Pinned list at the top of the Legend, for everyone in the campaign');
     return b;
   }
   /** The Legend's Pinned and Recent groups (nothing when both are off or empty). */
   function legendQuick() {
+    if (quickOn('pinned') && pinsOf().some(p => p.kind === 'session')) loadPinSessions();
+    return el('div', { class: 'legend-quick-wrap' }, legendQuickItems());
+  }
+  function legendQuickItems() {
     const quick = (cls, title, items) => items.length ? [el('span', { class: `legend-quick-h ${cls}` }, title),
       items.map(([href, icon, label]) => el('a', { href, class: 'legend-quick', 'data-tip': label }, el('span', { class: 'lq-icon', 'aria-hidden': 'true' }, icon), el('span', { class: 'lq-name' }, label)))] : [];
     const pins = quickOn('pinned') ? pinsOf().map(p => [pinHref(p), QUICK_KIND[{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]][1], pinLabel(p)]).filter(x => x[2]) : [];
@@ -2949,7 +3020,8 @@
         el('a', { class: 'button small primary', href, onclick: closePeek }, 'Open'),
         pins.length ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/maps/${pins[0].map_id}?pin=${pins[0].pin_id}`, onclick: closePeek,
           'data-tip': `Open ${pins[0].map_name} at its pin` }, '🗺 Show on map') : null,
-        quickOn('pinned') ? pinButton({ kind: 'entry', id: e.id }) : null));
+        S.viewAs ? null : btn('+ Note', () => peekNote(card, e), 'small peek-note-btn', `Add a note to the end of ${e.name}'s notes`),
+        !e.is_secret && quickOn('pinned') ? pinButton({ kind: 'entry', id: e.id }) : null));
     card._from = a;
     a.setAttribute('aria-expanded', 'true');
     document.body.append(card);
@@ -2965,9 +3037,34 @@
     document.addEventListener('keydown', peekKeys, true);
     card.querySelector('.peek-acts a')?.focus({ preventScroll: true });
   }
+  /** The peek's + Note: a note at the end of the entry's notes, as At the Table's Encyclopedia add does, without leaving. */
+  function peekNote(card, e) {
+    if (card.querySelector('.peek-note')) return card.querySelector('.peek-note textarea').focus();
+    const text = el('textarea', { rows: 3, 'aria-label': `Note on ${e.name}`, placeholder: 'What you found out' });
+    const gmOnly = el('input', { type: 'checkbox' });
+    const save = btn('Save note', null, 'small primary');
+    const form = el('div', { class: 'peek-note' }, text, el('div', { class: 'row spread' },
+      isGM() ? el('label', { class: 'small inline', 'data-tip': 'Goes in the entry\'s GM notes instead, which players never see' }, gmOnly, ' GM only') : el('span'),
+      el('div', { class: 'row' }, btn('Cancel', () => form.remove(), 'small'), save)));
+    save.addEventListener('click', busy(save, async () => {
+      const body = text.value.trim();
+      if (!body) return toast('Write the note first', true);
+      await post('entry_note_add', { id: e.id, body, gm_only: isGM() && gmOnly.checked }, S.camp.id);
+      tableEntries = null;
+      toast(`Note added to ${e.name}`);
+      closePeek();
+    }));
+    // the card's own Open stays the one filled button until the note is being written
+    card.querySelector('.peek-acts .primary')?.classList.remove('primary');
+    card.querySelector('.peek-acts').before(form);
+    text.focus();
+  }
+  // Names in prose (notes, events, summaries) peek. Lists of entries to go to (Connections, Suggested connections, the
+  // 📖 names-in-this-text row) are navigation already, so their links go straight there.
+  const PEEK_SKIP = '.enc-conn, .enc-conn-list, .enc-suggest-list, .enc-mentions';
   document.addEventListener('click', ev => {
     const a = ev.target.closest?.('a.enc-link');
-    if (!a || PANEL || ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey || a.closest('[contenteditable="true"], .peek')) return;
+    if (!a || PANEL || ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey || a.closest(`[contenteditable="true"], .peek, ${PEEK_SKIP}`)) return;
     const m = (a.getAttribute('href') || '').match(/^#\/c\/(\d+)\/encyclopedia\/(\d+)$/);
     const e = m && Number(m[1]) === S.camp?.id ? (S.encyclopedia || []).find(x => x.id === Number(m[2])) : null;
     if (!e) return;
@@ -2987,12 +3084,12 @@
     const c = cal();
     const mine = Number(e.created_by) === S.user.id;
     const span = e.end_day !== null && e.end_day !== undefined ? ` (${E.fmtDate(c, Number(e.abs_day), { noWeekday: true })} → ${E.fmtDate(c, Number(e.end_day), { noWeekday: true })})` : '';
-    const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
-    const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote' },
+    const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : ''), 'data-undo': `event_delete:${e.id}` });
+    const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote', 'data-undo': `note_delete:${n.id}` },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
         (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
-          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'note_delete', { id: n.id }), 'small note-del'), 'Delete this note') : null))));
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'note_delete', { id: n.id }), 'small danger note-del'), 'Delete this note') : null))));
     // The note box stays folded behind its button until it's wanted, so a day of events isn't a stack of empty boxes
     const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…', hidden: true, 'aria-label': `Note on ${e.title}` });
     const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
@@ -3025,7 +3122,7 @@
   function reminderView(x, d) {
     const state = !x.due ? ['Waiting', `Pops up when the clock reaches ${E.fmtShift(cal(), x.due_shift)}`]
       : x.dismissed ? ['Dismissed', 'You have read this one'] : ['Due', 'The clock has reached it and you haven\'t dismissed it yet'];
-    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : '') },
+    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : ''), 'data-undo': `reminder_delete:${x.id}` },
       el('div', { class: 'row spread' },
         el('h4', {}, '🔔 ', linked(x.title)),
         el('small', { class: 'muted' }, shiftNames()[E.mod(x.due_shift, spd())], ' · ', el('span', { 'data-tip': state[1] }, state[0]))),
@@ -3333,7 +3430,7 @@
       const when = d < d0 ? 'past' : d > d0 ? 'future' : 'now';
       const label = { waiting: 'Waiting', due: 'Due', dismissed: 'Dismissed' }[s];
       const tipText = { waiting: `Pops up when the clock reaches ${E.fmtShift(c, x.due_shift)}`, due: 'The clock has reached it and you haven\'t dismissed it yet', dismissed: 'You have read this one' }[s];
-      const r = el('div', { class: `listrow evrow remrow ${when} ${s}` },
+      const r = el('div', { class: `listrow evrow remrow ${when} ${s}`, 'data-undo': `reminder_delete:${x.id}` },
         el('div', { class: 'evwhen' },
           el('a', { href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': 'Open this day' }, E.fmtDate(c, d, { noWeekday: true })),
           el('div', { class: 'small muted' }, shiftNames()[E.mod(x.due_shift, n)], ' · ', el('span', { class: `remstate ${s}`, 'data-tip': tipText }, label))),
@@ -5545,7 +5642,7 @@
         try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
       for (const i of [cur, loc, amt]) i.addEventListener('change', save);
-      const row = el('div', { class: 'ledger-row' }, cur, loc, amt,
+      const row = el('div', { class: 'ledger-row', 'data-undo': `funds_delete:${f.id}` }, cur, loc, amt,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: () =>
           undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'));
       return row;
@@ -5587,7 +5684,7 @@
       const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
         onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
         onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
-      const row = el('div', { class: 'gear-row' }, item, claimed, loc, amount.node,
+      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed, loc, amount.node,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
           undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
       return row;
@@ -5669,7 +5766,7 @@
       item.addEventListener('change', save);
       weight.addEventListener('change', save);
       weight.addEventListener('input', sum);
-      const row = el('div', { class: 'ledger-row' }, item, weight,
+      const row = el('div', { class: 'ledger-row', 'data-undo': `storage_delete:${s.id}` }, item, weight,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: () => {
           undoDelete(row, `Removed "${shortText(item.value)}" from ${h.name}'s storage`, 'storage_delete', { id: s.id }, () => row.remove(), sum);
         } }, '✕'));
@@ -6749,7 +6846,7 @@
     const seq = ++routeSeq;
     let drawn = null;   // the address this run drew, for Recent, even if the address has moved on since
     return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
-      .then(() => { diceSync(); fillJumpLinks(); keepPlace(); if (drawn) noteRecent(drawn); }));
+      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) noteRecent(drawn); }));
   }
   // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
   // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.
@@ -6773,7 +6870,7 @@
     document.querySelectorAll('.lp-list').forEach((l, i) => { if (was.lists?.[i]) l.scrollTop = was.lists[i]; });
   }
   async function routeTo() {
-    await Undo.flush();   // a delete waiting on its Undo goes through before the page is drawn again
+    if (!Undo.samePage()) await Undo.flush();   // going to another page: a delete waiting on its Undo goes through first
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
     const parts = (path || '').split('/');
     if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too
