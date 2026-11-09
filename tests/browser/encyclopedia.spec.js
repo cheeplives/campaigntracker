@@ -383,7 +383,13 @@ test("the notes suggest connections, and the list searches and filters by them",
   await expect(list).toHaveCount(3);
   await page.getByLabel("Search the Encyclopedia").fill("");
   await expect(list).toHaveCount(4);
-  // the Connections dropdown: Deselect all, then tick the one to see; Select all shows everything again
+  // the Connections dropdown (behind Filters, which counts what is in force): Deselect all, then tick the one to see;
+  // Select all shows everything again
+  const filterBtn = page.getByRole("button", { name: /^Filters/ });
+  await expect(filterBtn).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".enc-filters")).toBeHidden();
+  await filterBtn.click();
+  await expect(page.locator(".enc-filters")).toBeVisible();
   const rels = page.locator("details.enc-relpick");
   await expect(rels.locator("summary")).toHaveText(/Connections: All/);
   await rels.locator("summary").click();
@@ -392,6 +398,7 @@ test("the notes suggest connections, and the list searches and filters by them",
   await rels.locator(".mpick-opt", { hasText: "Residents" }).locator("input").check();
   await expect(list).toHaveCount(3);
   await expect(rels.locator("summary")).toHaveText(/Connections: 1 of \d+/);
+  await expect(filterBtn.locator(".enc-fcount")).toHaveText("1");
   await rels.getByRole("button", { name: "Select all", exact: true }).click();
   await expect(list).toHaveCount(4);
   await page.keyboard.press("Escape");
@@ -559,23 +566,29 @@ test("the Wide list button swaps the widths of the list and the entry, and this 
   const id = await entry(page, cid, { name: "Altdorf", notes: "<p>The capital.</p>" });
   for (const name of ["Bögenhafen", "Nuln", "Marienburg", "Middenheim"]) await entry(page, cid, { name, notes: "<p>A town.</p>" });
   await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+  // Wide view waits in the list's ⋯ menu, which closes once it is picked
   const wideBtn = page.locator(".enc-widebtn");
+  const more = () => page.locator(".enc-index").getByLabel(/^More for /).click();
   const width = sel => page.locator(sel).evaluate(n => n.getBoundingClientRect().width);
   if ((page.viewportSize()?.width || 0) <= 900) {
     // One column already: nothing to swap, so no button.
     await expect(page.locator(".enc-detail h2")).toHaveText("Altdorf");
+    await more();
     await expect(wideBtn).toBeHidden();
     return;
   }
+  await more();
   await expect(wideBtn).toHaveAttribute("aria-pressed", "false");
   expect(await width(".enc-index")).toBeLessThan(await width(".enc-detail"));
   await wideBtn.click();
+  await expect(wideBtn).toBeHidden();
   await expect(page.locator(".enc-page")).toHaveClass(/\bwide\b/);
   await expect(wideBtn).toHaveAttribute("aria-pressed", "true");
   expect(await width(".enc-index")).toBeGreaterThan(await width(".enc-detail"));
   // Remembered across pages and reloads, then the button puts it back.
   await page.reload();
   await expect(page.locator(".enc-page")).toHaveClass(/\bwide\b/);
+  await more();
   await wideBtn.click();
   await expect(page.locator(".enc-page")).not.toHaveClass(/\bwide\b/);
   await page.reload();
@@ -609,6 +622,7 @@ test("entries have a Category: the list is grouped by it, and the Category and T
   await expect(page.locator(".enc-lists section[data-cat=location] .enc-item")).toHaveText([/Altdorf/, /Grey Lady/, /Nuln/]);
 
   // Category: Deselect all, then tick Location
+  await page.getByRole("button", { name: /^Filters/ }).click();
   const cats = page.locator("details.enc-catpick"), tags = page.locator("details.enc-tagpick");
   await cats.locator("summary").click();
   await cats.getByRole("button", { name: "Deselect all", exact: true }).click();
@@ -722,6 +736,7 @@ test("an entry with a character opens its sheet from its header, its card and th
 
   // the list: a sheet icon, and PCs / NPCs
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page.getByRole("group", { name: "Characters" }).getByRole("button", { name: "PCs", exact: true }).click();
   await expect(page.locator(".enc-item")).toHaveText([/Brannoc/, /Gwen's Hero/]);
   await page.getByRole("group", { name: "Characters" }).getByRole("button", { name: "NPCs", exact: true }).click();

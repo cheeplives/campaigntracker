@@ -4648,8 +4648,9 @@
   }
 
   // ------------------------------------------------------------ list and reader
-  // Encyclopedia, Library and Sessions share one layout: a list card with its title, + New, a ⋯ menu for the rarer
-  // actions and Wide view, « to tuck the list away, then search and filters above the list; the reader card beside it with the item picked.
+  // Encyclopedia, Library and Sessions share one layout: a list card with its title, + New and a ⋯ menu for the rarer
+  // actions and Wide view on one row, « to tuck the list away, then search and filters above the list; the reader card
+  // beside it with the item picked.
   /** wide: { key, tips: [off, on] } lets the page swap widths, remembered in this browser under key.
    * hide: { key, was } puts a « at the list's top right that tucks it away to a thin rail (» and its name, the whole rail a
    * button to bring it back) so the item picked takes the screen, remembered under key
@@ -4679,10 +4680,11 @@
     const wideBtn = wide ? toggle(wide, 'wide', on => on ? '⇤ Narrow view' : '⇥ Wide view', wide.tips).b : null;
     const hid = hide ? toggle(hide, 'list-hidden', () => '«', [`Tuck the list away to the left, so the ${picked ? 'item picked' : 'page'} takes the room. It stays as you leave it in this browser`, '']) : null;
     hid?.b.setAttribute('aria-label', 'Hide the list');
-    const items = more.filter(Boolean);
-    const menu = items.length ? KIT.menu({ ariaLabel: `More for ${title}`, tip: 'More: scan, export and the like', items, cls: 'more-menu' }) : null;
+    // Wide view is set once and kept, so it waits in the ⋯ menu rather than taking a row of the list
+    const items = [...more.filter(Boolean), wideBtn ? [el('hr'), wideBtn] : null];
+    const menu = items.flat().filter(Boolean).length ? KIT.menu({ ariaLabel: `More for ${title}`, tip: 'More: scan, export, Wide view and the like', items, cls: 'more-menu' }) : null;
     const left = el('section', { class: 'card enc-index' },
-      el('div', { class: 'lp-head' + (hid ? ' has-hide' : '') }, el('h2', {}, title, tipText ? tip(tipText) : null), el('div', { class: 'lp-actions' }, add, menu, wideBtn), hid?.b),
+      el('div', { class: 'lp-head' + (hid ? ' has-hide' : '') }, el('h2', {}, title, tipText ? tip(tipText) : null), el('div', { class: 'lp-actions' }, add, menu), hid?.b),
       ...clean(top), list, hid?.rail);
     list.classList.add('lp-list');
     reader.classList.add('card', 'enc-detail');
