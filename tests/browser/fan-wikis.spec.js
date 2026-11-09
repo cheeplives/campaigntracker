@@ -122,6 +122,10 @@ test.describe("Fan wikis API", () => {
 test.describe("Fan wikis in the app", () => {
   test("the GM picks the campaign's wiki in Settings, and an entry adds its summary with the source and licence", async ({ page, browser }) => {
     const errors = watchErrors(page);
+    // Find Image opens on All, which also shows the stub museums' pictures from their real hosts: answered here, so
+    // a made-up picture there isn't a 404.
+    await page.route(/^https:\/\/(www\.artic\.edu|ids\.si\.edu)\//, route => route.fulfill({ status: 200, contentType: "image/png",
+      body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64") }));
     const { cid, id, pp } = await setup(page, browser, "Settings");
     await page.goto(`index.html#/c/${cid}/settings`);
     const pickWiki = page.getByRole("combobox", { name: "Fan wiki" });
