@@ -85,6 +85,14 @@ comment and `validate`); the ones that matter most here:
   circles or boxes to tick is `pips` with their `count`. A tick box alone is a `checkbox`. Radio buttons or a
   printed list of choices is a `choice`. A ruled table (weapons, gear, spells) is a `list` whose `columns` are the
   table's headings.
+- **Table column widths.** A short value (a weight, uses, a quantity, damage, a bonus, a cost, a range, a level, a
+  rating, a tick box) needs far less room than a name or a description, and must never be as wide as the Item or
+  Name column. The sheet works this out from the label: a column whose label is one of those (Weight, Wt., Uses,
+  Qty, Damage, Dmg, Bonus, Cost, Range, Level, Rating, %, AP, ...) is drawn narrow, and the others share what is
+  left. `check.js` prints each list's columns with the width it will get. Where the label doesn't say it (a
+  location column holding armour points, a tick column named Scroll), give the column `"width": "narrow"`; where a
+  label looks short but holds text (a wound Level of Healthy, Nicked, ...), `"width": "normal"`; a long description
+  beside a name can be `"width": "wide"` (twice a normal column). Match the PDF: a column printed narrow is narrow.
 - **Summary.** Mark `"summary": true` on the two or three fields that say who a character is at a glance
   (class, level, career); `"play": true` on what changes during a session (hit points, stress, luck).
 
@@ -100,7 +108,8 @@ picture per page at 1280 (desktop) and 820 (iPad, portrait) pixels wide, and lis
 short, a box off the edge.
 
 **Open the pictures and compare them with the PDF's pages**, side by side, section by section. Ask: are the same
-fields there, in the same order, the same relative widths, grouped the same way? Fix the template and run both
+fields there, in the same order, the same relative widths, grouped the same way? In each table, is the name or
+description column the widest, and the numbers narrow? Fix the template and run both
 again. Add `--widths 1280,820,390` for a look at a phone too if you like; fix
 what's easy there, but desktop and iPad are what matter. Repeat until `check.js` says ok, `preview.js` says nothing looks wrong, and the pictures read like the PDF.
 Three rounds is usual.

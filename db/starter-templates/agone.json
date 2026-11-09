@@ -943,7 +943,8 @@
        },
        {
         "key": "mag_art_apt",
-        "label": "Mag. Art APT"
+        "label": "Mag. Art APT",
+        "width": "narrow"
        }
       ]
      }

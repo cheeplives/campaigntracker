@@ -66,15 +66,18 @@
        },
        {
         "key": "needy",
-        "label": "Needy"
+        "label": "Needy",
+        "width": "narrow"
        },
        {
         "key": "strained",
-        "label": "Strained"
+        "label": "Strained",
+        "width": "narrow"
        },
        {
         "key": "severed",
-        "label": "Severed"
+        "label": "Severed",
+        "width": "narrow"
        }
       ]
      }

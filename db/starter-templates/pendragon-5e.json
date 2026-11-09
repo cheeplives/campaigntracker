@@ -764,7 +764,8 @@
        },
        {
         "key": "move",
-        "label": "Move"
+        "label": "Move",
+        "width": "narrow"
        }
       ]
      }

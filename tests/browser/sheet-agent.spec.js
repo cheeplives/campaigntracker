@@ -99,3 +99,41 @@ test("Agent: check passes every starter file, and names what's wrong with a bad 
   expect(wrong).toMatch(/more than three fields/);
   expect(wrong).toMatch(/not rules text/);
 });
+
+test("Agent: a table's short columns are narrow by their label, its names and notes are not, and a column's own width wins", () => {
+  const L = require(path.join(TOOLS, "..", "..", "static", "sheetlayout.js"));
+  const w = labels => L.columnWidths(labels.map((label, i) => (typeof label === "string" ? { key: `c${i}`, label } : { key: `c${i}`, ...label })));
+  expect(w(["Item", "Weight", "Uses"])).toEqual(["normal", "narrow", "narrow"]);
+  expect(w(["Weapon", "Dmg.", "Range", "Notes"])).toEqual(["normal", "narrow", "narrow", "normal"]);
+  expect(w(["Skill", "%", "Attack Bonus", "Weight (kg)", "AP", "Progress (0-3)"])).toEqual(["normal", "narrow", "narrow", "narrow", "narrow", "narrow"]);
+  // a name, a description or a long label stays normal, even with a number word in it
+  expect(w(["Spell Name", "Range/Area of Effect", "Damage & Type", "Spec 1", "I'm a…"])).toEqual(["normal", "normal", "normal", "normal", "normal"]);
+  // every column narrow: the first names the row
+  expect(w(["Ammunition", "Count"])).toEqual(["normal", "narrow"]);
+  // the template's own width wins over the label
+  expect(w([{ label: "Level", width: "normal" }, "Wounds", { label: "Head", width: "narrow" }, { label: "Notes", width: "wide" }])).toEqual(["normal", "narrow", "narrow", "wide"]);
+  expect(L.validate({ sections: [{ key: "s", title: "S", fields: [{ key: "l", label: "L", type: "list", columns: [{ key: "a", label: "A", width: "tiny" }] }] }] }).join(" ")).toMatch(/narrow, normal or wide/);
+});
+
+test("Agent: a sheet draws a table's name column wider than its narrow Weight and Uses, at desktop and iPad widths", async () => {
+  const { browser, serve } = require(path.join(TOOLS, "lib.js"));
+  const site = await serve(), b = await browser();
+  try {
+    const layout = { sections: [{ key: "g", title: "Gear", width: "third", fields: [{ key: "gear", label: "Gear", type: "list",
+      columns: [{ key: "item", label: "Item" }, { key: "weight", label: "Weight" }, { key: "uses", label: "Uses" }] }] }] };
+    for (const w of [1280, 1180, 820]) {
+      const page = await b.newPage({ viewport: { width: w, height: 900 } });
+      await page.goto(`${site.url}/tools/sheet-agent/blank.html`);
+      for (const s of ["kit.js", "sheetlayout.js", "sheetimport.js", "pdfimport.js", "sheets.js"]) await page.addScriptTag({ url: `/static/${s}` });
+      await page.addScriptTag({ content: `document.getElementById('app').append(Sheets.renderSheetForm(${JSON.stringify(layout)}, { gear: [{ item: "Sword", weight: "1" }] }, { mode: 'edit' }));` });
+      const box = async c => (await page.getByLabel(`Gear row 1 ${c}`).boundingBox()).width;
+      const [item, weight, uses] = [await box("Item"), await box("Weight"), await box("Uses")];
+      expect(item, `${w}px`).toBeGreaterThan(weight * 1.3);
+      expect(item, `${w}px`).toBeGreaterThan(uses * 1.3);
+      await page.close();
+    }
+  } finally {
+    await b.close();
+    await site.close();
+  }
+});

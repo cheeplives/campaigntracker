@@ -1527,6 +1527,13 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .sheet-ed-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sheet-ed-main > .row { margin-top: 0; }
 .sheet-ed-main select[aria-label="Field type"] { max-width: 12em; }
+/* a list's columns sized by what they hold (sheets.js, SheetLayout.columnWidths): narrow ones (Weight, Uses, Damage)
+   a few characters wide, the rest sharing what is left, so the names and descriptions get the room */
+.sheet-list table.sheet-list-table { table-layout: fixed; }
+.sheet-list-table .sheet-col-btn { width: 2.5rem; }
+.sheet-list-table input { padding-left: 8px; padding-right: 8px; }
+.sheet-list-table th { overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; vertical-align: bottom; }
+.sheet-list-table td, .sheet-list-table th { padding-left: 4px; padding-right: 4px; }
 .character-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
 .character-card { display: flex; flex-direction: column; gap: 6px; }
 .character-card[data-kind="npc"] { border-left: 4px solid var(--secret); }
