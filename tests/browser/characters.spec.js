@@ -736,6 +736,16 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await expect(hero.locator(".enc-portrait")).toHaveCSS("pointer-events", "auto");
   await peek.click();
   await expect(hero).not.toHaveClass(/portrait-out/);
+  // how faded it sits is the theme's (--portrait-fade), and a browser can try its own live, kept across pages
+  await p1.mouse.move(5, 5); // off the tab, so the portrait settles back
+  await expect(hero.locator(".enc-portrait")).toHaveCSS("opacity", "0.32");
+  await p1.evaluate(() => window.portraitFade({ fade: 0.5, blur: 1, sat: 0.8 }));
+  await expect(hero.locator(".enc-portrait")).toHaveCSS("opacity", "0.5");
+  await expect(hero.locator(".enc-portrait")).toHaveCSS("filter", "blur(1px) saturate(0.8)");
+  await p1.reload();
+  await expect(p1.locator(".enc-hero.has-pic .enc-portrait")).toHaveCSS("opacity", "0.5");
+  await p1.evaluate(() => window.portraitFade());
+  await expect(p1.locator(".enc-hero.has-pic .enc-portrait")).toHaveCSS("opacity", "0.32");
 
   await p1.goto(`index.html#/c/${cid}/characters`);
   await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
