@@ -342,6 +342,10 @@
       const exprText = r.expr.split('#')[0].split('@')[0].trim();
       meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`,
         rerolled && ` · rerolled${rerolled > 1 ? ` ×${rerolled}` : ''}`, ` · ${when(r.at)}`, tools && ' · ', tools].filter(Boolean));
+      // ⧉ copies the roll as a line of text, for a chat window or a VTT's
+      const line = `${r.author || 'Someone'}${label ? ` (${label})` : ''}: ${exprText} = ${big}${words ? ` · ${words}` : ''}`;
+      meta.append(' ', el('button', { type: 'button', class: 'link small dice-copy', 'aria-label': 'Copy this roll', title: 'Copy this roll as text',
+        onclick: async () => { try { await navigator.clipboard.writeText(line); toast('Roll copied'); } catch { toast('This browser would not copy it', true); } } }, '⧉'));
       return el('li', { 'data-id': String(r.id), class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') + (landingId === r.id ? ' landing' : '') },
         el('div', { class: 'dice-e-main' }, head, meta, body), out);
     }

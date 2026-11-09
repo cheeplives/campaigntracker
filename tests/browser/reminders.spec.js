@@ -201,10 +201,9 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   await expect(page.getByText("Reminder saved")).toBeVisible();
   await expect(page.getByText("4 reminders")).toBeVisible();
 
-  // Delete asks first.
+  // Delete goes at once, with Undo in the toast for a few seconds.
   await rows.filter({ hasText: "Check the wards" }).getByRole("button", { name: "Delete" }).click();
-  await page.locator("dialog.kit-dialog").getByRole("button", { name: "OK" }).click();
-  await expect(rows.filter({ hasText: "Check the wards" })).toHaveCount(0);
+  await expect(rows.filter({ hasText: "Check the wards" })).toBeHidden();
 
   // A player sees their own reminders and everyone's, with no who-sees-it filter, and can't edit the GM's.
   await pp.goto(`index.html#/c/${cid}/events/reminders`);

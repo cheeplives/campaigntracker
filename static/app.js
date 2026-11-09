@@ -86,9 +86,14 @@
       opt.headers['X-Chronicle-Panel'] = panelCodeNow;
     } else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
     if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
+    if (body && leaving) opt.keepalive = true;   // a delete still waiting on its Undo, sent as the page goes
     const noteFail = (status, msg) => { if (typeof ReportLog !== 'undefined') ReportLog.request(action, status, msg); };
+    const tracked = !!body && !PANEL && action !== 'days_save' && action !== 'changed';   // the campaign bar's "✓ Saved"
+    if (tracked) SaveState.begin();
     let res;
-    try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); throw err; }
+    try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); if (tracked) SaveState.end(err.message); throw err; }
+    if (tracked) SaveState.end(res.ok ? null : `Not saved (${res.status})`);
+    if (res.ok && (action === 'session_save' || action === 'session_delete' || action === 'session_start')) forgetPinSessions();   // the Legend's pinned names
     let data;
     try { data = await res.json(); } catch { noteFail(res.status, 'not JSON'); throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
     // The panel's link was revoked (or its maker lost access): ask for a new one.
@@ -117,6 +122,101 @@
   addEventListener('beforeunload', () => { leaving = true; });
   addEventListener('pagehide', () => { leaving = true; });
   addEventListener('pageshow', () => { leaving = false; });   // back from the back-forward cache
+
+  // One line in the campaign bar says whether everything you changed has reached the server: ✓ Saved, Saving…, Not saved
+  // (with what went wrong in its tooltip) or Offline. It follows every change the page sends.
+  const SaveState = (() => {
+    const node = el('span', { class: 'save-state', role: 'status' });
+    let busy = 0, failed = null, sent = false;   // nothing is claimed as saved until something has been changed
+    const show = () => {
+      const off = navigator.onLine === false;
+      node.className = 'save-state' + (off || failed ? ' bad' : busy ? ' busy' : '');
+      node.textContent = off ? 'Offline' : busy ? 'Saving…' : failed ? 'Not saved' : sent ? '✓ Saved' : '';
+      node.dataset.tip = off ? 'This device is offline. Changes made now will not reach the campaign until it is back online'
+        : failed ? `The last change did not save: ${failed}. Try it again` : busy ? 'Sending your change' : 'Everything you changed on this page is saved';
+    };
+    addEventListener('online', show); addEventListener('offline', show);
+    addEventListener('hashchange', () => { if (!busy && !failed) { sent = false; show(); } });   // a new page has changed nothing yet
+    show();
+    return { node, begin() { busy++; sent = true; show(); }, end(err) { busy = Math.max(0, busy - 1); failed = err || (busy ? failed : null); show(); } };
+  })();
+
+  // Undo instead of "Are you sure?": a delete takes the thing off the page at once and says so with an Undo button, and the
+  // server is only told 8 seconds later (or sooner: when another delete starts, you go to another page or the tab closes).
+  // A redraw of the same page (after a save somewhere on it) keeps the Undo and its time, and hides the row again.
+  // Each row that can go this way carries data-undo="<action>:<id>", so a redrawn copy of it is found and hidden too.
+  const Undo = (() => {
+    let pending = null, bar = null;
+    // closed: back to the foot of the screen (it may have been lifted over At the Table's bar), so it slides out of sight
+    const close = () => { if (bar) { bar.classList.remove('show'); bar.style.bottom = ''; } };
+    const rows = p => [...document.querySelectorAll(`[data-undo="${CSS.escape(p.key)}"]`)];
+    async function flush() {
+      const p = pending; if (!p) return;
+      pending = null; clearTimeout(p.timer); close();
+      try { await p.commit(); } catch (err) { p.restore(); toast(err.message, true); }
+    }
+    function start(p) {
+      if (pending) flush();
+      const had = document.activeElement;
+      p.hash = location.hash;
+      p.hide();
+      pending = p;
+      if (!bar) document.body.append(bar = el('div', { id: 'undo-toast', role: 'status' }));
+      const undo = el('button', { type: 'button', class: 'undo-btn', 'aria-label': `Undo: ${p.label}` }, 'Undo');
+      undo.addEventListener('click', () => {
+        if (pending !== p) return;
+        pending = null; clearTimeout(p.timer); close(); p.restore();
+        // focus goes back to the row's own Delete (a redraw may have made a new one)
+        const again = had?.isConnected && !had.closest('[hidden]') ? had
+          : rows(p).find(r => r.isConnected)?.querySelector('button.danger');
+        again?.focus();
+      });
+      bar.replaceChildren(el('span', {}, p.label), undo, el('span', { class: 'undo-bar' }));
+      // above At the Table's floating bar, however many rows it wraps to (two on an iPad held upright)
+      const tb = document.querySelector('.tv-bar'), tr = tb?.getBoundingClientRect();
+      bar.style.bottom = tr && tr.height ? `${Math.max(20, innerHeight - tr.top + 12)}px` : '';
+      bar.classList.remove('show'); void bar.offsetWidth; bar.classList.add('show');
+      // a toast that comes meanwhile sits above the Undo bar
+      document.documentElement.style.setProperty('--undo-clear', `${(parseFloat(getComputedStyle(bar).bottom) || 20) + bar.offsetHeight + 8}px`);
+      // the Delete pressed is now hidden, so focus would fall to the page: put it on Undo instead
+      if (had && (had === document.body || had.closest('[hidden], .undo-gone'))) undo.focus({ preventScroll: true });
+      p.timer = setTimeout(flush, 8000);
+    }
+    /** True while a delete waits for its Undo on the page now showing: a redraw then keeps it. */
+    const samePage = () => !!pending && pending.hash === location.hash;
+    /** After a redraw of the same page: hide the redrawn copy of the row that is waiting to go. */
+    function reapply() { if (samePage()) pending.hide(); }
+    addEventListener('pagehide', () => { flush(); });
+    return { start, flush, samePage, reapply, rows };
+  })();
+  /** A small ⧉ Copy button that puts `text` on the clipboard (what it is, for the toast and its tooltip). */
+  const copyButton = (text, what) => btn('⧉ Copy', async () => {
+    try { await navigator.clipboard.writeText(typeof text === 'function' ? text() : text); toast(`${what} copied`); }
+    catch { toast('This browser would not copy it. Select it and press Ctrl+C (⌘C)', true); }
+  }, 'small copy-btn', `Copy the ${what.toLowerCase()}`);
+  /** A one-line trail above a page's title: [label, href] steps, the last one where you are. */
+  const trail = (...steps) => el('nav', { class: 'trail', 'aria-label': 'You are here' }, steps.filter(Boolean).map(([label, href], i, a) => [
+    href && i < a.length - 1 ? el('a', { href }, label) : el('span', { 'aria-current': i === a.length - 1 ? 'page' : null }, label),
+    i < a.length - 1 ? el('span', { class: 'trail-sep', 'aria-hidden': 'true' }, '›') : null]).flat());
+  const shortText = (t, n = 40) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t; };
+  /** Take `box` off the page and delete it on the server after the Undo has had its time. `changed` runs after the row
+   *  goes or comes back (a ledger's total); it is handed the ledger the row is in, which a redraw may have made anew. */
+  const undoDelete = (box, label, action, body, done, changed) => {
+    const key = `${action}:${body.id}`;
+    box.dataset.undo = key;
+    const set = gone => {
+      for (const r of new Set([box, ...Undo.rows(p)])) {
+        r.hidden = gone; r.classList.toggle('undo-gone', gone);
+        // a storage ledger's total: a redrawn ledger counts again through its own weight boxes
+        if (r !== box) r.closest('.ledger-rows')?.querySelector('.ledger-row:not([hidden]) input.ledger-w')?.dispatchEvent(new Event('input'));
+      }
+      changed?.();
+    };
+    const p = { key, label,
+      hide: () => set(true), restore: () => set(false),
+      commit: async () => { await post(action, body, S.camp.id); if (done) done(); } };
+    Undo.start(p);
+  };
   addEventListener('unhandledrejection', e => { if (leaving && e.reason instanceof TypeError) e.preventDefault(); });
 
   // ------------------------------------------------------------ change notices
@@ -1172,10 +1272,54 @@
     tokens: 'Round pictures for the party\'s groups, characters and entries (GM only)',
     settings: 'Campaign options and the calendar itself (GM only)',
   };
+  // "On this page": the long pages (At the Table, a day) get links to their boxes in the campaign bar. At the Table, where the
+  // bar has room, they are plain links with the one you are in tinted; elsewhere, and on a narrow screen, one Jump to ▾ menu.
+  // A link opens its box if it is folded, then scrolls to it.
+  let jumpScroll = null;
+  function fillJumpLinks() {
+    if (jumpScroll) { removeEventListener('scroll', jumpScroll); jumpScroll = null; }
+    const nav = $('.nowbar .jump-links'), main = app();
+    if (!nav || !main) return;
+    const targets = [];
+    const now = main.querySelector('.tv-now');
+    if (now) targets.push([now, 'Now']);
+    main.querySelectorAll('section.daybox[data-box], section.tv-links').forEach(sec => {
+      const raw = (sec.querySelector('.daybox-toggle')?.textContent || (sec.classList.contains('tv-links') ? 'VTT' : '')).trim();
+      if (!raw) return;
+      const name = raw.replace(/^today's\s+/i, '').replace(/\s+and conditions$/i, '').replace(/\s+today$/i, '');
+      const n = sec.querySelectorAll('.daybox-body > .event').length;
+      targets.push([sec, name.charAt(0).toUpperCase() + name.slice(1) + (n ? ` (${n})` : '')]);
+    });
+    if (targets.length < 3) { nav.hidden = true; nav.replaceChildren(); return; }
+    const go = sec => {
+      const t = sec.querySelector('.daybox-toggle');
+      if (sec.classList.contains('folded') && t) t.click();
+      sec.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    };
+    // the app routes by the address's hash, so a link can't be #box: it names this page (a new tab opens the page, not a
+    // blank one), and the click opens and scrolls to the box. aria-controls says which box it moves to.
+    targets.forEach(([sec, name], i) => { if (!sec.id) sec.id = `box-${(sec.dataset.box || name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${i}`; });
+    const links = targets.map(([sec, name]) => el('a', { href: location.hash || '#', 'aria-controls': sec.id, onclick: ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; ev.preventDefault(); go(sec); } }, name));
+    const menu = KIT.menu({ label: 'Jump to ▾', ariaLabel: 'Jump to a part of this page', items: targets.map(([sec, name]) => btn(name, () => go(sec))), cls: 'jump-menu', align: 'left' });
+    nav.replaceChildren(el('span', { class: 'jump-inline' }, links), menu);
+    nav.hidden = false;
+    // the link for the box you are in is tinted, as you scroll
+    const mark = () => {
+      const line = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0) + 90;
+      let on = 0;
+      targets.forEach(([sec], i) => { if (sec.isConnected && sec.getBoundingClientRect().top <= line) on = i; });
+      links.forEach((a, i) => { a.classList.toggle('on', i === on); if (i === on) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
+    };
+    let queued = false;
+    jumpScroll = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; mark(); }); } };
+    addEventListener('scroll', jumpScroll, { passive: true });
+    mark();
+  }
   function campaignHeader(active) {
     const c = cal(), d = today(), sh = E.mod(nowShift(), spd());
     // At the Table's block repeats the date, weather and light, so there the bar keeps to the campaign, View as player and ⏩
     const head = el('section', { class: 'nowbar' + (active === 'table' ? ' on-table' : '') });
+    const jumpNav = el('nav', { class: 'jump-links' + (active === 'table' ? ' inline' : ''), 'aria-label': 'On this page', hidden: true });
     const draw = async () => {
       let dayRow = null;
       try { dayRow = (await fetchRange(d, d)).days.get(d) || null; } catch { /* ignore */ }
@@ -1189,7 +1333,8 @@
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view'),
             isGM() ? btn('👁 View as player', () => setViewingAs(true), 'small view-as',
-              'See this campaign exactly as your players do: no secrets, GM notes or GM-only paragraphs. Nothing can be changed until you leave') : null),
+              'See this campaign exactly as your players do: no secrets, GM notes or GM-only paragraphs. Nothing can be changed until you leave') : null,
+            jumpNav),
           S.viewAs ? el('div', { class: 'view-as-banner', role: 'status' }, el('span', {}, '👁 Viewing as a player: this is what your players see. Changes are off.'),
             btn('Leave player view', () => setViewingAs(false), 'small primary')) : null,
           el('div', { class: 'now-time' },
@@ -1197,7 +1342,9 @@
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
               weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d, region),
               hol.map(holidayChip)))),
+        SaveState.node,
         isGM() ? passTime() : null]));
+      fillJumpLinks();
     };
     // Pass time is the same on every page: a ⏩ button at the end of the bar that opens its row. The button is just the
     // arrows until the mouse is over it (or it has focus, or its row is open), so the bar stays one line and the page
@@ -1218,7 +1365,7 @@
     };
     draw();
     const folds = legendFolds();
-    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), TAB_GROUPS.map(([g, gTip, ts]) => {
+    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), legendQuick(), TAB_GROUPS.map(([g, gTip, ts]) => {
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
@@ -1288,7 +1435,10 @@
   function searchBox(active) {
     const input = el('input', { type: 'search', name: 'q', placeholder: 'Search', 'aria-label': 'Search the campaign', enterkeyhint: 'search',
       'data-tip': 'Search the whole campaign: the Encyclopedia, days and events, the Library, Party Holdings and downtime. Press / to jump here' });
-    const form = el('form', { class: 'tab-search', role: 'search' }, input);
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    const form = el('form', { class: 'tab-search', role: 'search' }, input,
+      el('button', { type: 'button', class: 'tab-search-kbd', onclick: () => openJumpBox(), 'aria-label': 'Jump to a name, a tab or an action',
+        'data-tip': `Jump to a name, a tab or an action, or roll dice (${mac ? '⌘K' : 'Ctrl K'}). Press ? for every key` }, mac ? '⌘K' : 'Ctrl K'));
     form.addEventListener('submit', ev => {
       ev.preventDefault();
       const q = input.value.trim();
@@ -1307,6 +1457,104 @@
     if (!box.offsetParent) return;
     ev.preventDefault();
     box.focus();
+  });
+
+  // Ctrl K (⌘K on a Mac or an iPad keyboard): one box to jump anywhere in the campaign or do something, from any page.
+  // Typing matches Encyclopedia names and the tabs, and offers a roll, a search of everything and a few actions; with
+  // nothing typed it lists the pages opened lately. ↑ ↓ move, Enter goes, Escape closes. `?` lists every key.
+  let jumpBox = null;
+  function openJumpBox(seed = '') {
+    if (!S.camp || jumpBox) return;
+    const from = document.activeElement;
+    hideTip(); closePeek();
+    const input = el('input', { type: 'text', class: 'jb-input', placeholder: 'Jump to a name or a tab, or type a roll like 2d6+3', 'aria-label': 'Jump to or do',
+      autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'jb-list', value: seed });
+    const list = el('div', { class: 'jb-list', id: 'jb-list', role: 'listbox' });
+    const box = el('div', { class: 'jb-box surface-float', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Jump to' },
+      el('div', { class: 'jb-in' }, el('span', { 'aria-hidden': 'true' }, '🔍'), input, el('kbd', {}, 'Esc')), list,
+      el('div', { class: 'jb-foot' }, el('span', {}, el('kbd', {}, '↑'), ' ', el('kbd', {}, '↓'), ' move'), el('span', {}, el('kbd', {}, 'Enter'), ' go'),
+        el('span', {}, el('kbd', {}, '?'), ' every key')));
+    const scrim = el('div', { class: 'jb-scrim', onclick: () => close() });
+    let items = [], sel = 0;
+    const close = (back = true) => { scrim.remove(); box.remove(); jumpBox = null; if (back && from?.isConnected) from.focus({ preventScroll: true }); };
+    const go = it => { close(false); it.run(); };
+    const cid = S.camp.id;
+    const tabs = TAB_GROUPS.flatMap(([g, , ts]) => ts.map(([k, l]) => [k, l, g])).filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined'));
+    const draw = () => {
+      const q = input.value.trim(), ql = q.toLowerCase();
+      const groups = [];
+      if (!q) {
+        const recent = recentList().filter(x => x.hash.startsWith(`#/c/${cid}/`) && x.hash !== location.hash);
+        if (recent.length) groups.push(['Recent', recent.map(x => ({ icon: x.icon, name: x.label, hint: '', run: () => { location.hash = x.hash; } }))]);
+      } else {
+        const words = ql.split(/\s+/);
+        const hit = t => words.every(w => t.toLowerCase().includes(w));
+        const ents = (S.encyclopedia || []).filter(e => hit([e.name, ...(e.aliases || [])].join(' '))).sort((a, b) =>
+          (b.name.toLowerCase().startsWith(ql) ? 1 : 0) - (a.name.toLowerCase().startsWith(ql) ? 1 : 0) || a.name.localeCompare(b.name)).slice(0, 6);
+        if (ents.length) groups.push(['Encyclopedia', ents.map(e => ({ icon: encCat(e.category)?.[2] || '📖', name: e.name, hint: encCat(e.category)?.[1] || '',
+          run: () => { location.hash = `#/c/${cid}/encyclopedia/${e.id}`; } }))]);
+        const tabHits = tabs.filter(([, l]) => hit(l)).slice(0, 4);
+        if (tabHits.length) groups.push(['Go to', tabHits.map(([k, l, g]) => ({ icon: '🧭', name: l, hint: g, run: () => { location.hash = `#/c/${cid}/${k}`; } }))]);
+      }
+      const acts = [];
+      if (q && typeof Dice !== 'undefined' && /\d*d\d/i.test(q) && !Dice.check(q)) acts.push({ icon: '🎲', name: `Roll ${q}`, hint: 'In the dice panel, for the table', run: () => rollFromBox(q) });
+      if (q) acts.push({ icon: '🔍', name: `Search everything for "${q}"`, hint: 'Entries, days, events, the Library…', run: () => { location.hash = searchHref(q); } });
+      const want = (name, it) => (!q || name.toLowerCase().includes(ql)) && acts.push(it);
+      want('new entry', { icon: '➕', name: 'New entry', hint: 'Encyclopedia', run: () => { location.hash = `#/c/${cid}/encyclopedia/new`; } });
+      if (isGM()) want('pass time', { icon: '⏩', name: 'Pass time', hint: 'Open the Pass time row', run: () => { const b = $('.now-passbtn'); if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); $('.passtime input')?.focus(); } });
+      want('roll dice', { icon: '🎲', name: 'Roll dice', hint: 'Open the dice panel', run: () => $('.dice-fab')?.click() });
+      if (acts.length) groups.push(['Actions', acts]);
+      items = groups.flatMap(([, its]) => its);
+      sel = Math.min(sel, Math.max(0, items.length - 1));
+      let n = 0;
+      list.replaceChildren(...(items.length ? groups.map(([title, its]) => el('div', { class: 'jb-sec' }, el('div', { class: 'jb-h' }, title), its.map(it => {
+        const i = n++;
+        return el('div', { class: 'jb-it' + (i === sel ? ' sel' : ''), role: 'option', id: `jb-${i}`, 'aria-selected': String(i === sel),
+          onpointerdown: ev => ev.preventDefault(), onclick: () => go(it) },
+          el('span', { class: 'jb-icon', 'aria-hidden': 'true' }, it.icon), el('span', { class: 'jb-name' }, it.name), el('small', {}, it.hint));
+      }))) : [el('p', { class: 'muted jb-none' }, 'Nothing matches. Press Enter to search everything.')]));
+      if (items.length) input.setAttribute('aria-activedescendant', `jb-${sel}`); else input.removeAttribute('aria-activedescendant');
+      list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
+    };
+    input.addEventListener('input', () => { sel = 0; draw(); });
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); if (items.length) { sel = (sel + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; draw(); } }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (items[sel]) go(items[sel]); else if (input.value.trim()) { close(false); location.hash = searchHref(input.value.trim()); } }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); }
+      else if (ev.key === 'Tab') ev.preventDefault();   // the box is modal: its one field keeps the focus (↑ ↓ move through the list)
+    });
+    document.body.append(scrim, box);
+    jumpBox = box;
+    draw();
+    input.focus();
+  }
+  function rollFromBox(expr) {
+    const fab = $('.dice-fab');
+    if (fab && fab.getAttribute('aria-expanded') !== 'true') fab.click();
+    setTimeout(() => { const i = $('.dice-input'), b = $('.dice-go'); if (i && b) { i.value = expr; b.click(); } }, 60);
+  }
+  /** The `?` sheet: every key the app answers, the ones for this page first. */
+  function keysSheet() {
+    const onMap = /\/maps\/\d+/.test(location.hash);
+    const row = (k, what) => el('tr', {}, el('td', {}, k.split(' ').map(x => el('kbd', {}, x))), el('td', {}, what));
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    KIT.dialog({ title: 'Keys', message: el('div', { class: 'keys-sheet' },
+      onMap ? [el('h4', {}, 'On a map'), el('table', {}, row('P', 'Add a pin'), row('L', 'Add a label'), row('M', 'Measure'), row('T', 'Move the party'), row('Esc', 'Leave the tool, or close what is open'))] : null,
+      el('h4', {}, 'Anywhere in a campaign'), el('table', {},
+        row(mac ? '⌘ K' : 'Ctrl K', 'Jump to a name, a tab or an action, or roll'), row('/', 'Search the whole campaign'),
+        row('?', 'This list'), row('Esc', 'Close a menu, a card, a drawer or a dialog')),
+      el('p', { class: 'small muted' }, 'Keys work when the cursor is not in a text box.')),
+      buttons: [{ value: 'ok', label: 'Close', cls: 'primary', focus: true }] });
+  }
+  document.addEventListener('keydown', ev => {
+    if (!S.camp || !location.hash.startsWith('#/c/') || document.querySelector('dialog[open]')) return;
+    if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'k') {
+      if (ev.target.closest?.('[contenteditable="true"], .ql-editor')) return;   // the editor's own Ctrl K makes a link
+      ev.preventDefault();
+      jumpBox ? jumpBox.querySelector('input')?.focus() : openJumpBox();
+      return;
+    }
+    if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.target.closest?.('input, textarea, select, [contenteditable]') && !jumpBox) { ev.preventDefault(); keysSheet(); }
   });
 
   let passTimeOpen = false;   // the Pass time row, open or closed, for this visit
@@ -1656,7 +1904,12 @@
       toCalendar,
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/table`, 'data-tip': 'Open At the Table, on the campaign\'s current day' }, 'Go to today'),
       exportBtn);
-    mount(...campaignHeader('calendar'), nav, ...dayBoxes(x));
+    // the trail: Calendar › Firstmonth 1492 › this day. The month step opens the calendar on this day's month.
+    const mp = E.fromAbs(c, d);
+    const toMonth = ev => { if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return; vs().anchor = d; vs().mode = 'month'; };
+    const where = trail(['Calendar', `#/c/${S.camp.id}/calendar`], [`${c.months[mp.month].name} ${E.yearLabel(c, mp.year)}`, `#/c/${S.camp.id}/calendar`], [E.fmtDate(c, d, { noWeekday: true })]);
+    where.querySelectorAll('a')[1]?.addEventListener('click', toMonth);
+    mount(...campaignHeader('calendar'), where, nav, ...dayBoxes(x));
   }
 
   /** A day's boxes: Weather, Shifts (or Hours), Notes, Events and Reminders. table: under At the Table, where they start
@@ -1694,7 +1947,7 @@
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
       folded: table,
-      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'small', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
@@ -1702,7 +1955,7 @@
     const remBox = dayBox(key('reminders'), 'Reminders', {
       folded: table,
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
-      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'small', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
@@ -2670,13 +2923,11 @@
 
   /** Free notes at the foot of a shift card, separate from events. Anyone in the campaign can add one. */
   function shiftNotes(d, i, notes, after = route) {
-    const list = notes.map(n => el('div', { class: 'enote' },
+    const list = notes.map(n => el('div', { class: 'enote', 'data-undo': `shift_note_delete:${n.id}` },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
-        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
-          if (!await confirmDialog('Delete this note?')) return;
-          try { await post('shift_note_delete', { id: n.id }, S.camp.id); after(); } catch (err) { toast(err.message, true); }
-        }, 'link small'), 'Delete this note') : null)));
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'shift_note_delete', { id: n.id }), 'small danger note-del'), 'Delete this note') : null)));
     // the box stays closed behind + Note until it's wanted
     const input = el('textarea', { rows: 3, placeholder: 'Your note', hidden: true, 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
     const add = btn('+ Note', null, 'small', `Add your note to this ${word()}, signed with your character name`);
@@ -2689,6 +2940,148 @@
     return el('div', { class: 'shiftnotes' }, list.length ? el('span', { class: 'lbl' }, 'Notes') : null, el('div', { class: 'enotes' }, list), input, el('div', { class: 'row' }, add));
   }
 
+  // Recent and Pinned in the Legend: each campaign's own choice, off unless a GM turns them on in Settings. Recent is the
+  // last five things you opened, kept in this browser. Pinned is the GMs' short list for tonight (an entry, a tome, a session,
+  // a map), kept in the campaign's settings, so everyone in the campaign sees it; entries a member can't see are left out.
+  const quickOn = k => !!settings()[`legend_${k}`];
+  const RECENT_MAX = 5;
+  const recentKey = () => `chronicle:recent:${S.user?.id}:${S.camp?.id}`;
+  const recentList = () => { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch { return []; } };
+  const QUICK_KIND = { encyclopedia: ['entry', '📖'], library: ['tome', '📜'], sessions: ['session', '📝'], maps: ['map', '🗺'], day: ['day', '📅'] };
+  function noteRecent(hash) {
+    if (!S.camp) return;   // kept even with Recent off in the Legend: Ctrl K lists it
+    const m = hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
+    if (!m || Number(m[1]) !== S.camp.id) return;
+    const head = hash === location.hash ? app().querySelector('.enc-detail h2') || app().querySelector('.map-page h2, .map-head h2, h2') : null;
+    const text = node => { const c = node?.cloneNode(true); c?.querySelectorAll('.tip, .secret-tag, img').forEach(x => x.remove()); return (c?.textContent || '').trim(); };
+    const label = m[2] === 'day' ? E.fmtDate(cal(), Number(m[3]), { noWeekday: true })
+      : m[2] === 'encyclopedia' ? S.encyclopedia.find(e => e.id === Number(m[3]))?.name || text(head) : text(head);
+    if (!label) return;
+    const list = [{ hash, label, icon: QUICK_KIND[m[2]][1] }, ...recentList().filter(x => x.hash !== hash)].slice(0, RECENT_MAX);
+    try { localStorage.setItem(recentKey(), JSON.stringify(list)); } catch { /* private mode: no Recent */ }
+  }
+  const pinsOf = () => (Array.isArray(settings().legend_pins) ? settings().legend_pins : []);
+  const pinHref = p => `#/c/${S.camp.id}/${{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]}/${p.id}`;
+  // A session's title is never kept in the pin: the campaign's settings reach players, and an unpublished session's title
+  // must not. Its name comes from the sessions list this member may read (a player: the published ones), loaded once.
+  let pinSessions = null, pinSessionsCid = null, pinSessionsLoading = null;
+  function loadPinSessions() {
+    const cid = S.camp.id;
+    if (pinSessionsCid === cid && (pinSessions || pinSessionsLoading)) return pinSessionsLoading;
+    pinSessionsCid = cid; pinSessions = null;
+    return (pinSessionsLoading = api('sessions', { query: { cid } }).then(r => {
+      if (S.camp?.id !== cid) return;
+      pinSessions = new Map((r.sessions || []).map(x => [x.id, sessionName(x)]));
+      document.querySelectorAll('.legend-quick-wrap').forEach(w => w.replaceChildren(...legendQuickItems()));
+    }).catch(() => {}).finally(() => { pinSessionsLoading = null; }));
+  }
+  /** Drop what the Legend knows of sessions, after one is saved, published or deleted. */
+  const forgetPinSessions = () => { pinSessions = null; pinSessionsCid = null; };
+  /** A pin's name as this member may see it, or null to leave it out (an entry that is GM only or gone, an unpublished session). */
+  const pinLabel = p => (p.kind === 'entry' ? S.encyclopedia.find(e => e.id === p.id)?.name || null
+    : p.kind === 'session' ? (pinSessionsCid === S.camp.id ? pinSessions?.get(p.id) : null) || null
+    : p.name || null);
+  /** 📌 Pin / Unpin for a GM, when Pinned is on: puts the thing in (or takes it out of) the Legend's Pinned list. */
+  function pinButton(p) {
+    if (!isGM() || !quickOn('pinned')) return null;
+    const on = pinsOf().some(x => x.kind === p.kind && x.id === p.id);
+    const b = btn(on ? '📌 Unpin' : '📌 Pin', async () => {
+      const pins = on ? pinsOf().filter(x => !(x.kind === p.kind && x.id === p.id)) : [...pinsOf(), { kind: p.kind, id: p.id, ...(p.kind === 'entry' || p.kind === 'session' ? {} : { name: p.name }) }].slice(-8);
+      // (this sends the campaign's settings as this browser has them, so a second GM's Settings save at the same moment
+      // can be overwritten; Settings and pins are both rare, so a merge on the server isn't worth it yet)
+      try { await post('campaign_update', { settings: { ...settings(), legend_pins: pins } }, S.camp.id); settings().legend_pins = pins; forgetPinSessions(); closePeek(); route(); }
+      catch (err) { toast(err.message, true); }
+    }, 'small pin-btn', on ? 'Take this out of the Pinned list in the Legend' : 'Put this in the Pinned list at the top of the Legend, for everyone in the campaign');
+    return b;
+  }
+  /** The Legend's Pinned and Recent groups (nothing when both are off or empty). */
+  function legendQuick() {
+    if (quickOn('pinned') && pinsOf().some(p => p.kind === 'session')) loadPinSessions();
+    return el('div', { class: 'legend-quick-wrap' }, legendQuickItems());
+  }
+  function legendQuickItems() {
+    const quick = (cls, title, items) => items.length ? [el('span', { class: `legend-quick-h ${cls}` }, title),
+      items.map(([href, icon, label]) => el('a', { href, class: 'legend-quick', 'data-tip': label }, el('span', { class: 'lq-icon', 'aria-hidden': 'true' }, icon), el('span', { class: 'lq-name' }, label)))] : [];
+    const pins = quickOn('pinned') ? pinsOf().map(p => [pinHref(p), QUICK_KIND[{ entry: 'encyclopedia', tome: 'library', session: 'sessions', map: 'maps' }[p.kind]][1], pinLabel(p)]).filter(x => x[2]) : [];
+    const here = location.hash;
+    const recent = quickOn('recent') ? recentList().filter(x => x.hash !== here && x.hash.startsWith(`#/c/${S.camp.id}/`)).slice(0, RECENT_MAX).map(x => [x.hash, x.icon, x.label]) : [];
+    return [...quick('pinned', '📌 Pinned', pins), ...quick('recent', 'Recent', recent)].flat();
+  }
+
+  // Peek: a click (or tap) on an Encyclopedia name written in a note opens a small card about it on the spot, with Open,
+  // Show on map and Pin, instead of leaving the page you are running. Ctrl/⌘-click, a middle click or the card's Open still go there.
+  let peekCard = null;
+  const closePeek = () => { if (!peekCard) return; peekCard._from?.removeAttribute('aria-expanded'); peekCard.remove(); peekCard = null; document.removeEventListener('pointerdown', peekOutside, true); document.removeEventListener('keydown', peekKeys, true); };
+  const peekOutside = ev => { if (peekCard && !peekCard.contains(ev.target) && !ev.target.closest?.('a.enc-link')) closePeek(); };
+  const peekKeys = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); const a = peekCard?._from; closePeek(); a?.focus(); } };
+  function openPeek(a, e) {
+    closePeek(); hideTip();
+    const cat = encCat(e.category);
+    const href = `#/c/${S.camp.id}/encyclopedia/${e.id}`;
+    const pins = (S.mapIndex || []).filter(p => p.entry_id === e.id);
+    const card = el('div', { class: 'peek surface-float', role: 'dialog', 'aria-label': e.name },
+      el('div', { class: 'peek-head' },
+        e.pic ? el('img', { class: 'peek-pic', src: e.pic, alt: '' }) : el('div', { class: 'peek-pic peek-icon', 'aria-hidden': 'true' }, cat ? cat[2] : '📖'),
+        el('div', {}, el('a', { class: 'peek-name', href, onclick: closePeek }, e.name),
+          el('div', { class: 'etags' }, cat ? el('span', { class: 'chip enc-cat' }, `${cat[2]} ${cat[1]}`) : null, e.is_secret ? secretTag() : null))),
+      el('p', { class: e.preview ? 'peek-text' : 'peek-text muted' }, e.preview || 'Nothing written about it yet.'),
+      el('div', { class: 'row peek-acts' },
+        el('a', { class: 'button small primary', href, onclick: closePeek }, 'Open'),
+        pins.length ? el('a', { class: 'button small', href: `#/c/${S.camp.id}/maps/${pins[0].map_id}?pin=${pins[0].pin_id}`, onclick: closePeek,
+          'data-tip': `Open ${pins[0].map_name} at its pin` }, '🗺 Show on map') : null,
+        S.viewAs ? null : btn('+ Note', () => peekNote(card, e), 'small peek-note-btn', `Add a note to the end of ${e.name}'s notes`),
+        !e.is_secret && quickOn('pinned') ? pinButton({ kind: 'entry', id: e.id }) : null));
+    card._from = a;
+    a.setAttribute('aria-expanded', 'true');
+    document.body.append(card);
+    const r = a.getBoundingClientRect(), w = card.offsetWidth;
+    const left = Math.max(8, Math.min(r.left + scrollX - 16, scrollX + document.documentElement.clientWidth - w - 8));
+    const below = r.bottom + card.offsetHeight + 12 < innerHeight || r.top < card.offsetHeight + 12;
+    card.style.left = `${left}px`;
+    card.style.top = `${(below ? r.bottom + 8 : r.top - card.offsetHeight - 8) + scrollY}px`;
+    card.classList.toggle('above', !below);
+    card.style.setProperty('--peek-arrow', `${Math.max(14, Math.min(w - 26, r.left + scrollX - left + Math.min(r.width / 2, 40)))}px`);
+    peekCard = card;
+    document.addEventListener('pointerdown', peekOutside, true);
+    document.addEventListener('keydown', peekKeys, true);
+    card.querySelector('.peek-acts a')?.focus({ preventScroll: true });
+  }
+  /** The peek's + Note: a note at the end of the entry's notes, as At the Table's Encyclopedia add does, without leaving. */
+  function peekNote(card, e) {
+    if (card.querySelector('.peek-note')) return card.querySelector('.peek-note textarea').focus();
+    const text = el('textarea', { rows: 3, 'aria-label': `Note on ${e.name}`, placeholder: 'What you found out' });
+    const gmOnly = el('input', { type: 'checkbox' });
+    const save = btn('Save note', null, 'small primary');
+    const form = el('div', { class: 'peek-note' }, text, el('div', { class: 'row spread' },
+      isGM() ? el('label', { class: 'small inline', 'data-tip': 'Goes in the entry\'s GM notes instead, which players never see' }, gmOnly, ' GM only') : el('span'),
+      el('div', { class: 'row' }, btn('Cancel', () => form.remove(), 'small'), save)));
+    save.addEventListener('click', busy(save, async () => {
+      const body = text.value.trim();
+      if (!body) return toast('Write the note first', true);
+      await post('entry_note_add', { id: e.id, body, gm_only: isGM() && gmOnly.checked }, S.camp.id);
+      tableEntries = null;
+      toast(`Note added to ${e.name}`);
+      closePeek();
+    }));
+    // the card's own Open stays the one filled button until the note is being written
+    card.querySelector('.peek-acts .primary')?.classList.remove('primary');
+    card.querySelector('.peek-acts').before(form);
+    text.focus();
+  }
+  // Names in prose (notes, events, summaries) peek. Lists of entries to go to (Connections, Suggested connections, the
+  // 📖 names-in-this-text row) are navigation already, so their links go straight there.
+  const PEEK_SKIP = '.enc-conn, .enc-conn-list, .enc-suggest-list, .enc-mentions';
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest?.('a.enc-link');
+    if (!a || PANEL || ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey || a.closest(`[contenteditable="true"], .peek, ${PEEK_SKIP}`)) return;
+    const m = (a.getAttribute('href') || '').match(/^#\/c\/(\d+)\/encyclopedia\/(\d+)$/);
+    const e = m && Number(m[1]) === S.camp?.id ? (S.encyclopedia || []).find(x => x.id === Number(m[2])) : null;
+    if (!e) return;
+    ev.preventDefault();
+    if (peekCard?._from === a) closePeek(); else openPeek(a, e);
+  });
+  addEventListener('hashchange', closePeek);
+
   /** "📍 On the map: <map>" links, one per pin this member can see that points at entry or event `id` (key: 'entry_id' or 'event_id'). */
   const mapLinks = (key, id) => {
     const links = (S.mapIndex || []).filter(p => p[key] === id).map(p =>
@@ -2700,14 +3093,12 @@
     const c = cal();
     const mine = Number(e.created_by) === S.user.id;
     const span = e.end_day !== null && e.end_day !== undefined ? ` (${E.fmtDate(c, Number(e.abs_day), { noWeekday: true })} → ${E.fmtDate(c, Number(e.end_day), { noWeekday: true })})` : '';
-    const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : '') });
-    const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote' },
+    const box = el('div', { class: 'event' + (Number(e.is_secret) ? ' secret' : ''), 'data-undo': `event_delete:${e.id}` });
+    const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote', 'data-undo': `note_delete:${n.id}` },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
-        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
-          if (!await confirmDialog('Delete this note?')) return;
-          try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'link small'), 'Delete this note') : null))));
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'note_delete', { id: n.id }), 'small danger note-del'), 'Delete this note') : null))));
     // The note box stays folded behind its button until it's wanted, so a day of events isn't a stack of empty boxes
     const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…', hidden: true, 'aria-label': `Note on ${e.title}` });
     const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
@@ -2731,10 +3122,7 @@
           if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
           try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
         }, 'small', 'Make this GM-only event public: players see it from now on') : null,
-        btn('Delete', async () => {
-          if (!await confirmDialog(`Delete "${e.title}"?`)) return;
-          try { await post('event_delete', { id: e.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Delete this event and its notes')) : null,
+        btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes')) : null,
       notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
@@ -2743,7 +3131,7 @@
   function reminderView(x, d) {
     const state = !x.due ? ['Waiting', `Pops up when the clock reaches ${E.fmtShift(cal(), x.due_shift)}`]
       : x.dismissed ? ['Dismissed', 'You have read this one'] : ['Due', 'The clock has reached it and you haven\'t dismissed it yet'];
-    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : '') },
+    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : ''), 'data-undo': `reminder_delete:${x.id}` },
       el('div', { class: 'row spread' },
         el('h4', {}, '🔔 ', linked(x.title)),
         el('small', { class: 'muted' }, shiftNames()[E.mod(x.due_shift, spd())], ' · ', el('span', { 'data-tip': state[1] }, state[0]))),
@@ -2751,10 +3139,7 @@
       el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
       canEditReminder(x) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-        btn('Delete', async () => {
-          if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
-          try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Delete this reminder')) : null);
+        btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null);
     return box;
   }
 
@@ -2830,8 +3215,8 @@
     const find = el('input', { type: 'search', placeholder: `Find ${noun}`, 'aria-label': `Find ${noun}`, class: 'mpick-find' });
     let opts = [], shape = '';
     const change = () => { sync(); onChange(); };
-    const all = btn('Select all', () => { off.clear(); change(); }, 'link small', `Show every ${noun.replace(/s$/, '')}`);
-    const none = btn('Deselect all', () => { for (const o of opts) off.add(o.key); change(); }, 'link small', `Untick every ${noun.replace(/s$/, '')}, then tick the ones to show`);
+    const all = btn('Select all', () => { off.clear(); change(); }, 'small', `Show every ${noun.replace(/s$/, '')}`);
+    const none = btn('Deselect all', () => { for (const o of opts) off.add(o.key); change(); }, 'small', `Untick every ${noun.replace(/s$/, '')}, then tick the ones to show`);
     const node = el('details', { class: 'mpick' }, sum,
       el('div', { class: 'mpick-panel' }, el('div', { class: 'row small' }, all, none), find, box));
     const sync = () => {
@@ -3002,7 +3387,7 @@
           onclick: () => { on ? st.tags.delete(k) : st.tags.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
         b.style.setProperty('--tag', t.color);
         return b;
-      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'link small', 'Show events with any tag, or none')] : []));
+      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'small', 'Show events with any tag, or none')] : []));
     };
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     when.addEventListener('change', () => { st.when = when.value; draw(); });
@@ -3054,7 +3439,7 @@
       const when = d < d0 ? 'past' : d > d0 ? 'future' : 'now';
       const label = { waiting: 'Waiting', due: 'Due', dismissed: 'Dismissed' }[s];
       const tipText = { waiting: `Pops up when the clock reaches ${E.fmtShift(c, x.due_shift)}`, due: 'The clock has reached it and you haven\'t dismissed it yet', dismissed: 'You have read this one' }[s];
-      const r = el('div', { class: `listrow evrow remrow ${when} ${s}` },
+      const r = el('div', { class: `listrow evrow remrow ${when} ${s}`, 'data-undo': `reminder_delete:${x.id}` },
         el('div', { class: 'evwhen' },
           el('a', { href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': 'Open this day' }, E.fmtDate(c, d, { noWeekday: true })),
           el('div', { class: 'small muted' }, shiftNames()[E.mod(x.due_shift, n)], ' · ', el('span', { class: `remstate ${s}`, 'data-tip': tipText }, label))),
@@ -3064,10 +3449,7 @@
           el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
           canEditReminder(x) ? el('div', { class: 'row' },
             btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-            btn('Delete', async () => {
-              if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
-              try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Delete this reminder')) : null));
+            btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null));
       return r;
     };
     const draw = () => {
@@ -3558,7 +3940,7 @@
     const findBtn = up.ready && parentType === 'encyclopedia' && opts.name ? btn('🖼️ Find Image', () => {
       findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(findImage(parentType, parentId, opts.name, { gmOnly, onAdded: refresh }));
     }, 'small', 'Search open picture libraries, museums and DeviantArt for a picture of this, credited') : null;
-    const addBtn = up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
+    const addBtn = up.ready ? el('label', { class: 'button small file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
     const gallery = pics.length ? el('div', { class: 'file-gallery' }, pics.map((f, i) =>
       el('figure', { class: 'file-pic' + (hidden(f) ? ' secret' : ''), 'data-id': f.id },
         el('button', { type: 'button', class: 'file-thumb', 'aria-label': `Open ${f.caption || f.name}`, onclick: () => fileViewer(pics, i, { ...opts, mine, hidden }) },
@@ -3795,7 +4177,7 @@
           list.length ? btn('🕸 Web', () => ctx.web({ center: e.id }), 'small', `Draw ${e.name}'s connections as a web, one or two steps out`) : null,
           Web.hasFamily({ conns }, e.id) ? btn('🌳 Family', () => ctx.web({ center: e.id, mode: 'family' }), 'small', `Draw ${e.name}'s family: parents, partners, children and siblings`) : null,
           list.length ? btn('Show in list', () => { st.near = e.id; ctx.draw(); }, 'small', `List ${e.name} and the entries connected to it`) : null,
-          btn('🔗 Link', () => connectDialog(e, rel), 'small primary', `Connect ${e.name} to one or more entries`))),
+          btn('🔗 Link', () => connectDialog(e, rel), 'small', `Connect ${e.name} to one or more entries`))),
       rows.length ? el('div', { class: 'enc-conn-list' }, rows) : el('p', { class: 'muted small' }, 'No connections yet.'),
       suggest);
   }
@@ -3987,7 +4369,7 @@
       el('div', { class: 'enc-wiki-hits' }, items.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', onclick: () => (h.several ? meanings(h.title) : show(h.title)),
         'data-tip': h.several ? `"${h.title}" has several meanings: list them` : `Show the summary of "${h.title}"` },
         el('strong', {}, h.title, h.several ? el('span', { class: 'enc-wiki-several' }, 'Several meanings') : null), h.line ? el('span', { class: 'muted small' }, h.line) : null))),
-      el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'link small')));
+      el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'small')));
     async function search() {
       const q = name.value.trim();
       if (!q) return say('Give the entry a name first.');
@@ -4213,10 +4595,12 @@
     const canDelete = isGM() || t.created_by === S.user.id;
     const changed = t.editor && (t.editor !== t.author || t.updated_at !== t.created_at);
     return clean([
+      trail(['Library', `#/c/${S.camp.id}/library`], [label], [t.title]),
       el('div', { class: 'row spread' },
         el('h2', {}, t.title),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
+          pinButton({ kind: 'tome', id: t.id, name: t.title }),
           scanOneBtn('tome', s => s.kind === 'tome' && s.id === t.id, `"${t.title}"`),
           isGM() ? btn('🕘 History', () => HistoryView.open({ kind: 'tome', ref: t.id, title: t.title, cid: S.camp.id, api, post, onRestore: route }), 'small', 'Earlier versions of this tome, what each save changed, and Restore. GMs only') : null,
           canDelete ? btn('Delete', async () => {
@@ -5267,11 +5651,9 @@
         try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
       for (const i of [cur, loc, amt]) i.addEventListener('change', save);
-      const row = el('div', { class: 'ledger-row' }, cur, loc, amt,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: async () => {
-          if (!await confirmDialog(`Remove "${cur.value}" from Party Funds?`, { ok: 'Remove', danger: true })) return;
-          try { await post('funds_delete', { id: f.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
-        } }, '✕'));
+      const row = el('div', { class: 'ledger-row', 'data-undo': `funds_delete:${f.id}` }, cur, loc, amt,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: () =>
+          undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...funds.map(line));
@@ -5311,11 +5693,9 @@
       const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
         onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
         onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
-      const row = el('div', { class: 'gear-row' }, item, claimed, loc, amount.node,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: async () => {
-          if (!await confirmDialog(`Remove "${item.value || 'this item'}" from Gear and Loot?`, { ok: 'Remove', danger: true })) return;
-          try { await post('gear_delete', { id: g.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
-        } }, '✕'));
+      const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed, loc, amount.node,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
+          undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...gear.map(gearRow));
@@ -5376,7 +5756,7 @@
     const cap = leadNumber(h.stats?.cargo);
     const lines = el('div', { class: 'ledger-rows' });
     const total = el('div', { class: 'ledger-total' });
-    const weights = () => [...lines.querySelectorAll('input.ledger-w')].map(i => Number(i.value) || 0);
+    const weights = () => [...lines.querySelectorAll('.ledger-row:not([hidden]) input.ledger-w')].map(i => Number(i.value) || 0);
     const sum = () => {
       const t = weights().reduce((a, b) => a + b, 0), over = cap !== null && t > cap;
       total.classList.toggle('over', over);
@@ -5395,10 +5775,9 @@
       item.addEventListener('change', save);
       weight.addEventListener('change', save);
       weight.addEventListener('input', sum);
-      const row = el('div', { class: 'ledger-row' }, item, weight,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: async () => {
-          if (!await confirmDialog(`Remove "${item.value}" from ${h.name}'s storage?`, { ok: 'Remove', danger: true })) return;
-          try { await post('storage_delete', { id: s.id }, S.camp.id); row.remove(); sum(); } catch (err) { toast(err.message, true); }
+      const row = el('div', { class: 'ledger-row', 'data-undo': `storage_delete:${s.id}` }, item, weight,
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: () => {
+          undoDelete(row, `Removed "${shortText(item.value)}" from ${h.name}'s storage`, 'storage_delete', { id: s.id }, () => row.remove(), sum);
         } }, '✕'));
       return row;
     };
@@ -6260,9 +6639,10 @@
         if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
         try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
       }, 'small'))) : el('p', { class: 'muted small' }, 'No panel links yet.'));
-    box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small primary'),
+    box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small'),
       btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
-      el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href), ' under Extensions → Add custom extension.')));
+      el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href),
+        copyButton(new URL('api/index.php?a=owlbear_manifest', panelBase()).href, 'Owlbear Rodeo address'), ' under Extensions → Add custom extension.')));
     return box;
   }
   function newPanelLink(box) {
@@ -6415,16 +6795,16 @@
     // public panels change nothing anyway; a member's own link in a frame starts with changes off
     const writes = S.panel?.link?.scope !== 'public_panel' && panelFramed()
       ? (panelWritesAllowed()
-        ? btn(`Changes allowed on ${panelEmbedder()} · turn off`, () => { setPanelWrites(false); viewTable(); }, 'link small', 'Stop this panel making changes while this site shows it')
+        ? btn(`Changes allowed on ${panelEmbedder()} · turn off`, () => { setPanelWrites(false); viewTable(); }, 'small', 'Stop this panel making changes while this site shows it')
         : panelEmbedderOrigin()
           ? btn('Allow changes here', async () => {
             if (!await confirmDialog(`Let this panel pass time and add notes while ${panelEmbedder()} shows it? Only allow a site you use, such as your VTT.`, { ok: 'Allow changes' })) return;
             setPanelWrites(true); viewTable();
-          }, 'link small', `Changes are off while ${panelEmbedder()} shows this panel`)
+          }, 'small', `Changes are off while ${panelEmbedder()} shows this panel`)
           : el('span', {}, 'Read only here: this browser doesn\'t say which site shows the panel'))
       : null;
     return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago, writes,
-      btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'link small'));
+      btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'small'));
   }
   /** The panel follows the campaign: when a GM changes it (passes time, say), it redraws, unless a note is being typed. */
   async function panelPoll() {
@@ -6454,7 +6834,7 @@
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
-    tagsOf, tip, tipped, toast, today, vs
+    tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
@@ -6473,9 +6853,33 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => diceSync()));
+    let drawn = null;   // the address this run drew, for Recent, even if the address has moved on since
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
+      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) noteRecent(drawn); }));
+  }
+  // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
+  // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.
+  // A page reached by a new click starts at the top as before.
+  const places = new Map();
+  let placeHash = null, placeShot = null, placeNav = false;
+  const tabOf = h => (h || '').split('?')[0].split('/').slice(0, 4).join('/');
+  addEventListener('hashchange', () => {   // runs before the new page is drawn: the old one is still there to measure
+    placeNav = true;
+    if (placeHash) places.set(placeHash, placeShot = { y: scrollY, lists: [...document.querySelectorAll('.lp-list')].map(l => l.scrollTop) });
+  });
+  function keepPlace() {
+    if (!placeNav) { placeHash = location.hash; return; }   // a page drawn again after a save stays as mount() leaves it
+    placeNav = false;
+    const h = location.hash, back = !!history.state?.chronicleSeen;
+    if (!back) { try { history.replaceState({ ...(history.state || {}), chronicleSeen: true }, ''); } catch { /* fine */ } }
+    const was = back ? places.get(h) : (placeHash && tabOf(placeHash) === tabOf(h) ? { y: null, lists: placeShot?.lists } : null);
+    placeHash = h; placeShot = null;
+    if (!was) return;
+    if (was.y !== null && was.y !== undefined) scrollTo(0, was.y);
+    document.querySelectorAll('.lp-list').forEach((l, i) => { if (was.lists?.[i]) l.scrollTop = was.lists[i]; });
   }
   async function routeTo() {
+    if (!Undo.samePage()) await Undo.flush();   // going to another page: a delete waiting on its Undo goes through first
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
     const parts = (path || '').split('/');
     if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too

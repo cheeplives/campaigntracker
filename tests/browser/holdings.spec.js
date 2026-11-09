@@ -56,10 +56,10 @@ test("players and the GM keep the Gear and Loot list, with a ticker for how many
   await expect(grow.getByLabel("Claimed by")).toHaveValue("Pip");
   await expect(grow.locator(".tick-n")).toHaveValue("0");
   await expect(grow.getByRole("button", { name: /one fewer/ })).toBeDisabled();
-  await grow.getByRole("button", { name: "Remove Rope (50 ft)" }).click();
-  await page.locator(".kit-dialog").getByRole("button", { name: "Remove" }).click();
+  await grow.getByRole("button", { name: "Remove Rope (50 ft)" }).click();   // no "Are you sure?": it goes, with Undo for a few seconds
   await expect(grow).toHaveCount(0);
-  expect((await api(page, "holdings", undefined, cid)).json.gear).toEqual([]);
+  await expect(page.locator("#undo-toast")).toContainText("Rope (50 ft)");
+  await expect.poll(async () => (await api(page, "holdings", undefined, cid)).json.gear, { timeout: 15_000 }).toEqual([]);
 
   expectNoErrors(errors);
   expectNoErrors(perrors);
@@ -197,7 +197,6 @@ test("each holding has a Storage ledger whose total weight is checked against it
   const gstore = page.locator(".holding", { hasText: "Mule cart" }).locator(".storage");
   await expect(gstore.locator(".ledger-total")).toContainText("100 / 100 lb");
   await gstore.getByRole("button", { name: "Remove Grain sacks from storage" }).click();
-  await page.locator(".kit-dialog").getByRole("button", { name: "Remove" }).click();
   await expect(gstore.locator(".ledger-total")).toContainText("40 / 100 lb");
   expect((await api(page, "storage_save", { holding_id: shed, item: "Tools", weight: 12.5 }, cid)).status).toBe(200);
   await page.reload();
@@ -246,9 +245,8 @@ test("Party Funds tracks the party's money, one line per currency, for players a
   const gfunds = page.locator(".funds");
   await expect(gfunds.getByLabel("Amount of Silver", { exact: true })).toHaveValue("35.5");
   await gfunds.getByRole("button", { name: "Remove Silver" }).click();
-  await page.locator(".kit-dialog").getByRole("button", { name: "Remove" }).click();
-  await expect(gfunds.locator(".ledger-rows .ledger-row")).toHaveCount(1);
-  expect((await api(page, "holdings", undefined, cid)).json.funds.map(f => f.currency)).toEqual(["Gold pieces"]);
+  await expect(gfunds.locator(".ledger-rows .ledger-row:visible")).toHaveCount(1);
+  await expect.poll(async () => (await api(page, "holdings", undefined, cid)).json.funds.map(f => f.currency), { timeout: 15_000 }).toEqual(["Gold pieces"]);
 
   expectNoErrors(errors);
   expectNoErrors(perrors);
