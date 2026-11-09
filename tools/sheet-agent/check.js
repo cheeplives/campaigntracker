@@ -35,6 +35,17 @@ function check(file) {
   return out;
 }
 
+/** Each list's columns with the width the sheet draws them at (SheetLayout.columnWidths), for a look: narrow ones
+ * should be the short values (Weight, Uses, Damage), never the name or description. */
+function columnWidths(file) {
+  const t = JSON.parse(fs.readFileSync(file, 'utf8')), out = [];
+  for (const [, { field }] of L.fields(t.layout)) if (field.type === 'list') {
+    const w = L.columnWidths(field.columns);
+    out.push(`list "${field.label}": ${field.columns.map((c, i) => `${c.label} (${w[i]}${c.width ? '' : ', by its label'})`).join(' | ')}`);
+  }
+  return out;
+}
+
 if (require.main === module) {
   const files = process.argv.slice(2);
   if (!files.length) {
@@ -46,8 +57,9 @@ if (require.main === module) {
     const wrong = check(f);
     if (wrong.length) bad++;
     console.log(wrong.length ? `${f}:\n${wrong.map(w => `  - ${w}`).join('\n')}` : `${f}: ok`);
+    if (!wrong.length) for (const line of columnWidths(f)) console.log(`  ${line}`);
   }
   process.exit(bad ? 1 : 0);
 }
 
-module.exports = { check };
+module.exports = { check, columnWidths };

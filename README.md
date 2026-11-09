@@ -119,7 +119,7 @@ Hover over any visibility badge to see this breakdown.
 
 - `node tools/sheet-agent/extract.js <sheet.pdf> <out-dir>` reads the PDF with the app's own pdf.js: each page's form fields and text with their positions, which fields share a row, where the page splits into columns, likely headings, the width each box would be on the sheet, and the editor's first draft; and a picture of each page.
 - `node tools/sheet-agent/preview.js <template.json> <out-dir>` draws a template with the app's own CSS and code, a picture of each page at desktop and iPad widths (add `--widths 1280,820,390` for a phone), and lists what looks wrong (a sheet wider than the screen, a label cut short).
-- `node tools/sheet-agent/check.js <template.json>` checks a starter file against the starter test's rules.
+- `node tools/sheet-agent/check.js <template.json>` checks a starter file against the starter test's rules, and lists each table's columns with the width the sheet gives them (short values such as Weight, Uses or Damage narrow, names and descriptions sharing the rest).
 
 The PDF and the work files stay on your computer; only the finished template is committed. Nothing here is deployed.
 
