@@ -478,10 +478,15 @@ test("Settings → Dice at the table: the GM turns off players' free rolls and o
   const perrors = watchErrors(pp);
   await page.goto(`index.html#/c/${cid}/settings/dice`);
   const form = page.locator(".dice-settings");
-  await form.locator("#dice-game").selectOption("pf2");
-  await form.getByRole("checkbox", { name: "Players can make free rolls" }).uncheck();
-  await form.getByRole("checkbox", { name: "Players see the odds" }).uncheck();
-  await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+  // filled in again if the page draws itself afresh meanwhile (a campaign change check can redraw it in Firefox)
+  await expect(async () => {
+    await form.locator("#dice-game").selectOption("pf2");
+    await form.getByRole("checkbox", { name: "Players can make free rolls" }).setChecked(false, { timeout: 2000 });
+    await form.getByRole("checkbox", { name: "Players see the odds" }).setChecked(false, { timeout: 2000 });
+    await form.getByRole("combobox", { name: "3D dice" }).selectOption("flat");
+    await expect(form.locator("#dice-system")).toHaveValue("d20", { timeout: 1000 });
+    await expect(form.getByRole("checkbox", { name: "Players can make free rolls" })).not.toBeChecked({ timeout: 1000 });
+  }).toPass({ timeout: 20000 });
   await form.getByRole("button", { name: "Save dice settings" }).click();
   await expect(page.locator("#toast")).toContainText("Saved");
   const set = (await api(pp, "dice_rolls", undefined, cid)).json.settings;
@@ -611,4 +616,47 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
   await expect.poll(lastRoll).toBe("1d3+1 # Wren: Unarmed");
   expectNoErrors(errors);
   expectNoErrors(perrors);
+});
+
+test("a saved roll rolls again and again from its 🎲 Roll, and each device sets how long thrown dice stay", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice again");
+  await api(page, "prefs_save", { dice_saved: { cid, list: [{ n: "Fireball", e: "8d6 # fireball" }] } });
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const count = async () => (await api(page, "dice_rolls", undefined, cid)).json.rolls.filter(r => r.expr === "8d6 # fireball").length;
+  const again = page.getByRole("button", { name: "Roll this saved roll" });
+  await expect(again).toBeHidden();
+  await page.locator(".dice-saved").selectOption("1");
+  const box = page.getByRole("textbox", { name: "Free roll" });
+  await expect(box).toHaveValue("8d6 # fireball");
+  await again.click();
+  await expect.poll(count).toBe(1);
+  // something else rolled in between: the saved roll still rolls as it was saved, without picking it again
+  await box.fill("1d20");
+  await expect(page.locator(".dice-saved")).toHaveValue("");    // typed away from it, so the list lets go of it
+  await expect(again).toBeHidden();
+  await box.press("Enter");
+  await page.locator(".dice-saved").selectOption("1");
+  await again.click();
+  await expect.poll(count).toBe(2);
+  await again.click();
+  await expect.poll(count).toBe(3);
+
+  // 🎨: how long the dice stay, kept on this device
+  await page.getByRole("button", { name: /your dice/i }).click();
+  const stay = page.getByRole("combobox", { name: "How long thrown dice stay on screen" });
+  await expect(stay).toHaveValue("3");
+  // a browser that can't draw 3D (Firefox in CI has no WebGL2) throws no dice, so there's nothing to keep up: it says so
+  if (await stay.isDisabled()) {
+    await expect(page.locator(".dice-look-row", { hasText: "Throw 3D dice" })).toContainText("can't draw 3D");
+    expectNoErrors(errors);
+    return;
+  }
+  await stay.selectOption("0");
+  expect(await page.evaluate(() => localStorage.getItem("chronicle-dice-stay"))).toBe("0");
+  await page.reload();                                          // the panel opens again as it was left
+  await page.getByRole("button", { name: /your dice/i }).click();
+  await expect(stay).toHaveValue("0");
+  expectNoErrors(errors);
 });
