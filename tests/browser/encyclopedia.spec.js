@@ -213,7 +213,8 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
 
   // The blank entry opens in its editor: tag it with a tag of the GM's own, write GM notes, and save.
   await page.locator(".enc-blank .enc-item", { hasText: "Marienburg" }).click();
-  await page.locator(".enc-form input[aria-label='New tag name']").fill("Port");
+  await page.locator(".enc-form details.tagfold > summary").click();
+  await page.locator(".enc-form").getByLabel("Search or add a tag").fill("Port");
   await page.locator(".enc-form").getByRole("button", { name: "+ Add tag" }).click();
   const gmNotes = page.locator(".enc-form .notepanel.secret .ql-editor");
   await gmNotes.click();

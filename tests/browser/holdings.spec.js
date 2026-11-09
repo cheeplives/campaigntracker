@@ -127,8 +127,9 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await dlg.getByLabel("Value", { exact: true }).fill("400 gp");
   await dlg.getByRole("button", { name: "Amount: one more" }).click();
   // Holdings have their own tags: none of the events' starter tags are offered.
+  await dlg.locator("details.tagfold > summary").click();
   await expect(dlg.locator(".tagopt")).toHaveCount(0);
-  await dlg.getByLabel("New tag name").fill("Base");
+  await dlg.getByLabel("Search or add a tag").fill("Base");
   await dlg.getByRole("button", { name: "+ Add tag" }).click();
   await dlg.getByRole("button", { name: "Add holding" }).click();
   await expect(dlg).toHaveCount(0);
