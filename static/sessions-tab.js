@@ -133,6 +133,15 @@
           el('label', { class: 'inline small', 'data-tip': 'Add your notes to the file, as a list under the summary' }, withNotes, ' Include notes in Export'),
           btn('🕘 History', () => HistoryView.open({ kind: 'session', ref: s.id, title: sessionName(s), cid, api, post, onRestore: route }), 'small', 'Earlier versions of this session\'s summary, rewards, loot and notes, what each save changed, and Restore'), del));
       document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
+      // The list hangs from the ⋯ button's right edge; when the bar wraps and ⋯ starts a line (a phone), that runs off the
+      // left of the screen, so it is moved back on.
+      more.addEventListener('toggle', () => {
+        const list = more.lastElementChild;
+        list.style.translate = '';
+        if (!more.open) return;
+        const left = list.getBoundingClientRect().left;
+        if (left < 8) list.style.translate = `${Math.round(8 - left)}px 0`;
+      });
       const bar = el('div', { class: 'row sess-bar' }, head[1],
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
         el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, pinButton({ kind: 'session', id: s.id, name: sessionName(s) }), more);
