@@ -925,7 +925,8 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 .item-star:hover, .item-star:focus-visible { color: var(--accent); opacity: 1; background: none; }
 .item-star:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .item-star.busy { opacity: .3; pointer-events: none; }
-h2 > .item-star { margin-left: 6px; font-size: 1.25rem; }
+.title-star { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.title-star > .item-star { flex: none; font-size: 1.25rem; }
 .enc-card.has-star { position: relative; padding-right: 30px; }
 .enc-card.has-star > .item-star { position: absolute; top: 1px; right: 2px; }
 .enc-card.on > .item-star, .enc-card.on > .item-star:hover { color: inherit; }

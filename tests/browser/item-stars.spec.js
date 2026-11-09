@@ -43,11 +43,11 @@ test("Encyclopedia: entries are starred from the list or their page, listed unde
 
   // and from the entry's page, next to its name
   await page.goto(`index.html#/c/${cid}/encyclopedia/${ids.Marienburg}`);
-  await expect(page.locator(".enc-detail h2")).toHaveText("Marienburg");
-  await page.locator(".enc-detail h2").getByRole("button", { name: "Star Marienburg", exact: true }).click();
-  await expect(page.locator(".enc-detail h2").getByRole("button", { name: "Unstar Marienburg", exact: true })).toBeVisible();
-  await page.locator(".enc-detail h2").getByRole("button", { name: "Unstar Marienburg", exact: true }).click();
-  await expect(page.locator(".enc-detail h2").getByRole("button", { name: "Star Marienburg", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Marienburg", exact: true })).toBeVisible();   // the star isn't part of its name
+  await page.locator(".enc-detail .title-star").getByRole("button", { name: "Star Marienburg", exact: true }).click();
+  await expect(page.locator(".enc-detail .title-star").getByRole("button", { name: "Unstar Marienburg", exact: true })).toBeVisible();
+  await page.locator(".enc-detail .title-star").getByRole("button", { name: "Unstar Marienburg", exact: true }).click();
+  await expect(page.locator(".enc-detail .title-star").getByRole("button", { name: "Star Marienburg", exact: true })).toBeVisible();
   // the keyboard stars a card too
   await page.getByRole("button", { name: "Star Marienburg", exact: true }).first().focus();
   await page.keyboard.press("Enter");
@@ -89,8 +89,8 @@ test("Library: tomes are starred from the list or their page and listed under St
 
   await page.goto(`index.html#/c/${cid}/library/${ids["The Codex"]}`);
   await expect(page.locator(".lib-detail h2")).toHaveText("The Codex");
-  await page.locator(".lib-detail h2").getByRole("button", { name: "Star The Codex", exact: true }).click();
-  await expect(page.locator(".lib-detail h2").getByRole("button", { name: "Unstar The Codex", exact: true })).toBeVisible();
+  await page.locator(".lib-detail .title-star").getByRole("button", { name: "Star The Codex", exact: true }).click();
+  await expect(page.locator(".lib-detail .title-star").getByRole("button", { name: "Unstar The Codex", exact: true })).toBeVisible();
   await page.goto(`index.html#/c/${cid}/library`);
   await expect(starred(page)).toHaveText([/The Codex/, /Ship's Log/]);
   expectNoErrors(errors);

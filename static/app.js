@@ -4627,7 +4627,7 @@
     return clean([
       trail(['Library', `#/c/${S.camp.id}/library`], [label], [t.title]),
       el('div', { class: 'row spread' },
-        el('h2', {}, t.title, itemStar('tome', t.id, t.title)),
+        el('div', { class: 'title-star' }, el('h2', {}, t.title), itemStar('tome', t.id, t.title)),
         el('div', { class: 'row' },
           btn('Edit', ev => ev.currentTarget.closest('.lib-detail').replaceChildren(tomeForm(t)), 'small primary', 'Change this tome. Anyone in the campaign can'),
           pinButton({ kind: 'tome', id: t.id, name: t.title }),

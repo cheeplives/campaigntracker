@@ -478,7 +478,8 @@
       return clean([
         trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1], `#/c/${S.camp.id}/encyclopedia?cat=${encodeURIComponent(e.category)}`] : null, [e.name]),
         el('div', { class: 'row spread' },
-          el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name, itemStar('entry', e.id, e.name)),
+          // the star sits beside the heading, not in it, so the heading's name stays the entry's
+          el('div', { class: 'title-star' }, el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name), itemStar('entry', e.id, e.name)),
           el('div', { class: 'row' },
             ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
             !ch && isGM() && typeof Sheets !== 'undefined' && (!e.category || e.category === 'person')
