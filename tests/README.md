@@ -359,6 +359,12 @@ from this machine, and `.htaccess` returns 404 for `tests/` on a real site.
 
 ## Running locally (needs Node 18+, PHP 8 with pdo_mysql, and MySQL or MariaDB)
 
+On Ubuntu 24.04 as root (a Claude Code cloud container, say), `tools/test-all.sh` does all of this: it installs
+MySQL 8.0, PHP's extensions, the Node packages and the browsers if they're missing (`tools/test-setup.sh`), then runs
+everything CI runs. Arguments go to `npx playwright test`, e.g. `tools/test-all.sh --project=firefox`.
+
+By hand, anywhere:
+
 ```sh
 cd tests
 npm ci
