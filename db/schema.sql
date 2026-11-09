@@ -155,18 +155,20 @@ CREATE TABLE IF NOT EXISTS shifts (
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Shift actions (db/migrations/032_shift_actions.sql).
--- What each player's character did on a shift (Navigate, Keep watch, Forage...), and what the party as a whole did
--- (user_id 0): one action each per shift. A session's page and its Build draft list them for the shifts it ran over.
+-- Shift actions (db/migrations/032_shift_actions.sql, 041_shift_action_characters.sql).
+-- What each player's character did on a shift (Navigate, Keep watch, Forage...), what each character with no player
+-- that travels with the party did (user_id 0, character_id its sheet), and what the party as a whole did (user_id 0,
+-- character_id 0): one action each per shift. A session's page and its Build draft list them for the shifts it ran over.
 CREATE TABLE IF NOT EXISTS shift_actions (
   campaign_id INT UNSIGNED NOT NULL,
   abs_day BIGINT NOT NULL,
   shift TINYINT UNSIGNED NOT NULL,
-  user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,   -- the player whose character did it; 0: the party as a whole
+  user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,   -- the player whose character did it; 0: the party, or character_id's
+  character_id INT UNSIGNED NOT NULL DEFAULT 0, -- a party character with no player (sheet_characters.id); 0: none
   action VARCHAR(100) NOT NULL,
   updated_by BIGINT UNSIGNED NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (campaign_id, abs_day, shift, user_id),
+  PRIMARY KEY (campaign_id, abs_day, shift, user_id, character_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -855,10 +857,12 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   party_group_id INT UNSIGNED NULL,                  -- the party group a character with no player travels with (033); null: not in the party
   party_out TINYINT(1) NOT NULL DEFAULT 0,           -- a player's character the GM took out of the party (034): its player is in no group while it is their active one
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
+  portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
   template_version INT UNSIGNED NOT NULL,
   field_values MEDIUMTEXT NOT NULL,
   field_stamps MEDIUMTEXT NOT NULL,
   hidden TEXT NOT NULL,
+  pip_caps TEXT NULL,                                -- this character's own maximum on its dot/box tracks (042): {field key: pips}; NULL or a key left out: all of them
   version INT UNSIGNED NOT NULL DEFAULT 1,           -- the settings' (name, kind, owner, hidden) version; values save field by field
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

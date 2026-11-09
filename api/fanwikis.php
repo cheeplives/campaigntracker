@@ -67,6 +67,9 @@ function fanwiki_public(array $w): array {
 function fanwiki_classify(string $text, ?string $url = null): ?array {
     $s = strtolower(trim("$text " . ($url ?? '')));
     if ($s === '') return null;
+    // The address comes from the wiki (its rightsinfo, or a file page's LicenseUrl, which any editor there can set) and
+    // ends up as a link in the app, so only a web address is kept; anything else falls back to the licence's own deed.
+    if ($url !== null && !preg_match('~^https?://~i', $url)) $url = null;
     $ver = preg_match('/\b(\d\.\d)\b/', $s, $m) ? $m[1] : '';
     if (preg_match('~cc0|publicdomain/zero|public[ _-]domain|\bpd\b~', $s)) return ['Public domain', $url ?: 'https://creativecommons.org/publicdomain/mark/1.0/', true, false];
     if (preg_match('~gfdl|gnu free documentation|licenses/(old-licenses/)?fdl~', $s)) return [trim("GNU FDL $ver"), $url ?: 'https://www.gnu.org/licenses/fdl.html', true, false];
@@ -148,6 +151,8 @@ function fanwiki_site(array $w): array {
         $page = fanwiki_http($w['site'], 'text/html');
         if ($page['status'] !== 200 || !preg_match('~<link[^>]+rel="EditURI"[^>]+href="([^"]+?)api\.php\?action=rsd"~i', $page['body'], $m)) throw $first;
         $api = fanwiki_abs(html_entity_decode($m[1])) . 'api.php';
+        // the page is the wiki's own, but what it names is fetched by this server: only an address on the wiki itself
+        if (!fanwiki_host_ok($w, $api)) throw $first;
         $info = $ask($api);
     }
     $g = (array)($info['query']['general'] ?? []);

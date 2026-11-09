@@ -281,13 +281,19 @@ function convert_slot(int $a, ?array $from, ?array $to, bool $end = false): int 
  * $new's, after its time mode (or its hours per day, in hours mode) changes. Activities that end up in
  * the same slot are joined. All-day events and the days themselves don't move.
  */
-/** The actions picked on a day's shifts (or one shift of it): the party's (user_id 0) and each player's, with who did it. */
-function shift_actions_of(int $cid, int $day, ?int $slot = null): array {
-    $st = db()->prepare('SELECT a.shift, a.user_id, a.action, ' . AUTHOR_SQL . ' AS who
+/** The actions picked on a day's shifts (or one shift of it): the party's (user_id and character_id 0), each player's,
+ * and each party character's with no player (character_id its sheet), with who did it. A player isn't told of a
+ * character whose entry is GM only. */
+function shift_actions_of(int $cid, int $day, ?int $slot = null, bool $isGm = true): array {
+    $st = db()->prepare('SELECT a.shift, a.user_id, a.character_id, a.action, ' . AUTHOR_SQL . ' AS who, ce.name AS char_name
         FROM shift_actions a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN campaign_members m ON m.campaign_id=a.campaign_id AND m.user_id=a.user_id
-        WHERE a.campaign_id=? AND a.abs_day=?' . ($slot === null ? '' : ' AND a.shift=?') . ' ORDER BY a.shift, a.user_id <> 0, who');
+        LEFT JOIN sheet_characters sc ON sc.id=a.character_id AND sc.campaign_id=a.campaign_id LEFT JOIN encyclopedia_entries ce ON ce.id=sc.entry_id
+        WHERE a.campaign_id=? AND a.abs_day=?' . ($slot === null ? '' : ' AND a.shift=?')
+        . ' AND (a.character_id=0 OR ce.id IS NOT NULL' . ($isGm ? '' : ' AND ce.is_secret=0') . ')
+        ORDER BY a.shift, a.user_id = 0 AND a.character_id = 0 DESC, a.character_id <> 0, who, char_name');
     $st->execute($slot === null ? [$cid, $day] : [$cid, $day, $slot]);
-    return array_map(fn($r) => ['shift' => (int)$r['shift'], 'user_id' => (int)$r['user_id'], 'action' => $r['action'], 'who' => (int)$r['user_id'] ? $r['who'] : 'The party'], $st->fetchAll());
+    return array_map(fn($r) => ['shift' => (int)$r['shift'], 'user_id' => (int)$r['user_id'], 'character_id' => (int)$r['character_id'], 'action' => $r['action'],
+        'who' => (int)$r['character_id'] ? (string)$r['char_name'] : ((int)$r['user_id'] ? $r['who'] : 'The party')], $st->fetchAll());
 }
 
 function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
@@ -325,14 +331,14 @@ function convert_time_mode(PDO $pdo, int $cid, ?array $old, ?array $new): void {
     }
 
     // each player's and the party's action: where two shifts become one, the earlier shift's action stays
-    $st = $pdo->prepare('SELECT abs_day, shift, user_id, action, updated_by FROM shift_actions WHERE campaign_id=? ORDER BY abs_day, shift');
+    $st = $pdo->prepare('SELECT abs_day, shift, user_id, character_id, action, updated_by FROM shift_actions WHERE campaign_id=? ORDER BY abs_day, shift');
     $st->execute([$cid]);
     $acts = $st->fetchAll();
     $pdo->prepare('DELETE FROM shift_actions WHERE campaign_id=?')->execute([$cid]);
-    $ins = $pdo->prepare('INSERT IGNORE INTO shift_actions (campaign_id, abs_day, shift, user_id, action, updated_by) VALUES (?,?,?,?,?,?)');
+    $ins = $pdo->prepare('INSERT IGNORE INTO shift_actions (campaign_id, abs_day, shift, user_id, character_id, action, updated_by) VALUES (?,?,?,?,?,?,?)');
     foreach ($acts as $r) {
         [$d, $s] = $split(convert_slot((int)$r['abs_day'] * $n0 + (int)$r['shift'], $old, $new));
-        $ins->execute([$cid, $d, $s, $r['user_id'], $r['action'], $r['updated_by']]);
+        $ins->execute([$cid, $d, $s, $r['user_id'], $r['character_id'], $r['action'], $r['updated_by']]);
     }
 
     $st = $pdo->prepare('SELECT id, abs_day, end_day, shift, shift_end FROM events WHERE campaign_id=? AND shift IS NOT NULL');
@@ -634,7 +640,6 @@ const CAMPAIGN_COPY = [
     ['days', 'maps' => ['region_id' => 'regions']],
     ['shifts'],
     ['shift_notes'],
-    ['shift_actions'],
     ['events', 'key' => 'events'],
     ['event_tags', 'via' => ['event_id', 'events'], 'maps' => ['tag_id' => 'tags']],
     ['event_notes', 'via' => ['event_id', 'events']],
@@ -657,8 +662,10 @@ const CAMPAIGN_COPY = [
     ['clock_ticks', 'maps' => ['clock_id' => 'clock']],
     ['dice_rolls'],
     // Character sheets (db/migrations/023_character_sheets.sql): the copier owns every copied character that has a player.
-    // party_group_id is set once the party groups are copied, below.
-    ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group']],
+    // party_group_id and portrait_id are set once the party groups and files are copied, below.
+    ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group', 'portrait_id' => 'attachments']],
+    // after the characters: a party character's action points at its sheet (character_id 0: the party's or a player's)
+    ['shift_actions', 'maps' => ['character_id' => 'character']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
@@ -721,7 +728,7 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
                 $old = isset($r['id']) ? (int)$r['id'] : null;
                 if (array_key_exists('campaign_id', $r)) $r['campaign_id'] = $new;
                 foreach ($maps as $col => $m) {
-                    if (!array_key_exists($col, $r) || $r[$col] === null) continue;
+                    if (!array_key_exists($col, $r) || $r[$col] === null || (string)$r[$col] === '0') continue;   // 0: points at nothing
                     if (!isset($ids[$m][(int)$r[$col]])) continue 2;
                     $r[$col] = $ids[$m][(int)$r[$col]];
                 }
@@ -997,6 +1004,7 @@ try {
     case 'character_field':
     case 'character_values':
     case 'character_save':
+    case 'character_portrait':
     case 'character_delete':
     case 'character_presence':
     case 'member_active_character':
@@ -1410,8 +1418,10 @@ try {
             WHERE n.campaign_id=? AND n.abs_day=? ORDER BY n.created_at, n.id');
         $st->execute([$cid, $ad]);
         $shiftNotes = $st->fetchAll();
-        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'shift_actions' => shift_actions_of($cid, $ad), 'events' => $events, 'today' => $today,
-            'sessions' => day_sessions($cid, $c, $ad, $isGm)]);
+        out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'shift_actions' => shift_actions_of($cid, $ad, null, $isGm), 'events' => $events, 'today' => $today,
+            'sessions' => day_sessions($cid, $c, $ad, $isGm),
+            // the characters with no player who travel with the party, in any of its groups: each gets an action line
+            'party_characters' => array_merge(...array_values(party_characters($cid, $isGm)) ?: [[]])]);
 
     case 'days_save': // GM: batch upsert generated weather (+ region) — never touches notes
         $cid = cid(); need_gm($cid);
@@ -1506,15 +1516,25 @@ try {
         db()->commit();
         out(['ok' => true]);
 
-    case 'shift_action_set': // one action per player's character and one for the party (user_id 0) on a shift; '' clears it.
-        // A GM sets any of them; a player only their own character's.
+    case 'shift_action_set': // one action per player's character, one per party character with no player (character_id)
+        // and one for the party (user_id 0) on a shift; '' clears it. A GM sets any of them; a player only their own character's.
         $cid = cid();
         $role = role($cid);
         $c = campaign_row($cid);
         $maxSlot = camp_spd($c) - 1;
         $day = int_in(p('abs_day')); $slot = int_in(p('shift'), 0, $maxSlot);
         $uid = int_in(p('user_id') ?? 0, 0);
-        if ($role !== 'gm' && $uid !== me()['id']) fail('Only a GM picks the party\'s action or another player\'s', 403);
+        $chid = int_in(p('character_id') ?? 0, 0);
+        if ($role !== 'gm' && ($chid || $uid !== me()['id'])) fail('Only a GM picks the party\'s action or another player\'s', 403);
+        if ($chid) {
+            if ($uid) fail('Pick a player or a character, not both');
+            $st = db()->prepare('SELECT party_group_id FROM sheet_characters WHERE campaign_id=? AND id=?');
+            $st->execute([$cid, $chid]);
+            $pg = $st->fetch();
+            if (!$pg) fail('That character is not in this campaign');
+            // one that has left the party keeps what it did, but gets no new action
+            if ($pg['party_group_id'] === null && trim((string)p('action')) !== '') fail('That character doesn\'t travel with the party');
+        }
         if ($uid) {
             $st = db()->prepare("SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=? AND role='player'");
             $st->execute([$cid, $uid]);
@@ -1522,15 +1542,15 @@ try {
         }
         $act = trim((string)str_in(p('action'), 100, false));
         if ($act === '') {
-            db()->prepare('DELETE FROM shift_actions WHERE campaign_id=? AND abs_day=? AND shift=? AND user_id=?')->execute([$cid, $day, $slot, $uid]);
+            db()->prepare('DELETE FROM shift_actions WHERE campaign_id=? AND abs_day=? AND shift=? AND user_id=? AND character_id=?')->execute([$cid, $day, $slot, $uid, $chid]);
         } else {
             need_row_room($cid, 'shift_actions', 1);
-            db()->prepare('INSERT INTO shift_actions (campaign_id, abs_day, shift, user_id, action, updated_by) VALUES (?,?,?,?,?,?)
-                ON DUPLICATE KEY UPDATE action=VALUES(action), updated_by=VALUES(updated_by)')->execute([$cid, $day, $slot, $uid, $act, me()['id']]);
+            db()->prepare('INSERT INTO shift_actions (campaign_id, abs_day, shift, user_id, character_id, action, updated_by) VALUES (?,?,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE action=VALUES(action), updated_by=VALUES(updated_by)')->execute([$cid, $day, $slot, $uid, $chid, $act, me()['id']]);
             // the party on the move (Travel, Navigate...) tags the events running then as Transit, as the activity does
-            if (!$uid && p('transit')) tag_transit_events($cid, $day * ($maxSlot + 1) + $slot, $day * ($maxSlot + 1) + $slot);
+            if (!$uid && !$chid && p('transit')) tag_transit_events($cid, $day * ($maxSlot + 1) + $slot, $day * ($maxSlot + 1) + $slot);
         }
-        out(['ok' => true, 'actions' => shift_actions_of($cid, $day, $slot)]);
+        out(['ok' => true, 'actions' => shift_actions_of($cid, $day, $slot, $role === 'gm')]);
 
     case 'shift_note_add': // anyone in the campaign, GM or player
         $cid = cid();
@@ -1880,6 +1900,16 @@ try {
         db()->prepare('DELETE FROM map_pins WHERE id=?')->execute([$pin['id']]);
         if ($isGm) touch_campaign($cid);   // a player's pin is like their notes: not a campaign change
         out(['ok' => true]);
+
+    case 'map_clear': // GMs: map_id, pins and/or routes (true) to delete all of a map's pins and/or routes. Encyclopedia entries and Events stay
+        $cid = cid();
+        need_gm($cid);
+        $m = map_row($cid, int_in(p('map_id'), 1), true);
+        $pins = $routes = 0;
+        if (p('pins')) { $st = db()->prepare('DELETE FROM map_pins WHERE map_id=? AND campaign_id=?'); $st->execute([$m['id'], $cid]); $pins = $st->rowCount(); }
+        if (p('routes')) { $st = db()->prepare('DELETE FROM map_routes WHERE map_id=? AND campaign_id=?'); $st->execute([$m['id'], $cid]); $routes = $st->rowCount(); }
+        if ($pins || $routes) touch_campaign($cid);
+        out(['ok' => true, 'pins' => $pins, 'routes' => $routes]);
 
     case 'pin_to_entry': // GMs: id (a note pin), entry_id (an entry to use; else the one matching its label, else a new one)
         $cid = cid();

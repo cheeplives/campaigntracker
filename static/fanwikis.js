@@ -76,7 +76,7 @@ const FanWikis = (() => {
           out.replaceChildren(el('p', { class: 'muted small' }, `Which of these is it? Pick one to see its summary.`),
             el('div', { class: 'enc-wiki-hits' }, hits.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', onclick: () => show(w, h.page), 'data-tip': `Show the summary of "${h.title}"` },
               el('strong', {}, h.title), h.line ? el('span', { class: 'muted small' }, h.line) : null))),
-            el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'link small')));
+            el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'small')));
         } catch (err) { say(err.message); }
       }
       async function show(w, page) {

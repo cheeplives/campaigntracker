@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, trail, pinButton, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -71,6 +71,7 @@
       const asText = html => new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent;
       const placesFrom = notesText => sessionPlaces([asText(s.summary), asText(s.rewards), asText(s.loot), notesText || ''].join('\n'))
         .then(n => places.replaceChildren(...(n ? [n] : []))).catch(() => {});
+      const where = trail(['Sessions', `#/c/${S.camp.id}/sessions`], [sessionName(s)]);
       // the rolls made during it: on its shifts, as far as this member may see them (api/dice.php dice_in_shifts)
       const DiceUI = root.DiceUI, DiceSystems = root.DiceSystems; // loaded after this file
       const shown = (s.rolls || []).filter(r => !DiceUI.rerollOf(r));
@@ -81,7 +82,7 @@
         el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
       if (!gm) {
         placesFrom('');
-        return [head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
+        return [where, head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
           el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
           ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
             el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), rollsCard, places, pictures];
@@ -134,7 +135,7 @@
       document.addEventListener('click', ev => { if (more.open && !more.contains(ev.target)) more.open = false; });
       const bar = el('div', { class: 'row sess-bar' }, head[1],
         el('label', { class: 'inline sess-pub', 'data-tip': 'Players can read the summary (never your notes or its GM-only paragraphs) once it is published' }, pub, ' Published'),
-        el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, more);
+        el('span', { class: 'sess-bar-gap' }), detailsBtn, exportBtn, pinButton({ kind: 'session', id: s.id, name: sessionName(s) }), more);
 
       // --- the notes: one text box, saved as it is typed (notesEntry in app.js); Build draft under it writes the summary
       const notesHead = el('h3', {}, 'Notes', tip('Your notes from the game, a line each. They save as you type. Build draft writes the summary from them. The ? button under the box lists what each mark does'));
@@ -212,6 +213,7 @@
           Object.assign(s, { title: r.session.title, played_on: r.session.played_on, undated: r.session.undated });
           // the heading, the date line and the session's name in the list, redrawn in place so nothing typed is lost
           head[0].textContent = sessionName(s);
+          where.lastElementChild.textContent = sessionName(s);
           head[1].textContent = [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · ');
           const inList = document.querySelector('.sess-item.on .enc-name');
           if (inList?.firstChild?.nodeType === Node.TEXT_NODE) inList.firstChild.textContent = sessionName(s);
@@ -254,13 +256,13 @@
         await post('session_shift_add', { id: s.id, abs_shift: a }, cid);
         toast(`${E.fmtShift(cal(), a)} is in ${sessionName(s)}`);
         route();
-      }), 'link small', `Put one more ${E.slotWord(cal())} in this session, outside its run: a flashback, or a split party's other half`);
+      }), 'small', `Put one more ${E.slotWord(cal())} in this session, outside its run: a flashback, or a split party's other half`);
       const extras = el('p', { class: 'small sess-extras-list' }, el('span', { class: 'muted' }, xs.length ? 'Also takes in: ' : `Takes in no other ${E.slotWord(cal())}s. `),
         ...xs.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
             `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })]), ' ', addShift);
       placesFrom(entry.text());
-      return [head[0], bar, extras, details, cols, rollsCard, places, pictures];
+      return [where, head[0], bar, extras, details, cols, rollsCard, places, pictures];
     }
 
     return { viewSessions };

@@ -3,7 +3,7 @@
 // another player, and two people on one sheet (each named in the other's bar, the GM pressing Edit first, and a
 // change showing up on the other open sheet at the next check).
 const { test, expect } = require("@playwright/test");
-const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
+const { person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, makePng } = require("./helpers");
 test.afterEach(closeContexts);
 
 const LAYOUT = () => ({ sections: [
@@ -671,4 +671,155 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   await expect(gm.getByRole("link", { name: "Open sheet" })).toBeVisible();
   await gm.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(gm.locator(".enc-form").getByRole("link", { name: "Open sheet" })).toBeVisible();
+});
+
+test("Characters: a card shows a short summary, lists by their rows' names, and never the raw data", async ({ page, browser }) => {
+  const { cid, p1 } = await party(page, browser);
+  const layout = { sections: [{ key: "s", title: "S", fields: [
+    { key: "cls", label: "Class", type: "text", summary: true }, { key: "lvl", label: "Level", type: "number", summary: true },
+    { key: "hp", label: "Hit Points", type: "counter", play: true }, { key: "armor", label: "Armor", type: "number", play: true },
+    { key: "gear", label: "Gear", type: "list", play: true, columns: [{ key: "item", label: "Item" }, { key: "weight", label: "Weight" }] },
+    { key: "past", label: "Past", type: "longtext" }] }] };
+  const tpl = (await api(page, "template_save", { name: `Card sheet ${Date.now()}`, game: "Test RPG", layout })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Marshal Wright" });
+  const values = { cls: "Fighter", lvl: 2, hp: { cur: 15, max: 15 }, armor: 2, past: "Long story",
+    gear: [{ item: "Sword", weight: "1" }, { item: "Shield", weight: "1" }, { item: "Rations", weight: "1" }, { item: "Rope", weight: "1" }] };
+  sql(`UPDATE sheet_characters SET field_values='${JSON.stringify(values)}' WHERE id=${c.id}`);
+  await p1.goto(`index.html#/c/${cid}/characters`);
+  const card = p1.locator(".character-card", { hasText: "Marshal Wright" });
+  await expect(card.locator(".character-summary")).toHaveText("Fighter · Level 2");
+  await expect(card).toContainText("Hit Points 15 / 15");
+  await expect(card).toContainText("Armor 2");
+  await expect(card).toContainText("Gear: Sword, Shield, Rations +1 more");
+  await expect(card).not.toContainText("{");
+  await expect(card).not.toContainText("Long story");
+  await expect(card.locator(".character-initials")).toHaveText("MW");   // no portrait yet
+});
+
+test("Characters: a player uploads a portrait on the sheet; it shows on the card, and the GM can pick another of the entry's pictures", async ({ page, browser }) => {
+  const { cid, p1, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Portia" });
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await p1.getByRole("button", { name: "Add a portrait" }).click();
+  const panel = p1.locator(".sheet-portrait-panel");
+  await expect(panel).toContainText("No pictures yet.");
+  await panel.locator("input[type=file]").setInputFiles({ name: "portia.png", mimeType: "image/png", buffer: makePng(8, 8, () => 40) });
+  await expect(panel.locator(".portrait-pick")).toHaveCount(1);
+  await expect(p1.locator(".sheet-head img.character-pic")).toBeVisible();
+  const first = sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim();
+  expect(Number(first)).toBeGreaterThan(0);
+  // the picture went on the character's Encyclopedia entry
+  expect(sql(`SELECT parent_id FROM attachments WHERE id=${first}`).trim()).toBe(String(c.entry_id));
+
+  await p1.goto(`index.html#/c/${cid}/characters`);
+  await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+
+  // a second picture on the entry, picked by the GM from the sheet
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await p1.getByRole("button", { name: "Change the portrait" }).click();
+  await p1.locator(".sheet-portrait-panel input[type=file]").setInputFiles({ name: "second.png", mimeType: "image/png", buffer: makePng(8, 8, () => 200) });
+  await expect(p1.locator(".sheet-portrait-panel .portrait-pick")).toHaveCount(2);
+  const second = Number(sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim());
+  expect(second).not.toBe(Number(first));
+  await page.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await page.getByRole("button", { name: "Change the portrait" }).click();
+  await page.locator(".sheet-portrait-panel .portrait-pick").first().click();
+  await expect.poll(() => sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim()).toBe(first);
+
+  // only a picture on its own entry, and only by its player or a GM
+  const other = (await api(page, "entry_save", { name: "Elsewhere", notes: "" }, cid)).json.id;
+  const me = await (await page.request.get("api/auth/me.php")).json();
+  const up = await page.request.post(`api/index.php?a=file_upload&cid=${cid}`, { headers: { "X-CSRF-Token": me.csrf },
+    multipart: { parent_type: "encyclopedia", parent_id: String(other), file: { name: "x.png", mimeType: "image/png", buffer: makePng(4, 4) } } });
+  const stray = (await up.json()).file.id;
+  expect((await api(page, "character_portrait", { id: c.id, file_id: stray }, cid)).status).toBe(404);
+  // removing the portrait's picture goes back to the entry's first picture
+  expect((await api(page, "file_delete", { id: Number(first) }, cid)).status).toBe(200);
+  expect(sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("NULL");
+  const card = (await api(p1, "characters", undefined, cid)).json.characters.find(x => x.id === c.id);
+  expect(card.pic).toMatch(new RegExp(`id=${second}$`));
+});
+
+test("Characters: someone who isn't its player or a GM can't change a portrait", async ({ page, browser }) => {
+  const { cid, p1, p2, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Mine" });
+  expect((await api(p2, "character_portrait", { id: c.id, file_id: 0 }, cid)).status).toBe(403);
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p2.getByRole("heading", { name: "Mine" })).toBeVisible();
+  await expect(p2.getByRole("button", { name: "Add a portrait" })).toHaveCount(0);
+});
+
+test("Characters cards: Play shows on a blank sheet, a GM's Party switch, and every card's buttons on one line", async ({ page, browser }) => {
+  const { cid, p1, tpl } = await party(page, browser);
+  await page.setViewportSize({ width: 1180, height: 900 });
+  // a long game name wraps the line under the name on one card, not the others
+  const long = (await api(page, "template_save", { name: `Long ${cid}`, game: "A Game With A Very Long Name Indeed That Wraps", layout: LAYOUT() })).json.template;
+  const kat = await make(page, cid, { template_id: tpl.id, name: "Katrina", kind: "pc", owner_id: 0, party: false });
+  await make(page, cid, { template_id: long.id, name: "Hodor", kind: "npc", owner_id: 0, party: false });
+  await make(page, cid, { template_id: tpl.id, name: "Wright", kind: "pc", owner_id: 0, party: false });
+  await page.goto(`index.html#/c/${cid}/characters`);
+  const card = n => page.locator(".character-card").filter({ has: page.getByRole("link", { name: n, exact: true }) });
+  // nothing filled in yet, and Play is still there
+  await expect(card("Katrina").getByRole("link", { name: "Play" })).toBeVisible();
+  // the buttons sit at the same height on every card in the row
+  const tops = await page.locator(".character-card").evaluateAll(cs => cs.map(c => Math.round(c.querySelector(".character-card-foot").getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // the GM's Party switch puts it in the party and takes it out again
+  const sw = card("Katrina").getByLabel("Party");
+  await expect(sw).not.toBeChecked();
+  await sw.check();
+  await expect(page.locator("#toast")).toHaveText("Katrina travels with the party");
+  await expect(card("Katrina")).toContainText("In the party");
+  expect(sql(`SELECT party_group_id IS NOT NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
+  await card("Katrina").getByLabel("Party").uncheck();
+  await expect(page.locator("#toast")).toHaveText("Katrina is out of the party");
+  expect(sql(`SELECT party_group_id IS NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
+  // a player has no switch
+  await p1.goto(`index.html#/c/${cid}/characters`);
+  await expect(p1.locator(".character-card").first()).toBeVisible();
+  await expect(p1.locator(".character-party")).toHaveCount(0);
+});
+
+test("Characters: a track's maximum is the character's own: the pips past it are greyed out, can't be ticked, and the party sees it", async ({ page, browser }) => {
+  const { cid, gm, p1, p2, tpl } = await party(page, browser);
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Capped" });
+  await api(p1, "character_field", { id: c.id, key: "luck", value: 3 }, cid);
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p1.getByRole("button", { name: "Luck 3", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // the Max pickers show only while Track maximums is open
+  await expect(p1.getByLabel("Luck maximum")).toHaveCount(0);
+  await p1.getByRole("button", { name: "Track maximums" }).click();
+  await expect(p1.getByLabel("Luck maximum")).toHaveValue("3");
+  await p1.getByLabel("Luck maximum").selectOption("2");
+  await expect(p1.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  // ticked past the new maximum: it comes down to it, on screen and saved
+  await expect(p1.getByRole("button", { name: "Luck 2", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => stored(c.id, "luck")).toBe(2);
+  await p1.getByRole("button", { name: "Done" }).click();
+  await expect(p1.getByLabel("Luck maximum")).toHaveCount(0);
+  await p1.reload();
+  await expect(p1.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await p1.getByRole("button", { name: "Luck 1", exact: true }).click();
+  await expect.poll(() => stored(c.id, "luck")).toBe(1);
+
+  // the server holds to it too
+  expect((await api(p1, "character_field", { id: c.id, key: "luck", value: 3 }, cid)).status).toBe(400);
+  expect((await api(p1, "character_field", { id: c.id, key: "luck", value: 2 }, cid)).status).toBe(200);
+  // only a track takes a maximum, and only up to its pips
+  const v = () => sql(`SELECT version FROM sheet_characters WHERE id=${c.id}`).trim();
+  expect((await api(p1, "character_save", { id: c.id, version: Number(v()), pip_caps: { str: 2 } }, cid)).status).toBe(400);
+  expect((await api(p1, "character_save", { id: c.id, version: Number(v()), pip_caps: { luck: 4 } }, cid)).status).toBe(400);
+  // the party sees which are out of reach, on the sheet, the Play view and the card
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  await expect(p2.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await expect(p2.getByRole("button", { name: "Track maximums" })).toHaveCount(0);
+  await p2.goto(`index.html#/c/${cid}/characters/${c.id}/play`);
+  await expect(p2.getByRole("button", { name: "Luck 3, not available" })).toBeDisabled();
+  await p2.goto(`index.html#/c/${cid}/characters`);
+  await expect(p2.locator(".character-card", { hasText: "Capped" })).toContainText("Luck ●●○");
+  // a GM changes it too, and All puts every pip back
+  expect((await api(gm, "character_save", { id: c.id, version: Number(v()), pip_caps: { luck: null } }, cid)).status).toBe(200);
+  await p1.reload();
+  await expect(p1.getByRole("button", { name: "Luck 3", exact: true })).toBeEnabled();
+  expect(sql(`SELECT pip_caps FROM sheet_characters WHERE id=${c.id}`).trim()).toBe("NULL");
 });

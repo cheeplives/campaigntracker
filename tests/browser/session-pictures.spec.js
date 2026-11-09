@@ -51,6 +51,7 @@ test("a GM adds a map to a session; players see it once published, never a GM-on
   await expect(box.getByText("Add a map, a handout or a sketch of the scene")).toBeVisible();
   await box.locator("input[type=file]").setInputFiles({ name: "keep map.png", mimeType: "image/png", buffer: PNG });
   await expect(page.getByText("File added")).toBeVisible();
+  await box.locator(".file-pic img").scrollIntoViewIfNeeded();   // the picture loads lazily, once it is near the screen
   await expect.poll(() => box.locator(".file-pic img").evaluate(img => img.complete && img.naturalWidth)).toBe(2);
   // the caption is changed in the viewer
   await box.locator(".file-thumb").click();

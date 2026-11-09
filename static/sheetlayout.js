@@ -3,7 +3,7 @@
  *
  * Plain script, no build step, and no page needed, so the same file runs under Node in the tests. A layout is
  * { sections: [{ key, title, page?, width?, compact?, fields: [{ key, label, type, size?, cols?, play?, summary?, min?, max?,
- * count?, options?, columns? }] }] };
+ * count?, options?, columns: [{ key, label, width? }]? }] }] };
  * keys are permanent (values are stored by key) and unique across a template's sections and fields together.
  * api/sheets.php checks the same rules and is the authority; these give the editor its messages and the drafts.
  * The drafts come from what static/pdfimport.js reads with pdf.js: a fillable PDF's form fields and the text near
@@ -19,6 +19,23 @@
   const COLS = 12;
   // a section's share of the sheet's width: side by side with others on a wide screen, the full width on a narrow one
   const WIDTHS = ['full', 'half', 'third', 'two-thirds'];
+  // a list column's width: narrow for a short value (a weight, a count, a bonus), wide for long text; normal shares
+  // what is left with the other normal columns. A column without one is narrow when its label says it holds a number
+  // (columnWidth).
+  const COLUMN_WIDTHS = ['narrow', 'normal', 'wide'];
+  // the last word of a column label that holds a short value: a number, a die roll, a rating
+  const NARROW_WORDS = new Set(('weight wt kg lb lbs enc encumbrance bulk load uses used qty quantity count amount cost price value worth '
+    + 'bonus bonuses mod mods modifier modifiers adj total tot rating rtg rank ranks level lvl lv dots points pts pt damage dmg '
+    + 'range ranges rng ammo ammunition clip mag magazines shots rof rate size siz dc diff difficulty page pg roll die dice pool '
+    + 'score base prep prepared checked marked taken spent invested reach parry speed init initiative acc accuracy crit critical '
+    + 'reload hands conceal concealability malf malfunc jam number charges penalty penet penetration thac0 tier degree step '
+    + 'capacity cap rounds recoil rcl hits s.d.c m.d.c sdc mdc cpm lth atn dtn essence drain humanity glory xp experience '
+    + 'per day hit chance strike dodge shot short medium long close extreme sht med lng max round attacks aps att thresh '
+    + 'shts bth misc conc freq fumble force code magnitude intensity remaining known slots pass fail checks done carried linked '
+    + 'trained dedicated literate common experimental soft loadout d.c a.r durability structure handling autofire con adv advance '
+    + 'mem mas ctn wounds trust int harm ballistic impact cast actions').split(' '));
+  // two-letter labels that are words or names, not a short code
+  const NOT_CODES = new Set(['id', 'or', 'of', 'to', 'by']);
 
   const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const okLabel = s => typeof s === 'string' && s.trim().length >= 1 && s.length <= LIMITS.label;
@@ -70,6 +87,7 @@
             for (const c of f.columns) {
               if (!isObj(c) || typeof c.key !== 'string' || !KEY.test(c.key) || ck.has(c.key) || !okLabel(c.label)) out.push(`${name} has a column without a proper key and label`);
               else ck.add(c.key);
+              if (isObj(c) && c.width !== undefined && !COLUMN_WIDTHS.includes(c.width)) out.push(`${name}: a column's width is narrow, normal or wide`);
             }
           }
         }
@@ -81,6 +99,39 @@
     }
     if (n > LIMITS.fields) out.push(`A template can have ${LIMITS.fields} fields at most`);
     if (pageNames.size > LIMITS.pages) out.push(`A template can have ${LIMITS.pages} pages at most`);
+    return out;
+  }
+
+  /** How wide a list column is drawn: its own width if it has one, otherwise narrow when every part of its label
+   * ("Damage/Rate", "Weight (kg)") is a short number, roll or code (Weight, Uses, Damage, Bonus, Wt., %, AP), and
+   * normal for anything else (Item, Name, Notes, Effect), so the names and descriptions get the room. */
+  function columnWidth(col) {
+    if (isObj(col) && COLUMN_WIDTHS.includes(col.width)) return col.width;
+    const label = String(isObj(col) ? col.label ?? '' : col).toLowerCase().replace(/\([^)]*\)/g, ' ').trim();
+    if (!label || label.length > 24) return 'normal';
+    // a printed range of marks: Progress (0-3), Strings (0-4)
+    if (/\(\s*\d+\s*[-–]\s*\d+\s*\)/.test(String(col?.label ?? col))) return 'narrow';
+    const parts = label.split(/\s*(?:\/|&|,|\band\b)\s*/).filter(Boolean);
+    const short = part => {
+      const words = part.replace(/[.:?]+(?=\s|$)/g, '').split(/\s+/).filter(Boolean);
+      if (!words.length) return true;
+      if (words.length > 3) return false;
+      if (!/[a-z]/.test(part)) return true;                                      // %, #, +/-, +10%, 1/2d
+      // "Shot 1", "Page #": the word before the number or sign says what it is
+      const last = words.filter(w => /[a-z]/.test(w)).pop();
+      const known = x => { x = x.replace(/^#+|%+$/g, ''); return NARROW_WORDS.has(x) || NARROW_WORDS.has(x.replace(/s$/, '')); };   // #Ranks, Attk%
+      const code = x => x.length <= 2 && !NOT_CODES.has(x);
+      if (words.length === 1 && code(last.replace(/^#+|%+$/g, ''))) return true;    // AP, SP, HP, WS, D
+      return known(last) || (code(last) && words.some(known));                   // Attack Bonus, Rtg B
+    };
+    return parts.length && parts.every(short) ? 'narrow' : 'normal';
+  }
+
+  /** The width of each of a list's columns (columnWidth), except that a table whose columns would all be narrow keeps
+   * its first one normal: it names the row (Ammunition | Count, Pool | Dice). */
+  function columnWidths(columns) {
+    const cols = Array.isArray(columns) ? columns : [], out = cols.map(columnWidth);
+    if (out.length > 1 && out.every(w => w === 'narrow') && !(isObj(cols[0]) && COLUMN_WIDTHS.includes(cols[0].width))) out[0] = 'normal';
     return out;
   }
 
@@ -274,7 +325,7 @@
     return { sections: sections.filter(s => s.fields.length).slice(0, LIMITS.sections).map(({ labels, ...s }) => s) };
   }
 
-  const SheetLayout = { TYPES, LIMITS, SIZES, COLS, WIDTHS, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
+  const SheetLayout = { TYPES, LIMITS, SIZES, COLS, WIDTHS, COLUMN_WIDTHS, columnWidth, columnWidths, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
   if (typeof module !== 'undefined' && module.exports) module.exports = SheetLayout;
   else root.SheetLayout = SheetLayout;
 })(typeof window !== 'undefined' ? window : globalThis);

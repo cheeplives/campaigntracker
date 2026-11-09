@@ -53,6 +53,13 @@
   </Files>
 </IfModule>
 
+# --- Compress text on the way out ------------------------------------------
+# The app is about 1.7 MB of plain JavaScript and CSS, and a campaign's JSON can run to megabytes: compressed they are a
+# fifth of that. Pictures and PDFs are already compressed and are left alone.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml
+</IfModule>
+
 # --- Make browsers check for a new app after each deploy -------------------
 # The page, scripts and styles keep their names between releases, so without
 # this a browser can keep running last week's app.js (missing new tabs, say)

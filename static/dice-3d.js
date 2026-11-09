@@ -38,6 +38,12 @@
   /** Whether this device throws 3D dice: on unless turned off here, or the system asks for less motion. */
   const enabled = () => store.get(SETTING) !== 'off';
   const setEnabled = on => store.set(SETTING, on ? null : 'off');
+  // How long thrown dice stay once they land, on this device: seconds, or 0 for until the next roll (the panel closing
+  // still clears them). STAYS are the 🎨 card's choices.
+  const STAY = 'chronicle-dice-stay';
+  const STAYS = [[3, '3 seconds'], [6, '6 seconds'], [10, '10 seconds'], [20, '20 seconds'], [0, 'Until the next roll']];
+  const stay = () => { const v = Number(store.get(STAY)); return STAYS.some(([s]) => s === v) && store.get(STAY) !== null ? v : 3; };
+  const setStay = sec => store.set(STAY, sec === 3 ? null : String(sec));
 
   // ------------------------------------------------------------ colours
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || '')); const n = m ? parseInt(m[1], 16) : 0x888888; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -631,7 +637,7 @@
     canvas.classList.add('on');
     return new Promise(resolve => {
       const t0 = performance.now();
-      let landed = false;
+      let landed = false, landedAt = 0;
       current = { dice, done: v => resolve(v) };
       const q = new T.Quaternion(), qs = new T.Quaternion(), Y = new T.Vector3(0, 1, 0);
       const frame = now => {
@@ -654,14 +660,18 @@
         if (all && !landed) {
           landed = true;
           resolve(true);
-          // the dice stay a moment so everyone sees them, then fade
-          fadeTimer = setTimeout(() => {
+          // the dice stay as long as this device asks (stay()) so everyone sees them, then fade; or until the next roll
+          const hold = stay();
+          landedAt = t;
+          if (hold) fadeTimer = setTimeout(() => {
             canvas.classList.add('fade');
             fadeTimer = setTimeout(() => { if (current?.dice === dice) { current.done = () => {}; stop(); } }, 600);
-          }, 2600);
+          }, hold * 1000 - 400);
           // still dice need no more frames; animated patterns keep moving until the dice fade
           if (!moving(dice)) { raf = 0; return; }
         }
+        // dice staying until the next roll stop moving after a while, so they cost nothing while they wait
+        if (landed && t - landedAt > 20) { raf = 0; return; }
         raf = requestAnimationFrame(frame);
       };
       raf = requestAnimationFrame(frame);
@@ -718,5 +728,5 @@
     return { text: faceText(f, labels, sides), flat: Math.max(...ys), upright: -up.z };
   }
 
-  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, can, available, enabled, setEnabled, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
+  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, can, available, enabled, setEnabled, STAYS, stay, setStay, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
 })(window);

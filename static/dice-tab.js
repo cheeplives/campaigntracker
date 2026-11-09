@@ -76,18 +76,7 @@
     // ------------------------------------------------------------ the button and the panel
     const dot = el('span', { class: 'dice-dot', hidden: true, 'aria-hidden': 'true' });
     const fab = el('button', { type: 'button', class: 'dice-fab', hidden: true, 'aria-label': 'Dice roller', 'aria-expanded': 'false', 'data-tip': 'Roll dice. Everyone at the table sees the log' },
-      pileIcon(), dot);
-    /** The button's picture: a d20 with a d4 and a d6 in front of it, drawn in the theme's colours. */
-    function pileIcon() {
-      const span = el('span', { class: 'dice-pile', 'aria-hidden': 'true' });
-      span.innerHTML = `<svg viewBox="0 0 48 48" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
-        <g class="pd20"><path d="M19 4 31.6 11.3v14.6L19 33.2 6.4 25.9V11.3Z"/><path d="M19 11 27.6 25 10.4 25Z M19 4v7 M6.4 11.3 19 11 M31.6 11.3 19 11 M6.4 11.3l4 13.7 M31.6 11.3l-4 13.7 M6.4 25.9l4-.9 M31.6 25.9l-4-.9 M19 33.2l-8.6-8.2 M19 33.2l8.6-8.2" fill="none"/></g>
-        <g class="pd4"><path d="M14 25.5 3.5 43 14.5 46.5 24.5 41Z"/><path d="M14 25.5 14.5 46.5" fill="none"/></g>
-        <g class="pd6"><path d="M34 22 44.5 27.2 34 32.4 23.5 27.2Z"/><path d="M23.5 27.2 34 32.4V45L23.5 39.6Z"/><path d="M34 32.4 44.5 27.2V39.6L34 45Z"/>
-          <g fill="currentColor" stroke="none"><circle cx="34" cy="27.2" r="1.6"/><circle cx="26.3" cy="32" r="1.3"/><circle cx="31.2" cy="40.2" r="1.3"/><circle cx="36.7" cy="40.2" r="1.3"/><circle cx="39.25" cy="36.1" r="1.3"/><circle cx="41.8" cy="32" r="1.3"/></g></g>
-      </svg>`;
-      return span;
-    }
+      DiceUI.pileIcon(el), dot);
     const log = el('ol', { class: 'dice-log', 'aria-live': 'polite', 'aria-label': 'Rolls, newest first' });
     const input = el('input', { type: 'text', class: 'dice-input', placeholder: 'Free roll: 1d10, 2d6+3, 4d6kh3…', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false',
       'aria-label': 'Free roll', maxlength: String(Dice.LIMITS.length) });
@@ -128,8 +117,10 @@
     const savedSel = el('select', { class: 'dice-saved', 'aria-label': 'Saved rolls' });
     const saveBtn = el('button', { type: 'button', class: 'small dice-save', 'data-tip': 'Save the roll as it is now, with a name, to roll again later' }, '☆ Save');
     const forgetBtn = el('button', { type: 'button', class: 'small dice-forget', hidden: true, 'aria-label': 'Forget this saved roll', 'data-tip': 'Forget this saved roll' }, '🗑');
+    // the saved roll picked in the list, rolled as it was saved, as often as wanted (picking it again isn't needed)
+    const rollSavedBtn = el('button', { type: 'button', class: 'small primary dice-roll-saved', hidden: true, 'aria-label': 'Roll this saved roll', 'data-tip': 'Roll this saved roll again, as it was saved' }, '🎲 Roll');
     const who = el('label', { class: 'dice-who small muted', 'data-tip': 'Who sees the rolls you make' }, el('span', { 'aria-hidden': 'true' }, '👁'), visSel, visFixed);
-    const savedRow = el('div', { class: 'dice-saved-row' }, savedSel, saveBtn, forgetBtn, who);
+    const savedRow = el('div', { class: 'dice-saved-row' }, savedSel, rollSavedBtn, saveBtn, forgetBtn, who);
 
     // Pinned beside the page (it moves over) or floating over it (nothing moves): 📌 switches, remembered on this device.
     // Until someone picks, a mouse and keyboard pin it and a touch screen floats it.
@@ -171,8 +162,19 @@
     savedSel.addEventListener('change', () => useSaved(Number(savedSel.value)));
     saveBtn.addEventListener('click', saveRoll);
     forgetBtn.addEventListener('click', forgetRoll);
+    rollSavedBtn.addEventListener('click', () => {
+      const k = Number(savedSel.value), r = savedList()[k - 1];
+      if (!r) return;
+      useSaved(k);                        // back on the roller as saved, whatever was changed since
+      roll(mode === 'game' && sysNow ? gameText() : input.value);
+    });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); roll(input.value); } });
-    input.addEventListener('input', () => { if (err.textContent) check(); });
+    input.addEventListener('input', () => {
+      if (err.textContent) check();
+      // typed away from the saved roll: the list lets go of it, so picking it again puts it back
+      const k = Number(savedSel.value);
+      if (k && savedList()[k - 1]?.e !== input.value.trim()) { savedSel.value = ''; forgetBtn.hidden = rollSavedBtn.hidden = true; }
+    });
     visSel.addEventListener('change', () => store.set(visKey(), visSel.value));
     panel.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
@@ -340,6 +342,10 @@
       const exprText = r.expr.split('#')[0].split('@')[0].trim();
       meta.append(...[el('span', { class: 'mono' }, exprText), sysName && ` · ${sysName}`, note && ` · ${note}`,
         rerolled && ` · rerolled${rerolled > 1 ? ` ×${rerolled}` : ''}`, ` · ${when(r.at)}`, tools && ' · ', tools].filter(Boolean));
+      // ⧉ copies the roll as a line of text, for a chat window or a VTT's
+      const line = `${r.author || 'Someone'}${label ? ` (${label})` : ''}: ${exprText} = ${big}${words ? ` · ${words}` : ''}`;
+      meta.append(' ', el('button', { type: 'button', class: 'link small dice-copy', 'aria-label': 'Copy this roll', title: 'Copy this roll as text',
+        onclick: async () => { try { await navigator.clipboard.writeText(line); toast('Roll copied'); } catch { toast('This browser would not copy it', true); } } }, '⧉'));
       return el('li', { 'data-id': String(r.id), class: 'dice-e' + (latest ? ' latest' : '') + (r.visibility !== 'all' ? ' hidden-roll' : '') + (fresh.has(r.id) ? ' fresh' : '') + (tier ? ` t-${tier}` : '') + (landingId === r.id ? ' landing' : '') },
         el('div', { class: 'dice-e-main' }, head, meta, body), out);
     }
@@ -459,7 +465,7 @@
         if (settings?.hide_odds && !isGM()) { odds.set(null); return; }      // the GM keeps the odds from players
         try { odds.set(DS.odds(sysNow.sys, sysP, { table: sysNow.table }, 2000)); } catch { odds.set(null); }
       }, 120);
-      if (savedSel.value) { const s = savedList()[Number(savedSel.value) - 1]; if (s && s.e !== gameText()) { savedSel.value = ''; forgetBtn.hidden = true; } }
+      if (savedSel.value) { const s = savedList()[Number(savedSel.value) - 1]; if (s && s.e !== gameText()) { savedSel.value = ''; forgetBtn.hidden = rollSavedBtn.hidden = true; } }
     }
     /** The game roll as it is stored: its dice, @ the system and its numbers, # what it is for (cut to fit). */
     function gameText() {
@@ -477,13 +483,13 @@
       savedSel.replaceChildren(el('option', { value: '' }, list.length ? `Saved rolls (${list.length})` : 'No saved rolls yet'),
         ...list.map((r, k) => el('option', { value: String(k + 1) }, r.n)));
       savedSel.disabled = !list.length;
-      forgetBtn.hidden = true;
+      forgetBtn.hidden = rollSavedBtn.hidden = true;
     }
     /** Put a saved roll on the roller: its numbers on the game roll if it is one of this campaign's system, else in the
      * free-roll box (which rolls anything, a roll from another system included). */
     function useSaved(k) {
       const r = savedList()[k - 1];
-      forgetBtn.hidden = !r;
+      forgetBtn.hidden = rollSavedBtn.hidden = !r;
       if (!r) return;
       let parsed = null;
       try { parsed = Dice.parse(r.e); } catch { /* still goes in the box, which says what is wrong */ }
@@ -500,7 +506,7 @@
         check();
       }
       savedSel.value = String(k);
-      forgetBtn.hidden = false;
+      forgetBtn.hidden = rollSavedBtn.hidden = false;
     }
     async function putSaved(list) {
       const r = await post('prefs_save', { dice_saved: { cid, list } });
@@ -522,7 +528,7 @@
         await putSaved([...list, { n: name.trim().slice(0, 60), e }]);
         const k = savedList().findIndex(r => r.n === name.trim().slice(0, 60));
         savedSel.value = String(k + 1);
-        forgetBtn.hidden = k < 0;
+        forgetBtn.hidden = rollSavedBtn.hidden = k < 0;
         toast(`Saved "${name.trim()}"`);
       } catch (x) { toast(x.message, true); }
     }
@@ -576,7 +582,9 @@
               el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
             el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
-          gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null));
+          gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null),
+        el('label', { class: 'dice-look-row small' }, 'Dice stay on screen ', el('select', { class: 'dice-stay', 'aria-label': 'How long thrown dice stay on screen', disabled: !on3d.checked,
+          onchange: e => D3.setStay(Number(e.target.value)) }, D3.STAYS.map(([v, l]) => el('option', { value: String(v), selected: v === D3.stay() }, l)))));
       if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
     }
     /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */
@@ -656,6 +664,12 @@
           forInput.value = got.note ? `${label} (${got.note})` : label;
           drawFields();
           return rollGame();
+        }
+        if (sysNow) {             // a system a sheet's number doesn't fit: the game roll, named, for the player to set
+          setMode('game', true);
+          forInput.value = label;
+          sysRollBtn.focus({ preventScroll: true });
+          return;
         }
         x = { kind: 'dice', value: `1d20${n > 0 ? `+${n}` : n < 0 ? n : ''}` };
       }

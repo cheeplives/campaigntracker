@@ -377,6 +377,8 @@ function files_action(string $action): void {
             db()->prepare('UPDATE maps SET image_id=NULL, width=NULL, height=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
         if ($a['parent_type'] === 'token')   // and a token goes back to having no picture
             db()->prepare('UPDATE tokens SET image_id=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
+        if ($a['parent_type'] === 'encyclopedia')   // a character whose portrait this was goes back to its entry's first picture
+            db()->prepare('UPDATE sheet_characters SET portrait_id=NULL WHERE portrait_id=? AND campaign_id=?')->execute([$a['id'], $cid]);
         out(['ok' => true]);
     }
 }

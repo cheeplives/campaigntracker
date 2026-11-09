@@ -1355,11 +1355,13 @@
        },
        {
         "key": "scroll",
-        "label": "Scroll"
+        "label": "Scroll",
+        "width": "narrow"
        },
        {
         "key": "supplies",
-        "label": "Supplies"
+        "label": "Supplies",
+        "width": "narrow"
        },
        {
         "key": "effect",
@@ -1390,11 +1392,13 @@
        },
        {
         "key": "scroll",
-        "label": "Scroll"
+        "label": "Scroll",
+        "width": "narrow"
        },
        {
         "key": "supplies",
-        "label": "Supplies"
+        "label": "Supplies",
+        "width": "narrow"
        }
       ]
      }

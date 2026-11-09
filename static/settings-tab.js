@@ -379,6 +379,10 @@
           field('Players see future weather', el('input', { type: 'checkbox', name: 'players_see_future_weather', checked: !!st.players_see_future_weather }), null,
             'Off: players only see weather up to today. On: they also see days you have generated ahead, like a forecast'),
           field('Players can add events', el('input', { type: 'checkbox', name: 'players_can_add_events', checked: !!st.players_can_add_events }), 'They can always add notes to events they can see'),
+          field('Recent in the Legend', el('input', { type: 'checkbox', name: 'legend_recent', checked: !!st.legend_recent }), 'Each member\'s last five pages opened, at the top of the Legend',
+            'Entries, tomes, sessions, maps and days, kept in each member\'s own browser. Off: the Legend shows only its tabs'),
+          field('Pinned in the Legend', el('input', { type: 'checkbox', name: 'legend_pinned', checked: !!st.legend_pinned }), 'A 📌 Pin button on entries, tomes and sessions puts them at the top of the Legend for everyone',
+            'For tonight\'s villain, dungeon or session. Only GMs pin; players see the pins they are allowed to see. Off: no Pin buttons and no Pinned list'),
           Fan ? field('Fan wiki', Fan.settingsSelect(fanCtx()), 'Where Encyclopedia entries look names up for a summary or a picture',
             'The setting\'s fan wiki, for everyone in the campaign: an entry\'s Summary from the wiki and the wiki\'s tab in Find Image use it. None for a game of your own. The list starts on a guess from the campaign\'s name and calendar, used only once you save') : null),
         field('Description', el('textarea', { name: 'description', rows: 2, value: S.camp.description || '' })),
@@ -387,7 +391,8 @@
         e.preventDefault();
         const v = formData(general);
         const s = { ...st, current_region: v.current_region ? Number(v.current_region) : null, genre: v.genre, time_unit: v.time_unit, units: v.units, hide_temps: !v.show_temps,
-          players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events, fan_wiki: v.fan_wiki || st.fan_wiki };
+          players_see_future_weather: v.players_see_future_weather, players_can_add_events: v.players_can_add_events, fan_wiki: v.fan_wiki || st.fan_wiki,
+          legend_recent: !!v.legend_recent, legend_pinned: !!v.legend_pinned };
         if (!s.fan_wiki) delete s.fan_wiki;
         delete s.temp_unit;
         const body = { name: v.name, description: v.description, settings: s };
@@ -694,7 +699,7 @@
         const d = st.dice || {};
         const sysCard = diceSystemCard(d.system);
         const form = el('form', { class: 'card dice-settings' }, el('h2', {}, 'Dice'),
-          el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the 🎲 button at the bottom right of every page. Rolls go in a log the whole table shares.'),
+          el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the ', Object.assign(root.DiceUI.pileIcon(el, 22), { className: 'dice-pile dice-pile-inline' }), ' button at the bottom right of every page. Rolls go in a log the whole table shares.'),
           sysCard.node,
           el('h3', {}, 'Who sees what'),
           el('div', { class: 'grid2' },

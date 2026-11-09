@@ -63,15 +63,17 @@ const Sheets = (() => {
 
   // ------------------------------------------------------------ a sheet drawn from a layout
   /** A sheet: layout's sections and fields with values (by key). opts: { mode: 'edit'|'view'|'preview', hidden: keys
-   * hidden from the party, canHide, onChange(key, value), onHide(key, hidden), onRoll(x) }. 'view' can't be changed;
-   * 'preview' can be tried out but saves nothing. With onRoll, numbers and dice on the sheet have a 🎲 that rolls them
-   * (rollButton). */
+   * hidden from the party, canHide, onChange(key, value), onHide(key, hidden), onRoll(x), caps: { key: pips } the
+   * character's own maximum on a dot/box track, onCap(key, n) }. 'view' can't be changed; 'preview' can be tried out
+   * but saves nothing. With onRoll, numbers and dice on the sheet have a 🎲 that rolls them (rollButton). With onCap,
+   * each track has a Max picker under it (Track maximums on a character's sheet). */
   function renderSheetForm(layout, values = {}, opts = {}) {
     const mode = opts.mode || 'preview', off = mode === 'view', live = mode === 'edit';
     const hidden = new Set(opts.hidden || []);
     const dice = new Map();   // the 🎲 of each field that has one
     const change = (k, v) => { values[k] = v; opts.onChange?.(k, v); dice.get(k)?.update(); };
     const roll = opts.onRoll || null;
+    const caps = opts.caps || {};
     const eye = (key, what) => opts.canHide ? button(hidden.has(key) ? '🙈' : '👁', () => opts.onHide?.(key, !hidden.has(key)), 'icon-btn sheet-eye',
       { 'aria-pressed': String(hidden.has(key)), 'aria-label': hidden.has(key) ? `Show ${what} to the party` : `Hide ${what} from the party`,
         'data-tip': hidden.has(key) ? 'Hidden from the rest of the party. Tap to show it' : 'Seen by the party. Tap to hide it' }) : null;
@@ -84,11 +86,13 @@ const Sheets = (() => {
         // its width in half-columns: medium is two, small one, large four, or the number the template gives; full is all
         const wide = f.type === 'longtext' || f.type === 'list' || f.size === 'full';
         const cols = wide ? null : Number.isInteger(f.cols) ? f.cols : { small: 1, large: 4 }[f.size] ?? null;
-        const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live, roll));
+        // Track maximums: a Max picker under the track, in its box (a fourth row would break the sections' grid)
+        const picker = f.type === 'pips' && opts.onCap ? capPicker(f, caps[f.key], n => opts.onCap(f.key, n)) : null;
+        const slot = el('div', { class: 'sheet-control' }, control(f, values[f.key], v => change(f.key, v), off, live, roll, caps[f.key]), picker);
         const die = roll ? rollButton(f, () => values[f.key], roll) : null;
         if (die) dice.set(f.key, die);
         const note = el('div', { class: 'sheet-conflict', hidden: true });
-        slots.set(f.key, { f, slot, note });
+        slots.set(f.key, { f, slot, note, picker });
         return el('div', { class: `sheet-field sheet-${f.type}` + (wide ? ' wide' : '') + (hidden.has(f.key) ? ' is-hidden' : ''), 'data-key': f.key, 'data-cols': cols },
           el('div', { class: 'sheet-label' }, el('span', {}, f.label), die, eye(f.key, f.label)), slot, note);
       }))));
@@ -113,7 +117,7 @@ const Sheets = (() => {
       if (!x) return;
       values[key] = v;
       x.note.hidden = true;
-      x.slot.replaceChildren(control(x.f, v, nv => change(key, nv), off, live, roll));
+      fill(x.slot, control(x.f, v, nv => change(key, nv), off, live, roll, caps[key]), x.picker);
       dice.get(key)?.update();
     };
     /** Someone else changed a field this person is typing in: let them pick. */
@@ -135,9 +139,20 @@ const Sheets = (() => {
     return form;
   }
   const numOrNull = s => (String(s).trim() === '' ? null : Number(s));
+  const pipCount = f => Math.max(1, Math.min(L.LIMITS.pips, Number(f.count) || 1));
+  /** How many of a track's pips this character has: its own maximum, or all of them. */
+  const pipCap = (f, cap) => (Number.isInteger(cap) && cap >= 0 && cap < pipCount(f) ? cap : pipCount(f));
+  /** Track maximums: how many of a dot/box track's pips this character has, from all of them down to none. */
+  function capPicker(f, cap, set) {
+    const n = pipCount(f), now = pipCap(f, cap);
+    const s = el('select', { 'aria-label': `${f.label} maximum` }, Array.from({ length: n + 1 }, (_, i) => n - i).map(i =>
+      el('option', { value: i, selected: i === now }, i === n ? `All ${n}` : String(i))));
+    s.addEventListener('change', () => set(Number(s.value)));
+    return el('label', { class: 'sheet-cap small' }, 'Max ', s, ` of ${n}`);
+  }
   /** The input for one field, sending the new value to set(v) as it changes. */
   const CUSTOM = '__custom';
-  function control(f, value, set, off, live, roll = null) {
+  function control(f, value, set, off, live, roll = null, cap = null) {
     const label = f.label;
     // while typing, the value is sent 400 ms after the last key, as well as on leaving the box
     const typed = (node, read) => {
@@ -171,11 +186,13 @@ const Sheets = (() => {
       return el('div', { class: 'sheet-counter-box' }, cur, el('span', { class: 'muted' }, '/'), max);
     }
     if (f.type === 'pips') {
-      const n = Math.max(1, Math.min(L.LIMITS.pips, Number(f.count) || 1));
-      let filled = Number(value) || 0;
-      const box = el('div', { class: 'sheet-pips', role: 'group', 'aria-label': label });
-      const draw = () => box.replaceChildren(...Array.from({ length: n }, (_, i) =>
-        button('', () => { filled = filled === i + 1 ? i : i + 1; draw(); set(filled); }, 'sheet-pip' + (i < filled ? ' on' : ''),
+      // the pips past this character's own maximum are greyed out and can't be ticked
+      const n = pipCount(f), most = pipCap(f, cap);
+      let filled = Math.min(Number(value) || 0, most);
+      const box = el('div', { class: 'sheet-pips', role: 'group', 'aria-label': most < n ? `${label}, ${most} of ${n} available` : label });
+      const draw = () => box.replaceChildren(...Array.from({ length: n }, (_, i) => i >= most
+        ? button('', null, 'sheet-pip capped', { 'aria-label': `${label} ${i + 1}, not available`, disabled: true, 'data-tip': `Past this character's maximum of ${most}` })
+        : button('', () => { filled = filled === i + 1 ? i : i + 1; draw(); set(filled); }, 'sheet-pip' + (i < filled ? ' on' : ''),
           { 'aria-label': `${label} ${i + 1}`, 'aria-pressed': String(i < filled), disabled: off })));
       draw();
       return box;
@@ -187,6 +204,8 @@ const Sheets = (() => {
     }
     if (f.type === 'choice') {
       // Custom… opens a box beside the list for anything the options don't have
+      // a number kept from before the field was a list (a template changed a number to a rating) shows as typed
+      if (typeof value === 'number') value = String(value);
       const opts = f.options || [], own = typeof value === 'string' && value !== '' && !opts.includes(value);
       const s = el('select', { 'aria-label': label, disabled: off }, el('option', { value: '' }, '—'),
         opts.map(o => el('option', { value: o, selected: o === value }, o)), el('option', { value: CUSTOM, selected: own }, 'Custom…'));
@@ -223,14 +242,30 @@ const Sheets = (() => {
       b.update();
       return b;
     };
-    const draw = () => fill(table, 
-      el('table', { class: 'tbl' }, el('tr', {}, cols.map(c => el('th', {}, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
+    // column widths by what they hold (SheetLayout.columnWidths): a narrow column (Weight, Uses, Damage) is a fixed
+    // few characters, a wide one twice a normal one, and the normal ones (Item, Name, Notes) share what is left. A wide
+    // column spans two equal <col>s; below its least width the table scrolls sideways rather than squeezing.
+    // A narrow column fits its heading's longest word (a heading wraps between words), and a little more for each
+    // value it holds (ST / Rcl, 1/2D / Max), 4 to 7rem.
+    const widths = L.columnWidths(cols), span = w => (w === 'wide' ? 2 : 1);
+    const narrowRem = c => {
+      const label = String(c.label), parts = label.split(/\s+\/\s+|\s*&\s*/).length;
+      return Math.min(7, Math.max(4 + 1.5 * (parts - 1), 0.6 * Math.max(...label.split(/\s+/).map(x => x.length)) + 0.75));
+    };
+    const shares = widths.reduce((n, w) => n + (w === 'narrow' ? 0 : span(w)), 0), buttons = (roll ? 1 : 0) + (off ? 0 : 1);
+    const fixed = cols.reduce((n, c, i) => n + (widths[i] === 'narrow' ? narrowRem(c) : 0), 0) + buttons * 2.5;
+    const draw = () => fill(table,
+      el('table', { class: 'tbl sheet-list-table', style: { minWidth: `${fixed + shares * 7}rem` } },
+        el('colgroup', {}, cols.flatMap((c, i) => (widths[i] === 'narrow' ? [el('col', { class: 'sheet-col-narrow', style: { width: `${narrowRem(c)}rem` } })]
+          : Array.from({ length: span(widths[i]) }, () => el('col', {})))),
+          roll ? el('col', { class: 'sheet-col-btn' }) : null, off ? null : el('col', { class: 'sheet-col-btn' })),
+        el('tr', {}, cols.map((c, ci) => el('th', { colspan: span(widths[ci]), 'data-width': widths[ci] }, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
         rows.map((r, ri) => {
           const die = rowDice(r, ri);
-          return el('tr', {}, cols.map(c => {
+          return el('tr', {}, cols.map((c, ci) => {
             const i = el('input', { value: r[c.key] ?? '', maxlength: L.LIMITS.text, 'aria-label': `${label} row ${ri + 1} ${c.label}`, disabled: off });
             i.addEventListener('change', () => { r[c.key] = i.value; send(); die?.update(); });
-            return el('td', {}, i);
+            return el('td', { colspan: span(widths[ci]) }, i);
           }), roll ? el('td', { class: 'sheet-roll-cell' }, die) : null,
           off ? null : el('td', {}, button('×', () => { rows.splice(ri, 1); draw(); send(); }, 'icon-btn', { 'aria-label': `Remove row ${ri + 1}` })));
         })),
@@ -480,22 +515,26 @@ const Sheets = (() => {
       if (f.type === 'choice' || f.type === 'list') {
         const isList = f.type === 'list';
         const text = el('textarea', { rows: 3, 'aria-label': isList ? 'Columns' : 'Options', placeholder: 'One per line' });
-        text.value = (isList ? (f.columns || []).map(c => c.label) : f.options || []).join('\n');
+        // a list column's own width goes after its label in brackets: Weight [narrow], Notes [wide]
+        const WIDTH_TAG = /\s*\[(narrow|normal|wide)\]$/i;
+        text.value = (isList ? (f.columns || []).map(c => c.label + (c.width ? ` [${c.width}]` : '')) : f.options || []).join('\n');
         text.addEventListener('input', () => {
           const lines = [...new Set(text.value.split('\n').map(s => s.trim()).filter(Boolean))];
           if (!isList) f.options = lines;
           else {
             // a column keeps its key while its label stays, so rows already filled in keep their values
             const old = new Map((f.columns || []).map(c => [c.label, c.key])), taken = new Set();
-            f.columns = lines.map(label => {
+            f.columns = lines.map(line => {
+              const width = (line.match(WIDTH_TAG)?.[1] || '').toLowerCase(), label = line.replace(WIDTH_TAG, '') || line;
               const key = old.get(label) && !taken.has(old.get(label)) ? old.get(label) : L.newKey(label, taken);
               taken.add(key);
-              return { key, label };
+              return width ? { key, label, width } : { key, label };
             });
           }
           refresh();
         });
-        return el('label', { class: 'field' }, el('span', { class: 'lbl' }, isList ? 'Columns, one per line' : 'Options, one per line'), text);
+        return el('label', { class: 'field' }, el('span', { class: 'lbl' }, isList ? 'Columns, one per line' : 'Options, one per line'), text,
+          isList ? el('span', { class: 'small muted' }, 'Short columns such as Weight, Uses or Damage are drawn narrow by themselves. To choose, add [narrow], [normal] or [wide] after a label.') : null);
       }
       return null;
     }
@@ -741,31 +780,99 @@ const Sheets = (() => {
     return bar;
   }
 
-  /** A character's Play fields, small, for its card. */
+  /** A value short enough for a card, or null: a list's rows by their first column ("Sword, Shield, Rations"), long
+   * text cut short, anything else structured left to the sheet. */
+  function cardValue(v) {
+    if (v === null || v === undefined || v === '' || v === false) return null;
+    if (Array.isArray(v)) {
+      const names = v.map(r => (r && typeof r === 'object' ? Object.values(r).find(x => String(x ?? '').trim()) : r))
+        .filter(x => x !== null && x !== undefined && String(x).trim()).map(x => String(x).trim());
+      return names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3} more` : '') : null;
+    }
+    if (typeof v === 'object') return null;
+    const t = String(v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return !t ? null : t.length > 60 ? `${t.slice(0, 57)}…` : t;
+  }
+  /** "Level 2" for a number, the value alone for words ("Fighter"). */
+  const cardPair = (label, v, raw) => (typeof raw === 'number' || /^[+\-−]?\d/.test(v) ? `${label} ${v}` : v);
+  const CARD_LINES = 4;   // the most Play fields a card lists under its bars, past which it says how many more
+  /** What a card shows of a sheet: its Summary fields as one line under the name (who they are: Fighter · Level 2),
+   * then its Play fields (how they are doing): counters as bars, tracks as dots, ticked boxes as chips, and a few
+   * short values, lists as their rows' names. Never the raw data; the rest is on the sheet. */
   function cardStats(c) {
     if (!c.sheet_visible) return el('p', { class: 'small muted' }, 'Sheet hidden by the GM');
-    const bits = c.play.map(f => {
+    const inSummary = new Set(c.summary.map(f => f.key));
+    const bars = [], lines = [], chips = [];
+    for (const f of c.play) {
+      if (inSummary.has(f.key)) continue;
       if (f.type === 'counter') {
         const v = f.value || {}, pct = v.max ? Math.max(0, Math.min(100, (v.cur / v.max) * 100)) : 0;
-        return el('div', { class: 'card-stat' }, el('span', { class: 'small' }, `${f.label} ${v.cur ?? '–'}${v.max != null ? ` / ${v.max}` : ''}`),
-          v.max ? el('div', { class: 'stat-bar' }, el('span', { style: { width: `${pct}%` } })) : null);
+        if (v.cur == null && v.max == null) continue;
+        bars.push(el('div', { class: 'card-stat' }, el('span', { class: 'small' }, `${f.label} ${v.cur ?? '–'}${v.max != null ? ` / ${v.max}` : ''}`),
+          v.max ? el('div', { class: 'stat-bar' }, el('span', { style: { width: `${pct}%` } })) : null));
+      } else if (f.type === 'pips') {
+        // a track's own maximum (Track maximums): the pips past it greyed out
+        const most = Number.isInteger(f.cap) ? f.cap : (f.count || 0), v = Math.min(Number(f.value) || 0, most);
+        bars.push(el('div', { class: 'card-stat small' }, `${f.label} `, '●'.repeat(v) + '○'.repeat(Math.max(0, most - v)),
+          most < (f.count || 0) ? el('span', { class: 'pip-capped', 'aria-label': `${f.count - most} not available` }, '○'.repeat(f.count - most)) : null));
       }
-      if (f.type === 'pips') return el('div', { class: 'card-stat small' }, `${f.label} `, '●'.repeat(Number(f.value) || 0) + '○'.repeat(Math.max(0, (f.count || 0) - (Number(f.value) || 0))));
-      if (f.type === 'checkbox') return f.value ? el('span', { class: 'chip card-cond' }, f.label) : null;
-      if (f.value === null || f.value === undefined || f.value === '') return null;
-      return el('div', { class: 'card-stat small' }, `${f.label}: ${typeof f.value === 'object' ? JSON.stringify(f.value) : f.value}`);
-    });
-    const sum = c.summary.filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small muted' }, `${f.label}: ${f.value}`));
-    return el('div', { class: 'card-stats' }, bits, sum);
+      else if (f.type === 'checkbox') { if (f.value) chips.push(el('span', { class: 'chip card-cond' }, f.label)); }
+      else {
+        const v = cardValue(f.value);
+        if (v) lines.push(el('div', { class: 'card-stat small', title: v }, Array.isArray(f.value) ? `${f.label}: ${v}` : cardPair(f.label, v, f.value)));
+      }
+    }
+    const more = lines.length - CARD_LINES;
+    return el('div', { class: 'card-stats' }, bars, chips.length ? el('div', { class: 'row card-conds' }, chips) : null,
+      lines.slice(0, CARD_LINES), more > 0 ? el('div', { class: 'small muted' }, `+${more} more on the sheet`) : null);
+  }
+  /** A character's Summary fields as one short line: "Fighter · Level 2". */
+  function summaryLine(c) {
+    if (!c.sheet_visible) return null;
+    const parts = c.summary.map(f => { const v = cardValue(f.value); return v ? { text: cardPair(f.label, v, f.value), full: `${f.label}: ${v}` } : null; }).filter(Boolean);
+    return parts.length ? el('div', { class: 'character-summary', title: parts.map(p => p.full).join('\n') }, parts.map(p => p.text).join(' · ')) : null;
+  }
+  /** A character's portrait, or its initials in a circle where it has none. */
+  function portrait(c, cls = '') {
+    const initials = String(c.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    return c.pic ? el('img', { src: c.pic, alt: '', class: `character-pic ${cls}`, loading: 'lazy' })
+      : el('span', { class: `character-pic character-initials ${cls}`, 'aria-hidden': 'true' }, initials);
   }
   function characterCard(c) {
     const href = `#/c/${cid()}/characters/${c.id}`;
     return el('div', { class: 'card character-card', 'data-kind': c.kind },
-      el('div', { class: 'row' }, c.pic ? el('img', { src: c.pic, alt: '', class: 'character-pic', loading: 'lazy' }) : null,
+      el('div', { class: 'row character-card-head' }, el('a', { href, tabindex: -1, 'aria-hidden': 'true' }, portrait(c)),
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
-          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')))),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')),
+          summaryLine(c))),
       cardStats(c),
-      el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
+      // at the card's foot, so every card's buttons line up whatever is above them
+      el('div', { class: 'row character-card-foot' }, el('a', { href, class: 'button small' }, 'Sheet'),
+        c.sheet_visible && c.has_play ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null,
+        ctx.isGM() && c.can_edit ? partyToggle(c) : null));
+  }
+  /** A GM's Party switch on a character's card: the sheet's Travels with the party. A player's character is in the party
+   * with its player (off takes them out of every party group); one with no player travels with the main group. */
+  function partyToggle(c) {
+    const on = () => (c.owner_is_player ? !c.party_out : !!c.party_group_id);
+    const box = el('input', { type: 'checkbox', checked: on() });
+    box.addEventListener('change', async () => {
+      box.disabled = true;
+      try {
+        const res = await ctx.post('character_save', { id: c.id, version: c.version, party: box.checked }, cid());
+        Object.assign(c, res.character);
+        toast(on() ? `${c.name} travels with the party` : `${c.name} is out of the party`);
+        ctx.route();   // the card's line under the name says In the party or not
+      } catch (err) {
+        box.checked = on();
+        toast(err.message, true);
+        if (err.status === 409) ctx.route();
+      } finally { box.disabled = false; }
+    });
+    return el('label', { class: 'small check character-party', 'data-tip': c.owner_is_player
+      ? 'Travels with the party. Its player is in the party while this is their active character; untick to take them out of every party group'
+      : 'Travels with the party: listed with the party\'s players on Travel and the maps, gets its own action each shift At the Table, and goes where the party goes' },
+    box, ' Party');
   }
   const FILTER_KEY = 'chronicle:characters-filter';
   async function renderCharacters() {
@@ -987,6 +1094,60 @@ const Sheets = (() => {
   }
 
   /** A character's sheet, or (play) its Play view. */
+  /** The Portrait box on a sheet, for its player and the GMs: the pictures on the character's Encyclopedia entry to pick
+   * from, Upload a picture (which goes on the entry too) and Find Image. done(character) after each change. */
+  function portraitPanel(ch, done) {
+    const box = el('div', { class: 'card sheet-portrait-panel', hidden: true });
+    const status = el('p', { class: 'small muted', role: 'status' });
+    const use = async fileId => {
+      status.textContent = 'Saving…';
+      try {
+        const res = await ctx.post('character_portrait', { id: ch.id, file_id: fileId }, cid());
+        Object.assign(ch, { pic: res.character.pic, portrait_id: res.character.portrait_id });
+        status.textContent = '';
+        toast(fileId ? 'Portrait set' : 'Portrait is the entry\'s first picture again');
+        done(ch);
+        load();
+      } catch (err) { status.textContent = ''; toast(err.message, true); }
+    };
+    async function load() {
+      let r;
+      try { r = await ctx.api('files', { query: { cid: cid(), parent_type: 'encyclopedia', parent_id: ch.entry_id } }); }
+      catch (err) { return fill(box, el('p', { class: 'small muted' }, err.message)); }
+      const pics = r.files.filter(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone));
+      const up = r.uploads || {};
+      const input = el('input', { type: 'file', accept: 'image/*', class: 'file-input', 'aria-label': 'Upload a portrait' });
+      input.addEventListener('change', async () => {
+        const f = input.files[0];
+        input.value = '';
+        if (!f) return;
+        if (up.max_bytes && f.size > up.max_bytes) return toast(`${f.name} is too big`, true);
+        status.textContent = `Uploading ${f.name}…`;
+        try { const file = await ctx.uploadFile('encyclopedia', ch.entry_id, f); await use(file.id); }
+        catch (err) { status.textContent = ''; toast(err.message, true); }
+      });
+      const findSlot = el('div', { class: 'find-slot' });
+      const chosen = ch.portrait_id;
+      fill(box,
+        el('div', { class: 'row spread' }, el('h3', {}, 'Portrait'), button('Close', () => { box.hidden = true; }, 'small')),
+        el('p', { class: 'small muted' }, 'Shown on the character\'s card, at the top of the sheet and in the Play view. Pictures added here go on its Encyclopedia entry too.'),
+        pics.length ? el('div', { class: 'portrait-picks', role: 'group', 'aria-label': 'Pictures on the entry' }, pics.map((f, i) => {
+          const on = chosen ? f.id === chosen : i === 0;
+          return el('button', { type: 'button', class: 'portrait-pick' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': `Use ${f.caption || f.name}`,
+            onclick: () => { if (!on) use(f.id); } }, el('img', { src: f.url, alt: '', loading: 'lazy', referrerpolicy: f.embed ? 'no-referrer' : null }));
+        })) : el('p', { class: 'small muted' }, 'No pictures yet.'),
+        el('div', { class: 'row' },
+          up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': 'Upload a picture (JPEG, PNG, GIF, WebP) for the portrait' }, input, '📎 Upload a picture') : null,
+          up.ready && ctx.findImage ? button('🖼️ Find Image', () => {
+            findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(ctx.findImage('encyclopedia', ch.entry_id, ch.name, { copyOnly: true, onAdded: file => use(file.id) }));
+          }, 'small', { 'data-tip': 'Search open picture libraries and museums for a portrait, credited' }) : null,
+          chosen && pics.length > 1 ? button('Use the first picture', () => use(0), 'small', { 'data-tip': 'Go back to the first picture on the Encyclopedia entry' }) : null,
+          !up.ready && up.problem ? el('span', { class: 'small muted' }, up.problem) : null),
+        status, findSlot);
+    }
+    box.toggle = () => { box.hidden = !box.hidden; if (!box.hidden) { fill(box, el('p', { class: 'small muted' }, 'Loading…')); load(); } };
+    return box;
+  }
   async function renderCharacter(id, play = false) {
     stopPresence();
     const r = await ctx.api('character', { query: { cid: cid(), id } });
@@ -996,6 +1157,9 @@ const Sheets = (() => {
     let editing = false;
     const values = ch.values ? { ...ch.values } : {};
     let hidden = ch.hidden || [];
+    let caps = ch.pip_caps || {};
+    let capping = false;   // Track maximums is open: a Max picker under each dot/box track
+    const hasTracks = [...L.fields(ch.layout).values()].some(x => x.field.type === 'pips');
     let openPage = null;   // the sheet's open page, kept when it is drawn again
     // a refused or failed save: say why, and draw the sheet again from the server (a GM whose Edit ran out is back to reading)
     const sender = fieldSender(ch.id, err => {
@@ -1014,12 +1178,19 @@ const Sheets = (() => {
       draw();
     }, 'small') : null;
     let form = null;
+    const capsBtn = ch.can_edit && !play && hasTracks && ch.sheet_visible ? button('Track maximums', () => { capping = !capping; draw(); }, 'small',
+      { 'aria-pressed': 'false', 'data-tip': 'Set how many dots or boxes of each track this character has, such as 3 of 6 Damage boxes' }) : null;
 
     async function save(changes) {
       try {
         const res = await ctx.post('character_save', { id: ch.id, version: ch.version, ...changes }, cid());
         Object.assign(ch, res.character);
         if ('hidden' in changes) hidden = changes.hidden;
+        if ('pip_caps' in changes) {
+          caps = ch.pip_caps || {};
+          // a track ticked past its new maximum came down to it
+          for (const k of Object.keys(changes.pip_caps)) if (ch.values && k in ch.values) { values[k] = ch.values[k]; sender.known(k, values[k]); }
+        }
         if ('name' in changes || 'kind' in changes || 'owner_id' in changes || 'party' in changes) return ctx.route();
         draw();
       } catch (err) {
@@ -1036,15 +1207,18 @@ const Sheets = (() => {
     function draw() {
       if (editBtn) { editBtn.textContent = editing ? 'Done' : 'Edit'; editBtn.className = editing ? 'small primary' : 'small'; }
       if (!ch.sheet_visible) return body.replaceChildren(el('p', { class: 'muted' }, 'The GM hasn\'t shown this sheet to players.'));
-      if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v), rollHere));
+      if (capsBtn) { capsBtn.textContent = capping ? 'Done' : 'Track maximums'; capsBtn.className = capping ? 'small primary' : 'small'; capsBtn.setAttribute('aria-pressed', String(capping)); }
+      if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v), rollHere, caps));
       form = renderSheetForm(ch.layout, values, {
         mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
-        onRoll: rollHere,
+        onRoll: rollHere, caps,
+        onCap: capping ? (k, n) => save({ pip_caps: { [k]: n } }) : null,
       });
       fill(body,
         ch.can_edit ? settingsStrip(ch, mine, save) : null,
+        capping ? el('p', { class: 'notice sheet-caps-note' }, `Pick how many of each dot or box track ${ch.name} has. The rest are greyed out on the sheet and can't be ticked. Press Done when you're finished.`) : null,
         form,
         ch.old?.length ? el('div', { class: 'card sheet-old' }, el('h3', {}, 'Old fields'),
           el('p', { class: 'small muted' }, 'Values the template no longer has a place for. They are kept, so nothing is lost.'),
@@ -1055,9 +1229,16 @@ const Sheets = (() => {
       el('a', { href: `#/c/${cid()}/characters`, class: 'small' }, '← Characters'),
       play ? el('a', { href, class: 'small' }, 'Full sheet') : (ch.sheet_visible ? el('a', { href: `${href}/play`, class: 'small' }, 'Play view') : null),
       el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
+    // the portrait beside the name: its player and the GMs tap it to pick or upload one
+    const portraits = ch.can_edit ? portraitPanel(ch, () => face.replaceChildren(portrait(ch, 'big'), el('span', { class: 'portrait-edit', 'aria-hidden': 'true' }, '✎'))) : null;
+    const face = ch.can_edit
+      ? button([portrait(ch, 'big'), el('span', { class: 'portrait-edit', 'aria-hidden': 'true' }, '✎')], () => portraits.toggle(), 'sheet-portrait',
+        { 'aria-label': ch.pic ? 'Change the portrait' : 'Add a portrait', 'data-tip': ch.pic ? 'Change the portrait' : 'Add a portrait: upload one, or pick a picture on the Encyclopedia entry' })
+      : el('div', { class: 'sheet-portrait' }, portrait(ch, 'big'));
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
-        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn,
+        el('div', { class: 'sheet-head' }, face, el('div', { class: 'sheet-head-main' },
+        el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn, capsBtn,
           ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
           ch.can_edit ? button('Delete character', async () => {
           if (!await confirmDialog(`Delete ${ch.name}'s sheet? Everything filled in on it goes. The Encyclopedia entry stays.`, { ok: 'Delete', danger: true })) return;
@@ -1069,6 +1250,8 @@ const Sheets = (() => {
           } catch (err) { toast(err.message, true); }
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player && ch.party_out ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        summaryLine(ch))),
+        portraits,
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded
@@ -1092,7 +1275,7 @@ const Sheets = (() => {
 
   /** Only the Play fields, for a phone at the table: big + and − on counters, tappable pips, toggles. Each tap shows
    * and sends the new value at once. */
-  function playView(ch, values, can, send, roll = null) {
+  function playView(ch, values, can, send, roll = null, caps = {}) {
     const fields = L.fields(ch.layout);
     const playFields = [...fields.values()].map(x => x.field).filter(f => f.play);
     if (!playFields.length) return el('p', { class: 'muted' }, 'This template has no Play fields. Its author can mark fields Play in the template editor.');
@@ -1121,7 +1304,7 @@ const Sheets = (() => {
       }
       const die = roll ? rollButton(f, () => values[f.key], roll) : null;
       return el('div', { class: 'play-other' }, el('div', { class: 'play-label' }, f.label, die),
-        control(f, values[f.key], v => { set(f.key, v); die?.update(); }, !can, true, roll));
+        control(f, values[f.key], v => { set(f.key, v); die?.update(); }, !can, true, roll, caps[f.key]));
     }));
   }
 
