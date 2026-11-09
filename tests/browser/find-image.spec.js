@@ -369,6 +369,7 @@ test.describe("Find Image panel", () => {
     await panel.getByRole("button", { name: "Search", exact: true }).click();
     const first = panel.locator(".find-result").first();
     await expect(first).toContainText("by Hyptosis");
+    await first.locator("img").scrollIntoViewIfNeeded();   // thumbnails load lazily, and on a phone it starts below the fold
     await expect.poll(() => first.locator("img").evaluate(i => i.complete && i.naturalWidth)).toBe(192);
     await expect(first.getByRole("link", { name: "OpenGameArt" })).toHaveAttribute("href", "https://opengameart.org/content/cyberpunk-portraits");
     await first.getByRole("button", { name: "Use this picture" }).click();
