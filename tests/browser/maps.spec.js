@@ -847,8 +847,10 @@ test("Maps: a player adds a public pin the GM sees", async ({ page, browser }) =
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(page.locator(".map-pin")).toContainText("Our camp");
   await page.locator(".map-pin").click();
-  await expect(page.locator(".leaflet-popup")).toContainText("Added by Pip");
+  await expect(page.locator(".leaflet-popup")).not.toContainText("Added by");   // the card stays slim; who added it is in the edit box
   await expect(page.locator(".leaflet-popup")).toContainText("By the ford");
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("dialog", { name: "Edit pin" })).toContainText("Added by Pip");
   expectNoErrors(errors);
 });
 
@@ -934,7 +936,6 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📍" })).toHaveCount(1);
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card went with the redraw
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
-  await expect(page.locator(".leaflet-popup")).toContainText("Added by Pip");
   await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Burnt Ford/ })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.locator(".map-pin", { hasText: "The old mill" }).click();

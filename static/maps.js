@@ -627,7 +627,7 @@ const MapsTab = (() => {
     function pinCard(p) {
       const kindName = p.kind === 'entry' ? ctx.encCat(p.entry?.category)?.[1] || 'Entry' : p.kind === 'event' ? 'Event' : 'Note';
       const name = p.kind === 'entry' && p.entry ? el('a', { href: `#/c/${cid}/encyclopedia/${p.entry.id}`, 'data-tip': 'Open this entry' }, pinTitle(p)) : el('span', {}, pinTitle(p));
-      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.author ? `Added by ${p.author}` : null, p.is_locked ? 'Locked in place' : null].filter(Boolean).join(' · ');
+      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.is_locked ? 'Locked in place' : null].filter(Boolean).join(' · ');
       const match = gm && p.kind === 'note' ? entryNamed(p.label) : null;
       const dist = fromParty(p);
       const facts = [dist ? el('span', {}, dist) : null,
@@ -783,6 +783,7 @@ const MapsTab = (() => {
       const form = el('form', { class: 'map-panel card', role: 'dialog', 'aria-label': old ? 'Edit pin' : 'Add pin' },
         el('div', { class: 'row' }, el('strong', {}, old ? 'Edit pin' : 'Add pin'), gm ? el('span', { class: 'row map-kinds', role: 'group', 'aria-label': 'Kind of pin' }, kindBtns) : null),
         body, styleFields,
+        old && old.author ? el('p', { class: 'small muted' }, `Added by ${old.author}`) : null,
         gm ? field('Opens map', childSel, 'Clicking this pin offers a link to that map') : null,
         gm ? lockBox(secret, 'players won\'t see this pin') : null,
         el('div', { class: 'row map-panel-actions' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
