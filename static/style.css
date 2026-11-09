@@ -1495,6 +1495,10 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .sheet-sec.compact .sheet-field:not(.wide) .sheet-label { flex: 1; min-width: 0; }
 .sheet-sec.compact .sheet-field:not(.wide) .sheet-control { flex: 0 1 auto; max-width: 60%; }
 .sheet-sec.compact .sheet-field:not(.wide) .sheet-control input:not([type=checkbox]) { width: 6em; }
+/* a dot/box track keeps its label whole: in a narrow section its pips go under the label instead of squeezing it */
+.sheet-sec.compact .sheet-field.sheet-pips:not(.wide) { flex-wrap: wrap; }
+.sheet-sec.compact .sheet-field.sheet-pips:not(.wide) .sheet-label { flex: 1 0 auto; }
+.sheet-sec.compact .sheet-field.sheet-pips:not(.wide) .sheet-control { max-width: 100%; }
 .sheet-choice { display: flex; flex-direction: column; gap: 4px; }
 .sheet-control select, .sheet-control input:not([type=checkbox]) { max-width: 100%; }  /* a small box squeezes its dropdown and number box to fit */
 .sheet-text .sheet-control input { width: 100%; }  /* a text box fills its field, however wide */
@@ -1512,6 +1516,11 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .sheet-pips { display: flex; flex-wrap: wrap; gap: 4px; }
 .sheet-pip { width: 22px; height: 22px; padding: 0; border-radius: 50%; }
 .sheet-pip.on { background: var(--accent); border-color: var(--accent); }
+.sheet-pip.capped, .sheet-pip.capped:disabled { opacity: .45; border-style: dashed; border-color: var(--dim); cursor: not-allowed;
+  background: linear-gradient(135deg, transparent calc(50% - 1px), var(--dim) calc(50% - 1px), var(--dim) calc(50% + 1px), transparent calc(50% + 1px)); }
+.sheet-cap { display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--dim); white-space: nowrap; }
+.sheet-cap select { width: auto; padding: 2px 6px; }
+.pip-capped { opacity: .4; text-decoration: line-through; }
 .sheet-list { overflow-x: auto; }
 .sheet-list table { width: 100%; }
 .sheet-list input { width: 100%; }
