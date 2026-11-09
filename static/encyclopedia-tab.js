@@ -304,6 +304,16 @@
       const drawKinds = () => kindSeg?.replaceChildren(...[['all', 'All', 'Every entry'], ['pc', 'PCs', 'Only entries with a PC\'s sheet'], ['npc', 'NPCs', 'Only entries with an NPC\'s sheet']].map(([k, l, t]) =>
         btn(l, () => { st.kind = k; draw(); }, (st.kind || 'all') === k ? 'small on' : 'small', t)));
       const filters = el('div', { class: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+      // The filters in force, one chip each, with ✕ to drop it: so a short list says why it is short
+      const chips = el('div', { class: 'fchips', 'aria-label': 'Filters in force' });
+      const chipFor = (label, off, list) => {
+        if (!off.size) return null;
+        const on = list.filter(o => !off.has(o.key));
+        if (on.length === list.length) return null;
+        const what = !on.length ? 'none' : on.length <= 3 ? on.map(o => o.name).join(', ') : `${on.length} of ${list.length}`;
+        return el('span', { class: 'fchip' }, el('b', {}, `${label}:`), ` ${what}`,
+          btn('✕', () => { off.clear(); draw(); }, 'fchip-x', `Drop the ${label} filter`));
+      };
       const draw = () => {
         const shown = entries.filter(e => passes(e));
         const blank = shown.filter(entryBlank);
@@ -331,6 +341,14 @@
         relPick.update([...[...relUsed].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([k, t]) => ({ key: k, name: t.name, color: t.color })), { key: '', name: 'No connections' }]
           .map(o => ({ ...o, count: rels.get(o.key) || 0 })));
         clearAll.hidden = shown.length === entries.length;
+        const catList = [...ENC_CATEGORIES, ['', 'No category']].map(([key, name]) => ({ key, name }));
+        const tagList = [...used.map(t => ({ key: t.name.toLowerCase(), name: t.name })), { key: '', name: 'No tags' }];
+        const relList = [...[...relUsed].map(([key, t]) => ({ key, name: t.name })), { key: '', name: 'No connections' }];
+        chips.replaceChildren(...clean([
+          st.q.trim() ? el('span', { class: 'fchip' }, el('b', {}, 'Search:'), ` "${st.q.trim()}"`, btn('✕', () => { st.q = search.value = ''; draw(); }, 'fchip-x', 'Clear the search')) : null,
+          chipFor('Category', st.catsOff, catList), chipFor('Tags', st.tagsOff, tagList), chipFor('Connections', st.relsOff, relList),
+          st.kind && st.kind !== 'all' ? el('span', { class: 'fchip' }, el('b', {}, st.kind === 'pc' ? 'PCs only' : 'NPCs only'), btn('✕', () => { st.kind = 'all'; draw(); }, 'fchip-x', 'Show every entry')) : null]));
+        chips.hidden = !chips.childElementCount;
         drawKinds();
         kindSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on'))));
         const near = st.near && entries.find(e => e.id === st.near);
@@ -367,7 +385,7 @@
         more: [scanBtn, [...conns.values()].some(l => l.length) ? btn('🕸 Campaign web', () => ctx.web({ center: null }), '', 'Draw every connection in the Encyclopedia as a web you can pan, zoom and filter by kind') : null, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
         hide: { key: 'chronicle:enchide' },
         wide: { key: 'chronicle:encwide', tips: ['Widen the list to see more of the Encyclopedia at once, and narrow the entry', 'Give the entry its room back and narrow the list'] },
-        top: [search, filters, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
+        top: [search, filters, chips, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
     }
 
     /** The campaign's text that names entry e (encyclopedia_sources with names: only the sources containing one), asked

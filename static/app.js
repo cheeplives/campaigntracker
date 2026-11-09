@@ -6554,7 +6554,28 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); }));
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); keepPlace(); }));
+  }
+  // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
+  // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.
+  // A page reached by a new click starts at the top as before.
+  const places = new Map();
+  let placeHash = null, placeShot = null, placeNav = false;
+  const tabOf = h => (h || '').split('?')[0].split('/').slice(0, 4).join('/');
+  addEventListener('hashchange', () => {   // runs before the new page is drawn: the old one is still there to measure
+    placeNav = true;
+    if (placeHash) places.set(placeHash, placeShot = { y: scrollY, lists: [...document.querySelectorAll('.lp-list')].map(l => l.scrollTop) });
+  });
+  function keepPlace() {
+    if (!placeNav) { placeHash = location.hash; return; }   // a page drawn again after a save stays as mount() leaves it
+    placeNav = false;
+    const h = location.hash, back = !!history.state?.chronicleSeen;
+    if (!back) { try { history.replaceState({ ...(history.state || {}), chronicleSeen: true }, ''); } catch { /* fine */ } }
+    const was = back ? places.get(h) : (placeHash && tabOf(placeHash) === tabOf(h) ? { y: null, lists: placeShot?.lists } : null);
+    placeHash = h; placeShot = null;
+    if (!was) return;
+    if (was.y !== null && was.y !== undefined) scrollTo(0, was.y);
+    document.querySelectorAll('.lp-list').forEach((l, i) => { if (was.lists?.[i]) l.scrollTop = was.lists[i]; });
   }
   async function routeTo() {
     await Undo.flush();   // a delete waiting on its Undo goes through before the page is drawn again

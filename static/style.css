@@ -2146,3 +2146,13 @@ section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px
 .trail-sep { opacity: .6; }
 .copy-btn { margin-left: 6px; }
 .dice-copy { opacity: .55; } .dice-e:hover .dice-copy, .dice-copy:focus-visible { opacity: 1; }
+
+/* the filters in force, as chips under the Encyclopedia's search */
+.fchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.fchips[hidden] { display: none; }
+.fchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; font-size: .84rem;
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.fchip b { font-weight: 600; }
+button.fchip-x { border: 0; background: color-mix(in srgb, var(--accent) 22%, var(--panel)); border-radius: 50%; width: 22px; height: 22px; padding: 0;
+  font-size: .72rem; line-height: 1; display: inline-grid; place-items: center; }
+@media (pointer: coarse) { button.fchip-x { width: 32px; height: 32px; } }
