@@ -145,6 +145,7 @@ test("the Encyclopedia shows the filters in force as chips, and ✕ drops one", 
   await entry(page, cid, "Durnan", "Owner of the Yawning Portal.", { category: "person" });
   await entry(page, cid, "Waterdeep", "The City of Splendors.", { category: "location" });
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page.locator(".enc-catpick > summary").click();
   await page.locator('.enc-catpick input[value="location"]').uncheck();
   await page.keyboard.press("Escape");
