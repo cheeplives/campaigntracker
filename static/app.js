@@ -6001,11 +6001,12 @@
               }, 'small danger', 'Take them out of this campaign. Their account stays') : null)));
       }));
     if (isGM()) {
-      // Pick from the site's approved accounts, or type a full email for someone not in the list.
-      let candidates = [];
+      // Search for someone to add, or type a full email for anyone else. Nobody is listed until the GM types: the page
+      // never shows who else has access to the site.
+      let candidates = [], more = false, asked = '', timer = 0;
       const q = el('input', { name: 'q', type: 'search', placeholder: 'Search people, or type their sign-in email', autocomplete: 'off', 'aria-label': 'Find a person to add', class: 'grow' });
       const role = select([['player', 'Player'], ['gm', 'Co-GM']], 'player', { name: 'role', 'aria-label': 'Role', 'data-tip': 'A co-GM has the same powers as you, including secrets' });
-      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'Registered people' });
+      const list = el('div', { class: 'picker', role: 'list', 'aria-label': 'People matching your search' });
       const add = async body => {
         try {
           const r = await post('member_add', { ...body, role: role.value }, S.camp.id);
@@ -6013,20 +6014,26 @@
           await loadCampaign(S.camp.id, true); route();
         } catch (err) { toast(err.message, true); }
       };
-      const matches = () => {
-        const t = q.value.trim().toLowerCase();
-        return t ? candidates.filter(u => (u.display_name || '').toLowerCase().includes(t) || (u.email || '').toLowerCase().includes(t)) : candidates;
-      };
+      const term = () => q.value.trim();
+      const matches = () => term() === asked ? candidates : [];
       const renderList = () => {
-        const m = matches();
-        list.replaceChildren(...clean([m.length ? m.slice(0, 8).map(u => el('div', { class: 'listrow', role: 'listitem' },
+        const t = term(), m = matches();
+        list.replaceChildren(...clean([t.length < 2 || t !== asked ? [] : m.length ? m.map(u => el('div', { class: 'listrow', role: 'listitem' },
           el('div', {}, el('strong', {}, u.display_name || u.email || 'Unnamed account'), u.display_name && u.email ? el('span', { class: 'muted' }, ` ${u.email}`) : null),
           el('div', { class: 'actions' }, btn('Add', () => add({ user_id: u.id }), 'small primary', `Add ${u.display_name || u.email || 'them'} to this campaign`))))
-          // With nobody to pick from, the note under the form already says to add people by email: no empty-list message
-          : candidates.length ? [el('p', { class: 'muted' }, 'Nobody registered matches. Type their full sign-in email and press Add by email.')] : [],
-          m.length > 8 ? el('small', { class: 'muted' }, `${m.length - 8} more. Type to narrow the list.`) : null]));
+          : t.includes('@') ? [] : [el('p', { class: 'muted' }, 'Nobody you can add matches. Type their full sign-in email and press Add by email.')],
+          more && t === asked ? el('small', { class: 'muted' }, 'More people match. Type more to narrow the search.') : null]));
       };
-      q.addEventListener('input', renderList);
+      const search = async () => {
+        const t = term();
+        if (t.length < 2) { candidates = []; more = false; asked = t; renderList(); return; }
+        try {
+          const r = await api('member_candidates', { query: { cid: S.camp.id, q: t } });
+          if (term() !== t) return;   // they've typed on since
+          candidates = r.users; more = !!r.more; asked = t; renderList();
+        } catch (err) { toast(err.message, true); }
+      };
+      q.addEventListener('input', () => { clearTimeout(timer); renderList(); timer = setTimeout(search, 250); });
       const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
@@ -6043,9 +6050,8 @@
         el('div', { class: 'actions' }, btn('Cancel invitation', async () => {
           try { await post('member_remove', { email: i.email }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'They won\'t join this campaign when they sign in')))));
-      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Everyone who has signed in and been approved by the site admin is listed. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
-        : 'People you play with in your other campaigns are listed by name. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
-      api('member_candidates', { query: { cid: S.camp.id } }).then(r => { candidates = r.users; renderList(); }).catch(err => toast(err.message, true));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Search by name or email for anyone approved on the site. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
+        : 'Search by name for people you play with in your other campaigns. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
     }
     mount(...campaignHeader('members'), card);
   }

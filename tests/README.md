@@ -73,8 +73,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email: an approved account joins at once, any other address is an invitation
   taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; players never
-  receive secret events; a GM picks people they already play with from the approved accounts not yet in
-  the campaign, which only GMs can list.
+  receive secret events; a GM finds people they already play with among the approved accounts not yet in
+  the campaign by searching (two letters or more; a site admin also by email), which only GMs can do; nobody is listed
+  before a search, so no one sees who else uses the site.
 - **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,
   festival days outside them, Shieldmeet every fourth year and Selûne's known
   full moons; Eberron's months all start on Sul, with its twelve moons and
@@ -360,6 +361,12 @@ only works when the config sets `'test_login' => true` and the request comes
 from this machine, and `.htaccess` returns 404 for `tests/` on a real site.
 
 ## Running locally (needs Node 18+, PHP 8 with pdo_mysql, and MySQL or MariaDB)
+
+On Ubuntu 24.04 as root (a Claude Code cloud container, say), `tools/test-all.sh` does all of this: it installs
+MySQL 8.0, PHP's extensions, the Node packages and the browsers if they're missing (`tools/test-setup.sh`), then runs
+everything CI runs. Arguments go to `npx playwright test`, e.g. `tools/test-all.sh --project=firefox`.
+
+By hand, anywhere:
 
 ```sh
 cd tests

@@ -2242,7 +2242,9 @@ section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px
 @media (max-width: 560px) { .jump-links { display: none; } }   /* a phone: the page is one column to scroll anyway */
 
 /* ✓ Saved, Saving…, Not saved or Offline, at the end of the campaign bar */
-.save-state { font-size: .82rem; color: var(--ok); white-space: nowrap; margin-left: auto; }
+/* Room for its longest word even while empty, so "Saving…" appearing never wraps the bar onto another line and moves the
+   page under a finger mid-tap (a phone's notes box saves as it loses focus to the ⇥ button). */
+.save-state { font-size: .82rem; color: var(--ok); white-space: nowrap; margin-left: auto; min-width: 5.5em; text-align: right; }
 .save-state.busy { color: var(--dim); }
 .save-state.bad { color: var(--bad); font-weight: 600; }
 .nowbar .save-state + .now-passbtn { margin-left: 0; }
