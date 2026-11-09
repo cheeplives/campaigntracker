@@ -99,13 +99,25 @@
      {
       "key": "unit_morale",
       "label": "Unit Morale",
-      "type": "number",
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ],
       "play": true
      },
      {
       "key": "coolness",
       "label": "Coolness Under Fire",
-      "type": "number"
+      "type": "choice",
+      "options": [
+       "A (D12)",
+       "B (D10)",
+       "C (D8)",
+       "D (D6)"
+      ]
      }
     ]
    },
