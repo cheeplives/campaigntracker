@@ -2160,21 +2160,32 @@ button.daybox-toggle { font: 700 1.45rem var(--disp); text-transform: none; lett
   padding: 10px 10px 10px 16px; border-radius: 8px; background: var(--text); color: var(--bg); box-shadow: 0 8px 28px rgb(0 0 0 / .25);
   transform: translateX(-50%) translateY(140px); transition: transform .2s; overflow: hidden; }
 #undo-toast.show { transform: translateX(-50%) translateY(0); }
+#undo-toast:not(.show) { visibility: hidden; transition: transform .2s, visibility 0s .2s; }   /* and out of the Tab order */
 #undo-toast > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#undo-toast .undo-btn { flex: none; background: none; border: 0; color: color-mix(in srgb, var(--accent) 55%, var(--bg)); font-weight: 700; padding: 8px 10px; min-height: 40px; }
+/* Undo is in the bar's own text colour, bold and underlined, so it reads in every theme, light or dark */
+#undo-toast .undo-btn { flex: none; background: none; border: 0; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;
+  padding: 8px 12px; min-height: 44px; min-width: 44px; }
+#undo-toast .undo-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 #undo-toast .undo-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: color-mix(in srgb, var(--accent) 55%, var(--bg));
   transform-origin: left; }
 #undo-toast.show .undo-bar { animation: undo-run 8s linear forwards; }
 @keyframes undo-run { to { transform: scaleX(0); } }
 body:has(.tv-bar) #undo-toast { bottom: 92px; }   /* above At the Table's floating bar */
+/* a toast that comes while Undo is offered sits above it, not on top of it */
+body:has(#undo-toast.show) #toast { bottom: var(--undo-clear, 84px); }
 @media (prefers-reduced-motion: reduce) { #undo-toast { transition: none; } #undo-toast.show .undo-bar { animation: none; } }
 
 /* A touch screen (an iPad first): small buttons are at least 44px tall, so a finger finds them. The Legend's rows are
  * full-width already and stay as they are, so every tab still fits on an iPad held sideways. */
 @media (pointer: coarse) {
   button.small, .button.small { min-height: 44px; padding-left: 12px; padding-right: 12px; }
-  a.button.small:not([hidden]), label.button.small:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
+  a.button.small:not([hidden]), label.button.small:not([hidden]), summary.button.small { display: inline-flex; align-items: center; justify-content: center; }
+  summary.button.small::-webkit-details-marker { display: none; }
   button.link.small { min-height: 0; }
+  /* Icon-only ✕ controls stay quiet to look at, but get a finger-sized hit area: the ledgers' remove buttons, a
+   * session's ✕ on a shift it takes in, and the Encyclopedia's filter chips */
+  .ledger-row button.link.danger, .gear-row button.link.danger, .sess-extras-list button.link.small {
+    min-width: 44px; min-height: 44px; display: inline-grid; place-items: center; padding: 0; }
 }
 
 /* "On this page" in the campaign bar: plain links on At the Table, a Jump to ▾ menu elsewhere and on a narrow screen */
@@ -2217,9 +2228,14 @@ section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px
 .fchip b { font-weight: 600; }
 button.fchip-x { border: 0; background: color-mix(in srgb, var(--accent) 22%, var(--panel)); border-radius: 50%; width: 22px; height: 22px; padding: 0;
   font-size: .72rem; line-height: 1; display: inline-grid; place-items: center; }
-@media (pointer: coarse) { button.fchip-x { width: 32px; height: 32px; } }
+button.fchip-x { position: relative; }
+@media (pointer: coarse) {
+  button.fchip-x { width: 32px; height: 32px; }
+  button.fchip-x::after { content: ''; position: absolute; inset: -6px; }   /* a 44px hit area, the chip stays slim */
+}
 
 /* Pinned and Recent at the top of the Legend (each campaign turns them on in Settings) */
+.legend-quick-wrap { display: contents; }
 .legend-quick-h, .legend-quick { display: none; }
 @media (min-width: 561px) {
   main > nav.tabs .legend-quick-h { display: block; padding: 8px 14px 2px; font: 700 .72rem var(--disp); text-transform: uppercase; letter-spacing: .12em; color: var(--label); }
@@ -2241,6 +2257,9 @@ button.fchip-x { border: 0; background: color-mix(in srgb, var(--accent) 22%, va
 .peek-name { display: block; font: 650 1.12rem var(--body); color: var(--text); margin-bottom: 4px; }
 .peek-text { margin: 10px 0; }
 .peek-acts { gap: 6px; flex-wrap: wrap; }
+.peek-note { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+.peek-note textarea { width: 100%; }
+.peek:has(.peek-note) .peek-note-btn { display: none; }
 a.enc-link[aria-expanded="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 3px; }
 
 /* Ctrl K: the jump box */

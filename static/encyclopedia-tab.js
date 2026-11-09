@@ -250,6 +250,13 @@
       // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.
       const st = vs().enc || (vs().enc = { q: '', tagsOff: new Set(), relsOff: new Set(), catsOff: new Set(), folded: new Set() });
       if (st.near && !entries.some(e => e.id === st.near)) st.near = null;
+      // ?cat=<key> (the trail's Category step) shows that Category alone; the address then drops it, so Back is the list
+      const qcat = new URLSearchParams(location.hash.split('?')[1] || '').get('cat');
+      if (qcat !== null && !sel) {
+        st.catsOff.clear();
+        for (const k of [...ENC_CATEGORIES.map(c => c[0]), '']) if (k !== qcat) st.catsOff.add(k);
+        try { history.replaceState(history.state, '', `#/c/${S.camp.id}/encyclopedia`); } catch { /* fine */ }
+      }
       const current = sel === 'new' ? { tags: [] } : entries.find(e => e.id === Number(sel)) || null;
       const href = id => `#/c/${S.camp.id}/encyclopedia${id ? `/${id}` : ''}`;
 
@@ -305,7 +312,7 @@
         btn(l, () => { st.kind = k; draw(); }, (st.kind || 'all') === k ? 'small on' : 'small', t)));
       const filters = el('div', { class: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
       // The filters in force, one chip each, with ✕ to drop it: so a short list says why it is short
-      const chips = el('div', { class: 'fchips', 'aria-label': 'Filters in force' });
+      const chips = el('div', { class: 'fchips', role: 'group', 'aria-label': 'Filters in force' });
       const chipX = (fn, what) => { const b = btn('✕', fn, 'fchip-x', what); b.setAttribute('aria-label', what); return b; };
       const chipFor = (label, off, list) => {
         if (!off.size) return null;
@@ -461,7 +468,7 @@
       const ch = S.encChars?.[e.id] || null;
       const sheetHref = ch ? `#/c/${S.camp.id}/characters/${ch.id}` : null;
       return clean([
-        trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1]] : null, [e.name]),
+        trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1], `#/c/${S.camp.id}/encyclopedia?cat=${encodeURIComponent(e.category)}`] : null, [e.name]),
         el('div', { class: 'row spread' },
           el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.is_secret ? secretTag() : null, e.name),
           el('div', { class: 'row' },
