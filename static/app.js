@@ -986,7 +986,7 @@
     const { campaigns } = await api('campaigns');
     S.camp = null;
     const draw = () => mount(el('div', { class: 'card' },
-      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary')),
+      el('div', { class: 'row spread' }, el('h1', {}, 'Your campaigns'), btn('+ New campaign', () => (location.hash = '#/new'), 'primary new-btn')),
       campaigns.length ? el('ul', { class: 'camplist' }, byStarThenName(campaigns).map(c =>
         el('li', { class: 'camp-row' + (starredIds().has(Number(c.id)) ? ' starred' : '') },
           starButton(c, draw),
@@ -1947,7 +1947,7 @@
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
       folded: table,
-      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'small', 'Log something that happened (or will happen) on this day') : null,
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'new-btn', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
@@ -1955,7 +1955,7 @@
     const remBox = dayBox(key('reminders'), 'Reminders', {
       folded: table,
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
-      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'new-btn', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
@@ -3281,9 +3281,12 @@
     allDay.addEventListener('change', syncAllDay); syncAllDay();
     const tags = tagPicker(e.tags || []);
     const pinIt = !e.id && opt.pinAt && isGM() ? el('input', { type: 'checkbox', name: 'pin_it' }) : null;
+    // added from the Events tab rather than from a day, it asks which day it starts on (today to begin with)
+    const dayPick = opt.pickDay ? datePicker(start) : null;
     const f = el('form', { class: 'event editing' },
       el('div', { class: 'grid2' },
         field('Title', el('input', { name: 'title', value: e.title || '', required: true, maxlength: 200 })),
+        dayPick ? field('Starts on', dayPick, null, 'The day the event happens, or its first day if it lasts longer') : null,
         field('All day', allDay, null, `For things that fill the whole day. Untick to pick the ${word()}s it starts and ends in`),
         startField, endField,
         field('Lasts (days)', el('input', { type: 'number', name: 'lasts', min: 1, value: lasts }), null, 'More than 1 shows the event on every day it covers, like a siege or a voyage'),
@@ -3298,8 +3301,9 @@
       const timed = !allDay.checked;
       if (timed && n === 1 && Number(shiftEnd.value) < Number(shiftStart.value)) { toast(`${Word()} End is before ${Word()} Start`, true); return; }
       const picked = tags.get();
+      const from = dayPick ? dayPick.getAbs() : start;
       try {
-        const saved = await post('event_save', { id: e.id, abs_day: start, end_day: n > 1 ? start + n - 1 : null,
+        const saved = await post('event_save', { id: e.id, abs_day: from, end_day: n > 1 ? from + n - 1 : null,
           shift: timed ? shiftStart.value : null, shift_end: timed ? shiftEnd.value : null,
           title: v.title, body: v.body, is_secret: v.is_secret, tags: picked }, S.camp.id);
         if (pinIt?.checked) {
@@ -3370,7 +3374,7 @@
         && (!st.tags.size || (e.tags || []).some(t => st.tags.has(t.name.toLowerCase())))
         && words.every(w => hay.get(e).includes(w)));
       count.textContent = shown.length === events.length ? `${events.length} event${events.length === 1 ? '' : 's'}` : `${shown.length} of ${events.length} events`;
-      const none = el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one from any day on the Calendar.');
+      const none = el('p', { class: 'muted' }, events.length ? 'No events match. Clear the search or the tags to see more.' : 'No events yet. Add one here, or from any day on the Calendar.');
       timeline.node.hidden = !asTimeline || !shown.length;
       order.hidden = asTimeline;
       if (asTimeline) {
@@ -3401,8 +3405,16 @@
       asTl.classList.toggle('on', on); asTl.setAttribute('aria-pressed', String(on));
       draw();
     };
+    // + New event, as on a day: the form opens above the list, asking for the day too
+    const adder = el('div', {});
+    const add = isGM() || settings().players_can_add_events ? btn('+ New event', () => {
+      adder.replaceChildren(eventForm(d0, {}, { pickDay: true }));
+      adder.querySelector('input')?.focus();
+    }, 'primary new-btn', 'Log something that happened, or will happen, on any day') : null;
     mount(...campaignHeader('events'), el('div', { class: 'card' },
-      el('div', { class: 'row evhead' }, eventsSubtabs('events'), el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl)),
+      el('div', { class: 'row evhead' }, eventsSubtabs('events'),
+        el('div', { class: 'row evhead-actions' }, el('span', { class: 'seg', role: 'group', 'aria-label': 'Show events as' }, asList, asTl), add)),
+      adder,
       el('div', { class: 'row evfilters' }, search, when, order),
       used.length ? el('div', { class: 'field' }, el('span', { class: 'lbl' }, 'Tags', tip('Pick one or more tags to see only the events that carry any of them')), tagRow) : null,
       count, list, timeline.node));
@@ -3467,7 +3479,7 @@
     state.addEventListener('change', () => { st.state = state.value; draw(); });
     who?.addEventListener('change', () => { st.who = who.value; draw(); });
     order.addEventListener('change', () => { st.order = order.value; draw(); });
-    const add = btn('+ New reminder', () => { adder.replaceChildren(reminderForm(d0)); adder.querySelector('input')?.focus(); }, 'primary small',
+    const add = btn('+ New reminder', () => { adder.replaceChildren(reminderForm(d0)); adder.querySelector('input')?.focus(); }, 'primary new-btn',
       `Have something pop up when the campaign reaches a ${word()}: set it on any day`);
     mount(...campaignHeader('events'), el('div', { class: 'card' },
       el('div', { class: 'row evhead' }, eventsSubtabs('reminders'), add),
@@ -4584,7 +4596,7 @@
     else reader.append(...tomeView(current));
     mount(...campaignHeader('library'), listPage({ cls: 'lib-page', title: 'Library', picked: !!(current || sel),
       tipText: 'The campaign\'s books, journals and notes. Everyone in the campaign, GM or player, can add a tome and change any of them',
-      add: el('a', { class: 'button primary small', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
+      add: el('a', { class: 'button primary new-btn', href: href('new'), 'data-tip': 'Add a book, a journal or a note' }, '+ New tome'),
       hide: { key: 'chronicle:libhide' },
       wide: { key: 'chronicle:libwide', tips: ['Widen the list to see more of the Library at once, and narrow the tome', 'Give the tome its room back and narrow the list'] },
       top: [search, el('div', { class: 'enc-filters' }, kindRow)], list, reader }));
@@ -5033,7 +5045,7 @@
   function viewRegions() {
     const cur = settings().current_region;
     const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Regions'),
-      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary small', 'Add a place with its own climate, light source and terrain') : null),
+      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary new-btn', 'Add a place with its own climate, light source and terrain') : null),
       S.regions.map(r => el('div', { class: 'listrow' },
         el('div', {}, el('strong', {}, r.name), r.id === Number(cur) ? el('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
           el('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? el('div', { class: 'small pre' }, r.description) : null),
@@ -5271,7 +5283,7 @@
   }
   function viewHolidays() {
     const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Holidays & recurring days'),
-      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary small', 'Add a festival, feast day or any other recurring date') : null),
+      isGM() ? btn('+ New holiday', () => list.after(holidayForm()), 'primary new-btn', 'Add a festival, feast day or any other recurring date') : null),
       S.holidays.length ? S.holidays.map(x => el('div', { class: 'listrow' },
         el('div', {}, holidayChip(x), x.is_secret ? secretTag() : null,
           el('div', { class: 'small muted' }, describeRule(x.rule)), x.description ? el('div', { class: 'small pre' }, x.description) : null),
@@ -5412,7 +5424,7 @@
     const { downtimes } = await api('downtimes', { query: { cid: S.camp.id } });
     const head = el('div', { class: 'card' }, el('div', { class: 'row spread' },
       el('h2', {}, 'Downtime', tip('Rests and stretches of downtime, one card each. Making one writes Long Rest, Short Rest or Downtime into the activity of the shifts it covers, and can move the clock to its end. Pick what the party does on each card and who does it.')),
-      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary small', 'Start a long rest, a short rest or some days of downtime') : null),
+      isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary new-btn', 'Start a long rest, a short rest or some days of downtime') : null),
       downtimes.length ? null : el('p', { class: 'muted' }, isGM() ? 'No rests or downtime yet. Press New downtime to add one.' : 'No rests or downtime yet.'));
     mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(downtimeCard)));
   }
@@ -5631,7 +5643,7 @@
     const right = el('div', { class: 'holdings-col' },
       el('div', { class: 'card' }, el('div', { class: 'row spread' },
         el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. The GM and every player can add and change them.')),
-        btn('+ New holding', () => holdingDialog(), 'primary small', 'Add a vehicle, animal, building, asset or a type of your own')),
+        btn('+ New holding', () => holdingDialog(), 'primary new-btn', 'Add a vehicle, animal, building, asset or a type of your own')),
         holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
       holdings.map(holdingCard));
     mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear)), right));

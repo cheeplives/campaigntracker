@@ -576,6 +576,7 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 mark { background: color-mix(in srgb, var(--accent) 32%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 .evhead { justify-content: space-between; margin-top: 0; align-items: flex-end; }
 .evhead h2 { margin: 0; }
+.evhead-actions { margin-top: 0; }
 /* The Events tab's Events / Reminders halves, styled like the Settings tabs */
 .subtabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto; border-bottom: 1px solid var(--line); }
 .subtabs a { padding: 6px 14px; margin-bottom: -1px; border-bottom: 3px solid transparent; color: var(--dim); text-decoration: none;
@@ -1081,6 +1082,10 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-page > .gen-head, .gen-page > .gen-town { grid-column: 1 / -1; }
 .gen-head .row { margin-top: 0; }
 .gen-head .field { margin: 0; }
+/* Genre sits beside its label, level with the title and the 🔒, so the header stays one line tall */
+.gen-head-tools { flex-wrap: nowrap; }
+.gen-genre { display: inline-flex; align-items: center; gap: 8px; }
+.gen-head-tools .lock-toggle { align-self: center; }
 .gen-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; border-top: 6px solid var(--accent); }
 .gen-card > h2 { margin: 0; }
 .gen-controls { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: flex-end; }
@@ -1877,6 +1882,8 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 .clock-head { margin-bottom: 10px; }
 .clock-filters { gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .clock-filters .tagpick { margin: 0; }
+.clock-top { margin-bottom: 14px; }
+.clock-top .clock-filters { margin-bottom: 0; }
 button.tagopt.clock-tag-gm { --tag: var(--clock-gm); } button.tagopt.clock-tag-player { --tag: var(--clock-player); }
 .clock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; align-items: start; }
 .clock-card { display: flex; gap: 14px; align-items: flex-start; border-left: 4px solid var(--clock-gm); }
@@ -2187,6 +2194,10 @@ h2, h3, h4 { text-transform: none; letter-spacing: .01em; }
 :root[data-scheme="console"] .tabs a { font-family: var(--mono); }
 button.primary, .button.primary { font: 650 .95rem var(--body); text-transform: none; letter-spacing: 0; }
 button.small.primary, .button.small.primary { font-size: .85rem; }
+/* Every + New button (New map, New character, New clock, New event...) is the same button wherever it is: one font, size
+ * and height, filled on a page's header and outlined inside a box At the Table. Page headers put it at the right of the title. */
+button.new-btn, .button.new-btn { font: 650 .875rem/1.25 var(--body); text-transform: none; letter-spacing: 0; padding: 6px 14px; min-height: 32px;
+  white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 button.daybox-toggle { font: 700 1.45rem var(--disp); text-transform: none; letter-spacing: .01em; }
 
 /* rows that go at once on a delete, while its Undo waits */

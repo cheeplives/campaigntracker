@@ -25,7 +25,7 @@
       const add = isGM() ? btn('+ New session', async () => {
         const made = await newSessionDialog();
         if (made) location.hash = href(made.id);
-      }, 'primary small', 'Start a session at the campaign\'s clock or another shift, or write one up afterwards, then take your notes in it') : null;
+      }, 'primary new-btn', 'Start a session at the campaign\'s clock or another shift, or write one up afterwards, then take your notes in it') : null;
       // the list, and a search over the sessions' names and dates once there are a few
       const list = el('div', { class: 'lib-list' });
       const search = sessions.length > 4 ? el('input', { type: 'search', value: sessQuery, placeholder: 'Search names and dates', 'aria-label': 'Search the sessions' }) : null;

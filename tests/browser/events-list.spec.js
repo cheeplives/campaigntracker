@@ -109,3 +109,39 @@ test("going Back while a day is still loading leaves the Events tab drawn", asyn
   await page.waitForTimeout(2000);
   await expect(titles).toHaveText(["Ambush on the road"]);
 });
+
+test("+ New event on the Events tab adds an event on any day; a player who may not add events doesn't get it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Wren"), player = person("Ash");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `New event ${gm.id}`); // today is day 2
+  await page.goto(`index.html#/c/${cid}/events`);
+  await expect(page.getByText("No events yet. Add one here, or from any day on the Calendar.")).toBeVisible();
+
+  await page.getByRole("button", { name: "+ New event" }).click();
+  const form = page.locator("form.event.editing");
+  const day = form.getByLabel("Day", { exact: true });
+  const today = Number(await day.inputValue());
+  await form.getByLabel("Title").fill("Caravan reaches the pass");
+  await day.fill(String(today + 3));               // three days on from today
+  await form.getByRole("button", { name: "Add event" }).click();
+  await expect(page.locator(".evrow h4")).toHaveText(["Caravan reaches the pass"]);
+  const { json } = await api(page, "events", undefined, cid);
+  expect(json.events.map(e => [e.title, Number(e.abs_day)])).toEqual([["Caravan reaches the pass", 5]]);
+
+  // Cancel closes the form again
+  await page.getByRole("button", { name: "+ New event" }).click();
+  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(form).toHaveCount(0);
+
+  const pctx = await newContext(browser);
+  const pp = await pctx.newPage();
+  await signIn(pp, player);
+  await approve(browser, player.email);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  await pp.goto(`index.html#/c/${cid}/events`);
+  await expect(pp.locator(".evrow h4")).toHaveText(["Caravan reaches the pass"]);
+  await expect(pp.getByRole("button", { name: "+ New event" })).toHaveCount(0);
+  expectNoErrors(errors);
+});

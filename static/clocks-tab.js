@@ -194,11 +194,14 @@
       };
       draw();
       const add = btn('+ New clock', async () => { const c = await clockDialog(); if (c) { clocks.unshift(c); st.show = full(c) ? 'full' : 'running'; draw(); } },
-        'primary', 'Make a clock. GMs and players can both make them');
+        'primary new-btn', 'Make a clock. GMs and players can both make them');
       if (S.viewAs) add.disabled = true;
+      // the title, + New clock and the filters in a card along the top, as on Characters, Maps and the other tabs
       mount(...campaignHeader('clocks'), el('section', { class: 'clock-page' },
-        el('div', { class: 'row spread clock-head' }, el('h2', {}, 'Clocks', tip('Circles of segments that fill as something comes closer. Anyone can make one; a player\'s is drawn in its own colour with a dashed rim. Its maker and GMs fill it by pressing a segment, or − and +. Running ones show on At the Table.')), add),
-        filters, grid));
+        el('div', { class: 'card clock-top' },
+          el('div', { class: 'row spread clock-head' }, el('h2', {}, 'Clocks', tip('Circles of segments that fill as something comes closer. Anyone can make one; a player\'s is drawn in its own colour with a dashed rim. Its maker and GMs fill it by pressing a segment, or − and +. Running ones show on At the Table.')), add),
+          filters),
+        grid));
     }
 
     // ------------------------------------------------------------ At the Table
@@ -218,7 +221,7 @@
       const summary = () => (clocks.length ? `${clocks.length} running${clocks.some(full) ? `, ${clocks.filter(full).length} full` : ''}` : 'None running');
       list.append(...(clocks.length ? clocks.map(row) : [el('p', { class: 'muted small' }, 'No clocks running.')]));
       const add = S.viewAs ? null : btn('+ New clock', async () => { const c = await clockDialog(); if (c) { clocks.unshift(c); list.querySelector('p.muted')?.remove(); list.prepend(row(c)); sum.textContent = summary(); } },
-        'small', 'Make a clock. GMs and players can both make them');
+        'new-btn', 'Make a clock. GMs and players can both make them');
       const box = dayBox('clocks', 'Clocks', { folded: true, tip: 'Clocks that are running: press a segment, or − and +, to fill one you made (a GM fills any). All of them are on the Clocks tab', summary: summary(),
         actions: [add, el('a', { class: 'button small', href: href() }, 'All clocks')] }, list);
       const sum = box.querySelector('.daybox-sum');
