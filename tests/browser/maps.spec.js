@@ -1120,7 +1120,8 @@ test("Map page: the map stage fills the window to its bottom edge and never shri
   await expect(page.locator(".map-view.card")).toHaveCount(0);
   await expect(page.locator(".map-view .map-meta")).toHaveText("0 locations · 0 routes");
   await page.setViewportSize({ width: 1280, height: 420 });
-  await expect.poll(async () => (await stage.boundingBox()).height).toBeGreaterThanOrEqual(320);
+  // rounded: at a fractional offset Firefox reports a 320px box as 319.99998
+  await expect.poll(async () => Math.round((await stage.boundingBox()).height * 100) / 100).toBeGreaterThanOrEqual(320);
 });
 
 test("Map page: the toolbar floats on the map in two groups and keeps every control's name", async ({ page, browser }) => {
