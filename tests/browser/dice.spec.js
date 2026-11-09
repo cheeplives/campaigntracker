@@ -642,6 +642,12 @@ test("a saved roll rolls again and again from its 🎲 Roll, and each device set
   await page.getByRole("button", { name: /your dice/i }).click();
   const stay = page.getByRole("combobox", { name: "How long thrown dice stay on screen" });
   await expect(stay).toHaveValue("3");
+  // a browser that can't draw 3D (Firefox in CI has no WebGL2) throws no dice, so there's nothing to keep up: it says so
+  if (await stay.isDisabled()) {
+    await expect(page.locator(".dice-look-row", { hasText: "Throw 3D dice" })).toContainText("can't draw 3D");
+    expectNoErrors(errors);
+    return;
+  }
   await stay.selectOption("0");
   expect(await page.evaluate(() => localStorage.getItem("chronicle-dice-stay"))).toBe("0");
   await page.reload();                                          // the panel opens again as it was left
