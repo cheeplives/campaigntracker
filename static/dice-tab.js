@@ -392,7 +392,7 @@
       err.textContent = '';
       input.classList.remove('bad');
       busy = true;
-      rollBtn.disabled = sysRollBtn.disabled = true;
+      rollBtn.disabled = sysRollBtn.disabled = rollSavedBtn.disabled = true;   // a click while one is rolling would be dropped
       quick.querySelectorAll('button').forEach(b => { b.disabled = true; });
       try {
         const r = await post('dice_roll', { expr, engine: Dice.VERSION, visibility: visSel.value }, cid);
@@ -402,7 +402,7 @@
         take([r.roll], true);
       } catch (e) { toast(e.message, true); } finally {
         busy = false;
-        rollBtn.disabled = sysRollBtn.disabled = false;
+        rollBtn.disabled = sysRollBtn.disabled = rollSavedBtn.disabled = false;
         quick.querySelectorAll('button').forEach(b => { b.disabled = false; });
       }
     }

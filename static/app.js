@@ -5713,7 +5713,7 @@
         return { name: n, members: who.filter(p => p[0] === 'u').map(p => Number(p.slice(1))), characters: who.filter(p => p[0] === 'c').map(p => Number(p.slice(1))) };
       });
       await post('downtime_save', { id: x.id, group_id: gid, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
-      toast(`${k.label} saved`); route();
+      await route(); toast(`${k.label} saved`);   // after the redraw, so the card you see next is the saved one
       offerNouns([{ text: `${title.value}\n${custom.filter(n => picked.has(n)).join('\n')}`, title: true, label: `${k.label} title and activities` },
         { text: notes.value, label: `${k.label} notes` }, { text: gmn.value, secret: true, label: `${k.label} GM notes` }]);
     }));
