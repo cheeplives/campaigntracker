@@ -315,7 +315,17 @@
       const kindSeg = hasChars ? el('div', { class: 'seg enc-kinds', role: 'group', 'aria-label': 'Characters' }) : null;
       const drawKinds = () => kindSeg?.replaceChildren(...[['all', 'All', 'Every entry'], ['pc', 'PCs', 'Only entries with a PC\'s sheet'], ['npc', 'NPCs', 'Only entries with an NPC\'s sheet']].map(([k, l, t]) =>
         btn(l, () => { st.kind = k; draw(); }, (st.kind || 'all') === k ? 'small on' : 'small', t)));
-      const filters = el('div', { class: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+      const filters = el('div', { class: 'enc-filters', id: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
+      // The filters wait behind one Filters button beside the search, so the list starts near the top of the column; the
+      // button carries a count of the filters in force, and the chips under it say what they are. Open stays open while
+      // you move between entries (st), and closes again on a new visit.
+      const fcount = el('span', { class: 'count-badge enc-fcount', hidden: true });
+      const filterBtn = el('button', { type: 'button', class: 'button small enc-filterbtn', 'aria-expanded': String(!!st.filtersOpen), 'aria-controls': 'enc-filters',
+        'data-tip': 'Narrow the list: characters, Category, tags and connections',
+        onclick: () => { st.filtersOpen = !st.filtersOpen; filters.hidden = !st.filtersOpen; filterBtn.setAttribute('aria-expanded', String(!!st.filtersOpen)); } },
+        'Filters ', fcount, el('span', { 'aria-hidden': 'true' }, ' ▾'));
+      filters.hidden = !st.filtersOpen;
+      const searchRow = el('div', { class: 'enc-search-row' }, search, filterBtn);
       // The filters in force, one chip each, with ✕ to drop it: so a short list says why it is short
       const chips = el('div', { class: 'fchips', role: 'group', 'aria-label': 'Filters in force' });
       const chipX = (fn, what) => { const b = btn('✕', fn, 'fchip-x', what); b.setAttribute('aria-label', what); return b; };
@@ -363,6 +373,9 @@
           chipFor('Category', st.catsOff, catList), chipFor('Tags', st.tagsOff, tagList), chipFor('Connections', st.relsOff, relList),
           st.kind && st.kind !== 'all' ? el('span', { class: 'fchip' }, el('b', {}, st.kind === 'pc' ? 'PCs only' : 'NPCs only'), chipX(() => { st.kind = 'all'; draw(); }, 'Show every entry')) : null]));
         chips.hidden = !chips.childElementCount;
+        fcount.textContent = String(chips.childElementCount); fcount.hidden = !chips.childElementCount;
+        fcount.setAttribute('aria-label', `${chips.childElementCount} in force`);
+        filterBtn.classList.toggle('filtered', chips.childElementCount > 0);
         drawKinds();
         kindSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on'))));
         const near = st.near && entries.find(e => e.id === st.near);
@@ -401,7 +414,7 @@
         more: [scanBtn, [...conns.values()].some(l => l.length) ? btn('🕸 Campaign web', () => ctx.web({ center: null }), '', 'Draw every connection in the Encyclopedia as a web you can pan, zoom and filter by kind') : null, btn('⬇ Export…', () => exportLore(entries, conns, entries.filter(e => passes(e))), '', 'Download the Encyclopedia for a virtual tabletop or a wiki: Markdown pages with their pictures, or a Foundry VTT journal. It holds only what you can see here')],
         hide: { key: 'chronicle:enchide' },
         wide: { key: 'chronicle:encwide', tips: ['Widen the list to see more of the Encyclopedia at once, and narrow the entry', 'Give the entry its room back and narrow the list'] },
-        top: [search, filters, chips, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
+        top: [searchRow, filters, chips, nearRow], list: el('div', {}, lists, ignored, isGM() ? relationKinds(rel) : null), reader }));
     }
 
     /** The campaign's text that names entry e (encyclopedia_sources with names: only the sources containing one), asked
