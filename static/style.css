@@ -2138,3 +2138,11 @@ section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px
 .save-state.bad { color: var(--bad); font-weight: 600; }
 .nowbar .save-state + .now-passbtn { margin-left: 0; }
 @media (pointer: coarse) { .now-title .view-as, .jump-menu > summary { min-height: 34px; } }
+
+/* the trail above a page's title: Encyclopedia › Person › Renaer */
+.trail { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: .84rem; color: var(--dim); margin: 0 0 4px; }
+.trail a { color: var(--accent); }
+.trail [aria-current] { color: var(--dim); }
+.trail-sep { opacity: .6; }
+.copy-btn { margin-left: 6px; }
+.dice-copy { opacity: .55; } .dice-e:hover .dice-copy, .dice-copy:focus-visible { opacity: 1; }

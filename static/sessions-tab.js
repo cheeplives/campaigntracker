@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, trail, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -71,11 +71,12 @@
       const asText = html => new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent;
       const placesFrom = notesText => sessionPlaces([asText(s.summary), asText(s.rewards), asText(s.loot), notesText || ''].join('\n'))
         .then(n => places.replaceChildren(...(n ? [n] : []))).catch(() => {});
+      const where = trail(['Sessions', `#/c/${S.camp.id}/sessions`], [sessionName(s)]);
       const head = [el('h2', {}, sessionName(s)),
         el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
       if (!gm) {
         placesFrom('');
-        return [head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
+        return [where, head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
           el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
           ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
             el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), places, pictures];
@@ -206,6 +207,7 @@
           Object.assign(s, { title: r.session.title, played_on: r.session.played_on, undated: r.session.undated });
           // the heading, the date line and the session's name in the list, redrawn in place so nothing typed is lost
           head[0].textContent = sessionName(s);
+          where.lastElementChild.textContent = sessionName(s);
           head[1].textContent = [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · ');
           const inList = document.querySelector('.sess-item.on .enc-name');
           if (inList?.firstChild?.nodeType === Node.TEXT_NODE) inList.firstChild.textContent = sessionName(s);
@@ -254,7 +256,7 @@
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
             `Take ${E.fmtShift(cal(), a)} out of this session`), { ariaLabel: `Take ${E.fmtShift(cal(), a)} out` })]), ' ', addShift);
       placesFrom(entry.text());
-      return [head[0], bar, extras, details, cols, places, pictures];
+      return [where, head[0], bar, extras, details, cols, places, pictures];
     }
 
     return { viewSessions };

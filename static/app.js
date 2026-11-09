@@ -164,6 +164,15 @@
     addEventListener('pagehide', () => { flush(); });
     return { start, flush };
   })();
+  /** A small ⧉ Copy button that puts `text` on the clipboard (what it is, for the toast and its tooltip). */
+  const copyButton = (text, what) => btn('⧉ Copy', async () => {
+    try { await navigator.clipboard.writeText(typeof text === 'function' ? text() : text); toast(`${what} copied`); }
+    catch { toast('This browser would not copy it. Select it and press Ctrl+C (⌘C)', true); }
+  }, 'small copy-btn', `Copy the ${what.toLowerCase()}`);
+  /** A one-line trail above a page's title: [label, href] steps, the last one where you are. */
+  const trail = (...steps) => el('nav', { class: 'trail', 'aria-label': 'You are here' }, steps.filter(Boolean).map(([label, href], i, a) => [
+    href && i < a.length - 1 ? el('a', { href }, label) : el('span', { 'aria-current': i === a.length - 1 ? 'page' : null }, label),
+    i < a.length - 1 ? el('span', { class: 'trail-sep', 'aria-hidden': 'true' }, '›') : null]).flat());
   const shortText = (t, n = 40) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t; };
   /** Take `box` off the page and delete it on the server after the Undo has had its time. */
   const undoDelete = (box, label, action, body, done, changed) => Undo.start({
@@ -4288,6 +4297,7 @@
     const canDelete = isGM() || t.created_by === S.user.id;
     const changed = t.editor && (t.editor !== t.author || t.updated_at !== t.created_at);
     return clean([
+      trail(['Library', `#/c/${S.camp.id}/library`], [label], [t.title]),
       el('div', { class: 'row spread' },
         el('h2', {}, t.title),
         el('div', { class: 'row' },
@@ -6332,7 +6342,8 @@
       }, 'small'))) : el('p', { class: 'muted small' }, 'No panel links yet.'));
     box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small'),
       btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
-      el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href), ' under Extensions → Add custom extension.')));
+      el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href),
+        copyButton(new URL('api/index.php?a=owlbear_manifest', panelBase()).href, 'Owlbear Rodeo address'), ' under Extensions → Add custom extension.')));
     return box;
   }
   function newPanelLink(box) {
@@ -6524,7 +6535,7 @@
     leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
-    tagsOf, tip, tipped, toast, today, vs
+    tagsOf, tip, tipped, toast, today, trail, copyButton, vs
   };
   ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
