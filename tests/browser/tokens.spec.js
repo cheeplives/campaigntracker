@@ -66,6 +66,62 @@ test("Tokens: a GM uploads several at once, named after their files", async ({ p
   expectNoErrors(errors);
 });
 
+test("Tokens: game icons, a genre's starter set and a search, each credited to its artist", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Tokens icons");
+  await page.goto(`#/c/${cid}/tokens`);
+  // an empty Tokens tab offers the campaign's genre's set (a campaign without one counts as Sci-Fi)
+  await page.getByRole("button", { name: "Add Sci-Fi starter tokens…" }).click();
+  const dlg = page.locator("dialog.gi-dialog");
+  await expect(dlg.locator(".gi-cell")).toHaveCount(12);
+  await expect(dlg.locator(".gi-cell").first()).toContainText("Party ship");
+  await dlg.getByLabel("Genre").selectOption("fantasy");
+  await expect(dlg.locator(".gi-cell").first()).toContainText("Adventuring party");
+  await dlg.getByRole("button", { name: "Add all 12" }).click();
+  await expect(page.locator(".token-card")).toHaveCount(12, { timeout: 30_000 });
+  await expect(dlg.locator(".gi-cell", { hasText: "✓ Dragon" })).toHaveCount(1);
+  let list = await tokens(page, cid);
+  const count = k => list.filter(t => t.kind === k).length;
+  expect([count("party"), count("character"), count("creature"), count("object")]).toEqual([1, 4, 5, 2]);
+  const dragon = list.find(t => t.name === "Dragon");
+  expect(dragon.credit).toMatchObject({ title: "Dragon head", author: "Lorc", license: "CC BY 3.0", source: "game-icons.net",
+    source_url: "https://game-icons.net/1x1/lorc/dragon-head.html" });
+  expect(dragon.image_url).toBeTruthy();
+  // the picture is a PNG the browser drew
+  const pic = await page.request.get(dragon.image_url);
+  expect(pic.headers()["content-type"]).toContain("image/png");
+
+  // a search: pick one, rename it, make it an object
+  await dlg.getByLabel("Search the game icons").fill("treasure");
+  await expect(dlg.getByRole("button", { name: "Add all 12" })).toBeHidden();
+  await dlg.locator('.gi-cell[data-icon="skoll/open-treasure-chest"]').click();
+  await expect(dlg.getByLabel("Token name")).toHaveValue("Open treasure chest");
+  await dlg.getByLabel("Token name").fill("Hoard");
+  await dlg.getByLabel("Kind").selectOption("object");
+  await dlg.getByRole("button", { name: "Add token" }).click();
+  await expect(page.locator(".token-card")).toHaveCount(13);
+  await dlg.getByRole("button", { name: "Close" }).click();
+  list = await tokens(page, cid);
+  const hoard = list.find(t => t.name === "Hoard");
+  expect(hoard.kind).toBe("object");
+  expect(hoard.credit.author).toBe("Skoll");
+
+  // the credit shows when the token is edited
+  await page.locator(".token-card").filter({ hasText: "Hoard" }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.locator("dialog.kit-dialog .file-credit")).toContainText("Open treasure chest by Skoll, CC BY 3.0, via game-icons.net");
+  await page.locator("dialog.kit-dialog").getByRole("button", { name: "Cancel" }).click();
+
+  // the server credits only icons that are in the set, and only the four kinds
+  const me = await (await page.request.get("api/auth/me.php")).json();
+  const send = extra => page.request.post(`api/index.php?${new URLSearchParams({ a: "token_upload", cid })}`, {
+    headers: { "X-CSRF-Token": me.csrf }, multipart: { ...extra, file: { name: "x.png", mimeType: "image/png", buffer: PNG } } });
+  expect((await send({ icon: "lorc/no-such-icon" })).status()).toBe(400);
+  expect((await send({ icon: "../../api/config" })).status()).toBe(400);
+  expect((await send({ kind: "dragon" })).status()).toBe(400);
+  expect((await tokens(page, cid)).length).toBe(13);
+  expectNoErrors(errors);
+});
+
 test("Tokens: assigning one to a character, an entry and the party", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pipId } = await setup(page, browser, "Tokens assign");

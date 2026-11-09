@@ -682,8 +682,9 @@ const TOKEN_KINDS = ['party', 'character', 'creature', 'object'];
 function token_hidden(array $t): bool {
     return (bool)(int)$t['is_secret'] || (bool)(int)($t['entry_secret'] ?? 0);
 }
-const TOKEN_SELECT = 'SELECT t.*, e.is_secret AS entry_secret, (SELECT GROUP_CONCAT(g.id ORDER BY g.id) FROM party_groups g WHERE g.token_id=t.id) AS group_ids
-    FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id WHERE t.campaign_id=?';
+const TOKEN_SELECT = 'SELECT t.*, e.is_secret AS entry_secret, (SELECT GROUP_CONCAT(g.id ORDER BY g.id) FROM party_groups g WHERE g.token_id=t.id) AS group_ids,
+    a.credit_title, a.credit_author, a.credit_author_url, a.credit_license, a.credit_license_url, a.credit_source, a.credit_source_url
+    FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id LEFT JOIN attachments a ON a.id=t.image_id WHERE t.campaign_id=?';
 /** A token of campaign $cid, or fail as not found. */
 function token_row(int $cid, int $id): array {
     $st = db()->prepare(TOKEN_SELECT . ' AND t.id=?');
@@ -692,14 +693,15 @@ function token_row(int $cid, int $id): array {
     if (!$t) fail('Token not found', 404);
     return $t;
 }
-/** A token as the browser gets it; image_url is the picture's address, null until it has one (or when a player may not see it). */
+/** A token as the browser gets it; image_url is the picture's address, null until it has one (or when a player may not see it),
+ * and credit where the picture came from (Find Image, a game icon), null for one uploaded by hand. */
 function token_out(array $t, bool $isGm): array {
     $url = null;
     if ($t['image_id'] !== null && ($isGm || !token_hidden($t)))
         $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$t['campaign_id'], 'id' => (int)$t['image_id']]);
     return ['id' => (int)$t['id'], 'name' => $t['name'], 'kind' => $t['kind'], 'size_squares' => (int)$t['size_squares'],
         'member_id' => $t['member_id'] !== null ? (int)$t['member_id'] : null, 'entry_id' => $t['entry_id'] !== null ? (int)$t['entry_id'] : null,
-        'is_secret' => (bool)(int)$t['is_secret'], 'image_url' => $url,
+        'is_secret' => (bool)(int)$t['is_secret'], 'image_url' => $url, 'credit' => $url !== null ? attachment_credit($t) : null,
         'groups' => $t['group_ids'] !== null ? array_map('intval', explode(',', $t['group_ids'])) : []];
 }
 /** Every token of campaign $cid, by name. */
@@ -723,6 +725,19 @@ function token_urls(int $cid, bool $isGm): array {
     return $out;
 }
 /** A token's name from its file's: no extension, _ and - as spaces, a capital first letter ("pip-the-bold.png": "Pip the bold"). */
+/** The credit for a token picture drawn from a game-icons.net icon ("artist/name", from static/vendor/game-icons/index.json):
+ * the icon, its artist and licence, as attachments columns. An icon that isn't in the set is refused. */
+function game_icon_credit(string $icon): array {
+    if (!preg_match('~^([a-z0-9-]{1,40})/([a-z0-9-]{1,80})$~', $icon, $m)) fail('That isn\'t one of the game icons', 400, 'bad_icon');
+    $index = json_decode((string)@file_get_contents(__DIR__ . '/../static/vendor/game-icons/index.json'), true);
+    $artist = $index['artists'][$m[1]] ?? null;
+    if (!$artist || !in_array($icon, $index['icons'] ?? [], true)) fail('That isn\'t one of the game icons', 400, 'bad_icon');
+    $cc0 = $artist['licence'] === 'CC0';
+    return ['credit_title' => ucfirst(str_replace('-', ' ', $m[2])), 'credit_author' => $artist['name'], 'credit_author_url' => $artist['url'],
+        'credit_license' => $cc0 ? 'CC0 1.0' : 'CC BY 3.0',
+        'credit_license_url' => $cc0 ? 'https://creativecommons.org/publicdomain/zero/1.0/' : 'https://creativecommons.org/licenses/by/3.0/',
+        'credit_source' => 'game-icons.net', 'credit_source_url' => "https://game-icons.net/1x1/{$m[1]}/{$m[2]}.html"];
+}
 function token_name_from_file(string $file): string {
     $base = pathinfo($file, PATHINFO_FILENAME);
     $base = trim(preg_replace('/[\s_-]+/u', ' ', $base) ?? '');
@@ -736,13 +751,16 @@ function token_upload(int $cid): array {
     [$mime, $kind, $w, $h] = upload_type($f['tmp_name'], $file);
     if ($kind !== 'image') fail('A token needs a picture: JPEG, PNG, GIF or WebP', 415, 'unsupported_type');
     $name = trim((string)($_POST['name'] ?? '')) !== '' ? trim((string)str_in($_POST['name'], 100)) : token_name_from_file($file);
+    $tkind = (string)($_POST['kind'] ?? '') !== '' ? (string)$_POST['kind'] : 'creature';
+    if (!in_array($tkind, TOKEN_KINDS, true)) fail('Pick party, character, creature or object');
+    $credit = (string)($_POST['icon'] ?? '') !== '' ? game_icon_credit((string)$_POST['icon']) : [];
     attachment_room($cid, 'token', 0, $size);   // the campaign's and the account's room; the token itself starts with no files
     db()->beginTransaction();
     try {
-        db()->prepare('INSERT INTO tokens (campaign_id, name, created_by) VALUES (?,?,?)')->execute([$cid, mb_substr($name, 0, 100), me()['id']]);
+        db()->prepare('INSERT INTO tokens (campaign_id, name, kind, created_by) VALUES (?,?,?,?)')->execute([$cid, mb_substr($name, 0, 100), $tkind, me()['id']]);
         $id = (int)db()->lastInsertId();
         $pic = attachment_store($cid, $f['tmp_name'], ['parent_type' => 'token', 'parent_id' => $id, 'original_name' => $file, 'mime' => $mime,
-            'kind' => 'image', 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'is_secret' => 0], true);
+            'kind' => 'image', 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'is_secret' => 0] + $credit, true);
         db()->prepare('UPDATE tokens SET image_id=? WHERE id=?')->execute([$pic['id'], $id]);
         db()->commit();
     } catch (Throwable $e) {

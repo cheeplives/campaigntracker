@@ -2013,7 +2013,7 @@ try {
         need_gm($cid);
         out(['tokens' => tokens_list($cid)]);
 
-    case 'token_upload': // GMs, multipart: file, name (default: the file's name). One token and its picture
+    case 'token_upload': // GMs, multipart: file, name (default: the file's name), kind, icon (a game icon's artist/name, credited). One token and its picture
         $cid = cid();
         need_gm($cid);
         if (empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) fail('That file is too big for the server', 413);
