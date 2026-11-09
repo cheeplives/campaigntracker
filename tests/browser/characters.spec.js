@@ -672,3 +672,34 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   await gm.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(gm.locator(".enc-form").getByRole("link", { name: "Open sheet" })).toBeVisible();
 });
+
+test("Characters cards: Play shows on a blank sheet, a GM's Party switch, and every card's buttons on one line", async ({ page, browser }) => {
+  const { cid, p1, tpl } = await party(page, browser);
+  await page.setViewportSize({ width: 1180, height: 900 });
+  // a long game name wraps the line under the name on one card, not the others
+  const long = (await api(page, "template_save", { name: `Long ${cid}`, game: "A Game With A Very Long Name Indeed That Wraps", layout: LAYOUT() })).json.template;
+  const kat = await make(page, cid, { template_id: tpl.id, name: "Katrina", kind: "pc", owner_id: 0, party: false });
+  await make(page, cid, { template_id: long.id, name: "Hodor", kind: "npc", owner_id: 0, party: false });
+  await make(page, cid, { template_id: tpl.id, name: "Wright", kind: "pc", owner_id: 0, party: false });
+  await page.goto(`index.html#/c/${cid}/characters`);
+  const card = n => page.locator(".character-card").filter({ has: page.getByRole("link", { name: n, exact: true }) });
+  // nothing filled in yet, and Play is still there
+  await expect(card("Katrina").getByRole("link", { name: "Play" })).toBeVisible();
+  // the buttons sit at the same height on every card in the row
+  const tops = await page.locator(".character-card").evaluateAll(cs => cs.map(c => Math.round(c.querySelector(".character-card-foot").getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // the GM's Party switch puts it in the party and takes it out again
+  const sw = card("Katrina").getByLabel("Party");
+  await expect(sw).not.toBeChecked();
+  await sw.check();
+  await expect(page.locator("#toast")).toHaveText("Katrina travels with the party");
+  await expect(card("Katrina")).toContainText("In the party");
+  expect(sql(`SELECT party_group_id IS NOT NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
+  await card("Katrina").getByLabel("Party").uncheck();
+  await expect(page.locator("#toast")).toHaveText("Katrina is out of the party");
+  expect(sql(`SELECT party_group_id IS NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
+  // a player has no switch
+  await p1.goto(`index.html#/c/${cid}/characters`);
+  await expect(p1.locator(".character-card").first()).toBeVisible();
+  await expect(p1.locator(".character-party")).toHaveCount(0);
+});

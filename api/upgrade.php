@@ -118,6 +118,8 @@ function upgrade_steps(): array {
             'Entries, tomes, session notes and day notes now keep their earlier versions, for a GM to read, compare and restore.'],
         ['040_site_reports.sql', fn(PDO $p) => !db_has_table($p, 'site_reports'),
             'Added the Report (!) button to the top bar, and a Reports tab on Site Admin to read, resolve, send to GitHub or delete what people report.'],
+        ['041_shift_action_characters.sql', fn(PDO $p) => db_has_table($p, 'shift_actions') && !db_has_column($p, 'shift_actions', 'character_id'),
+            'Characters with no player who travel with the party now get their own action on every shift At the Table.'],
     ];
 }
 

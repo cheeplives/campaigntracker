@@ -694,7 +694,7 @@
         const d = st.dice || {};
         const sysCard = diceSystemCard(d.system);
         const form = el('form', { class: 'card dice-settings' }, el('h2', {}, 'Dice'),
-          el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the 🎲 button at the bottom right of every page. Rolls go in a log the whole table shares.'),
+          el('p', { class: 'muted small' }, 'Anyone in the campaign rolls with the ', Object.assign(root.DiceUI.pileIcon(el, 22), { className: 'dice-pile dice-pile-inline' }), ' button at the bottom right of every page. Rolls go in a log the whole table shares.'),
           sysCard.node,
           el('h3', {}, 'Who sees what'),
           el('div', { class: 'grid2' },

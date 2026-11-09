@@ -386,6 +386,27 @@
           note: p.wild ? `trait ${t}, wild ${w}` : null };
       } },
     // 18
+    { id: 'yzstep', group: 'step', name: 'Attribute die + skill die, count successes', hint: 'd6 to d12, 6+ hits, 10+ twice',
+      params: [
+        sel('attr', 'Attribute die', 8, DIE([6, 8, 10, 12]), { main: true }),
+        sel('skill', 'Skill die', 6, [[0, 'None'], ...DIE([6, 8, 10, 12])], { main: true }),
+        num('ammo', 'Ammo dice (d6)', 0, 0, 30, { main: true, help: 'Extra d6s: each 6 is a success' }),
+        num('t', 'A success on', 6, 2, 12),
+        num('dbl', 'Two successes on (0: never)', 10, 0, 12, { help: '10 for Twilight: 2000' }),
+        num('need', 'Successes needed', 1, 1, 10),
+      ],
+      build: p => `1d${p.attr}${p.skill ? `+1d${p.skill}` : ''}${p.ammo ? `+${p.ammo}d6` : ''}`,
+      read: (r, p) => {
+        const base = [all(r.terms[0])[0], ...(p.skill ? [all(r.terms[1])[0]] : [])];
+        const ammo = p.ammo ? all(r.terms[p.skill ? 2 : 1]) : [];
+        const hits = base.reduce((n, v) => n + (p.dbl && v >= p.dbl ? 2 : v >= p.t ? 1 : 0), 0) + ammo.filter(v => v === 6).length;
+        const ones = base.filter(v => v === 1).length, ammoOnes = ammo.filter(v => v === 1).length;
+        const tier = hits >= p.need ? (hits >= p.need + 2 ? 'crit' : 'good') : hits > 0 ? 'partial' : 'bad';
+        const n1 = k => (k === 1 ? 'a 1' : `${k} 1s`);
+        const notes = [ones ? `${n1(ones)} on the attribute and skill dice` : null, ammoOnes ? `${n1(ammoOnes)} on the ammo dice` : null, p.need > 1 ? `needed ${p.need}` : null].filter(Boolean);
+        return { big: hits, words: hits === 1 ? 'success' : 'successes', tier, note: notes.join(', ') || null };
+      } },
+    // 19
     { id: 'oracle', group: 'gm', name: 'Oracle: ask a yes-or-no question', hint: 'd100 vs a likelihood',
       params: [
         sel('odds', 'Likelihood', 50, [[90, 'Almost certain (90%)'], [75, 'Likely (75%)'], [50, 'Even (50%)'], [25, 'Unlikely (25%)'], [10, 'Small chance (10%)']], { main: true }),
@@ -510,6 +531,7 @@
     { id: 'exalted', name: 'Exalted', system: 'pool', params: { d: 10, t: 7, dbl: 10 } },
     { id: 'sr5', name: 'Shadowrun 5th edition', system: 'pool', params: { d: 6, t: 5, botch: 'glitch' }, labels: { n: 'Dice pool', need: 'Threshold' } },
     { id: 'yze', name: 'Year Zero Engine (Mutant, Alien, Forbidden Lands…)', system: 'pool', params: { d: 6, t: 6 } },
+    { id: 't2k4', name: 'Twilight: 2000 4th edition (Year Zero step dice)', system: 'yzstep', params: { t: 6, dbl: 10 } },
     { id: 'blades', name: 'Blades in the Dark / Forged in the Dark', system: 'highest', params: {} },
     { id: 'sorcerer', name: 'Sorcerer', system: 'rolloff', params: { d: 10 } },
     { id: 'l5r', name: 'Legend of the Five Rings (1st–4th edition)', system: 'keep', params: { d: 10, explode: true, raise: 5 } },
@@ -532,6 +554,7 @@
    * null for a system with none (the oracle). */
   function sheetKey(sys) {
     if (sys.id === 'sum') return 'mod';
+    if (sys.id === 'yzstep') return null;     // its numbers are dice sizes, which a sheet's number doesn't give
     return sys.params.find(d => d.main && d.type === 'num')?.key || null;
   }
 

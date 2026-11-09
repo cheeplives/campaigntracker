@@ -210,7 +210,7 @@ test("Map pins: the badge follows the campaign's genre, and the pin card is slim
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(page.locator(".map-stage")).toHaveClass(/map-genre-(fantasy|modern|scifi)/);
   const pin = page.locator(".map-pin", { hasText: "Ford" });
-  const badge = async () => pin.evaluate(el => getComputedStyle(el, "::before").backgroundColor);
+  const badge = async () => pin.evaluate(el => getComputedStyle(el.querySelector(".map-marker-icon")).filter);
   const before = await badge();
   await page.locator(".map-stage").evaluate(el => { el.className = "map-stage map-genre-fantasy"; });
   const fantasy = await badge();
@@ -222,5 +222,33 @@ test("Map pins: the badge follows the campaign's genre, and the pin card is slim
   await expect(card).toContainText("Ford");
   await expect(card.locator(".mpc-sub")).toContainText("Note");
   expect((await page.locator(".leaflet-popup-content-wrapper").boundingBox()).width).toBeLessThan(330);
+  expectNoErrors(errors);
+});
+
+test("Map settings: the GM can delete all of a map's pins, or all of its routes, and a player can't", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Map clear");
+  const mapId = await mapWithPicture(page, cid);
+  const other = await mapWithPicture(page, cid);
+  for (const [x, y, label] of [[50, 50, "Ford"], [90, 60, "Keep"]]) await api(page, "pin_save", { map_id: mapId, x, y, kind: "note", label }, cid);
+  await api(page, "pin_save", { map_id: other, x: 50, y: 50, kind: "note", label: "Elsewhere" }, cid);
+  await api(page, "route_save", { map_id: mapId, name: "Road", points: [[10, 10], [80, 80]] }, cid);
+  const state = async id => (await (await page.request.get(`api/index.php?a=map&cid=${cid}&id=${id}`)).json());
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-pin")).toHaveCount(2);
+
+  await gearAction(page, "Delete all pins…");
+  await page.getByRole("button", { name: "Delete 2 pins" }).click();
+  await expect(page.locator(".map-pin")).toHaveCount(0);
+  expect((await state(mapId)).pins).toHaveLength(0);
+  expect((await state(mapId)).routes).toHaveLength(1);   // routes untouched
+  expect((await state(other)).pins).toHaveLength(1);     // and so are other maps
+
+  await gearAction(page, "Delete all routes…");
+  await page.getByRole("button", { name: "Delete 1 route" }).click();
+  await expect.poll(async () => (await state(mapId)).routes.length).toBe(0);
+
+  expect((await api(pp, "map_clear", { map_id: other, pins: true, routes: true }, cid)).status).toBe(403);
+  expect((await state(other)).pins).toHaveLength(1);
   expectNoErrors(errors);
 });
