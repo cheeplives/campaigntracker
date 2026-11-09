@@ -78,7 +78,9 @@ test("rerolls: r keeps rerolling, ro rerolls once", () => {
   many("10d6r1", 200, r => { for (const v of vals(r)) expect(v).not.toBe(1); });
   many("10d6r<3", 200, r => { for (const v of vals(r)) expect(v).toBeGreaterThanOrEqual(3); });
   let kept1 = false;
-  many("d20ro1", 2000, r => { const d = r.terms[0].dice[0]; if (d.rerolled.length) expect(d.rerolled).toEqual([1]); if (d.v === 1) kept1 = true; });
+  // a d4, so a 1 rerolled into another 1 comes up about once in sixteen: with a d20 it was once in four hundred, and
+  // 2000 rolls missed it about one run in 150, which failed CI by chance
+  many("d4ro1", 2000, r => { const d = r.terms[0].dice[0]; if (d.rerolled.length) expect(d.rerolled).toEqual([1]); if (d.v === 1) kept1 = true; });
   expect(kept1).toBe(true);   // a 1 rerolled once can come up 1 again, and stays
 });
 
@@ -189,7 +191,7 @@ test("repeat rolls the whole thing again, and each go is its own result", () => 
 
 test("the dice are fair: each face of a d6, d20 and d100 comes up about as often", () => {
   for (const sides of [6, 20, 100]) {
-    const R = Dice.seeded(Dice.newSeed(), 1e7), n = sides * 6000, count = new Array(sides + 1).fill(0);
+    const R = Dice.seeded(SEED, 1e7), n = sides * 6000, count = new Array(sides + 1).fill(0);
     for (let k = 0; k < n; k++) count[R.int(sides)]++;
     // chi-squared against even odds: under its mean plus six of its standard deviations, which a fair die all but never
     // passes, so the test doesn't fail by chance; a die that skipped or doubled a face would be far over
