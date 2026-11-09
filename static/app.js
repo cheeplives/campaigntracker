@@ -1394,7 +1394,10 @@
   function searchBox(active) {
     const input = el('input', { type: 'search', name: 'q', placeholder: 'Search', 'aria-label': 'Search the campaign', enterkeyhint: 'search',
       'data-tip': 'Search the whole campaign: the Encyclopedia, days and events, the Library, Party Holdings and downtime. Press / to jump here' });
-    const form = el('form', { class: 'tab-search', role: 'search' }, input);
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    const form = el('form', { class: 'tab-search', role: 'search' }, input,
+      el('button', { type: 'button', class: 'tab-search-kbd', onclick: () => openJumpBox(), 'aria-label': 'Jump to a name, a tab or an action',
+        'data-tip': `Jump to a name, a tab or an action, or roll dice (${mac ? '⌘K' : 'Ctrl K'}). Press ? for every key` }, mac ? '⌘K' : 'Ctrl K'));
     form.addEventListener('submit', ev => {
       ev.preventDefault();
       const q = input.value.trim();
@@ -1413,6 +1416,102 @@
     if (!box.offsetParent) return;
     ev.preventDefault();
     box.focus();
+  });
+
+  // Ctrl K (⌘K on a Mac or an iPad keyboard): one box to jump anywhere in the campaign or do something, from any page.
+  // Typing matches Encyclopedia names and the tabs, and offers a roll, a search of everything and a few actions; with
+  // nothing typed it lists the pages opened lately. ↑ ↓ move, Enter goes, Escape closes. `?` lists every key.
+  let jumpBox = null;
+  function openJumpBox(seed = '') {
+    if (!S.camp || jumpBox) return;
+    hideTip(); closePeek();
+    const input = el('input', { type: 'text', class: 'jb-input', placeholder: 'Jump to a name or a tab, or type a roll like 2d6+3', 'aria-label': 'Jump to or do',
+      autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'jb-list', value: seed });
+    const list = el('div', { class: 'jb-list', id: 'jb-list', role: 'listbox' });
+    const box = el('div', { class: 'jb-box surface-float', role: 'dialog', 'aria-label': 'Jump to' },
+      el('div', { class: 'jb-in' }, el('span', { 'aria-hidden': 'true' }, '🔍'), input, el('kbd', {}, 'Esc')), list,
+      el('div', { class: 'jb-foot' }, el('span', {}, el('kbd', {}, '↑'), ' ', el('kbd', {}, '↓'), ' move'), el('span', {}, el('kbd', {}, 'Enter'), ' go'),
+        el('span', {}, el('kbd', {}, '?'), ' every key')));
+    const scrim = el('div', { class: 'jb-scrim', onclick: () => close() });
+    let items = [], sel = 0;
+    const close = () => { scrim.remove(); box.remove(); jumpBox = null; };
+    const go = it => { close(); it.run(); };
+    const cid = S.camp.id;
+    const tabs = TAB_GROUPS.flatMap(([g, , ts]) => ts.map(([k, l]) => [k, l, g])).filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined'));
+    const draw = () => {
+      const q = input.value.trim(), ql = q.toLowerCase();
+      const groups = [];
+      if (!q) {
+        const recent = recentList().filter(x => x.hash.startsWith(`#/c/${cid}/`) && x.hash !== location.hash);
+        if (recent.length) groups.push(['Recent', recent.map(x => ({ icon: x.icon, name: x.label, hint: '', run: () => { location.hash = x.hash; } }))]);
+      } else {
+        const words = ql.split(/\s+/);
+        const hit = t => words.every(w => t.toLowerCase().includes(w));
+        const ents = (S.encyclopedia || []).filter(e => hit([e.name, ...(e.aliases || [])].join(' '))).sort((a, b) =>
+          (b.name.toLowerCase().startsWith(ql) ? 1 : 0) - (a.name.toLowerCase().startsWith(ql) ? 1 : 0) || a.name.localeCompare(b.name)).slice(0, 6);
+        if (ents.length) groups.push(['Encyclopedia', ents.map(e => ({ icon: encCat(e.category)?.[2] || '📖', name: e.name, hint: encCat(e.category)?.[1] || '',
+          run: () => { location.hash = `#/c/${cid}/encyclopedia/${e.id}`; } }))]);
+        const tabHits = tabs.filter(([, l]) => hit(l)).slice(0, 4);
+        if (tabHits.length) groups.push(['Go to', tabHits.map(([k, l, g]) => ({ icon: '🧭', name: l, hint: g, run: () => { location.hash = `#/c/${cid}/${k}`; } }))]);
+      }
+      const acts = [];
+      if (q && typeof Dice !== 'undefined' && /\d*d\d/i.test(q) && !Dice.check(q)) acts.push({ icon: '🎲', name: `Roll ${q}`, hint: 'In the dice panel, for the table', run: () => rollFromBox(q) });
+      if (q) acts.push({ icon: '🔍', name: `Search everything for "${q}"`, hint: 'Entries, days, events, the Library…', run: () => { location.hash = searchHref(q); } });
+      const want = (name, it) => (!q || name.toLowerCase().includes(ql)) && acts.push(it);
+      want('new entry', { icon: '➕', name: 'New entry', hint: 'Encyclopedia', run: () => { location.hash = `#/c/${cid}/encyclopedia/new`; } });
+      if (isGM()) want('pass time', { icon: '⏩', name: 'Pass time', hint: 'Open the Pass time row', run: () => { const b = $('.now-passbtn'); if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); $('.passtime input')?.focus(); } });
+      want('roll dice', { icon: '🎲', name: 'Roll dice', hint: 'Open the dice panel', run: () => $('.dice-fab')?.click() });
+      if (acts.length) groups.push(['Actions', acts]);
+      items = groups.flatMap(([, its]) => its);
+      sel = Math.min(sel, Math.max(0, items.length - 1));
+      let n = 0;
+      list.replaceChildren(...(items.length ? groups.map(([title, its]) => el('div', { class: 'jb-sec' }, el('div', { class: 'jb-h' }, title), its.map(it => {
+        const i = n++;
+        return el('div', { class: 'jb-it' + (i === sel ? ' sel' : ''), role: 'option', id: `jb-${i}`, 'aria-selected': String(i === sel),
+          onpointerdown: ev => ev.preventDefault(), onclick: () => go(it) },
+          el('span', { class: 'jb-icon', 'aria-hidden': 'true' }, it.icon), el('span', { class: 'jb-name' }, it.name), el('small', {}, it.hint));
+      }))) : [el('p', { class: 'muted jb-none' }, 'Nothing matches. Press Enter to search everything.')]));
+      input.setAttribute('aria-activedescendant', items.length ? `jb-${sel}` : '');
+      list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
+    };
+    input.addEventListener('input', () => { sel = 0; draw(); });
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); if (items.length) { sel = (sel + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; draw(); } }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (items[sel]) go(items[sel]); else if (input.value.trim()) { close(); location.hash = searchHref(input.value.trim()); } }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); }
+    });
+    document.body.append(scrim, box);
+    jumpBox = box;
+    draw();
+    input.focus();
+  }
+  function rollFromBox(expr) {
+    const fab = $('.dice-fab');
+    if (fab && fab.getAttribute('aria-expanded') !== 'true') fab.click();
+    setTimeout(() => { const i = $('.dice-input'), b = $('.dice-go'); if (i && b) { i.value = expr; b.click(); } }, 60);
+  }
+  /** The `?` sheet: every key the app answers, the ones for this page first. */
+  function keysSheet() {
+    const onMap = /\/maps\/\d+/.test(location.hash);
+    const row = (k, what) => el('tr', {}, el('td', {}, k.split(' ').map(x => el('kbd', {}, x))), el('td', {}, what));
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    KIT.dialog({ title: 'Keys', message: el('div', { class: 'keys-sheet' },
+      onMap ? [el('h4', {}, 'On a map'), el('table', {}, row('P', 'Add a pin'), row('L', 'Add a label'), row('M', 'Measure'), row('T', 'Move the party'), row('Esc', 'Leave the tool, or close what is open'))] : null,
+      el('h4', {}, 'Anywhere in a campaign'), el('table', {},
+        row(mac ? '⌘ K' : 'Ctrl K', 'Jump to a name, a tab or an action, or roll'), row('/', 'Search the whole campaign'),
+        row('?', 'This list'), row('Esc', 'Close a menu, a card, a drawer or a dialog')),
+      el('p', { class: 'small muted' }, 'Keys work when the cursor is not in a text box.')),
+      buttons: [{ value: 'ok', label: 'Close', cls: 'primary', focus: true }] });
+  }
+  document.addEventListener('keydown', ev => {
+    if (!S.camp || !location.hash.startsWith('#/c/') || document.querySelector('dialog[open]')) return;
+    if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'k') {
+      if (ev.target.closest?.('[contenteditable="true"], .ql-editor')) return;   // the editor's own Ctrl K makes a link
+      ev.preventDefault();
+      jumpBox ? jumpBox.querySelector('input')?.focus() : openJumpBox();
+      return;
+    }
+    if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.target.closest?.('input, textarea, select, [contenteditable]') && !jumpBox) { ev.preventDefault(); keysSheet(); }
   });
 
   let passTimeOpen = false;   // the Pass time row, open or closed, for this visit
@@ -2793,7 +2892,7 @@
   const recentList = () => { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch { return []; } };
   const QUICK_KIND = { encyclopedia: ['entry', '📖'], library: ['tome', '📜'], sessions: ['session', '📝'], maps: ['map', '🗺'], day: ['day', '📅'] };
   function noteRecent() {
-    if (!S.camp || !quickOn('recent')) return;
+    if (!S.camp) return;   // kept even with Recent off in the Legend: Ctrl K lists it
     const m = location.hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
     if (!m || Number(m[1]) !== S.camp.id) return;
     const label = m[2] === 'day' ? E.fmtDate(cal(), Number(m[3]), { noWeekday: true })
