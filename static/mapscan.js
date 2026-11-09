@@ -214,16 +214,8 @@
     return `Anthropic refused the scan: ${status}${msg}`;
   }
 
-  /**
-   * Read the place names on the picture at url with Claude, using the GM's own API key. onProgress(share or null,
-   * what) is told how it is going. Resolves { found: fromClaude(), canvas, k }. signal (an AbortSignal) stops it.
-   */
-  async function claude(url, key, onProgress = () => {}, signal) {
-    if (!key) throw new Error('Add your Anthropic API key on your account page first.');
-    onProgress(0, 'Getting the picture ready…');
-    const { canvas, k } = await picture(url, 0, CLAUDE_SIDE);
-    const data = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-    onProgress(null, 'Claude is reading the map. This usually takes under a minute…');
+  /** One call to Anthropic with the GM's own key: content is the user's message, schema the shape of the answer. Resolves the parsed answer. */
+  async function ask_(key, signal, content, schema) {
     let res;
     try {
       res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -241,11 +233,8 @@
           model: CLAUDE_MODEL,
           max_tokens: 16000,
           fallbacks: 'default',
-          output_config: { effort: 'medium', format: { type: 'json_schema', schema: LABELS } },
-          messages: [{ role: 'user', content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } },
-            { type: 'text', text: ask(canvas.width, canvas.height) },
-          ] }],
+          output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
+          messages: [{ role: 'user', content }],
         }),
       });
     } catch (err) {
@@ -257,9 +246,62 @@
     if (body.stop_reason === 'refusal') throw new Error('Claude declined to read this picture.');
     if (body.stop_reason === 'max_tokens') throw new Error('The map has more names than one scan can list. Try a smaller part of it.');
     const text = (body.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    let answer;
-    try { answer = JSON.parse(text); } catch { throw new Error('Claude\'s answer couldn\'t be read. Try again.'); }
-    return { found: fromClaude(answer, k, canvas.width, canvas.height), canvas, k };
+    try { return JSON.parse(text); } catch { throw new Error('Claude\'s answer couldn\'t be read. Try again.'); }
+  }
+
+  // Where each numbered marker really is: Claude's first look, at the whole map, puts small markers a long way off, so each is
+  // looked at again close up, in a window round where it was first put.
+  const WINDOW = 600, SHOWN = 1000, MAX_CLOSEUPS = 40;
+  const CLOSEUP = {
+    type: 'object', additionalProperties: false, required: ['seen'],
+    properties: { seen: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['picture', 'found', 'x', 'y'],
+      properties: { picture: { type: 'integer' }, found: { type: 'boolean' }, x: { type: 'integer' }, y: { type: 'integer' } } } } },
+  };
+  /** Moves each numbered candidate in found (candidates from fromClaude(), at the scale k of canvas) to where a close-up shows its number printed. */
+  async function refine(canvas, k, found, key, signal) {
+    const marks = found.filter(c => c.num).slice(0, MAX_CLOSEUPS);
+    const content = [{ type: 'text', text: `Below are ${marks.length} close-up pictures of one map, each ${SHOWN} pixels square, numbered from 0. In each, one numbered marker (a small number, often in a circle or badge) should be near the middle, but may be off to a side. For each picture, say whether you can see that marker, and if so the x and y, in the picture's own pixels, of the centre of the number as printed. If the number isn't there, say found false.` }];
+    const wins = marks.map((c, i) => {
+      const w = Math.min(WINDOW, canvas.width, canvas.height);
+      const x0 = Math.round(Math.min(Math.max(0, c.x * k - w / 2), canvas.width - w)), y0 = Math.round(Math.min(Math.max(0, c.y * k - w / 2), canvas.height - w));
+      const t = document.createElement('canvas');
+      t.width = t.height = SHOWN;
+      t.getContext('2d').drawImage(canvas, x0, y0, w, w, 0, 0, SHOWN, SHOWN);
+      content.push({ type: 'text', text: `Picture ${i}: the marker numbered ${c.num}` },
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: t.toDataURL('image/jpeg', 0.9).split(',')[1] } });
+      return { x0, y0, s: w / SHOWN };
+    });
+    if (!wins.length) return;
+    const answer = await ask_(key, signal, content, CLOSEUP);
+    for (const r of (answer && answer.seen) || []) {
+      const c = marks[r.picture], w = wins[r.picture];
+      if (!c || !r.found || !Number.isFinite(r.x) || !Number.isFinite(r.y) || r.x < 0 || r.y < 0 || r.x > SHOWN || r.y > SHOWN) continue;
+      const cx = (w.x0 + r.x * w.s) / k, cy = (w.y0 + r.y * w.s) / k;
+      c.box = { x: cx - c.box.w / 2, y: cy - c.box.h / 2, w: c.box.w, h: c.box.h };
+      c.x = cx; c.y = cy;
+    }
+  }
+
+  /**
+   * Read the place names on the picture at url with Claude, using the GM's own API key. onProgress(share or null,
+   * what) is told how it is going. Resolves { found: fromClaude(), canvas, k }. signal (an AbortSignal) stops it.
+   */
+  async function claude(url, key, onProgress = () => {}, signal) {
+    if (!key) throw new Error('Add your Anthropic API key on your account page first.');
+    onProgress(0, 'Getting the picture ready…');
+    const { canvas, k } = await picture(url, 0, CLAUDE_SIDE);
+    const data = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    onProgress(null, 'Claude is reading the map. This usually takes under a minute…');
+    const answer = await ask_(key, signal, [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } },
+      { type: 'text', text: ask(canvas.width, canvas.height) },
+    ], LABELS);
+    const found = fromClaude(answer, k, canvas.width, canvas.height);
+    if (found.some(c => c.num)) {
+      onProgress(null, 'Claude is checking where each number sits…');
+      try { await refine(canvas, k, found, key, signal); } catch (err) { if (err && err.name === 'AbortError') throw err; }   // the first guesses stand
+    }
+    return { found, canvas, k };
   }
 
   /** A small picture of where a candidate was read, cut from the scanned canvas, as a data: URL. */

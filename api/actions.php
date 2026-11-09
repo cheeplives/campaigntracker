@@ -166,6 +166,7 @@ const ACTIONS = [
     'map_delete' => ['who' => 'gm'],
     'pin_save' => ['who' => 'member'],
     'pin_delete' => ['who' => 'member'],
+    'map_clear' => ['who' => 'gm'],
     'pin_to_entry' => ['who' => 'gm'],
     'route_save' => ['who' => 'gm'],
     'route_delete' => ['who' => 'gm'],

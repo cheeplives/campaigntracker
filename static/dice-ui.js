@@ -166,5 +166,17 @@
     }));
   }
 
-  root.DiceUI = { TIER_NAME, labelOf, fields, oddsBar, outcome, diceRows, rerollOf, rerollsFor, rollList };
+  /** The roller's button picture: a d20 with a d4 and a d6 in front of it, in the theme's colours (px square). */
+  function pileIcon(el, px = 36) {
+    const span = el('span', { class: 'dice-pile', 'aria-hidden': 'true' });
+    span.innerHTML = `<svg viewBox="0 0 48 48" width="${px}" height="${px}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+      <g class="pd20"><path d="M19 4 31.6 11.3v14.6L19 33.2 6.4 25.9V11.3Z"/><path d="M19 11 27.6 25 10.4 25Z M19 4v7 M6.4 11.3 19 11 M31.6 11.3 19 11 M6.4 11.3l4 13.7 M31.6 11.3l-4 13.7 M6.4 25.9l4-.9 M31.6 25.9l-4-.9 M19 33.2l-8.6-8.2 M19 33.2l8.6-8.2" fill="none"/></g>
+      <g class="pd4"><path d="M14 25.5 3.5 43 14.5 46.5 24.5 41Z"/><path d="M14 25.5 14.5 46.5" fill="none"/></g>
+      <g class="pd6"><path d="M34 22 44.5 27.2 34 32.4 23.5 27.2Z"/><path d="M23.5 27.2 34 32.4V45L23.5 39.6Z"/><path d="M34 32.4 44.5 27.2V39.6L34 45Z"/>
+        <g fill="currentColor" stroke="none"><circle cx="34" cy="27.2" r="1.6"/><circle cx="26.3" cy="32" r="1.3"/><circle cx="31.2" cy="40.2" r="1.3"/><circle cx="36.7" cy="40.2" r="1.3"/><circle cx="39.25" cy="36.1" r="1.3"/><circle cx="41.8" cy="32" r="1.3"/></g></g>
+    </svg>`;
+    return span;
+  }
+
+  root.DiceUI = { TIER_NAME, pileIcon, labelOf, fields, oddsBar, outcome, diceRows, rerollOf, rerollsFor, rollList };
 })(window);
