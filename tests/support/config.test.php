@@ -27,6 +27,9 @@ return [
     'contact' => 'tests@example.test',
     'deviantart' => ['client_id' => 'stub', 'client_secret' => 'stub'],
     'smithsonian' => ['api_key' => 'stub'],
+    'europeana' => ['api_key' => 'stub'],
+    'pixabay' => ['api_key' => 'stub'],
+    'pexels' => ['api_key' => 'stub'],
   ],
   // Fan wikis ask tests/support/fanwiki-stub.php instead of Wookieepedia, Memory Alpha and Greyhawk Online.
   'fan_wikis' => ['enabled' => true, 'open_only' => false, 'stub' => __DIR__ . '/fanwiki-stub.php'],

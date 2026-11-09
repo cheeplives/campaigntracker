@@ -2,18 +2,23 @@
 /**
  * images.php — Find Image: the server side of searching for a picture for an Encyclopedia entry.
  *
- * Three sources, each searched only when its tab is opened: Openverse (openly licensed pictures from Flickr, Wikimedia
- * Commons, museums and more), museums' open access collections (the Art Institute of Chicago, The Met and, with a key,
- * the Smithsonian; public domain works only) and DeviantArt (by tag). The server asks them, so the keys in the config's image_search block never
+ * Six sources, each searched only when picked (All, the panel's first choice, asks each in turn from the browser):
+ * Openverse (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), Wikimedia Commons directly,
+ * Pixabay and Pexels (free under their own licences; keys needed), museums' open access collections (the Art Institute
+ * of Chicago, The Met, the Cleveland Museum of Art and, with keys, the Smithsonian and Europeana; public domain and open
+ * works only) and DeviantArt (by tag). The server asks them, so the keys in the config's image_search block never
  * reach the browser, and every result comes back in one shape (image_item()). Only pictures under an open licence
- * (image_license()) can be copied into the app; a DeviantArt work that isn't can be embedded instead, which keeps only
- * its link and loads the picture from DeviantArt through its oEmbed API each time.
+ * (image_license()) or Pixabay's and Pexels' free licences can be copied into the app; a DeviantArt work that isn't
+ * can be embedded instead, which keeps only its link and loads the picture from DeviantArt through its oEmbed API each
+ * time.
  *
  * Every outbound call goes through image_http(). When the config names an image_search.stub file (the tests do), that
  * file's function answers instead and nothing leaves the machine.
  */
 
-const IMAGE_SOURCES = ['openverse', 'museums', 'deviantart'];
+const IMAGE_SOURCES = ['openverse', 'commons', 'pixabay', 'museums', 'pexels', 'deviantart'];
+const IMAGE_SOURCE_NAMES = ['openverse' => 'Openverse', 'commons' => 'Wikimedia Commons', 'pixabay' => 'Pixabay', 'museums' => 'The museums',
+    'pexels' => 'Pexels', 'deviantart' => 'DeviantArt'];
 const IMAGE_RESULTS = 20;
 /** How long an embed's picture address from oEmbed is trusted before it is asked for again, in seconds. */
 const EMBED_RECHECK = 6 * 3600;
@@ -93,22 +98,25 @@ function image_item(string $source, string $id, array $f): array {
 }
 function image_public(array $item): array { unset($item['full'], $item['mature']); return $item; }
 
-// --- tokens ----------------------------------------------------------------------------------------------------
-/** A client-credentials access token for $name ('openverse' or 'deviantart'), kept until it expires in a file in the
- * uploads folder (outside the web root), or in the session folder when uploads aren't set up, so a search never
+// --- tokens and the cache -------------------------------------------------------------------------------------
+/** A folder of the app's own outside the web root for Find Image's small files: the uploads folder, or the session
+ * folder when uploads aren't set up, or PHP's temp folder as the last resort; [folder, suffix for its file names]. */
+function image_private_dir(): array {
+    $dir = upload_dir()['dir'];
+    if ($dir) return [$dir, ''];
+    $sess = (string)session_save_path();
+    $dir = $sess !== '' && is_dir($sess) && is_writable($sess) ? rtrim($sess, '/') : rtrim(sys_get_temp_dir(), '/');
+    return [$dir, '-' . substr(hash('sha256', (string)cfg('base_url', '') . __DIR__), 0, 16)];
+}
+/** A client-credentials access token for $name ('openverse' or 'deviantart'), kept until it expires, so a search never
  * asks for a fresh token each time; null when the config has no keys for it. */
 function image_token(string $name, string $tokenUrl): ?string {
     $keys = (array)(image_cfg()[$name] ?? []);
     $id = trim((string)($keys['client_id'] ?? '')); $secret = trim((string)($keys['client_secret'] ?? ''));
     if ($id === '' || $secret === '') return null;
-    $dir = upload_dir()['dir'];
-    if ($dir) $file = "$dir/.image-search-tokens.json";
-    else {   // the session folder is ours (lib.php session_dir); PHP's temp folder as the last resort
-        $sess = (string)session_save_path();
-        $dir = $sess !== '' && is_dir($sess) && is_writable($sess) ? rtrim($sess, '/') : rtrim(sys_get_temp_dir(), '/');
-        $file = "$dir/.chronicle-image-tokens-" . substr(hash('sha256', (string)cfg('base_url', '') . __DIR__), 0, 16) . '.json';
-    }
-    $cache = $file && is_file($file) ? (json_decode((string)@file_get_contents($file), true) ?: []) : [];
+    [$dir, $suffix] = image_private_dir();
+    $file = $suffix === '' ? "$dir/.image-search-tokens.json" : "$dir/.chronicle-image-tokens$suffix.json";
+    $cache = is_file($file) ? (json_decode((string)@file_get_contents($file), true) ?: []) : [];
     $key = $name . ':' . hash('sha256', $id);
     if (($cache[$key]['until'] ?? 0) > time() + 60) return $cache[$key]['token'];
     $data = image_json($tokenUrl, ['post_fields' => http_build_query(['grant_type' => 'client_credentials', 'client_id' => $id, 'client_secret' => $secret]),
@@ -116,8 +124,64 @@ function image_token(string $name, string $tokenUrl): ?string {
     $token = (string)($data['access_token'] ?? '');
     if ($token === '') throw new ImageSourceDown('no token');
     $cache[$key] = ['token' => $token, 'until' => time() + max(60, (int)($data['expires_in'] ?? 3600))];
-    if ($file && @file_put_contents($file, json_encode($cache), LOCK_EX) !== false) @chmod($file, 0600);
+    if (@file_put_contents($file, json_encode($cache), LOCK_EX) !== false) @chmod($file, 0600);
     return $token;
+}
+/** A source's answer kept for $ttl seconds under $key (Pixabay asks that its searches be kept for a day, so the same
+ * search isn't asked again): $fetch() when nothing fresh is kept. Old answers are swept out now and then. */
+function image_cached(string $key, int $ttl, callable $fetch) {
+    [$dir, $suffix] = image_private_dir();
+    $folder = "$dir/.image-cache$suffix";
+    $file = "$folder/" . hash('sha256', $key) . '.json';
+    if (is_file($file) && filemtime($file) > time() - $ttl && is_array($kept = json_decode((string)@file_get_contents($file), true))) return $kept['v'] ?? null;
+    $v = $fetch();
+    if ((is_dir($folder) || @mkdir($folder, 0700)) && @file_put_contents($file, json_encode(['v' => $v]), LOCK_EX) !== false) {
+        @chmod($file, 0600);
+        if (random_int(1, 50) === 1) foreach (glob("$folder/*.json") ?: [] as $f) if (filemtime($f) < time() - 86400) @unlink($f);
+    }
+    return $v;
+}
+/** Several GETs at once (each [url, opts]), so one slow source doesn't hold up the rest: each answer as image_json()
+ * gives it (the decoded JSON, or null for a 404), or the ImageSourceDown it would have thrown. */
+function image_json_all(array $reqs): array {
+    $out = [];
+    if ((string)(image_cfg()['stub'] ?? '') !== '' || count($reqs) < 2 || !function_exists('curl_multi_init')) {
+        foreach ($reqs as $k => [$url, $opts]) { try { $out[$k] = image_json($url, $opts); } catch (ImageSourceDown $e) { $out[$k] = $e; } }
+        return $out;
+    }
+    $contact = trim((string)(image_cfg()['contact'] ?? ''));
+    $ua = 'CampaignChronicle/1.0' . ($contact !== '' ? " ($contact)" : '');
+    $mh = curl_multi_init();
+    $hs = $bodies = [];
+    foreach ($reqs as $k => [$url, $opts]) {
+        $bodies[$k] = '';
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10,
+            CURLOPT_ENCODING => '', CURLOPT_HTTPHEADER => array_merge(["User-Agent: $ua", 'Accept: application/json'], $opts['headers'] ?? []),
+            CURLOPT_WRITEFUNCTION => function ($ch, string $chunk) use (&$bodies, $k): int {
+                if (strlen($bodies[$k]) + strlen($chunk) > HTTP_MAX_BYTES) return -1;
+                $bodies[$k] .= $chunk;
+                return strlen($chunk);
+            }]);
+        curl_multi_add_handle($mh, $ch);
+        $hs[$k] = $ch;
+    }
+    do { $st = curl_multi_exec($mh, $running); if ($running) curl_multi_select($mh, 1.0); } while ($running && $st === CURLM_OK);
+    foreach ($hs as $k => $ch) {
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_multi_remove_handle($mh, $ch);
+        $url = $reqs[$k][0];
+        $data = json_decode($bodies[$k], true);
+        if ($status === 404) $out[$k] = null;
+        elseif ($status === 200 && is_array($data)) $out[$k] = $data;
+        else {
+            error_log("image search: $url answered $status $err");
+            $out[$k] = new ImageSourceDown(parse_url($url, PHP_URL_HOST) . parse_url($url, PHP_URL_PATH) . ' answered ' . ($err !== '' ? $err : "HTTP $status"));
+        }
+    }
+    unset($hs, $mh);
+    return $out;
 }
 
 // --- Openverse -------------------------------------------------------------------------------------------------
@@ -189,38 +253,68 @@ function smithsonian_item(array $r): ?array {
     return image_item('museums', "si:$id", ['title' => $r['title'] ?? ($d['title']['content'] ?? ''), 'author' => $name, 'license' => image_license('cc0'),
         'via' => 'Smithsonian', 'landing_url' => $d['record_link'] ?? null, 'thumb' => "$ids&max=400", 'full' => "$ids&max=1600"]);
 }
-/** The museums, taken in turn so none crowds the others out: the Art Institute of Chicago and The Met, and the
- * Smithsonian when the config has its key. One that is down is skipped while another answers. */
+const CLEVELAND = 'https://openaccess-api.clevelandart.org/api/artworks';
+/** A Cleveland Museum of Art artwork, when its picture is released CC0. */
+function cleveland_item(array $r): ?array {
+    if (strtoupper((string)($r['share_license_status'] ?? '')) !== 'CC0' || !image_url($r['images']['web']['url'] ?? null)) return null;
+    $who = '';
+    foreach ((array)($r['creators'] ?? []) as $c) if (is_array($c) && trim((string)($c['description'] ?? '')) !== '') { $who = preg_replace('/\s*\(.*$/s', '', $c['description']); break; }
+    return image_item('museums', 'cma:' . (int)($r['id'] ?? 0), ['title' => $r['title'] ?? '', 'author' => $who, 'license' => image_license('cc0'),
+        'via' => 'Cleveland Museum of Art', 'landing_url' => $r['url'] ?? null, 'thumb' => $r['images']['web']['url'],
+        'full' => image_url($r['images']['print']['url'] ?? null) ?? $r['images']['web']['url']]);
+}
+// Europeana gathers thousands of European museums, libraries and archives (the Rijksmuseum and SMK among them), with a
+// free key. Only openly reusable pictures are asked for (reusability=open), and each one's rights are checked again.
+const EUROPEANA = 'https://api.europeana.eu/record/v2/search.json';
+function europeana_key(): string { return trim((string)(image_cfg()['europeana']['api_key'] ?? '')); }
+/** A rights statement's address (creativecommons.org/licenses/by-sa/4.0/, …/publicdomain/mark/1.0/) as a licence. */
+function europeana_license(string $u): array {
+    if (preg_match('~creativecommons\.org/publicdomain/zero/~', $u)) return image_license('cc0');
+    if (preg_match('~creativecommons\.org/publicdomain/mark/~', $u)) return image_license('pdm');
+    if (preg_match('~creativecommons\.org/licenses/([a-z-]+)/(\d\.\d)~', $u, $m)) return image_license($m[1], $m[2]);
+    return ['Rights reserved', image_url($u), false];
+}
+function europeana_item(array $r): ?array {
+    $first = fn($v) => is_array($v) ? (string)(reset($v) ?: '') : (string)$v;
+    $id = $first($r['id'] ?? '');
+    if (!preg_match('~^/[A-Za-z0-9_]+/[A-Za-z0-9_.-]+$~', $id) || !image_url($first($r['edmPreview'] ?? ''))) return null;
+    return image_item('museums', "eu:$id", ['title' => $first($r['title'] ?? ''), 'author' => $first($r['dcCreator'] ?? ''),
+        'license' => europeana_license($first($r['rights'] ?? '')), 'via' => ($first($r['dataProvider'] ?? '') ?: 'Europeana') . ' (Europeana)',
+        'landing_url' => $r['guid'] ?? "https://www.europeana.eu/item$id", 'thumb' => $first($r['edmPreview']), 'full' => $first($r['edmIsShownBy'] ?? '') ?: null]);
+}
+function europeana_url(string $query): string {
+    return EUROPEANA . '?' . http_build_query(['wskey' => europeana_key(), 'query' => $query, 'reusability' => 'open', 'media' => 'true', 'qf' => 'TYPE:IMAGE', 'rows' => IMAGE_RESULTS]);
+}
+/** The museums, searched together and taken in turn so none crowds the others out: the Art Institute of Chicago, The
+ * Met and the Cleveland Museum of Art, and the Smithsonian and Europeana when the config has their keys. One that is
+ * down is skipped while another answers. */
 function museums_search(string $q): array {
+    $reqs = [
+        'aic' => [ARTIC . '/api/v1/artworks/search?' . http_build_query(['q' => $q, 'limit' => IMAGE_RESULTS, 'fields' => ARTIC_FIELDS,
+            'query' => ['term' => ['is_public_domain' => 'true']]]), ['headers' => artic_headers()]],
+        'met' => [MET . '/public/collection/v1/search?' . http_build_query(['hasImages' => 'true', 'q' => $q]), []],
+        // cc0 is a flag that takes no value
+        'cma' => [CLEVELAND . '/?' . http_build_query(['q' => $q, 'has_image' => 1, 'limit' => IMAGE_RESULTS]) . '&cc0', []],
+    ];
+    if (($key = smithsonian_key()) !== '')
+        $reqs['si'] = [SMITHSONIAN . '/search?' . http_build_query(['q' => "$q AND online_media_type:\"Images\"", 'rows' => IMAGE_RESULTS, 'api_key' => $key]), []];
+    if (europeana_key() !== '') $reqs['eu'] = [europeana_url($q), []];
+    $got = image_json_all($reqs);
+    $ok = fn($d) => is_array($d) ? $d : [];
+    if (count(array_filter($got, fn($d) => $d instanceof ImageSourceDown)) === count($got)) throw new ImageSourceDown('every museum down');
     $lists = [];
-    $tried = $down = 0;
-    $tried++;
-    try {
-        $data = image_json(ARTIC . '/api/v1/artworks/search?' . http_build_query(['q' => $q, 'limit' => IMAGE_RESULTS, 'fields' => ARTIC_FIELDS,
-            'query' => ['term' => ['is_public_domain' => 'true']]]), ['headers' => artic_headers()]);
-        $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? artic_item($r, (string)($data['config']['iiif_url'] ?? '')) : null, (array)($data['data'] ?? []))));
-    } catch (ImageSourceDown) { $down++; }
-    $tried++;
-    try {
-        $data = image_json(MET . '/public/collection/v1/search?' . http_build_query(['hasImages' => 'true', 'q' => $q]));
-        $met = [];
-        foreach (array_slice(array_filter(array_map('intval', (array)($data['objectIDs'] ?? []))), 0, 10) as $id) {
-            try { $r = image_json(MET . "/public/collection/v1/objects/$id"); } catch (ImageSourceDown) { continue; }
-            if ($r && ($i = met_item($r))) $met[] = $i;
-        }
-        $lists[] = $met;
-    } catch (ImageSourceDown) { $down++; }
-    if (($key = smithsonian_key()) !== '') {
-        $tried++;
-        try {
-            $data = image_json(SMITHSONIAN . '/search?' . http_build_query(['q' => "$q AND online_media_type:\"Images\"", 'rows' => IMAGE_RESULTS, 'api_key' => $key]));
-            $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? smithsonian_item($r) : null, (array)($data['response']['rows'] ?? []))));
-        } catch (ImageSourceDown) { $down++; }
-    }
-    if ($down === $tried) throw new ImageSourceDown('every museum down');
+    $d = $ok($got['aic']);
+    $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? artic_item($r, (string)($d['config']['iiif_url'] ?? '')) : null, (array)($d['data'] ?? []))));
+    // The Met's search gives only ids: the first ten are looked up together.
+    $ids = array_slice(array_filter(array_map('intval', (array)($ok($got['met'])['objectIDs'] ?? []))), 0, 10);
+    $objs = $ids ? image_json_all(array_map(fn($id) => [MET . "/public/collection/v1/objects/$id", []], $ids)) : [];
+    $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? met_item($r) : null, $objs)));
+    $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? cleveland_item($r) : null, (array)($ok($got['cma'])['data'] ?? []))));
+    if (isset($got['si'])) $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? smithsonian_item($r) : null, (array)($ok($got['si'])['response']['rows'] ?? []))));
+    if (isset($got['eu'])) $lists[] = array_values(array_filter(array_map(fn($r) => is_array($r) ? europeana_item($r) : null, (array)($ok($got['eu'])['items'] ?? []))));
     $out = [];
-    for ($i = 0; count($out) < IMAGE_RESULTS && array_filter($lists, fn($l) => isset($l[$i])); $i++)
-        foreach ($lists as $l) if (isset($l[$i]) && count($out) < IMAGE_RESULTS) $out[] = $l[$i];
+    for ($i = 0; count($out) < IMAGE_RESULTS * 2 && array_filter($lists, fn($l) => isset($l[$i])); $i++)
+        foreach ($lists as $l) if (isset($l[$i]) && count($out) < IMAGE_RESULTS * 2) $out[] = $l[$i];
     return $out;
 }
 function museums_lookup(string $id): ?array {
@@ -236,7 +330,128 @@ function museums_lookup(string $id): ?array {
         $data = image_json(SMITHSONIAN . '/content/' . rawurlencode($m[1]) . '?' . http_build_query(['api_key' => $key]));
         return $data && is_array($data['response'] ?? null) ? smithsonian_item($data['response']) : null;
     }
+    if (preg_match('/^cma:(\d+)$/', $id, $m)) {
+        $data = image_json(CLEVELAND . "/{$m[1]}");
+        return $data && is_array($data['data'] ?? null) ? cleveland_item($data['data']) : null;
+    }
+    if (preg_match('~^eu:(/[A-Za-z0-9_]+/[A-Za-z0-9_.-]+)$~', $id, $m) && europeana_key() !== '') {
+        $data = image_json(europeana_url('europeana_id:"' . $m[1] . '"'));
+        foreach ((array)($data['items'] ?? []) as $r) if (is_array($r) && ($i = europeana_item($r)) && $i['id'] === $id) return $i;
+        return null;
+    }
     return null;
+}
+
+// --- Wikimedia Commons -----------------------------------------------------------------------------------------
+// Searched directly as well as through Openverse, whose copy of Commons lags behind: this finds newer uploads, and
+// Commons' own search takes incategory:"…" for its categories. No key; the User-Agent carries the config's contact.
+const COMMONS = 'https://commons.wikimedia.org/w/api.php';
+/** Commons' licence (extmetadata's License, e.g. "cc-by-sa-4.0", "cc0", "pd") as a code and version. */
+function commons_license(string $l): array {
+    $l = strtolower(trim($l));
+    if ($l === 'cc0' || str_starts_with($l, 'cc-zero')) return ['cc0', ''];
+    if ($l === 'pd' || str_starts_with($l, 'pd-') || $l === 'public domain') return ['pdm', ''];
+    if (preg_match('/^cc-(by(?:-(?:nc|nd|sa))*)(?:-(\d\.\d))?/', $l, $m)) return [$m[1], $m[2] ?? ''];
+    return [$l, ''];
+}
+function commons_item(array $p): ?array {
+    $ii = (array)($p['imageinfo'][0] ?? []);
+    $meta = (array)($ii['extmetadata'] ?? []);
+    $v = fn(string $k) => (string)($meta[$k]['value'] ?? '');
+    $id = (int)($p['pageid'] ?? 0);
+    if (!$id || !image_url($ii['thumburl'] ?? null)) return null;
+    [$code, $ver] = commons_license($v('License'));
+    $lic = image_license($code, $ver);
+    if ($lic[0] === 'Public Domain Mark 1.0' && $code === 'pdm') $lic[0] = 'Public domain';
+    if (!$lic[2] && $v('LicenseShortName') !== '') $lic[0] = image_text($v('LicenseShortName'), 60);
+    // Artist is HTML, often a link to the artist's user page; its first link is kept as theirs.
+    $artist = $v('Artist');
+    $artistUrl = preg_match('~href="((?:https?:)?//[^"]+)"~', $artist, $m) ? (str_starts_with($m[1], '//') ? "https:{$m[1]}" : $m[1]) : null;
+    $title = $v('ObjectName') ?: preg_replace(['/^File:/', '/\.[a-z0-9]{2,4}$/i'], '', (string)($p['title'] ?? ''));
+    return image_item('commons', (string)$id, ['title' => $title, 'author' => $artist, 'author_url' => $artistUrl, 'license' => $lic,
+        'via' => 'Wikimedia Commons', 'landing_url' => $ii['descriptionurl'] ?? null, 'thumb' => $ii['thumburl'], 'full' => $ii['responsiveUrls']['2'] ?? ($ii['url'] ?? null)]);
+}
+function commons_query(array $q): array {
+    $data = image_json(COMMONS . '?' . http_build_query($q + ['action' => 'query', 'format' => 'json', 'formatversion' => 2,
+        'prop' => 'imageinfo', 'iiprop' => 'url|extmetadata', 'iiurlwidth' => 400, 'iiextmetadatafilter' => 'License|LicenseShortName|Artist|ObjectName']));
+    if (!is_array($data) || isset($data['error'])) throw new ImageSourceDown('Commons answered an error');
+    $pages = (array)($data['query']['pages'] ?? []);
+    usort($pages, fn($a, $b) => ($a['index'] ?? 0) <=> ($b['index'] ?? 0));   // the search's own order
+    return array_values(array_filter(array_map(fn($p) => is_array($p) ? commons_item($p) : null, $pages)));
+}
+function commons_search(string $q): array {
+    return commons_query(['generator' => 'search', 'gsrsearch' => "$q filetype:bitmap", 'gsrnamespace' => 6, 'gsrlimit' => IMAGE_RESULTS]);
+}
+function commons_lookup(string $id): ?array {
+    if (!preg_match('/^\d{1,12}$/', $id)) return null;
+    $item = commons_query(['pageids' => $id])[0] ?? null;
+    if (!$item) return null;
+    // The picture to copy: Commons' own 1,600 pixel copy rather than the original, which can be huge.
+    $big = image_json(COMMONS . '?' . http_build_query(['action' => 'query', 'format' => 'json', 'formatversion' => 2, 'pageids' => $id,
+        'prop' => 'imageinfo', 'iiprop' => 'url', 'iiurlwidth' => 1600]));
+    $item['full'] = image_url($big['query']['pages'][0]['imageinfo'][0]['thumburl'] ?? null) ?? $item['full'];
+    return $item;
+}
+
+// --- Pixabay ---------------------------------------------------------------------------------------------------
+// Free under the Pixabay Content License (not an open licence, but use, change and commercial use are allowed, no
+// credit needed). Its API asks for a key, a day's caching of each search, the pictures downloaded rather than
+// hotlinked once used, and the results to say they came from Pixabay.
+const PIXABAY = 'https://pixabay.com/api/';
+const PIXABAY_LICENSE = ['Pixabay Content License', 'https://pixabay.com/service/license-summary/', true];
+function pixabay_key(): string { return trim((string)(image_cfg()['pixabay']['api_key'] ?? '')); }
+function pixabay_item(array $h): ?array {
+    $id = (int)($h['id'] ?? 0);
+    if (!$id) return null;
+    $user = (string)($h['user'] ?? '');
+    $web = (string)($h['webformatURL'] ?? '');
+    return image_item('pixabay', (string)$id, ['title' => ucfirst(str_replace(',', ', ', preg_replace('/\s*,\s*/', ',', (string)($h['tags'] ?? '')))),
+        'author' => $user, 'author_url' => $user !== '' && !empty($h['user_id']) ? 'https://pixabay.com/users/' . rawurlencode($user) . '-' . (int)$h['user_id'] . '/' : null,
+        'license' => PIXABAY_LICENSE, 'via' => 'Pixabay', 'landing_url' => $h['pageURL'] ?? null,
+        'thumb' => $web !== '' ? preg_replace('/_640(\.\w+)$/', '_340$1', $web) : ($h['previewURL'] ?? null), 'full' => $h['largeImageURL'] ?? ($web ?: null)]);
+}
+/** Pixabay's answer to one query, kept for a day as its API asks. */
+function pixabay_get(array $q): array {
+    $key = pixabay_key();
+    return image_cached('pixabay:' . http_build_query($q), 86400, function () use ($q, $key) {
+        $data = image_json(PIXABAY . '?' . http_build_query(['key' => $key] + $q));
+        if (!isset($data['hits']) || !is_array($data['hits'])) throw new ImageSourceDown('no results list');
+        return $data['hits'];
+    });
+}
+function pixabay_search(string $q): array {
+    return array_values(array_filter(array_map(fn($h) => is_array($h) ? pixabay_item($h) : null,
+        pixabay_get(['q' => mb_substr($q, 0, 100), 'image_type' => 'all', 'safesearch' => 'true', 'per_page' => IMAGE_RESULTS]))));
+}
+function pixabay_lookup(string $id): ?array {
+    if (!preg_match('/^\d{1,12}$/', $id)) return null;
+    $h = pixabay_get(['id' => $id])[0] ?? null;
+    return is_array($h) ? pixabay_item($h) : null;
+}
+
+// --- Pexels ----------------------------------------------------------------------------------------------------
+// Photographs, mostly of today's world, under the Pexels License (free to use and change, credit not needed; not an
+// open licence). A key goes in the Authorization header, and results link to Pexels and credit the photographer.
+const PEXELS = 'https://api.pexels.com/v1';
+const PEXELS_LICENSE = ['Pexels License', 'https://www.pexels.com/license/', true];
+function pexels_key(): string { return trim((string)(image_cfg()['pexels']['api_key'] ?? '')); }
+function pexels_item(array $p): ?array {
+    $id = (int)($p['id'] ?? 0);
+    $src = (array)($p['src'] ?? []);
+    if (!$id) return null;
+    return image_item('pexels', (string)$id, ['title' => ($p['alt'] ?? '') ?: 'Photo', 'author' => $p['photographer'] ?? '', 'author_url' => $p['photographer_url'] ?? null,
+        'license' => PEXELS_LICENSE, 'via' => 'Pexels', 'landing_url' => $p['url'] ?? null, 'thumb' => $src['medium'] ?? ($src['small'] ?? null),
+        'full' => $src['large2x'] ?? ($src['large'] ?? ($src['original'] ?? null))]);
+}
+function pexels_search(string $q): array {
+    $data = image_json(PEXELS . '/search?' . http_build_query(['query' => $q, 'per_page' => IMAGE_RESULTS]), ['headers' => ['Authorization: ' . pexels_key()]]);
+    if (!isset($data['photos']) || !is_array($data['photos'])) throw new ImageSourceDown('no results list');
+    return array_values(array_filter(array_map(fn($p) => is_array($p) ? pexels_item($p) : null, $data['photos'])));
+}
+function pexels_lookup(string $id): ?array {
+    if (!preg_match('/^\d{1,12}$/', $id)) return null;
+    $p = image_json(PEXELS . "/photos/$id", ['headers' => ['Authorization: ' . pexels_key()]]);
+    return $p ? pexels_item($p) : null;
 }
 
 // --- DeviantArt ------------------------------------------------------------------------------------------------
@@ -303,14 +518,27 @@ function embed_src_ok($u): ?string {
     return strlen($u) <= 1000 && str_starts_with($u, 'https://') && preg_match('/(^|\.)(wixmp\.com|deviantart\.net)$/', $host) ? $u : null;
 }
 
+/** Stops the request (409 source_not_set_up) when $source needs keys the config doesn't have, telling an admin where
+ * to get them. */
+function image_source_ready(string $source): void {
+    $need = ['deviantart' => [deviantart_ready(), "register an app at deviantart.com/developers and put its client_id and client_secret under 'image_search' => ['deviantart' => …]"],
+        'pixabay' => [pixabay_key() !== '', "get a free key at pixabay.com/api/docs (signed in) and put it under 'image_search' => ['pixabay' => ['api_key' => …]]"],
+        'pexels' => [pexels_key() !== '', "get a free key at pexels.com/api and put it under 'image_search' => ['pexels' => ['api_key' => …]]"]][$source] ?? [true, ''];
+    if ($need[0]) return;
+    $name = IMAGE_SOURCE_NAMES[$source];
+    fail(me()['is_admin'] ? "$name isn't set up on this server: {$need[1]} in the config." : "$name isn't available on this server.", 409, 'source_not_set_up');
+}
+
 // --- one entry point per action --------------------------------------------------------------------------------
 function image_search(string $source, string $q): array {
-    $items = match ($source) { 'openverse' => openverse_search($q), 'museums' => museums_search($q), 'deviantart' => deviantart_search($q) };
+    $items = match ($source) { 'openverse' => openverse_search($q), 'commons' => commons_search($q), 'pixabay' => pixabay_search($q),
+        'museums' => museums_search($q), 'pexels' => pexels_search($q), 'deviantart' => deviantart_search($q) };
     return array_values(array_map('image_public', array_filter($items, fn($i) => $i['id'] !== '' && $i['thumb'] && !$i['mature'])));
 }
 /** One work, looked up again by source and id (never taken from the browser), with its full picture; null if gone. */
 function image_lookup(string $source, string $id): ?array {
-    $i = match ($source) { 'openverse' => openverse_lookup($id), 'museums' => museums_lookup($id), 'deviantart' => deviantart_lookup($id), default => null };
+    $i = match ($source) { 'openverse' => openverse_lookup($id), 'commons' => commons_lookup($id), 'pixabay' => pixabay_lookup($id),
+        'museums' => museums_lookup($id), 'pexels' => pexels_lookup($id), 'deviantart' => deviantart_lookup($id), default => null };
     return $i && !$i['mature'] ? $i : null;
 }
 

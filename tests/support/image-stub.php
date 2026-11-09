@@ -1,6 +1,8 @@
 <?php
 // Find Image's sources, for the browser tests only: support/config.test.php names this file as image_search.stub, so
 // api/images.php asks this function instead of Openverse, the museums (the Smithsonian's key is "stub") and DeviantArt, and nothing leaves the machine.
+// Commons, Pixabay, Pexels, Cleveland and Europeana are answered too (Pixabay notes each search it is asked in
+// chronicle-test-pixabay.log in the temp folder, so a test can see the day's cache at work).
 // Searching for "broken" makes a source answer an error; "nothing" finds nothing. Thumbnails are data: pictures; the
 // full-size pictures are at https://img.test/, which only this stub serves. A DeviantArt page with "/art/Gone-" in it
 // is one oEmbed no longer knows, and oEmbed is down for /offline/.
@@ -14,7 +16,7 @@ return function (string $method, string $url, array $opts): array {
     $host = $u['host'] ?? '';
     $path = $u['path'] ?? '';
     parse_str($u['query'] ?? '', $q);
-    $words = strtolower((string)($q['q'] ?? $q['tag'] ?? ''));
+    $words = strtolower((string)($q['q'] ?? $q['tag'] ?? $q['gsrsearch'] ?? $q['query'] ?? ''));
     if (str_contains($words, 'broken')) return $json(['detail' => 'down'], 500);
     $none = str_contains($words, 'nothing');
 
@@ -98,6 +100,59 @@ return function (string $method, string $url, array $opts): array {
         $src = str_contains($page, '/elsewhere/') ? 'https://evil.test/keep.jpg' : 'https://images-wixmp-stub.wixmp.com/f/keep.png?token=' . bin2hex(random_bytes(4));
         return $json(['version' => '1.0', 'type' => 'photo', 'url' => $src, 'width' => 2, 'height' => 1, 'title' => 'The Grey Keep',
             'author_name' => 'greyartist', 'author_url' => 'https://www.deviantart.com/greyartist', 'provider_name' => 'DeviantArt', 'safety' => 'nonadult']);
+    }
+    if ($host === 'commons.wikimedia.org' && $path === '/w/api.php') {
+        $files = [
+            9001 => ['title' => 'File:Ruined keep in winter.jpg', 'License' => 'cc-by-sa-4.0', 'LicenseShortName' => 'CC BY-SA 4.0',
+                'Artist' => '<a href="//commons.wikimedia.org/wiki/User:Ann" title="User:Ann">Ann Walker</a>', 'ObjectName' => 'Ruined keep in winter'],
+            9002 => ['title' => 'File:Keep under the GFDL.png', 'License' => 'gfdl', 'LicenseShortName' => 'GFDL', 'Artist' => 'Gus', 'ObjectName' => ''],
+            9003 => ['title' => 'File:Old engraving of a keep.jpg', 'License' => 'pd', 'LicenseShortName' => 'Public domain', 'Artist' => 'Unknown engraver', 'ObjectName' => 'Old engraving of a keep'],
+        ];
+        $page = fn(int $id, int $i) => ['pageid' => $id, 'ns' => 6, 'title' => $files[$id]['title'], 'index' => $i, 'imageinfo' => [[
+            'url' => "https://img.test/commons-$id-original.png", 'descriptionurl' => 'https://commons.wikimedia.org/wiki/' . str_replace(' ', '_', $files[$id]['title']),
+            'thumburl' => (($q['iiurlwidth'] ?? '') === '1600' ? "https://img.test/commons-$id-1600.png" : $thumb),
+            'extmetadata' => array_map(fn($v) => ['value' => $v, 'source' => 'commons-desc-page'], array_diff_key($files[$id], ['title' => 1]))]]];
+        if (isset($q['pageids'])) return $json(['batchcomplete' => true, 'query' => ['pages' => isset($files[(int)$q['pageids']]) ? [$page((int)$q['pageids'], 1)] : [['pageid' => (int)$q['pageids'], 'missing' => true]]]]);
+        // the search's pages come in no particular order; "index" is their place in it
+        return $json(['batchcomplete' => true] + ($none ? [] : ['query' => ['pages' => [$page(9003, 3), $page(9001, 1), $page(9002, 2)]]]));
+    }
+    if ($host === 'pixabay.com' && $path === '/api/') {
+        if (($q['key'] ?? '') !== 'stub') return $json(['error' => '[ERROR 400] "key" is wrong'], 400);
+        @file_put_contents(sys_get_temp_dir() . '/chronicle-test-pixabay.log', ($q['q'] ?? 'id=' . ($q['id'] ?? '')) . "\n", FILE_APPEND);
+        $hit = fn(int $id, string $tags, string $user) => ['id' => $id, 'pageURL' => "https://pixabay.com/illustrations/castle-$id/", 'type' => 'illustration', 'tags' => $tags,
+            'previewURL' => $thumb, 'webformatURL' => $thumb, 'largeImageURL' => "https://img.test/pixabay-$id.png", 'user_id' => 77, 'user' => $user];
+        $hits = [5001 => $hit(5001, 'castle, fantasy, dragon', 'DragonPainter'), 5002 => $hit(5002, 'wizard,tower', 'Mage')];
+        if (isset($q['id'])) return $json(['total' => isset($hits[(int)$q['id']]) ? 1 : 0, 'totalHits' => 0, 'hits' => isset($hits[(int)$q['id']]) ? [$hits[(int)$q['id']]] : []]);
+        return $json(['total' => $none ? 0 : 2, 'totalHits' => $none ? 0 : 2, 'hits' => $none ? [] : array_values($hits)]);
+    }
+    if ($host === 'api.pexels.com') {
+        if (!in_array('Authorization: stub', $opts['headers'] ?? [], true)) return $json(['error' => 'Unauthorized'], 401);
+        $photo = fn(int $id) => ['id' => $id, 'width' => 2, 'height' => 1, 'url' => "https://www.pexels.com/photo/old-tower-$id/", 'photographer' => 'Pat Lens',
+            'photographer_url' => 'https://www.pexels.com/@pat', 'alt' => 'An old stone tower by a river', 'src' => ['original' => "https://img.test/pexels-$id.png",
+            'large2x' => "https://img.test/pexels-$id-large2x.png", 'large' => "https://img.test/pexels-$id-large.png", 'medium' => $thumb, 'small' => $thumb, 'tiny' => $thumb]];
+        if ($path === '/v1/search') return $json(['page' => 1, 'per_page' => 20, 'total_results' => $none ? 0 : 1, 'photos' => $none ? [] : [$photo(3003)]]);
+        if ($path === '/v1/photos/3003') return $json($photo(3003));
+        return $json(['error' => 'Not found'], 404);
+    }
+    if ($host === 'openaccess-api.clevelandart.org') {
+        $art = fn(int $id, string $status) => ['id' => $id, 'accession_number' => "1916.$id", 'share_license_status' => $status, 'title' => $status === 'CC0' ? 'Helmet for the joust' : 'A modern print',
+            'creators' => $status === 'CC0' ? [['description' => 'Kolman Helmschmid (German, 1471-1532)', 'role' => 'artist']] : [],
+            'url' => "https://clevelandart.org/art/1916.$id", 'images' => ['web' => ['url' => $thumb], 'print' => ['url' => "https://img.test/cma-$id.png"]]];
+        if ($path === '/api/artworks/') return str_contains($u['query'] ?? '', '&cc0') ? $json(['info' => ['total' => $none ? 0 : 2], 'data' => $none ? [] : [$art(1517, 'CC0'), $art(2000, 'Copyrighted')]])
+            : $json(['detail' => 'the stub expects the cc0 flag'], 400);
+        if ($path === '/api/artworks/1517') return $json(['data' => $art(1517, 'CC0')]);
+        return $json(['detail' => 'Not found'], 404);
+    }
+    if ($host === 'api.europeana.eu' && $path === '/record/v2/search.json') {
+        if (($q['wskey'] ?? '') !== 'stub') return $json(['success' => false, 'error' => 'Invalid API key'], 401);
+        if (($q['reusability'] ?? '') !== 'open') return $json(['success' => false, 'error' => 'the stub expects reusability=open'], 400);
+        $items = [
+            '/90402/SK_A_1505' => ['title' => ['Portrait of a Knight'], 'dcCreator' => ['Frans Hals'], 'rights' => ['http://creativecommons.org/publicdomain/mark/1.0/'], 'dataProvider' => ['Rijksmuseum']],
+            '/2048/item_77' => ['title' => ['Sketch of a tower'], 'dcCreator' => ['A. Student'], 'rights' => ['http://creativecommons.org/licenses/by-sa/4.0/'], 'dataProvider' => ['SMK - Statens Museum for Kunst']],
+        ];
+        $item = fn($id) => ['id' => $id, 'guid' => "https://www.europeana.eu/item$id", 'edmPreview' => [$thumb], 'edmIsShownBy' => ['https://img.test/eu' . str_replace('/', '-', $id) . '.png'], 'type' => 'IMAGE'] + $items[$id];
+        if (preg_match('~^europeana_id:"([^"]+)"$~', (string)$q['query'], $m)) return $json(['success' => true, 'itemsCount' => isset($items[$m[1]]) ? 1 : 0, 'items' => isset($items[$m[1]]) ? [$item($m[1])] : []]);
+        return $json(['success' => true, 'itemsCount' => $none ? 0 : 2, 'items' => $none ? [] : array_map($item, array_keys($items))]);
     }
     return ['status' => 0, 'body' => '', 'error' => "image stub: nothing at $url"];
 };

@@ -281,19 +281,18 @@ function files_action(string $action): void {
         out(['ok' => true, 'file' => attachment_store($cid, $f['tmp_name'], ['parent_type' => $type, 'parent_id' => $pid, 'original_name' => $name, 'mime' => $mime,
             'kind' => $kind, 'size_bytes' => $size, 'width' => $w, 'height' => $h, 'caption' => $caption, 'is_secret' => $secret], true)]);
 
-    case 'image_search': // Find Image: source (openverse, museums or deviantart), q. Results as image_item() describes.
+    case 'image_search': // Find Image: source (one of IMAGE_SOURCES), q. Results as image_item() describes.
         $cid = cid();
         role($cid);
         $source = (string)($_GET['source'] ?? '');
         if (!in_array($source, IMAGE_SOURCES, true)) fail('Unknown picture source', 400);
         $q = trim((string)str_in($_GET['q'] ?? '', 200));
         if ($q === '') fail('Type something to search for');
-        rate_limit('image_search', (string)me()['id'], 30, 60);
-        if ($source === 'deviantart' && !deviantart_ready())
-            fail(me()['is_admin'] ? "DeviantArt isn't set up on this server: register an app at deviantart.com/developers and put its client_id and client_secret under 'image_search' => ['deviantart' => …] in the config."
-                : 'DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
+        // Each source counts on its own, so searching All (every source at once) is one search of each.
+        rate_limit($source === 'openverse' ? 'image_search' : "image_search_$source", (string)me()['id'], 30, 60);
+        image_source_ready($source);
         try { out(['results' => image_search($source, $q)]); }
-        catch (ImageSourceDown) { fail(['openverse' => 'Openverse', 'museums' => 'The museums', 'deviantart' => 'DeviantArt'][$source] . ' couldn\'t be reached just now. Try again later.', 502, 'source_unavailable'); }
+        catch (ImageSourceDown) { fail(IMAGE_SOURCE_NAMES[$source] . ' couldn\'t be reached just now. Try again later.', 502, 'source_unavailable'); }
 
     case 'image_import': // Find Image's picks: parent_type, parent_id, source, id, mode ('copy' or 'embed'), is_secret (GMs)
         $cid = cid();
@@ -308,7 +307,7 @@ function files_action(string $action): void {
         $fan = $source === 'fanwiki' && function_exists('fanwiki_on') && fanwiki_on();
         if ((!$fan && !in_array($source, IMAGE_SOURCES, true)) || !in_array($mode, ['copy', 'embed'], true)) fail('Unknown picture source', 400);
         if ($mode === 'embed' && $source !== 'deviantart') fail('Only DeviantArt works can be embedded', 400);
-        if ($source === 'deviantart' && !deviantart_ready()) fail('DeviantArt isn\'t available on this server.', 409, 'source_not_set_up');
+        if (!$fan) image_source_ready($source);
         $secret = $role === 'gm' && p('is_secret') ? 1 : 0;
         rate_limit('image_import', (string)me()['id'], 30, 60);   // each one downloads a picture from outside
         // Admins are told which call failed and how, so they can tell a refused key from a source that is down.

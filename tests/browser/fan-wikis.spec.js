@@ -153,7 +153,7 @@ test.describe("Fan wikis in the app", () => {
     if (NONOPEN) {
       await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
       await page.getByRole("button", { name: "🖼️ Find Image" }).click();
-      await page.getByRole("tab", { name: "Wookieepedia" }).click();
+      await page.getByRole("combobox", { name: "Where to search" }).selectOption({ label: "Wookieepedia" });
       const promo = page.locator(".find-result", { hasText: "Luke promo" });
       await expect(promo).toContainText("Personal fair use, not openly licensed");
       await expect(page.locator(".find-result", { hasText: "X-wing fan drawing" }).getByRole("button", { name: "Use this picture" })).toBeVisible();

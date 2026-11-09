@@ -3956,35 +3956,76 @@
   // this picture, and each keeps its credit. A DeviantArt work under any other licence can be embedded instead, which
   // keeps only its link, or followed to its page and its artist's to ask before copying it.
   const FIND_SOURCES = [
+    ['all', 'All sources', 'Every source below at once, mixed together as each answers'],
     ['openverse', 'Open web', 'Openly licensed pictures from Flickr, Wikimedia Commons, museums and more, through Openverse'],
-    ['museums', 'Museums', 'Public-domain paintings, armour, maps and the like from The Met, the Art Institute of Chicago and the Smithsonian'],
+    ['commons', 'Wikimedia Commons', 'Openly licensed pictures straight from Wikimedia Commons, newest uploads included. incategory:"…" searches one of its categories'],
+    ['pixabay', 'Pixabay', 'Free illustrations and photos from Pixabay, plenty of them fantasy and science fiction. Some are made with AI'],
+    ['museums', 'Museums', 'Public-domain paintings, armour, maps and the like from The Met, the Art Institute of Chicago, Cleveland, the Rijksmuseum, SMK, the Smithsonian and Europeana'],
+    ['pexels', 'Pexels photos', 'Free photographs of today\'s world from Pexels, for modern settings'],
     ['deviantart', 'DeviantArt', 'Searched by tag, so the words are joined into one: "ruined keep" looks for ruinedkeep'],
   ];
+  /** Results from several sources, taken in turn so none crowds the others out. */
+  const mixResults = lists => { const out = []; for (let i = 0; lists.some(l => i < l.length); i++) for (const l of lists) if (i < l.length) out.push(l[i]); return out; };
   function findImage(parentType, parentId, name, opts) {
     const cid = S.camp.id;
-    let source = 'openverse', seq = 0;
+    let source = 'all', seq = 0;
     const q = el('input', { type: 'search', value: name || '', maxlength: 200, placeholder: 'e.g. ruined keep', 'aria-label': 'Search for pictures', enterkeyhint: 'search' });
     q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); run(); } });
     const gmOnly = opts.gmOnly;                       // the Pictures and files box's own GM only box
     const out = el('div', { class: 'find-results', 'aria-live': 'polite' });
     const say = t => out.replaceChildren(el('p', { class: 'muted small' }, t));
-    const tab = (k, label, t) => el('button', { type: 'button', role: 'tab', class: 'small' + (k === source ? ' on' : ''), 'aria-selected': String(k === source), 'data-source': k, 'data-tip': t,
-      onclick: () => { source = k; for (const b of tabs.children) { const on = b.dataset.source === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); } run(); } }, label);
-    const tabs = el('div', { class: 'seg find-tabs', role: 'tablist', 'aria-label': 'Where to search' }, FIND_SOURCES.map(([k, label, t]) => tab(k, label, t)));
-    // the campaign's fan wiki, when there is one, as a tab of its own
+    const about = el('p', { class: 'small muted find-about' });
+    const tips = Object.fromEntries(FIND_SOURCES.map(([k, , t]) => [k, t]));
+    const pickSource = el('select', { class: 'find-source', 'aria-label': 'Where to search', onchange: () => { source = pickSource.value; about.textContent = tips[source] || ''; run(); } },
+      FIND_SOURCES.map(([k, label]) => el('option', { value: k }, label)));
+    about.textContent = tips.all;
+    // the campaign's fan wiki, when there is one, as a source of its own (and one of All's)
     let fan = null;
-    Fan?.findTab(fanCtx()).then(t => { if (t) tabs.append(tab(t.key, t.label, (fan = t).tip)); });
+    const fanReady = Promise.resolve(Fan?.findTab(fanCtx())).then(t => { if (t) { fan = t; tips[t.key] = t.tip; pickSource.append(el('option', { value: t.key }, t.label)); } }).catch(() => {});
+    const searchOne = async (k, words) => k === 'fanwiki' ? (fan ? await fan.search(words) : []) : (await api('image_search', { query: { cid, source: k, q: words } })).results;
+    const grid = list => el('div', { class: 'find-grid' }, list.map(result));
     const link = (href, text, cls) => href ? el('a', { href, target: '_blank', rel: 'noopener noreferrer', class: cls }, text) : text;
     async function run() {
       const words = q.value.trim(), mine = ++seq;
       if (!words) return say('Type something to search for.');
       say('Looking…');
-      try {
-        const r = source === 'fanwiki' && fan ? { results: await fan.search(words) } : await api('image_search', { query: { cid, source, q: words } });
+      if (source !== 'all') {
+        try {
+          const list = await searchOne(source, words);
+          if (mine !== seq) return;
+          if (!list.length) return say(`Nothing found for "${words}".`);
+          out.replaceChildren(grid(list), credits(list));
+        } catch (err) { if (mine === seq) say(err.message); }
+        return;
+      }
+      // All: every source at once, the grid redrawn as each answers. A source the server hasn't been set up for is
+      // left out quietly; one that can't be reached is named under the results.
+      await fanReady;
+      if (mine !== seq) return;
+      const keys = FIND_SOURCES.map(([k]) => k).filter(k => k !== 'all').concat(fan ? [fan.key] : []);
+      const lists = keys.map(() => []), down = [];
+      let left = keys.length;
+      const draw = () => {
         if (mine !== seq) return;
-        if (!r.results.length) return say(`Nothing found for "${words}".`);
-        out.replaceChildren(el('div', { class: 'find-grid' }, r.results.map(result)));
-      } catch (err) { if (mine === seq) say(err.message); }
+        const list = mixResults(lists);
+        const note = left ? el('p', { class: 'muted small' }, `Still looking in ${left} more…`)
+          : down.length ? el('p', { class: 'muted small find-down' }, `Couldn't reach ${down.join(', ')} just now.`) : null;
+        if (!list.length && left) return say('Looking…');
+        if (!list.length) return out.replaceChildren(el('p', { class: 'muted small' }, `Nothing found for "${words}".`), note || '');
+        out.replaceChildren(grid(list), credits(list), note || '');
+      };
+      await Promise.all(keys.map(async (k, i) => {
+        try { lists[i] = await searchOne(k, words); }
+        catch (err) { if (err.status !== 409 && err.status !== 400) down.push(k === fan?.key ? fan.label : FIND_SOURCES.find(s => s[0] === k)[1]); }
+        left--;
+        draw();
+      }));
+    }
+    /** Pixabay and Pexels ask that their results say where they came from, beyond each picture's own source link. */
+    function credits(list) {
+      const from = [['pixabay', 'https://pixabay.com/', 'Pictures from Pixabay'], ['pexels', 'https://www.pexels.com/', 'Photos provided by Pexels']]
+        .filter(([k]) => list.some(it => it.source === k));
+      return from.length ? el('p', { class: 'small muted find-credits' }, from.flatMap(([, href, t], i) => [i ? ' · ' : '', link(href, t)])) : '';
     }
     function result(it) {
       const pick = async (mode, ev) => {
@@ -4014,8 +4055,8 @@
               opts.copyOnly ? null : btn('Embed from DeviantArt', ev => pick('embed', ev), 'small', 'Show this work on the entry from DeviantArt, credited, without copying it. If the artist removes it, it goes from here too')) : null));
     }
     const panel = el('div', { class: 'find-image' },
-      el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), tabs),
-      out);
+      el('div', { class: 'row find-bar' }, q, btn('Search', run, 'small primary'), pickSource),
+      about, out);
     run();
     return panel;
   }
@@ -6412,12 +6453,16 @@
           'The Feature Highlighter\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
             ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
-          ['Find Image on an Encyclopedia entry searches, only when asked: ', extLink({ url: 'https://openverse.org/', title: 'Openverse' }),
-            ' (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), the public-domain collections of ',
-            extLink({ url: 'https://www.metmuseum.org/hubs/open-access', title: 'The Met (Open Access)' }), ' and the ',
-            extLink({ url: 'https://www.artic.edu/open-access/public-api', title: 'Art Institute of Chicago (public API)' }), ' and the ',
-            extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', and ',
-            extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA are copied, ',
+          ['Find Image on an Encyclopedia entry (and for portraits, maps and tokens) searches, only when asked: ', extLink({ url: 'https://openverse.org/', title: 'Openverse' }),
+            ' (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), ', extLink({ url: 'https://commons.wikimedia.org/', title: 'Wikimedia Commons' }),
+            ' directly, the public-domain collections of ',
+            extLink({ url: 'https://www.metmuseum.org/hubs/open-access', title: 'The Met (Open Access)' }), ', the ',
+            extLink({ url: 'https://www.artic.edu/open-access/public-api', title: 'Art Institute of Chicago (public API)' }), ', the ',
+            extLink({ url: 'https://openaccess-api.clevelandart.org/', title: 'Cleveland Museum of Art (Open Access)' }), ' and the ',
+            extLink({ url: 'https://www.si.edu/openaccess', title: 'Smithsonian (Open Access)' }), ', the openly licensed works gathered by ',
+            extLink({ url: 'https://www.europeana.eu/', title: 'Europeana' }), ' (the Rijksmuseum, SMK and thousands more), and ',
+            extLink({ url: 'https://pixabay.com/', title: 'Pixabay' }), ', ', extLink({ url: 'https://www.pexels.com/', title: 'Pexels' }), ' and ',
+            extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA, or Pixabay\'s and Pexels\' own free licences, are copied, ',
             'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
           ['Game icons and the starter tokens on the Tokens tab: ', extLink({ url: 'https://game-icons.net/', title: 'game-icons.net' }),
             ', over 4,000 icons by Lorc, Delapouite and other artists under ', extLink({ url: 'https://creativecommons.org/licenses/by/3.0/', title: 'CC BY 3.0' }),
@@ -6453,6 +6498,10 @@
           'Four rare Köppen classes have no weather station with published open normals squarely in them: Csc and Dwd borrow the nearest bordering station, and the Cwc and Dsd stations sit on their class line. Each is noted in the climate table.',
           ['DeviantArt, through its API and oEmbed, for Find Image: artists there keep their copyright unless they chose a Creative Commons licence, so the app copies only works under an open one and embeds the rest, linked to the work and its artist. ',
             'If an artist or DeviantArt asks, a work will be removed.'],
+          ['Pixabay and Pexels, through their APIs, for Find Image: their pictures are free to use and change under their own licences (the ',
+            extLink({ url: 'https://pixabay.com/service/license-summary/', title: 'Pixabay Content License' }), ' and the ', extLink({ url: 'https://www.pexels.com/license/', title: 'Pexels License' }),
+            '), which are not open licences: they forbid selling a picture as it is or offering them as a picture library. A picture copied from either keeps its photographer or artist and a link to its page. ',
+            'Some Pixabay illustrations are made with AI, and its search can\'t leave them out.'],
           ['Import on a character\'s sheet reads a character the player made elsewhere, only when asked: a ', extLink({ url: 'https://pathbuilder2e.com/', title: 'Pathbuilder 2e' }),
             ' export, or a public character on ', extLink({ url: 'https://www.dndbeyond.com/', title: 'D&D Beyond' }),
             ' through its character service. Neither is openly licensed; only that player\'s own character is read, and its values are copied onto the sheet.'],

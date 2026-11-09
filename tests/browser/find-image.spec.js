@@ -1,7 +1,8 @@
-// Find Image on Encyclopedia entries: the server searches Openverse, two museums and DeviantArt (here
-// tests/support/image-stub.php answers for them), copies only openly licensed pictures, credited, and embeds other
-// DeviantArt works without copying them.
+// Find Image on Encyclopedia entries: the server searches Openverse, Wikimedia Commons, Pixabay, the museums, Pexels and
+// DeviantArt (here tests/support/image-stub.php answers for them), copies only openly or freely licensed pictures,
+// credited, and embeds other DeviantArt works without copying them. All, the panel's first choice, searches them all.
 const { test, expect } = require("@playwright/test");
+const fs = require("fs"), os = require("os"), path = require("path");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
 
@@ -55,9 +56,14 @@ test.describe("Find Image API", () => {
     expect(ov.json.results[0].full).toBeUndefined();          // the full picture's address stays on the server
 
     const mu = await search(page, cid, "museums", "armour");
+    // taken in turn; the Met's, Cleveland's and the Smithsonian's works that aren't public domain are left out
     expect(mu.json.results.map(r => [r.id, r.via, r.open])).toEqual([["aic:27992", "Art Institute of Chicago", true], ["met:436535", "The Met", true],
-      ["si:edanmdm-nmah_1", "Smithsonian", true]]);   // the Smithsonian's record with no CC0 picture is left out
-    expect(mu.json.results[2]).toMatchObject({ title: "Suit of armor", author: "Unknown armorer", license: "CC0 1.0",
+      ["cma:1517", "Cleveland Museum of Art", true], ["si:edanmdm-nmah_1", "Smithsonian", true], ["eu:/90402/SK_A_1505", "Rijksmuseum (Europeana)", true],
+      ["eu:/2048/item_77", "SMK - Statens Museum for Kunst (Europeana)", true]]);
+    expect(mu.json.results[2]).toMatchObject({ title: "Helmet for the joust", author: "Kolman Helmschmid", license: "CC0 1.0", landing_url: "https://clevelandart.org/art/1916.1517" });
+    expect(mu.json.results[4]).toMatchObject({ title: "Portrait of a Knight", author: "Frans Hals", license: "Public Domain Mark 1.0", landing_url: "https://www.europeana.eu/item/90402/SK_A_1505" });
+    expect(mu.json.results[5]).toMatchObject({ license: "CC BY-SA 4.0", license_url: "https://creativecommons.org/licenses/by-sa/4.0/" });
+    expect(mu.json.results[3]).toMatchObject({ title: "Suit of armor", author: "Unknown armorer", license: "CC0 1.0",
       thumb: "https://ids.si.edu/ids/deliveryService?id=NMAH-edanmdm-nmah_1&max=400", landing_url: "https://americanhistory.si.edu/collections/object/edanmdm-nmah_1" });
     expect(mu.json.results[0]).toMatchObject({ thumb: "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/400,/0/default.jpg",
       author_url: "https://www.artic.edu/artists/35", landing_url: "https://www.artic.edu/artworks/27992" });
@@ -67,6 +73,22 @@ test.describe("Find Image API", () => {
     expect(da.status).toBe(200);
     expect(da.json.results.map(r => [r.id, r.open, r.license])).toEqual([[DA_CC, true, "CC BY 3.0"], [DA_ARR, false, "All rights reserved"], [DA_ELSEWHERE, false, "All rights reserved"]]);
     expect(da.json.results[1]).toMatchObject({ author: "greyartist", author_url: "https://www.deviantart.com/greyartist", landing_url: "https://www.deviantart.com/greyartist/art/The-Grey-Keep-2" });
+
+    // Wikimedia Commons, in its search's own order, with the artist's link taken from Commons' HTML
+    const co = await search(page, cid, "commons", "keep");
+    expect(co.status, JSON.stringify(co.json)).toBe(200);
+    expect(co.json.results.map(r => [r.id, r.open, r.license])).toEqual([["9001", true, "CC BY-SA 4.0"], ["9002", false, "GFDL"], ["9003", true, "Public domain"]]);
+    expect(co.json.results[0]).toMatchObject({ title: "Ruined keep in winter", author: "Ann Walker", author_url: "https://commons.wikimedia.org/wiki/User:Ann",
+      via: "Wikimedia Commons", landing_url: "https://commons.wikimedia.org/wiki/File:Ruined_keep_in_winter.jpg" });
+
+    // Pixabay and Pexels: free under their own licences, so they may be copied
+    const px = await search(page, cid, "pixabay", "castle");
+    expect(px.json.results.map(r => [r.id, r.open, r.license, r.via])).toEqual([["5001", true, "Pixabay Content License", "Pixabay"], ["5002", true, "Pixabay Content License", "Pixabay"]]);
+    expect(px.json.results[0]).toMatchObject({ title: "Castle, fantasy, dragon", author: "DragonPainter", author_url: "https://pixabay.com/users/DragonPainter-77/",
+      license_url: "https://pixabay.com/service/license-summary/", landing_url: "https://pixabay.com/illustrations/castle-5001/" });
+    const pe = await search(page, cid, "pexels", "tower");
+    expect(pe.json.results).toEqual([expect.objectContaining({ id: "3003", open: true, license: "Pexels License", license_url: "https://www.pexels.com/license/",
+      title: "An old stone tower by a river", author: "Pat Lens", author_url: "https://www.pexels.com/@pat", via: "Pexels" })]);
 
     expect((await search(page, cid, "openverse", "nothing at all")).json.results).toEqual([]);
     expect((await search(page, cid, "elsewhere", "keep")).status).toBe(400);
@@ -79,6 +101,8 @@ test.describe("Find Image API", () => {
     expect(r.status).toBe(502);
     expect(r.json.message).toBe("Openverse couldn't be reached just now. Try again later.");
     expect((await search(page, cid, "museums", "broken")).status).toBe(502);
+    const px = await search(page, cid, "pixabay", "broken");
+    expect([px.status, px.json.message]).toEqual([502, "Pixabay couldn't be reached just now. Try again later."]);
     expect((await search(page, cid, "openverse", "keep")).status).toBe(200);
   });
 
@@ -94,6 +118,18 @@ test.describe("Find Image API", () => {
     while (ok < 61 && (last = await search(page, cid, "openverse", "keep")).status === 200) ok++;
     expect(last.status).toBe(429);
     expect(ok).toBeGreaterThanOrEqual(30);
+    // each source counts on its own, so All (one search of each) isn't held back by Openverse's count
+    expect((await search(page, cid, "commons", "keep")).status).toBe(200);
+  });
+
+  test("Pixabay's searches are kept for a day, as its API asks", async ({ page, browser }) => {
+    const { cid } = await setup(page, browser, "Cache");
+    const words = `castle ${Date.now()} ${Math.random().toString(36).slice(2)}`;
+    const log = path.join(os.tmpdir(), "chronicle-test-pixabay.log");
+    const asked = () => (fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "").split("\n").filter(l => l === words).length;
+    expect((await search(page, cid, "pixabay", words)).json.results).toHaveLength(2);
+    expect((await search(page, cid, "pixabay", words)).json.results).toHaveLength(2);
+    expect(asked()).toBe(1);
   });
 
   test("Use this picture copies an open picture with its credit; a closed one is refused", async ({ page, browser }) => {
@@ -119,6 +155,15 @@ test.describe("Find Image API", () => {
     expect(big.json.file.size).toBe(PNG.length);
     expect((await pick(page, cid, id, { source: "museums", id: "met:436535" })).json.file.credit).toMatchObject({ license: "CC0 1.0", source: "The Met", author: "Jacob Halder" });
     expect((await pick(page, cid, id, { source: "museums", id: "si:edanmdm-nmah_1" })).json.file.credit).toMatchObject({ license: "CC0 1.0", source: "Smithsonian", title: "Suit of armor" });
+    expect((await pick(page, cid, id, { source: "museums", id: "cma:1517" })).json.file.credit).toMatchObject({ license: "CC0 1.0", source: "Cleveland Museum of Art", title: "Helmet for the joust" });
+    expect((await pick(page, cid, id, { source: "museums", id: "eu:/90402/SK_A_1505" })).json.file.credit).toMatchObject({ license: "Public Domain Mark 1.0", source: "Rijksmuseum (Europeana)", author: "Frans Hals" });
+    expect((await pick(page, cid, id, { source: "commons", id: "9001" })).json.file.credit).toMatchObject({ license: "CC BY-SA 4.0", source: "Wikimedia Commons", author: "Ann Walker",
+      source_url: "https://commons.wikimedia.org/wiki/File:Ruined_keep_in_winter.jpg" });
+    expect((await pick(page, cid, id, { source: "commons", id: "9002" })).status).toBe(403);   // GFDL only
+    expect((await pick(page, cid, id, { source: "pixabay", id: "5001" })).json.file.credit).toMatchObject({ license: "Pixabay Content License", source: "Pixabay", author: "DragonPainter",
+      license_url: "https://pixabay.com/service/license-summary/" });
+    expect((await pick(page, cid, id, { source: "pexels", id: "3003" })).json.file.credit).toMatchObject({ license: "Pexels License", source: "Pexels", author: "Pat Lens" });
+    expect((await pick(page, cid, id, { source: "pixabay", id: "999" })).status).toBe(404);
     const mine = await pick(pp, cid, id, { source: "deviantart", id: DA_CC, is_secret: true });
     expect(mine.status, JSON.stringify(mine.json)).toBe(200);
     expect(mine.json.file).toMatchObject({ is_secret: false, credit: { license: "CC BY 3.0", source: "DeviantArt", author: "mistpainter" } });
@@ -187,6 +232,9 @@ test.describe("Find Image panel", () => {
     await box.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel = box.locator(".find-image");
     await expect(panel.getByRole("searchbox", { name: "Search for pictures" })).toHaveValue("Greywater Keep");
+    const where = panel.getByRole("combobox", { name: "Where to search" });
+    await expect(where).toHaveValue("all");
+    await where.selectOption("openverse");
     const results = panel.locator(".find-result");
     await expect(results).toHaveCount(3);
     const first = results.first();
@@ -216,8 +264,8 @@ test.describe("Find Image panel", () => {
     const box2 = page.locator(".enc-detail .enc-files");
     await box2.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel2 = box2.locator(".find-image");
-    await panel2.getByRole("tab", { name: "Museums" }).click();
-    await expect(panel2.locator(".find-result")).toHaveCount(3);
+    await panel2.getByRole("combobox", { name: "Where to search" }).selectOption("museums");
+    await expect(panel2.locator(".find-result")).toHaveCount(6);
     await panel2.getByRole("searchbox").fill("nothing here");
     await panel2.getByRole("button", { name: "Search", exact: true }).click();
     await expect(panel2).toContainText('Nothing found for "nothing here".');
@@ -235,7 +283,7 @@ test.describe("Find Image panel", () => {
     const box = page.locator(".enc-detail .enc-files");
     await box.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel = box.locator(".find-image");
-    await panel.getByRole("tab", { name: "DeviantArt" }).click();
+    await panel.getByRole("combobox", { name: "Where to search" }).selectOption("deviantart");
     const grey = panel.locator(".find-result", { hasText: "The Grey Keep" });
     await expect(grey).toBeVisible();
     await expect(grey.getByRole("button", { name: "Use this picture" })).toHaveCount(0);
@@ -257,6 +305,42 @@ test.describe("Find Image panel", () => {
     await expect(viewer.getByRole("link", { name: "Download" })).toHaveCount(0);
     expectNoErrors(errors);
   });
+  test("All searches every source at once and mixes their pictures, naming one that can't be reached", async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    await routeImages(page);
+    const { cid, id } = await setup(page, browser, "All");
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+    const box = page.locator(".enc-detail .enc-files");
+    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    const panel = box.locator(".find-image");
+    // 3 from Openverse, 3 from Commons, 2 from Pixabay, 6 from the museums, 1 from Pexels and 3 from DeviantArt
+    const results = panel.locator(".find-result");
+    await expect(results).toHaveCount(18);
+    await expect(panel).not.toContainText("Still looking");
+    // taken in turn, the first of each source first
+    await expect(results.nth(0)).toContainText("Ruined keep at dusk");
+    await expect(results.nth(1)).toContainText("Ruined keep in winter");
+    await expect(results.nth(2)).toContainText("Castle, fantasy, dragon");
+    await expect(panel.locator(".find-credits").getByRole("link", { name: "Pictures from Pixabay" })).toHaveAttribute("href", "https://pixabay.com/");
+    await expect(panel.locator(".find-credits").getByRole("link", { name: "Photos provided by Pexels" })).toHaveAttribute("href", "https://www.pexels.com/");
+    const pexels = panel.locator(".find-result", { hasText: "An old stone tower by a river" });
+    await pexels.getByRole("button", { name: "Use this picture" }).click();
+    await expect(page.getByText("Picture added")).toBeVisible();
+    await expect(page.locator(".enc-detail .enc-files .file-pic .tip")).toHaveAttribute("data-tip", /An old stone tower by a river by Pat Lens, Pexels License, via Pexels\./);
+
+    // A source that is down is named; the rest still show.
+    const box2 = page.locator(".enc-detail .enc-files");
+    await box2.getByRole("button", { name: "🖼️ Find Image" }).click();
+    const panel2 = box2.locator(".find-image");
+    await panel2.getByRole("searchbox").fill("broken");
+    await panel2.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(panel2.locator(".find-down")).toHaveText(/^Couldn't reach .*Pixabay.* just now\.$/);
+    await panel2.getByRole("searchbox").fill("nothing here");
+    await panel2.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(panel2).toContainText('Nothing found for "nothing here".');
+    expectNoErrors(errors.filter(e => !/status of 502/.test(e)));
+  });
+
   test("a linked entry name shows the entry's first picture with its tooltip, and a GM-only picture only to GMs", async ({ page, browser, isMobile }) => {
     const errors = watchErrors(page);
     const { cid, id, pp } = await setup(page, browser, "Hover");
