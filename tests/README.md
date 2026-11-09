@@ -73,8 +73,9 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
   (every N, except every N), which the year and month lengths and weekdays follow, and
   Settings spells out the next leap years; members are added by sign-in email: an approved account joins at once, any other address is an invitation
   taken up once that person is approved and opens the campaign (or their list), which a GM can cancel; players never
-  receive secret events; a GM picks people they already play with from the approved accounts not yet in
-  the campaign, which only GMs can list.
+  receive secret events; a GM finds people they already play with among the approved accounts not yet in
+  the campaign by searching (two letters or more; a site admin also by email), which only GMs can do; nobody is listed
+  before a search, so no one sees who else uses the site.
 - **setting-presets**: the Forgotten Realms preset keeps Harptos's tendays,
   festival days outside them, Shieldmeet every fourth year and Selûne's known
   full moons; Eberron's months all start on Sul, with its twelve moons and

@@ -1175,18 +1175,26 @@ try {
 
     // ===== members =====
     case 'member_candidates':
-        // Approved accounts not yet in this campaign, for the GM's member picker. GMs only: it lists emails.
+        // The GM's member picker searches, it never lists: nobody sees who else has access to the site. GMs only, and only
+        // for a search of at least 2 letters (q), which returns up to 8 approved accounts not yet in this campaign.
         $cid = cid(); need_gm($cid);
-        // Only a site admin sees their emails: any approved user can start a campaign and be its GM, so the rest get names.
-        // The accounts table is shared with Sinless, so a GM who isn't a site admin is offered only people they already
-        // play with in another campaign; anyone else they add by typing their sign-in email.
-        $mine = me()['is_admin'] ? '' : ' AND id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';
-        $st = db()->prepare("SELECT * FROM (SELECT u.id, u.email, " . user_name_sql() . " AS display_name FROM users u WHERE " . approved_sql('u.id') . " AND u.id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine) x ORDER BY display_name = '', display_name, email");
-        $st->execute(me()['is_admin'] ? [$cid] : [$cid, me()['id']]);
+        $q = mb_strtolower(trim((string)str_in($_GET['q'] ?? '', 191, false)));
+        if (mb_strlen($q) < 2) out(['users' => [], 'more' => false]);
+        $like = '%' . addcslashes($q, '\\%_') . '%';
+        // Only a site admin sees emails and finds people by them: any approved user can start a campaign and be its GM, so
+        // the rest search names. The accounts table is shared with Sinless, so a GM who isn't a site admin finds only
+        // people they already play with in another campaign; anyone else they add by typing their sign-in email.
+        $admin = (bool)me()['is_admin'];
+        $mine = $admin ? '' : ' AND u.id IN (SELECT o.user_id FROM campaign_members o JOIN campaign_members me ON me.campaign_id=o.campaign_id WHERE me.user_id=?)';
+        $match = $admin ? '(LOWER(display_name) LIKE ? OR LOWER(email) LIKE ?)' : "(TRIM(display_name) <> '' AND LOWER(display_name) LIKE ?)";
+        $st = db()->prepare("SELECT * FROM (SELECT u.id, u.email, " . user_name_sql() . " AS display_name FROM users u WHERE " . approved_sql('u.id') . " AND u.id NOT IN (SELECT user_id FROM campaign_members WHERE campaign_id=?)$mine) x
+            WHERE $match ORDER BY display_name = '', display_name, email LIMIT 9");
+        $st->execute($admin ? [$cid, $like, $like] : [$cid, me()['id'], $like]);
         $users = $st->fetchAll();
-        if (!me()['is_admin']) $users = array_values(array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']],
-            array_filter($users, fn($x) => trim((string)$x['display_name']) !== '')));
-        out(['users' => $users]);
+        $more = count($users) > 8;
+        $users = array_slice($users, 0, 8);
+        if (!$admin) $users = array_map(fn($x) => ['id' => $x['id'], 'display_name' => $x['display_name']], $users);
+        out(['users' => $users, 'more' => $more]);
 
     case 'member_add':
         // By the account picked from member_candidates, or by sign-in email. An approved account joins at once, so the
