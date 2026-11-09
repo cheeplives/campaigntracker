@@ -1521,6 +1521,8 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .character-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
 .character-card { display: flex; flex-direction: column; gap: 6px; }
 .character-card[data-kind="npc"] { border-left: 4px solid var(--secret); }
+.character-card-foot { margin-top: auto; align-items: center; }
+.character-party { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 .character-name { font: 700 1.2rem var(--disp); text-transform: uppercase; letter-spacing: .04em; }
 .character-pic { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
 .card-stats { display: flex; flex-direction: column; gap: 3px; }

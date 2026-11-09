@@ -441,6 +441,53 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   expectNoErrors(errors);
 });
 
+test("a character with no player who travels with the party gets its own action line; one out of the party doesn't", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, player, pp } = await table(page, browser, "PartyActs");
+  await page.setViewportSize({ width: 1180, height: 900 });
+  const layout = { sections: [{ key: "s", title: "Stats", fields: [{ key: "hp", label: "HP", type: "counter", play: true }] }] };
+  const tpl = (await api(page, "template_save", { name: `Acts sheet ${cid}`, game: "Test RPG", layout })).json.template;
+  const make = async body => (await api(page, "character_create", { template_id: tpl.id, ...body }, cid)).json.character;
+  const hodor = await make({ name: "Hodor", kind: "npc", owner_id: null, party: true });         // the GM's own, in the party
+  const kat = await make({ name: "Katrina Fielder", kind: "pc", owner_id: 0, party: true });     // no player, in the party
+  await make({ name: "Stay Home", kind: "npc", owner_id: 0, party: false });                     // not in the party
+
+  await page.goto(`index.html#/c/${cid}`);
+  const now = page.locator(".tv-now");
+  const shift = (await now.locator(".tv-now-main textarea").first().getAttribute("aria-label")).replace("What the party does this ", "");
+  await expect(now.getByLabel(`${player.name}'s action this ${shift}`)).toBeVisible();
+  await expect(now.getByLabel(`Stay Home (NPC)'s action this ${shift}`)).toHaveCount(0);
+  await now.getByLabel(`Hodor (NPC)'s action this ${shift}`).selectOption("Keep watch");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  await now.getByLabel(`Katrina Fielder's action this ${shift}`).selectOption("Forage");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  const rows = () => sql(`SELECT user_id, character_id, action FROM shift_actions WHERE campaign_id=${cid} ORDER BY character_id`).trim();
+  await expect.poll(rows).toBe(`0\t${hodor.id}\tKeep watch\n0\t${kat.id}\tForage`);
+  // the party's own action is still one of its own
+  await now.getByLabel(`The party's action this ${shift}`).selectOption("Travel");
+  await expect(now.locator(".sa-status")).toHaveText("Saved ✓");
+  expect(sql(`SELECT COUNT(*) FROM shift_actions WHERE campaign_id=${cid}`).trim()).toBe("3");
+
+  // a player reads them but can't pick them
+  await pp.goto(`index.html#/c/${cid}`);
+  const pnow = pp.locator(".tv-now");
+  await expect(pnow.locator(".shift-actions")).toContainText("Hodor (NPC)");
+  await expect(pnow.getByLabel(`Hodor (NPC)'s action this ${shift}`)).toHaveCount(0);
+  const [day, slot] = sql(`SELECT abs_day, shift FROM shift_actions WHERE campaign_id=${cid} LIMIT 1`).trim().split("\t").map(Number);
+  expect((await api(pp, "shift_action_set", { abs_day: day, shift: slot, character_id: hodor.id, action: "Rest" }, cid)).status).toBe(403);
+
+  // out of the party: no new action, but what it did stays listed
+  expect((await api(page, "character_save", { id: kat.id, version: kat.version, party: false }, cid)).status).toBe(200);
+  expect((await api(page, "shift_action_set", { abs_day: day, shift: slot, character_id: kat.id, action: "Rest" }, cid)).status).toBe(400);
+  await page.reload();
+  await expect(now.getByLabel(`Katrina Fielder's action this ${shift}`)).toHaveCount(0);
+  await expect(now.locator(".shift-actions")).toContainText("Katrina Fielder");
+  // deleting its sheet takes its actions with it
+  expect((await api(page, "character_delete", { id: hodor.id }, cid)).status).toBe(200);
+  expect(sql(`SELECT COUNT(*) FROM shift_actions WHERE campaign_id=${cid} AND character_id=${hodor.id}`).trim()).toBe("0");
+  expectNoErrors(errors);
+});
+
 test("each player and the party pick one action a shift beside the writing; + Event and + Reminder are on the bar; the session lists the actions", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, player, pp } = await table(page, browser, "Acts");
