@@ -120,6 +120,9 @@ test.describe("Fan wikis API", () => {
 });
 
 test.describe("Fan wikis in the app", () => {
+  // Find Image's museum pictures are answered by page.route() below, which WebKit skips while a service worker runs.
+  test.use({ serviceWorkers: "block" });
+
   test("the GM picks the campaign's wiki in Settings, and an entry adds its summary with the source and licence", async ({ page, browser }) => {
     const errors = watchErrors(page);
     // Find Image opens on All, which also shows the stub museums' pictures from their real hosts: answered here, so
