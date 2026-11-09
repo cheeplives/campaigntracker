@@ -205,9 +205,10 @@ test("a split party's downtime is for one group, and offers its players and its 
   await who.getByRole("button", { name: "Absent Friend" }).click();
   await who.getByRole("button", { name: "Spy (NPC)" }).click();
   await card.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Short Rest saved")).toBeVisible();
+  // the first save's toast, with the same words, may still be up: wait for this save to reach the server instead
+  await expect.poll(async () => (await api(page, "downtimes", undefined, cid)).json.downtimes[0].group_id).toBe(main.id);
+  await expect(card.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
   saved = (await api(page, "downtimes", undefined, cid)).json.downtimes[0];
-  expect(saved.group_id).toBe(main.id);
   expect(saved.activities[0].characters.sort()).toEqual([absent.id, spy.id].sort());
 
   // A player reads the names, but not the GM-only character's.
