@@ -1689,7 +1689,7 @@
 
     // --- shifts
     const shiftCards = el('div', { class: 'shifts' + (hourMode() ? ' hours' : '') }, names.map((_, i) =>
-      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null, { sessions: r.sessions, actions: r.shift_actions || [] })));
+      shiftCard(d, i, shifts[i] || {}, region, sws[i] || null, !!w?.partial && !sws[i], (r.shift_notes || []).filter(n => Number(n.shift) === i), grounds[i] || null, { sessions: r.sessions, actions: r.shift_actions || [], party: r.party_characters || [] })));
 
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
@@ -2515,32 +2515,41 @@
     return b;
   }
 
-  /** A shift's actions: one for the party as a whole and one for each player's character, picked from the baseline
-   * shift actions (their descriptions on hover). A GM picks any of them, a player their own; each saves as it is picked,
-   * and a session's page and its Build draft list them. acts: the day's shift_actions. readOnly: just the ones picked. */
+  /** A shift's actions: one for the party as a whole, one for each player's character and one for each character with
+   * no player that travels with the party, picked from the baseline shift actions (their descriptions on hover). A GM
+   * picks any of them, a player their own; each saves as it is picked, and a session's page and its Build draft list
+   * them. acts: the day's shift_actions. party: the day's party_characters. readOnly: just the ones picked. */
   function shiftActionsBox(d, i, acts, opt = {}) {
     const mine = (acts || []).filter(a => Number(a.shift) === i);
-    const byUser = new Map(mine.map(a => [Number(a.user_id), a]));
+    const keyOf = a => `${Number(a.user_id) || 0}:${Number(a.character_id) || 0}`;
+    const byKey = new Map(mine.map(a => [keyOf(a), a]));
     const find = name => E.SHIFT_ACTIONS.find(a => a.name === name);
     const label = name => { const a = find(name); return a ? `${a.icon} ${a.name}` : name; };
-    const players = dtPlayers();
-    const rows = [{ uid: 0, who: 'The party' }, ...players.map(m => ({ uid: Number(m.id), who: memberName(m) })),
-      // a player who has since left keeps what they did
-      ...mine.filter(a => Number(a.user_id) && !players.some(m => Number(m.id) === Number(a.user_id))).map(a => ({ uid: Number(a.user_id), who: a.who, gone: true }))];
-    const head = el('span', { class: 'lbl' }, 'Actions', tip(`One action for the party as a whole and one for each player's character this ${word()}. Hover an action to read what it means. They go in the notes of the session this ${word()} is in`));
+    const players = dtPlayers(), party = opt.party || [];
+    const row = (uid, chid, who, gone = false) => ({ uid, chid, key: `${uid}:${chid}`, who, gone });
+    const rows = [row(0, 0, 'The party'), ...players.map(m => row(Number(m.id), 0, memberName(m))),
+      ...party.map(c => row(0, Number(c.id), c.kind === 'npc' ? `${c.name} (NPC)` : c.name)),
+      // a player who has since left, or a character no longer in the party, keeps what they did
+      ...mine.filter(a => !listed(a)).map(a => row(Number(a.user_id) || 0, Number(a.character_id) || 0, a.who, true))];
+    function listed(a) {
+      const u = Number(a.user_id) || 0, c = Number(a.character_id) || 0;
+      return c ? party.some(x => Number(x.id) === c) : !u || players.some(m => Number(m.id) === u);
+    }
+    const head = el('span', { class: 'lbl' }, 'Actions', tip(`One action for the party as a whole, one for each player's character and one for each character with no player who travels with the party this ${word()}. Hover an action to read what it means. They go in the notes of the session this ${word()} is in`));
     if (opt.readOnly) {
-      const set = rows.filter(r => byUser.has(r.uid));
+      const set = rows.filter(r => byKey.has(r.key));
       if (!set.length) return null;
       return el('div', { class: 'shift-actions read' }, head, el('div', { class: 'sa-list small' }, set.map((r, k) => {
-        const a = byUser.get(r.uid).action;
+        const a = byKey.get(r.key).action;
         return el('span', { 'data-tip': find(a)?.desc || null }, k ? ' · ' : '', el('b', {}, r.who), ': ', label(a));
       })));
     }
     const status = el('small', { class: 'sa-status', role: 'status' });
     const can = r => !S.viewAs && !r.gone && (isGM() || (r.uid && r.uid === S.user.id));
     const grid = el('div', { class: 'sa-grid' }, rows.map(r => {
-      const cur = byUser.get(r.uid)?.action || '';
-      const name = el('span', { class: 'sa-who' + (r.uid ? '' : ' party') }, r.who);
+      const cur = byKey.get(r.key)?.action || '';
+      const whole = !r.uid && !r.chid;
+      const name = el('span', { class: 'sa-who' + (whole ? ' party' : '') }, r.who);
       if (!can(r)) return [name, el('span', { class: 'sa-val' + (cur ? '' : ' muted'), 'data-tip': find(cur)?.desc || null }, cur ? label(cur) : '—')];
       const sel = el('select', { class: 'sa-pick', 'aria-label': `${r.who}'s action this ${shiftNames()[i]}` },
         el('option', { value: '' }, '—'),
@@ -2548,14 +2557,14 @@
           E.SHIFT_ACTIONS.filter(a => a.group === g).map(a => el('option', { value: a.name, title: a.desc }, `${a.icon} ${a.name}`)))),
         cur && !find(cur) ? el('option', { value: cur }, cur) : null);
       sel.value = cur;
-      const tipNow = () => { const a = find(sel.value); sel.dataset.tip = a ? `${a.icon} ${a.name}: ${a.desc}` : `Pick what ${r.uid ? r.who : 'the party as a whole'} does this ${word()}`; };
+      const tipNow = () => { const a = find(sel.value); sel.dataset.tip = a ? `${a.icon} ${a.name}: ${a.desc}` : `Pick what ${whole ? 'the party as a whole' : r.who} does this ${word()}`; };
       tipNow();
       let saved = cur;
       sel.addEventListener('change', async () => {
         tipNow();
         status.textContent = 'Saving…'; status.className = 'sa-status';
         try {
-          await post('shift_action_set', { abs_day: d, shift: i, user_id: r.uid, action: sel.value, transit: !r.uid && E.isOnTheMove(sel.value) }, S.camp.id);
+          await post('shift_action_set', { abs_day: d, shift: i, user_id: r.uid, character_id: r.chid, action: sel.value, transit: whole && E.isOnTheMove(sel.value) }, S.camp.id);
           saved = sel.value;
           status.textContent = 'Saved ✓'; status.className = 'sa-status ok';
         } catch (err) { sel.value = saved; tipNow(); status.textContent = 'Not saved'; status.className = 'sa-status bad'; toast(err.message, true); }
@@ -2563,7 +2572,7 @@
       return [name, sel];
     }).flat());
     return el('div', { class: 'shift-actions' }, el('div', { class: 'row spread' }, head, status), grid,
-      players.length ? null : el('p', { class: 'small muted' }, 'Players who join the campaign get a line each.'));
+      players.length || party.length ? null : el('p', { class: 'small muted' }, 'Players who join the campaign get a line each, and so does a character with no player when Travels with the party is ticked on its sheet.'));
   }
 
   /** hiddenWx: a player looking at a shift of today that hasn't come yet, whose weather the server held back. opt: { big: the
@@ -2589,7 +2598,7 @@
       return det;
     };
     // the actions: the big box's (a player picks their own there), else a line of what was picked
-    const actsBox = opt.actions && (opt.big || !isGM() || opt.readOnly) ? shiftActionsBox(d, i, opt.actions, { readOnly: opt.readOnly || !opt.big }) : null;
+    const actsBox = opt.actions && (opt.big || !isGM() || opt.readOnly) ? shiftActionsBox(d, i, opt.actions, { readOnly: opt.readOnly || !opt.big, party: opt.party }) : null;
     if (!isGM() || opt.readOnly) {
       card.append(el('p', { class: 'pre' }, s.activity ? linked(s.activity) : el('span', { class: 'muted' }, 'No activity recorded.')), actsBox || '', shiftNotes(d, i, notes, opt.after));
       return fold(card);
@@ -2646,7 +2655,7 @@
         preview, el('span', { class: 'shift-edit-label' }, el('span', { class: 'when-closed' }, '✎ Edit'), el('span', { class: 'when-open' }, 'Done'))),
       opt.big ? el('span', { class: 'lbl' }, 'What the party does') : null, act,
       opt.big ? el('span', { class: 'lbl' }, '🔒 GM notes') : null, gmn, mentionRow(s.activity, s.gm_notes) || '',
-      !opt.big && opt.actions ? shiftActionsBox(d, i, opt.actions) : null);
+      !opt.big && opt.actions ? shiftActionsBox(d, i, opt.actions, { party: opt.party }) : null);
     editor.addEventListener('focusout', e => { if (!editor.contains(e.relatedTarget)) { save(); offer(); } });
     editor.addEventListener('toggle', () => { if (!editor.open) { save(); offer(); } });
     card.append(editor, status, actsBox || '', shiftNotes(d, i, notes, opt.after));
@@ -5979,7 +5988,7 @@
       party.link ? el('div', { class: 'small' }, party.link) : null, party.groups ? el('div', { class: 'small muted' }, party.groups) : null]) : [el('div', { class: 'muted' }, 'Not set')]));
 
     // the big box: the shift as its card on the day page shows it, made large, its editor open
-    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions, actions: cur.x.r.shift_actions || [] })
+    const big = cur ? shiftCard(cur.d, cur.i, cur.s, cur.x.region, cur.sw, cur.hidden, cur.notes, cur.ground, { big: true, readOnly: PANEL, after: PANEL ? () => viewTable() : route, sessions: cur.x.r.sessions, actions: cur.x.r.shift_actions || [], party: cur.x.r.party_characters || [] })
       : el('div', { class: 'card shiftcard' }, el('p', { class: 'muted' }, `This ${word()} couldn't be loaded.`));
     big.classList.add('tv-now');
     // on a wide screen the big box is two columns: the writing, and beside it everyone's notes and the events
