@@ -741,29 +741,66 @@ const Sheets = (() => {
     return bar;
   }
 
-  /** A character's Play fields, small, for its card. */
+  /** A value short enough for a card, or null: a list's rows by their first column ("Sword, Shield, Rations"), long
+   * text cut short, anything else structured left to the sheet. */
+  function cardValue(v) {
+    if (v === null || v === undefined || v === '' || v === false) return null;
+    if (Array.isArray(v)) {
+      const names = v.map(r => (r && typeof r === 'object' ? Object.values(r).find(x => String(x ?? '').trim()) : r))
+        .filter(x => x !== null && x !== undefined && String(x).trim()).map(x => String(x).trim());
+      return names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3} more` : '') : null;
+    }
+    if (typeof v === 'object') return null;
+    const t = String(v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return !t ? null : t.length > 60 ? `${t.slice(0, 57)}…` : t;
+  }
+  /** "Level 2" for a number, the value alone for words ("Fighter"). */
+  const cardPair = (label, v, raw) => (typeof raw === 'number' || /^[+\-−]?\d/.test(v) ? `${label} ${v}` : v);
+  const CARD_LINES = 4;   // the most Play fields a card lists under its bars, past which it says how many more
+  /** What a card shows of a sheet: its Summary fields as one line under the name (who they are: Fighter · Level 2),
+   * then its Play fields (how they are doing): counters as bars, tracks as dots, ticked boxes as chips, and a few
+   * short values, lists as their rows' names. Never the raw data; the rest is on the sheet. */
   function cardStats(c) {
     if (!c.sheet_visible) return el('p', { class: 'small muted' }, 'Sheet hidden by the GM');
-    const bits = c.play.map(f => {
+    const inSummary = new Set(c.summary.map(f => f.key));
+    const bars = [], lines = [], chips = [];
+    for (const f of c.play) {
+      if (inSummary.has(f.key)) continue;
       if (f.type === 'counter') {
         const v = f.value || {}, pct = v.max ? Math.max(0, Math.min(100, (v.cur / v.max) * 100)) : 0;
-        return el('div', { class: 'card-stat' }, el('span', { class: 'small' }, `${f.label} ${v.cur ?? '–'}${v.max != null ? ` / ${v.max}` : ''}`),
-          v.max ? el('div', { class: 'stat-bar' }, el('span', { style: { width: `${pct}%` } })) : null);
+        if (v.cur == null && v.max == null) continue;
+        bars.push(el('div', { class: 'card-stat' }, el('span', { class: 'small' }, `${f.label} ${v.cur ?? '–'}${v.max != null ? ` / ${v.max}` : ''}`),
+          v.max ? el('div', { class: 'stat-bar' }, el('span', { style: { width: `${pct}%` } })) : null));
+      } else if (f.type === 'pips') bars.push(el('div', { class: 'card-stat small' }, `${f.label} `, '●'.repeat(Number(f.value) || 0) + '○'.repeat(Math.max(0, (f.count || 0) - (Number(f.value) || 0)))));
+      else if (f.type === 'checkbox') { if (f.value) chips.push(el('span', { class: 'chip card-cond' }, f.label)); }
+      else {
+        const v = cardValue(f.value);
+        if (v) lines.push(el('div', { class: 'card-stat small', title: v }, Array.isArray(f.value) ? `${f.label}: ${v}` : cardPair(f.label, v, f.value)));
       }
-      if (f.type === 'pips') return el('div', { class: 'card-stat small' }, `${f.label} `, '●'.repeat(Number(f.value) || 0) + '○'.repeat(Math.max(0, (f.count || 0) - (Number(f.value) || 0))));
-      if (f.type === 'checkbox') return f.value ? el('span', { class: 'chip card-cond' }, f.label) : null;
-      if (f.value === null || f.value === undefined || f.value === '') return null;
-      return el('div', { class: 'card-stat small' }, `${f.label}: ${typeof f.value === 'object' ? JSON.stringify(f.value) : f.value}`);
-    });
-    const sum = c.summary.filter(f => f.value !== null && f.value !== '' && typeof f.value !== 'object').map(f => el('div', { class: 'small muted' }, `${f.label}: ${f.value}`));
-    return el('div', { class: 'card-stats' }, bits, sum);
+    }
+    const more = lines.length - CARD_LINES;
+    return el('div', { class: 'card-stats' }, bars, chips.length ? el('div', { class: 'row card-conds' }, chips) : null,
+      lines.slice(0, CARD_LINES), more > 0 ? el('div', { class: 'small muted' }, `+${more} more on the sheet`) : null);
+  }
+  /** A character's Summary fields as one short line: "Fighter · Level 2". */
+  function summaryLine(c) {
+    if (!c.sheet_visible) return null;
+    const parts = c.summary.map(f => { const v = cardValue(f.value); return v ? { text: cardPair(f.label, v, f.value), full: `${f.label}: ${v}` } : null; }).filter(Boolean);
+    return parts.length ? el('div', { class: 'character-summary', title: parts.map(p => p.full).join('\n') }, parts.map(p => p.text).join(' · ')) : null;
+  }
+  /** A character's portrait, or its initials in a circle where it has none. */
+  function portrait(c, cls = '') {
+    const initials = String(c.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    return c.pic ? el('img', { src: c.pic, alt: '', class: `character-pic ${cls}`, loading: 'lazy' })
+      : el('span', { class: `character-pic character-initials ${cls}`, 'aria-hidden': 'true' }, initials);
   }
   function characterCard(c) {
     const href = `#/c/${cid()}/characters/${c.id}`;
     return el('div', { class: 'card character-card', 'data-kind': c.kind },
-      el('div', { class: 'row' }, c.pic ? el('img', { src: c.pic, alt: '', class: 'character-pic', loading: 'lazy' }) : null,
+      el('div', { class: 'row character-card-head' }, el('a', { href, tabindex: -1, 'aria-hidden': 'true' }, portrait(c)),
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
-          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')))),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')),
+          summaryLine(c))),
       cardStats(c),
       el('div', { class: 'row' }, el('a', { href, class: 'button small' }, 'Sheet'), c.sheet_visible && c.play.length ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null));
   }
@@ -987,6 +1024,60 @@ const Sheets = (() => {
   }
 
   /** A character's sheet, or (play) its Play view. */
+  /** The Portrait box on a sheet, for its player and the GMs: the pictures on the character's Encyclopedia entry to pick
+   * from, Upload a picture (which goes on the entry too) and Find Image. done(character) after each change. */
+  function portraitPanel(ch, done) {
+    const box = el('div', { class: 'card sheet-portrait-panel', hidden: true });
+    const status = el('p', { class: 'small muted', role: 'status' });
+    const use = async fileId => {
+      status.textContent = 'Saving…';
+      try {
+        const res = await ctx.post('character_portrait', { id: ch.id, file_id: fileId }, cid());
+        Object.assign(ch, { pic: res.character.pic, portrait_id: res.character.portrait_id });
+        status.textContent = '';
+        toast(fileId ? 'Portrait set' : 'Portrait is the entry\'s first picture again');
+        done(ch);
+        load();
+      } catch (err) { status.textContent = ''; toast(err.message, true); }
+    };
+    async function load() {
+      let r;
+      try { r = await ctx.api('files', { query: { cid: cid(), parent_type: 'encyclopedia', parent_id: ch.entry_id } }); }
+      catch (err) { return fill(box, el('p', { class: 'small muted' }, err.message)); }
+      const pics = r.files.filter(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone));
+      const up = r.uploads || {};
+      const input = el('input', { type: 'file', accept: 'image/*', class: 'file-input', 'aria-label': 'Upload a portrait' });
+      input.addEventListener('change', async () => {
+        const f = input.files[0];
+        input.value = '';
+        if (!f) return;
+        if (up.max_bytes && f.size > up.max_bytes) return toast(`${f.name} is too big`, true);
+        status.textContent = `Uploading ${f.name}…`;
+        try { const file = await ctx.uploadFile('encyclopedia', ch.entry_id, f); await use(file.id); }
+        catch (err) { status.textContent = ''; toast(err.message, true); }
+      });
+      const findSlot = el('div', { class: 'find-slot' });
+      const chosen = ch.portrait_id;
+      fill(box,
+        el('div', { class: 'row spread' }, el('h3', {}, 'Portrait'), button('Close', () => { box.hidden = true; }, 'small')),
+        el('p', { class: 'small muted' }, 'Shown on the character\'s card, at the top of the sheet and in the Play view. Pictures added here go on its Encyclopedia entry too.'),
+        pics.length ? el('div', { class: 'portrait-picks', role: 'group', 'aria-label': 'Pictures on the entry' }, pics.map((f, i) => {
+          const on = chosen ? f.id === chosen : i === 0;
+          return el('button', { type: 'button', class: 'portrait-pick' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': `Use ${f.caption || f.name}`,
+            onclick: () => { if (!on) use(f.id); } }, el('img', { src: f.url, alt: '', loading: 'lazy', referrerpolicy: f.embed ? 'no-referrer' : null }));
+        })) : el('p', { class: 'small muted' }, 'No pictures yet.'),
+        el('div', { class: 'row' },
+          up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': 'Upload a picture (JPEG, PNG, GIF, WebP) for the portrait' }, input, '📎 Upload a picture') : null,
+          up.ready && ctx.findImage ? button('🖼️ Find Image', () => {
+            findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(ctx.findImage('encyclopedia', ch.entry_id, ch.name, { copyOnly: true, onAdded: file => use(file.id) }));
+          }, 'small', { 'data-tip': 'Search open picture libraries and museums for a portrait, credited' }) : null,
+          chosen && pics.length > 1 ? button('Use the first picture', () => use(0), 'small', { 'data-tip': 'Go back to the first picture on the Encyclopedia entry' }) : null,
+          !up.ready && up.problem ? el('span', { class: 'small muted' }, up.problem) : null),
+        status, findSlot);
+    }
+    box.toggle = () => { box.hidden = !box.hidden; if (!box.hidden) { fill(box, el('p', { class: 'small muted' }, 'Loading…')); load(); } };
+    return box;
+  }
   async function renderCharacter(id, play = false) {
     stopPresence();
     const r = await ctx.api('character', { query: { cid: cid(), id } });
@@ -1055,8 +1146,15 @@ const Sheets = (() => {
       el('a', { href: `#/c/${cid()}/characters`, class: 'small' }, '← Characters'),
       play ? el('a', { href, class: 'small' }, 'Full sheet') : (ch.sheet_visible ? el('a', { href: `${href}/play`, class: 'small' }, 'Play view') : null),
       el('a', { href: `#/c/${cid()}/encyclopedia/${ch.entry_id}`, class: 'small' }, 'Encyclopedia entry'));
+    // the portrait beside the name: its player and the GMs tap it to pick or upload one
+    const portraits = ch.can_edit ? portraitPanel(ch, () => face.replaceChildren(portrait(ch, 'big'), el('span', { class: 'portrait-edit', 'aria-hidden': 'true' }, '✎'))) : null;
+    const face = ch.can_edit
+      ? button([portrait(ch, 'big'), el('span', { class: 'portrait-edit', 'aria-hidden': 'true' }, '✎')], () => portraits.toggle(), 'sheet-portrait',
+        { 'aria-label': ch.pic ? 'Change the portrait' : 'Add a portrait', 'data-tip': ch.pic ? 'Change the portrait' : 'Add a portrait: upload one, or pick a picture on the Encyclopedia entry' })
+      : el('div', { class: 'sheet-portrait' }, portrait(ch, 'big'));
     ctx.mount(...ctx.campaignHeader('characters'),
       el('div', { class: `card sheet-page${play ? ' play-page' : ''}` }, links,
+        el('div', { class: 'sheet-head' }, face, el('div', { class: 'sheet-head-main' },
         el('div', { class: 'row spread' }, el('h1', {}, ch.name), el('div', { class: 'row' }, editBtn,
           ch.can_edit && !play ? button('Import', () => { imports.hidden = !imports.hidden; }, 'small', { 'data-tip': 'Fill this sheet from Pathbuilder 2e or D&D Beyond' }) : null,
           ch.can_edit ? button('Delete character', async () => {
@@ -1069,6 +1167,8 @@ const Sheets = (() => {
           } catch (err) { toast(err.message, true); }
         }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null)),
         el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player && ch.party_out ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        summaryLine(ch))),
+        portraits,
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,
         bar, imports, body));
     if (!location.hash.startsWith(href)) return;   // left while it loaded

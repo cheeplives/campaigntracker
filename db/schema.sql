@@ -855,6 +855,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   party_group_id INT UNSIGNED NULL,                  -- the party group a character with no player travels with (033); null: not in the party
   party_out TINYINT(1) NOT NULL DEFAULT 0,           -- a player's character the GM took out of the party (034): its player is in no group while it is their active one
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
+  portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
   template_version INT UNSIGNED NOT NULL,
   field_values MEDIUMTEXT NOT NULL,
   field_stamps MEDIUMTEXT NOT NULL,

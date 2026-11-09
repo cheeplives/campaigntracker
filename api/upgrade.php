@@ -107,6 +107,8 @@ function upgrade_steps(): array {
             'Entries, tomes, session notes and day notes now keep their earlier versions, for a GM to read, compare and restore.'],
         ['040_site_reports.sql', fn(PDO $p) => !db_has_table($p, 'site_reports'),
             'Added the Report (!) button to the top bar, and a Reports tab on Site Admin to read, resolve, send to GitHub or delete what people report.'],
+        ['043_character_portraits.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'portrait_id'),
+            'A character can now have a portrait, picked or uploaded on its sheet and shown on its card, its sheet and its Play view.'],
     ];
 }
 
