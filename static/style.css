@@ -2114,3 +2114,27 @@ body:has(.tv-bar) #undo-toast { bottom: 92px; }   /* above At the Table's floati
   a.button.small:not([hidden]), label.button.small:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
   button.link.small { min-height: 0; }
 }
+
+/* "On this page" in the campaign bar: plain links on At the Table, a Jump to ▾ menu elsewhere and on a narrow screen */
+.jump-links { display: inline-flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--line); font-size: .85rem; }
+.jump-links[hidden] { display: none; }
+.jump-inline { display: none; gap: 2px; flex-wrap: wrap; }
+.jump-links.inline .jump-inline { display: inline-flex; }
+.jump-links.inline .jump-menu { display: none; }
+.jump-inline a { color: var(--dim); border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
+.jump-inline a:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+.jump-inline a.on { color: var(--accent); font-weight: 600; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.jump-menu > summary { padding: 2px 10px; font-size: .82rem; }
+@media (max-width: 1000px) {
+  .jump-links.inline .jump-inline { display: none; }
+  .jump-links.inline .jump-menu { display: block; }
+}
+section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px) + 14px); }
+@media (max-width: 560px) { .jump-links { display: none; } }   /* a phone: the page is one column to scroll anyway */
+
+/* ✓ Saved, Saving…, Not saved or Offline, at the end of the campaign bar */
+.save-state { font-size: .82rem; color: var(--ok); white-space: nowrap; margin-left: auto; }
+.save-state.busy { color: var(--dim); }
+.save-state.bad { color: var(--bad); font-weight: 600; }
+.nowbar .save-state + .now-passbtn { margin-left: 0; }
+@media (pointer: coarse) { .now-title .view-as, .jump-menu > summary { min-height: 34px; } }

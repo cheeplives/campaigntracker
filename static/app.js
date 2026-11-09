@@ -88,8 +88,11 @@
     if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
     if (body && leaving) opt.keepalive = true;   // a delete still waiting on its Undo, sent as the page goes
     const noteFail = (status, msg) => { if (typeof ReportLog !== 'undefined') ReportLog.request(action, status, msg); };
+    const tracked = !!body && !PANEL && action !== 'days_save' && action !== 'changed';   // the campaign bar's "✓ Saved"
+    if (tracked) SaveState.begin();
     let res;
-    try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); throw err; }
+    try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); if (tracked) SaveState.end(err.message); throw err; }
+    if (tracked) SaveState.end(res.ok ? null : `Not saved (${res.status})`);
     let data;
     try { data = await res.json(); } catch { noteFail(res.status, 'not JSON'); throw Object.assign(new Error(`Server error (${res.status})`), { status: res.status }); }
     // The panel's link was revoked (or its maker lost access): ask for a new one.
@@ -118,6 +121,23 @@
   addEventListener('beforeunload', () => { leaving = true; });
   addEventListener('pagehide', () => { leaving = true; });
   addEventListener('pageshow', () => { leaving = false; });   // back from the back-forward cache
+
+  // One line in the campaign bar says whether everything you changed has reached the server: ✓ Saved, Saving…, Not saved
+  // (with what went wrong in its tooltip) or Offline. It follows every change the page sends.
+  const SaveState = (() => {
+    const node = el('span', { class: 'save-state', role: 'status', 'aria-live': 'polite' });
+    let busy = 0, failed = null;
+    const show = () => {
+      const off = navigator.onLine === false;
+      node.className = 'save-state' + (off || failed ? ' bad' : busy ? ' busy' : '');
+      node.textContent = off ? 'Offline' : busy ? 'Saving…' : failed ? 'Not saved' : '✓ Saved';
+      node.dataset.tip = off ? 'This device is offline. Changes made now will not reach the campaign until it is back online'
+        : failed ? `The last change did not save: ${failed}. Try it again` : busy ? 'Sending your change' : 'Everything you changed on this page is saved';
+    };
+    addEventListener('online', show); addEventListener('offline', show);
+    show();
+    return { node, begin() { busy++; show(); }, end(err) { busy = Math.max(0, busy - 1); failed = err || (busy ? failed : null); show(); } };
+  })();
 
   // Undo instead of "Are you sure?": a delete takes the thing off the page at once and says so with an Undo button, and the
   // server is only told 8 seconds later (or sooner: when another delete starts, the page changes or the tab closes).
@@ -1205,10 +1225,51 @@
     tokens: 'Round pictures for the party\'s groups, characters and entries (GM only)',
     settings: 'Campaign options and the calendar itself (GM only)',
   };
+  // "On this page": the long pages (At the Table, a day) get links to their boxes in the campaign bar. At the Table, where the
+  // bar has room, they are plain links with the one you are in tinted; elsewhere, and on a narrow screen, one Jump to ▾ menu.
+  // A link opens its box if it is folded, then scrolls to it.
+  let jumpScroll = null;
+  function fillJumpLinks() {
+    if (jumpScroll) { removeEventListener('scroll', jumpScroll); jumpScroll = null; }
+    const nav = $('.nowbar .jump-links'), main = app();
+    if (!nav || !main) return;
+    const targets = [];
+    const now = main.querySelector('.tv-now');
+    if (now) targets.push([now, 'Now']);
+    main.querySelectorAll('section.daybox[data-box], section.tv-links').forEach(sec => {
+      const raw = (sec.querySelector('.daybox-toggle')?.textContent || (sec.classList.contains('tv-links') ? 'VTT' : '')).trim();
+      if (!raw) return;
+      const name = raw.replace(/^today's\s+/i, '').replace(/\s+and conditions$/i, '').replace(/\s+today$/i, '');
+      const n = sec.querySelectorAll('.daybox-body > .event').length;
+      targets.push([sec, name.charAt(0).toUpperCase() + name.slice(1) + (n ? ` (${n})` : '')]);
+    });
+    if (targets.length < 3) { nav.hidden = true; nav.replaceChildren(); return; }
+    const go = sec => {
+      const t = sec.querySelector('.daybox-toggle');
+      if (sec.classList.contains('folded') && t) t.click();
+      sec.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    };
+    const links = targets.map(([sec, name]) => el('a', { href: '#', onclick: ev => { ev.preventDefault(); go(sec); } }, name));
+    const menu = KIT.menu({ label: 'Jump to ▾', ariaLabel: 'Jump to a part of this page', items: targets.map(([sec, name]) => btn(name, () => go(sec))), cls: 'jump-menu', align: 'left' });
+    nav.replaceChildren(el('span', { class: 'jump-inline' }, links), menu);
+    nav.hidden = false;
+    // the link for the box you are in is tinted, as you scroll
+    const mark = () => {
+      const line = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0) + 90;
+      let on = 0;
+      targets.forEach(([sec], i) => { if (sec.isConnected && sec.getBoundingClientRect().top <= line) on = i; });
+      links.forEach((a, i) => a.classList.toggle('on', i === on));
+    };
+    let queued = false;
+    jumpScroll = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; mark(); }); } };
+    addEventListener('scroll', jumpScroll, { passive: true });
+    mark();
+  }
   function campaignHeader(active) {
     const c = cal(), d = today(), sh = E.mod(nowShift(), spd());
     // At the Table's block repeats the date, weather and light, so there the bar keeps to the campaign, View as player and ⏩
     const head = el('section', { class: 'nowbar' + (active === 'table' ? ' on-table' : '') });
+    const jumpNav = el('nav', { class: 'jump-links' + (active === 'table' ? ' inline' : ''), 'aria-label': 'On this page', hidden: true });
     const draw = async () => {
       let dayRow = null;
       try { dayRow = (await fetchRange(d, d)).days.get(d) || null; } catch { /* ignore */ }
@@ -1222,7 +1283,8 @@
             ? 'You are a GM here: you can pass time, edit days and see secret events, notes and future weather'
             : 'You are a player here: GM notes, secret events and (unless allowed) future weather are hidden' }, isGM() ? 'GM view' : 'Player view'),
             isGM() ? btn('👁 View as player', () => setViewingAs(true), 'small view-as',
-              'See this campaign exactly as your players do: no secrets, GM notes or GM-only paragraphs. Nothing can be changed until you leave') : null),
+              'See this campaign exactly as your players do: no secrets, GM notes or GM-only paragraphs. Nothing can be changed until you leave') : null,
+            jumpNav),
           S.viewAs ? el('div', { class: 'view-as-banner', role: 'status' }, el('span', {}, '👁 Viewing as a player: this is what your players see. Changes are off.'),
             btn('Leave player view', () => setViewingAs(false), 'small primary')) : null,
           el('div', { class: 'now-time' },
@@ -1230,7 +1292,9 @@
             el('span', { class: 'now-meta' }, region ? el('span', { 'data-tip': `Where the party is today: ${regionSummary(region)}` }, `📍 ${region.name}`) : null, ' ',
               weatherText(sw, w?.partial ? `Weather this ${shiftNames()[sh]}` : `Weather this ${shiftNames()[sh]}. Day's forecast: ${E.weatherLabel(w, tempUnit())}`), ' ', visPill(v), ' ', moonBadges(d, region),
               hol.map(holidayChip)))),
+        SaveState.node,
         isGM() ? passTime() : null]));
+      fillJumpLinks();
     };
     // Pass time is the same on every page: a ⏩ button at the end of the bar that opens its row. The button is just the
     // arrows until the mouse is over it (or it has focus, or its row is open), so the bar stays one line and the page
@@ -6479,7 +6543,7 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => diceSync()));
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); }));
   }
   async function routeTo() {
     await Undo.flush();   // a delete waiting on its Undo goes through before the page is drawn again
