@@ -90,6 +90,17 @@ test.describe("Find Image API", () => {
     expect(pe.json.results).toEqual([expect.objectContaining({ id: "3003", open: true, license: "Pexels License", license_url: "https://www.pexels.com/license/",
       title: "An old stone tower by a river", author: "Pat Lens", author_url: "https://www.pexels.com/@pat", via: "Pexels" })]);
 
+    // Game art: the set shipped with the app, best matches first, its pictures served from the app itself
+    const ga = await search(page, cid, "gameart", "orc");
+    expect(ga.status, JSON.stringify(ga.json)).toBe(200);
+    expect(ga.json.results[0]).toMatchObject({ id: "pauliuw-orc", source: "gameart", title: "Orc", author: "pauliuw", author_url: "https://opengameart.org/users/pauliuw",
+      license: "CC0 1.0", open: true, via: "OpenGameArt", landing_url: "https://opengameart.org/content/orc-portrait", thumb: "static/vendor/opengameart/pauliuw-orc.png" });
+    expect(ga.json.results[0].local).toBeUndefined();
+    const old = await search(page, cid, "gameart", "old woman");
+    expect(old.json.results[0].title).toBe("Old woman with white hair");   // both words beat either
+    expect((await page.request.get(ga.json.results[0].thumb)).status()).toBe(200);
+    expect((await search(page, cid, "gameart", "zzzz")).json.results).toEqual([]);
+
     expect((await search(page, cid, "openverse", "nothing at all")).json.results).toEqual([]);
     expect((await search(page, cid, "elsewhere", "keep")).status).toBe(400);
     expect((await search(page, cid, "openverse", "  ")).status).toBe(400);
@@ -164,6 +175,11 @@ test.describe("Find Image API", () => {
       license_url: "https://pixabay.com/service/license-summary/" });
     expect((await pick(page, cid, id, { source: "pexels", id: "3003" })).json.file.credit).toMatchObject({ license: "Pexels License", source: "Pexels", author: "Pat Lens" });
     expect((await pick(page, cid, id, { source: "pixabay", id: "999" })).status).toBe(404);
+    const ga = await pick(page, cid, id, { source: "gameart", id: "battler-fiellangue" });
+    expect(ga.status, JSON.stringify(ga.json)).toBe(200);
+    expect(ga.json.file).toMatchObject({ kind: "image", mime: "image/png", credit: { title: "Fiellangue, a lightning serpent", author: "gilgaphoenixignis",
+      license: "CC BY 4.0", license_url: "https://creativecommons.org/licenses/by/4.0/", source: "OpenGameArt", source_url: "https://opengameart.org/content/painted-battlers-pack" } });
+    expect((await pick(page, cid, id, { source: "gameart", id: "../index" })).status).toBe(404);
     const mine = await pick(pp, cid, id, { source: "deviantart", id: DA_CC, is_secret: true });
     expect(mine.status, JSON.stringify(mine.json)).toBe(200);
     expect(mine.json.file).toMatchObject({ is_secret: false, credit: { license: "CC BY 3.0", source: "DeviantArt", author: "mistpainter" } });
@@ -313,7 +329,7 @@ test.describe("Find Image panel", () => {
     const box = page.locator(".enc-detail .enc-files");
     await box.getByRole("button", { name: "🖼️ Find Image" }).click();
     const panel = box.locator(".find-image");
-    // 3 from Openverse, 3 from Commons, 2 from Pixabay, 6 from the museums, 1 from Pexels and 3 from DeviantArt
+    // 3 from Openverse, 3 from Commons, 2 from Pixabay, 6 from the museums, 1 from Pexels and 3 from DeviantArt (no game art is called "Greywater Keep")
     const results = panel.locator(".find-result");
     await expect(results).toHaveCount(18);
     await expect(panel).not.toContainText("Still looking");
@@ -339,6 +355,26 @@ test.describe("Find Image panel", () => {
     await panel2.getByRole("button", { name: "Search", exact: true }).click();
     await expect(panel2).toContainText('Nothing found for "nothing here".');
     expectNoErrors(errors.filter(e => !/status of 502/.test(e)));
+  });
+
+  test("Game art finds the pictures shipped with the app, and copies one with its credit", async ({ page, browser }) => {
+    const errors = watchErrors(page);
+    const { cid, id } = await setup(page, browser, "Game art");
+    await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+    const box = page.locator(".enc-detail .enc-files");
+    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    const panel = box.locator(".find-image");
+    await panel.getByRole("combobox", { name: "Where to search" }).selectOption("gameart");
+    await panel.getByRole("searchbox").fill("cyberpunk woman");
+    await panel.getByRole("button", { name: "Search", exact: true }).click();
+    const first = panel.locator(".find-result").first();
+    await expect(first).toContainText("by Hyptosis");
+    await expect.poll(() => first.locator("img").evaluate(i => i.complete && i.naturalWidth)).toBe(192);
+    await expect(first.getByRole("link", { name: "OpenGameArt" })).toHaveAttribute("href", "https://opengameart.org/content/cyberpunk-portraits");
+    await first.getByRole("button", { name: "Use this picture" }).click();
+    await expect(page.getByText("Picture added")).toBeVisible();
+    await expect(page.locator(".enc-detail .enc-files .file-pic .tip")).toHaveAttribute("data-tip", /by Hyptosis, CC0 1\.0, via OpenGameArt\./);
+    expectNoErrors(errors);
   });
 
   test("a linked entry name shows the entry's first picture with its tooltip, and a GM-only picture only to GMs", async ({ page, browser, isMobile }) => {

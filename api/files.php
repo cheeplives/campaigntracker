@@ -336,7 +336,11 @@ function files_action(string $action): void {
         $tmp = null;
         // The full picture, or the thumbnail when that is too big or won't come.
         $err = null;
-        foreach (array_unique(array_filter([$item['full'], $item['thumb']])) as $url) {
+        if (!empty($item['local'])) {                     // Game art: a copy of the app's own file
+            $tmp = tempnam(sys_get_temp_dir(), 'ccimg');
+            if (filesize($item['local']) > $max || !copy($item['local'], $tmp)) { @unlink($tmp); $tmp = null; }
+        }
+        if (!$tmp) foreach (array_unique(array_filter([$item['full'], $item['thumb']])) as $url) {
             try { $tmp = image_download($url, $max); break; } catch (ImageSourceDown $e) { $err = $e; } catch (LengthException) {}
         }
         if (!$tmp) $down($err);

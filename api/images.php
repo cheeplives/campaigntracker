@@ -2,8 +2,9 @@
 /**
  * images.php — Find Image: the server side of searching for a picture for an Encyclopedia entry.
  *
- * Six sources, each searched only when picked (All, the panel's first choice, asks each in turn from the browser):
+ * Seven sources, each searched only when picked (All, the panel's first choice, asks each in turn from the browser):
  * Openverse (openly licensed pictures from Flickr, Wikimedia Commons, museums and more), Wikimedia Commons directly,
+ * Game art (CC0 and CC BY portraits and creatures from OpenGameArt.org, shipped with the app),
  * Pixabay and Pexels (free under their own licences; keys needed), museums' open access collections (the Art Institute
  * of Chicago, The Met, the Cleveland Museum of Art and, with keys, the Smithsonian and Europeana; public domain and open
  * works only) and DeviantArt (by tag). The server asks them, so the keys in the config's image_search block never
@@ -16,8 +17,8 @@
  * file's function answers instead and nothing leaves the machine.
  */
 
-const IMAGE_SOURCES = ['openverse', 'commons', 'pixabay', 'museums', 'pexels', 'deviantart'];
-const IMAGE_SOURCE_NAMES = ['openverse' => 'Openverse', 'commons' => 'Wikimedia Commons', 'pixabay' => 'Pixabay', 'museums' => 'The museums',
+const IMAGE_SOURCES = ['openverse', 'commons', 'gameart', 'pixabay', 'museums', 'pexels', 'deviantart'];
+const IMAGE_SOURCE_NAMES = ['openverse' => 'Openverse', 'commons' => 'Wikimedia Commons', 'gameart' => 'Game art', 'pixabay' => 'Pixabay', 'museums' => 'The museums',
     'pexels' => 'Pexels', 'deviantart' => 'DeviantArt'];
 const IMAGE_RESULTS = 20;
 /** How long an embed's picture address from oEmbed is trusted before it is asked for again, in seconds. */
@@ -96,7 +97,7 @@ function image_item(string $source, string $id, array $f): array {
         'landing_url' => image_url($f['landing_url'] ?? null), 'thumb' => image_url($f['thumb'] ?? null),
         'full' => image_url($f['full'] ?? null), 'mature' => !empty($f['mature'])];
 }
-function image_public(array $item): array { unset($item['full'], $item['mature']); return $item; }
+function image_public(array $item): array { unset($item['full'], $item['mature'], $item['local']); return $item; }
 
 // --- tokens and the cache -------------------------------------------------------------------------------------
 /** A folder of the app's own outside the web root for Find Image's small files: the uploads folder, or the session
@@ -454,6 +455,45 @@ function pexels_lookup(string $id): ?array {
     return $p ? pexels_item($p) : null;
 }
 
+// --- Game art (OpenGameArt.org, shipped with the app) ------------------------------------------------------------
+// A hand-picked set of CC0 and CC BY portraits and creatures, built by tools/opengameart-build.py into
+// static/vendor/opengameart/. Searched here from its index, so it needs no key and works offline; a picked picture is
+// copied from the app's own folder with its artist, licence and OpenGameArt page.
+const GAMEART_DIR = __DIR__ . '/../static/vendor/opengameart';
+const GAMEART_URL = 'static/vendor/opengameart/';
+function gameart_index(): array {
+    static $items = null;
+    if ($items !== null) return $items;
+    $data = is_file(GAMEART_DIR . '/index.json') ? json_decode((string)file_get_contents(GAMEART_DIR . '/index.json'), true) : null;
+    $items = [];
+    foreach ((array)($data['items'] ?? []) as $i) if (is_array($i) && preg_match('/^[a-z0-9-]{1,80}$/', (string)($i['id'] ?? '')) && preg_match('/^[a-z0-9-]+\.(png|jpg)$/', (string)($i['file'] ?? ''))) $items[$i['id']] = $i;
+    return $items;
+}
+function gameart_item(array $i): array {
+    $item = image_item('gameart', $i['id'], ['title' => $i['title'] ?? '', 'author' => $i['author'] ?? '', 'author_url' => $i['author_url'] ?? null,
+        'license' => image_license((string)($i['license'] ?? ''), (string)($i['license_version'] ?? '')), 'via' => 'OpenGameArt', 'landing_url' => $i['page'] ?? null]);
+    $item['thumb'] = GAMEART_URL . $i['file'];   // the app's own folder, so a relative address
+    $item['local'] = GAMEART_DIR . '/' . $i['file'];
+    return $item;
+}
+/** Pictures whose words start with the most of the searched words, best first. */
+function gameart_search(string $q): array {
+    $want = array_values(array_filter(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($q)) ?: [], fn($w) => mb_strlen($w) > 1));
+    if (!$want) return [];
+    $scored = [];
+    foreach (gameart_index() as $i) {
+        $words = preg_split('/[^\p{L}\p{N}-]+/u', mb_strtolower(($i['words'] ?? '') . ' ' . ($i['title'] ?? '') . ' ' . ($i['author'] ?? ''))) ?: [];
+        $hits = count(array_filter($want, function ($w) use ($words) { foreach ($words as $x) if (str_starts_with($x, $w)) return true; return false; }));
+        if ($hits) $scored[] = [$hits, $i];
+    }
+    usort($scored, fn($a, $b) => $b[0] <=> $a[0]);   // usort is stable, so ties keep the set's order
+    return array_map(fn($s) => gameart_item($s[1]), array_slice($scored, 0, IMAGE_RESULTS * 2));
+}
+function gameart_lookup(string $id): ?array {
+    $i = gameart_index()[$id] ?? null;
+    return $i && is_file(GAMEART_DIR . '/' . $i['file']) ? gameart_item($i) : null;
+}
+
 // --- DeviantArt ------------------------------------------------------------------------------------------------
 const DEVIANTART = 'https://www.deviantart.com';
 const DEVIANTART_OEMBED = 'https://backend.deviantart.com/oembed';
@@ -531,13 +571,13 @@ function image_source_ready(string $source): void {
 
 // --- one entry point per action --------------------------------------------------------------------------------
 function image_search(string $source, string $q): array {
-    $items = match ($source) { 'openverse' => openverse_search($q), 'commons' => commons_search($q), 'pixabay' => pixabay_search($q),
+    $items = match ($source) { 'openverse' => openverse_search($q), 'commons' => commons_search($q), 'gameart' => gameart_search($q), 'pixabay' => pixabay_search($q),
         'museums' => museums_search($q), 'pexels' => pexels_search($q), 'deviantart' => deviantart_search($q) };
     return array_values(array_map('image_public', array_filter($items, fn($i) => $i['id'] !== '' && $i['thumb'] && !$i['mature'])));
 }
 /** One work, looked up again by source and id (never taken from the browser), with its full picture; null if gone. */
 function image_lookup(string $source, string $id): ?array {
-    $i = match ($source) { 'openverse' => openverse_lookup($id), 'commons' => commons_lookup($id), 'pixabay' => pixabay_lookup($id),
+    $i = match ($source) { 'openverse' => openverse_lookup($id), 'commons' => commons_lookup($id), 'gameart' => gameart_lookup($id), 'pixabay' => pixabay_lookup($id),
         'museums' => museums_lookup($id), 'pexels' => pexels_lookup($id), 'deviantart' => deviantart_lookup($id), default => null };
     return $i && !$i['mature'] ? $i : null;
 }
