@@ -634,14 +634,14 @@ test("entries have a Category: the list is grouped by it, and the Category and T
   await page.getByRole("button", { name: "📍 Location (3)" }).click();
   await expect(items).toHaveCount(6);
 
-  // the entry shows its Category, and the editor changes it
+  // the entry shows its Category over its name, and the editor changes it
   await page.goto(`index.html#/c/${cid}/encyclopedia/${gunther}`);
-  await expect(page.locator(".enc-detail .chip.enc-cat")).toHaveText("👤 Person");
+  await expect(page.locator(".enc-detail .enc-kind")).toHaveText("Person");
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.locator(".enc-form select[name=category]")).toHaveValue("person");
   await page.locator(".enc-form select[name=category]").selectOption("group");
   await page.getByRole("button", { name: "Save entry" }).click();
-  await expect(page.locator(".enc-detail .chip.enc-cat")).toHaveText("👥 Group");
+  await expect(page.locator(".enc-detail .enc-kind")).toHaveText("Group");
   // a save that leaves Category out keeps it
   expect((await api(page, "entry_save", { id: gunther, name: "Gunther", notes }, cid)).status).toBe(200);
   expect((await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.id === gunther).category).toBe("group");
@@ -731,6 +731,7 @@ test("a GM adds a character sheet to a Person entry", async ({ page, browser }) 
   const tpl = (await api(page, "template_save", { name: "Add sheet tpl", game: "Test RPG", layout: SHEET })).json.template;
   const e = (await api(page, "entry_save", { name: "Captain Vey", notes: "<p>Master of the Gull.</p>" }, cid)).json;
   await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
+  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Add character sheet waits in the entry's ⋯ menu
   await page.getByRole("button", { name: "Add character sheet" }).click();
   await page.getByLabel("Template", { exact: true }).selectOption(String(tpl.id));
   await page.getByRole("button", { name: "Add sheet" }).click();

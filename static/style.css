@@ -73,7 +73,7 @@ h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h
 .pre { white-space: pre-wrap; margin: .3em 0; } .bad { color: var(--bad); }
 .mono { font-family: var(--mono); font-size: .85rem; }
 /* The tapered rule under a title, thick at the left and running to a point, like a stat block's */
-.nowbar::after, .daybox-head::after, .enc-detail > :first-child::after {
+.nowbar::after, .daybox-head::after, .enc-hero-head::after, .enc-detail > :first-child:not(.enc-hero)::after {
   content: ''; display: block; height: 5px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 3px solid var(--accent); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
@@ -926,6 +926,44 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 /* the editor fills the entry's card in place of its title row, so it takes none of that row's wrap and rule (which left a gap under Name) */
 .enc-detail > .enc-form { flex-wrap: nowrap; } .enc-detail > .enc-form::after { content: none; }
 .enc-where { margin: 0; padding-left: 18px; }
+/* The entry's head as a profile: the portrait down the left, the kind in small capitals over the name and its buttons on
+   the right, the tapered rule under them, then the character strip, tags and other names. Narrow (Wide view, a phone),
+   the portrait goes above the name instead. */
+.enc-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 20px; align-items: start; }
+.enc-hero.has-pic { grid-template-columns: 200px minmax(0, 1fr); }
+.enc-hero-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.enc-hero-head { display: flex; flex-direction: column; gap: 4px; }
+.enc-hero-head::after { margin-top: 4px; }
+.enc-detail > .trail:has(+ .enc-hero)::after { content: none; }   /* the rule is the hero's, not the breadcrumb's */
+.enc-kicker { font: 600 .8rem var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--label); display: flex; align-items: center; gap: 8px; margin: 0; }
+.enc-kicker .secret-tag { margin: 0; letter-spacing: 0; }
+.enc-title-row { align-items: flex-start; gap: 6px 12px; }
+.enc-actions { flex-wrap: nowrap; gap: 6px; align-items: center; flex: none; }
+.enc-portrait { display: block; width: 200px; max-width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2);
+  box-shadow: 0 10px 24px -14px rgb(0 0 0 / .6); }
+.enc-portrait img { display: block; width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.enc-portrait.tall img { aspect-ratio: 3 / 4; }
+a.enc-portrait:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* the Public notes read as the entry's summary: prose on the card, no box; GM notes keep their locked box */
+.enc-hero .notepanel.public > .richtext { background: none; border: 0; padding: 0; font-size: 1.02rem; line-height: 1.55; }
+.enc-hero .notepanel.public { margin-top: 2px; }
+.enc-hero .notepanel > h4, .enc-detail > .notepanel.secret > h4 { font: 600 .8rem var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--label); }
+.enc-detail > .notepanel.secret > h4 { color: var(--secret); }
+/* the highlights: each sentence written about the entry elsewhere, behind an arrow, with where it was written after it */
+.enc-highlights[hidden] { display: none; }
+.enc-highlights ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.enc-highlights li { position: relative; padding-left: 26px; line-height: 1.45; overflow-wrap: anywhere; }
+.enc-highlights li::before { content: '→'; position: absolute; left: 2px; top: 0; color: var(--accent); font-weight: 700; }
+.enc-hl-src { white-space: nowrap; } .enc-hl-src::before { content: '— '; }
+.enc-page.wide .enc-hero.has-pic { grid-template-columns: minmax(0, 1fr); }
+.enc-page.wide .enc-portrait { width: 160px; }
+@media (max-width: 600px) {
+  .enc-hero.has-pic { grid-template-columns: minmax(0, 1fr); }
+  .enc-portrait { width: 160px; }
+  .enc-title-row { flex-direction: column; }
+}
+/* the ⋯ menu's items are plain rows: the Delete keeps its red */
+.enc-actions .kit-menu-list > button, .enc-actions .kit-menu-list > a, .enc-actions .kit-menu-list > label { width: 100%; }
 .search-row { display: block; }
 .search-row h4 { margin: 0; }
 .search-row p { margin: 4px 0 0; }
@@ -1584,8 +1622,10 @@ button.sheet-portrait { cursor: pointer; }
 .play-toggle { min-height: 48px; touch-action: manipulation; }
 .play-toggle.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .play-page .sheet-pip { width: 48px; height: 48px; }
-.enc-character { display: flex; gap: 12px; align-items: center; color: inherit; text-decoration: none; margin: 8px 0; padding: 10px; border-left: 4px solid var(--accent); }
+/* the character strip under an entry's name: kind, player, game and Summary fields in one line, the whole strip opening the sheet */
+.enc-character { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; color: inherit; text-decoration: none; margin: 0; padding: 6px 10px; border-left: 4px solid var(--accent); }
 .enc-character:hover { outline: 1px solid var(--accent); }
+.enc-fact { color: var(--dim); } .enc-fact::before { content: '· '; opacity: .6; }
 .chip.kind-pc { background: var(--ok); }
 .chip.kind-npc { background: var(--secret); }
 .enc-sheet { cursor: pointer; }

@@ -118,6 +118,7 @@ test("Copy as handout puts the entry, formatted, on the clipboard without its GM
     } } });
   });
   await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf}`);
+  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Copy as handout waits in the entry's ⋯ menu
   await page.getByRole("button", { name: "📋 Copy as handout" }).click();
   await expect(page.getByText("Copied. Paste it into a handout or a note")).toBeVisible();
   const got = await page.evaluate(() => window.copied);

@@ -171,6 +171,7 @@ test("Recent and Pinned stay out of the Legend until the campaign turns them on;
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${a}`);
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "Floon" })).toBeVisible();   // Recent
+  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Pin waits in the entry's ⋯ menu
   await page.getByRole("button", { name: "📌 Pin" }).click();
   await expect(page.locator("nav.tabs .legend-quick-h.pinned")).toBeVisible();
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "Stone of Golorr" })).toBeVisible();

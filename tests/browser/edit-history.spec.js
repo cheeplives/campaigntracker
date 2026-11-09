@@ -152,6 +152,7 @@ test("the History dialog lists the versions, shows what changed, and restores on
   await ok("entry_save", { id, name: "Gunther", notes: "<p>Runs the inn in Bree</p><p>Likes ale</p><p>Owes money</p>" });
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
+  await page.locator(".enc-detail").getByLabel(/^More for /).click();   // History waits in the entry's ⋯ menu
   await page.getByRole("button", { name: "🕘 History" }).click();
   const dlg = page.locator("dialog.history-dialog");
   await expect(dlg.locator(".hist-ver")).toHaveCount(2);
@@ -178,5 +179,6 @@ test("the History dialog lists the versions, shows what changed, and restores on
   await ok("member_add", { email: player.email, role: "player" });
   await pp.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
   await expect(pp.getByRole("heading", { name: "Gunther" }).first()).toBeVisible();
+  await pp.locator(".enc-detail").getByLabel(/^More for /).click();   // a player's ⋯ menu has no History
   await expect(pp.getByRole("button", { name: "🕘 History" })).toHaveCount(0);
 });
