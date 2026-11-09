@@ -76,13 +76,17 @@ return [
   // deliverability the 'from' MUST be an address on a domain your host is
   // authorized to send for (e.g. your site's domain), so SPF/DKIM align — a
   // gmail.com From from a shared host will be spam-filtered. One switch covers
-  // both events: set enabled=false (or leave 'from' empty) to disable. The
-  // approval message's sign-in link uses 'base_url' above.
+  // these emails and the campaign invitations below: set enabled=false (or
+  // leave 'from' empty) to disable. The approval message's sign-in link and the
+  // invite links use 'base_url' above.
+  // A GM inviting someone by an email with no approved account emails them the
+  // invitation's link (Members tab); with this off, the GM copies the link instead.
   'approval_email' => [
     'enabled'        => false,
     'from'           => 'Campaign Chronicle <noreply@example.com>',
     'subject'        => 'Your Campaign Chronicle account is approved',
     'revoke_subject' => 'Your Campaign Chronicle access was removed',
+    'invite_subject' => "You're invited to a campaign on Campaign Chronicle",
     // 'reply_to' => 'you@example.com',   // optional
   ],
 
@@ -191,6 +195,7 @@ return [
     // So one account can't grow the database without bound (0 turns a limit off). Site admins have no campaign limit.
     'campaigns_per_account' => 50,     // campaigns a person may create (or copy) of their own
     'write_mb_per_day'      => 50,     // what one account may save in a day, uploads aside (they have uploads.user_mb)
+    'invites_per_day'       => 50,     // campaign invitations (and so invite emails) one GM may send in a day
     'days_per_campaign'     => 40000,  // days with weather or notes, about a century
     'shifts_per_campaign'   => 200000, // shifts with an activity
     'events_per_campaign'   => 20000,

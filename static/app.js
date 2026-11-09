@@ -800,10 +800,46 @@
       el('p', {}, revoked
         ? 'An administrator has removed your access. Your notes are kept if it is restored.'
         : 'Your account has been created and is waiting for the site admin to approve it. You\'ll get in automatically once approved, with no need to reload.'),
+      !revoked && /^#\/join\//.test(location.hash) ? el('p', {}, 'You opened an invite link: you\'ll join that campaign as soon as you\'re approved.') : null,
       el('p', { class: 'muted' }, `Signed in as ${u.email}`),
       btn('Sign out', signOut)));
     clearTimeout(pendingTimer);
     if (!revoked) pendingTimer = setTimeout(boot, 20000);
+  }
+
+  /** Where an invite link opened before approval waits (boot), until viewJoin takes it up. */
+  const JOIN_KEY = 'chronicle.join';
+  /** An invitation's link: this site's page, #/join/<its code>. */
+  const inviteUrl = token => `${location.origin}${location.pathname}#/join/${token}`;
+  /** #/join/<code>: an invite link. Signed in and approved (boot sees to that), they join its campaign and go to it. */
+  async function viewJoin(token) {
+    try { localStorage.removeItem(JOIN_KEY); } catch { /* nothing kept */ }
+    mount(el('div', { class: 'card narrow' }, el('p', { class: 'muted' }, 'Joining the campaign…')));
+    try {
+      const r = await post('invite_accept', { token });
+      toast(`Welcome to ${r.name}`);
+      location.replace(`#/c/${r.cid}`);
+    } catch (err) {
+      mount(el('div', { class: 'card narrow' }, el('h2', {}, 'This invite link doesn\'t work'), el('p', {}, err.message),
+        el('a', { href: '#/' }, 'Go to your campaigns')));
+    }
+  }
+  /** A dialog showing an invitation's link with a Copy button: the GM sends it to them however they like. */
+  function showInviteLink(email, token, emailed) {
+    const url = inviteUrl(token);
+    const shown = el('input', { readonly: true, value: url, 'aria-label': 'Invite link', style: 'width: 100%', onfocus: e => e.target.select() });
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Invite link' });
+    d.append(el('form', { method: 'dialog' }, el('h3', {}, `Invite link for ${email}`),
+      el('p', {}, emailed ? `It has been emailed to ${email}. You can also send it yourself, by text or chat.`
+        : `Send this to ${email} however you like. They open it, sign in with Google or GitHub, and join the campaign once their account is approved.`),
+      shown,
+      el('p', { class: 'small muted' }, 'Anyone who opens it can join this campaign, once, whatever email they sign in with. Cancel the invitation to stop it working.'),
+      el('div', { class: 'kit-dialog-actions' },
+        btn('Copy', async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
+        el('button', { value: 'done' }, 'Done'))));
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
   }
 
   const UNIT_OPTIONS = [['', 'None (each campaign\'s own)'], ['imperial', 'Imperial (°F, miles, inches, mph)'], ['metric', 'Metric (°C, km, cm, km/h)']];
@@ -6167,8 +6203,8 @@
       const add = async body => {
         try {
           const r = await post('member_add', { ...body, role: role.value }, S.camp.id);
-          if (r.invited) toast(`Invitation recorded. ${body.email} joins the next time they sign in with an approved account`);
           await loadCampaign(S.camp.id, true); route();
+          if (r.invited) showInviteLink(body.email, r.token, r.emailed);
         } catch (err) { toast(err.message, true); }
       };
       const term = () => q.value.trim();
@@ -6203,12 +6239,14 @@
       // Invitations by email not taken up yet: they become members when that person, approved, next signs in.
       if (S.invites.length) card.append(el('h3', {}, 'Invited'), ...S.invites.map(i => el('div', { class: 'listrow member invite' },
         el('div', { class: 'who' }, el('strong', {}, i.email), el('span', { class: `role ${i.role}` }, i.role === 'gm' ? 'GM' : 'Player'),
-          el('span', { class: 'muted small' }, ' joins when they next sign in')),
-        el('div', { class: 'actions' }, btn('Cancel invitation', async () => {
+          el('span', { class: 'muted small', 'data-tip': 'They join when they open their invite link, or sign in with this email' }, ' waiting to join')),
+        el('div', { class: 'actions' }, btn('Copy invite link', async () => {
+          try { showInviteLink(i.email, (await post('invite_link', { email: i.email }, S.camp.id)).token, false); } catch (err) { toast(err.message, true); }
+        }, 'small', 'Show the link that lets them join, to send them yourself'), btn('Cancel invitation', async () => {
           try { await post('member_remove', { email: i.email }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'They won\'t join this campaign when they sign in')))));
-      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Search by name or email for anyone approved on the site. Anyone else, type their sign-in email: they join when they next sign in, once approved.'
-        : 'Search by name for people you play with in your other campaigns. To add anyone else, type their full sign-in email: they join the campaign the next time they sign in with an approved account.'));
+        }, 'small danger', 'They won\'t join this campaign, and their invite link stops working')))));
+      card.append(el('h3', {}, 'Add a member'), f, list, el('small', { class: 'muted' }, S.user?.is_admin ? 'Search by name or email for anyone approved on the site. For anyone else, type their email and press Add by email: they get an invite link to join with.'
+        : 'Search by name for people you play with in your other campaigns. For anyone else, type their email and press Add by email: someone already on the site joins at once, and anyone else gets an invite link to join with.'));
     }
     mount(...campaignHeader('members'), card);
   }
@@ -7079,6 +7117,7 @@
       if (parts[0] === 'admin') return await viewAdmin(parts[1]);
       if (parts[0] === 'templates' && typeof Sheets !== 'undefined') return await Sheets.route(parts.slice(1));
       if (parts[0] === 'new') return viewCreate(); // its own address, so Cancel (back to #/) is a real change of page
+      if (parts[0] === 'join') return await viewJoin(parts[1] || '');
       if (parts[0] === 'c') {
         const cid = Number(parts[1]);
         await loadCampaign(cid);
@@ -7122,8 +7161,19 @@
     if (res.status === 401) { S.user = null; S.pending = null; renderNav(); return location.hash.startsWith('#/about') ? viewAbout() : viewLogin(data.providers || []); }
     if (!res.ok) { S.user = null; renderNav(); return mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Server error'), el('p', {}, data.message || data.error || `Error ${res.status}`))); }
     S.csrf = data.csrf;
-    if (data.status !== 'approved') { S.user = null; S.pending = data; renderNav(); return viewPending(data); }
+    if (data.status !== 'approved') {
+      // An invite link opened before their account is approved is kept, and taken up once it is (viewJoin), even if this
+      // tab is closed and they come back to the site's front page.
+      const join = location.hash.match(/^#\/join\/([0-9a-f]{32})/);
+      if (join) try { localStorage.setItem(JOIN_KEY, join[1]); } catch { /* the link still works when opened again */ }
+      S.user = null; S.pending = data; renderNav(); return viewPending(data);
+    }
     S.pending = null;
+    if (!location.hash.startsWith('#/join/')) {
+      let kept = null;
+      try { kept = localStorage.getItem(JOIN_KEY); } catch { /* none */ }
+      if (kept) { history.replaceState(null, '', `${location.pathname}${location.search}#/join/${kept}`); }
+    }
     const first = !S.user;
     S.user = { ...data, id: Number(data.id) };
     // A theme saved on the account wins over this device's, so it follows them between devices.

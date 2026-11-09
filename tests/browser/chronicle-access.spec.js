@@ -25,7 +25,7 @@ test("someone approved for Sinless asks for Chronicle on their first sign-in her
   const cid = await makeCampaign(gp, `Shared ${gm.id}`);
   // Before they ask, Chronicle doesn't know them: a GM's add is only an invitation (the same answer as for anyone, so
   // it tells the GM nothing), and the admin doesn't list them.
-  expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
+  expect((await api(gp, "member_add", { email: who.email, role: "player" }, cid)).json).toMatchObject({ ok: true, invited: true });
   const ap = await (await newContext(browser)).newPage();
   await signIn(ap, ADMIN);
   expect((await api(ap, "users")).json.users.map(u => u.email)).not.toContain(who.email);

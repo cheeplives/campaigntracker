@@ -70,6 +70,8 @@ const ACTIONS = [
     'campaign_copy' => ['who' => 'gm'],
     'set_time' => ['who' => 'gm', 'touch' => true, 'panel' => 'write', 'key' => 'write'],
     'member_candidates' => ['get' => true, 'who' => 'gm'],
+    'invite_link' => ['who' => 'gm'],
+    'invite_accept' => ['who' => 'account'],
     'member_add' => ['who' => 'gm', 'touch' => true],
     'member_remove' => ['who' => 'gm', 'touch' => true],
     'member_character' => ['who' => 'member', 'touch' => true],

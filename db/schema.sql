@@ -97,10 +97,12 @@ CREATE TABLE IF NOT EXISTS campaign_invites (
   campaign_id INT UNSIGNED NOT NULL,
   email VARCHAR(191) NOT NULL,                      -- lower-cased sign-in email
   role ENUM('gm','player') NOT NULL DEFAULT 'player',
+  token CHAR(32) NULL,                              -- the invite link's code (#/join/<token>), migration 045
   invited_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (campaign_id, email),
   KEY ix_invite_email (email),
+  UNIQUE KEY ux_invite_token (token),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

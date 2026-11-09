@@ -1,0 +1,11 @@
+-- 045_invite_links.sql — invite links. campaign_invites.token: a random 32-character code for the invitation's link
+-- (index.html#/join/<token>), which the invited person opens to join whatever email they sign in with. The site emails
+-- it to them when the account email (config approval_email) is on, and the GM can copy it from the Members tab. NULL
+-- on invitations made before this change, which get one the first time the GM copies their link. The invitation (and
+-- so its link) is gone once taken up or cancelled.
+--
+-- Run ONCE on an install created before this change:
+--   mysql -u <user> -p <database> < db/migrations/045_invite_links.sql
+-- (deploy.sh and install.php run it for you when campaign_invites has no token column.)
+-- Fresh installs already get the column from db/schema.sql.
+ALTER TABLE campaign_invites ADD COLUMN token CHAR(32) NULL AFTER role, ADD UNIQUE KEY ux_invite_token (token);

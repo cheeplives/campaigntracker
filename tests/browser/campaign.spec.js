@@ -144,8 +144,8 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   const pctx = await newContext(browser);
   const pp = await pctx.newPage();
   await signIn(pp, player);
-  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
-  expect((await api(page, "member_add", { email: `nobody-${gm.id}@example.test`, role: "player" }, cid)).json).toEqual({ ok: true, invited: true });
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).json).toMatchObject({ ok: true, invited: true });
+  expect((await api(page, "member_add", { email: `nobody-${gm.id}@example.test`, role: "player" }, cid)).json).toMatchObject({ ok: true, invited: true });
   expect((await pp.request.get(`api/index.php?a=days&cid=${cid}&from=0&to=10`)).status()).toBe(403);
   await approve(browser, player.email);
 
@@ -176,6 +176,73 @@ test("a GM adds a player by email; the player sees the campaign but not its secr
   await page.getByRole("button", { name: "Add by email" }).click();
   await expect(page.getByText(`(${late.email})`)).toBeVisible();
   await pctx.close();
+  expectNoErrors(errors);
+});
+
+test("an invitation's link is emailed to them and can be copied; whoever opens it joins once, even before approval", async ({ page, browser }) => {
+  const fs = require("fs"), os = require("os"), path = require("path");
+  const outbox = path.join(os.tmpdir(), "chronicle-test-outbox.jsonl");
+  const mailTo = to => (fs.existsSync(outbox) ? fs.readFileSync(outbox, "utf8") : "").trim().split("\n").filter(Boolean).map(l => JSON.parse(l)).filter(m => m.to === to);
+  const errors = watchErrors(page);
+  const gm = person("Nell"), friend = person("Otto"), late = person("Pia");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Links ${gm.id}`);
+
+  // Adding an email with no account makes an invitation with a link, which is emailed to them (to the test outbox here)
+  const invited = `otto-invite-${gm.id}@example.test`;
+  await page.goto(`index.html#/c/${cid}/members`);
+  await page.getByPlaceholder("Search people, or type their sign-in email").fill(invited);
+  await page.getByRole("button", { name: "Add by email" }).click();
+  const dialog = page.getByRole("dialog", { name: "Invite link" });
+  await expect(dialog).toContainText(`emailed to ${invited}`);
+  const link = await dialog.getByRole("textbox", { name: "Invite link" }).inputValue();
+  expect(link).toMatch(/#\/join\/[0-9a-f]{32}$/);
+  await dialog.getByRole("button", { name: "Done" }).click();
+  const mail = mailTo(invited);
+  expect(mail).toHaveLength(1);
+  expect(mail[0].subject).toContain("invited");
+  expect(mail[0].body).toContain(`Links ${gm.id}`);
+  expect(mail[0].body).toContain(link.slice(link.indexOf("#/join/")));
+  // Copy invite link on the Invited row shows the same link
+  await page.locator(".listrow.invite").filter({ hasText: invited }).getByRole("button", { name: "Copy invite link" }).click();
+  await expect(page.getByRole("dialog", { name: "Invite link" }).getByRole("textbox")).toHaveValue(link);
+  await page.getByRole("dialog", { name: "Invite link" }).getByRole("button", { name: "Done" }).click();
+  // only the campaign's GMs get a link
+  const token = link.split("/join/")[1];
+  const pctx = await newContext(browser);
+  const fp = await pctx.newPage();
+  await signIn(fp, friend);
+  await approve(browser, friend.email);
+  expect((await api(fp, "invite_link", { email: invited }, cid)).status).toBe(403);
+
+  // Someone signed in with another email opens it and joins as a player; the invitation is used up
+  await fp.goto(`index.html${link.slice(link.indexOf("#"))}`);
+  await expect(fp).toHaveURL(new RegExp(`#/c/${cid}`));
+  expect((await api(fp, "days", undefined, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator(".listrow.invite")).toHaveCount(0);
+  await expect(page.locator(".listrow.member").filter({ hasText: friend.email })).toContainText("Player");
+  // a used link says so
+  await fp.goto(`index.html#/join/${token}`);
+  await expect(fp.getByRole("heading", { name: "This invite link doesn't work" })).toBeVisible();
+  expect((await api(fp, "invite_accept", { token: "0".repeat(32) })).status).toBe(404);
+
+  // Opened while waiting for approval, the link is kept, and taken up once they're approved
+  const r = await api(page, "member_add", { email: `pia-invite-${gm.id}@example.test`, role: "gm" }, cid);
+  expect(r.json).toMatchObject({ invited: true, emailed: true });
+  const lctx = await newContext(browser);
+  const lp = await lctx.newPage();
+  await signIn(lp, late);
+  await lp.goto(`index.html#/join/${r.json.token}`);
+  await expect(lp.getByText("you'll join that campaign as soon as you're approved")).toBeVisible();
+  await lp.goto("index.html#/");
+  await approve(browser, late.email);
+  await lp.reload();
+  await expect(lp).toHaveURL(new RegExp(`#/c/${cid}`));
+  expect((await api(page, "campaign", undefined, cid)).json.members.find(m => m.email === late.email)?.role).toBe("gm");
+  await pctx.close();
+  await lctx.close();
   expectNoErrors(errors);
 });
 
