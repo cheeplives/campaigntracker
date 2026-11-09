@@ -5,7 +5,7 @@ Automated checks that Campaign Chronicle behaves the same in **Chromium**
 iPhone/iPad), on desktop, phone and iPad-sized screens. Set up the same way as
 Sinless's suite, with PHP and MySQL added because this app has a server.
 
-They run on GitHub Actions on every push and pull request
+They run on GitHub Actions on every pull request and every push to main
 (`.github/workflows/browser-tests.yml`), one job per project:
 
 | Project | Engine | Emulates |

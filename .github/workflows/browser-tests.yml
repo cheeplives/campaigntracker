@@ -3,8 +3,11 @@
 # workflow, plus PHP and MySQL because this app has a server. See tests/README.md.
 name: Browser tests
 
+# A push to a pull request's branch already runs as the pull request (against main merged in), so pushes run on their
+# own only on main: running both doubled every job and showed each failure twice.
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -59,7 +62,7 @@ jobs:
       run:
         working-directory: tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Image matches @playwright/test
         run: |
           want=$(node -p 'require("./package-lock.json").packages["node_modules/@playwright/test"].version')
@@ -100,7 +103,7 @@ jobs:
           touch "$PHP_ERROR_LOG"
           if grep -E 'PHP (Deprecated|Fatal error)' "$PHP_ERROR_LOG"; then echo "::error::PHP $PHP logged the lines above"; exit 1; fi
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: report-${{ matrix.project }}-php${{ matrix.php }}
           path: |
