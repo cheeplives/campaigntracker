@@ -273,23 +273,28 @@
       "columns": [
        {
         "key": "row",
-        "label": "PD / DR"
+        "label": "PD / DR",
+        "width": "normal"
        },
        {
         "key": "head",
-        "label": "Head"
+        "label": "Head",
+        "width": "narrow"
        },
        {
         "key": "body",
-        "label": "Body"
+        "label": "Body",
+        "width": "narrow"
        },
        {
         "key": "arms",
-        "label": "Arms"
+        "label": "Arms",
+        "width": "narrow"
        },
        {
         "key": "legs",
-        "label": "Legs"
+        "label": "Legs",
+        "width": "narrow"
        },
        {
         "key": "hands",
@@ -297,11 +302,13 @@
        },
        {
         "key": "feet",
-        "label": "Feet"
+        "label": "Feet",
+        "width": "narrow"
        },
        {
         "key": "all",
-        "label": "All"
+        "label": "All",
+        "width": "narrow"
        }
       ]
      },

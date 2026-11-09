@@ -85,7 +85,13 @@ function sheet_layout_in($layout): array {
                     if (!is_array($col) || !is_string($col['key'] ?? null) || !preg_match(SHEET_KEY, $col['key']) || isset($ck[$col['key']]))
                         fail("$name has a column without a proper key");
                     $ck[$col['key']] = true;
-                    $field['columns'][] = ['key' => $col['key'], 'label' => $label($col['label'] ?? null, 'Column labels')];
+                    $column = ['key' => $col['key'], 'label' => $label($col['label'] ?? null, 'Column labels')];
+                    // a column's own width: narrow (a weight, a count), normal, or wide (long text); left out, the sheet works it out from the label
+                    if (isset($col['width'])) {
+                        if (!in_array($col['width'], ['narrow', 'normal', 'wide'], true)) fail("$name: a column's width is narrow, normal or wide");
+                        $column['width'] = $col['width'];
+                    }
+                    $field['columns'][] = $column;
                 }
             }
             if (isset($f['size'])) {

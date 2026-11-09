@@ -282,7 +282,8 @@
       "columns": [
        {
         "key": "level",
-        "label": "Level"
+        "label": "Level",
+        "width": "normal"
        },
        {
         "key": "wounds",

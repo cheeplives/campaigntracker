@@ -223,14 +223,30 @@ const Sheets = (() => {
       b.update();
       return b;
     };
-    const draw = () => fill(table, 
-      el('table', { class: 'tbl' }, el('tr', {}, cols.map(c => el('th', {}, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
+    // column widths by what they hold (SheetLayout.columnWidths): a narrow column (Weight, Uses, Damage) is a fixed
+    // few characters, a wide one twice a normal one, and the normal ones (Item, Name, Notes) share what is left. A wide
+    // column spans two equal <col>s; below its least width the table scrolls sideways rather than squeezing.
+    // A narrow column fits its heading's longest word (a heading wraps between words), and a little more for each
+    // value it holds (ST / Rcl, 1/2D / Max), 4 to 7rem.
+    const widths = L.columnWidths(cols), span = w => (w === 'wide' ? 2 : 1);
+    const narrowRem = c => {
+      const label = String(c.label), parts = label.split(/\s+\/\s+|\s*&\s*/).length;
+      return Math.min(7, Math.max(4 + 1.5 * (parts - 1), 0.6 * Math.max(...label.split(/\s+/).map(x => x.length)) + 0.75));
+    };
+    const shares = widths.reduce((n, w) => n + (w === 'narrow' ? 0 : span(w)), 0), buttons = (roll ? 1 : 0) + (off ? 0 : 1);
+    const fixed = cols.reduce((n, c, i) => n + (widths[i] === 'narrow' ? narrowRem(c) : 0), 0) + buttons * 2.5;
+    const draw = () => fill(table,
+      el('table', { class: 'tbl sheet-list-table', style: { minWidth: `${fixed + shares * 7}rem` } },
+        el('colgroup', {}, cols.flatMap((c, i) => (widths[i] === 'narrow' ? [el('col', { class: 'sheet-col-narrow', style: { width: `${narrowRem(c)}rem` } })]
+          : Array.from({ length: span(widths[i]) }, () => el('col', {})))),
+          roll ? el('col', { class: 'sheet-col-btn' }) : null, off ? null : el('col', { class: 'sheet-col-btn' })),
+        el('tr', {}, cols.map((c, ci) => el('th', { colspan: span(widths[ci]), 'data-width': widths[ci] }, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
         rows.map((r, ri) => {
           const die = rowDice(r, ri);
-          return el('tr', {}, cols.map(c => {
+          return el('tr', {}, cols.map((c, ci) => {
             const i = el('input', { value: r[c.key] ?? '', maxlength: L.LIMITS.text, 'aria-label': `${label} row ${ri + 1} ${c.label}`, disabled: off });
             i.addEventListener('change', () => { r[c.key] = i.value; send(); die?.update(); });
-            return el('td', {}, i);
+            return el('td', { colspan: span(widths[ci]) }, i);
           }), roll ? el('td', { class: 'sheet-roll-cell' }, die) : null,
           off ? null : el('td', {}, button('×', () => { rows.splice(ri, 1); draw(); send(); }, 'icon-btn', { 'aria-label': `Remove row ${ri + 1}` })));
         })),
@@ -480,22 +496,26 @@ const Sheets = (() => {
       if (f.type === 'choice' || f.type === 'list') {
         const isList = f.type === 'list';
         const text = el('textarea', { rows: 3, 'aria-label': isList ? 'Columns' : 'Options', placeholder: 'One per line' });
-        text.value = (isList ? (f.columns || []).map(c => c.label) : f.options || []).join('\n');
+        // a list column's own width goes after its label in brackets: Weight [narrow], Notes [wide]
+        const WIDTH_TAG = /\s*\[(narrow|normal|wide)\]$/i;
+        text.value = (isList ? (f.columns || []).map(c => c.label + (c.width ? ` [${c.width}]` : '')) : f.options || []).join('\n');
         text.addEventListener('input', () => {
           const lines = [...new Set(text.value.split('\n').map(s => s.trim()).filter(Boolean))];
           if (!isList) f.options = lines;
           else {
             // a column keeps its key while its label stays, so rows already filled in keep their values
             const old = new Map((f.columns || []).map(c => [c.label, c.key])), taken = new Set();
-            f.columns = lines.map(label => {
+            f.columns = lines.map(line => {
+              const width = (line.match(WIDTH_TAG)?.[1] || '').toLowerCase(), label = line.replace(WIDTH_TAG, '') || line;
               const key = old.get(label) && !taken.has(old.get(label)) ? old.get(label) : L.newKey(label, taken);
               taken.add(key);
-              return { key, label };
+              return width ? { key, label, width } : { key, label };
             });
           }
           refresh();
         });
-        return el('label', { class: 'field' }, el('span', { class: 'lbl' }, isList ? 'Columns, one per line' : 'Options, one per line'), text);
+        return el('label', { class: 'field' }, el('span', { class: 'lbl' }, isList ? 'Columns, one per line' : 'Options, one per line'), text,
+          isList ? el('span', { class: 'small muted' }, 'Short columns such as Weight, Uses or Damage are drawn narrow by themselves. To choose, add [narrow], [normal] or [wide] after a label.') : null);
       }
       return null;
     }
