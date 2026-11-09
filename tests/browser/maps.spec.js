@@ -1,6 +1,6 @@
 // The Maps tab: maps (an uploaded image with pins, routes and a scale), tokens and party groups.
 const { test, expect } = require("@playwright/test");
-const { hexGray, openDrawer, gearAction, openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+const { hexGray, openDrawer, gearAction, openLegend, watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, makePng, tokenUpload, settledBox, newContext, closeContexts, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 test("Maps: a fresh install has the tables, and the campaign says maps are ready", async ({ page, browser }) => {
@@ -912,12 +912,12 @@ test("Maps: a GM saves a route and a player sees its length", async ({ page, bro
   await expect(pp.locator(".map-route", { hasText: "Old North Road" })).toContainText(/\d+(\.\d)? (km|mi)/);
   await expect(pp.locator(".map-route").getByRole("button", { name: "Delete" })).toHaveCount(0);
   await openDrawer(page);
-  await row.getByRole("button", { name: "GM only" }).click();
-  await expect(row.getByRole("button", { name: "GM only" })).toHaveAttribute("aria-pressed", "true");
+  await moreIn(row, "GM only");   // in the route's ⋯ menu
+  await expect(row).toContainText("🔒");
   await pp.reload();
   await expect(pp.locator(".map-view .leaflet-container")).toHaveCount(1);
   await expect(pp.locator(".map-route")).toHaveCount(0);
-  await row.getByRole("button", { name: "Delete" }).click();
+  await moreIn(row, "Delete");
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.locator(".map-route")).toHaveCount(0);
   expectNoErrors(errors);

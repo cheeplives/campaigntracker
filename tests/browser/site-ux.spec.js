@@ -270,6 +270,7 @@ test("a pinned session's title never reaches players until it is published", asy
   await api(page, "session_save", { id: sid, title: "The secret heist" }, cid);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
+  await page.locator(".sess-bar .kit-menu > summary").click();   // Pin waits in the session's ⋯ menu
   await page.getByRole("button", { name: "📌 Pin" }).click();
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "The secret heist" })).toBeVisible();
   // the pin keeps only the session's id: its title is not in the settings every member is sent

@@ -1,6 +1,6 @@
 // Party groups: the main group (every player, its region the campaign's current one) and the groups split from it.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload, settledBox, newContext, closeContexts } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, mapWithPicture, tokenUpload, settledBox, newContext, closeContexts, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 /** A GM with a campaign, `n` players in it (each with a page) and a second and third region. */
@@ -253,7 +253,7 @@ test("Party: the GM splits and merges on the Travel tab", async ({ page, browser
   await expect(rowOf(page, "Scouts").locator(".party-members")).toContainText("Pat1");
   await expect(rowOf(page, "The party").locator(".party-members")).not.toContainText("Pat1");
 
-  await rowOf(page, "Scouts").getByRole("button", { name: "Rename" }).click();
+  await moreIn(rowOf(page, "Scouts"), "Rename");
   await page.locator("dialog .kit-dialog-input").fill("Advance party");
   await page.locator("dialog").getByRole("button", { name: "Save" }).click();
   await expect(rowOf(page, "Advance party")).toHaveCount(1);
@@ -262,7 +262,7 @@ test("Party: the GM splits and merges on the Travel tab", async ({ page, browser
   await expect(rowOf(page, "Advance party").locator(".party-main")).toHaveCount(1);
   expect((await groups(page, cid))[0].name).toBe("Advance party");
 
-  await rowOf(page, "Advance party").getByRole("button", { name: "Merge into…" }).click();
+  await moreIn(rowOf(page, "Advance party"), "Merge into…");
   await page.locator("dialog.party-dialog").getByLabel("Merge into").selectOption({ label: "The party" });
   await page.locator("dialog.party-dialog").getByRole("button", { name: "Merge", exact: true }).click();
   await expect(page.locator(".party-row")).toHaveCount(1);
@@ -360,7 +360,7 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
 
   // assign it with Token on the Travel row
   await page.goto(`#/c/${cid}/travel`);
-  await rowOf(page, "The party").getByRole("button", { name: "Token" }).click();
+  await moreIn(rowOf(page, "The party"), "Token");
   await page.locator("dialog.party-dialog").getByLabel("Token").selectOption({ label: "Banner" });
   await page.locator("dialog.party-dialog").getByRole("button", { name: "Save" }).click();
   await expect.poll(async () => (await groups(page, cid))[0].token_id).toBe(t.id);

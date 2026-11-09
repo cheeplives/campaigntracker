@@ -1,7 +1,7 @@
 // The Library tab: books, journals and notes ("tomes") with a title, a description and a long rich-text body. Every
 // member, GM or player, adds tomes and changes any of them; a save from a copy someone else has saved over is refused.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, pressMore } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign, sql, newContext, closeContexts, pressMore, moreIn } = require("./helpers");
 test.afterEach(closeContexts);
 
 // A 2×1 PNG, inline so the test needs no image files.
@@ -165,7 +165,7 @@ test("Scan on an entry or a tome runs the Feature Highlighter over just that one
   const entry = (await api(page, "entry_save", { name: "Hexe", notes: "<p>She lives near Bögenhafen.</p>", gm_notes: "<p>She serves Tzeentch.</p>", tags: [] }, cid)).json;
   // The tome's scan offers only the names in the tome.
   await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
-  await page.locator(".lib-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await moreIn(page.locator(".lib-detail"), "🔍 Scan");
   await expect(dlg).toBeVisible();
   await expect(dlg).toContainText('in "Ledger" that');
   for (const n of ["Brother Udo", "Wurtbad"]) await expect(row(n)).toBeVisible();
@@ -185,7 +185,7 @@ test("Scan on an entry or a tome runs the Feature Highlighter over just that one
   await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
   expect((await api(page, "terms_ignore", { terms: ["Brother Udo", "Ledger"] }, cid)).status).toBe(200);
   await page.reload();
-  await page.locator(".lib-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await moreIn(page.locator(".lib-detail"), "🔍 Scan");
   await expect(page.getByText('No names missing: everything the Feature Highlighter finds in "Ledger"')).toBeVisible();
   expectNoErrors(errors);
 });
