@@ -2461,9 +2461,12 @@
       else if (ev.key === 'Escape') box.dataset.freeTab = '1';   // the next Tab leaves the box, as a keyboard user needs
       if (ev.key !== 'Escape') delete box.dataset.freeTab;
     });
+    // The tap keeps the box focused (no blur): the blur would start a save, whose Saving… in the bar at the top can
+    // wrap that bar onto another line and move this button from under the finger before the tap ends.
     const phone = (glyph, label, dir) => {
       const b = btn(glyph, () => { indent(dir); box.focus(); }, 'small snote-phone', label);
       b.setAttribute('aria-label', label);
+      b.addEventListener('pointerdown', ev => ev.preventDefault());
       return b;
     };
     const helpBtn = btn('?', () => { help.hidden = !help.hidden; }, 'small', 'Show the shorthand this box understands');
