@@ -612,3 +612,40 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("a saved roll rolls again and again from its 🎲 Roll, and each device sets how long thrown dice stay", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice again");
+  await api(page, "prefs_save", { dice_saved: { cid, list: [{ n: "Fireball", e: "8d6 # fireball" }] } });
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const count = async () => (await api(page, "dice_rolls", undefined, cid)).json.rolls.filter(r => r.expr === "8d6 # fireball").length;
+  const again = page.getByRole("button", { name: "Roll this saved roll" });
+  await expect(again).toBeHidden();
+  await page.locator(".dice-saved").selectOption("1");
+  const box = page.getByRole("textbox", { name: "Free roll" });
+  await expect(box).toHaveValue("8d6 # fireball");
+  await again.click();
+  await expect.poll(count).toBe(1);
+  // something else rolled in between: the saved roll still rolls as it was saved, without picking it again
+  await box.fill("1d20");
+  await expect(page.locator(".dice-saved")).toHaveValue("");    // typed away from it, so the list lets go of it
+  await expect(again).toBeHidden();
+  await box.press("Enter");
+  await page.locator(".dice-saved").selectOption("1");
+  await again.click();
+  await expect.poll(count).toBe(2);
+  await again.click();
+  await expect.poll(count).toBe(3);
+
+  // 🎨: how long the dice stay, kept on this device
+  await page.getByRole("button", { name: /your dice/i }).click();
+  const stay = page.getByRole("combobox", { name: "How long thrown dice stay on screen" });
+  await expect(stay).toHaveValue("3");
+  await stay.selectOption("0");
+  expect(await page.evaluate(() => localStorage.getItem("chronicle-dice-stay"))).toBe("0");
+  await page.reload();                                          // the panel opens again as it was left
+  await page.getByRole("button", { name: /your dice/i }).click();
+  await expect(stay).toHaveValue("0");
+  expectNoErrors(errors);
+});
