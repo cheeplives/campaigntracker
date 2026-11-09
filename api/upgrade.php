@@ -20,10 +20,21 @@ function run_sql_file(PDO $pdo, string $file): void {
         if (preg_match('/^\s*(--.*\n\s*)*(--.*)?$/', $stmt)) continue;
         $pdo->exec($stmt);
     }
+    db_tables($pdo, true);   // it may have made a table
+}
+
+/** The database's tables, from one SHOW TABLES per connection per request: schema_current() runs on every API request,
+ * and lib.php's has_table() asks the same question, so the list is read once and shared. run_sql_file() refreshes it,
+ * since a migration or schema.sql may have just made a table. */
+function db_tables(PDO $pdo, bool $fresh = false): array {
+    static $cache = [];
+    $k = spl_object_id($pdo);
+    if ($fresh || !isset($cache[$k])) $cache[$k] = array_flip($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
+    return $cache[$k];
 }
 
 function db_has_table(PDO $pdo, string $table): bool {
-    return (bool)$pdo->query("SHOW TABLES LIKE " . $pdo->quote($table))->fetchColumn();
+    return isset(db_tables($pdo)[$table]);
 }
 
 function db_has_column(PDO $pdo, string $table, string $column): bool {
@@ -112,17 +123,22 @@ function upgrade_steps(): array {
 
 /** Tables db/schema.sql creates, so a fresh or partly made database can be spotted without running it. */
 function schema_tables(string $root): array {
-    preg_match_all('/CREATE TABLE IF NOT EXISTS\s+`?(\w+)`?/i', (string)file_get_contents("$root/db/schema.sql"), $m);
-    return $m[1];
+    static $cache = [];
+    if (!isset($cache[$root])) {
+        preg_match_all('/CREATE TABLE IF NOT EXISTS\s+`?(\w+)`?/i', (string)file_get_contents("$root/db/schema.sql"), $m);
+        $cache[$root] = $m[1];
+    }
+    return $cache[$root];
 }
 
 /**
  * Whether the database is at the latest migration, cheaply enough to ask on every API request (api/index.php refuses
- * to run anything on a database that is behind): every table db/schema.sql makes is there, from one SHOW TABLES, and
- * the newest step above has nothing left to do. The steps run in order, so the newest stands for them all.
+ * to run anything on a database that is behind): every table db/schema.sql makes is there, from the one SHOW TABLES
+ * the request shares (db_tables), and the newest step above has nothing left to do. The steps run in order, so the
+ * newest stands for them all.
  */
 function schema_current(PDO $pdo, string $root): bool {
-    $have = array_flip($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
+    $have = db_tables($pdo);
     foreach (schema_tables($root) as $t) if (!isset($have[$t])) return false;
     $steps = upgrade_steps();
     return !end($steps)[1]($pdo);

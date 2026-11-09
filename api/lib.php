@@ -289,6 +289,8 @@ function require_method(string ...$allowed): void {
 /** Whether table $t exists, from one SHOW TABLES a request. The API itself needs none of this (it refuses to run on a
  * database that is behind: schema_current() in api/upgrade.php), but sign-in also runs from api/auth/, outside it. */
 function has_table(string $t): bool {
+  // The API loads api/upgrade.php, whose schema check reads the same list: share its copy rather than ask again.
+  if (function_exists('db_tables')) return isset(db_tables(db())[$t]);
   static $tables = null;
   $tables ??= array_flip(db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
   return isset($tables[$t]);
