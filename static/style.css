@@ -2080,3 +2080,37 @@ dialog.kit-dialog.history-dialog[open] { display: flex; }
 .hist-line ins { text-decoration: none; background: color-mix(in srgb, #16a34a 28%, transparent); border-radius: 2px; }
 .hist-line del { background: color-mix(in srgb, #dc2626 24%, transparent); border-radius: 2px; }
 @media (max-width: 760px) { .hist-body { grid-template-columns: 1fr; grid-template-rows: 150px 1fr; } }
+
+/* ------------------------------------------------------------ site-wide UX pass (Nov 2026)
+ * Sentence case where people scan: headings below the page title, the Legend's links, fold headers and main buttons.
+ * Page titles, the masthead, the campaign bar's date and the small labels and chips keep their capitals. */
+h2, h3, h4 { text-transform: none; letter-spacing: .01em; }
+.tabs a { font: 600 .98rem var(--body); text-transform: none; letter-spacing: 0; }
+:root[data-scheme="console"] .tabs a { font-family: var(--mono); }
+button.primary, .button.primary { font: 650 .95rem var(--body); text-transform: none; letter-spacing: 0; }
+button.small.primary, .button.small.primary { font-size: .85rem; }
+button.daybox-toggle { font: 700 1.45rem var(--disp); text-transform: none; letter-spacing: .01em; }
+
+/* rows that go at once on a delete, while its Undo waits */
+.enote[hidden], .event[hidden], .gear-row[hidden], .ledger-row[hidden] { display: none !important; }
+.enote .note-del { margin-left: 10px; }
+#undo-toast { position: fixed; left: 50%; bottom: 20px; z-index: 21; display: flex; align-items: center; gap: 14px; max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px; border-radius: 8px; background: var(--text); color: var(--bg); box-shadow: 0 8px 28px rgb(0 0 0 / .25);
+  transform: translateX(-50%) translateY(140px); transition: transform .2s; overflow: hidden; }
+#undo-toast.show { transform: translateX(-50%) translateY(0); }
+#undo-toast > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#undo-toast .undo-btn { flex: none; background: none; border: 0; color: color-mix(in srgb, var(--accent) 55%, var(--bg)); font-weight: 700; padding: 8px 10px; min-height: 40px; }
+#undo-toast .undo-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: color-mix(in srgb, var(--accent) 55%, var(--bg));
+  transform-origin: left; }
+#undo-toast.show .undo-bar { animation: undo-run 8s linear forwards; }
+@keyframes undo-run { to { transform: scaleX(0); } }
+body:has(.tv-bar) #undo-toast { bottom: 92px; }   /* above At the Table's floating bar */
+@media (prefers-reduced-motion: reduce) { #undo-toast { transition: none; } #undo-toast.show .undo-bar { animation: none; } }
+
+/* A touch screen (an iPad first): small buttons are at least 44px tall, so a finger finds them. The Legend's rows are
+ * full-width already and stay as they are, so every tab still fits on an iPad held sideways. */
+@media (pointer: coarse) {
+  button.small, .button.small { min-height: 44px; padding-left: 12px; padding-right: 12px; }
+  a.button.small:not([hidden]), label.button.small:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
+  button.link.small { min-height: 0; }
+}

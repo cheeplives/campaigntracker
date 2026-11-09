@@ -86,6 +86,7 @@
       opt.headers['X-Chronicle-Panel'] = panelCodeNow;
     } else if (query.cid && viewingAs(query.cid)) opt.headers['X-View-As'] = 'player';
     if (body) { opt.headers['Content-Type'] = 'application/json'; if (!PANEL) opt.headers['X-CSRF-Token'] = S.csrf; opt.body = JSON.stringify(body); }
+    if (body && leaving) opt.keepalive = true;   // a delete still waiting on its Undo, sent as the page goes
     const noteFail = (status, msg) => { if (typeof ReportLog !== 'undefined') ReportLog.request(action, status, msg); };
     let res;
     try { res = await fetch('api/index.php?' + qs, opt); } catch (err) { if (!leaving) noteFail(0, err.message); throw err; }
@@ -117,6 +118,38 @@
   addEventListener('beforeunload', () => { leaving = true; });
   addEventListener('pagehide', () => { leaving = true; });
   addEventListener('pageshow', () => { leaving = false; });   // back from the back-forward cache
+
+  // Undo instead of "Are you sure?": a delete takes the thing off the page at once and says so with an Undo button, and the
+  // server is only told 8 seconds later (or sooner: when another delete starts, the page changes or the tab closes).
+  // undoable({ label, hide, restore, commit }) — hide/restore show and hide the row, commit tells the server.
+  const Undo = (() => {
+    let pending = null, bar = null;
+    const close = () => { if (bar) bar.classList.remove('show'); };
+    async function flush() {
+      const p = pending; if (!p) return;
+      pending = null; clearTimeout(p.timer); close();
+      try { await p.commit(); } catch (err) { p.restore(); toast(err.message, true); }
+    }
+    function start(p) {
+      if (pending) flush();
+      p.hide();
+      pending = p;
+      if (!bar) document.body.append(bar = el('div', { id: 'undo-toast', role: 'status', 'aria-live': 'polite' }));
+      const undo = el('button', { type: 'button', class: 'undo-btn' }, 'Undo');
+      undo.addEventListener('click', () => { if (pending !== p) return; pending = null; clearTimeout(p.timer); close(); p.restore(); });
+      bar.replaceChildren(el('span', {}, p.label), undo, el('span', { class: 'undo-bar' }));
+      bar.classList.remove('show'); void bar.offsetWidth; bar.classList.add('show');
+      p.timer = setTimeout(flush, 8000);
+    }
+    addEventListener('pagehide', () => { flush(); });
+    return { start, flush };
+  })();
+  const shortText = (t, n = 40) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t; };
+  /** Take `box` off the page and delete it on the server after the Undo has had its time. */
+  const undoDelete = (box, label, action, body, done, changed) => Undo.start({
+    label, hide: () => { box.hidden = true; changed?.(); }, restore: () => { box.hidden = false; changed?.(); },
+    commit: async () => { await post(action, body, S.camp.id); if (done) done(); },
+  });
   addEventListener('unhandledrejection', e => { if (leaving && e.reason instanceof TypeError) e.preventDefault(); });
 
   // ------------------------------------------------------------ change notices
@@ -1694,7 +1727,7 @@
     // --- events
     const evBox = dayBox(key('events'), 'Events', {
       folded: table,
-      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'primary small', 'Log something that happened (or will happen) on this day') : null,
+      actions: (isGM() || settings().players_can_add_events) ? btn('+ New event', () => openBox(evBox).append(eventForm(d)), 'small', 'Log something that happened (or will happen) on this day') : null,
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
@@ -1702,7 +1735,7 @@
     const remBox = dayBox(key('reminders'), 'Reminders', {
       folded: table,
       tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
-      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'primary small', `Have something pop up when the campaign reaches a ${word()} of this day`),
+      actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'small', `Have something pop up when the campaign reaches a ${word()} of this day`),
     }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
@@ -2664,10 +2697,8 @@
     const list = notes.map(n => el('div', { class: 'enote' },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
-        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
-          if (!await confirmDialog('Delete this note?')) return;
-          try { await post('shift_note_delete', { id: n.id }, S.camp.id); after(); } catch (err) { toast(err.message, true); }
-        }, 'link small'), 'Delete this note') : null)));
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'shift_note_delete', { id: n.id }), 'small note-del'), 'Delete this note') : null)));
     // the box stays closed behind + Note until it's wanted
     const input = el('textarea', { rows: 3, placeholder: 'Your note', hidden: true, 'aria-label': `Notes for ${shiftNames()[i]}`, 'data-tip': 'Everyone in the campaign can read these' });
     const add = btn('+ Note', null, 'small', `Add your note to this ${word()}, signed with your character name`);
@@ -2695,10 +2726,8 @@
     const notesList = el('div', { class: 'enotes' }, (e.notes || []).map(n => el('div', { class: 'enote' },
       el('div', { class: 'pre' }, linked(n.body)),
       el('small', { class: 'muted' }, '— ', byline(n), `, ${n.created_at}`,
-        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('delete', async () => {
-          if (!await confirmDialog('Delete this note?')) return;
-          try { await post('note_delete', { id: n.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'link small'), 'Delete this note') : null))));
+        (isGM() || Number(n.user_id) === S.user.id) ? tipped(btn('Delete', ev =>
+          undoDelete(ev.currentTarget.closest('.enote'), `Deleted the note "${shortText(n.body)}"`, 'note_delete', { id: n.id }), 'small note-del'), 'Delete this note') : null))));
     // The note box stays folded behind its button until it's wanted, so a day of events isn't a stack of empty boxes
     const noteIn = el('textarea', { rows: 2, placeholder: 'Add a note…', hidden: true, 'aria-label': `Note on ${e.title}` });
     const addNote = btn('Add note', null, 'small', 'Add a comment to this event. Everyone who can see the event can read it');
@@ -2722,10 +2751,7 @@
           if (!await confirmDialog(`Make "${e.title}" public? Players see this event and its notes from now on.`, { ok: 'Reveal' })) return;
           try { await post('item_reveal', { kind: 'event', id: e.id }, S.camp.id); toast('Revealed to the players'); route(); } catch (err) { toast(err.message, true); }
         }, 'small', 'Make this GM-only event public: players see it from now on') : null,
-        btn('Delete', async () => {
-          if (!await confirmDialog(`Delete "${e.title}"?`)) return;
-          try { await post('event_delete', { id: e.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Delete this event and its notes')) : null,
+        btn('Delete', () => undoDelete(box, `Deleted "${shortText(e.title)}"`, 'event_delete', { id: e.id }), 'small danger', 'Delete this event and its notes')) : null,
       notesList, el('div', { class: 'row' }, noteIn, addNote)].filter(Boolean));
     return box;
   }
@@ -2742,10 +2768,7 @@
       el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
       canEditReminder(x) ? el('div', { class: 'row' },
         btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-        btn('Delete', async () => {
-          if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
-          try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-        }, 'small danger', 'Delete this reminder')) : null);
+        btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null);
     return box;
   }
 
@@ -3055,10 +3078,7 @@
           el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
           canEditReminder(x) ? el('div', { class: 'row' },
             btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-            btn('Delete', async () => {
-              if (!await confirmDialog(`Delete the reminder "${x.title}"?`)) return;
-              try { await post('reminder_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Delete this reminder')) : null));
+            btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')) : null));
       return r;
     };
     const draw = () => {
@@ -3549,7 +3569,7 @@
     const findBtn = up.ready && parentType === 'encyclopedia' && opts.name ? btn('🖼️ Find Image', () => {
       findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(findImage(parentType, parentId, opts.name, { gmOnly, onAdded: refresh }));
     }, 'small', 'Search open picture libraries, museums and DeviantArt for a picture of this, credited') : null;
-    const addBtn = up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
+    const addBtn = up.ready ? el('label', { class: 'button small file-add', 'data-tip': `Add a picture (JPEG, PNG, GIF, WebP) or a file (PDF, text) up to ${fileSize(up.max_bytes)}. You can also drop files here` }, input, '📎 Add') : null;
     const gallery = pics.length ? el('div', { class: 'file-gallery' }, pics.map((f, i) =>
       el('figure', { class: 'file-pic' + (hidden(f) ? ' secret' : ''), 'data-id': f.id },
         el('button', { type: 'button', class: 'file-thumb', 'aria-label': `Open ${f.caption || f.name}`, onclick: () => fileViewer(pics, i, { ...opts, mine, hidden }) },
@@ -3786,7 +3806,7 @@
           list.length ? btn('🕸 Web', () => ctx.web({ center: e.id }), 'small', `Draw ${e.name}'s connections as a web, one or two steps out`) : null,
           Web.hasFamily({ conns }, e.id) ? btn('🌳 Family', () => ctx.web({ center: e.id, mode: 'family' }), 'small', `Draw ${e.name}'s family: parents, partners, children and siblings`) : null,
           list.length ? btn('Show in list', () => { st.near = e.id; ctx.draw(); }, 'small', `List ${e.name} and the entries connected to it`) : null,
-          btn('🔗 Link', () => connectDialog(e, rel), 'small primary', `Connect ${e.name} to one or more entries`))),
+          btn('🔗 Link', () => connectDialog(e, rel), 'small', `Connect ${e.name} to one or more entries`))),
       rows.length ? el('div', { class: 'enc-conn-list' }, rows) : el('p', { class: 'muted small' }, 'No connections yet.'),
       suggest);
   }
@@ -5259,10 +5279,8 @@
       };
       for (const i of [cur, loc, amt]) i.addEventListener('change', save);
       const row = el('div', { class: 'ledger-row' }, cur, loc, amt,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: async () => {
-          if (!await confirmDialog(`Remove "${cur.value}" from Party Funds?`, { ok: 'Remove', danger: true })) return;
-          try { await post('funds_delete', { id: f.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
-        } }, '✕'));
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: () =>
+          undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...funds.map(line));
@@ -5303,10 +5321,8 @@
         onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
         onSet: n => post('gear_save', { id: g.id, item: item.value, claimed_by: claimed.value, location: loc.value, amount: n }, S.camp.id) });
       const row = el('div', { class: 'gear-row' }, item, claimed, loc, amount.node,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: async () => {
-          if (!await confirmDialog(`Remove "${item.value || 'this item'}" from Gear and Loot?`, { ok: 'Remove', danger: true })) return;
-          try { await post('gear_delete', { id: g.id }, S.camp.id); row.remove(); } catch (err) { toast(err.message, true); }
-        } }, '✕'));
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
+          undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...gear.map(gearRow));
@@ -5367,7 +5383,7 @@
     const cap = leadNumber(h.stats?.cargo);
     const lines = el('div', { class: 'ledger-rows' });
     const total = el('div', { class: 'ledger-total' });
-    const weights = () => [...lines.querySelectorAll('input.ledger-w')].map(i => Number(i.value) || 0);
+    const weights = () => [...lines.querySelectorAll('.ledger-row:not([hidden]) input.ledger-w')].map(i => Number(i.value) || 0);
     const sum = () => {
       const t = weights().reduce((a, b) => a + b, 0), over = cap !== null && t > cap;
       total.classList.toggle('over', over);
@@ -5387,9 +5403,8 @@
       weight.addEventListener('change', save);
       weight.addEventListener('input', sum);
       const row = el('div', { class: 'ledger-row' }, item, weight,
-        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: async () => {
-          if (!await confirmDialog(`Remove "${item.value}" from ${h.name}'s storage?`, { ok: 'Remove', danger: true })) return;
-          try { await post('storage_delete', { id: s.id }, S.camp.id); row.remove(); sum(); } catch (err) { toast(err.message, true); }
+        el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: () => {
+          undoDelete(row, `Removed "${shortText(item.value)}" from ${h.name}'s storage`, 'storage_delete', { id: s.id }, () => row.remove(), sum);
         } }, '✕'));
       return row;
     };
@@ -6251,7 +6266,7 @@
         if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
         try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
       }, 'small'))) : el('p', { class: 'muted small' }, 'No panel links yet.'));
-    box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small primary'),
+    box.append(list, el('div', { class: 'row' }, btn('New panel link…', () => newPanelLink(box), 'small'),
       btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
       el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href), ' under Extensions → Add custom extension.')));
     return box;
@@ -6467,6 +6482,7 @@
     return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => diceSync()));
   }
   async function routeTo() {
+    await Undo.flush();   // a delete waiting on its Undo goes through before the page is drawn again
     const [path, query] = location.hash.replace(/^#\/?/, '').split('?');
     const parts = (path || '').split('/');
     if (parts[0] === 'about') { renderNav(); return viewAbout(); } // readable signed out too
