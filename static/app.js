@@ -176,7 +176,7 @@
   const shortText = (t, n = 40) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t; };
   /** Take `box` off the page and delete it on the server after the Undo has had its time. */
   const undoDelete = (box, label, action, body, done, changed) => Undo.start({
-    label, hide: () => { box.hidden = true; changed?.(); }, restore: () => { box.hidden = false; changed?.(); },
+    label, hide: () => { box.hidden = true; box.classList.add('undo-gone'); changed?.(); }, restore: () => { box.hidden = false; box.classList.remove('undo-gone'); changed?.(); },
     commit: async () => { await post(action, body, S.camp.id); if (done) done(); },
   });
   addEventListener('unhandledrejection', e => { if (leaving && e.reason instanceof TypeError) e.preventDefault(); });
@@ -2891,16 +2891,16 @@
   const recentKey = () => `chronicle:recent:${S.user?.id}:${S.camp?.id}`;
   const recentList = () => { try { return JSON.parse(localStorage.getItem(recentKey()) || '[]'); } catch { return []; } };
   const QUICK_KIND = { encyclopedia: ['entry', '📖'], library: ['tome', '📜'], sessions: ['session', '📝'], maps: ['map', '🗺'], day: ['day', '📅'] };
-  function noteRecent() {
+  function noteRecent(hash) {
     if (!S.camp) return;   // kept even with Recent off in the Legend: Ctrl K lists it
-    const m = location.hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
+    const m = hash.match(/^#\/c\/(\d+)\/(encyclopedia|library|sessions|maps|day)\/(\d+)$/);
     if (!m || Number(m[1]) !== S.camp.id) return;
-    const head = app().querySelector('.enc-detail h2') || app().querySelector('.map-page h2, .map-head h2, h2');
+    const head = hash === location.hash ? app().querySelector('.enc-detail h2') || app().querySelector('.map-page h2, .map-head h2, h2') : null;
     const text = node => { const c = node?.cloneNode(true); c?.querySelectorAll('.tip, .secret-tag, img').forEach(x => x.remove()); return (c?.textContent || '').trim(); };
     const label = m[2] === 'day' ? E.fmtDate(cal(), Number(m[3]), { noWeekday: true })
-      : m[2] === 'encyclopedia' ? S.encyclopedia.find(e => e.id === Number(m[3]))?.name || '' : text(head);
+      : m[2] === 'encyclopedia' ? S.encyclopedia.find(e => e.id === Number(m[3]))?.name || text(head) : text(head);
     if (!label) return;
-    const list = [{ hash: location.hash, label, icon: QUICK_KIND[m[2]][1] }, ...recentList().filter(x => x.hash !== location.hash)].slice(0, RECENT_MAX);
+    const list = [{ hash, label, icon: QUICK_KIND[m[2]][1] }, ...recentList().filter(x => x.hash !== hash)].slice(0, RECENT_MAX);
     try { localStorage.setItem(recentKey(), JSON.stringify(list)); } catch { /* private mode: no Recent */ }
   }
   const pinsOf = () => (Array.isArray(settings().legend_pins) ? settings().legend_pins : []);
@@ -3109,8 +3109,8 @@
     const find = el('input', { type: 'search', placeholder: `Find ${noun}`, 'aria-label': `Find ${noun}`, class: 'mpick-find' });
     let opts = [], shape = '';
     const change = () => { sync(); onChange(); };
-    const all = btn('Select all', () => { off.clear(); change(); }, 'link small', `Show every ${noun.replace(/s$/, '')}`);
-    const none = btn('Deselect all', () => { for (const o of opts) off.add(o.key); change(); }, 'link small', `Untick every ${noun.replace(/s$/, '')}, then tick the ones to show`);
+    const all = btn('Select all', () => { off.clear(); change(); }, 'small', `Show every ${noun.replace(/s$/, '')}`);
+    const none = btn('Deselect all', () => { for (const o of opts) off.add(o.key); change(); }, 'small', `Untick every ${noun.replace(/s$/, '')}, then tick the ones to show`);
     const node = el('details', { class: 'mpick' }, sum,
       el('div', { class: 'mpick-panel' }, el('div', { class: 'row small' }, all, none), find, box));
     const sync = () => {
@@ -3281,7 +3281,7 @@
           onclick: () => { on ? st.tags.delete(k) : st.tags.add(k); draw(); } }, el('span', { class: 'tick', 'aria-hidden': 'true' }, on ? '✓ ' : ''), t.name);
         b.style.setProperty('--tag', t.color);
         return b;
-      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'link small', 'Show events with any tag, or none')] : []));
+      }), ...(st.tags.size ? [btn('Clear tags', () => { st.tags.clear(); draw(); }, 'small', 'Show events with any tag, or none')] : []));
     };
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     when.addEventListener('change', () => { st.when = when.value; draw(); });
@@ -4263,7 +4263,7 @@
       el('div', { class: 'enc-wiki-hits' }, items.map(h => el('button', { type: 'button', class: 'enc-wiki-hit', onclick: () => (h.several ? meanings(h.title) : show(h.title)),
         'data-tip': h.several ? `"${h.title}" has several meanings: list them` : `Show the summary of "${h.title}"` },
         el('strong', {}, h.title, h.several ? el('span', { class: 'enc-wiki-several' }, 'Several meanings') : null), h.line ? el('span', { class: 'muted small' }, h.line) : null))),
-      el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'link small')));
+      el('div', { class: 'row' }, btn('None of these', () => out.replaceChildren(), 'small')));
     async function search() {
       const q = name.value.trim();
       if (!q) return say('Give the entry a name first.');
@@ -6689,16 +6689,16 @@
     // public panels change nothing anyway; a member's own link in a frame starts with changes off
     const writes = S.panel?.link?.scope !== 'public_panel' && panelFramed()
       ? (panelWritesAllowed()
-        ? btn(`Changes allowed on ${panelEmbedder()} · turn off`, () => { setPanelWrites(false); viewTable(); }, 'link small', 'Stop this panel making changes while this site shows it')
+        ? btn(`Changes allowed on ${panelEmbedder()} · turn off`, () => { setPanelWrites(false); viewTable(); }, 'small', 'Stop this panel making changes while this site shows it')
         : panelEmbedderOrigin()
           ? btn('Allow changes here', async () => {
             if (!await confirmDialog(`Let this panel pass time and add notes while ${panelEmbedder()} shows it? Only allow a site you use, such as your VTT.`, { ok: 'Allow changes' })) return;
             setPanelWrites(true); viewTable();
-          }, 'link small', `Changes are off while ${panelEmbedder()} shows this panel`)
+          }, 'small', `Changes are off while ${panelEmbedder()} shows this panel`)
           : el('span', {}, 'Read only here: this browser doesn\'t say which site shows the panel'))
       : null;
     return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago, writes,
-      btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'link small'));
+      btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'small'));
   }
   /** The panel follows the campaign: when a GM changes it (passes time, say), it redraws, unless a note is being typed. */
   async function panelPoll() {
@@ -6747,7 +6747,9 @@
   let routeSeq = 0, routeRun = Promise.resolve();
   function route() {
     const seq = ++routeSeq;
-    return (routeRun = routeRun.then(() => (seq === routeSeq ? routeTo() : null)).catch(err => console.error(err)).then(() => { diceSync(); fillJumpLinks(); keepPlace(); noteRecent(); }));
+    let drawn = null;   // the address this run drew, for Recent, even if the address has moved on since
+    return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
+      .then(() => { diceSync(); fillJumpLinks(); keepPlace(); if (drawn) noteRecent(drawn); }));
   }
   // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
   // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.

@@ -137,7 +137,8 @@ test("saving notes offers new names; added ones become entries, linked on the pa
   await pp.goto(`index.html#/c/${cid}/day/2`);
   await expect(pp.locator(".notes-locs a.enc-link")).toHaveText("Altdorf");
   await expect(pp.locator("[data-box=notes] .richtext strong a.enc-link")).toHaveText("Gunther");
-  await pp.locator("[data-box=notes] .richtext a.enc-link", { hasText: "Gunther" }).click();
+  await pp.locator("[data-box=notes] .richtext a.enc-link", { hasText: "Gunther" }).click();   // a peek card first
+  await pp.locator(".peek").getByRole("link", { name: "Open" }).click();
   await expect(pp).toHaveURL(new RegExp(`#/c/${cid}/encyclopedia/${byName.Gunther.id}$`));
   // A new entry is blank, so it opens in its editor. Players write Public notes but get no GM notes.
   await expect(pp.locator(".enc-blank .enc-item")).toHaveCount(2);

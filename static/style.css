@@ -2158,6 +2158,7 @@ button.daybox-toggle { font: 700 1.45rem var(--disp); text-transform: none; lett
 /* rows that go at once on a delete, while its Undo waits */
 .enote[hidden], .event[hidden], .gear-row[hidden], .ledger-row[hidden] { display: none !important; }
 .enote .note-del { margin-left: 10px; }
+.undo-gone { display: none !important; }   /* a deleted row, while its Undo is offered */
 #undo-toast { position: fixed; left: 50%; bottom: 20px; z-index: 21; display: flex; align-items: center; gap: 14px; max-width: min(520px, calc(100vw - 32px));
   padding: 10px 10px 10px 16px; border-radius: 8px; background: var(--text); color: var(--bg); box-shadow: 0 8px 28px rgb(0 0 0 / .25);
   transform: translateX(-50%) translateY(140px); transition: transform .2s; overflow: hidden; }
@@ -2279,3 +2280,14 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .dice-hist-e { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
 .dice-hist-out { text-align: right; flex: none; }
 .dice-hist-out b { display: block; font: 700 1.5rem var(--disp); line-height: 1; }
+
+/* The pin card's actions are buttons, so they look like buttons: one row of small outlined boxes, Delete outlined in red.
+ * (Pills choose or go somewhere, boxed buttons do something, and a plain link only goes somewhere.) On a touch screen
+ * they are a little taller, but not the full 44px, so the card stays slim over the map. */
+.mpc-actions { gap: 6px; }
+.mpc-actions button, .mpc-actions button.small { min-width: 0; min-height: 0; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); box-shadow: none; color: var(--text); font: 500 .78rem/1.3 var(--body); cursor: pointer; }
+.mpc-actions button:hover { text-decoration: none; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.mpc-actions button.danger { margin-left: 0; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.mpc-actions button.danger:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--panel)); }
+@media (pointer: coarse) { .mpc-actions button, .mpc-actions button.small { min-height: 34px; padding: 4px 12px; } }

@@ -154,7 +154,7 @@
             el('p', { class: 'small muted' }, scan
               ? `The Feature Highlighter found ${found.length} name${found.length === 1 ? '' : 's'} in ${where} that ${found.length === 1 ? 'isn\'t' : 'aren\'t'} in the Encyclopedia. Pick Add for the ones to keep; Ignore stops a word being offered again.`
               : 'The Feature Highlighter found these in what you saved. Add puts one in the Encyclopedia, Ignore stops it being offered again, Skip asks next time.'),
-            el('div', { class: 'row small' }, el('span', { class: 'muted' }, 'All:'), btn('Add', () => all('add'), 'link small'), btn('Ignore', () => all('ignore'), 'link small'), btn('Skip', () => all('skip'), 'link small')),
+            el('div', { class: 'row small' }, el('span', { class: 'muted' }, 'All:'), btn('Add', () => all('add'), 'small'), btn('Ignore', () => all('ignore'), 'small'), btn('Skip', () => all('skip'), 'small')),
             el('div', { class: 'noun-list' }, rows.map(r => r.row)),
             el('div', { class: 'kit-dialog-actions' },
               el('button', { value: 'save', class: 'primary', type: 'submit' }, 'Save choices'),
@@ -298,7 +298,7 @@
       const tagPick = multiPick('Tags', 'tags', st.tagsOff, () => draw());
       const relPick = multiPick('Connections', 'connections', st.relsOff, () => draw());
       catPick.node.classList.add('enc-catpick'); tagPick.node.classList.add('enc-tagpick'); relPick.node.classList.add('enc-relpick');
-      const clearAll = btn('Show all', () => { for (const off of Object.values(offOf)) off.clear(); st.q = search.value = ''; st.near = null; st.kind = 'all'; draw(); }, 'link small', 'Clear the search and every filter');
+      const clearAll = btn('Show all', () => { for (const off of Object.values(offOf)) off.clear(); st.q = search.value = ''; st.near = null; st.kind = 'all'; draw(); }, 'small', 'Clear the search and every filter');
       // PCs and NPCs: the entries with a character sheet of each kind
       const kindSeg = hasChars ? el('div', { class: 'seg enc-kinds', role: 'group', 'aria-label': 'Characters' }) : null;
       const drawKinds = () => kindSeg?.replaceChildren(...[['all', 'All', 'Every entry'], ['pc', 'PCs', 'Only entries with a PC\'s sheet'], ['npc', 'NPCs', 'Only entries with an NPC\'s sheet']].map(([k, l, t]) =>
@@ -306,13 +306,14 @@
       const filters = el('div', { class: 'enc-filters' }, kindSeg, catPick.node, used.length ? tagPick.node : null, relUsed.size ? relPick.node : null, clearAll);
       // The filters in force, one chip each, with ✕ to drop it: so a short list says why it is short
       const chips = el('div', { class: 'fchips', 'aria-label': 'Filters in force' });
+      const chipX = (fn, what) => { const b = btn('✕', fn, 'fchip-x', what); b.setAttribute('aria-label', what); return b; };
       const chipFor = (label, off, list) => {
         if (!off.size) return null;
         const on = list.filter(o => !off.has(o.key));
         if (on.length === list.length) return null;
         const what = !on.length ? 'none' : on.length <= 3 ? on.map(o => o.name).join(', ') : `${on.length} of ${list.length}`;
         return el('span', { class: 'fchip' }, el('b', {}, `${label}:`), ` ${what}`,
-          btn('✕', () => { off.clear(); draw(); }, 'fchip-x', `Drop the ${label} filter`));
+          chipX(() => { off.clear(); draw(); }, `Drop the ${label} filter`));
       };
       const draw = () => {
         const shown = entries.filter(e => passes(e));
@@ -345,16 +346,16 @@
         const tagList = [...used.map(t => ({ key: t.name.toLowerCase(), name: t.name })), { key: '', name: 'No tags' }];
         const relList = [...[...relUsed].map(([key, t]) => ({ key, name: t.name })), { key: '', name: 'No connections' }];
         chips.replaceChildren(...clean([
-          st.q.trim() ? el('span', { class: 'fchip' }, el('b', {}, 'Search:'), ` "${st.q.trim()}"`, btn('✕', () => { st.q = search.value = ''; draw(); }, 'fchip-x', 'Clear the search')) : null,
+          st.q.trim() ? el('span', { class: 'fchip' }, el('b', {}, 'Search:'), ` "${st.q.trim()}"`, chipX(() => { st.q = search.value = ''; draw(); }, 'Clear the search')) : null,
           chipFor('Category', st.catsOff, catList), chipFor('Tags', st.tagsOff, tagList), chipFor('Connections', st.relsOff, relList),
-          st.kind && st.kind !== 'all' ? el('span', { class: 'fchip' }, el('b', {}, st.kind === 'pc' ? 'PCs only' : 'NPCs only'), btn('✕', () => { st.kind = 'all'; draw(); }, 'fchip-x', 'Show every entry')) : null]));
+          st.kind && st.kind !== 'all' ? el('span', { class: 'fchip' }, el('b', {}, st.kind === 'pc' ? 'PCs only' : 'NPCs only'), chipX(() => { st.kind = 'all'; draw(); }, 'Show every entry')) : null]));
         chips.hidden = !chips.childElementCount;
         drawKinds();
         kindSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on'))));
         const near = st.near && entries.find(e => e.id === st.near);
         nearRow.hidden = !near;
         nearRow.replaceChildren(...(near ? [el('span', { class: 'muted' }, 'Connected to'), el('strong', {}, near.name),
-          btn('× Clear', () => { st.near = null; draw(); }, 'link small', 'Show every entry again')] : []));
+          btn('× Clear', () => { st.near = null; draw(); }, 'small', 'Show every entry again')] : []));
       };
       ctx.draw = draw;
       search.addEventListener('input', () => { st.q = search.value; draw(); });
@@ -368,7 +369,7 @@
         el('div', { class: 'enc-ignored-list' }, S.encIgnored.map(t => el('span', { class: 'enc-ignored-word' }, t, ' ',
           btn('Restore', async () => {
             try { await post('term_restore', { term: t }, S.camp.id); S.encIgnored = S.encIgnored.filter(x => x !== t); route(); } catch (err) { toast(err.message, true); }
-          }, 'link small', `Have the Feature Highlighter offer "${t}" again`))))) : null;
+          }, 'small', `Have the Feature Highlighter offer "${t}" again`))))) : null;
       // --- the entry picked, or the newest ones to start from
       const reader = el('section', {});
       if (!current) readerEmpty(reader, { lead: entries.length ? 'Pick an entry to read it.' : 'Nothing here yet.',

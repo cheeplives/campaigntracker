@@ -256,7 +256,7 @@
         await post('session_shift_add', { id: s.id, abs_shift: a }, cid);
         toast(`${E.fmtShift(cal(), a)} is in ${sessionName(s)}`);
         route();
-      }), 'link small', `Put one more ${E.slotWord(cal())} in this session, outside its run: a flashback, or a split party's other half`);
+      }), 'small', `Put one more ${E.slotWord(cal())} in this session, outside its run: a flashback, or a split party's other half`);
       const extras = el('p', { class: 'small sess-extras-list' }, el('span', { class: 'muted' }, xs.length ? 'Also takes in: ' : `Takes in no other ${E.slotWord(cal())}s. `),
         ...xs.flatMap((a, k) => [k ? ', ' : '', el('a', { href: `#/c/${cid}/day/${Math.floor(a / n)}` }, E.fmtShift(cal(), a)), ' ',
           Object.assign(btn('✕', busy(null, async () => { await post('session_shift_remove', { id: s.id, abs_shift: a }, cid); route(); }), 'link small',
