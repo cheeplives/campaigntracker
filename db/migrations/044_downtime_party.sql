@@ -1,0 +1,12 @@
+-- 044_downtime_party.sql — which party group a rest or downtime is for, once the party has split.
+-- downtimes.group_id: the party group (party_groups.id) the card is for, so only that group's players and characters
+-- are offered for its activities. NULL for the whole party, as every card was before. No foreign key, as with
+-- party_trail.group_id: a group merged away or gone leaves the card for the whole party again.
+-- Activities can now name characters with no player too: activities_json gets "characters": [sheet_characters ids]
+-- beside "members" (user ids). That is inside the JSON, so it needs nothing here.
+--
+-- Run ONCE on an install created before this change:
+--   mysql -u <user> -p <database> < db/migrations/044_downtime_party.sql
+-- (deploy.sh and install.php run it for you when downtimes has no group_id column.)
+-- Fresh installs already get the column from db/schema.sql.
+ALTER TABLE downtimes ADD COLUMN group_id INT UNSIGNED NULL AFTER kind;

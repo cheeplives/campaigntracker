@@ -525,23 +525,37 @@ function long_rest_min(array $c): int {
     $hours = function_exists('time_mode') && time_mode(dec($c['calendar_json'])) === 'hours';
     return $hours ? min(8, downtime_spd($c)) : max(1, intdiv(downtime_spd($c), 2));
 }
-/** A downtime's activities, checked: [{name, members: [user ids in the campaign]}], each name once. */
+/** A downtime's activities, checked: [{name, members: [user ids in the campaign], characters: [its characters' ids]}],
+ * each name once. The characters are ones no player of the campaign plays (sheet_characters.id), as on a shift's actions. */
 function downtime_activities($list, int $cid): string {
     if (!is_array($list)) fail('Expected a list of activities');
     if (count($list) > 40) fail('Too many activities (max 40)');
     $st = db()->prepare('SELECT user_id FROM campaign_members WHERE campaign_id=?');
     $st->execute([$cid]);
     $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $st = db()->prepare("SELECT c.id FROM sheet_characters c LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
+        WHERE c.campaign_id=? AND COALESCE(m.role, '')<>'player'");
+    $st->execute([$cid]);
+    $chars = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $only = fn($v, array $ok) => array_values(array_unique(array_filter(array_map('intval', is_array($v) ? $v : []), fn($i) => in_array($i, $ok, true))));
     $out = []; $seen = [];
     foreach ($list as $a) {
         $name = trim((string)str_in(is_array($a) ? ($a['name'] ?? '') : '', 100, false));
         $k = mb_strtolower($name);
         if ($name === '' || isset($seen[$k])) continue;
         $seen[$k] = true;
-        $m = array_map('intval', is_array($a['members'] ?? null) ? $a['members'] : []);
-        $out[] = ['name' => $name, 'members' => array_values(array_unique(array_filter($m, fn($i) => in_array($i, $ids, true))))];
+        $out[] = ['name' => $name, 'members' => $only($a['members'] ?? null, $ids), 'characters' => $only($a['characters'] ?? null, $chars)];
     }
     return json_encode($out, JSON_UNESCAPED_UNICODE);
+}
+/** The party group a downtime is for: one of campaign $cid's groups, or null (empty, 0) for the whole party. */
+function downtime_group($v, int $cid): ?int {
+    if ($v === null || $v === '' || (string)$v === '0') return null;
+    $st = db()->prepare('SELECT id FROM party_groups WHERE id=? AND campaign_id=?');
+    $st->execute([int_in($v, 1), $cid]);
+    $id = $st->fetchColumn();
+    if ($id === false) fail('That party group isn\'t in this campaign', 404);
+    return (int)$id;
 }
 /**
  * Add $label to the activity of absolute shifts $from..$to (a day has $spd of them), after what is
@@ -643,7 +657,8 @@ const CAMPAIGN_COPY = [
     ['events', 'key' => 'events'],
     ['event_tags', 'via' => ['event_id', 'events'], 'maps' => ['tag_id' => 'tags']],
     ['event_notes', 'via' => ['event_id', 'events']],
-    ['downtimes'],
+    // its group and the characters on its activities are set once the party groups are copied, below
+    ['downtimes', 'key' => 'downtime', 'later' => ['group_id' => 'group']],
     ['party_gear'],
     ['holdings', 'key' => 'holdings'],
     ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
@@ -765,6 +780,16 @@ function campaign_copy(int $cid, string $name, bool $setupOnly): array {
             foreach ($cols as $col => $m) {
                 if (($r[$col] ?? null) !== null && isset($ids[$m][(int)$r[$col]])) $pdo->prepare("UPDATE `$t` SET `$col`=? WHERE id=?")->execute([$ids[$m][(int)$r[$col]], $nid]);
             }
+        }
+        // A downtime's activities name characters with no player by their ids: the copy's own, or none once not copied.
+        foreach ($ids['downtime'] ?? [] as $nid) {
+            $st = $pdo->prepare('SELECT activities_json FROM downtimes WHERE id=?');
+            $st->execute([$nid]);
+            $acts = dec($st->fetchColumn()) ?: [];
+            if (!array_filter($acts, fn($a) => !empty($a['characters']))) continue;
+            foreach ($acts as &$a) $a['characters'] = array_values(array_filter(array_map(fn($i) => $ids['character'][(int)$i] ?? 0, $a['characters'] ?? [])));
+            unset($a);
+            $pdo->prepare('UPDATE downtimes SET activities_json=? WHERE id=?')->execute([json_encode($acts, JSON_UNESCAPED_UNICODE), $nid]);
         }
         // The settings name the current region by its id.
         $s = dec($c['settings_json']) ?: [];
@@ -1692,18 +1717,34 @@ try {
 
     // ===== downtime: rests and downtime, one card each =====
     case 'downtimes':
+        // With the names and kinds of the characters with no player its activities name (a player isn't told of a GM-only one),
+        // and the party group each is for: null for the whole party, or once its group has been merged away.
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        $st = db()->prepare('SELECT id, kind, title, start_shift, end_shift, slots, activities_json, notes' . ($isGm ? ', gm_notes' : '')
-            . ' FROM downtimes WHERE campaign_id=? ORDER BY start_shift DESC, id DESC');
+        $st = db()->prepare('SELECT d.id, d.kind, IF(g.id IS NULL, NULL, d.group_id) AS group_id, g.name AS group_name, d.title, d.start_shift, d.end_shift,
+            d.slots, d.activities_json, d.notes' . ($isGm ? ', d.gm_notes' : '') . '
+            FROM downtimes d LEFT JOIN party_groups g ON g.id=d.group_id AND g.campaign_id=d.campaign_id
+            WHERE d.campaign_id=? ORDER BY d.start_shift DESC, d.id DESC');
         $st->execute([$cid]);
-        $rows = array_map(function ($r) {
+        $cs = db()->prepare("SELECT c.id, c.kind, e.name FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+            LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
+            WHERE c.campaign_id=? AND COALESCE(m.role, '')<>'player'" . ($isGm ? '' : ' AND e.is_secret=0'));
+        $cs->execute([$cid]);
+        $names = [];
+        foreach ($cs->fetchAll() as $c) $names[(int)$c['id']] = ['name' => $c['name'], 'kind' => $c['kind']];
+        $used = [];
+        $rows = array_map(function ($r) use ($names, &$used) {
             foreach (['id', 'start_shift', 'end_shift', 'slots'] as $k) $r[$k] = (int)$r[$k];
-            $r['activities'] = dec($r['activities_json']) ?: [];
+            $r['group_id'] = $r['group_id'] !== null ? (int)$r['group_id'] : null;
+            $r['activities'] = array_map(function ($a) use ($names, &$used) {
+                $ch = array_values(array_filter(array_map('intval', $a['characters'] ?? []), fn($i) => isset($names[$i])));
+                foreach ($ch as $i) $used[$i] = $names[$i];
+                return ['name' => (string)($a['name'] ?? ''), 'members' => array_map('intval', $a['members'] ?? []), 'characters' => $ch];
+            }, dec($r['activities_json']) ?: []);
             unset($r['activities_json']);
             return $r;
         }, $st->fetchAll());
-        out(['downtimes' => $rows]);
+        out(['downtimes' => $rows, 'characters' => (object)$used]);
 
     case 'downtime_save':
         // The GM makes a card and can change anything on it but its timing. Players can only write its public notes.
@@ -1718,8 +1759,9 @@ try {
                 db()->prepare('UPDATE downtimes SET notes=? WHERE id=?')->execute([str_in(p('notes'), 20000), $id]);
                 out(['ok' => true, 'id' => $id]);
             }
-            db()->prepare('UPDATE downtimes SET title=?, activities_json=?, notes=?, gm_notes=? WHERE id=?')
-                ->execute([trim((string)str_in(p('title'), 200, false)), downtime_activities(p('activities', []), $cid), str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), $id]);
+            db()->prepare('UPDATE downtimes SET group_id=?, title=?, activities_json=?, notes=?, gm_notes=? WHERE id=?')
+                ->execute([downtime_group(p('group_id'), $cid), trim((string)str_in(p('title'), 200, false)), downtime_activities(p('activities', []), $cid),
+                    str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), $id]);
             out(['ok' => true, 'id' => $id]);
         }
         need_gm($cid);
@@ -1742,10 +1784,11 @@ try {
             $now = (int)$c['current_shift'];
             [$from, $to] = $slots ? [$now + 1, $now + $slots] : [$now, $now];
         }
+        $group = downtime_group(p('group_id'), $cid);
         $pdo = db();
         $pdo->beginTransaction();
-        $pdo->prepare('INSERT INTO downtimes (campaign_id, kind, title, start_shift, end_shift, slots, activities_json, notes, gm_notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$cid, $kind, trim((string)str_in(p('title'), 200, false)), $from, $to, $slots, downtime_activities(p('activities', []), $cid),
+        $pdo->prepare('INSERT INTO downtimes (campaign_id, kind, group_id, title, start_shift, end_shift, slots, activities_json, notes, gm_notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$cid, $kind, $group, trim((string)str_in(p('title'), 200, false)), $from, $to, $slots, downtime_activities(p('activities', []), $cid),
                 str_in(p('notes'), 20000), str_in(p('gm_notes'), 20000), me()['id']]);
         $id = (int)$pdo->lastInsertId();
         label_shifts($cid, $spd, $from, $to, DOWNTIME_KINDS[$kind], true);

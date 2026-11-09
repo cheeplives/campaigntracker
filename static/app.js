@@ -5437,14 +5437,18 @@
     : kind === 'long_rest' ? [...REST_ACTIVITIES, ['Work on Project', 'Put a few hours into a long-term project']] : REST_ACTIVITIES;
   const dtPlayers = () => S.members.filter(m => m.role === 'player');
   const memberName = m => m.character_name || m.display_name || m.email;
+  /** A character with no player, as a downtime names it: an NPC says so. */
+  const dtCharName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
+  /** The party's groups, main first, or [] if they can't be had (the cards then offer every player). */
+  const dtGroups = () => api('groups', { query: { cid: S.camp.id } }).then(r => r.groups || [], () => []);
 
   async function viewDowntime() {
-    const { downtimes } = await api('downtimes', { query: { cid: S.camp.id } });
+    const [{ downtimes, characters }, groups] = await Promise.all([api('downtimes', { query: { cid: S.camp.id } }), dtGroups()]);
     const head = el('div', { class: 'card' }, el('div', { class: 'row spread' },
       el('h2', {}, 'Downtime', tip('Rests and stretches of downtime, one card each. Making one writes Long Rest, Short Rest or Downtime into the activity of the shifts it covers, and can move the clock to its end. Pick what the party does on each card and who does it.')),
       isGM() ? btn('+ New downtime', () => downtimeDialog(), 'primary small', 'Start a long rest, a short rest or some days of downtime') : null),
       downtimes.length ? null : el('p', { class: 'muted' }, isGM() ? 'No rests or downtime yet. Press New downtime to add one.' : 'No rests or downtime yet.'));
-    mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(downtimeCard)));
+    mount(...campaignHeader('downtime'), head, el('div', { class: 'downtimes' }, downtimes.map(x => downtimeCard(x, groups, characters || {}))));
   }
 
   /** The dialog a new downtime card starts from: what kind, how long, and whether to move the clock. */
@@ -5460,6 +5464,15 @@
     const startDay = datePicker(today()), endDay = datePicker(today() + 6);
     const dayFields = el('div', {}, field('Start date', startDay), field('End date', endDay, 'Every shift from the start of the first day to the end of the last'));
     const title = el('input', { name: 'title', maxlength: 200, placeholder: 'e.g. Back at the Grey Lady inn' });
+    // which group it is for, once the party has split: only that group's players and characters are offered for it
+    const party = el('select', { name: 'group', 'aria-label': 'Party' });
+    const partyField = field('Party', party, 'Only this group\'s players and characters can be put on its activities');
+    partyField.hidden = true;
+    dtGroups().then(gs => {
+      if (gs.length < 2) return;
+      party.replaceChildren(...gs.map(g => el('option', { value: g.id, selected: g.is_main }, g.name)), el('option', { value: '' }, 'The whole party (every group)'));
+      partyField.hidden = false;
+    });
     const moveClock = el('input', { type: 'checkbox', name: 'move', checked: true });
     const moveLbl = el('span');
     const err = el('p', { class: 'bad small', hidden: true });
@@ -5485,6 +5498,7 @@
         el('h3', {}, 'New downtime'),
         el('div', { class: 'field', role: 'radiogroup', 'aria-label': 'Kind' }, el('span', { class: 'lbl' }, 'Kind'), el('div', { class: 'row' }, kinds)),
         restField, dayFields,
+        partyField,
         field('Title (optional)', title),
         el('label', { class: 'inline' }, moveClock, moveLbl),
         err,
@@ -5495,6 +5509,7 @@
       e.preventDefault();
       err.hidden = true;
       const k = kind(), body = { kind: k, title: title.value };
+      if (!partyField.hidden && party.value) body.group_id = Number(party.value);
       if (k === 'downtime') {
         body.start_day = startDay.getAbs(); body.end_day = endDay.getAbs();
         if (body.end_day < body.start_day) { err.textContent = 'The end date is before the start date.'; err.hidden = false; return; }
@@ -5528,15 +5543,27 @@
     return `${E.fmtShift(c, x.start_shift)}${x.slots > 1 ? ` → ${E.fmtShift(c, x.end_shift)}` : ''} · ${x.slots} ${dtWord(x.slots)}`;
   }
 
-  /** One downtime card. The GM picks its activities and who takes part; the public notes are open to everyone. */
-  function downtimeCard(x) {
+  /** One downtime card. The GM picks the party group it is for (once the party has split), its activities and who
+   * takes part: that group's players and characters with no player. The public notes are open to everyone.
+   * chars: id => {name, kind} of the characters its activities name. */
+  function downtimeCard(x, groups = [], chars = {}) {
     const k = DOWNTIME_KINDS[x.kind] || { label: x.kind, icon: '' };
     const going = nowShift() >= x.start_shift && nowShift() <= x.end_shift;
     const players = dtPlayers();
     const byId = new Map(S.members.map(m => [Number(m.id), m]));
+    const charById = new Map(groups.flatMap(g => g.characters || []).map(c => [c.id, c]));
+    for (const [id, c] of Object.entries(chars)) if (!charById.has(Number(id))) charById.set(Number(id), { id: Number(id), ...c });
+    // who is on an activity: 'u' + a player's user id, or 'c' + a character's id
+    const nameOf = key => {
+      const id = Number(key.slice(1));
+      if (key[0] === 'c') return charById.has(id) ? dtCharName(charById.get(id)) : null;
+      return byId.has(id) ? memberName(byId.get(id)) : null;
+    };
+    const keysOf = a => [...a.members.map(id => `u${id}`), ...(a.characters || []).map(id => `c${id}`)];
     const card = el('section', { class: 'card downtime', 'data-kind': x.kind },
       el('div', { class: 'row spread' },
         el('h3', {}, `${k.icon} ${k.label}`, x.title ? el('span', { class: 'dt-title' }, ` · ${x.title}`) : null,
+          x.group_name ? el('span', { class: 'dt-group', 'data-tip': 'The party group this is for' }, `👥 ${x.group_name}`) : null,
           going ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is inside this one' }, 'NOW') : null),
         el('small', { class: 'muted' }, downtimeWhen(x))));
     const notes = el('textarea', { rows: 3, value: x.notes || '', 'aria-label': 'Notes', placeholder: 'Notes for everyone',
@@ -5545,7 +5572,7 @@
     if (!isGM()) {
       card.append(el('span', { class: 'lbl' }, 'Activities'),
         x.activities.length ? el('ul', { class: 'dt-acts' }, x.activities.map(a => {
-          const who = a.members.map(id => byId.get(Number(id))).filter(Boolean).map(memberName);
+          const who = keysOf(a).map(nameOf).filter(Boolean);
           return el('li', {}, el('strong', {}, a.name), who.length ? el('span', { class: 'muted' }, ` · ${who.join(', ')}`) : null);
         })) : el('p', { class: 'muted' }, 'No activities picked yet.'));
       const save = btn('Save notes', null, 'small primary', 'Save the notes on this card');
@@ -5557,24 +5584,47 @@
       return card;
     }
 
-    // picked: name -> Set of member ids; the offered activities first, then custom ones in the order they were added
-    const picked = new Map(x.activities.map(a => [a.name, new Set(a.members.map(Number))]));
+    // The party group it is for (null: the whole party), and who that offers: its players, then its characters with
+    // no player. Without groups to go on, every player.
+    let gid = x.group_id;
+    const offeredPeople = () => {
+      if (!groups.length) return players.map(m => `u${m.id}`);
+      const gs = gid ? groups.filter(g => g.id === gid) : groups;
+      return [...gs.flatMap(g => g.members).filter(id => byId.get(Number(id))?.role === 'player').map(id => `u${id}`),
+        ...gs.flatMap(g => g.characters || []).map(c => `c${c.id}`)];
+    };
+    // picked: name -> Set of who; the offered activities first, then custom ones in the order they were added
+    const picked = new Map(x.activities.map(a => [a.name, new Set(keysOf(a))]));
     const offered = dtOffered(x.kind);
     const custom = x.activities.map(a => a.name).filter(nm => !offered.some(([o]) => o === nm));
     const list = el('div', { class: 'dt-acts' });
-    const row = (name, desc) => {
+    const row = (name, desc, people) => {
       const on = picked.has(name);
       const box = el('input', { type: 'checkbox', checked: on, 'aria-label': name, onchange: () => { box.checked ? picked.set(name, new Set()) : picked.delete(name); draw(); } });
-      const who = on && players.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, players.map(m => {
-        const id = Number(m.id), sel = picked.get(name).has(id);
+      // someone already on it who isn't in the group any more stays, so a GM sees and can take them off
+      const here = on ? [...people, ...[...picked.get(name)].filter(p => !people.includes(p) && nameOf(p))] : [];
+      const who = here.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, here.map(p => {
+        const sel = picked.get(name).has(p), nm = nameOf(p);
         return el('button', { type: 'button', class: 'dt-member' + (sel ? ' on' : ''), 'aria-pressed': String(sel),
-          'data-tip': sel ? `${memberName(m)} is doing this. Click to take them off` : `Click to put ${memberName(m)} on this`,
-          onclick: () => { const s = picked.get(name); s.has(id) ? s.delete(id) : s.add(id); draw(); } }, memberName(m));
+          'data-tip': sel ? `${nm} is doing this. Click to take them off` : `Click to put ${nm} on this`,
+          onclick: () => { const s = picked.get(name); s.has(p) ? s.delete(p) : s.add(p); draw(); } }, nm);
       })) : null;
       return el('div', { class: 'dt-act' + (on ? ' on' : '') }, el('label', { class: 'inline', 'data-tip': desc || 'A custom activity' }, box, name), who);
     };
-    const draw = () => list.replaceChildren(...offered.map(([n, desc]) => row(n, desc)), ...custom.map(n => row(n, null)));
+    const draw = () => {
+      const people = offeredPeople().filter(nameOf);
+      list.replaceChildren(...offered.map(([n, desc]) => row(n, desc, people)), ...custom.map(n => row(n, null, people)));
+    };
     draw();
+    // Picking another group takes off anyone who isn't in it.
+    const party = groups.length > 1 || gid ? select([...groups.map(g => [g.id, g.name]), ['', 'The whole party (every group)']], gid ?? '',
+      { 'aria-label': 'Party', 'data-tip': 'Which group of the party this is for. Only its players and characters can be put on the activities' }) : null;
+    party?.addEventListener('change', () => {
+      gid = party.value ? Number(party.value) : null;
+      const people = new Set(offeredPeople());
+      for (const s of picked.values()) for (const p of [...s]) if (!people.has(p)) s.delete(p);
+      draw();
+    });
     const customIn = el('input', { maxlength: 100, placeholder: 'Custom activity', 'aria-label': 'Custom activity', class: 'grow' });
     const addCustom = () => {
       const n = customIn.value.trim();
@@ -5587,10 +5637,13 @@
     customIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); addCustom(); } });
     const title = el('input', { maxlength: 200, value: x.title || '', 'aria-label': 'Title', placeholder: 'Title (optional)' });
     const gmn = el('textarea', { rows: 3, value: x.gm_notes || '', 'aria-label': 'GM notes', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
-    const save = btn('Save', null, 'small primary', 'Save this card\'s title, activities and notes');
+    const save = btn('Save', null, 'small primary', 'Save this card\'s party, title, activities and notes');
     save.addEventListener('click', busy(save, async () => {
-      const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => ({ name: n, members: [...picked.get(n)] }));
-      await post('downtime_save', { id: x.id, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+      const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => {
+        const who = [...picked.get(n)];
+        return { name: n, members: who.filter(p => p[0] === 'u').map(p => Number(p.slice(1))), characters: who.filter(p => p[0] === 'c').map(p => Number(p.slice(1))) };
+      });
+      await post('downtime_save', { id: x.id, group_id: gid, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
       toast(`${k.label} saved`); route();
       offerNouns([{ text: `${title.value}\n${custom.filter(n => picked.has(n)).join('\n')}`, title: true, label: `${k.label} title and activities` },
         { text: notes.value, label: `${k.label} notes` }, { text: gmn.value, secret: true, label: `${k.label} GM notes` }]);
@@ -5599,9 +5652,11 @@
       if (!await confirmDialog(`Delete this ${k.label.toLowerCase()}? Its label comes off the shifts it covered; the clock stays where it is.`, { ok: 'Delete', danger: true })) return;
       try { await post('downtime_delete', { id: x.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
     }, 'small danger', 'Delete this card');
+    const anyone = offeredPeople().some(nameOf);
     card.append(
-      field('Title', title),
-      el('span', { class: 'lbl' }, 'Activities', tip(players.length ? 'Tick what the party does, then pick which players do each one' : 'Tick what the party does. Add players on the Members tab to put them on activities')),
+      party ? el('div', { class: 'grid2' }, field('Title', title), field('Party', party)) : field('Title', title),
+      el('span', { class: 'lbl' }, 'Activities', tip(anyone ? 'Tick what the party does, then pick who does each one: its players, and its characters with no player'
+        : 'Tick what the party does. Add players on the Members tab, or tick Travels with the party on a character, to put them on activities')),
       list,
       el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small primary', 'Add your own activity to this card')),
       el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
