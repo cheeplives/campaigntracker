@@ -1,5 +1,6 @@
 // The Party Holdings tab: Gear and Loot down the left (item, claimed by, location, amount),
-// and a card per holding on the right, added from a dialog whose fields follow the type.
+// and a card per holding on the right, added from a dialog whose fields follow the type. A card closes to its
+// name, type and amount; its name opens it.
 // GM and players alike can add, change and remove both.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, notNow, newContext, closeContexts } = require("./helpers");
@@ -18,28 +19,49 @@ async function campaignWithPlayer(page, browser, tag) {
   return { cid, pp, pctx };
 }
 
-test("players and the GM keep the Gear and Loot list, with a ticker for how many", async ({ page, browser }) => {
+test("players and the GM keep the Gear and Loot list, with a ticker for how many and the party to claim from", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp, pctx } = await campaignWithPlayer(page, browser, "Gear");
   const perrors = watchErrors(pp);
 
-  // A player adds an item from the last row.
+  // A player adds an item from the one box under the list: it comes in as one, claimed by nobody.
   await pp.goto(`index.html#/c/${cid}/holdings`);
   await expect(pp.locator(".tabs a.on")).toHaveText("Party Holdings");
   const gear = pp.locator(".gear");
   await expect(gear).toContainText("Nothing yet");
   await gear.getByLabel("New item", { exact: true }).fill("Rope (50 ft)");
-  await gear.getByLabel("New item claimed by").fill("Pip");
-  await gear.getByLabel("New item location").fill("Pack mule");
-  await gear.getByRole("button", { name: "How many of the new item: one more" }).click();
   await gear.getByRole("button", { name: "+ Add" }).click();
   const row = gear.locator(".gear-rows .gear-row");
   await expect(row).toHaveCount(1);
   await expect(row.getByLabel("Item", { exact: true })).toHaveValue("Rope (50 ft)");
   await expect(gear.getByLabel("New item", { exact: true })).toHaveValue("");
+  await expect(gear.getByText("Nothing yet")).toBeHidden();
+
+  // Claimed by offers the party; Custom… takes anyone else, and clearing it goes back to the list.
+  const claimed = row.getByLabel("Claimed by", { exact: true });
+  await expect(claimed).toHaveValue("");
+  await claimed.selectOption("Pip");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.gear[0].claimed_by).toBe("Pip");
+  await claimed.selectOption("__custom");
+  const custom = row.getByLabel("Claimed by, custom");
+  await expect(custom).toBeFocused();
+  await custom.fill("The innkeeper");
+  await custom.press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.gear[0].claimed_by).toBe("The innkeeper");
+  await custom.fill("");
+  await custom.press("Tab");
+  await expect(claimed).toBeVisible();
+  await expect(claimed).toHaveValue("");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.gear[0].claimed_by).toBe("");
+  await claimed.selectOption("__custom");
+  await custom.fill("The innkeeper");
+  await custom.press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.gear[0].claimed_by).toBe("The innkeeper");
 
   // Ticks save straight away, never below 0; the boxes save when you leave them.
   const count = row.locator(".tick-n");
+  await expect(count).toHaveValue("1");
+  await row.getByRole("button", { name: /one more/ }).click();
   await expect(count).toHaveValue("2");
   await row.getByRole("button", { name: /one more/ }).click();
   await expect(count).toHaveValue("3");
@@ -53,7 +75,7 @@ test("players and the GM keep the Gear and Loot list, with a ticker for how many
   // The GM sees it and can remove it.
   await page.goto(`index.html#/c/${cid}/holdings`);
   const grow = page.locator(".gear .gear-rows .gear-row");
-  await expect(grow.getByLabel("Claimed by")).toHaveValue("Pip");
+  await expect(grow.getByLabel("Claimed by, custom")).toHaveValue("The innkeeper");   // not in the party, so it opens as Custom
   await expect(grow.locator(".tick-n")).toHaveValue("0");
   await expect(grow.getByRole("button", { name: /one fewer/ })).toBeDisabled();
   await grow.getByRole("button", { name: "Remove Rope (50 ft)" }).click();   // no "Are you sure?": it goes, with Undo for a few seconds
@@ -112,10 +134,21 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await expect(dlg).toHaveCount(0);
   await notNow(pp); // the names in it go to the Feature Highlighter
 
+  // A new holding's card opens; its name closes it to one line of name, type and amount, and it stays closed.
   const card = pp.locator(".holding");
   await expect(card).toHaveCount(1);
-  await expect(card).toContainText("Old Watchtower");
-  await expect(card).toContainText("Building · 📍 Northern ridge");
+  const toggle = card.locator(".hold-toggle");
+  await expect(toggle).toContainText("Old Watchtower");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(card.locator(".hold-body")).toBeHidden();
+  await expect(card.locator(".hold-type")).toHaveText("Building");
+  await expect(card.locator(".tick-n")).toBeVisible();
+  await pp.reload();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(card.locator(".hold-body")).toBeVisible();
+  await expect(card).toContainText("📍 Northern ridge");
   await expect(card).toContainText("Bone and wattle");
   await expect(card).toContainText("The roof leaks.");
   await expect(card.locator(".chip.tag")).toHaveText("Base");
@@ -131,8 +164,10 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   expect(campaignTags).toContain("Battle");
   expect((await api(pp, "holdings", undefined, cid)).json.tags.map(t => t.name)).toEqual(["Base"]);
 
-  // The GM edits it into a custom type: only Value stays among its fields.
+  // The GM edits it into a custom type: only Value stays among its fields. Their cards start closed.
   await page.goto(`index.html#/c/${cid}/holdings`);
+  await expect(page.locator(".holding .hold-body")).toBeHidden();
+  await page.locator(".holding .hold-toggle").click();
   await page.locator(".holding").getByRole("button", { name: "Edit" }).click();
   const gdlg = page.locator("dialog.hold-dialog");
   await expect(gdlg.getByLabel("Construction Type", { exact: true })).toHaveValue("__custom");
@@ -143,7 +178,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await gdlg.getByLabel("Custom type", { exact: true }).fill("Hideout");
   await gdlg.getByRole("button", { name: "Save" }).click();
   await expect(gdlg).toHaveCount(0);
-  await expect(page.locator(".holding")).toContainText("Hideout · 📍 Northern ridge");
+  await expect(page.locator(".holding .hold-type")).toHaveText("Hideout");
   await expect(page.locator(".holding")).not.toContainText("Bone and wattle");
   const edited = (await api(page, "holdings", undefined, cid)).json.holdings[0];
   expect(edited).toMatchObject({ kind: "custom", type_name: "Hideout", amount: 1, stats: { value: "400 gp" } });
@@ -170,17 +205,20 @@ test("each holding has a Storage ledger whose total weight is checked against it
   expect((await api(page, "holding_save", { name: "Mule cart", kind: "vehicle", stats: { cargo: "100 lb" } }, cid)).status).toBe(200);
   const { id: shed } = (await api(page, "holding_save", { name: "Shed", kind: "building" }, cid)).json;
 
-  // A player loads the cart past its cargo.
+  // A player opens Expand all and loads the cart past its cargo: each item goes in from the one box, then gets its weight.
   await pp.goto(`index.html#/c/${cid}/holdings`);
+  await pp.getByRole("button", { name: "Expand all" }).click();
+  await expect(pp.getByRole("button", { name: "Collapse all" })).toBeVisible();
   const cart = pp.locator(".holding", { hasText: "Mule cart" });
   const store = cart.locator(".storage");
   await expect(store.locator(".ledger-total")).toContainText("0 / 100 lb");
   await store.getByLabel("New item in Mule cart's storage", { exact: true }).fill("Grain sacks");
-  await store.getByLabel("Weight of the new item in Mule cart's storage").fill("60");
   await store.getByRole("button", { name: "+ Add" }).click();
+  await store.getByLabel("Weight of Grain sacks", { exact: true }).fill("60");
+  await store.getByLabel("Weight of Grain sacks", { exact: true }).press("Tab");
   await store.getByLabel("New item in Mule cart's storage", { exact: true }).fill("Anvil");
-  await store.getByLabel("Weight of the new item in Mule cart's storage").fill("50");
-  await store.getByLabel("Weight of the new item in Mule cart's storage").press("Enter");
+  await store.getByLabel("New item in Mule cart's storage", { exact: true }).press("Enter");
+  await store.getByLabel("Weight of Anvil", { exact: true }).fill("50");
   await expect(store.locator(".ledger-rows .ledger-row")).toHaveCount(2);
   await expect(store.locator(".ledger-total")).toContainText("110 / 100 lb");
   await expect(store.locator(".ledger-total")).toContainText("Over cargo by 10");
@@ -194,6 +232,7 @@ test("each holding has a Storage ledger whose total weight is checked against it
 
   // The GM sees it, and removes a line. A holding with no Cargo just totals its weights.
   await page.goto(`index.html#/c/${cid}/holdings`);
+  await page.getByRole("button", { name: "Expand all" }).click();
   const gstore = page.locator(".holding", { hasText: "Mule cart" }).locator(".storage");
   await expect(gstore.locator(".ledger-total")).toContainText("100 / 100 lb");
   await gstore.getByRole("button", { name: "Remove Grain sacks from storage" }).click();
@@ -218,14 +257,17 @@ test("Party Funds tracks the party's money, one line per currency, for players a
   await pp.goto(`index.html#/c/${cid}/holdings`);
   const funds = pp.locator(".funds");
   await expect(funds).toContainText("Party Funds");
+  // A currency goes in from the one box, at 0; then its row takes where it is kept and how much.
   await funds.getByLabel("New currency", { exact: true }).fill("Gold pieces");
-  await funds.getByLabel("Where the new currency is kept").fill("Strongbox in the wagon");
-  await funds.getByLabel("Amount of the new currency").fill("120");
   await funds.getByRole("button", { name: "+ Add" }).click();
+  await funds.getByLabel("Where the Gold pieces is kept").fill("Strongbox in the wagon");
+  await funds.getByLabel("Where the Gold pieces is kept").press("Tab");
   await funds.getByLabel("New currency", { exact: true }).fill("Silver");
-  await funds.getByLabel("Amount of the new currency").fill("35.5");
-  await funds.getByLabel("Amount of the new currency").press("Enter");
+  await funds.getByLabel("New currency", { exact: true }).press("Enter");
   await expect(funds.locator(".ledger-rows .ledger-row")).toHaveCount(2);
+  await expect(funds.getByLabel("Amount of Silver", { exact: true })).toHaveValue("0");
+  await funds.getByLabel("Amount of Silver", { exact: true }).fill("35.5");
+  await funds.getByLabel("Amount of Silver", { exact: true }).press("Tab");
 
   // Spending saves when you leave the box.
   await funds.getByLabel("Amount of Gold pieces", { exact: true }).fill("95");

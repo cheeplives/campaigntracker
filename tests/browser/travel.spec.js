@@ -2,7 +2,7 @@
 // shifts (a quarter of the calendar's day), and the campaign's genre limits the
 // modes and samples on offer.
 const { test, expect } = require("@playwright/test");
-const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, openPassTime, mapWithPicture, settledBox, openDrawer } = require("./helpers");
+const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, openPassTime, mapWithPicture, settledBox, openDrawer, moreIn } = require("./helpers");
 
 test("samples fill the planner, trips count shifts, and the genre limits the modes", async ({ page, browser }) => {
   const errors = watchErrors(page);
@@ -330,7 +330,7 @@ test("Travel: a route's terrain for each leg is set on the Maps tab and averaged
   expect((await api(page, "route_save", { id: route.id, terrain: [2, 9] }, cid)).status).toBe(400);
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
   await openDrawer(page);
-  await page.locator(".map-route").getByRole("button", { name: "Terrain…" }).click();
+  await moreIn(page.locator(".map-route"), "Terrain…");
   const dlg = page.getByRole("dialog", { name: "Terrain of the route" });
   await dlg.getByLabel("Terrain of leg 1").selectOption("3");
   await dlg.getByRole("button", { name: "Save terrain" }).click();
