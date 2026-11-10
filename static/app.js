@@ -1295,7 +1295,7 @@
   // The tabs in the Legend's four groups, each under its heading (a thin divider when the tabs run across the top)
   const TAB_GROUPS = [
     ['Play', 'The campaign\'s days: where the clock is, and what happened when', [['table', 'At the Table'], ['calendar', 'Calendar'], ['events', 'Events'], ['sessions', 'Sessions'], ['clocks', 'Clocks']]],
-    ['Party', 'What the party does and owns: journeys, rests and holdings, and where it is right now', [['characters', 'Characters'], ['travel', 'Travel'], ['downtime', 'Downtime'], ['holdings', 'Party Holdings']]],
+    ['Party', 'Who is in the party and what it owns, its journeys and rests, and where it is right now', [['party', 'Party'], ['travel', 'Travel'], ['downtime', 'Downtime']]],
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
@@ -1305,7 +1305,9 @@
     sessions: 'Each game night\'s quick notes and the summary written from them',
     clocks: 'Circles of segments that fill as something comes closer: the GM\'s plots and dangers, and the players\' own plans',
     table: 'Play from here: the shift the clock is on in a big box (what the party does, notes, its events) with End shift, and today\'s weather, shifts and events folded underneath',
+    party: 'Everyone\'s characters, how the party is split into groups, and what it owns',
     characters: 'Everyone\'s characters and their sheets',
+    groups: 'Who travels with whom: the main party and any groups split off from it, where each one is, and its marker on the maps',
     travel: 'Work out how long a journey takes, then pass that much time',
     downtime: 'Rests and downtime: what the party does, and who does it',
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
@@ -1412,12 +1414,13 @@
     };
     draw();
     const folds = legendFolds();
+    const legendAt = isPartyTab(active) ? 'party' : active;   // Characters, Groups and Holdings are the Party tab's halves
     const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), legendQuick(), TAB_GROUPS.map(([g, gTip, ts]) => {
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
-      const links = ts.filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined')).map(([k, l]) =>
-        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === active ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
+      const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
+        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === legendAt ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
         const f = !heading.classList.contains('folded');
@@ -1526,7 +1529,8 @@
     const close = (back = true) => { scrim.remove(); box.remove(); jumpBox = null; if (back && from?.isConnected) from.focus({ preventScroll: true }); };
     const go = it => { close(false); it.run(); };
     const cid = S.camp.id;
-    const tabs = TAB_GROUPS.flatMap(([g, , ts]) => ts.map(([k, l]) => [k, l, g])).filter(([k]) => ((k !== 'settings' && k !== 'tokens') || isGM()) && (k !== 'characters' || typeof Sheets !== 'undefined'));
+    const tabs = [...TAB_GROUPS.flatMap(([g, , ts]) => ts.map(([k, l]) => [k, l, g])), ...partyTabs().map(([k, l]) => [k, l, 'Party'])]
+      .filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM());
     const draw = () => {
       const q = input.value.trim(), ql = q.toLowerCase();
       const groups = [];
@@ -4828,45 +4832,52 @@
   // ------------------------------------------------------------ sessions tab: static/sessions-tab.js
   let viewSessions;
 
-  // ------------------------------------------------------------ travel tab
-  async function viewTravel() {
-    const out = el('div', { class: 'travel-out' });
-    // The party's groups (main first), the maps' names and, for Depart, the pins of the map a group is on.
-    let groups = [], mapNames = new Map(), result = null;
-    const pinCache = new Map();
-    const loadParty = async () => {
-      try {
-        groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
-        mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
-      } catch { /* the card is only a convenience; the planner still works */ }
+  // ------------------------------------------------------------ party tab: Characters, Groups and Holdings
+  // One Party tab in the Legend, with three halves under it, each at its own address (characters, groups, holdings) so
+  // old links and a character's sheet keep working. #/c/<id>/party opens the half you were on last in this browser.
+  const PARTY_TABS = [['characters', 'Characters'], ['groups', 'Groups'], ['holdings', 'Holdings']];
+  const PARTY_KEY = 'chronicle:party-tab';
+  /** The Party tab's halves this page has: Characters only when the sheets are loaded. */
+  function partyTabs() { return PARTY_TABS.filter(([k]) => k !== 'characters' || typeof Sheets !== 'undefined'); }
+  function isPartyTab(k) { return PARTY_TABS.some(([t]) => t === k); }
+  function lastPartyTab() {
+    let t = null;
+    try { t = localStorage.getItem(`${PARTY_KEY}:${S.user?.id}`); } catch { /* private window */ }
+    return partyTabs().some(([k]) => k === t) ? t : partyTabs()[0][0];
+  }
+  /** The bar across the top of each half: its sub-tabs, then the half's own buttons. Remembers the half for Party. */
+  function partySubtabs(at, ...actions) {
+    try { localStorage.setItem(`${PARTY_KEY}:${S.user?.id}`, at); } catch { /* private window */ }
+    return el('div', { class: 'row evhead party-head' },
+      el('nav', { class: 'subtabs', 'aria-label': 'Party' }, partyTabs().map(([k, l]) =>
+        el('a', { href: `#/c/${S.camp.id}/${k}`, class: k === at ? 'on' : '', 'aria-current': k === at ? 'page' : null, 'data-tip': TAB_TIPS[k] }, l))),
+      actions.some(Boolean) ? el('div', { class: 'row evhead-actions' }, ...actions) : null);
+  }
+
+  /** Party → Groups: a card for each of the party's groups, the main one first, with who is in it, where it is, and
+   * (for a GM) splitting, moving someone to another group, renaming, its token, making it main and merging. */
+  async function viewGroups() {
+    let groups = [], mapNames = new Map();
+    const load = async () => {
+      groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+      try { mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name])); } catch { /* names only */ }
     };
-    await loadParty();
-    // Plan this trip: a saved route (route=) or a measured path (path=x,y;x,y…) on a map, sent from the Maps tab
-    let trip = null;   // { map, pins, points, name }
-    const tq = new URLSearchParams(location.hash.split('?')[1] || '');
-    if (tq.get('map')) {
-      try {
-        const d = await api('map', { query: { cid: S.camp.id, id: tq.get('map') } });
-        const r = tq.get('route') ? (d.routes || []).find(x => x.id === Number(tq.get('route'))) : null;
-        const points = r ? r.points.map(([x, y]) => ({ x, y }))
-          : (tq.get('path') || '').split(';').map(p => p.split(',').map(Number)).filter(a => a.length === 2 && a.every(Number.isFinite)).map(([x, y]) => ({ x, y }));
-        if (points.length > 1 && MapGeo.toMetres(1, d.map) !== null) trip = { map: d.map, pins: d.pins || [], points, name: r ? r.name : null, terrain: r && Array.isArray(r.terrain) && r.terrain.length === points.length - 1 ? [...r.terrain] : null };
-      } catch { /* a map that can't be read plans nothing */ }
-    }
-    const partyCard = el('div', { class: 'card party-card' });
-    const memberName = uid => { const m = S.members.find(x => Number(x.id) === uid); return m ? m.character_name || m.display_name : 'Someone'; };
+    await load();
+    const board = el('div', { class: 'group-board' });
+    const reload = async () => { await load(); draw(); };
+    const member = uid => S.members.find(x => Number(x.id) === uid);
+    const memberName = uid => { const m = member(uid); return m ? m.character_name || m.display_name : 'Someone'; };
     const charName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
-    /** Who is in group g: its players, then the characters with no player who travel with it. */
-    const partyNames = g => [...g.members.map(memberName), ...(g.characters || []).map(charName)];
-    const reloadParty = async () => { await loadParty(); drawParty(); result = null; out.replaceChildren(); };   // Depart is offered again with the new groups
-    /** A small modal form: run() does the work, and the card is redrawn after. */
+    const labelled = (b, label) => { b.setAttribute('aria-label', label); return b; };
+    const face = (url, name) => (typeof TokensTab !== 'undefined' ? TokensTab.face(el, url, name) : null);
+    /** A small modal form: run() does the work, and the board is drawn again after. */
     const partyDialog = (title, kids, ok, run) => {
       const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
       const go = el('button', { class: 'primary', type: 'submit' }, ok);
       const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
       form.addEventListener('submit', async ev => {
         ev.preventDefault(); go.disabled = true;
-        try { await run(); d.close(); await reloadParty(); } catch (err) { toast(err.message, true); go.disabled = false; }
+        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; }
       });
       d.addEventListener('close', () => d.remove());
       d.append(form); document.body.append(d); d.showModal();
@@ -4903,32 +4914,88 @@
       partyDialog(`Token for ${g.name}`, [field('Token', sel, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
         () => post('group_save', { id: g.id, token_id: sel.value ? Number(sel.value) : null }, S.camp.id));
     };
-    const drawParty = () => {
-      partyCard.hidden = !groups.length;
-      partyCard.replaceChildren(el('div', { class: 'row spread' }, el('h2', {}, 'Where the party is'),
-        isGM() ? btn('Split the party…', splitParty, 'small', 'Send some of the party off as a group of their own') : null),
-        ...groups.map(g => el('div', { class: 'party-row' },
-          el('div', { class: 'party-info' },
-            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
-            el('small', { class: 'party-members muted' }, partyNames(g).join(', ') || 'No one yet'),
-            el('small', {}, 'Region: ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || '—'),
-              ' · Map: ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || '—'))),
-          // Make main group is what gets pressed as the party moves; naming, the token and merging wait in ⋯
-          isGM() ? el('div', { class: 'actions' },
-            g.is_main ? null : btn('Make main group', async () => {
-              try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reloadParty(); } catch (err) { toast(err.message, true); }
-            }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
-            moreMenu(g.name,
-              btn('Rename', async () => {
-                const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
-                if (!name || !name.trim()) return;
-                try { await post('group_save', { id: g.id, name }, S.camp.id); await reloadParty(); } catch (err) { toast(err.message, true); }
-              }, 'small'),
-              btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps'),
-              el('hr'),
-              groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null)) : null)));
+    /** Move one player (who.member) or one character with no player (who.character) from group g to another. */
+    const moveTo = (g, who, name) => {
+      const others = groups.filter(x => x.id !== g.id);
+      const to = select(others.map(x => [x.id, x.name]), others[0].id);
+      partyDialog(`Move ${name}`, [field('Move to', to, `${name} leaves ${g.name} and travels with that group from now on`)], 'Move',
+        () => post('group_join', { id: Number(to.value), ...who }, S.camp.id));
     };
-    drawParty();
+    const memberRow = (g, kind, id, name, sub, url) => el('li', { class: 'group-member' + (kind === 'npc' ? ' npc' : '') },
+      face(url, name), el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
+      isGM() && groups.length > 1 ? labelled(btn('Move…', () => moveTo(g, kind === 'member' ? { member: id } : { character: id }, name), 'small',
+        `Send ${name} to another group`), `Move ${name}`) : null);
+    const groupCard = g => {
+      const players = g.members.map(uid => {
+        const m = member(uid);
+        return memberRow(g, 'member', uid, memberName(uid), m?.character_name && m.display_name ? `Played by ${m.display_name}` : 'Player', m?.token_url || null);
+      });
+      const chars = (g.characters || []).map(c => memberRow(g, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name, c.kind === 'npc' ? 'NPC' : 'PC with no player',
+        S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || null));
+      return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name },
+        el('div', { class: 'group-head' }, face(g.token_url, g.name),
+          el('div', { class: 'group-title' },
+            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
+            el('small', { class: 'muted' }, '📍 ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || 'No region'),
+              ' · 🗺 ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || 'Not on a map'))),
+          isGM() ? moreMenu(g.name,
+            btn('Rename', async () => {
+              const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
+              if (!name || !name.trim()) return;
+              try { await post('group_save', { id: g.id, name }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
+            }, 'small'),
+            btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps'),
+            g.is_main ? null : btn('Make main group', async () => {
+              try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reload(); } catch (err) { toast(err.message, true); }
+            }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
+            groups.length > 1 ? el('hr') : null,
+            groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null) : null),
+        players.length || chars.length ? el('ul', { class: 'group-members' }, players, chars) : el('p', { class: 'muted small' }, 'No one yet'),
+        isGM() && !g.is_main ? el('div', { class: 'row' }, btn(`Rejoin ${groups[0].name}`, async () => {
+          try { await post('group_merge', { id: g.id, into_id: groups[0].id }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
+        }, 'small', `Everyone in ${g.name} goes back to ${groups[0].name}, and ${g.name} is gone`)) : null);
+    };
+    const draw = () => board.replaceChildren(...(groups.length ? groups.map(groupCard)
+      : [el('p', { class: 'muted' }, 'No one is in the party yet. Players join it when they join the campaign, and a character joins it with Travels with the party.')]));
+    draw();
+    const split = isGM() && groups.length ? btn('+ New group', splitParty, 'primary new-btn', 'Send some of the party off as a group of their own: name it and pick who goes') : null;
+    mount(...campaignHeader('groups'), el('div', { class: 'card' }, partySubtabs('groups', split),
+      el('p', { class: 'small muted party-intro' }, isGM()
+        ? 'Who travels with whom. The main group\'s region is the campaign\'s, and each group has its own marker on the maps (🚩 Place party on a map).'
+        : 'Who travels with whom, and where each group is. The GM splits and joins the groups.')), board);
+  }
+
+  // ------------------------------------------------------------ travel tab
+  async function viewTravel() {
+    const out = el('div', { class: 'travel-out' });
+    // The party's groups (main first), the maps' names and, for Depart, the pins of the map a group is on.
+    let groups = [], mapNames = new Map(), result = null;
+    const pinCache = new Map();
+    const loadParty = async () => {
+      try {
+        groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+        mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
+      } catch { /* the card is only a convenience; the planner still works */ }
+    };
+    await loadParty();
+    // Plan this trip: a saved route (route=) or a measured path (path=x,y;x,y…) on a map, sent from the Maps tab
+    let trip = null;   // { map, pins, points, name }
+    const tq = new URLSearchParams(location.hash.split('?')[1] || '');
+    if (tq.get('map')) {
+      try {
+        const d = await api('map', { query: { cid: S.camp.id, id: tq.get('map') } });
+        const r = tq.get('route') ? (d.routes || []).find(x => x.id === Number(tq.get('route'))) : null;
+        const points = r ? r.points.map(([x, y]) => ({ x, y }))
+          : (tq.get('path') || '').split(';').map(p => p.split(',').map(Number)).filter(a => a.length === 2 && a.every(Number.isFinite)).map(([x, y]) => ({ x, y }));
+        if (points.length > 1 && MapGeo.toMetres(1, d.map) !== null) trip = { map: d.map, pins: d.pins || [], points, name: r ? r.name : null, terrain: r && Array.isArray(r.terrain) && r.terrain.length === points.length - 1 ? [...r.terrain] : null };
+      } catch { /* a map that can't be read plans nothing */ }
+    }
+    // Who is where, in a line per group; the groups are arranged on Party → Groups
+    const partyCard = el('div', { class: 'card party-summary' }, el('div', { class: 'row spread' }, el('h2', {}, 'Where the party is'),
+      el('a', { class: 'button small', href: `#/c/${S.camp.id}/groups`, 'data-tip': 'Split the party, move people between groups, and choose each group\'s token on Party → Groups' }, 'Groups →')),
+      groups.map(g => el('div', { class: 'party-line' }, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null,
+        el('span', { class: 'muted small' }, ` 📍 ${regionById(g.region_id)?.name || 'No region'} · 🗺 ${mapNames.get(g.map_id) || 'Not on a map'}`))));
+    partyCard.hidden = !groups.length;
     const genre = E.genreOf(settings());
     const modes = [
       ['overland', 'Overland (on foot, mounted, by road or rail)'],
@@ -5900,7 +5967,7 @@
           btn('+ New holding', () => holdingDialog(), 'primary new-btn', 'Add a vehicle, animal, building, asset or a type of your own'))),
         holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
       cards.map(c => c.node));
-    mount(...campaignHeader('holdings'), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear, partyClaimants(groups))), right));
+    mount(...campaignHeader('holdings'), el('div', { class: 'card' }, partySubtabs('holdings')), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear, partyClaimants(groups))), right));
   }
 
   /** The one-box row under a ledger that adds a line: type a name and press Enter or + Add. The box clears before
@@ -7227,6 +7294,8 @@
         else if (tab === 'maps' && typeof MapsTab !== 'undefined') await MapsTab.view(mapsCtx(), parts[3], query);
         else if (tab === 'tokens' && typeof TokensTab !== 'undefined') await TokensTab.view(mapsCtx());
         else if (tab === 'characters' && typeof Sheets !== 'undefined') await Sheets.campaignRoute(parts.slice(3));
+        else if (tab === 'party') { location.replace(`#/c/${cid}/${lastPartyTab()}`); return; }
+        else if (tab === 'groups') await viewGroups();
         else if (tab === 'search') await viewSearch(new URLSearchParams(query || '').get('q') || '');
         else if (tab === 'today' && parts[3]) await viewDay(Number(parts[3]));   // an old Current Day link to another day
         else await ({ today: viewToday, table: viewTable, calendar: viewCalendar, events: () => (parts[3] === 'reminders' ? viewReminders() : viewEvents()), travel: viewTravel, downtime: viewDowntime, holdings: viewHoldings, generators: viewGenerators, regions: viewRegions, holidays: viewHolidays, members: viewMembers, settings: () => viewSettings(parts[3]) }[tab] || viewToday)();
@@ -7278,7 +7347,7 @@
   }
 
   // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
-  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, isGM, route, rollFromSheet: diceFromSheet, uploadFile, findImage, reloadCampaign: () => loadCampaign(S.camp.id, true) });
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, partySubtabs, isGM, route, rollFromSheet: diceFromSheet, uploadFile, findImage, reloadCampaign: () => loadCampaign(S.camp.id, true) });
 
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {

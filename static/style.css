@@ -1582,6 +1582,27 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .party-card { display: flex; flex-direction: column; gap: 8px; }
 .party-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; padding: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .party-info { display: flex; flex-direction: column; gap: 2px; min-width: 12rem; flex: 1 1 14rem; }
+/* Party → Groups: a card per group, side by side (three on a desk, two on an iPad either way, one on a phone), the main one outlined */
+.party-head { margin-top: 0; }
+.party-intro { margin: 8px 0 0; }
+.group-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; align-items: start; }
+.group-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.group-card.main { box-shadow: 0 0 0 2px var(--accent), 0 10px 24px -18px rgb(0 0 0 / .6); }
+.group-head { display: flex; gap: 12px; align-items: center; }
+.group-head > .token-face { width: 52px; height: 52px; font-size: 1.4rem; }
+.group-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.group-title .party-name { font: 700 1.2rem var(--disp); text-transform: uppercase; letter-spacing: .04em; overflow-wrap: anywhere; }
+.group-members { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.group-member { display: flex; gap: 10px; align-items: center; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.group-member.npc { border-left: 4px solid var(--secret); }
+.group-member > .token-face { width: 34px; height: 34px; border-width: 2px; font-size: .95rem; }
+.group-who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.group-member-name { overflow-wrap: anywhere; }
+.group-card > .row { margin-top: 0; }
+/* Travel's line per group, pointing at Party → Groups */
+.party-summary { display: flex; flex-direction: column; gap: 6px; }
+.party-summary h2 { margin: 0; }
+.party-line { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 .party-main { margin-left: 8px; padding: 0 6px; font-size: .7rem; font-weight: 700; letter-spacing: .04em; color: var(--on-accent); background: var(--accent); border-radius: 4px; }
 .party-dialog .party-pick { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0; }
 .party-dialog .party-pick label { display: flex; gap: 4px; align-items: center; }

@@ -673,6 +673,44 @@ function group_merge(int $cid): void {
     touch_campaign($cid);
 }
 
+/** GM: move one player (member: a user id) or one character with no player (character: its id) into group id,
+ * out of whichever group they were in. Only someone already in the party moves; nobody new joins this way. */
+function group_join(int $cid): void {
+    $body = body();
+    $to = group_row($cid, $body['id'] ?? null);
+    $user = $body['member'] ?? null;
+    $char = $body['character'] ?? null;
+    if (($user === null) === ($char === null)) fail('Name one player or one character to move');
+    db()->beginTransaction();
+    try {
+        party_lock($cid);
+        $to = party_reread($cid, $to['id']);
+        if ($user !== null) {
+            $user = int_in($user, 1);
+            if (!in_array($user, party_players($cid), true)) fail('That player isn\'t in the party');
+            $st = db()->prepare('SELECT * FROM party_groups WHERE campaign_id=?');
+            $st->execute([$cid]);
+            foreach ($st->fetchAll() as $g) {
+                $m = party_members($g);
+                $keep = array_values(array_filter($m, fn($u) => $u !== $user));
+                if ((int)$g['id'] === (int)$to['id']) $keep[] = $user;
+                if ($keep !== $m) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($keep), $g['id']]);
+            }
+        } else {
+            $st = db()->prepare('SELECT id FROM sheet_characters WHERE id=? AND campaign_id=? AND party_group_id IS NOT NULL');
+            $st->execute([int_in($char, 1), $cid]);
+            $id = $st->fetchColumn();
+            if (!$id) fail('That character isn\'t travelling with the party');
+            db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE id=?')->execute([$to['id'], $id]);
+        }
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+}
+
 // ---------- tokens ----------
 // A token is a picture on a round marker: a party group's, a character's, an entry's, or a creature's. GMs keep the
 // library; a player is only sent the picture of a token that is assigned to a character or an entry they can see.

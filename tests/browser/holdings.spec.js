@@ -26,7 +26,8 @@ test("players and the GM keep the Gear and Loot list, with a ticker for how many
 
   // A player adds an item from the one box under the list: it comes in as one, claimed by nobody.
   await pp.goto(`index.html#/c/${cid}/holdings`);
-  await expect(pp.locator(".tabs a.on")).toHaveText("Party Holdings");
+  await expect(pp.locator(".tabs a.on")).toHaveText("Party");
+  await expect(pp.locator(".subtabs a.on")).toHaveText("Holdings");
   const gear = pp.locator(".gear");
   await expect(gear).toContainText("Nothing yet");
   await gear.getByLabel("New item", { exact: true }).fill("Rope (50 ft)");
