@@ -69,10 +69,13 @@ jobs:
           test "$want" = "1.56.1" || { echo "::error::tests/package-lock.json has @playwright/test $want; set the container image to v$want-noble"; exit 1; }
       # PHP and the MySQL client, from Ubuntu's own archive: a few MB, where WebKit's libraries were hundreds.
       # Ubuntu 24.04 ships PHP 8.3 only; a newer PHP comes from Ondřej Surý's PPA, the usual source of PHP on Ubuntu.
+      # The archive is read through the Azure mirror GitHub's own runners use: archive.ubuntu.com itself has taken
+      # minutes over the package lists from Actions, and timed this step out before PHP was installed.
       - name: Install PHP ${{ matrix.php }} and the MySQL client
-        timeout-minutes: 6
+        timeout-minutes: 10
         run: |
           echo 'Acquire::Retries "5"; Acquire::http::Timeout "30";' > /etc/apt/apt.conf.d/80-retries
+          sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list 2>/dev/null || true
           apt-get update -q
           if [ "$PHP" != "8.3" ]; then
             DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends ca-certificates curl
