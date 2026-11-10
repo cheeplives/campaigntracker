@@ -701,7 +701,7 @@ const MapsTab = (() => {
       const drawEntries = () => {
         const k = qEntry.value.trim().toLowerCase();
         const found = S.encyclopedia.filter(e => !k || [e.name, ...(e.aliases || [])].some(n => n.toLowerCase().includes(k))).slice(0, 8);
-        entryList.replaceChildren(...(found.length ? found.map(e => pick(entry?.id === e.id, e.is_secret ? `🔒 ${e.name} (GM only)` : e.name, () => { entry = e; qEntry.value = e.name; drawEntries(); }))
+        entryList.replaceChildren(...(found.length ? found.map(e => pick(entry?.id === e.id, e.is_secret ? `🔒 ${e.name} (GM only)` : e.name, () => { entry = e; qEntry.value = e.name; drawEntries(); drawStyle(); }))
           : [el('small', { class: 'muted' }, 'No entry has that name yet')]));
       };
       const drawEvents = () => {
@@ -711,7 +711,7 @@ const MapsTab = (() => {
         eventList.replaceChildren(...(found.length ? found.map(e => pick(event?.id === e.id, `${ctx.fmtDay(Number(e.abs_day))} · ${e.is_secret ? '🔒 ' : ''}${e.title}`, () => { event = e; qEvent.value = e.title; drawEvents(); }))
           : [el('small', { class: 'muted' }, 'No event has that title yet')]));
       };
-      qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) entry = null; drawEntries(); });
+      qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) { entry = null; drawStyle(); } drawEntries(); });
       qEvent.addEventListener('input', () => { if (event && qEvent.value !== event.title) event = null; drawEvents(); });
       const kinds = [['entry', 'Encyclopedia entry'], ['note', 'Note'], ['event', 'Event']];
       // its icon (none: the kind's own) and colour, once the database has them
@@ -722,7 +722,10 @@ const MapsTab = (() => {
         const fake = { kind, entry: entry ? { category: S.encyclopedia.find(e => e.id === entry.id)?.category || (entry.blank ? 'location' : null) } : null };
         const opt = (v, face, name, on) => el('button', { type: 'button', class: 'map-icon-opt' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,
           onclick: () => { icon = v; drawStyle(); } }, face);
-        iconBox.replaceChildren(opt(null, kindIcon(fake), 'The kind\'s own icon', !icon), ...PIN_ICONS.map(([e, name]) => opt(e, e, name, icon === e)));
+        // an entry with a picture: the pin wears that picture unless an icon is picked here
+        const pic = kind === 'entry' && entry ? S.encyclopedia.find(e => e.id === entry.id)?.token_url || null : null;
+        iconBox.replaceChildren(pic ? opt(null, (typeof DiscPic !== 'undefined' ? DiscPic.disc(pic, 'map-icon-pic') : el('img', { class: 'map-icon-pic', src: pic, alt: '' })), 'The entry\'s picture', !icon)
+          : opt(null, kindIcon(fake), 'The kind\'s own icon', !icon), ...PIN_ICONS.map(([e, name]) => opt(e, e, name, icon === e)));
         const sw = (v, name) => {
           const on = (colour || null) === v;
           const b = el('button', { type: 'button', class: 'map-swatch' + (v ? '' : ' none') + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,

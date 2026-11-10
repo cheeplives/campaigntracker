@@ -1644,3 +1644,35 @@ test("Maps: an entry's pin wears the entry's token, unless the pin has an icon o
   await expect(page.locator(".map-pin")).toContainText("🏰");
   expectNoErrors(errors);
 });
+
+test("Maps: a location with a picture shows that picture in place of its pin, also after a visit to the Encyclopedia", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps location picture");
+  const mapId = await mapWithPicture(page, cid);
+  const entryId = (await api(page, "entry_save", { name: "Greywater Keep", category: "location" }, cid)).json.id;
+  expect((await upload(page, cid, "encyclopedia", entryId)).status).toBe(200);   // a picture on the entry, no token
+  const pinId = (await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "entry", entry_id: entryId }, cid)).json.pin.id;
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-pin img")).toHaveCount(1);
+  await expect(page.locator(".map-pin")).not.toContainText("📍");
+  await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(pp.locator(".map-pin img")).toHaveCount(1);   // the players see it too
+  // the Encyclopedia reloads its list of entries; the pin keeps its picture when the GM comes back to the map from there
+  await page.goto(`#/c/${cid}/encyclopedia`);
+  await page.getByRole("link", { name: /Greywater Keep/ }).first().click();
+  await page.getByRole("link", { name: "📍 On the map: Sartar" }).click();
+  await expect(page.locator(".map-pin img")).toHaveCount(1);
+  // the pin form offers the picture as the pin's face, picked until an icon is
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog", { name: "Edit pin" });
+  await form.getByText("Icon and colour").click();
+  await expect(form.getByRole("button", { name: "The entry's picture", pressed: true }).locator("img")).toHaveCount(1);
+  await form.getByRole("button", { name: "Castle", exact: true }).click();
+  await form.getByRole("button", { name: "Save pin" }).click();
+  await expect(form).toBeHidden();
+  await expect(page.locator(".map-pin img")).toHaveCount(0);
+  expect((await api(page, "pin_save", { id: pinId, icon: null }, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator(".map-pin img")).toHaveCount(1);
+  expectNoErrors(errors);
+});

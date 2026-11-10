@@ -1513,6 +1513,8 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-icon-opt { width: 36px; height: 36px; padding: 0; font-size: 1.2rem; line-height: 1; }
 .map-icon-opt.on, .map-swatch.on { outline: 3px solid var(--accent); outline-offset: 1px; }
 .map-icon-opt.on { background: var(--panel-2); color: inherit; }
+/* the default choice for an entry with a picture: that picture, round, as the pin wears it */
+.map-icon-pic { display: block; width: 28px; height: 28px; margin: auto; border-radius: 50%; object-fit: cover; }
 .map-colour-pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .map-swatch { width: 32px; height: 32px; padding: 0; border-radius: 50%; background: var(--swatch); border: 2px solid var(--line); }
 .map-swatch.none { background: var(--panel); color: var(--dim); }
