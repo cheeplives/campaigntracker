@@ -75,6 +75,7 @@ test("Map pins: a locked pin can't be dragged or moved until it is unlocked", as
   const id = (await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "note", label: "Ford" }, cid)).json.pin.id;
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await page.locator(".map-pin", { hasText: "Ford" }).click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.locator(".leaflet-popup").getByRole("button", { name: "Lock" }).click();
   await expect(page.locator("#toast")).toContainText("Pin locked in place");
   await expect(page.locator(".map-pin.locked")).toHaveCount(1);

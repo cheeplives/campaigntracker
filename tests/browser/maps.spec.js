@@ -932,6 +932,7 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await api(page, "entry_save", { name: "Old Mill" }, cid);
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
   await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📍" })).toHaveCount(1);
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card went with the redraw
@@ -939,6 +940,7 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Burnt Ford/ })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.locator(".map-pin", { hasText: "The old mill" }).click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await expect(page.getByRole("button", { name: "Add to Encyclopedia" })).toHaveCount(0);
   await page.getByRole("button", { name: "Link to Old Mill" }).click();
   await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📌" })).toHaveCount(1);   // an entry without a Category
@@ -957,7 +959,7 @@ test("Maps: a player can't move or delete the GM's pins", async ({ page, browser
   await pp.locator(".map-pin", { hasText: "Keep out" }).click();
   await expect(pp.locator(".leaflet-popup")).toContainText("Keep out");
   await expect(pp.locator(".leaflet-popup").getByRole("button", { name: "Edit" })).toHaveCount(0);
-  await expect(pp.locator(".leaflet-popup").getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await expect(pp.locator(".leaflet-popup .kit-menu")).toHaveCount(0);   // nor the ⋯ menu that holds Lock and Delete
   await expect(pp.locator(".leaflet-marker-draggable")).toHaveCount(1);   // only their own
   await expect(pp.locator(".leaflet-marker-draggable .map-marker-label")).toHaveText("Mine");
   expectNoErrors(errors);
@@ -972,10 +974,12 @@ test("Maps: a new entry from a pin's note goes through the detector; a GM-only e
   await api(page, "entry_save", { name: "Hidden Vault", is_secret: true }, cid);
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
   await expect(page.locator("dialog.noun-dialog").getByLabel("Name for Gareth Stormborn")).toBeVisible();
   await page.locator("dialog.noun-dialog").getByRole("button", { name: "Not now" }).click();
   await page.locator(".map-pin", { hasText: "Hidden Vault" }).click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.getByRole("button", { name: "Link to Hidden Vault" }).click();
   await expect(page.getByText(/players won't see the pin until the entry is shown to them/)).toBeVisible();
   expectNoErrors(errors);
@@ -1605,6 +1609,7 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
   // the card's switch shows it to the players again, and back
   await pin.click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   const gmOnly = page.locator(".leaflet-popup").getByRole("button", { name: "GM only" });
   await expect(gmOnly).toHaveAttribute("aria-pressed", "true");
   await gmOnly.click();
@@ -1612,6 +1617,7 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(1);
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card is gone before the pin is opened again
   await pin.click();
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.locator(".leaflet-popup").getByRole("button", { name: "GM only", pressed: false }).click();
   await expect(pin).toHaveClass(/\bsecret\b/);
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
@@ -1642,6 +1648,30 @@ test("Maps: an entry's pin wears the entry's token, unless the pin has an icon o
   await page.reload();
   await expect(page.locator(".map-pin .map-marker-icon img")).toHaveCount(0);
   await expect(page.locator(".map-pin")).toContainText("🏰");
+  expectNoErrors(errors);
+});
+
+test("Maps: a pin's card keeps Edit in sight and the rest under ⋯, which stays inside the map", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Maps pin more");
+  const mapId = await mapWithPicture(page, cid);
+  expect((await api(page, "pin_save", { map_id: mapId, x: 150, y: 195, kind: "note", label: "Low Ford" }, cid)).status).toBe(200);   // near the picture's lower edge
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await page.locator(".map-pin", { hasText: "Low Ford" }).click();
+  const card = page.locator(".leaflet-popup");
+  await expect(card.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Delete" })).toHaveCount(0);   // not until ⋯ is opened
+  // one row of buttons: Edit and ⋯ sit on the same line
+  const top = async l => Math.round((await l.boundingBox()).y + (await l.boundingBox()).height / 2);
+  expect(Math.abs(await top(card.getByRole("button", { name: "Edit" })) - await top(card.locator(".kit-menu > summary")))).toBeLessThanOrEqual(3);
+  await card.locator(".kit-menu > summary").click();
+  const list = card.locator(".kit-menu-list");
+  await expect(list.getByRole("button")).toHaveText(["Add to Encyclopedia", /GM only/, "Lock", "Delete"]);
+  const inMap = await list.evaluate(n => { const r = n.getBoundingClientRect(), m = n.closest(".leaflet-container").getBoundingClientRect(); return r.top >= m.top && r.bottom <= m.bottom && r.left >= m.left && r.right <= m.right; });
+  expect(inMap).toBe(true);
+  await list.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(page.locator(".map-pin")).toHaveCount(0);
   expectNoErrors(errors);
 });
 
@@ -1676,12 +1706,15 @@ test("Maps: a location with a picture shows that picture in place of its pin, al
   await page.locator(".map-pin").click();
   const card = page.locator(".leaflet-popup");
   await expect(card).toContainText("Custom icon");
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await card.getByRole("button", { name: "Use picture" }).click();
   await expect(page.locator(".map-pin img")).toHaveCount(1);
   expect((await getMap(page, cid, mapId)).json.pins.find(p => p.id === pinId).icon).toBeNull();
   await expect(card).toHaveCount(0);   // the old card has closed before the pin is clicked again
   await page.locator(".map-pin").click();
   await expect(page.locator(".leaflet-popup")).not.toContainText("Custom icon");
+  await page.locator(".leaflet-popup .kit-menu > summary").last().click();
+  await expect(page.locator(".leaflet-popup .kit-menu-list").getByRole("button", { name: "Lock" })).toBeVisible();
   await expect(page.locator(".leaflet-popup").getByRole("button", { name: "Use picture" })).toHaveCount(0);
   expectNoErrors(errors);
 });

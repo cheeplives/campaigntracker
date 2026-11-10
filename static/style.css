@@ -738,6 +738,7 @@ button.dt-member.on { background: var(--accent); border-color: var(--accent); co
 /* flipped (kit.js) when the list would run off the edge of the screen */
 .kit-menu-right.kit-menu-flip > .kit-menu-list { right: auto; left: 0; } .kit-menu-left.kit-menu-flip > .kit-menu-list { left: auto; right: 0; }
 .kit-menu-list { max-width: calc(100vw - 16px); }
+.kit-menu-up > .kit-menu-list { top: auto; bottom: calc(100% + 4px); }   /* a menu with no room under it (a pin's card low on a map) */
 .kit-menu-list > * { text-align: left; white-space: nowrap; }
 .kit-menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 2px 4px; width: auto; }
 .kit-menu-list [hidden] { display: none; }
@@ -2554,4 +2555,13 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .mpc-actions button.danger { margin-left: 0; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .mpc-actions button.danger:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--panel)); }
 @media (pointer: coarse) { .mpc-actions button, .mpc-actions button.small { min-height: 34px; padding: 4px 12px; } }
+/* a pin's ⋯ menu: its button matches the card's others and sits at the row's end; its items are plain full-width rows */
+.mpc-actions .kit-menu { margin-left: auto; }
+/* while the menu is open the map's own layer rises over the map's controls (the legend, the toolbar), so none covers an item */
+.leaflet-map-pane:has(.kit-menu[open]) { z-index: 1100; }
+.map-pin-card:has(.kit-menu) { min-width: 13rem; }   /* room for Party is here, Edit and ⋯ on one row */
+.mpc-actions button { white-space: nowrap; }
+.mpc-actions .kit-menu > summary { min-width: 0; min-height: 0; padding: 3px 10px; border-radius: 6px; font-size: .8rem; line-height: inherit; }
+.mpc-actions .kit-menu-list > button { width: 100%; }
+@media (pointer: coarse) { .mpc-actions .kit-menu > summary { min-height: 34px; padding: 4px 12px; display: inline-flex; align-items: center; } }
 .dice-look-row select.dice-stay { width: auto; flex: 0 1 auto; }
