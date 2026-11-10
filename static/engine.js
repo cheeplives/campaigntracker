@@ -1478,9 +1478,10 @@
       licence: 'MIT', url: 'https://github.com/mrdoob/three.js' },
     htmlToImage: { title: 'html-to-image 1.11.13, the Report button\'s screenshot of the page (static/vendor/html-to-image)', by: 'W.Y. and the html-to-image contributors',
       licence: 'MIT', url: 'https://github.com/bubkoo/html-to-image' },
-    inter: { title: 'Inter typeface', by: 'Rasmus Andersson', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/' },
-    barlow: { title: 'Barlow Condensed typeface (via Fontsource)', by: 'Jeremy Tribby', licence: 'SIL Open Font License 1.1',
-      url: 'https://fonts.google.com/specimen/Barlow+Condensed' },
+    spectral: { title: 'Spectral typeface (via Fontsource), the headings', by: 'Production Type', licence: 'SIL Open Font License 1.1',
+      url: 'https://fonts.google.com/specimen/Spectral' },
+    atkinson: { title: 'Atkinson Hyperlegible typeface (via Fontsource), the body text', by: 'the Braille Institute of America',
+      licence: 'SIL Open Font License 1.1', url: 'https://fonts.google.com/specimen/Atkinson+Hyperlegible' },
   };
 
   // ---------------------------------------------------------------- travel planner

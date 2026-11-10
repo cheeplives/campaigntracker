@@ -6685,7 +6685,7 @@
           ['The 3D dice on the die roller: ', cite('three'), '. The dice shapes, the numbers on them and the dice patterns (marble, wood, stone and the rest) are drawn in your browser by this app; no picture files are used.'],
           ['The screenshot the Report (!) button offers, taken in your browser and sent only with the report, to the site admins: ', cite('htmlToImage'), '.'],
           'Send to GitHub on Site Admin\'s Reports tab opens an issue on the app\'s GitHub repository, only when a site admin presses it. The issue carries the report\'s text and page details, never who sent it or the screenshot.',
-          ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
+          ['Typefaces, self-hosted: ', cite('spectral'), ' and ', cite('atkinson'), '.'],
           'The Feature Highlighter\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
             ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
