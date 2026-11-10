@@ -1964,7 +1964,8 @@ try {
         // the party's trail: every group's that has been on this map, as a player can see this map
         out(['map' => map_out($m), 'parent' => map_parent($cid, (int)$m['id'], $isGm), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
             'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])),
-            'trail' => trail_on_map((int)$m['id'], array_map(fn($g) => $g['id'], party_groups($cid, $isGm)))]);
+            // a group hidden from the maps hides its trail from players too
+            'trail' => trail_on_map((int)$m['id'], array_map(fn($g) => $g['id'], array_filter(party_groups($cid, $isGm), fn($g) => $isGm || $g['map_display'] !== 'hidden')))]);
 
     case 'groups': // every member: the party's groups, main first
         $cid = cid();
@@ -1977,7 +1978,7 @@ try {
         group_split($cid, role($cid) === 'gm');
         out(['ok' => true, 'groups' => party_groups($cid, role($cid) === 'gm')]);
 
-    case 'group_save': // GMs: id, then name, region_id, is_main, token_id, players_can_move
+    case 'group_save': // GMs: id, then name, region_id, is_main, token_id, players_can_move, map_display (marker, tokens, hidden)
         $cid = cid();
         need_gm($cid);
         group_save($cid);
@@ -1988,6 +1989,11 @@ try {
         need_gm($cid);
         group_move($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
+
+    case 'party_on_map': // character (its id) and on_map: its token shows around its group's marker. A GM any; a player their own
+        $cid = cid();
+        party_on_map($cid, role($cid) === 'gm');
+        out(['ok' => true, 'groups' => party_groups($cid, role($cid) === 'gm')]);
 
     case 'group_join': // id (the group to join; GMs: null takes them out of the party), and member (a player's user id) or
         // character (a character; a player's active one moves its player). A player moves only themselves, between groups that let players move

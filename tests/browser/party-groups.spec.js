@@ -465,6 +465,58 @@ test("Party: the GM splits and merges on Party → Groups", async ({ page, brows
   expectNoErrors(errors);
 });
 
+test("Party: a group shows on the maps as one marker, its characters' tokens, or not at all to players", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, players } = await setup(page, browser, "Party display", 2);
+  const [p0, p1] = [players[0].pp, players[1].pp];
+  const tpl = (await api(page, "template_save", { name: `Display sheet ${cid}`, game: "Test RPG", layout: { sections: [{ key: "s", title: "S", fields: [{ key: "hp", label: "HP", type: "number" }] }] } })).json.template;
+  const ada = (await api(p0, "character_create", { template_id: tpl.id, name: "Ada" }, cid)).json.character;
+  const bo = (await api(p1, "character_create", { template_id: tpl.id, name: "Bo" }, cid)).json.character;
+  await api(page, "character_create", { template_id: tpl.id, name: "Mule", kind: "npc", owner_id: 0, party: true }, cid);
+  const mapId = await mapWithPicture(page, cid);
+  const main = (await groups(page, cid))[0];
+  expect(main.map_display).toBe("marker");
+  await api(page, "group_move", { id: main.id, map_id: mapId, x: 150, y: 100 }, cid);
+
+  // the GM picks each character's token on Party → Groups: the map draws a face for each around the marker
+  await page.goto(`#/c/${cid}/groups`);
+  await page.getByLabel("How The party shows on the maps").selectOption("tokens");
+  await expect.poll(async () => (await groups(page, cid))[0].map_display).toBe("tokens");
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-party .map-ring-face")).toHaveCount(3);
+  // a player leaves their own character off with its eye, never someone else's
+  expect((await api(p0, "party_on_map", { character: bo.id, on_map: false }, cid)).status).toBe(403);
+  await p0.goto(`#/c/${cid}/groups`);
+  await expect(p0.getByRole("button", { name: /^(Hide|Show) .* on the map$/ })).toHaveCount(1);
+  await p0.getByRole("button", { name: "Hide Ada on the map" }).click();
+  await expect(p0.getByRole("button", { name: "Show Ada on the map" })).toBeVisible();
+  expect(sql(`SELECT on_map FROM sheet_characters WHERE id=${ada.id}`).trim()).toBe("0");
+  await p1.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(p1.locator(".map-party .map-ring-face")).toHaveCount(2);
+  await expect(p1.locator(".map-party .map-ring-face[title='Ada']")).toHaveCount(0);
+
+  // hidden: players lose the marker and its trail; the GM still sees it, faded
+  expect((await api(page, "group_save", { id: main.id, map_display: "sideways" }, cid)).status).toBe(400);
+  expect((await api(p0, "group_save", { id: main.id, map_display: "hidden" }, cid)).status).toBe(403);
+  expect((await api(page, "group_save", { id: main.id, map_display: "hidden" }, cid)).status).toBe(200);
+  const seen = await (await p1.request.get(`api/index.php?${new URLSearchParams({ a: "map", cid, id: mapId })}`)).json();
+  expect(seen.groups).toHaveLength(0);
+  expect(seen.trail).toHaveLength(0);
+  expect((await groups(p1, cid))[0]).toMatchObject({ map_id: null, x: null, y: null });
+  await p1.reload();
+  await expect(p1.locator(".map-stage")).toBeVisible();
+  await expect(p1.locator(".map-party")).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".map-party.map-party-hidden")).toHaveCount(1);
+  await expect(page.locator(".map-party")).toContainText("(hidden)");
+  // back to one marker: no ring
+  await api(page, "group_save", { id: main.id, map_display: "marker" }, cid);
+  await p1.reload();
+  await expect(p1.locator(".map-party")).toHaveCount(1);
+  await expect(p1.locator(".map-ring-face")).toHaveCount(0);
+  expectNoErrors(errors);
+});
+
 test("Party: a player sees the markers but can't drag them", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, ids, players } = await setup(page, browser, "Party player", 2);
