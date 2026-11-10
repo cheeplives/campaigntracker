@@ -157,6 +157,7 @@
         else if (eat('kl')) { once('keep'); t.keep = { hi: false, n: num('after kl') }; }
         else if (eat('dh')) { once('keep'); t.drop = { hi: true, n: num('after dh') }; t.keep = null; }
         else if (eat('dl')) { once('keep'); t.drop = { hi: false, n: num('after dl') }; t.keep = null; }
+        else if (eat('!m')) { once('match'); t.match = num('after !m (how many must match, like !m2 for doubles)'); }
         else if (eat('!!')) { once('explode'); t.explode = { compound: true, when: cmp('after !!', true) }; }
         else if (eat('!')) { once('explode'); t.explode = { compound: false, when: cmp('after !', true) }; }
         else if (eat('ro')) { once('reroll'); t.reroll = { once: true, when: cmp('after ro', true) || bad('Say which rolls to reroll, like ro1') }; }
@@ -187,6 +188,11 @@
         if (all(t.explode.when)) bad('Every face would explode, forever');
       }
       if (t.reroll && all(t.reroll.when)) bad('Every face would be rerolled, forever');
+      if (t.match !== undefined) {
+        if (t.flip || t.tens !== undefined || t.d66 || t.sets) bad('Those dice can\'t explode on matches');
+        if (t.match < 2) bad('Say how many dice must match, 2 or more, like !m2 for doubles');
+        if (t.match > t.count) bad(`${t.count} ${t.count === 1 ? 'die' : 'dice'} can't make ${t.match} of a kind`);
+      }
       t.src = s.slice(start, i);
       if (eat('[')) { t.tag = tags[num('')]; if (!eat(']') || t.tag === undefined) bad('A [ needs its ]'); }
       return t;
@@ -249,12 +255,32 @@
    * ctx numbers every die of the roll in order (d.i) and applies dice rerolled by hand (roll()'s rerolls) to them. */
   function rollTerm(t, R, ctx) {
     const dice = [];
-    for (let k = 0; k < t.count; k++) {
-      let d = oneDie(t, R);
-      dice.push(d);
-      if (t.explode && !t.explode.compound) {
-        let n = 0;
-        while (test(t.explode.when, d.v) && n++ < LIMITS.chain) { d.exploded = true; d = oneDie(t, R); d.extra = true; dice.push(d); }
+    /** Roll count dice, each followed by the dice its explosions add; gives the first die of each (the batch). */
+    const batch = (count, extra) => {
+      const firsts = [];
+      for (let k = 0; k < count; k++) {
+        let d = oneDie(t, R);
+        if (extra) d.extra = true;
+        dice.push(d);
+        firsts.push(d);
+        if (t.explode && !t.explode.compound) {
+          let n = 0;
+          while (test(t.explode.when, d.v) && n++ < LIMITS.chain) { d.exploded = true; d = oneDie(t, R); d.extra = true; dice.push(d); }
+        }
+      }
+      return firsts;
+    };
+    let round = batch(t.count, false);
+    if (t.match) {
+      // Exploding on matches (Tunnels & Trolls' doubles add and roll over): each set of t.match or more dice showing the
+      // same face rolls that many dice again, added on; the new dice look for their own sets, and so on.
+      for (let n = 0; n < LIMITS.chain && round.length >= t.match; n++) {
+        const count = new Map();
+        for (const d of round) count.set(d.rolls[0], (count.get(d.rolls[0]) || 0) + 1);
+        let again = 0;
+        for (const d of round) if (count.get(d.rolls[0]) >= t.match) { d.exploded = true; d.matched = true; again++; }
+        if (!again) break;
+        round = batch(again, true);
       }
     }
     if (ctx) for (const d of dice) {

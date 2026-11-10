@@ -15,6 +15,7 @@ function fake(terms, extra = 0) {
   });
   return { total: ts.reduce((s, t) => s + t.value, 0) + extra, terms: ts, mode: "total" };
 }
+const SEED = "0123456789abcdef0123456789abcdef";
 const read = (id, r, p = {}, ctx = {}) => { const sys = DS.BY_ID[id]; return sys.read(r, DS.params(sys, p), ctx); };
 
 test("every system and preset builds dice that roll, and its numbers go round the @ and back", () => {
@@ -191,4 +192,79 @@ test("Twilight: 2000 4e: an attribute die and a skill die, 6+ a success and 10+ 
   expect(read("yzstep", fake([[4], [2], [6, 6, 1]]), { attr: 8, skill: 6, ammo: 3 })).toMatchObject({ big: 2, note: "a 1 on the ammo dice" });
   expect(read("yzstep", fake([[7], [5]]), { attr: 8, skill: 6, need: 2 })).toMatchObject({ big: 1, tier: "partial" });
   expect(DS.sheetKey(DS.BY_ID.yzstep)).toBeNull();
+});
+
+/** Like fake, with each term's die size: [[sides, [values]], …]. */
+function sized(terms, extra = 0) {
+  const r = fake(terms.map(([, vs]) => vs), extra);
+  r.terms.forEach((t, k) => { t.sides = terms[k][0]; });
+  return r;
+}
+const reading = (id, r, p = {}, ctx = {}) => { const sys = DS.BY_ID[id]; return DS.reading(sys, r, DS.params(sys, p), ctx); };
+
+test("explosions in the game roll: on the top faces, and on doubles or triples, built into the dice", () => {
+  const b = (id, p) => DS.BY_ID[id].build(DS.params(DS.BY_ID[id], p));
+  expect(b("sum", { n: 2, xt: 2 })).toBe("2d6!>=5");                  // a 5 or a 6 on a d6
+  expect(b("sum", { n: 2, xm: 2 })).toBe("2d6!m2");                   // doubles add and roll again
+  expect(b("sum", { n: 3, xm: 3, xt: 1, mod: 2 })).toBe("3d6!>=6!m3+2");
+  expect(b("sum", { n: 2, xm: 3 })).toBe("2d6");                      // two dice can't make triples
+  expect(b("sum", { n: 3, wild: true, xt: 2, xm: 2 })).toBe("2d6!>=5!m2+1d6!>=5");
+  expect(b("sum", { n: 2, sides: 4, xt: 9 })).toBe("2d4!>=2");        // never every face
+  expect(b("d20", { xt: 1, die: 10 })).toBe("1d10!!>=10");            // compounded, so it stays one die
+  expect(b("d20", { xt: 2, adv: "adv" })).toBe("2d20!!>=19kh1");
+  expect(b("keep", { x: 5, y: 3, d: 10, explode: false, xt: 2, xm: 2 })).toBe("5d10!>=9!m2kh3");
+  expect(b("pool", { n: 6, d: 10, t: 8, xm: 2 })).toBe("6d10!m2>=8");
+  // each one rolls, and reads back as it was set
+  for (const [id, p] of [["sum", { xt: 2, xm: 2, cs: "doubles", cf: "low" }], ["d20", { xt: 1, cs: "exact" }], ["keep", { xt: 3, xm: 2, cs: "high" }],
+    ["pool", { xm: 2, cs: "doubles" }], ["pbta", { cs: "doubles", cf: "low" }], ["percent", { cs: "exact" }], ["under3d6", { cs: "low" }], ["under20", { cs: "exact", cf: "high" }]]) {
+    const sys = DS.BY_ID[id], params = DS.params(sys, p), text = DS.rollText(sys, params);
+    expect(Dice.check(text), text).toBeNull();
+    expect(DS.decode(Dice.roll(text, SEED).system).p).toEqual(params);
+  }
+  // left off, they aren't written into the roll at all, so rolls read as they did before these existed
+  expect(DS.rollText(DS.BY_ID.sum, DS.params(DS.BY_ID.sum))).toBe("2d6 @sum n=2 mod=0 tn=8 sides=6 wild=0 explode=0");
+  expect(DS.rollText(DS.BY_ID.sum, DS.params(DS.BY_ID.sum, { xm: 2 }))).toBe("2d6!m2 @sum n=2 mod=0 tn=8 sides=6 wild=0 explode=0 xm=2");
+  // a d20 that explodes on 20 still rolled a natural 20
+  expect(read("d20", fake([[{ v: 27, rolls: [20, 7] }]], 0), { tn: 40, xt: 1 })).toMatchObject({ tier: "crit" });
+  // only the systems where they make sense have them; "exactly the target" only where there is a target
+  const keys = id => DS.BY_ID[id].params.map(d => d.key);
+  expect(keys("fudge")).not.toContain("cs");
+  expect(keys("pbta")).not.toContain("xt");
+  expect(DS.BY_ID.pbta.params.find(d => d.key === "cs").opts.map(o => o[0])).toEqual(["none", "high", "low", "doubles"]);
+  expect(DS.BY_ID.under20.params.find(d => d.key === "cs").opts.map(o => o[0])).toEqual(["none", "high", "low", "exact"]);
+});
+
+test("criticals in the game roll: on the top face, a 1, exactly the target, or doubles", () => {
+  // highest: every die on its top face
+  expect(reading("sum", sized([[6, [6, 6]]]), { tn: 20, cs: "high" })).toMatchObject({ tier: "crit", words: "Critical success", note: expect.stringContaining("every die on its top face") });
+  expect(reading("sum", sized([[6, [6, 5]]]), { tn: 8, cs: "high" })).toMatchObject({ tier: "good", words: "Success" });
+  // lowest: every die a 1, as a failure
+  expect(reading("pbta", sized([[6, [1, 1]]], 3), { cf: "low" })).toMatchObject({ tier: "botch", words: "Critical failure", note: "every die on a 1" });
+  expect(reading("pbta", sized([[6, [1, 1]]], 8), { cf: "low" }).note).toBe("every die on a 1 (would be strong hit)");   // a +8 would have hit
+  // ... or as a success, in a roll-under game
+  expect(reading("under20", sized([[20, [1]]]), { stat: 10, nat: false, cs: "low" })).toMatchObject({ tier: "crit" });
+  // exactly the skill (QuestWorlds, blackjack) and exactly the target
+  expect(reading("under20", sized([[20, [12]]]), { stat: 12, nat: false, cs: "exact" })).toMatchObject({ tier: "crit", note: expect.stringContaining("exactly the target") });
+  expect(reading("under20", sized([[20, [11]]]), { stat: 12, nat: false, cs: "exact" }).tier).toBe("good");
+  expect(reading("percent", sized([[100, [45]]]), { skill: 45, cs: "exact" }).tier).toBe("crit");
+  expect(reading("d20", sized([[20, [12]]], 3), { tn: 15, crit: 0, fumble: false, cs: "exact" }).tier).toBe("crit");
+  // doubles: any two dice that match; on d100, matching digits; with advantage, the two d20s
+  const dbl = sized([[6, [4, 4]]]);
+  expect(reading("sum", dbl, { tn: 12, cs: "doubles" })).toMatchObject({ tier: "crit", note: "doubles (would be failure); missed 12 by 4" });
+  expect(dbl.terms[0].dice.every(d => d.crit)).toBe(true);           // the dice that made it are marked
+  expect(reading("percent", sized([[100, [33]]]), { skill: 20, mode: "plain", cf: "doubles" }).tier).toBe("botch");
+  expect(reading("d20", sized([[20, [{ v: 9, dropped: true }, 9]]], 2), { tn: 15, adv: "adv", crit: 0, fumble: false, cs: "doubles" }).tier).toBe("crit");
+  // a pool keeps its count of successes
+  expect(reading("pool", sized([[10, [7, 7, 2]]]), { t: 6, cs: "doubles" })).toMatchObject({ big: 2, words: "successes, critical", tier: "crit" });
+  // dice added by an explosion don't make a critical
+  const boom = sized([[6, [6, { v: 6, extra: true }]]]);
+  expect(reading("sum", boom, { n: 1, tn: 30, cs: "doubles" }).tier).toBe("bad");
+  // both at once: snake eyes are doubles, but "every die a 1" is the narrower, so it wins
+  expect(reading("sum", sized([[6, [1, 1]]]), { cs: "doubles", cf: "low" }).tier).toBe("botch");
+  expect(reading("sum", sized([[6, [6, 6]]]), { cs: "high", cf: "doubles" }).tier).toBe("crit");
+  // the odds count them: 2d6 doubles one in six, snake eyes one in 36
+  const sum = DS.BY_ID.sum;
+  const o = DS.odds(sum, DS.params(sum, { tn: 0, cs: "doubles", cf: "low" }), {}, 20000);
+  expect(o.crit).toBeCloseTo(5 / 36, 1);
+  expect(o.botch).toBeCloseTo(1 / 36, 1);
 });

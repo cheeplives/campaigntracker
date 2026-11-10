@@ -2197,6 +2197,16 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .die.miss { background: #f1c2c2; color: #6b1f1f; }
 .die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18), 0 0 0 2px var(--accent); }
 .die.extra { opacity: .9; }
+/* Explosions and criticals (static/dice-systems.js): a die that exploded wears a burst, the dice it added a +, and a die
+   that made a critical a gold (or, a critical failure, red) ring and a star. */
+.die { position: relative; }
+.die.boom::after, .die.crit::after, .die.fumble::after { position: absolute; top: -7px; right: -6px; font-size: .7rem; line-height: 1; pointer-events: none; }
+.die.boom::after { content: '✸'; color: var(--accent); }
+.die.extra::before { content: '+'; font-size: .75em; opacity: .7; margin-right: 1px; }
+.die.crit { outline: 2px solid #c99a1a; outline-offset: 1px; }
+.die.crit::after { content: '★'; color: #c99a1a; }
+.die.fumble { outline: 2px solid #b8322a; outline-offset: 1px; }
+.die.fumble::after { content: '✕'; color: #b8322a; }
 .die.dropped { opacity: .4; text-decoration: line-through; }
 .die.rolling { animation: dice-tumble .14s linear infinite; }
 /* Rerolling by hand: ↻ Reroll on a roll, then its dice are tapped to pick them. A die rerolled by hand keeps a dashed ring. */
@@ -2280,6 +2290,9 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .dice-more { margin-top: 6px; }
 .dice-more summary { cursor: pointer; color: var(--dim); }
 .dice-more .dsp-grid { margin-top: 6px; }
+/* Under More options the labels wrap rather than cut off (Explode on matches), the boxes lined up along the bottom. */
+.dice-more .dsp-f:not(.dsp-bool) { justify-content: flex-end; }
+.dice-more .dsp-f > label { white-space: normal; overflow: visible; line-height: 1.2; }
 .dice-sys .dice-row { margin-top: 8px; }
 .dice-for { flex: 1; min-width: 0; }
 .dice-sys-go { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; max-width: 45%; }

@@ -74,6 +74,42 @@ test("exploding dice roll again on their top face, or what they are told; compou
   expect(compounded).toBe(true);
 });
 
+test("exploding on matches: each set of N matching dice rolls that many again and adds, and so on", () => {
+  // fixed seeds, so the same dice every run
+  const seeds = Array.from({ length: 400 }, (_, k) => ((k + 1) * 2654435761 >>> 0).toString(16).padStart(8, "0").repeat(4));
+  let doubles = 0, chained = 0;
+  for (const seed of seeds) {
+    const r = Dice.roll("2d6!m2", seed).results[0], ds = r.terms[0].dice;
+    expect(r.total).toBe(ds.reduce((s, d) => s + d.v, 0));
+    expect(ds.filter(d => !d.extra)).toHaveLength(2);
+    // the dice come in pairs: each pair that matched is followed by the pair it rolled
+    for (let k = 0; k < ds.length; k += 2) {
+      const pair = ds.slice(k, k + 2), same = pair[0].v === pair[1].v;
+      expect(pair.every(d => !!d.matched)).toBe(same);
+      expect(ds.length > k + 2).toBe(same);
+    }
+    if (ds[0].matched) doubles++;
+    if (ds.length > 4) chained++;
+  }
+  expect(doubles).toBeGreaterThan(30);            // about one in six
+  expect(chained).toBeGreaterThan(0);
+  // triples: three of a kind among five dice roll three more; a pair alone does nothing
+  for (const seed of seeds.slice(0, 200)) {
+    const ds = Dice.roll("5d6!m3", seed).results[0].terms[0].dice;
+    const first = ds.filter(d => !d.extra), count = {};
+    for (const d of first) count[d.v] = (count[d.v] || 0) + 1;
+    const sets = first.filter(d => count[d.v] >= 3).length;
+    expect(first.filter(d => d.matched)).toHaveLength(sets);
+    if (!sets) expect(ds).toHaveLength(5);
+    else expect(ds.length).toBeGreaterThanOrEqual(5 + sets);
+  }
+  // with top-face explosions, success counting and keep too
+  const pool = Dice.roll("6d10!>=9!m2>=7", seeds[3]).results[0];
+  expect(pool.total).toBe(pool.terms[0].dice.filter(d => d.v >= 7).length);
+  expect(Dice.check("4d6!m2kh3")).toBeNull();
+  expect(Dice.roll("2d6!m2", SEED)).toEqual(Dice.roll("2d6!m2", SEED));
+});
+
 test("rerolls: r keeps rerolling, ro rerolls once", () => {
   many("10d6r1", 200, r => { for (const v of vals(r)) expect(v).not.toBe(1); });
   many("10d6r<3", 200, r => { for (const v of vals(r)) expect(v).toBeGreaterThanOrEqual(3); });
@@ -212,6 +248,11 @@ test("a roll that can't be read says why", () => {
     "2d6)": "no ( to match",
     "d6!>=1": "explode, forever",
     "d6r<7": "rerolled, forever",
+    "1d6!m2": "can't make 2 of a kind",
+    "2d6!m1": "2 or more",
+    "2d6!m": "how many must match",
+    "d66!m2": "can't explode on matches",
+    "2d6!m2!m3": "once",
     "3d6f1": "give a success target",
     "d20flip": "for d100",
     "d100b3": "1 or 2 bonus",
