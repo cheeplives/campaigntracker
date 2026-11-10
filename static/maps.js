@@ -656,11 +656,12 @@ const MapsTab = (() => {
       const facts = [dist ? el('span', {}, dist) : null,
         p.kind === 'event' && p.event ? el('a', { href: `#/c/${cid}/day/${p.event.abs_day}`, 'data-tip': 'Open this day' }, ctx.fmtDay(p.event.abs_day)) : null,
         p.child_map ? el('a', { class: 'map-pin-opens', href: `#/c/${cid}/maps/${p.child_map.id}`, 'data-tip': 'Open the map inside this place' }, `🗺️ Open ${p.child_map.name}`) : null].filter(Boolean);
-      const acts = [partyHere(p),
+      const acts = [partyHere(p), mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null].filter(Boolean);
+      // the actions done now and then go under ⋯, so the card stays one row of buttons tall
+      const more = [
         gm && p.kind === 'note' ? (match
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), '', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), '', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
-        mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null,
         overPic && mine(p) ? btn('Use picture', async () => {
           try { await post('pin_save', { id: p.id, icon: null }, cid); lmap_close(); await refresh(); toast('This pin shows the entry\'s picture again'); }
           catch (err) { toast(err.message, true); }
@@ -682,6 +683,15 @@ const MapsTab = (() => {
           if (!await ctx.confirmDialog(`Delete the pin "${pinTitle(p)}"?`, { ok: 'Delete', danger: true })) return;
           try { await post('pin_delete', { id: p.id }, cid); await refresh(); toast('Pin deleted'); } catch (err) { toast(err.message, true); }
         }, 'danger') : null].filter(Boolean);
+      if (more.length) {
+        const menu = KIT.menu({ label: '⋯', ariaLabel: `More for ${pinTitle(p)}`, tip: 'More: GM only, lock, delete and the like', cls: 'more-menu', items: more });
+        // a list that would run under the map's lower edge (where it is cut off) opens upward instead
+        menu.addEventListener('toggle', () => {
+          menu.classList.remove('kit-menu-up');
+          if (menu.open && menu.querySelector('.kit-menu-list').getBoundingClientRect().bottom > lf.map.getContainer().getBoundingClientRect().bottom - 4) menu.classList.add('kit-menu-up');
+        });
+        acts.push(menu);
+      }
       return el('div', { class: 'map-pin-card' },
         el('div', { class: 'mpc-head' }, el('span', { class: 'mpc-glyph', 'aria-hidden': 'true' }, el('span', {}, pinIcon(p))),
           el('div', { class: 'mpc-title' }, el('strong', {}, name), el('span', { class: 'mpc-sub' }, sub))),
