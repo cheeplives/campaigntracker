@@ -63,16 +63,20 @@ test("only those who may see future weather are sent the weather seed", async ({
   await pctx.close();
 });
 
-test("the server's Content-Security-Policy header and index.html's meta tag allow the same things", async () => {
-  // A browser applies both, so a host the page may reach in one but not the other is blocked on the live site only
-  // (php -S, which the tests run on, never reads .htaccess).
+test("the pages' Content-Security-Policy comes from the header alone, the one .htaccess sends", async ({ request }) => {
+  // A CSP <meta> tag turns off Chrome's preload scanner, so the 40-odd scripts would load one after another (about
+  // 5 s on the live site instead of under 1). The pages carry none; the header is their policy, and the test server
+  // sends the same header .htaccess does (tests/support/router.php), so the suite still runs under the live policy.
   const fs = require("fs"), path = require("path");
   const root = path.join(__dirname, "..", "..");
-  const header = fs.readFileSync(path.join(root, ".htaccess"), "utf8").match(/Content-Security-Policy "([^"]+)"/)[1];
-  const meta = fs.readFileSync(path.join(root, "index.html"), "utf8").match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
-  // frame-ancestors only works as a header, so the meta tag leaves it out
-  const directives = csp => csp.split(";").map(d => d.trim()).filter(d => d && !d.startsWith("frame-ancestors")).sort();
-  expect(directives(meta)).toEqual(directives(header));
+  const policies = [...fs.readFileSync(path.join(root, ".htaccess"), "utf8").matchAll(/Header always set Content-Security-Policy "([^"]+)"/g)].map(m => m[1]);
+  expect(policies).toHaveLength(2);   // the site's, then panel.html's
+  for (const [page, csp] of [["index.html", policies[0]], ["panel.html", policies[1]], ["", policies[0]]]) {
+    if (page) expect(fs.readFileSync(path.join(root, page), "utf8"), page).not.toMatch(/http-equiv=["']?Content-Security-Policy/i);
+    const res = await request.get(page);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-security-policy"], page || "the site's root").toBe(csp);
+  }
 });
 
 test("the page's CSP keeps the inline style attributes el() writes", async ({ page }) => {
