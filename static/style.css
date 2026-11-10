@@ -2686,3 +2686,5 @@ button.tagopt { opacity: 1; }
 /* the edge of a text box, list or select stands out at 3:1 from the card it sits on (1.4.11), in every theme */
 :root { --field-line: color-mix(in srgb, var(--dim) 85%, var(--bg)); }
 input, select, textarea { border-color: var(--field-line); }
+/* a header's hidden name stays inside its cell, so in a table that scrolls sideways it can't widen the page */
+th:has(> .visually-hidden) { position: relative; }
