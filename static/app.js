@@ -719,37 +719,45 @@
   // ------------------------------------------------------------ top nav
   function renderNav() {
     const n = $('#topnav');
-    // Every control in the top bar is the same pill; the page you are on has its pill lit
+    // A quiet bar: two plain links (the page you are on underlined), Report, and your name, whose menu holds what is yours:
+    // the account page, Site Admin, the colour theme and light / dark, and signing out. Signed out, the theme controls
+    // stay in the bar, as there is no menu to hold them.
     const at = (location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]) || '';
-    const navPill = (href, here, tip, text) => el('a', { href, class: 'nav-pill', 'data-tip': tip, 'aria-current': here ? 'page' : null }, text);
+    const navLink = (href, here, tip, text) => el('a', { href, class: 'nav-link', 'data-tip': tip, 'aria-current': here ? 'page' : null }, text);
     n.replaceChildren(...clean([
-      S.user ? navPill('#/', ['', 'c', 'new'].includes(at), 'All the campaigns you play in or run', 'Campaigns') : null,
-      S.user && typeof Sheets !== 'undefined' ? navPill('#/templates', at === 'templates', 'Character sheet templates for every game: use one, fork one, or make your own', 'Sheet templates') : null,
-      schemePicker(),
-      themeToggle(),
+      S.user ? navLink('#/', ['', 'c', 'new'].includes(at), 'All the campaigns you play in or run', 'Campaigns') : null,
+      S.user && typeof Sheets !== 'undefined' ? navLink('#/templates', at === 'templates', 'Character sheet templates for every game: use one, fork one, or make your own', 'Sheet templates') : null,
+      S.user ? null : schemePicker(),
+      S.user ? null : themeToggle(),
       S.user && reports ? reports.button() : null,
-      // Your name opens a menu of what is yours: the account page, the admin's Site Admin, and signing out
       S.user ? KIT.menu({ label: [el('span', { class: 'nav-pill-name' }, S.user.name || S.user.email), el('span', { class: 'nav-caret', 'aria-hidden': 'true' }, '▾')],
         ariaLabel: `Account menu for ${S.user.name || S.user.email}`, cls: `account-menu${['account', 'admin'].includes(at) ? ' is-here' : ''}`,
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
           S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts, and see game requests and problem reports (site admins only)' }, 'Site Admin') : null,
           el('hr'),
+          el('div', { class: 'menu-head' }, 'Theme'),
+          schemeButtons(),
+          themeToggle(true),
+          el('hr'),
           btn('Sign out', signOut, 'small')] })
-        : S.pending ? btn('Sign out', signOut, 'nav-pill') : null,
+        : S.pending ? btn('Sign out', signOut, 'nav-link') : null,
     ]));
   }
 
   // ------------------------------------------------------------ theme (same control and storage scheme as Sinless)
   const THEME_KEY = 'chronicle:theme';
-  function themeToggle() {
+  /** Light / dark. In the bar (signed out) it is the sun or moon alone; in the account menu (inMenu) it says which mode a
+   * press switches to. Either way its name is "Toggle light / dark mode". */
+  function themeToggle(inMenu = false) {
     const isLight = () => document.documentElement.dataset.theme === 'light';
-    const b = btn(isLight() ? '☀' : '🌙', () => {
+    const face = () => inMenu ? (isLight() ? '🌙 Dark mode' : '☀ Light mode') : (isLight() ? '☀' : '🌙');
+    const b = btn(face(), () => {
       const t = isLight() ? 'dark' : 'light';
       document.documentElement.dataset.theme = t;
       try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: just this page */ }
-      b.replaceChildren(...KIT.withIcons(t === 'light' ? '☀' : '🌙'));
-    }, 'theme-toggle nav-pill', 'Toggle light / dark mode');
+      b.replaceChildren(...KIT.withIcons(face()));
+    }, inMenu ? 'small theme-toggle' : 'theme-toggle nav-icon', 'Toggle light / dark mode');
     b.setAttribute('aria-label', 'Toggle light / dark mode');
     return b;
   }
@@ -779,7 +787,7 @@
   function schemePicker() {
     const cur = schemeOf(currentScheme());
     const list = el('ul', { class: 'scheme-list', role: 'menu', hidden: true });
-    const button = el('button', { type: 'button', class: 'scheme-btn nav-pill', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
+    const button = el('button', { type: 'button', class: 'scheme-btn nav-link', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': `Theme: ${cur.name}` },
       el('span', { class: 'scheme-dot', style: { background: cur.dot } }), el('span', { class: 'scheme-name' }, cur.name));
     let wrap = null;
     // pointerdown, not click: iPad Safari sends no click for a tap on plain page background
@@ -798,6 +806,14 @@
     });
     list.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); button.focus(); } });
     return (wrap = el('span', { class: 'scheme-pick' }, button, list));
+  }
+
+  /** The account menu's theme rows: one button per theme, the current one pressed. Picking one keeps it on the account. */
+  function schemeButtons() {
+    const cur = currentScheme();
+    return SCHEMES.map(s => el('button', { type: 'button', class: 'small scheme-opt', 'aria-pressed': String(s.id === cur), 'data-tip': s.blurb,
+      onclick: () => { applyScheme(s.id, true); renderNav(); } },
+      el('span', { class: 'scheme-dot', style: { background: s.dot } }), s.name));
   }
 
   // ------------------------------------------------------------ sign-in gate / account / admin

@@ -177,7 +177,7 @@
     }
     /** The ! in the top bar. */
     function button() {
-      const b = el('button', { type: 'button', class: 'nav-pill report-btn', 'aria-label': 'Report a problem with the site',
+      const b = el('button', { type: 'button', class: 'nav-icon report-btn', 'aria-label': 'Report a problem with the site',
         'data-tip': 'Report a problem with the site to its admins, with a screenshot of this page if you like' }, '!');
       b.addEventListener('click', openReport);
       return b;
