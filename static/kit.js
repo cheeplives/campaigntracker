@@ -243,8 +243,9 @@ const KIT = (() => {
     };
     d.addEventListener('toggle', () => {
       summary.setAttribute('aria-expanded', String(d.open));
-      if (d.open) { if (tipEl === summary) hideTip(); place(); document.addEventListener('click', outside, true); document.addEventListener('keydown', keys, true); d.addEventListener('focusout', away); }
-      else { document.removeEventListener('click', outside, true); document.removeEventListener('keydown', keys, true); d.removeEventListener('focusout', away); }
+      // pointerdown as well as click: iPad Safari sends no click for a tap on plain page background, so the menu would stay open
+      if (d.open) { if (tipEl === summary) hideTip(); place(); document.addEventListener('click', outside, true); document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', keys, true); d.addEventListener('focusout', away); }
+      else { document.removeEventListener('click', outside, true); document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', keys, true); d.removeEventListener('focusout', away); }
     });
     // Arrow down on the closed button opens the menu on its first item (Enter and Space open it as a <summary> does)
     summary.addEventListener('keydown', ev => {

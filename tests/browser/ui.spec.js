@@ -39,7 +39,7 @@ test("the theme toggle switches light/dark and is remembered", async ({ page }) 
   await expect(html).toHaveAttribute("data-theme", after);
 });
 
-test("a colour theme is picked from the top bar, remembered, and follows the account", async ({ page, browser }) => {
+test("a colour theme is picked from the account menu, remembered, and follows the account", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const who = person("Theo");
   await signIn(page, who);
@@ -47,10 +47,18 @@ test("a colour theme is picked from the top bar, remembered, and follows the acc
   await page.goto("index.html");
   const html = page.locator("html");
   await expect(html).toHaveAttribute("data-scheme", "parchment");
-  await page.getByRole("button", { name: /^Theme:/ }).click();
-  await page.getByRole("menuitemradio", { name: /Ship's Console/ }).click();
+  // signed in, the theme and light / dark live in the menu under your name, not in the bar
+  await expect(page.locator("#topnav > .scheme-pick, #topnav > .theme-toggle")).toHaveCount(0);
+  await page.getByLabel(/^Account menu for /).click();
+  await page.getByRole("button", { name: "Ship's Console" }).click();
   await expect(html).toHaveAttribute("data-scheme", "console");
-  await expect(page.getByRole("button", { name: "Theme: Ship's Console" })).toBeVisible();
+  await page.getByLabel(/^Account menu for /).click();
+  await expect(page.getByRole("button", { name: "Ship's Console" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Parchment & Brass" })).toHaveAttribute("aria-pressed", "false");
+  // light / dark sits beside the themes
+  const mode = await html.getAttribute("data-theme");
+  await page.getByRole("button", { name: "Toggle light / dark mode" }).click();
+  await expect(html).toHaveAttribute("data-theme", mode === "light" ? "dark" : "light");
   await page.reload();
   await expect(html).toHaveAttribute("data-scheme", "console");
 

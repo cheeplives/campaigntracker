@@ -40,13 +40,14 @@ test("on a touch screen a tooltip opens on tap and closes on a second tap or a t
   expectNoErrors(errors);
 });
 
-test("the theme menu closes on a tap or click outside it", async ({ page, browser, hasTouch, viewport }) => {
+test("the account menu (with the themes) closes on a tap or click outside it", async ({ page, browser, hasTouch, viewport }) => {
   const errors = watchErrors(page);
   await gmCampaign(page, browser, "Tam");
   await page.goto("index.html");
   const press = l => (hasTouch ? l.tap() : l.click());
-  await press(page.getByRole("button", { name: /^Theme:/ }));
-  const menu = page.getByRole("menu");
+  await press(page.getByLabel(/^Account menu for /));
+  const menu = page.locator(".account-menu .kit-menu-list");
+  await expect(menu.getByRole("button", { name: "Parchment & Brass" })).toBeVisible();
   await expect(menu).toBeVisible();
   // plain page background in the bottom-left corner, well away from the menu at the top right
   const [x, y] = [4, viewport.height - 4];
