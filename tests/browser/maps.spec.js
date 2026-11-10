@@ -1610,8 +1610,9 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   await gmOnly.click();
   await expect(pin).not.toHaveClass(/\bsecret\b/);
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(1);
+  await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card is gone before the pin is opened again
   await pin.click();
-  await page.locator(".leaflet-popup").getByRole("button", { name: "GM only" }).click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "GM only", pressed: false }).click();
   await expect(pin).toHaveClass(/\bsecret\b/);
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
   expectNoErrors(errors);
