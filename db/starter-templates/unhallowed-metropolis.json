@@ -427,33 +427,9 @@
     ]
    },
    {
-    "key": "assets",
-    "title": "Assets, Possessions & Equipment",
-    "page": "Combat",
-    "width": "half",
-    "fields": [
-     {
-      "key": "assets_text",
-      "label": "Assets, Possessions & Equipment",
-      "type": "longtext"
-     },
-     {
-      "key": "wealth",
-      "label": "Wealth",
-      "type": "text"
-     },
-     {
-      "key": "savings",
-      "label": "Savings",
-      "type": "text"
-     }
-    ]
-   },
-   {
     "key": "notes_sec",
     "title": "Notes",
     "page": "Combat",
-    "width": "half",
     "fields": [
      {
       "key": "notes",
@@ -461,6 +437,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

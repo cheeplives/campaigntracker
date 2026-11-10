@@ -305,15 +305,10 @@
    },
    {
     "key": "possessions_sec",
-    "title": "Possessions & Allies",
+    "title": "Allies",
     "page": "Gear & History",
     "width": "half",
     "fields": [
-     {
-      "key": "possessions",
-      "label": "Possessions",
-      "type": "longtext"
-     },
      {
       "key": "allies",
       "label": "Allies/Contacts",
@@ -333,6 +328,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

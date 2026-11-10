@@ -275,25 +275,10 @@
    },
    {
     "key": "outfit",
-    "title": "Equipment",
-    "page": "Equipment",
+    "title": "Weapons & Armor",
+    "page": "Weapons & Techniques",
     "width": "half",
     "fields": [
-     {
-      "key": "gear",
-      "label": "Equipment",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
      {
       "key": "weapons",
       "label": "Weapons",
@@ -321,13 +306,6 @@
       "cols": 4
      },
      {
-      "key": "koku",
-      "label": "Koku",
-      "type": "number",
-      "cols": 2,
-      "play": true
-     },
-     {
       "key": "arrows",
       "label": "Arrows",
       "type": "text",
@@ -339,7 +317,7 @@
    {
     "key": "advantages",
     "title": "Advantages & Disadvantages",
-    "page": "Equipment",
+    "page": "Weapons & Techniques",
     "width": "half",
     "fields": [
      {
@@ -377,7 +355,7 @@
    {
     "key": "techniques",
     "title": "Techniques & Spells",
-    "page": "Equipment",
+    "page": "Weapons & Techniques",
     "width": "half",
     "fields": [
      {
@@ -426,7 +404,7 @@
    {
     "key": "notes_sec",
     "title": "Notes",
-    "page": "Equipment",
+    "page": "Weapons & Techniques",
     "width": "half",
     "fields": [
      {
@@ -435,6 +413,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

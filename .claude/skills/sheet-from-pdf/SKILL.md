@@ -97,9 +97,11 @@ comment and `validate`); the ones that matter most here:
   `{ "key": "personal_holdings", "title": "Personal Holdings", "page": "Holdings", "holdings": true, "fields": [] }`.
   It has no fields: the sheet draws the character's own funds, gear and loot, and holding cards there, laid out and
   working exactly like Party → Holdings. It is a page of its own, so a one-page sheet then has two tabs (Sheet and
-  Holdings); give no other section that page. It stands beside whatever the PDF has: keep the PDF's own equipment,
-  weapon and armour boxes where the PDF puts them. If the PDF has a page or box that mixes general gear with weapons
-  or armour, say so in the pull request so Josh can decide how to handle it. `check.js` refuses a template without it.
+  Holdings); give no other section that page. Keep the PDF's weapon and armour boxes where the PDF puts them. Where
+  the PDF has a page or box that mixes general gear with weapons or armour (a Gear tab with Weapons, Armour and an
+  Equipment list), keep the weapons and armour and leave out the general gear lists and coin boxes on that page:
+  they belong on the Holdings page. Name the page for what is left on it, and say in the pull request what you left
+  out. `check.js` refuses a template without the Holdings page.
 - **Summary.** Mark `"summary": true` on the two or three fields that say who a character is at a glance
   (class, level, career); `"play": true` on what changes during a session (hit points, stress, luck).
 

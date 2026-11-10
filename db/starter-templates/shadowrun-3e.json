@@ -279,7 +279,7 @@
    {
     "key": "weapons_sec",
     "title": "Weapons",
-    "page": "Weapons & Gear",
+    "page": "Weapons & Vehicle",
     "fields": [
      {
       "key": "weapons",
@@ -328,23 +328,9 @@
     ]
    },
    {
-    "key": "equipment",
-    "title": "Equipment & Gear",
-    "page": "Weapons & Gear",
-    "width": "half",
-    "fields": [
-     {
-      "key": "equipment_text",
-      "label": "Equipment & Gear",
-      "type": "longtext"
-     }
-    ]
-   },
-   {
     "key": "contacts",
     "title": "Contacts & Information",
-    "page": "Weapons & Gear",
-    "width": "half",
+    "page": "Weapons & Vehicle",
     "fields": [
      {
       "key": "contacts_text",
@@ -356,7 +342,7 @@
    {
     "key": "character_notes",
     "title": "Character Notes",
-    "page": "Weapons & Gear",
+    "page": "Weapons & Vehicle",
     "width": "half",
     "fields": [
      {
@@ -369,7 +355,7 @@
    {
     "key": "vehicle",
     "title": "Vehicle",
-    "page": "Weapons & Gear",
+    "page": "Weapons & Vehicle",
     "width": "half",
     "fields": [
      {
@@ -440,6 +426,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

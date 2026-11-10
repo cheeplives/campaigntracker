@@ -576,13 +576,13 @@
    },
    {
     "key": "possessions",
-    "title": "Weapons and Possessions",
+    "title": "Weapons & Armor Carried",
     "page": "Weapons & Story",
     "width": "half",
     "fields": [
      {
       "key": "possessions_list",
-      "label": "Weapons and Possessions",
+      "label": "Weapons & Armor Carried",
       "type": "list",
       "columns": [
        {
@@ -623,6 +623,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

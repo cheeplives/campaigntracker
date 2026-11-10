@@ -1001,24 +1001,9 @@
    },
    {
     "key": "equipment_sec",
-    "title": "Equipment",
+    "title": "Wealth",
     "page": "Gear",
     "fields": [
-     {
-      "key": "equipment",
-      "label": "Equipment",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item_description",
-        "label": "Item & Description"
-       },
-       {
-        "key": "location",
-        "label": "Location"
-       }
-      ]
-     },
      {
       "key": "wealth_level",
       "label": "Wealth Level",
@@ -1376,6 +1361,13 @@
       ]
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

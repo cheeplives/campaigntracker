@@ -381,7 +381,7 @@
    {
     "key": "edges",
     "title": "Edges & Gifts",
-    "page": "Edges & Gear",
+    "page": "Edges & Weapons",
     "width": "half",
     "fields": [
      {
@@ -419,7 +419,7 @@
    {
     "key": "tricks",
     "title": "Specialties, Contacts & Aspirations",
-    "page": "Edges & Gear",
+    "page": "Edges & Weapons",
     "width": "half",
     "fields": [
      {
@@ -473,37 +473,9 @@
     ]
    },
    {
-    "key": "gear",
-    "title": "Gear",
-    "page": "Edges & Gear",
-    "width": "half",
-    "fields": [
-     {
-      "key": "equipment",
-      "label": "Gear",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Gear"
-       },
-       {
-        "key": "en",
-        "label": "EN"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     }
-    ]
-   },
-   {
     "key": "armor_sec",
     "title": "Armor",
-    "page": "Edges & Gear",
-    "width": "half",
+    "page": "Edges & Weapons",
     "fields": [
      {
       "key": "armor",
@@ -534,7 +506,7 @@
    {
     "key": "weapons_sec",
     "title": "Weapons",
-    "page": "Edges & Gear",
+    "page": "Edges & Weapons",
     "fields": [
      {
       "key": "weapons",
@@ -577,7 +549,7 @@
    {
     "key": "vehicles",
     "title": "Vehicles",
-    "page": "Edges & Gear",
+    "page": "Edges & Weapons",
     "fields": [
      {
       "key": "vehicle_list",
@@ -611,6 +583,13 @@
       ]
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

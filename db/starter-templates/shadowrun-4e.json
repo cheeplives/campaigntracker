@@ -323,7 +323,7 @@
    {
     "key": "qualities_contacts",
     "title": "Contacts",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -350,7 +350,7 @@
    {
     "key": "ranged_sec",
     "title": "Ranged Weapons",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -390,7 +390,7 @@
    {
     "key": "augment",
     "title": "Cyberware / Bioware",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -421,7 +421,7 @@
    {
     "key": "melee_sec",
     "title": "Melee Weapons",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -453,7 +453,7 @@
    {
     "key": "vehicle_sec",
     "title": "Vehicle",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -509,7 +509,7 @@
    {
     "key": "armor_sec",
     "title": "Armor",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -548,7 +548,7 @@
    {
     "key": "commlink_sec",
     "title": "Commlink / Programs",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "third",
     "fields": [
      {
@@ -591,7 +591,7 @@
    {
     "key": "gear",
     "title": "Spells",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "two-thirds",
     "fields": [
      {
@@ -630,7 +630,7 @@
    {
     "key": "spirits",
     "title": "Spirits / Sprites",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -661,7 +661,7 @@
    {
     "key": "adept",
     "title": "Adept Powers / Complex Forms",
-    "page": "Gear & Magic",
+    "page": "Weapons & Magic",
     "width": "half",
     "fields": [
      {
@@ -683,28 +683,9 @@
    },
    {
     "key": "gear_ids",
-    "title": "Gear, IDs & Licenses",
-    "page": "Gear & Magic",
+    "title": "IDs & Licenses",
+    "page": "Weapons & Magic",
     "fields": [
-     {
-      "key": "gear_list",
-      "label": "Gear",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "rating",
-        "label": "Rating"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
-     },
      {
       "key": "ids",
       "label": "IDs & Licenses",
@@ -721,6 +702,13 @@
       ]
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }
