@@ -1577,3 +1577,70 @@ test("Trail: At the Table says where the party was the shift before, and the day
   await expect(page.getByLabel("Locations visited")).toHaveValue("Burnt Ford");
   expectNoErrors(errors);
 });
+
+test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map shows it with a lock", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps pin to GM only");
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, label: "Old mill", kind: "note" }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  const pin = page.locator(".map-pin");
+  await expect(pin).toContainText("Old mill");
+  await expect(pin).not.toHaveClass(/\bsecret\b/);
+  const lock = () => pin.evaluate(n => getComputedStyle(n, "::after").content);
+  expect(await lock()).toBe("none");
+  // Edit: the lock in the form, which now says what it does
+  await pin.click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog", { name: "Edit pin" });
+  await expect(form).toContainText("GM only: players won't see this pin");
+  await form.evaluate(f => { f.scrollTop = f.scrollHeight; });
+  await form.locator(".lock-toggle").click();
+  await expect(form.getByLabel("GM only")).toBeChecked();
+  await form.getByRole("button", { name: "Save pin" }).click();
+  await expect(form).toHaveCount(0);
+  await expect.poll(async () => (await getMap(page, cid, mapId)).json.pins[0].is_secret).toBe(true);
+  await expect(pin).toHaveClass(/\bsecret\b/);
+  expect(await lock()).toContain("🔒");
+  expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
+  // the card's switch shows it to the players again, and back
+  await pin.click();
+  const gmOnly = page.locator(".leaflet-popup").getByRole("button", { name: "GM only" });
+  await expect(gmOnly).toHaveAttribute("aria-pressed", "true");
+  await gmOnly.click();
+  await expect(pin).not.toHaveClass(/\bsecret\b/);
+  expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(1);
+  await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card is gone before the pin is opened again
+  await pin.click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "GM only", pressed: false }).click();
+  await expect(pin).toHaveClass(/\bsecret\b/);
+  expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
+  expectNoErrors(errors);
+});
+
+test("Maps: an entry's pin wears the entry's token, unless the pin has an icon of its own", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await setup(page, browser, "Maps entry token");
+  const mapId = await mapWithPicture(page, cid);
+  const entryId = (await api(page, "entry_save", { name: "Greywater Keep", category: "location" }, cid)).json.id;
+  const pinId = (await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "entry", entry_id: entryId }, cid)).json.pin.id;
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(0);   // no token yet: the kind's glyph
+  const t = await tokenUpload(page, cid, "Keep");
+  expect((await api(page, "token_save", { id: t.id, entry_id: entryId }, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(1);
+  await expect(page.locator(".map-place img.map-place-token")).toHaveCount(1);   // and in the list of locations
+  await pp.goto(`#/c/${cid}/maps/${mapId}`);
+  await expect(pp.locator(".map-pin img.map-marker-icon")).toHaveCount(1);       // a player sees a token that isn't GM only
+  expect((await api(page, "token_save", { id: t.id, is_secret: true }, cid)).status).toBe(200);
+  await pp.reload();
+  await expect(pp.locator(".map-pin")).toHaveCount(1);
+  await expect(pp.locator(".map-pin img.map-marker-icon")).toHaveCount(0);       // ...and never a GM-only one
+  // an icon picked for the pin wins over the token
+  expect((await api(page, "pin_save", { id: pinId, icon: "🏰" }, cid)).status).toBe(200);
+  await page.reload();
+  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(0);
+  await expect(page.locator(".map-pin")).toContainText("🏰");
+  expectNoErrors(errors);
+});
