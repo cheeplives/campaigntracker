@@ -85,10 +85,18 @@ jobs:
           test "$want" = "1.56.1" || { echo "::error::tests/package-lock.json has @playwright/test $want; set the container image to v$want-noble"; exit 1; }
       # PHP and the MySQL client, from Ubuntu's own archive: a few MB, where WebKit's libraries were hundreds.
       # Ubuntu 24.04 ships PHP 8.3 only; a newer PHP comes from Ondřej Surý's PPA, the usual source of PHP on Ubuntu.
+      # Only Ubuntu's main component (where PHP 8.3 and every package it needs live), and not the image's Node.js
+      # repository: the full set of package lists was some 35 MB, and with 14 runners fetching it at once the archive
+      # served it slowly enough to time a runner out. main alone is about 5 MB. The PPA's PHP may need universe too.
       - name: Install PHP ${{ matrix.php }} and the MySQL client
-        timeout-minutes: 6
+        timeout-minutes: 8
         run: |
           echo 'Acquire::Retries "5"; Acquire::http::Timeout "30";' > /etc/apt/apt.conf.d/80-retries
+          components=main; [ "$PHP" = "8.3" ] || components="main universe"
+          mkdir -p /etc/apt/sources.list.d.off
+          find /etc/apt/sources.list.d -type f -exec mv {} /etc/apt/sources.list.d.off/ \;
+          printf 'deb http://archive.ubuntu.com/ubuntu noble %s\ndeb http://archive.ubuntu.com/ubuntu noble-updates %s\ndeb http://security.ubuntu.com/ubuntu noble-security %s\n' \
+            "$components" "$components" "$components" > /etc/apt/sources.list
           apt-get update -q
           if [ "$PHP" != "8.3" ]; then
             DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends ca-certificates curl
