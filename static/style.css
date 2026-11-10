@@ -864,6 +864,9 @@ details.shiftcard[open] > * + * { margin-top: 6px; }
 .holdings-left { align-self: stretch; }
 .gear { flex: 1; }
 .funds .ledger-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px 32px; }
+/* under a funds line whose location isn't in the Encyclopedia: Add as a Location / Vehicle, Not now */
+.ledger-offer { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 0 4px; }
+.ledger-offer[hidden] { display: none; }
 @media (max-width: 560px) {
   /* the currency on its own line, then where it is kept and how much */
   .funds .ledger-row { grid-template-columns: minmax(0, 1fr) 100px 32px; }
