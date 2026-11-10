@@ -130,6 +130,8 @@ function upgrade_steps(): array {
             'An invitation now has a link: the site emails it to the person invited (when account emails are on), and the GM can copy it from the Members tab.'],
         ['046_picture_framing.sql', fn(PDO $p) => db_has_table($p, 'attachments') && !db_has_column($p, 'attachments', 'frame_x'),
             'A portrait or token can now be moved and zoomed inside its circle, so a face isn\'t cut off on the sheet, the Encyclopedia or the map.'],
+        ['047_party_group_moves.sql', fn(PDO $p) => db_has_table($p, 'party_groups') && !db_has_column($p, 'party_groups', 'players_can_move'),
+            'Players can now move their own character to another group of the party, and start a group of their own, on Party → Groups. A GM can turn that off for a group.'],
     ];
 }
 

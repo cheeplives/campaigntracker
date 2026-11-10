@@ -431,7 +431,7 @@ test("Characters: a GM makes a PC with no player, and it travels with the party"
 
   // Party → Groups lists it with the players, for the players too
   await p1.goto(`index.html#/c/${cid}/groups`);
-  await expect(p1.locator(".group-members")).toContainText("Wanderer");
+  await expect(p1.locator(".group-board")).toContainText("Wanderer");
 
   // the GM takes it out of the party, then hands it to a player: it is in the party with them, not on its own
   await gm.getByLabel("Travels with the party").uncheck();
@@ -452,7 +452,7 @@ test("Characters: a GM takes a player's character out of the party, and puts it 
   const groups = () => sql(`SELECT GROUP_CONCAT(members_json) FROM party_groups WHERE campaign_id=${cid}`).trim();
 
   await gm.goto(`index.html#/c/${cid}/groups`);
-  await expect(gm.locator(".group-members")).toContainText("Sir Benched");
+  await expect(gm.locator(".group-board")).toContainText("Sir Benched");
   expect(groups()).toContain(String(ids.p1));
 
   // the GM unticks it on the sheet: the character, and its player with it, leave the party
@@ -474,7 +474,7 @@ test("Characters: a GM takes a player's character out of the party, and puts it 
   await gm.getByLabel("Travels with the party").check();
   await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
   await gm.goto(`index.html#/c/${cid}/groups`);
-  await expect(gm.locator(".group-members")).toContainText("Sir Benched");
+  await expect(gm.locator(".group-board")).toContainText("Sir Benched");
 
   // the player sees no box on their own sheet
   await p1.goto(`index.html#/c/${cid}/characters/${pc.id}`);
@@ -824,14 +824,14 @@ test("Characters cards: Play shows on a blank sheet, a GM's Party switch, and ev
   // the buttons sit at the same height on every card in the row
   const tops = await page.locator(".character-card").evaluateAll(cs => cs.map(c => Math.round(c.querySelector(".character-card-foot").getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
-  // the GM's Party switch puts it in the party and takes it out again
-  const sw = card("Katrina").getByLabel("Party");
-  await expect(sw).not.toBeChecked();
-  await sw.check();
-  await expect(page.locator("#toast")).toHaveText("Katrina travels with the party");
+  // the GM's group picker puts it in a group of the party and takes it out again
+  const sw = card("Katrina").getByLabel("Group for Katrina");
+  await expect(sw).toHaveValue("");
+  await sw.selectOption({ label: "👥 The party" });
+  await expect(page.locator("#toast")).toHaveText("Katrina travels with The party");
   await expect(card("Katrina")).toContainText("In the party");
   expect(sql(`SELECT party_group_id IS NOT NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
-  await card("Katrina").getByLabel("Party").uncheck();
+  await card("Katrina").getByLabel("Group for Katrina").selectOption({ label: "Not travelling" });
   await expect(page.locator("#toast")).toHaveText("Katrina is out of the party");
   expect(sql(`SELECT party_group_id IS NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");
   // a player has no switch

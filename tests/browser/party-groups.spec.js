@@ -129,11 +129,11 @@ test("Party: the main group's region is the current region, both ways", async ({
   expectNoErrors(errors);
 });
 
-test("Party: only GMs change groups", async ({ page, browser }) => {
+test("Party: only GMs change groups (a player only splits themselves off)", async ({ page, browser }) => {
   const { cid, players, ids } = await setup(page, browser, "Party access", 2);
   const main = (await groups(page, cid))[0];
   const pp = players[0].pp;
-  for (const [a, body] of [["group_split", { from_id: main.id, name: "X", members: [ids[0]] }], ["group_save", { id: main.id, name: "X" }],
+  for (const [a, body] of [["group_split", { from_id: main.id, name: "X", members: [ids[1]] }], ["group_save", { id: main.id, name: "X" }],
     ["group_move", { id: main.id, map_id: null }], ["group_merge", { id: main.id, into_id: main.id }]]) {
     const r = await api(pp, a, body, cid);
     expect(r.status, a).toBe(403);
@@ -232,8 +232,95 @@ test("Party: group_join moves one player to another group, and refuses anyone no
   expect((await api(page, "group_join", { id: scouts.id, member: 999999 }, cid)).status).toBe(400);
   expect((await api(page, "group_join", { id: scouts.id }, cid)).status).toBe(400);
   expect((await api(page, "group_join", { id: scouts.id, member: ids[2], character: 1 }, cid)).status).toBe(400);
-  expect((await api(page, "group_join", { id: scouts.id, character: 999999 }, cid)).status).toBe(400);
+  expect((await api(page, "group_join", { id: scouts.id, character: 999999 }, cid)).status).toBe(404);
   expect((await api(page, "group_join", { id: 999999, member: ids[2] }, cid)).status).toBe(404);
+});
+
+test("Party: a player moves only themselves, starts a group of their own, and a GM can keep a group together", async ({ page, browser }) => {
+  const { cid, ids, players } = await setup(page, browser, "Party moves", 3);
+  const [p0, p1] = [players[0].pp, players[1].pp];
+  const main = (await groups(page, cid))[0];
+  const scouts = (await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[2]] }, cid)).json.groups[1];
+  expect(scouts.players_can_move).toBe(true);
+  // a player moves themselves, never anyone else
+  let r = await api(p0, "group_join", { id: scouts.id, member: ids[0] }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(sorted(r.json.groups.find(g => g.id === scouts.id).members)).toEqual(sorted([ids[0], ids[2]]));
+  expect((await api(p0, "group_join", { id: scouts.id, member: ids[1] }, cid)).status).toBe(403);
+  expect((await api(p0, "group_join", { id: null, member: ids[0] }, cid)).status).toBe(403);   // only a GM takes someone out
+  // a group the GM keeps together: no one moves in or out of it
+  expect((await api(page, "group_save", { id: scouts.id, players_can_move: false }, cid)).json.groups[1].players_can_move).toBe(false);
+  expect((await api(p0, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(403);
+  expect((await api(p1, "group_join", { id: scouts.id, member: ids[1] }, cid)).status).toBe(403);
+  expect((await api(p0, "group_split", { from_id: scouts.id, name: "Me", members: [ids[0]] }, cid)).status).toBe(403);
+  await api(page, "group_save", { id: scouts.id, players_can_move: true }, cid);
+  // a player starts a group of their own, with only themselves in it
+  expect((await api(p1, "group_split", { from_id: main.id, name: "Lone", members: [ids[1], ids[0]] }, cid)).status).toBe(403);
+  r = await api(p1, "group_split", { from_id: main.id, name: "Lone", members: [ids[1]] }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups.find(g => g.name === "Lone").members).toEqual([ids[1]]);
+});
+
+test("Party: a GM takes a player out of the party and brings them back with group_join", async ({ page, browser }) => {
+  const { cid, ids, players } = await setup(page, browser, "Party out", 2);
+  const tpl = (await api(page, "template_save", { name: `Out sheet ${cid}`, game: "Test RPG", layout: { sections: [{ key: "s", title: "S", fields: [{ key: "hp", label: "HP", type: "number" }] }] } })).json.template;
+  const pc = (await api(players[0].pp, "character_create", { template_id: tpl.id, name: "Benchwarmer" }, cid)).json.character;
+  const npc = (await api(page, "character_create", { template_id: tpl.id, name: "Stray Dog", kind: "npc", owner_id: 0 }, cid)).json.character;
+  const main = (await groups(page, cid))[0];
+  // out: in no group, and their sheet says so
+  let r = await api(page, "group_join", { id: null, member: ids[0] }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups.flatMap(g => g.members)).not.toContain(ids[0]);
+  expect(sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
+  expect((await api(players[0].pp, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(403);   // they can't walk back in
+  // back in, by their character: their player joins the group
+  r = await api(page, "group_join", { id: main.id, character: pc.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups[0].members).toContain(ids[0]);
+  expect(sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
+  // a character with no player who wasn't travelling joins, and leaves again
+  expect((await api(page, "group_join", { id: main.id, character: npc.id }, cid)).json.groups[0].characters.map(c => c.name)).toContain("Stray Dog");
+  expect((await api(page, "group_join", { id: null, character: npc.id }, cid)).json.groups[0].characters.map(c => c.name)).not.toContain("Stray Dog");
+  expect((await api(players[1].pp, "group_join", { id: main.id, character: npc.id }, cid)).status).toBe(403);
+});
+
+test("Party: the GM drags someone onto another group, and into and out of the party from the tray", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, ids, players } = await setup(page, browser, "Party drag", 3);
+  const tpl = (await api(page, "template_save", { name: `Drag sheet ${cid}`, game: "Test RPG", layout: { sections: [{ key: "s", title: "S", fields: [{ key: "hp", label: "HP", type: "number" }] }] } })).json.template;
+  await api(page, "character_create", { template_id: tpl.id, name: "Stray Dog", kind: "npc", owner_id: 0 }, cid);
+  const main = (await groups(page, cid))[0];
+  await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[2]] }, cid);
+  await page.goto(`#/c/${cid}/groups`);
+  const dragTo = async (row, target) => {
+    const from = await row.locator(".group-grip").boundingBox(), to = await target.boundingBox();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 30, from.y + 30, { steps: 4 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await page.mouse.up();
+  };
+  await dragTo(rowOf(page, "The party").locator(".group-member", { hasText: "Pat0" }), rowOf(page, "Scouts"));
+  await expect(rowOf(page, "Scouts").locator(".group-members")).toContainText("Pat0");
+  expect(sorted((await groups(page, cid))[1].members)).toEqual(sorted([ids[0], ids[2]]));
+  // the tray: Stray Dog isn't travelling; Move… brings it in, and a drag onto the tray takes it out again
+  const tray = page.locator(".group-tray");
+  await tray.locator("summary").click();
+  await tray.getByRole("button", { name: "Move Stray Dog" }).click();
+  await page.locator("dialog.party-dialog").getByLabel("Move to").selectOption({ label: "Scouts" });
+  await page.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(rowOf(page, "Scouts").locator(".group-members")).toContainText("Stray Dog");
+  await dragTo(rowOf(page, "Scouts").locator(".group-member", { hasText: "Stray Dog" }), tray.locator("summary"));
+  await expect(rowOf(page, "Scouts").locator(".group-members")).not.toContainText("Stray Dog");
+  await expect(tray).toContainText("Stray Dog");
+  // a player can move only their own row, and has no tray
+  const pp = players[1].pp;
+  await pp.goto(`#/c/${cid}/groups`);
+  await expect(pp.getByRole("button", { name: /^Move / })).toHaveCount(1);
+  await expect(pp.getByRole("button", { name: "Move Pat1" })).toBeVisible();
+  await expect(pp.locator(".group-tray")).toBeHidden();
+  await expect(pp.getByRole("button", { name: "+ Start a group" })).toBeHidden();   // alone in their group: nothing to start
+  expectNoErrors(errors);
 });
 
 test("Party: a member made a GM drops out of every group on the next read", async ({ page, browser }) => {
@@ -341,7 +428,7 @@ test("Party: a player sees the markers but can't drag them", async ({ page, brow
   // Party → Groups is read-only for a player
   await pp.goto(`#/c/${cid}/groups`);
   await expect(pp.locator(".group-card")).toHaveCount(2);
-  await expect(pp.locator(".group-board").getByRole("button")).toHaveCount(0);
+  await expect(pp.locator(".group-board .kit-menu")).toHaveCount(0);   // no ⋯ for a player
   await expect(pp.getByRole("button", { name: "+ New group" })).toHaveCount(0);
   expect((await api(pp, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(403);
   expect((await api(pp, "group_move", { id: main.id, map_id: mapId, x: 5, y: 5 }, cid)).status).toBe(403);

@@ -4854,22 +4854,43 @@
       actions.some(Boolean) ? el('div', { class: 'row evhead-actions' }, ...actions) : null);
   }
 
-  /** Party → Groups: a card for each of the party's groups, the main one first, with who is in it, where it is, and
-   * (for a GM) splitting, moving someone to another group, renaming, its token, making it main and merging. */
+  /** Party → Groups: a card for each of the party's groups, the main one first, with who is in it and where it is.
+   * Anyone in a group is moved by dragging their row (by its ⠿ handle) onto another group, or with Move…. A GM moves
+   * anyone, brings in someone who isn't travelling from the tray underneath, splits, renames, sets the token, makes main,
+   * merges, and says whether players may move in and out of a group. A player moves only themselves, and can start a
+   * group of their own, between groups that let players move. */
   async function viewGroups() {
-    let groups = [], mapNames = new Map();
+    const gm = isGM(), me = Number(S.user.id);
+    let groups = [], mapNames = new Map(), characters = [];
     const load = async () => {
       groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
       try { mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name])); } catch { /* names only */ }
+      // the GM's tray: characters who aren't travelling
+      if (gm && typeof Sheets !== 'undefined') try { characters = (await api('characters', { query: { cid: S.camp.id } })).characters; } catch { characters = []; }
     };
     await load();
     const board = el('div', { class: 'group-board' });
+    const tray = el('details', { class: 'card group-tray', 'data-drop': 'out' });
     const reload = async () => { await load(); draw(); };
     const member = uid => S.members.find(x => Number(x.id) === uid);
     const memberName = uid => { const m = member(uid); return m ? m.character_name || m.display_name : 'Someone'; };
     const charName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
     const labelled = (b, label) => { b.setAttribute('aria-label', label); return b; };
     const face = (url, name) => (typeof TokensTab !== 'undefined' ? TokensTab.face(el, url, name) : null);
+    const groupOf = uid => groups.find(g => g.members.includes(uid)) || null;
+    const mine = () => groupOf(me);
+    /** Who this member may move: a GM anyone; a player themselves, when their group lets players move. */
+    const canMove = (kind, id, g) => gm || (kind === 'member' && id === me && !!g?.players_can_move);
+    /** The groups someone in group `from` may be sent to: every other group for a GM, only those letting players move for a player. */
+    const targets = from => groups.filter(x => x.id !== from?.id && (gm || x.players_can_move));
+    /** Put one person (who: { member } or { character }) in group id, or (null, GMs) take them out of the party. */
+    const join = async (id, who, name) => {
+      try {
+        await post('group_join', { id, ...who }, S.camp.id);
+        toast(id === null ? `${name} is out of the party` : `${name} joins ${groups.find(g => g.id === id)?.name || 'the group'}`);
+        await reload();
+      } catch (err) { toast(err.message, true); }
+    };
     /** A small modal form: run() does the work, and the board is drawn again after. */
     const partyDialog = (title, kids, ok, run) => {
       const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
@@ -4884,6 +4905,11 @@
     };
     const splitParty = () => {
       const name = el('input', { maxlength: 100, required: true, autocomplete: 'off', placeholder: 'e.g. Scouts' });
+      if (!gm) {   // a player starts a group of their own, where they are now
+        const from = mine();
+        return partyDialog('Start a group', [field('Group name', name, `You leave ${from.name} and travel on your own until you join a group again`)], 'Start',
+          () => post('group_split', { from_id: from.id, name: name.value, members: [me] }, S.camp.id));
+      }
       const from = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id) : null;
       const region = select([['', '— none —'], ...S.regions.map(r => [r.id, r.name])], groups[0].region_id ?? '');
       const pick = el('div', { class: 'party-pick' });
@@ -4898,8 +4924,8 @@
       partyDialog('Split the party', [from ? field('From', from) : null, field('Group name', name), field('Who goes', pick), field('Region', region, 'Where they are now')], 'Split', async () => {
         const ticked = [...pick.querySelectorAll('input:checked')];
         const members = ticked.filter(i => !i.hasAttribute('data-character')).map(i => Number(i.value));
-        const characters = ticked.filter(i => i.hasAttribute('data-character')).map(i => Number(i.value));
-        await post('group_split', { from_id: fromGroup().id, name: name.value, members, characters, region_id: region.value ? Number(region.value) : null }, S.camp.id);
+        const chars = ticked.filter(i => i.hasAttribute('data-character')).map(i => Number(i.value));
+        await post('group_split', { from_id: fromGroup().id, name: name.value, members, characters: chars, region_id: region.value ? Number(region.value) : null }, S.camp.id);
       });
     };
     const mergeParty = g => {
@@ -4914,55 +4940,145 @@
       partyDialog(`Token for ${g.name}`, [field('Token', sel, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
         () => post('group_save', { id: g.id, token_id: sel.value ? Number(sel.value) : null }, S.camp.id));
     };
-    /** Move one player (who.member) or one character with no player (who.character) from group g to another. */
-    const moveTo = (g, who, name) => {
-      const others = groups.filter(x => x.id !== g.id);
-      const to = select(others.map(x => [x.id, x.name]), others[0].id);
-      partyDialog(`Move ${name}`, [field('Move to', to, `${name} leaves ${g.name} and travels with that group from now on`)], 'Move',
-        () => post('group_join', { id: Number(to.value), ...who }, S.camp.id));
+    /** Move… : pick the group (a GM can also pick Not travelling, to take them out of the party). */
+    const moveTo = (from, who, name) => {
+      const opts = targets(from).map(x => [x.id, x.name]);
+      if (gm && from) opts.push(['out', 'Not travelling (out of the party)']);
+      const to = select(opts, opts[0]?.[0] ?? '');
+      partyDialog(`Move ${name}`, [field('Move to', to, from ? `${name} leaves ${from.name}` : `${name} starts travelling with the party`)], 'Move',
+        () => post('group_join', { id: to.value === 'out' ? null : Number(to.value), ...who }, S.camp.id));
     };
-    const memberRow = (g, kind, id, name, sub, url) => el('li', { class: 'group-member' + (kind === 'npc' ? ' npc' : '') },
-      face(url, name), el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
-      isGM() && groups.length > 1 ? labelled(btn('Move…', () => moveTo(g, kind === 'member' ? { member: id } : { character: id }, name), 'small',
-        `Send ${name} to another group`), `Move ${name}`) : null);
+
+    // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
+    // finger on an iPad drags it as a mouse does; Move… does the same without dragging.
+    let drag = null;
+    const dropAt = (x, y, from) => {
+      const t = document.elementFromPoint(x, y)?.closest('[data-drop]');
+      return t && t.dataset.drop !== String(from ?? 'out') && (t.dataset.drop !== 'out' || gm) ? t : null;
+    };
+    const handle = (row, who, name, from) => {
+      const h = el('span', { class: 'group-grip', 'aria-hidden': 'true' }, '⠿');
+      h.addEventListener('pointerdown', ev => {
+        if (ev.button > 0) return;
+        ev.preventDefault();
+        h.setPointerCapture(ev.pointerId);
+        const box = row.getBoundingClientRect();
+        drag = { who, name, from: from?.id ?? null, row, x0: ev.clientX, y0: ev.clientY, dx: ev.clientX - box.left, dy: ev.clientY - box.top, ghost: null, hot: null, w: box.width };
+      });
+      h.addEventListener('pointermove', ev => {
+        if (!drag || drag.row !== row) return;
+        if (!drag.ghost) {
+          if (Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) < 5) return;
+          hideTip();
+          drag.ghost = row.cloneNode(true);
+          drag.ghost.classList.add('group-ghost');
+          drag.ghost.style.width = `${drag.w}px`;
+          document.body.append(drag.ghost);
+          row.classList.add('dragging');
+          document.body.classList.add('group-dragging');
+        }
+        drag.ghost.style.left = `${ev.clientX - drag.dx}px`;
+        drag.ghost.style.top = `${ev.clientY - drag.dy}px`;
+        const hot = dropAt(ev.clientX, ev.clientY, drag.from);
+        if (hot !== drag.hot) { drag.hot?.classList.remove('drop-hot'); hot?.classList.add('drop-hot'); drag.hot = hot; }
+      });
+      const end = ev => {
+        if (!drag || drag.row !== row) return;
+        const d = drag; drag = null;
+        d.hot?.classList.remove('drop-hot');
+        row.classList.remove('dragging');
+        document.body.classList.remove('group-dragging');
+        if (!d.ghost) return;
+        d.ghost.remove();
+        const t = ev.type === 'pointerup' ? dropAt(ev.clientX, ev.clientY, d.from) || d.hot : null;
+        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name);
+      };
+      h.addEventListener('pointerup', end);
+      h.addEventListener('pointercancel', end);
+      return h;
+    };
+
+    /** A row for one person: the ⠿ handle and Move… where this member may move them. */
+    const personRow = (from, kind, id, name, sub, url) => {
+      const who = kind === 'member' ? { member: id } : { character: id };
+      const movable = canMove(kind, id, from) && (targets(from).length || (gm && from));
+      const row = el('li', { class: 'group-member' + (kind === 'npc' ? ' npc' : '') + (kind === 'member' && id === me ? ' me' : '') });
+      row.append(...clean([movable ? handle(row, who, name, from) : null, face(url, name),
+        el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
+        movable ? labelled(btn('Move…', () => moveTo(from, who, name), 'small', from ? `Send ${name} to another group` : `Bring ${name} into a group of the party`), `Move ${name}`) : null]));
+      return row;
+    };
     const groupCard = g => {
       const players = g.members.map(uid => {
         const m = member(uid);
-        return memberRow(g, 'member', uid, memberName(uid), m?.character_name && m.display_name ? `Played by ${m.display_name}` : 'Player', m?.token_url || null);
+        return personRow(g, 'member', uid, memberName(uid), uid === me ? 'You' : m?.character_name && m.display_name ? `Played by ${m.display_name}` : 'Player', m?.token_url || null);
       });
-      const chars = (g.characters || []).map(c => memberRow(g, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name, c.kind === 'npc' ? 'NPC' : 'PC with no player',
+      const chars = (g.characters || []).map(c => personRow(g, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name, c.kind === 'npc' ? 'NPC' : 'PC with no player',
         S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || null));
-      return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name },
+      const dropOk = gm || g.players_can_move;
+      return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name, 'data-drop': dropOk ? g.id : null },
         el('div', { class: 'group-head' }, face(g.token_url, g.name),
           el('div', { class: 'group-title' },
-            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null),
+            el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null,
+              g.players_can_move ? null : el('span', { class: 'group-kept', 'data-tip': 'Players can\'t move in or out of this group until the GM lets them' }, '🔒 Kept together')),
             el('small', { class: 'muted' }, '📍 ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || 'No region'),
               ' · 🗺 ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || 'Not on a map'))),
-          isGM() ? moreMenu(g.name,
+          gm ? moreMenu(g.name,
             btn('Rename', async () => {
               const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });
               if (!name || !name.trim()) return;
               try { await post('group_save', { id: g.id, name }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
             }, 'small'),
             btn('Token', () => tokenParty(g), 'small', 'Choose the picture that marks this group on the maps'),
+            btn(g.players_can_move ? 'Keep players in' : 'Let players move', async () => {
+              try { await post('group_save', { id: g.id, players_can_move: !g.players_can_move }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
+            }, 'small', g.players_can_move ? 'Players can\'t move their characters in or out of this group until you let them again' : 'Players can move their own characters in and out of this group'),
             g.is_main ? null : btn('Make main group', async () => {
               try { await post('group_save', { id: g.id, is_main: true }, S.camp.id); await loadCampaign(S.camp.id, true); await reload(); } catch (err) { toast(err.message, true); }
             }, 'small', 'Its region becomes the campaign\'s current region, and the weather follows it'),
             groups.length > 1 ? el('hr') : null,
             groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null) : null),
         players.length || chars.length ? el('ul', { class: 'group-members' }, players, chars) : el('p', { class: 'muted small' }, 'No one yet'),
-        isGM() && !g.is_main ? el('div', { class: 'row' }, btn(`Rejoin ${groups[0].name}`, async () => {
+        dropOk && groups.length > 1 ? el('div', { class: 'group-drop small muted', 'aria-hidden': 'true' }, 'Drag someone here') : null,
+        gm && !g.is_main ? el('div', { class: 'row' }, btn(`Rejoin ${groups[0].name}`, async () => {
           try { await post('group_merge', { id: g.id, into_id: groups[0].id }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
         }, 'small', `Everyone in ${g.name} goes back to ${groups[0].name}, and ${g.name} is gone`)) : null);
     };
-    const draw = () => board.replaceChildren(...(groups.length ? groups.map(groupCard)
-      : [el('p', { class: 'muted' }, 'No one is in the party yet. Players join it when they join the campaign, and a character joins it with Travels with the party.')]));
+    /** The GM's tray: characters who aren't travelling. A player's active character the GM took out of the party, and every
+     * character with no player that isn't in a group; a player's other characters wait on their account. */
+    const drawTray = () => {
+      const active = new Set(S.members.map(m => Number(m.active_character_id)).filter(Boolean));
+      const out = characters.filter(c => (c.owner_is_player ? c.party_out && active.has(c.id) : !c.party_group_id));
+      const find = el('input', { type: 'search', placeholder: 'Find a character', 'aria-label': 'Find a character not travelling' });
+      const list = el('ul', { class: 'group-members group-tray-list' });
+      const fill = () => {
+        const q = find.value.trim().toLowerCase();
+        const shown = out.filter(c => !q || c.name.toLowerCase().includes(q));
+        list.replaceChildren(...shown.map(c => personRow(null, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name,
+          [c.kind === 'npc' ? 'NPC' : 'PC', c.owner?.name ? `Played by ${c.owner.name}` : 'No player', c.owner_is_player ? 'Out of the party' : null].filter(Boolean).join(' · '), c.pic || null)));
+        if (!shown.length) list.append(el('li', { class: 'muted small' }, out.length ? 'No one by that name.' : 'Everyone with a sheet is travelling.'));
+      };
+      find.addEventListener('input', fill);
+      fill();
+      tray.replaceChildren(...clean([el('summary', {}, el('span', { class: 'group-tray-title' }, 'Not travelling with any group'), el('span', { class: 'muted small' }, ` ${out.length}`)),
+        el('p', { class: 'small muted' }, 'Characters with no player who don\'t travel with the party, and players\' characters taken out of it. Drag one onto a group to bring them along, or drag someone here to take them out.'),
+        out.length > 6 ? find : null, list]));
+    };
+    const draw = () => {
+      board.replaceChildren(...(groups.length ? groups.map(groupCard)
+        : [el('p', { class: 'muted' }, 'No one is in the party yet. Players join it when they join the campaign, and a character joins it with Travels with the party.')]));
+      if (gm && typeof Sheets !== 'undefined') drawTray();
+      // display, not hidden: a button's own display would show it anyway
+      tray.style.display = gm && typeof Sheets !== 'undefined' ? '' : 'none';
+      start.style.display = (gm ? groups.length : mine()?.players_can_move && mine().members.length + (mine().characters || []).length > 1) ? '' : 'none';
+    };
+    const start = btn(gm ? '+ New group' : '+ Start a group', splitParty, 'primary new-btn', gm ? 'Send some of the party off as a group of their own: name it and pick who goes'
+      : 'Leave your group and start one of your own, where you are now');
     draw();
-    const split = isGM() && groups.length ? btn('+ New group', splitParty, 'primary new-btn', 'Send some of the party off as a group of their own: name it and pick who goes') : null;
-    mount(...campaignHeader('groups'), el('div', { class: 'card' }, partySubtabs('groups', split),
-      el('p', { class: 'small muted party-intro' }, isGM()
-        ? 'Who travels with whom. The main group\'s region is the campaign\'s, and each group has its own marker on the maps (🚩 Place party on a map).'
-        : 'Who travels with whom, and where each group is. The GM splits and joins the groups.')), board);
+    mount(...campaignHeader('groups'), el('div', { class: 'card' }, partySubtabs('groups', start),
+      el('p', { class: 'small muted party-intro' }, gm
+        ? 'Who travels with whom. Drag someone by ⠿ onto another group, or press their Move… button. The main group\'s region is the campaign\'s, and each group has its own marker on the maps.'
+        : 'Who travels with whom, and where each group is. Drag yourself by ⠿ onto another group, or press Move…, unless the GM has kept a group together.')), board, tray);
   }
 
   // ------------------------------------------------------------ travel tab

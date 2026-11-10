@@ -857,7 +857,33 @@ const Sheets = (() => {
       // at the card's foot, so every card's buttons line up whatever is above them
       el('div', { class: 'row character-card-foot' }, el('a', { href, class: 'button small' }, 'Sheet'),
         c.sheet_visible && c.has_play ? el('a', { href: `${href}/play`, class: 'button small' }, 'Play') : null,
-        ctx.isGM() && c.can_edit ? partyToggle(c) : null));
+        ctx.isGM() && c.can_edit ? groupPick(c) || partyToggle(c) : null));
+  }
+  let partyGroups = [];   // the party's groups, for the GM's group picker on each card (renderCharacters loads them)
+  /** A GM's group picker on a character's card: which group of the party it travels with, or Not travelling. A player's
+   * character stands for its player, so it has one only while it is their active character. Null when it has none. */
+  function groupPick(c) {
+    if (!partyGroups.length) return null;
+    let value = '';
+    if (c.owner_is_player) {
+      const m = ctx.S.members.find(x => Number(x.id) === c.owner?.id);
+      if (!m || Number(m.active_character_id) !== c.id) return null;
+      value = c.party_out ? '' : partyGroups.find(g => g.members.includes(c.owner.id))?.id ?? '';
+    } else value = c.party_group_id ?? '';
+    const sel = el('select', { class: 'small', 'aria-label': `Group for ${c.name}` },
+      partyGroups.map(g => el('option', { value: g.id, selected: g.id === value }, `👥 ${g.name}`)), el('option', { value: '', selected: value === '' }, 'Not travelling'));
+    sel.addEventListener('change', async () => {
+      sel.disabled = true;
+      try {
+        await ctx.post('group_join', { id: sel.value ? Number(sel.value) : null, character: c.id }, cid());
+        toast(sel.value ? `${c.name} travels with ${partyGroups.find(g => g.id === Number(sel.value)).name}` : `${c.name} is out of the party`);
+        ctx.route();   // the line under the name says In the party or not
+      } catch (err) {
+        toast(err.message, true);
+        sel.disabled = false;
+      }
+    });
+    return el('label', { class: 'small character-party', 'data-tip': 'Which group of the party this character travels with. Arrange the groups on Party → Groups' }, sel);
   }
   /** A GM's Party switch on a character's card: the sheet's Travels with the party. A player's character is in the party
    * with its player (off takes them out of every party group); one with no player travels with the main group. */
@@ -885,7 +911,9 @@ const Sheets = (() => {
   const FILTER_KEY = 'chronicle:characters-filter';
   async function renderCharacters() {
     stopPresence();
-    const { characters } = await ctx.api('characters', { query: { cid: cid() } });
+    const [{ characters }, groups] = await Promise.all([ctx.api('characters', { query: { cid: cid() } }),
+      ctx.isGM() ? ctx.api('groups', { query: { cid: cid() } }).then(r => r.groups).catch(() => []) : []]);
+    partyGroups = groups;
     let filter = 'all';
     try { filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch { /* private window */ }
     const list = el('div', { class: 'character-grid' });

@@ -693,6 +693,7 @@ CREATE TABLE IF NOT EXISTS party_groups (
   y DOUBLE NULL,
   token_id INT UNSIGNED NULL,
   is_main TINYINT(1) NOT NULL DEFAULT 0,
+  players_can_move TINYINT(1) NOT NULL DEFAULT 1,   -- players may move their characters in and out of it (047)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL,
