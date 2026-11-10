@@ -359,6 +359,7 @@ test.describe("Find Image panel", () => {
 
   test("Game art finds the pictures shipped with the app, and copies one with its credit", async ({ page, browser }) => {
     const errors = watchErrors(page);
+    await routeImages(page);   // the panel opens on All, museums included
     const { cid, id } = await setup(page, browser, "Game art");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const box = page.locator(".enc-detail .enc-files");
