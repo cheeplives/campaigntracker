@@ -258,7 +258,9 @@ test("Travel: Depart moves the party's marker to the pin named in To", async ({ 
   expect(after).toMatchObject({ map_id: mapId, x: 200, y: 120 });
 
   await page.goto(`index.html#/c/${cid}/maps/${mapId}`);
-  const flag = await settledBox(page.locator(".map-party")), pin = await settledBox(page.locator(".map-pin", { hasText: "Weathertop" }));
+  // the group stands on the pin (its marker's box is there), drawn just beside it so both can be clicked
+  await expect(page.locator(".map-party")).toHaveClass(/\bbeside\b/);
+  const flag = await settledBox(page.locator(".leaflet-marker-icon", { has: page.locator(".map-party") })), pin = await settledBox(page.locator(".map-pin", { hasText: "Weathertop" }));
   expect(Math.abs(flag.x + flag.width / 2 - (pin.x + pin.width / 2))).toBeLessThan(3);
   expect(Math.abs(flag.y + flag.height / 2 - (pin.y + pin.height / 2))).toBeLessThan(3);
   expectNoErrors(errors);
