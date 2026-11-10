@@ -384,11 +384,13 @@ function party_set_current_region(int $cid, ?int $rid): void {
 function party_sync_main_region(int $cid): void {
     db()->prepare('UPDATE party_groups SET region_id=? WHERE campaign_id=? AND is_main=1')->execute([party_current_region($cid), $cid]);
 }
-/** Take user $uid out of every group of campaign $cid (they have left the campaign). */
-function party_remove_member(int $cid, int $uid): void {
+/** Take user $uid out of every group of campaign $cid (they have left the campaign), and the characters they played
+ * as a player ($player). */
+function party_remove_member(int $cid, int $uid, bool $player = false): void {
     db()->beginTransaction();
     try {
         party_lock($cid);
+        if ($player) db()->prepare('UPDATE sheet_characters SET party_group_id=NULL WHERE campaign_id=? AND owner_id=?')->execute([$cid, $uid]);
         $st = db()->prepare('SELECT id, members_json FROM party_groups WHERE campaign_id=?');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $g) {
@@ -410,20 +412,20 @@ function party_lock(int $cid): void {
 function party_reread(int $cid, $id): array {
     return row_of('party_groups', $cid, (int)$id, 'Group not found');
 }
-/** The user ids of campaign $cid's players. */
-/** Campaign $cid's players who are in the party: all but those whose active character a GM took out of it. */
+/** Campaign $cid's players with no character sheet, who stand in the party as themselves (party_groups.members_json).
+ * A player with a sheet is in the party through their characters, each in a group of its own (party_group_id). */
 function party_players(int $cid): array {
-    $st = db()->prepare("SELECT m.user_id FROM campaign_members m LEFT JOIN sheet_characters c ON c.id=m.active_character_id
-        WHERE m.campaign_id=? AND m.role='player' AND COALESCE(c.party_out, 0)=0 ORDER BY m.user_id");
+    $st = db()->prepare("SELECT m.user_id FROM campaign_members m WHERE m.campaign_id=? AND m.role='player'
+        AND NOT EXISTS (SELECT 1 FROM sheet_characters c WHERE c.campaign_id=m.campaign_id AND c.owner_id=m.user_id) ORDER BY m.user_id");
     $st->execute([$cid]);
     return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
 }
 function party_members(array $g): array {
     return array_values(array_map('intval', dec($g['members_json']) ?: []));
 }
-/** Campaign $cid's groups, main first, as rows. Makes the main group when there is none, puts any player who is in no
- * group into it (players can join late) and drops anyone who is no longer a player from every group (removed, deleted or
- * made a GM). That is housekeeping, not a campaign change, so it doesn't touch the campaign, and it writes only when
+/** Campaign $cid's groups, main first, as rows. Makes the main group when there is none, puts any player with no sheet
+ * who is in no group into it (players can join late) and drops from members_json anyone who is no longer a player with no
+ * sheet (removed, deleted, made a GM, or now with a character, who stands for them). That is housekeeping, not a campaign change, so it doesn't touch the campaign, and it writes only when
  * something needs fixing. */
 function party_rows(int $cid): array {
     $load = function () use ($cid) {
@@ -494,16 +496,31 @@ function party_groups(int $cid, bool $isGm = true): array {
             'players_can_move' => (bool)(int)$g['players_can_move']];
     }, $rows);
 }
-/** The characters with no player who travel with the party, as group id => [{id, name, kind, entry_id}], A to Z. A
- * player isn't told of one whose entry is GM only. */
+/** The characters who travel with the party, as group id => [{id, name, kind, entry_id, player_id}]: players' characters
+ * first, then those with no player, A to Z. player_id is the player who plays it, or null (no player, or a GM's). A player
+ * isn't told of one whose entry is GM only, unless it is their own. */
 function party_characters(int $cid, bool $isGm): array {
-    $st = db()->prepare('SELECT c.id, c.kind, c.entry_id, c.party_group_id, e.name FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
-        WHERE c.campaign_id=? AND c.party_group_id IS NOT NULL' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
-    $st->execute([$cid]);
+    $st = db()->prepare("SELECT c.id, c.kind, c.entry_id, c.party_group_id, e.name, IF(m.role='player', c.owner_id, NULL) AS player_id
+        FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+        LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
+        WHERE c.campaign_id=? AND c.party_group_id IS NOT NULL" . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . "
+        ORDER BY m.role='player' DESC, e.name");
+    $st->execute($isGm ? [$cid] : [$cid, me()['id']]);
     $out = [];
     foreach ($st->fetchAll() as $c)
-        $out[(int)$c['party_group_id']][] = ['id' => (int)$c['id'], 'name' => $c['name'], 'kind' => $c['kind'], 'entry_id' => (int)$c['entry_id']];
+        $out[(int)$c['party_group_id']][] = ['id' => (int)$c['id'], 'name' => $c['name'], 'kind' => $c['kind'], 'entry_id' => (int)$c['entry_id'],
+            'player_id' => $c['player_id'] !== null ? (int)$c['player_id'] : null];
     return $out;
+}
+/** Character $id of campaign $cid as group_split and group_join need it: its group and the player who plays it (null:
+ * no player). Fails as not found. */
+function party_character(int $cid, $id): array {
+    $st = db()->prepare("SELECT c.id, c.party_group_id, IF(m.role='player', c.owner_id, NULL) AS player_id FROM sheet_characters c
+        LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id WHERE c.id=? AND c.campaign_id=?");
+    $st->execute([int_in($id, 1), $cid]);
+    $c = $st->fetch() ?: fail('Character not found', 404);
+    return ['id' => (int)$c['id'], 'group' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null,
+        'player' => $c['player_id'] !== null ? (int)$c['player_id'] : null];
 }
 /** Group $id of campaign $cid as a row, or fail as not found. */
 function group_row(int $cid, $id): array {
@@ -518,21 +535,25 @@ function party_make_main(int $cid, int $id): void {
     $r = $st->fetchColumn();
     party_set_current_region($cid, $r !== null && $r !== false ? (int)$r : null);
 }
-/** GM: split the members the request names off group from_id into a new group. A player ($isGm false) splits only
- * themselves off, from a group that lets players move, into a group of their own; it starts where they were. */
+/** GM: split the players with no sheet (members) and the characters the request names off group from_id into a new
+ * group. A player ($isGm false) splits off one of their own characters (or themselves, with no sheet), from a group that
+ * lets players move, into a group of their own; it starts where they were. */
 function group_split(int $cid, bool $isGm = true): void {
     $body = body();
     $g = group_row($cid, $body['from_id'] ?? null);   // 404s a group that isn't here, and tidies the groups first
     if (!$isGm) {
         $me = me()['id'];
-        if (($body['members'] ?? null) !== [$me] || !empty($body['characters'])) fail('You can start a group with just your own character', 403);
+        $m = $body['members'] ?? []; $c = $body['characters'] ?? [];
+        $alone = $m === [$me] && !$c
+            || !$m && is_array($c) && count($c) === 1 && party_character($cid, $c[0])['player'] === $me;
+        if (!$alone) fail('You can start a group with just one of your own characters', 403);
         if (!(int)$g['players_can_move']) fail('The GM has kept that group together for now', 403);
         unset($body['region_id']);
     }
     $name = trim((string)str_in($body['name'] ?? null, 100));
     if ($name === '') fail('Give the group a name');
     $pick = $body['members'] ?? [];
-    $chars = $body['characters'] ?? [];   // ids of characters with no player in that group
+    $chars = $body['characters'] ?? [];   // ids of characters in that group
     if (!is_array($pick) || !is_array($chars) || !$pick && !$chars) fail('Pick who goes from that group');
     $pick = array_values(array_unique(array_map(fn($u) => is_numeric($u) ? (int)$u : 0, $pick)));
     $chars = array_values(array_unique(array_map(fn($c) => is_numeric($c) ? (int)$c : 0, $chars)));
@@ -682,10 +703,10 @@ function group_merge(int $cid): void {
     touch_campaign($cid);
 }
 
-/** Move one player (member: a user id) or one character (character: its id) into group id, out of whichever group they
- * were in. A player's active character stands for its player. A GM can also bring in someone who isn't travelling (a
- * player's character taken out of the party, or a character with no player) and, with id null, take someone out of the
- * party. A player ($isGm false) moves only themselves, and only out of and into groups that let players move. */
+/** Move one character (character: its id), or one player with no sheet (member: a user id), into group id, out of
+ * whichever group they were in. A GM can also bring in a character who isn't travelling and, with id null, take one out
+ * of the party. A player ($isGm false) moves only their own characters (or themselves, with no sheet), and only out of
+ * and into groups that let players move. */
 function group_join(int $cid, bool $isGm = true): void {
     $body = body();
     $out = array_key_exists('id', $body) && $body['id'] === null;
@@ -694,52 +715,44 @@ function group_join(int $cid, bool $isGm = true): void {
     $user = $body['member'] ?? null;
     $char = $body['character'] ?? null;
     if (($user === null) === ($char === null)) fail('Name one player or one character to move');
-    // a character: one with no player moves on its own; a player's active one moves its player
+    $me = me()['id'];
     $sheet = null;
     if ($char !== null) {
-        $st = db()->prepare("SELECT c.id, c.owner_id, c.party_group_id, c.party_out, m.role AS owner_role, m.active_character_id FROM sheet_characters c
-            LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id WHERE c.id=? AND c.campaign_id=?");
-        $st->execute([int_in($char, 1), $cid]);
-        $sheet = $st->fetch();
-        if (!$sheet) fail('Character not found', 404);
-        if ($sheet['owner_role'] === 'player') {
-            if ((int)$sheet['active_character_id'] !== (int)$sheet['id']) fail('Only a player\'s active character travels with the party: pick it on their account first');
-            $user = (int)$sheet['owner_id'];
-            $sheet = null;
-        }
-    }
-    if ($user !== null) {
+        $sheet = party_character($cid, $char);
+        if (!$isGm && $sheet['player'] !== $me) fail('You can only move your own characters', 403);
+        if (!$isGm && $sheet['group'] === null) fail('That character is out of the party for now: ask the GM to bring them back', 403);
+    } else {
         $user = int_in($user, 1);
-        if (!$isGm && $user !== me()['id']) fail('You can only move your own character', 403);
+        if (!$isGm && $user !== $me) fail('You can only move your own characters', 403);
         if (member_role($cid, $user) !== 'player') fail('That player isn\'t in this campaign');
-    } elseif (!$isGm) fail('You can only move your own character', 403);
+        if (!in_array($user, party_players($cid), true)) fail('That player has a character sheet: move their character instead');
+        if ($out) fail('They have no character sheet to take out of the party');
+    }
     db()->beginTransaction();
     try {
         party_lock($cid);
         if ($to) $to = party_reread($cid, $to['id']);
+        $st = db()->prepare('SELECT * FROM party_groups WHERE campaign_id=?');
+        $st->execute([$cid]);
+        $rows = $st->fetchAll();
+        // a player leaves a group and joins one only where the GM lets players move
+        $from = null;
+        if ($sheet) {
+            $st = db()->prepare('SELECT party_group_id FROM sheet_characters WHERE id=?');
+            $st->execute([$sheet['id']]);
+            $now = $st->fetchColumn();
+            foreach ($rows as $g) if ($now !== null && (int)$g['id'] === (int)$now) $from = $g;
+        } else foreach ($rows as $g) if (in_array($user, party_members($g), true)) $from = $g;
+        $same = $from && $to && (int)$from['id'] === (int)$to['id'];
+        if (!$isGm && !$same && ($from && !(int)$from['players_can_move'] || $to && !(int)$to['players_can_move']))
+            fail('The GM has kept that group together for now', 403);
         if ($sheet) {
             db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE id=?')->execute([$to ? $to['id'] : null, $sheet['id']]);
-        } else {
-            $st = db()->prepare('SELECT active_character_id FROM campaign_members WHERE campaign_id=? AND user_id=?');
-            $st->execute([$cid, $user]);
-            $active = $st->fetchColumn();
-            $active = $active !== null && $active !== false ? (int)$active : null;
-            $in = in_array($user, party_players($cid), true);
-            if (!$in && !$isGm) fail('You are out of the party for now: ask the GM to bring you back', 403);
-            if ($out && $active === null) fail('They have no character sheet to take out of the party');
-            $st = db()->prepare('SELECT * FROM party_groups WHERE campaign_id=?');
-            $st->execute([$cid]);
-            foreach ($st->fetchAll() as $g) {
-                $m = party_members($g);
-                $here = in_array($user, $m, true);
-                if (!$isGm && ($here || ($to && (int)$g['id'] === (int)$to['id'])) && !(int)$g['players_can_move'] && !($here && $to && (int)$g['id'] === (int)$to['id']))
-                    fail('The GM has kept that group together for now', 403);
-                $keep = array_values(array_filter($m, fn($u) => $u !== $user));
-                if ($to && (int)$g['id'] === (int)$to['id']) $keep[] = $user;
-                if ($keep !== $m) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($keep), $g['id']]);
-            }
-            // in or out of the party: the player's active character says which (a player with no sheet is always in)
-            if ($active !== null) db()->prepare('UPDATE sheet_characters SET party_out=?, version=version+1 WHERE id=? AND campaign_id=?')->execute([$out ? 1 : 0, $active, $cid]);
+        } else foreach ($rows as $g) {
+            $m = party_members($g);
+            $keep = array_values(array_filter($m, fn($u) => $u !== $user));
+            if ($to && (int)$g['id'] === (int)$to['id']) $keep[] = $user;
+            if ($keep !== $m) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($keep), $g['id']]);
         }
         db()->commit();
     } catch (Throwable $e) {

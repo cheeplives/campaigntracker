@@ -865,8 +865,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   template_id INT UNSIGNED NOT NULL,
   entry_id INT UNSIGNED NOT NULL,
   kind ENUM('pc','npc') NOT NULL DEFAULT 'pc',
-  party_group_id INT UNSIGNED NULL,                  -- the party group a character with no player travels with (033); null: not in the party
-  party_out TINYINT(1) NOT NULL DEFAULT 0,           -- a player's character the GM took out of the party (034): its player is in no group while it is their active one
+  party_group_id INT UNSIGNED NULL,                  -- the party group the character travels with, a player's or not (033, 048); null: not travelling
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
   portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
   template_version INT UNSIGNED NOT NULL,

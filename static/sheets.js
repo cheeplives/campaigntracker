@@ -851,7 +851,7 @@ const Sheets = (() => {
     return el('div', { class: 'card character-card', 'data-kind': c.kind },
       el('div', { class: 'row character-card-head' }, el('a', { href, tabindex: -1, 'aria-hidden': 'true' }, portrait(c)),
         el('div', {}, el('a', { href, class: 'character-name' }, c.name),
-          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player && c.party_out ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')),
+          el('div', { class: 'small muted' }, [kindName(c.kind), c.owner?.name || 'No player', c.party_group_id ? 'In the party' : c.owner_is_player ? 'Out of the party' : null, c.template.game].filter(Boolean).join(' · ')),
           summaryLine(c))),
       cardStats(c),
       // at the card's foot, so every card's buttons line up whatever is above them
@@ -860,16 +860,11 @@ const Sheets = (() => {
         ctx.isGM() && c.can_edit ? groupPick(c) || partyToggle(c) : null));
   }
   let partyGroups = [];   // the party's groups, for the GM's group picker on each card (renderCharacters loads them)
-  /** A GM's group picker on a character's card: which group of the party it travels with, or Not travelling. A player's
-   * character stands for its player, so it has one only while it is their active character. Null when it has none. */
+  /** A GM's group picker on a character's card: which group of the party it travels with, or Not travelling. Null
+   * before the party has any group. */
   function groupPick(c) {
     if (!partyGroups.length) return null;
-    let value = '';
-    if (c.owner_is_player) {
-      const m = ctx.S.members.find(x => Number(x.id) === c.owner?.id);
-      if (!m || Number(m.active_character_id) !== c.id) return null;
-      value = c.party_out ? '' : partyGroups.find(g => g.members.includes(c.owner.id))?.id ?? '';
-    } else value = c.party_group_id ?? '';
+    const value = c.party_group_id ?? '';
     const sel = el('select', { class: 'small', 'aria-label': `Group for ${c.name}` },
       partyGroups.map(g => el('option', { value: g.id, selected: g.id === value }, `👥 ${g.name}`)), el('option', { value: '', selected: value === '' }, 'Not travelling'));
     sel.addEventListener('change', async () => {
@@ -885,10 +880,9 @@ const Sheets = (() => {
     });
     return el('label', { class: 'small character-party', 'data-tip': 'Which group of the party this character travels with. Arrange the groups on Party → Groups' }, sel);
   }
-  /** A GM's Party switch on a character's card: the sheet's Travels with the party. A player's character is in the party
-   * with its player (off takes them out of every party group); one with no player travels with the main group. */
+  /** A GM's Party switch on a character's card: the sheet's Travels with the party (on puts it in the main group). */
   function partyToggle(c) {
-    const on = () => (c.owner_is_player ? !c.party_out : !!c.party_group_id);
+    const on = () => !!c.party_group_id;
     const box = el('input', { type: 'checkbox', checked: on() });
     box.addEventListener('change', async () => {
       box.disabled = true;
@@ -904,7 +898,7 @@ const Sheets = (() => {
       } finally { box.disabled = false; }
     });
     return el('label', { class: 'small check character-party', 'data-tip': c.owner_is_player
-      ? 'Travels with the party. Its player is in the party while this is their active character; untick to take them out of every party group'
+      ? 'Travels with the party: untick to take this character out of every party group (it died, left, or sits this arc out)'
       : 'Travels with the party: listed with the party\'s players on Travel and the maps, gets its own action each shift At the Table, and goes where the party goes' },
     box, ' Party');
   }
@@ -1072,9 +1066,8 @@ const Sheets = (() => {
     const owner = el('select', { 'aria-label': 'Whose sheet' }, gm || !ch.owner ? el('option', { value: 0, selected: !ch.owner }, 'No player (the GM runs it)') : null,
       people.map(m => el('option', { value: m.id, selected: Number(m.id) === ch.owner?.id }, `${memberName(m)}${m.role === 'gm' ? ' (GM)' : ''}`)));
     owner.addEventListener('change', () => save({ owner_id: Number(owner.value) }));
-    // a character no player of the campaign plays can travel with the party (a player's is in it with them)
-    // a player's character is in the party with its player until a GM takes it out (and them with it)
-    const party = el('input', { type: 'checkbox', checked: ch.owner_is_player ? !ch.party_out : !!ch.party_group_id });
+    // every character can travel with the party, in a group of its own (Party → Groups says which)
+    const party = el('input', { type: 'checkbox', checked: !!ch.party_group_id });
     party.addEventListener('change', () => save({ party: party.checked }));
     const shown = el('input', { type: 'checkbox', checked: ch.sheet_public });
     shown.addEventListener('change', () => save({ sheet_public: shown.checked }));
@@ -1083,7 +1076,7 @@ const Sheets = (() => {
       ctx.field('Name', name), ctx.field('Kind', kind), ctx.field('Player', owner),
       ch.kind === 'npc' ? el('label', { class: 'small check', 'data-tip': 'NPC sheets are for GMs only until this is on' }, shown, ' Show sheet to players') : null,
       gm ? el('label', { class: 'small check', 'data-tip': ch.owner_is_player
-        ? 'Its player is in the party while this is their active character. Untick to take them out of every party group (they died, left, or sit this arc out); tick to put them back in the main group'
+        ? 'Untick to take this character out of every party group (it died, left, or sits this arc out); tick to put it back in the main group'
         : 'Listed with the party\'s players on Travel and the maps, and goes where the party goes' },
         party, ' Travels with the party') : null,
       mine ? (Number(active) === ch.id ? el('span', { class: 'small muted' }, 'Your active character')
@@ -1307,7 +1300,7 @@ const Sheets = (() => {
             }, 'small danger', { 'data-tip': 'Delete this sheet. Its Encyclopedia entry stays' }) : null] });
           return more.querySelector('.kit-menu-list').childElementCount ? more : null;
         })())),
-        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player && ch.party_out ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
+        el('div', { class: 'small muted' }, [kindName(ch.kind), ch.owner?.name || 'No player', ch.party_group_id ? 'In the party' : ch.owner_is_player ? 'Out of the party' : null, `${ch.template.name} (${ch.template.game})`].filter(Boolean).join(' · ')),
         summaryLine(ch))),
         portraits,
         r.template_changed ? el('p', { class: 'notice' }, 'This sheet\'s template has changed since it was last opened. Anything that no longer fits is under Old fields.') : null,

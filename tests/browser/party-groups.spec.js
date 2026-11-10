@@ -261,27 +261,80 @@ test("Party: a player moves only themselves, starts a group of their own, and a 
   expect(r.json.groups.find(g => g.name === "Lone").members).toEqual([ids[1]]);
 });
 
-test("Party: a GM takes a player out of the party and brings them back with group_join", async ({ page, browser }) => {
-  const { cid, ids, players } = await setup(page, browser, "Party out", 2);
+test("Party: every character travels in a group of its own: a player's two split up, and a GM takes one out and back", async ({ page, browser }) => {
+  const { cid, ids, players } = await setup(page, browser, "Party chars", 2);
+  const [p0, p1] = [players[0].pp, players[1].pp];
   const tpl = (await api(page, "template_save", { name: `Out sheet ${cid}`, game: "Test RPG", layout: { sections: [{ key: "s", title: "S", fields: [{ key: "hp", label: "HP", type: "number" }] }] } })).json.template;
-  const pc = (await api(players[0].pp, "character_create", { template_id: tpl.id, name: "Benchwarmer" }, cid)).json.character;
+  const pc = (await api(p0, "character_create", { template_id: tpl.id, name: "Benchwarmer" }, cid)).json.character;
+  const alt = (await api(p0, "character_create", { template_id: tpl.id, name: "Second Self" }, cid)).json.character;
   const npc = (await api(page, "character_create", { template_id: tpl.id, name: "Stray Dog", kind: "npc", owner_id: 0 }, cid)).json.character;
-  const main = (await groups(page, cid))[0];
-  // out: in no group, and their sheet says so
-  let r = await api(page, "group_join", { id: null, member: ids[0] }, cid);
+  // a player's new characters start in the main group and stand for them; a player with no sheet is there as themselves
+  let g = await groups(page, cid);
+  const main = g[0];
+  expect(main.characters.filter(c => c.player_id === ids[0]).map(c => c.name).sort()).toEqual(["Benchwarmer", "Second Self"]);
+  expect(main.members).toEqual([ids[1]]);
+  expect(main.characters.map(c => c.name)).not.toContain("Stray Dog");
+  // the GM splits one of them off: the player's two characters travel apart
+  let r = await api(page, "group_split", { from_id: main.id, name: "Scouts", characters: [alt.id] }, cid);
   expect(r.status, JSON.stringify(r.json)).toBe(200);
-  expect(r.json.groups.flatMap(g => g.members)).not.toContain(ids[0]);
-  expect(sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
-  expect((await api(players[0].pp, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(403);   // they can't walk back in
-  // back in, by their character: their player joins the group
+  const scouts = r.json.groups.find(x => x.name === "Scouts");
+  expect(scouts.characters.map(c => c.name)).toEqual(["Second Self"]);
+  expect(r.json.groups[0].characters.map(c => c.name)).toContain("Benchwarmer");
+  // its player moves either of their own; no one else's
+  r = await api(p0, "group_join", { id: scouts.id, character: pc.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups.find(x => x.id === scouts.id).characters.map(c => c.name).sort()).toEqual(["Benchwarmer", "Second Self"]);
+  expect((await api(p1, "group_join", { id: main.id, character: pc.id }, cid)).status).toBe(403);
+  expect((await api(page, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(400);   // they have a sheet: move a character
+  // and starts a group of their own with one of them, never with someone else's
+  expect((await api(p0, "group_split", { from_id: scouts.id, name: "Lone", characters: [pc.id, alt.id] }, cid)).status).toBe(403);
+  r = await api(p0, "group_split", { from_id: scouts.id, name: "Lone", characters: [alt.id] }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups.find(x => x.name === "Lone").characters.map(c => c.name)).toEqual(["Second Self"]);
+  // a GM takes one out of the party: in no group, and its player can't walk it back in
+  r = await api(page, "group_join", { id: null, character: pc.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.groups.flatMap(x => x.characters).map(c => c.name)).not.toContain("Benchwarmer");
+  expect(sql(`SELECT party_group_id IS NULL FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
+  expect((await api(p0, "group_join", { id: main.id, character: pc.id }, cid)).status).toBe(403);
   r = await api(page, "group_join", { id: main.id, character: pc.id }, cid);
-  expect(r.status, JSON.stringify(r.json)).toBe(200);
-  expect(r.json.groups[0].members).toContain(ids[0]);
-  expect(sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
+  expect(r.json.groups[0].characters.map(c => c.name)).toContain("Benchwarmer");
   // a character with no player who wasn't travelling joins, and leaves again
   expect((await api(page, "group_join", { id: main.id, character: npc.id }, cid)).json.groups[0].characters.map(c => c.name)).toContain("Stray Dog");
   expect((await api(page, "group_join", { id: null, character: npc.id }, cid)).json.groups[0].characters.map(c => c.name)).not.toContain("Stray Dog");
-  expect((await api(players[1].pp, "group_join", { id: main.id, character: npc.id }, cid)).status).toBe(403);
+  expect((await api(p1, "group_join", { id: main.id, character: npc.id }, cid)).status).toBe(403);
+  // a player who leaves the campaign takes their characters out of the party
+  expect((await api(page, "member_remove", { user_id: ids[0] }, cid)).status).toBe(200);
+  g = await groups(page, cid);
+  expect(g.flatMap(x => x.characters).map(c => c.name)).not.toContain("Benchwarmer");
+  expect(g.flatMap(x => x.characters).map(c => c.name)).not.toContain("Second Self");
+});
+
+test("Party: a player with two characters moves either on Party → Groups, and starts a group with one", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, players } = await setup(page, browser, "Party two", 2);
+  const pp = players[0].pp;
+  const tpl = (await api(page, "template_save", { name: `Two sheet ${cid}`, game: "Test RPG", layout: { sections: [{ key: "s", title: "S", fields: [{ key: "hp", label: "HP", type: "number" }] }] } })).json.template;
+  await api(pp, "character_create", { template_id: tpl.id, name: "Ada" }, cid);
+  await api(pp, "character_create", { template_id: tpl.id, name: "Bea" }, cid);
+  const main = (await groups(page, cid))[0];
+  await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [players[1].id] }, cid);
+  await pp.goto(`#/c/${cid}/groups`);
+  // both are theirs to move, and no one else
+  await expect(pp.getByRole("button", { name: /^Move / })).toHaveCount(2);
+  await expect(rowOf(pp, "The party").locator(".group-member", { hasText: "Ada" })).toContainText("You");
+  await pp.getByRole("button", { name: "Move Bea" }).click();
+  await pp.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(rowOf(pp, "Scouts").locator(".group-members")).toContainText("Bea");
+  await expect(rowOf(pp, "The party").locator(".group-members")).toContainText("Ada");
+  // Start a group: Bea shares Scouts, so she can go off on her own (Ada is alone in hers)
+  await pp.getByRole("button", { name: "+ Start a group" }).click();
+  const dlg = pp.locator("dialog.party-dialog");
+  await dlg.getByLabel("Group name").fill("Bea alone");
+  await dlg.getByRole("button", { name: "Start" }).click();
+  await expect(rowOf(pp, "Bea alone").locator(".group-members")).toContainText("Bea");
+  await expect(pp.getByRole("button", { name: "+ Start a group" })).toBeHidden();   // each is alone now
+  expectNoErrors(errors);
 });
 
 test("Party: the GM drags someone onto another group, and into and out of the party from the tray", async ({ page, browser }) => {
@@ -293,6 +346,9 @@ test("Party: the GM drags someone onto another group, and into and out of the pa
   await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[2]] }, cid);
   await page.goto(`#/c/${cid}/groups`);
   const dragTo = async (row, target) => {
+    // on a phone the groups stack: start with the row near the top of the screen (clear of the edge that scrolls), so the
+    // group below it is on screen too
+    await row.evaluate(e => { e.scrollIntoView({ block: "start" }); scrollBy(0, -90); });
     const from = await row.locator(".group-grip").boundingBox(), to = await target.boundingBox();
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();

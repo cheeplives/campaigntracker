@@ -4854,11 +4854,12 @@
       actions.some(Boolean) ? el('div', { class: 'row evhead-actions' }, ...actions) : null);
   }
 
-  /** Party → Groups: a card for each of the party's groups, the main one first, with who is in it and where it is.
+  /** Party → Groups: a card for each of the party's groups, the main one first, with who is in it and where it is: its
+   * characters (players' and those with no player), each in a group of its own choosing, and any player with no sheet yet.
    * Anyone in a group is moved by dragging their row (by its ⠿ handle) onto another group, or with Move…. A GM moves
-   * anyone, brings in someone who isn't travelling from the tray underneath, splits, renames, sets the token, makes main,
-   * merges, and says whether players may move in and out of a group. A player moves only themselves, and can start a
-   * group of their own, between groups that let players move. */
+   * anyone, brings in a character who isn't travelling from the tray underneath, splits, renames, sets the token, makes
+   * main, merges, and says whether players may move in and out of a group. A player moves only their own characters, and
+   * can start a group of their own with one, between groups that let players move. */
   async function viewGroups() {
     const gm = isGM(), me = Number(S.user.id);
     let groups = [], mapNames = new Map(), characters = [];
@@ -4877,10 +4878,15 @@
     const charName = c => (c.kind === 'npc' ? `${c.name} (NPC)` : c.name);
     const labelled = (b, label) => { b.setAttribute('aria-label', label); return b; };
     const face = (url, name) => (typeof TokensTab !== 'undefined' ? TokensTab.face(el, url, name) : null);
-    const groupOf = uid => groups.find(g => g.members.includes(uid)) || null;
-    const mine = () => groupOf(me);
-    /** Who this member may move: a GM anyone; a player themselves, when their group lets players move. */
-    const canMove = (kind, id, g) => gm || (kind === 'member' && id === me && !!g?.players_can_move);
+    const size = g => g.members.length + (g.characters || []).length;
+    /** This player's own places in the groups: each of their characters, or themselves with no sheet, with its group. */
+    const mine = () => groups.flatMap(g => [...g.members.filter(u => u === me).map(u => ({ g, who: { member: u }, name: memberName(u) })),
+      ...(g.characters || []).filter(c => c.player_id === me).map(c => ({ g, who: { character: c.id }, name: c.name }))]);
+    /** The ones this player may split off into a group of their own: in a group that lets players move, with someone else in it. */
+    const splittable = () => mine().filter(x => x.g.players_can_move && size(x.g) > 1);
+    /** Whether this member may move someone: a GM anyone; a player their own characters (or themselves, with no sheet),
+     * when their group lets players move. own: it is theirs. */
+    const canMove = (own, g) => gm || (own && !!g?.players_can_move);
     /** The groups someone in group `from` may be sent to: every other group for a GM, only those letting players move for a player. */
     const targets = from => groups.filter(x => x.id !== from?.id && (gm || x.players_can_move));
     /** Put one person (who: { member } or { character }) in group id, or (null, GMs) take them out of the party. */
@@ -4905,10 +4911,17 @@
     };
     const splitParty = () => {
       const name = el('input', { maxlength: 100, required: true, autocomplete: 'off', placeholder: 'e.g. Scouts' });
-      if (!gm) {   // a player starts a group of their own, where they are now
-        const from = mine();
-        return partyDialog('Start a group', [field('Group name', name, `You leave ${from.name} and travel on your own until you join a group again`)], 'Start',
-          () => post('group_split', { from_id: from.id, name: name.value, members: [me] }, S.camp.id));
+      if (!gm) {   // a player starts a group of their own with one of their characters, where it is now
+        const own = splittable();
+        const who = own.length > 1 ? select(own.map((x, k) => [k, `${x.name} (in ${x.g.name})`]), 0) : null;
+        const pickd = () => own[who ? Number(who.value) : 0];
+        return partyDialog('Start a group', [who ? field('Who goes', who) : null,
+          field('Group name', name, own.length > 1 ? 'They leave their group and travel on their own until they join a group again'
+            : `${own[0].name} leaves ${own[0].g.name} and travels on their own until they join a group again`)], 'Start',
+        () => {
+          const x = pickd();
+          return post('group_split', { from_id: x.g.id, name: name.value, members: x.who.member ? [x.who.member] : [], characters: x.who.character ? [x.who.character] : [] }, S.camp.id);
+        });
       }
       const from = groups.length > 1 ? select(groups.map(g => [g.id, g.name]), groups[0].id) : null;
       const region = select([['', '— none —'], ...S.regions.map(r => [r.id, r.name])], groups[0].region_id ?? '');
@@ -4952,6 +4965,14 @@
     // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
     // finger on an iPad drags it as a mouse does; Move… does the same without dragging.
     let drag = null;
+    // near the top or bottom of the window the page scrolls while dragging, so a group below the screen (on a phone, or
+    // an iPad upright) can be reached; it keeps going while the finger rests there
+    let edge = 0, edgeTimer = null;
+    const edgeScroll = y => {
+      edge = y < 56 ? -1 : y > innerHeight - 56 ? 1 : 0;
+      if (edge && !edgeTimer) edgeTimer = setInterval(() => { if (edge) scrollBy(0, edge * 14); }, 16);
+      if (!edge && edgeTimer) { clearInterval(edgeTimer); edgeTimer = null; }
+    };
     const dropAt = (x, y, from) => {
       const t = document.elementFromPoint(x, y)?.closest('[data-drop]');
       return t && t.dataset.drop !== String(from ?? 'out') && (t.dataset.drop !== 'out' || gm) ? t : null;
@@ -4979,12 +5000,14 @@
         }
         drag.ghost.style.left = `${ev.clientX - drag.dx}px`;
         drag.ghost.style.top = `${ev.clientY - drag.dy}px`;
+        edgeScroll(ev.clientY);
         const hot = dropAt(ev.clientX, ev.clientY, drag.from);
         if (hot !== drag.hot) { drag.hot?.classList.remove('drop-hot'); hot?.classList.add('drop-hot'); drag.hot = hot; }
       });
       const end = ev => {
         if (!drag || drag.row !== row) return;
         const d = drag; drag = null;
+        edgeScroll(innerHeight / 2);
         d.hot?.classList.remove('drop-hot');
         row.classList.remove('dragging');
         document.body.classList.remove('group-dragging');
@@ -4998,23 +5021,25 @@
       return h;
     };
 
-    /** A row for one person: the ⠿ handle and Move… where this member may move them. */
-    const personRow = (from, kind, id, name, sub, url) => {
-      const who = kind === 'member' ? { member: id } : { character: id };
-      const movable = canMove(kind, id, from) && (targets(from).length || (gm && from));
-      const row = el('li', { class: 'group-member' + (kind === 'npc' ? ' npc' : '') + (kind === 'member' && id === me ? ' me' : '') });
+    /** A row for one person (who: { member } or { character }): the ⠿ handle and Move… where this member may move them.
+     * own: it is this player's. */
+    const personRow = (from, who, name, sub, url, { npc = false, own = false } = {}) => {
+      const movable = canMove(own, from) && (targets(from).length || (gm && from));
+      const row = el('li', { class: 'group-member' + (npc ? ' npc' : '') + (own ? ' me' : '') });
       row.append(...clean([movable ? handle(row, who, name, from) : null, face(url, name),
         el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
         movable ? labelled(btn('Move…', () => moveTo(from, who, name), 'small', from ? `Send ${name} to another group` : `Bring ${name} into a group of the party`), `Move ${name}`) : null]));
       return row;
     };
     const groupCard = g => {
-      const players = g.members.map(uid => {
-        const m = member(uid);
-        return personRow(g, 'member', uid, memberName(uid), uid === me ? 'You' : m?.character_name && m.display_name ? `Played by ${m.display_name}` : 'Player', m?.token_url || null);
+      // players with no sheet stand in as themselves; everyone else is a character, a player's first
+      const players = g.members.map(uid => personRow(g, { member: uid }, memberName(uid), uid === me ? 'You' : 'Player (no character sheet yet)', member(uid)?.token_url || null, { own: uid === me }));
+      const chars = (g.characters || []).map(c => {
+        const m = c.player_id ? member(c.player_id) : null;
+        const sub = c.player_id === me ? 'You' : m ? `Played by ${m.display_name || m.character_name}` : c.kind === 'npc' ? 'NPC' : 'PC with no player';
+        const url = S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || (m && Number(m.active_character_id) === c.id ? m.token_url : null) || null;
+        return personRow(g, { character: c.id }, c.name, sub, url, { npc: c.kind === 'npc', own: c.player_id === me });
       });
-      const chars = (g.characters || []).map(c => personRow(g, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name, c.kind === 'npc' ? 'NPC' : 'PC with no player',
-        S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || null));
       const dropOk = gm || g.players_can_move;
       return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name, 'data-drop': dropOk ? g.id : null },
         el('div', { class: 'group-head' }, face(g.token_url, g.name),
@@ -5044,41 +5069,39 @@
           try { await post('group_merge', { id: g.id, into_id: groups[0].id }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
         }, 'small', `Everyone in ${g.name} goes back to ${groups[0].name}, and ${g.name} is gone`)) : null);
     };
-    /** The GM's tray: characters who aren't travelling. A player's active character the GM took out of the party, and every
-     * character with no player that isn't in a group; a player's other characters wait on their account. */
+    /** The GM's tray: the characters who aren't in any group, players' and those with no player alike. */
     const drawTray = () => {
-      const active = new Set(S.members.map(m => Number(m.active_character_id)).filter(Boolean));
-      const out = characters.filter(c => (c.owner_is_player ? c.party_out && active.has(c.id) : !c.party_group_id));
+      const out = characters.filter(c => !c.party_group_id);
       const find = el('input', { type: 'search', placeholder: 'Find a character', 'aria-label': 'Find a character not travelling' });
       const list = el('ul', { class: 'group-members group-tray-list' });
       const fill = () => {
         const q = find.value.trim().toLowerCase();
         const shown = out.filter(c => !q || c.name.toLowerCase().includes(q));
-        list.replaceChildren(...shown.map(c => personRow(null, c.kind === 'npc' ? 'npc' : 'pc', c.id, c.name,
-          [c.kind === 'npc' ? 'NPC' : 'PC', c.owner?.name ? `Played by ${c.owner.name}` : 'No player', c.owner_is_player ? 'Out of the party' : null].filter(Boolean).join(' · '), c.pic || null)));
-        if (!shown.length) list.append(el('li', { class: 'muted small' }, out.length ? 'No one by that name.' : 'Everyone with a sheet is travelling.'));
+        list.replaceChildren(...shown.map(c => personRow(null, { character: c.id }, c.name,
+          [c.kind === 'npc' ? 'NPC' : 'PC', c.owner?.name ? `Played by ${c.owner.name}` : 'No player'].join(' · '), c.pic || null, { npc: c.kind === 'npc' })));
+        if (!shown.length) list.append(el('li', { class: 'muted small' }, out.length ? 'No one by that name.' : 'Every character is travelling.'));
       };
       find.addEventListener('input', fill);
       fill();
       tray.replaceChildren(...clean([el('summary', {}, el('span', { class: 'group-tray-title' }, 'Not travelling with any group'), el('span', { class: 'muted small' }, ` ${out.length}`)),
-        el('p', { class: 'small muted' }, 'Characters with no player who don\'t travel with the party, and players\' characters taken out of it. Drag one onto a group to bring them along, or drag someone here to take them out.'),
+        el('p', { class: 'small muted' }, 'Characters who don\'t travel with any group: players\' characters sitting this out, and characters with no player. Drag one onto a group to bring them along, or drag someone here to take them out.'),
         out.length > 6 ? find : null, list]));
     };
     const draw = () => {
       board.replaceChildren(...(groups.length ? groups.map(groupCard)
-        : [el('p', { class: 'muted' }, 'No one is in the party yet. Players join it when they join the campaign, and a character joins it with Travels with the party.')]));
+        : [el('p', { class: 'muted' }, 'No one is in the party yet. A player\'s character joins it when it is made, and any other with Travels with the party.')]));
       if (gm && typeof Sheets !== 'undefined') drawTray();
       // display, not hidden: a button's own display would show it anyway
       tray.style.display = gm && typeof Sheets !== 'undefined' ? '' : 'none';
-      start.style.display = (gm ? groups.length : mine()?.players_can_move && mine().members.length + (mine().characters || []).length > 1) ? '' : 'none';
+      start.style.display = (gm ? groups.length : splittable().length) ? '' : 'none';
     };
     const start = btn(gm ? '+ New group' : '+ Start a group', splitParty, 'primary new-btn', gm ? 'Send some of the party off as a group of their own: name it and pick who goes'
-      : 'Leave your group and start one of your own, where you are now');
+      : 'Take your character out of their group and start one of their own, where they are now');
     draw();
     mount(...campaignHeader('groups'), el('div', { class: 'card' }, partySubtabs('groups', start),
       el('p', { class: 'small muted party-intro' }, gm
         ? 'Who travels with whom. Drag someone by ⠿ onto another group, or press their Move… button. The main group\'s region is the campaign\'s, and each group has its own marker on the maps.'
-        : 'Who travels with whom, and where each group is. Drag yourself by ⠿ onto another group, or press Move…, unless the GM has kept a group together.')), board, tray);
+        : 'Who travels with whom, and where each group is. Drag your character by ⠿ onto another group, or press Move…, unless the GM has kept a group together.')), board, tray);
   }
 
   // ------------------------------------------------------------ travel tab
@@ -5795,15 +5818,6 @@
     const startDay = datePicker(today()), endDay = datePicker(today() + 6);
     const dayFields = el('div', {}, field('Start date', startDay), field('End date', endDay, 'Every shift from the start of the first day to the end of the last'));
     const title = el('input', { name: 'title', maxlength: 200, placeholder: 'e.g. Back at the Grey Lady inn' });
-    // which group it is for, once the party has split: only that group's players and characters are offered for it
-    const party = el('select', { name: 'group', 'aria-label': 'Party' });
-    const partyField = field('Party', party, 'Only this group\'s players and characters can be put on its activities');
-    partyField.hidden = true;
-    dtGroups().then(gs => {
-      if (gs.length < 2) return;
-      party.replaceChildren(...gs.map(g => el('option', { value: g.id, selected: g.is_main }, g.name)), el('option', { value: '' }, 'The whole party (every group)'));
-      partyField.hidden = false;
-    });
     const moveClock = el('input', { type: 'checkbox', name: 'move', checked: true });
     const moveLbl = el('span');
     const err = el('p', { class: 'bad small', hidden: true });
@@ -5829,7 +5843,6 @@
         el('h3', {}, 'New downtime'),
         el('div', { class: 'field', role: 'radiogroup', 'aria-label': 'Kind' }, el('span', { class: 'lbl' }, 'Kind'), el('div', { class: 'row' }, kinds)),
         restField, dayFields,
-        partyField,
         field('Title (optional)', title),
         el('label', { class: 'inline' }, moveClock, moveLbl),
         err,
@@ -5840,7 +5853,6 @@
       e.preventDefault();
       err.hidden = true;
       const k = kind(), body = { kind: k, title: title.value };
-      if (!partyField.hidden && party.value) body.group_id = Number(party.value);
       if (k === 'downtime') {
         body.start_day = startDay.getAbs(); body.end_day = endDay.getAbs();
         if (body.end_day < body.start_day) { err.textContent = 'The end date is before the start date.'; err.hidden = false; return; }
@@ -5874,8 +5886,9 @@
     return `${E.fmtShift(c, x.start_shift)}${x.slots > 1 ? ` → ${E.fmtShift(c, x.end_shift)}` : ''} · ${x.slots} ${dtWord(x.slots)}`;
   }
 
-  /** One downtime card. The GM picks the party group it is for (once the party has split), its activities and who
-   * takes part: that group's players and characters with no player. The public notes are open to everyone.
+  /** One downtime card. The GM picks its activities and who takes part: any player, and any character with no player
+   * who travels with the party, whatever group they are in (time passes for everyone alike). The public notes are open
+   * to everyone.
    * chars: id => {name, kind} of the characters its activities name. */
   function downtimeCard(x, groups = [], chars = {}) {
     const k = DOWNTIME_KINDS[x.kind] || { label: x.kind, icon: '' };
@@ -5894,7 +5907,6 @@
     const card = el('section', { class: 'card downtime', 'data-kind': x.kind },
       el('div', { class: 'row spread' },
         el('h3', {}, `${k.icon} ${k.label}`, x.title ? el('span', { class: 'dt-title' }, ` · ${x.title}`) : null,
-          x.group_name ? el('span', { class: 'dt-group', 'data-tip': 'The party group this is for' }, `👥 ${x.group_name}`) : null,
           going ? el('span', { class: 'nowtag', 'data-tip': 'The campaign clock is inside this one' }, 'NOW') : null),
         el('small', { class: 'muted' }, downtimeWhen(x))));
     const notes = el('textarea', { rows: 3, value: x.notes || '', 'aria-label': 'Notes', placeholder: 'Notes for everyone',
@@ -5915,15 +5927,9 @@
       return card;
     }
 
-    // The party group it is for (null: the whole party), and who that offers: its players, then its characters with
-    // no player. Without groups to go on, every player.
-    let gid = x.group_id;
-    const offeredPeople = () => {
-      if (!groups.length) return players.map(m => `u${m.id}`);
-      const gs = gid ? groups.filter(g => g.id === gid) : groups;
-      return [...gs.flatMap(g => g.members).filter(id => byId.get(Number(id))?.role === 'player').map(id => `u${id}`),
-        ...gs.flatMap(g => g.characters || []).map(c => `c${c.id}`)];
-    };
+    // Who it offers: every player, then the characters with no player who travel with the party, in any group.
+    const offeredPeople = () => [...players.map(m => `u${m.id}`),
+      ...groups.flatMap(g => g.characters || []).filter(c => !c.player_id).map(c => `c${c.id}`)];
     // picked: name -> Set of who; the offered activities first, then custom ones in the order they were added
     const picked = new Map(x.activities.map(a => [a.name, new Set(keysOf(a))]));
     const offered = dtOffered(x.kind);
@@ -5932,7 +5938,7 @@
     const row = (name, desc, people) => {
       const on = picked.has(name);
       const box = el('input', { type: 'checkbox', checked: on, 'aria-label': name, onchange: () => { box.checked ? picked.set(name, new Set()) : picked.delete(name); draw(); } });
-      // someone already on it who isn't in the group any more stays, so a GM sees and can take them off
+      // someone already on it who isn't offered any more (left the party) stays, so a GM sees and can take them off
       const here = on ? [...people, ...[...picked.get(name)].filter(p => !people.includes(p) && nameOf(p))] : [];
       const who = here.length ? el('div', { class: 'dt-who', role: 'group', 'aria-label': `Who does ${name}` }, here.map(p => {
         const sel = picked.get(name).has(p), nm = nameOf(p);
@@ -5947,15 +5953,6 @@
       list.replaceChildren(...offered.map(([n, desc]) => row(n, desc, people)), ...custom.map(n => row(n, null, people)));
     };
     draw();
-    // Picking another group takes off anyone who isn't in it.
-    const party = groups.length > 1 || gid ? select([...groups.map(g => [g.id, g.name]), ['', 'The whole party (every group)']], gid ?? '',
-      { 'aria-label': 'Party', 'data-tip': 'Which group of the party this is for. Only its players and characters can be put on the activities' }) : null;
-    party?.addEventListener('change', () => {
-      gid = party.value ? Number(party.value) : null;
-      const people = new Set(offeredPeople());
-      for (const s of picked.values()) for (const p of [...s]) if (!people.has(p)) s.delete(p);
-      draw();
-    });
     const customIn = el('input', { maxlength: 100, placeholder: 'Custom activity', 'aria-label': 'Custom activity', class: 'grow' });
     const addCustom = () => {
       const n = customIn.value.trim();
@@ -5968,13 +5965,13 @@
     customIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); addCustom(); } });
     const title = el('input', { maxlength: 200, value: x.title || '', 'aria-label': 'Title', placeholder: 'Title (optional)' });
     const gmn = el('textarea', { rows: 3, value: x.gm_notes || '', 'aria-label': 'GM notes', placeholder: 'GM-only notes 🔒', 'data-tip': 'Only GMs ever see these' });
-    const save = btn('Save', null, 'small primary', 'Save this card\'s party, title, activities and notes');
+    const save = btn('Save', null, 'small primary', 'Save this card\'s title, activities and notes');
     save.addEventListener('click', busy(save, async () => {
       const acts = [...offered.map(([n]) => n), ...custom].filter(n => picked.has(n)).map(n => {
         const who = [...picked.get(n)];
         return { name: n, members: who.filter(p => p[0] === 'u').map(p => Number(p.slice(1))), characters: who.filter(p => p[0] === 'c').map(p => Number(p.slice(1))) };
       });
-      await post('downtime_save', { id: x.id, group_id: gid, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
+      await post('downtime_save', { id: x.id, title: title.value, activities: acts, notes: notes.value, gm_notes: gmn.value }, S.camp.id);
       await route(); toast(`${k.label} saved`);   // after the redraw, so the card you see next is the saved one
       offerNouns([{ text: `${title.value}\n${custom.filter(n => picked.has(n)).join('\n')}`, title: true, label: `${k.label} title and activities` },
         { text: notes.value, label: `${k.label} notes` }, { text: gmn.value, secret: true, label: `${k.label} GM notes` }]);
@@ -5985,7 +5982,7 @@
     }, 'small danger', 'Delete this card');
     const anyone = offeredPeople().some(nameOf);
     card.append(
-      party ? el('div', { class: 'grid2' }, field('Title', title), field('Party', party)) : field('Title', title),
+      field('Title', title),
       el('span', { class: 'lbl' }, 'Activities', tip(anyone ? 'Tick what the party does, then pick who does each one: its players, and its characters with no player'
         : 'Tick what the party does. Add players on the Members tab, or tick Travels with the party on a character, to put them on activities')),
       list,
