@@ -843,7 +843,7 @@ const Sheets = (() => {
   /** A character's portrait, or its initials in a circle where it has none. */
   function portrait(c, cls = '') {
     const initials = String(c.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-    return c.pic ? el('img', { src: c.pic, alt: '', class: `character-pic ${cls}`, loading: 'lazy' })
+    return c.pic ? DiscPic.disc(c.pic, `character-pic ${cls}`, { loading: 'lazy' })
       : el('span', { class: `character-pic character-initials ${cls}`, 'aria-hidden': 'true' }, initials);
   }
   function characterCard(c) {
@@ -1115,7 +1115,19 @@ const Sheets = (() => {
         toast(fileId ? 'Portrait set' : 'Portrait is the entry\'s first picture again');
         done(ch);
         load();
-      } catch (err) { status.textContent = ''; toast(err.message, true); }
+        return true;
+      } catch (err) { status.textContent = ''; toast(err.message, true); return false; }
+    };
+    // Fit in the circle: move and zoom the portrait in its disc (static/discpic.js); offered straight after an upload too
+    const fit = async () => {
+      try {
+        const file = await DiscPic.frame(ch.pic, (a, body) => ctx.post(a, body, cid()));
+        if (!file) return;
+        ch.pic = file.url;
+        toast('Portrait framed');
+        done(ch);
+        load();
+      } catch (err) { toast(err.message, true); }
     };
     async function load() {
       let r;
@@ -1130,7 +1142,7 @@ const Sheets = (() => {
         if (!f) return;
         if (up.max_bytes && f.size > up.max_bytes) return toast(`${f.name} is too big`, true);
         status.textContent = `Uploading ${f.name}…`;
-        try { const file = await ctx.uploadFile('encyclopedia', ch.entry_id, f); await use(file.id); }
+        try { const file = await ctx.uploadFile('encyclopedia', ch.entry_id, f); if (await use(file.id)) fit(); }
         catch (err) { status.textContent = ''; toast(err.message, true); }
       });
       const findSlot = el('div', { class: 'find-slot' });
@@ -1146,8 +1158,9 @@ const Sheets = (() => {
         el('div', { class: 'row' },
           up.ready ? el('label', { class: 'button small primary file-add', 'data-tip': 'Upload a picture (JPEG, PNG, GIF, WebP) for the portrait' }, input, '📎 Upload a picture') : null,
           up.ready && ctx.findImage ? button('🖼️ Find Image', () => {
-            findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(ctx.findImage('encyclopedia', ch.entry_id, ch.name, { copyOnly: true, onAdded: file => use(file.id) }));
+            findSlot.firstChild ? findSlot.replaceChildren() : findSlot.replaceChildren(ctx.findImage('encyclopedia', ch.entry_id, ch.name, { copyOnly: true, onAdded: async file => { if (await use(file.id)) fit(); } }));
           }, 'small', { 'data-tip': 'Search open picture libraries and museums for a portrait, credited' }) : null,
+          ch.pic && DiscPic.fileId(ch.pic) ? button('⤢ Fit in the circle', fit, 'small', { 'data-tip': 'Move and zoom the portrait inside its circle, so the face shows' }) : null,
           chosen && pics.length > 1 ? button('Use the first picture', () => use(0), 'small', { 'data-tip': 'Go back to the first picture on the Encyclopedia entry' }) : null,
           !up.ready && up.problem ? el('span', { class: 'small muted' }, up.problem) : null),
         status, findSlot);

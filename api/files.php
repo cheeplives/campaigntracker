@@ -51,6 +51,15 @@ function attachment_credit(array $a): ?array {
     return ['title' => $a['credit_title'], 'author' => $a['credit_author'], 'author_url' => $a['credit_author_url'], 'license' => $a['credit_license'],
         'license_url' => $a['credit_license_url'], 'source' => $a['credit_source'], 'source_url' => $a['credit_source_url']];
 }
+/** A picture's address. With its attachments row ($a, or one with its frame_x, frame_y and frame_zoom columns), the
+ * way it sits in a round disc rides along after a # ("#frame=50,20,180"), which the browser never sends: the file is the
+ * same whatever the framing, and the disc reads it (static/kit.js, KIT.discPic). */
+function pic_url(int $cid, int $id, ?array $a = null): string {
+    $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => $id]);
+    if ($a !== null && ($a['frame_x'] ?? null) !== null)
+        $url .= '#frame=' . (int)$a['frame_x'] . ',' . (int)$a['frame_y'] . ',' . (int)($a['frame_zoom'] ?? 100);
+    return $url;
+}
 function attachment_out(array $a): array {
     $id = (int)$a['id'];
     return ['id' => $id, 'parent_type' => $a['parent_type'], 'parent_id' => (int)$a['parent_id'], 'name' => $a['original_name'],
@@ -58,7 +67,7 @@ function attachment_out(array $a): array {
         'width' => $a['width'] !== null ? (int)$a['width'] : null, 'height' => $a['height'] !== null ? (int)$a['height'] : null,
         'caption' => $a['caption'], 'is_secret' => (bool)(int)$a['is_secret'], 'created_by' => $a['created_by'] !== null ? (int)$a['created_by'] : null,
         'credit' => attachment_credit($a), 'embed' => $a['kind'] === 'embed' ? ['url' => $a['embed_url'], 'gone' => ($a['embed_src'] ?? null) === null] : null,
-        'url' => 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$a['campaign_id'], 'id' => $id])];
+        'url' => pic_url((int)$a['campaign_id'], $id, $a)];
 }
 /** The files on every Encyclopedia entry this member may see. */
 function entry_files(int $cid, bool $isGm): array {
@@ -366,6 +375,26 @@ function files_action(string $action): void {
             if ((int)$st->fetchColumn() > 0) fail('This picture is in use; hide the map or token instead');
         }
         db()->prepare('UPDATE attachments SET caption=?, is_secret=? WHERE id=?')->execute([$caption, $secret, $a['id']]);
+        $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
+        $st->execute([$a['id']]);
+        out(['ok' => true, 'file' => attachment_out($st->fetch())]);
+
+    case 'file_frame': // how a picture sits in its round disc: x, y (0-100, the point kept in the middle), zoom (100-400)
+        $cid = cid();
+        $role = role($cid);
+        $a = attachment_row($cid, int_in(p('id'), 1), $role);
+        if (!in_array($a['kind'], ['image', 'embed'], true)) fail('Only a picture can be framed', 400);
+        // whoever may change the picture, and the player of a character on whose entry it is (it may be their portrait)
+        $st = db()->prepare('SELECT COUNT(*) FROM sheet_characters WHERE campaign_id=? AND entry_id=? AND owner_id=?');
+        $st->execute([$cid, (int)$a['parent_id'], me()['id']]);
+        if (!attachment_mine($a, $role) && !($a['parent_type'] === 'encyclopedia' && (int)$st->fetchColumn() > 0))
+            fail('Only a GM, whoever added the picture or the character\'s player can frame it', 403);
+        $x = int_in(p('x', 50), 0, 100);
+        $y = int_in(p('y', 50), 0, 100);
+        $zoom = int_in(p('zoom', 100), 100, 400);
+        $plain = $x === 50 && $y === 50 && $zoom === 100;   // the middle, just filling the circle: as if never framed
+        db()->prepare('UPDATE attachments SET frame_x=?, frame_y=?, frame_zoom=? WHERE id=?')
+            ->execute($plain ? [null, null, null, $a['id']] : [$x, $y, $zoom, $a['id']]);
         $st = db()->prepare('SELECT * FROM attachments WHERE id=?');
         $st->execute([$a['id']]);
         out(['ok' => true, 'file' => attachment_out($st->fetch())]);

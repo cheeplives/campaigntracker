@@ -472,8 +472,9 @@ function party_rows(int $cid): array {
 function party_groups(int $cid, bool $isGm = true): array {
     $rows = party_rows($cid);
     $ids = array_map(fn($g) => (int)$g['id'], $rows);
-    $st = db()->prepare('SELECT g.id, m.is_secret AS map_secret, t.id AS tid, t.image_id AS timg, (t.is_secret OR COALESCE(te.is_secret, 0)) AS tsecret
-        FROM party_groups g LEFT JOIN maps m ON m.id=g.map_id LEFT JOIN tokens t ON t.id=g.token_id LEFT JOIN encyclopedia_entries te ON te.id=t.entry_id WHERE g.campaign_id=?');
+    $st = db()->prepare('SELECT g.id, m.is_secret AS map_secret, t.id AS tid, t.image_id AS timg, (t.is_secret OR COALESCE(te.is_secret, 0)) AS tsecret, ta.frame_x, ta.frame_y, ta.frame_zoom
+        FROM party_groups g LEFT JOIN maps m ON m.id=g.map_id LEFT JOIN tokens t ON t.id=g.token_id LEFT JOIN encyclopedia_entries te ON te.id=t.entry_id
+        LEFT JOIN attachments ta ON ta.id=t.image_id WHERE g.campaign_id=?');
     $st->execute([$cid]);
     $extra = [];
     foreach ($st->fetchAll() as $e) $extra[(int)$e['id']] = $e;
@@ -484,7 +485,7 @@ function party_groups(int $cid, bool $isGm = true): array {
         $hideTok = !$isGm && !empty($e['tsecret']);
         $url = null;
         if (!$hideTok && ($e['timg'] ?? null) !== null)
-            $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$e['timg']]);
+            $url = pic_url($cid, (int)$e['timg'], $e);
         $num = fn($k) => $g[$k] !== null && !$hideMap ? (float)$g[$k] : null;
         return ['id' => (int)$g['id'], 'name' => $g['name'], 'members' => party_members($g), 'characters' => $chars[(int)$g['id']] ?? [],
             'region_id' => $g['region_id'] !== null ? (int)$g['region_id'] : null,
@@ -683,7 +684,8 @@ function token_hidden(array $t): bool {
     return (bool)(int)$t['is_secret'] || (bool)(int)($t['entry_secret'] ?? 0);
 }
 const TOKEN_SELECT = 'SELECT t.*, e.is_secret AS entry_secret, (SELECT GROUP_CONCAT(g.id ORDER BY g.id) FROM party_groups g WHERE g.token_id=t.id) AS group_ids,
-    a.credit_title, a.credit_author, a.credit_author_url, a.credit_license, a.credit_license_url, a.credit_source, a.credit_source_url
+    a.credit_title, a.credit_author, a.credit_author_url, a.credit_license, a.credit_license_url, a.credit_source, a.credit_source_url,
+    a.frame_x, a.frame_y, a.frame_zoom
     FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id LEFT JOIN attachments a ON a.id=t.image_id WHERE t.campaign_id=?';
 /** A token of campaign $cid, or fail as not found. */
 function token_row(int $cid, int $id): array {
@@ -698,7 +700,7 @@ function token_row(int $cid, int $id): array {
 function token_out(array $t, bool $isGm): array {
     $url = null;
     if ($t['image_id'] !== null && ($isGm || !token_hidden($t)))
-        $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$t['campaign_id'], 'id' => (int)$t['image_id']]);
+        $url = pic_url((int)$t['campaign_id'], (int)$t['image_id'], $t);
     return ['id' => (int)$t['id'], 'name' => $t['name'], 'kind' => $t['kind'], 'size_squares' => (int)$t['size_squares'],
         'member_id' => $t['member_id'] !== null ? (int)$t['member_id'] : null, 'entry_id' => $t['entry_id'] !== null ? (int)$t['entry_id'] : null,
         'is_secret' => (bool)(int)$t['is_secret'], 'image_url' => $url, 'credit' => $url !== null ? attachment_credit($t) : null,
@@ -716,27 +718,28 @@ function tokens_list(int $cid): array {
  * GM-only entry or picture. */
 function token_urls(int $cid, bool $isGm): array {
     $out = ['member' => [], 'entry' => []];
-    $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
-        WHERE t.campaign_id=? AND t.image_id IS NOT NULL AND (t.member_id IS NOT NULL OR t.entry_id IS NOT NULL)'
+    $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id, a.frame_x, a.frame_y, a.frame_zoom FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
+        LEFT JOIN attachments a ON a.id=t.image_id WHERE t.campaign_id=? AND t.image_id IS NOT NULL AND (t.member_id IS NOT NULL OR t.entry_id IS NOT NULL)'
         . ($isGm ? '' : ' AND t.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)') . ' ORDER BY t.id ASC');   // the first-assigned (lowest id) token wins a member or entry
     $st->execute([$cid]);
     foreach ($st->fetchAll() as $r) {
-        $url = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['image_id']]);
+        $url = pic_url($cid, (int)$r['image_id'], $r);
         if ($r['member_id'] !== null) $out['member'][(int)$r['member_id']] ??= $url;
         if ($r['entry_id'] !== null) $out['entry'][(int)$r['entry_id']] ??= $url;
     }
-    $st = db()->prepare('SELECT c.entry_id, c.portrait_id FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+    $st = db()->prepare('SELECT c.entry_id, c.portrait_id, pa.frame_x, pa.frame_y, pa.frame_zoom FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
         JOIN attachments pa ON pa.id=c.portrait_id AND pa.campaign_id=c.campaign_id AND pa.parent_type=\'encyclopedia\' AND pa.parent_id=c.entry_id
         WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0 AND pa.is_secret=0'));
     $st->execute([$cid]);
     foreach ($st->fetchAll() as $r)
-        $out['entry'][(int)$r['entry_id']] ??= 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['portrait_id']]);
-    $st = db()->prepare('SELECT a.parent_id, MIN(a.id) AS id FROM attachments a JOIN encyclopedia_entries e ON e.id=a.parent_id AND e.campaign_id=a.campaign_id
+        $out['entry'][(int)$r['entry_id']] ??= pic_url($cid, (int)$r['portrait_id'], $r);
+    $st = db()->prepare('SELECT p.parent_id, p.id, p.frame_x, p.frame_y, p.frame_zoom FROM attachments p JOIN (SELECT MIN(a.id) AS id FROM attachments a
+        JOIN encyclopedia_entries e ON e.id=a.parent_id AND e.campaign_id=a.campaign_id
         WHERE a.campaign_id=? AND a.parent_type=\'encyclopedia\' AND (a.kind=\'image\' OR (a.kind=\'embed\' AND a.embed_src IS NOT NULL))'
-        . ($isGm ? '' : ' AND a.is_secret=0 AND e.is_secret=0') . ' GROUP BY a.parent_id');
+        . ($isGm ? '' : ' AND a.is_secret=0 AND e.is_secret=0') . ' GROUP BY a.parent_id) f ON f.id=p.id');
     $st->execute([$cid]);
     foreach ($st->fetchAll() as $r)
-        $out['entry'][(int)$r['parent_id']] ??= 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['id']]);
+        $out['entry'][(int)$r['parent_id']] ??= pic_url($cid, (int)$r['id'], $r);
     return $out;
 }
 /** A token's name from its file's: no extension, _ and - as spaces, a capital first letter ("pip-the-bold.png": "Pip the bold"). */

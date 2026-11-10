@@ -48,11 +48,12 @@ function entry_index(int $cid, bool $isGm, array $tokens = []): array {
 }
 /** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
 function entry_pics(int $cid, bool $isGm): array {
-    $st = db()->prepare("SELECT a.parent_id, MIN(a.id) AS id FROM attachments a WHERE a.campaign_id=? AND a.parent_type='encyclopedia'
-        AND (a.kind='image' OR (a.kind='embed' AND a.embed_src IS NOT NULL))" . ($isGm ? '' : ' AND a.is_secret=0') . ' GROUP BY a.parent_id');
+    $st = db()->prepare("SELECT p.parent_id, p.id, p.frame_x, p.frame_y, p.frame_zoom FROM attachments p JOIN (SELECT MIN(a.id) AS id FROM attachments a
+        WHERE a.campaign_id=? AND a.parent_type='encyclopedia' AND (a.kind='image' OR (a.kind='embed' AND a.embed_src IS NOT NULL))"
+        . ($isGm ? '' : ' AND a.is_secret=0') . ' GROUP BY a.parent_id) f ON f.id=p.id');
     $st->execute([$cid]);
     $out = [];
-    foreach ($st->fetchAll() as $r) $out[(int)$r['parent_id']] = 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['id']]);
+    foreach ($st->fetchAll() as $r) $out[(int)$r['parent_id']] = pic_url($cid, (int)$r['id'], $r);
     return $out;
 }
 /** An entry row's aliases as a list. */

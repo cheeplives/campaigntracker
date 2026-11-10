@@ -11,7 +11,7 @@
 const fs = require('fs'), path = require('path');
 const { browser, serve, args } = require('./lib');
 
-const SCRIPTS = ['kit.js', 'sheetlayout.js', 'sheetimport.js', 'pdfimport.js', 'sheets.js'];
+const SCRIPTS = ['kit.js', 'discpic.js', 'sheetlayout.js', 'sheetimport.js', 'pdfimport.js', 'sheets.js'];
 
 async function preview(file, outDir, widths = [1280, 820]) {
   const t = JSON.parse(fs.readFileSync(file, 'utf8'));

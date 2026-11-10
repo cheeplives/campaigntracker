@@ -3096,7 +3096,7 @@
     const pins = (S.mapIndex || []).filter(p => p.entry_id === e.id);
     const card = el('div', { class: 'peek surface-float', role: 'dialog', 'aria-label': e.name },
       el('div', { class: 'peek-head' },
-        e.pic ? el('img', { class: 'peek-pic', src: e.pic, alt: '' }) : el('div', { class: 'peek-pic peek-icon', 'aria-hidden': 'true' }, cat ? cat[2] : '📖'),
+        e.pic ? DiscPic.disc(e.pic, 'peek-pic') : el('div', { class: 'peek-pic peek-icon', 'aria-hidden': 'true' }, cat ? cat[2] : '📖'),
         el('div', {}, el('a', { class: 'peek-name', href, onclick: closePeek }, e.name),
           el('div', { class: 'etags' }, cat ? el('span', { class: 'chip enc-cat' }, `${cat[2]} ${cat[1]}`) : null, e.is_secret ? secretTag() : null))),
       el('p', { class: e.preview ? 'peek-text' : 'peek-text muted' }, e.preview || 'Nothing written about it yet.'),

@@ -1625,22 +1625,22 @@ test("Maps: an entry's pin wears the entry's token, unless the pin has an icon o
   const entryId = (await api(page, "entry_save", { name: "Greywater Keep", category: "location" }, cid)).json.id;
   const pinId = (await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "entry", entry_id: entryId }, cid)).json.pin.id;
   await page.goto(`#/c/${cid}/maps/${mapId}`);
-  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(0);   // no token yet: the kind's glyph
+  await expect(page.locator(".map-pin .map-marker-icon img")).toHaveCount(0);   // no token yet: the kind's glyph
   const t = await tokenUpload(page, cid, "Keep");
   expect((await api(page, "token_save", { id: t.id, entry_id: entryId }, cid)).status).toBe(200);
   await page.reload();
-  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(1);
+  await expect(page.locator(".map-pin .map-marker-icon img")).toHaveCount(1);
   await expect(page.locator(".map-place img.map-place-token")).toHaveCount(1);   // and in the list of locations
   await pp.goto(`#/c/${cid}/maps/${mapId}`);
-  await expect(pp.locator(".map-pin img.map-marker-icon")).toHaveCount(1);       // a player sees a token that isn't GM only
+  await expect(pp.locator(".map-pin .map-marker-icon img")).toHaveCount(1);       // a player sees a token that isn't GM only
   expect((await api(page, "token_save", { id: t.id, is_secret: true }, cid)).status).toBe(200);
   await pp.reload();
   await expect(pp.locator(".map-pin")).toHaveCount(1);
-  await expect(pp.locator(".map-pin img.map-marker-icon")).toHaveCount(0);       // ...and never a GM-only one
+  await expect(pp.locator(".map-pin .map-marker-icon img")).toHaveCount(0);       // ...and never a GM-only one
   // an icon picked for the pin wins over the token
   expect((await api(page, "pin_save", { id: pinId, icon: "🏰" }, cid)).status).toBe(200);
   await page.reload();
-  await expect(page.locator(".map-pin img.map-marker-icon")).toHaveCount(0);
+  await expect(page.locator(".map-pin .map-marker-icon img")).toHaveCount(0);
   await expect(page.locator(".map-pin")).toContainText("🏰");
   expectNoErrors(errors);
 });

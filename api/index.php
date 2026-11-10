@@ -1946,6 +1946,7 @@ try {
     case 'image_search':
     case 'image_import':
     case 'file_update':
+    case 'file_frame':
     case 'file_delete':
         files_action($action);
 

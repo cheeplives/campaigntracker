@@ -128,6 +128,8 @@ function upgrade_steps(): array {
             'A rest or downtime can be for one group of a split party, and characters with no player can be put on its activities.'],
         ['045_invite_links.sql', fn(PDO $p) => db_has_table($p, 'campaign_invites') && !db_has_column($p, 'campaign_invites', 'token'),
             'An invitation now has a link: the site emails it to the person invited (when account emails are on), and the GM can copy it from the Members tab.'],
+        ['046_picture_framing.sql', fn(PDO $p) => db_has_table($p, 'attachments') && !db_has_column($p, 'attachments', 'frame_x'),
+            'A portrait or token can now be moved and zoomed inside its circle, so a face isn\'t cut off on the sheet, the Encyclopedia or the map.'],
     ];
 }
 

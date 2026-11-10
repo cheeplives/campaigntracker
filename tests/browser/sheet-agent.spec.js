@@ -124,7 +124,7 @@ test("Agent: a sheet draws a table's name column wider than its narrow Weight an
     for (const w of [1280, 1180, 820]) {
       const page = await b.newPage({ viewport: { width: w, height: 900 } });
       await page.goto(`${site.url}/tools/sheet-agent/blank.html`);
-      for (const s of ["kit.js", "sheetlayout.js", "sheetimport.js", "pdfimport.js", "sheets.js"]) await page.addScriptTag({ url: `/static/${s}` });
+      for (const s of ["kit.js", "discpic.js", "sheetlayout.js", "sheetimport.js", "pdfimport.js", "sheets.js"]) await page.addScriptTag({ url: `/static/${s}` });
       await page.addScriptTag({ content: `document.getElementById('app').append(Sheets.renderSheetForm(${JSON.stringify(layout)}, { gear: [{ item: "Sword", weight: "1" }] }, { mode: 'edit' }));` });
       const box = async c => (await page.getByLabel(`Gear row 1 ${c}`).boundingBox()).width;
       const [item, weight, uses] = [await box("Item"), await box("Weight"), await box("Uses")];
