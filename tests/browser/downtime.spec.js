@@ -180,7 +180,7 @@ test("a split party's downtime offers every player and every character with no p
   await dlg.getByRole("button", { name: "Create" }).click();
   await expect(dlg).toHaveCount(0);
   const card = page.locator(".downtime");
-  await expect(card).not.toContainText("👥");
+  await expect(card.locator(".ico-people")).toHaveCount(0);
   await expect(card.getByLabel("Party", { exact: true })).toHaveCount(0);
 
   // Everyone is offered, from both groups: the players, then the characters with no player, the GM-only spy among them.

@@ -470,7 +470,7 @@ test("a session's page: notes beside the summary, Build draft under them fills i
   await expect(page.getByLabel("Title")).toHaveValue("A Locked Box");
   // away from the day pages, Pass time is a button that opens its row
   await expect(page.locator(".passtime")).toBeHidden();
-  await page.getByRole("button", { name: "⏩ Pass time" }).click();
+  await page.getByRole("button", { name: "Pass time", exact: true }).click();
   await expect(page.locator(".passtime")).toBeVisible();
   expectNoErrors(errors.filter(e => !/409/.test(e)));
 });
@@ -686,7 +686,7 @@ test("a shift's ✕ takes it out of a session, and the session page sets its in-
   expect(mid.json.message).toContain("middle");
   // In-game dates… on the session page sets the start and end by day and shift
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
-  await page.getByRole("button", { name: "🗓 In-game dates…" }).click();
+  await page.getByRole("button", { name: "In-game dates…" }).click();
   const d = page.locator("dialog.kit-dialog");
   await d.getByLabel("Starts: shift").selectOption("2");
   await d.getByLabel("Ends: day").fill("4");

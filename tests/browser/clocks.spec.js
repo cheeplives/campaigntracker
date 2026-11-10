@@ -72,7 +72,7 @@ test("a player makes their own clock, drawn in the player colour, and fills it; 
   const card = pp.locator(".clock-card");
   await expect(card).toHaveClass(/player/);
   await expect(card.locator(".clock-face")).toHaveClass(/player/);
-  await expect(card.locator(".clock-who")).toHaveText("🙋 Player");
+  await expect(card.locator(".clock-who")).toHaveText("Player");
   await card.getByRole("button", { name: "+", exact: true }).click();
   await expect(card.locator(".clock-count")).toHaveText("1 of 4");
   expect((await api(pp, "clock_save", { name: "Nope", segments: 4, visibility: "secret" }, cid)).status).toBe(403);

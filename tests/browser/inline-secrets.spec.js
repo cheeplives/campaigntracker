@@ -95,7 +95,7 @@ test("View as player shows the GM the players' side, and changes nothing meanwhi
 
   await page.goto(`index.html#/c/${cid}/events`);
   await expect(page.locator(".evrow")).toHaveCount(2);
-  await page.getByRole("button", { name: "👁 View as player" }).click();
+  await page.getByRole("button", { name: "View as player" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Viewing as a player" })).toBeVisible();
   await expect(page.locator(".now-title .role")).toHaveText("Player view");
   await expect(page.locator(".evrow h4")).toHaveText(["Open fair"]);
@@ -164,7 +164,7 @@ test("Reveal makes a run of GM-only paragraphs public in one click, and can log 
   const { cid, pp } = await gmAndPlayer(page, browser, "Reveal");
   const id = (await api(page, "entry_save", { name: "Gunther Hoffmann", notes: "<p>Runs the inn.</p><aside>Smuggles wine.</aside><aside>Owes the <strong>Guild</strong>.</aside><p>Has a dog.</p><aside>Born in Marienburg.</aside>" }, cid)).json.id;
   await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
-  const reveal = page.getByRole("button", { name: "🔓 Reveal" });
+  const reveal = page.getByRole("button", { name: "Reveal" });
   await expect(reveal).toHaveCount(2);
   await reveal.first().click();
   await page.getByRole("button", { name: "Reveal and log it today" }).click();
@@ -189,9 +189,9 @@ test("Reveal makes a run of GM-only paragraphs public in one click, and can log 
   // Tomes too.
   const t = (await api(page, "tome_save", { kind: "book", title: "Ledger", body: "<p>Ale.</p><aside>Hidden debts.</aside>" }, cid)).json.tome;
   await page.goto(`index.html#/c/${cid}/library/${t.id}`);
-  await page.getByRole("button", { name: "🔓 Reveal" }).click();
+  await page.getByRole("button", { name: "Reveal" }).click();
   await page.getByRole("button", { name: "Just reveal" }).click();
-  await expect(page.getByRole("button", { name: "🔓 Reveal" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reveal" })).toHaveCount(0);
   expect((await (await pp.request.get(`api/index.php?a=tome&cid=${cid}&id=${t.id}`)).json()).tome.body).toBe("<p>Ale.</p><p>Hidden debts.</p>");
   expectNoErrors(errors);
 });

@@ -48,7 +48,7 @@ test("a GM's reminder pops up for the GM and an open player page when time passe
   await openPassTime(page);
   await page.getByRole("button", { name: "Pass time ▶" }).click();
   const dlg = page.locator("dialog.reminder-dialog");
-  await expect(dlg).toContainText("🔔 Reminder");
+  await expect(dlg).toContainText("Reminder");
   await expect(dlg).toContainText("The ransom is due");
   await expect(dlg).toContainText("Meet the Black Hand at the bridge");
   await dlg.getByRole("button", { name: "Dismiss" }).click();
@@ -163,7 +163,7 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   await expect(page).toHaveURL(/#\/c\/\d+\/events\/reminders$/);
   await expect(page.locator(".tabs a.on")).toHaveText("Events");
   const rows = page.locator(".remrow");
-  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports", "🔔 Market day", "🔔 Check the wards"]);
+  await expect(rows.locator("h4")).toHaveText(["The spy reports", "Market day", "Check the wards"]);
   await expect(page.getByText("3 reminders")).toBeVisible();
   await expect(rows.first()).toContainText("Due");
   await expect(rows.first()).toContainText("GMs only");
@@ -172,17 +172,17 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   // Search, which-reminders, who-sees-it and order narrow and turn the list.
   const search = page.getByRole("searchbox", { name: "Search reminders" });
   await search.fill("mill");
-  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports"]);
+  await expect(rows.locator("h4")).toHaveText(["The spy reports"]);
   await expect(page.getByText("1 of 3 reminders")).toBeVisible();
   await search.fill("");
   await page.getByLabel("Which reminders").selectOption("waiting");
-  await expect(rows.locator("h4")).toHaveText(["🔔 Market day", "🔔 Check the wards"]);
+  await expect(rows.locator("h4")).toHaveText(["Market day", "Check the wards"]);
   await page.getByLabel("Who sees it").selectOption("all");
-  await expect(rows.locator("h4")).toHaveText(["🔔 Market day"]);
+  await expect(rows.locator("h4")).toHaveText(["Market day"]);
   await page.getByLabel("Which reminders").selectOption("all");
   await page.getByLabel("Who sees it").selectOption({ label: "For anyone" });
   await page.getByLabel("Order").selectOption("desc");
-  await expect(rows.locator("h4")).toHaveText(["🔔 Check the wards", "🔔 Market day", "🔔 The spy reports"]);
+  await expect(rows.locator("h4")).toHaveText(["Check the wards", "Market day", "The spy reports"]);
   await page.getByLabel("Order").selectOption("asc");
 
   // Edit one where it is: the filters stay as they were.
@@ -192,7 +192,7 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   await form.getByRole("button", { name: "Save reminder" }).click();
   await expect(page.getByText("Reminder saved")).toBeVisible();
   await notNow(page); // the detector offers Thornbury for the Encyclopedia
-  await expect(rows.locator("h4")).toHaveText(["🔔 The spy reports", "🔔 Market day at Thornbury", "🔔 Check the wards"]);
+  await expect(rows.locator("h4")).toHaveText(["The spy reports", "Market day at Thornbury", "Check the wards"]);
 
   // + New reminder adds one on any day.
   await page.getByRole("button", { name: "+ New reminder" }).click();
@@ -208,7 +208,7 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   // A player sees their own reminders and everyone's, with no who-sees-it filter, and can't edit the GM's.
   await pp.goto(`index.html#/c/${cid}/events/reminders`);
   const prow = pp.locator(".remrow");
-  await expect(prow.locator("h4")).toHaveText(["🔔 Buy rope", "🔔 Market day at Thornbury"]);
+  await expect(prow.locator("h4")).toHaveText(["Buy rope", "Market day at Thornbury"]);
   await expect(pp.getByLabel("Who sees it")).toHaveCount(0);
   await expect(prow.filter({ hasText: "Buy rope" }).getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(prow.filter({ hasText: "Market day" }).getByRole("button", { name: "Edit" })).toHaveCount(0);

@@ -150,7 +150,7 @@ test("a holding's dialog shows the fields of its type, takes custom choices and 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
   await expect(card.locator(".hold-body")).toBeVisible();
-  await expect(card).toContainText("📍 Northern ridge");
+  await expect(card).toContainText("Northern ridge");
   await expect(card).toContainText("Bone and wattle");
   await expect(card).toContainText("The roof leaks.");
   await expect(card.locator(".chip.tag")).toHaveText("Base");

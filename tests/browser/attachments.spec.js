@@ -53,7 +53,7 @@ test("a GM adds a portrait and a handout to an entry; the picture shows and open
   const pic = box.locator(".file-pic img");
   await expect(pic).toHaveCount(1);
   await expect.poll(() => pic.evaluate(img => img.complete && img.naturalWidth)).toBe(2);
-  await expect(box.locator(".file-list a")).toHaveText("📄 Wanted poster.pdf");
+  await expect(box.locator(".file-list a")).toHaveText("Wanted poster.pdf");
 
   // The full-size viewer, where the caption is changed.
   await box.locator(".file-thumb").click();

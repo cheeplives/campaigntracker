@@ -166,7 +166,7 @@ test("Recent and Pinned stay out of the Legend until the campaign turns them on;
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const id of [a, b]) { await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`); await expect(page.locator(".enc-detail h2")).toBeVisible(); }
   await expect(page.locator("nav.tabs .legend-quick")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "📌 Pin" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Pin", exact: true })).toHaveCount(0);
 
   await page.goto(`index.html#/c/${cid}/settings`);
   await page.getByLabel("Recent in the Legend").check();
@@ -177,7 +177,7 @@ test("Recent and Pinned stay out of the Legend until the campaign turns them on;
   await page.goto(`index.html#/c/${cid}/encyclopedia/${a}`);
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "Floon" })).toBeVisible();   // Recent
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Pin waits in the entry's ⋯ menu
-  await page.getByRole("button", { name: "📌 Pin" }).click();
+  await page.getByRole("button", { name: "Pin", exact: true }).click();
   await expect(page.locator("nav.tabs .legend-quick-h.pinned")).toBeVisible();
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "Stone of Golorr" })).toBeVisible();
 
@@ -244,7 +244,7 @@ test("the peek leaves lists of entries alone, adds a note on the spot, and has n
   await page.goto(`index.html#/c/${cid}/encyclopedia/${gunther}`);
   await page.locator(".enc-detail .richtext a.enc-link", { hasText: "Ilse" }).click();
   const peek = page.locator(".peek");
-  await expect(peek.getByRole("button", { name: "📌 Pin" })).toBeVisible();
+  await expect(peek.getByRole("button", { name: "Pin", exact: true })).toBeVisible();
   await peek.getByRole("button", { name: "+ Note" }).click();
   await peek.getByRole("textbox", { name: "Note on Ilse" }).fill("Owes the party a favour");
   await peek.getByRole("button", { name: "Save note" }).click();
@@ -256,7 +256,7 @@ test("the peek leaves lists of entries alone, adds a note on the spot, and has n
   // a GM-only entry can't be pinned from its page, nor from its peek
   await page.locator(".enc-detail .richtext a.enc-link", { hasText: "The Lair" }).click();
   await expect(peek).toBeVisible();
-  await expect(peek.getByRole("button", { name: "📌 Pin" })).toHaveCount(0);
+  await expect(peek.getByRole("button", { name: "Pin", exact: true })).toHaveCount(0);
   expect(lair).toBeTruthy();
   expectNoErrors(errors);
 });
@@ -273,7 +273,7 @@ test("a pinned session's title never reaches players until it is published", asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
   await page.locator(".sess-bar .kit-menu > summary").click();   // Pin waits in the session's ⋯ menu
-  await page.getByRole("button", { name: "📌 Pin" }).click();
+  await page.getByRole("button", { name: "Pin", exact: true }).click();
   await expect(page.locator("nav.tabs a.legend-quick", { hasText: "The secret heist" })).toBeVisible();
   // the pin keeps only the session's id: its title is not in the settings every member is sent
   const camp = await (await page.request.get(`api/index.php?a=campaign&cid=${cid}`)).json();

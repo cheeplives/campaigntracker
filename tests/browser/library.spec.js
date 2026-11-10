@@ -142,7 +142,7 @@ test("names in tomes, downtime and Party Holdings go to the Feature Highlighter,
   expect((await api(page, "holding_save", { name: "The Wandering Goose", kind: "vehicle", location: "Kemperbad docks", description: "Bought from Old Hilde.", amount: 1, stats: {}, tags: [] }, cid)).status).toBe(200);
   expect((await api(page, "downtime_save", { kind: "long_rest", slots: 2, title: "", notes: "Resting at Ubersreik." }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
-  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
+  await pressMore(page, "Encyclopedia", "Scan campaign");
   await expect(page.locator("dialog.noun-dialog")).toBeVisible();
   for (const n of ["Nuln", "Countess of Averheim", "Sword of Teclis", "Wandering Goose", "Kemperbad docks", "Old Hilde", "Ubersreik"]) await expect(row(page, n)).toBeVisible();
   await expect(row(page, "Long Rest")).toHaveCount(0); // the label a rest writes into the shifts
@@ -165,7 +165,7 @@ test("Scan on an entry or a tome runs the Feature Highlighter over just that one
   const entry = (await api(page, "entry_save", { name: "Hexe", notes: "<p>She lives near Bögenhafen.</p>", gm_notes: "<p>She serves Tzeentch.</p>", tags: [] }, cid)).json;
   // The tome's scan offers only the names in the tome.
   await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
-  await moreIn(page.locator(".lib-detail"), "🔍 Scan");
+  await moreIn(page.locator(".lib-detail"), "Scan");
   await expect(dlg).toBeVisible();
   await expect(dlg).toContainText('in "Ledger" that');
   for (const n of ["Brother Udo", "Wurtbad"]) await expect(row(n)).toBeVisible();
@@ -177,7 +177,7 @@ test("Scan on an entry or a tome runs the Feature Highlighter over just that one
   await page.goto(`index.html#/c/${cid}/encyclopedia/${entry.id}`);
   await expect(page.locator(".enc-detail h2")).toHaveText("Hexe"); // the Library's page is an .enc-detail too: wait for the entry
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // the entry's Scan waits in its ⋯ menu
-  await page.locator(".enc-detail").getByRole("button", { name: "🔍 Scan" }).click();
+  await page.locator(".enc-detail").getByRole("button", { name: "Scan" }).click();
   await expect(dlg).toBeVisible();
   for (const n of ["Bögenhafen", "Tzeentch"]) await expect(row(n)).toBeVisible();
   for (const n of ["Grissenwald", "Brother Udo", "Wurtbad", "Hexe"]) await expect(row(n)).toHaveCount(0);
@@ -186,7 +186,7 @@ test("Scan on an entry or a tome runs the Feature Highlighter over just that one
   await page.goto(`index.html#/c/${cid}/library/${tome.id}`);
   expect((await api(page, "terms_ignore", { terms: ["Brother Udo", "Ledger"] }, cid)).status).toBe(200);
   await page.reload();
-  await moreIn(page.locator(".lib-detail"), "🔍 Scan");
+  await moreIn(page.locator(".lib-detail"), "Scan");
   await expect(page.getByText('No names missing: everything the Feature Highlighter finds in "Ledger"')).toBeVisible();
   expectNoErrors(errors);
 });

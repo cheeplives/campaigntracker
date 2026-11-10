@@ -47,7 +47,7 @@ function scabardExport() {
 
 /** Click Import from Scabard and give its file picker a JSON file holding `obj` (or the text as it is). */
 async function pickFile(page, obj) {
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "⬆ Import from Scabard…" }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "Import from Scabard…" }).click()]);
   await chooser.setFiles({ name: "campaign.123.json", mimeType: "application/json", buffer: Buffer.from(typeof obj === "string" ? obj : JSON.stringify(obj)) });
 }
 const byName = (list, name) => list.find(e => e.name === name);

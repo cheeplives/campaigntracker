@@ -111,7 +111,7 @@ test("a player's note goes on the clock's shift, or at the end of an Encyclopedi
   await pp.goto(`index.html#/c/${cid}/table`);
   const view = pp.locator(".table-view");
   // Search and Encyclopedia add are in the floating bar
-  await view.locator(".tv-bar").getByRole("button", { name: "🔍 Search" }).click();
+  await view.locator(".tv-bar").getByRole("button", { name: "Search" }).click();
   await view.getByLabel("Look up a name in the Encyclopedia").fill("coach");
   await expect(view.locator(".tv-entry h3")).toContainText("Coaching Inn");
   await expect(view.locator(".tv-entry")).toContainText("A walled inn on the road.");
@@ -127,9 +127,9 @@ test("a player's note goes on the clock's shift, or at the end of an Encyclopedi
   expect(notes).toContain("Sore feet");
 
   // an entry note, from the looked-up entry's Add a note
-  await view.locator(".tv-bar").getByRole("button", { name: "🔍 Search" }).click();
+  await view.locator(".tv-bar").getByRole("button", { name: "Search" }).click();
   await view.getByLabel("Look up a name in the Encyclopedia").fill("coach");
-  await view.getByRole("button", { name: "📝 Add a note" }).click();
+  await view.getByRole("button", { name: "Add a note" }).click();
   await expect(view.getByLabel("Entry")).toHaveValue("Coaching Inn");
   await expect(view.getByText("GM only")).toHaveCount(0);   // players can't make a GM-only note
   await view.getByLabel("Note", { exact: true }).fill("Hans owes Kurt <3> shillings");
@@ -388,7 +388,7 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   const top = view.locator(".tv-summary");
   await expect(top.locator(".tv-shift")).toContainText("Midday");
   await expect(top.locator(".wx")).toBeVisible();
-  await top.getByText("🔔 1 reminder").click();
+  await top.getByText("1 reminder").click();
   await expect(top.locator(".tv-rem-pop")).toContainText("The ransom is due");
   await page.keyboard.press("Escape");
   await expect(top.locator(".tv-rem-pop")).toBeHidden();
@@ -407,7 +407,7 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await expect(now.locator(".sess-more-pop .sess-chip")).toHaveText(["Session 1", "Session 2"]);
   // the visibility pill is one dropdown, Auto with its score first; a pick saves and colours the pill
   const vis = now.getByLabel("Visibility for Midday", { exact: true });
-  await expect(vis.locator("option").first()).toHaveText(/^👁 \d .* · auto$/);
+  await expect(vis.locator("option").first()).toHaveText(/^\d .* · auto$/);
   await vis.selectOption("1");
   await expect(vis).toHaveClass(/\bv1\b/);
   await expect.poll(() => sql(`SELECT visibility_override FROM shifts WHERE campaign_id=${cid}`).trim()).toBe("1");
@@ -434,9 +434,9 @@ test("the block up top, the reminders badge, the visibility pill, the session ch
   await view.locator(".tv-bar").getByRole("button", { name: "Show the bar" }).click();
   await expect(bar.getByRole("button", { name: /^End Midday/ })).toBeVisible();
   // Encyclopedia add opens over the bar
-  await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
+  await bar.getByRole("button", { name: "Encyclopedia add" }).click();
   await expect(view.getByLabel("Entry", { exact: true })).toBeFocused();
-  await bar.getByRole("button", { name: "📝 Encyclopedia add" }).click();
+  await bar.getByRole("button", { name: "Encyclopedia add" }).click();
   await expect(view.locator(".tv-bar-pop")).toBeHidden();
   expectNoErrors(errors);
 });
@@ -546,7 +546,7 @@ test("each player and the party pick one action a shift beside the writing; + Ev
   // the session's page lists them, and Build draft writes them in
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
   const acts = page.locator(".sess-actions");
-  await expect(acts).toContainText("The party: 🧭 Navigate");
-  await expect(acts).toContainText(`${player.name}: 🏹 Hunt / trap`);
+  await expect(acts).toContainText("The party: Navigate");
+  await expect(acts).toContainText(`${player.name}: Hunt / trap`);
   expectNoErrors(errors);
 });

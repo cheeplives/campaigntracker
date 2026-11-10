@@ -30,12 +30,12 @@ test("a whole GM-only entry is revealed in one click, with or without a line on 
   // Reveal entry waits in the entry's ⋯ menu (the page may be drawn again once after it opens, closing the menu: open it until it stays)
   await expect(async () => {
     await page.locator(".enc-detail").getByLabel(/^More for /).click({ timeout: 2000 });
-    await page.getByRole("button", { name: "🔓 Reveal entry" }).click({ timeout: 2000 });
+    await page.getByRole("button", { name: "Reveal entry" }).click({ timeout: 2000 });
   }).toPass();
   await page.getByRole("button", { name: "Reveal and log it today" }).click();
   await expect(page.getByText("Revealed, and logged on today's events")).toBeVisible();
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // public now: the menu no longer offers it
-  await expect(page.getByRole("button", { name: "🔓 Reveal entry" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reveal entry" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   const shown = await seen(pp, a);
   expect(shown.name).toBe("Black Barrow");
@@ -48,12 +48,12 @@ test("a whole GM-only entry is revealed in one click, with or without a line on 
   // Reveal entry waits in the entry's ⋯ menu (the page may be drawn again once after it opens, closing the menu: open it until it stays)
   await expect(async () => {
     await page.locator(".enc-detail").getByLabel(/^More for /).click({ timeout: 2000 });
-    await page.getByRole("button", { name: "🔓 Reveal entry" }).click({ timeout: 2000 });
+    await page.getByRole("button", { name: "Reveal entry" }).click({ timeout: 2000 });
   }).toPass();
   await page.getByRole("button", { name: "Just reveal" }).click();
   await expect(page.getByText("Revealed to the players")).toBeVisible();
   await page.locator(".enc-detail").getByLabel(/^More for /).click();
-  await expect(page.getByRole("button", { name: "🔓 Reveal entry" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reveal entry" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   expect((await seen(pp, b)).name).toBe("Quiet Ford");
   expect((await get(pp, `a=events&cid=${cid}`)).events).toHaveLength(1);
@@ -75,10 +75,10 @@ test("a GM-only event is revealed from its card, and players then see it", async
   const ev = (await api(page, "event_save", { abs_day: 2, title: "The cult meets", body: "Under the mill.", is_secret: true }, cid)).json.id;
   expect((await get(pp, `a=events&cid=${cid}`)).events).toHaveLength(0);
   await page.goto(`index.html#/c/${cid}/day/2`);
-  await pressMore(page, "The cult meets", "🔓 Reveal");
+  await pressMore(page, "The cult meets", "Reveal");
   await page.getByRole("button", { name: "Reveal", exact: true }).last().click();
   await expect(page.getByText("Revealed to the players")).toBeVisible();
-  await expect(page.getByRole("button", { name: "🔓 Reveal" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reveal" })).toHaveCount(0);
   expect((await get(pp, `a=events&cid=${cid}`)).events.map(e => e.title)).toEqual(["The cult meets"]);
   expect((await api(page, "item_reveal", { kind: "event", id: ev }, cid)).status).toBe(409);
   expect((await api(pp, "item_reveal", { kind: "event", id: ev }, cid)).status).toBe(403);
@@ -96,9 +96,9 @@ test("GM-only paragraphs of a session's summary, rewards and loot, and a day's S
   expect((await session(pp)).summary).toBe("<p>They docked.</p>");
 
   await page.goto(`index.html#/c/${cid}/sessions/${sid}`);
-  await expect(page.getByRole("button", { name: "🔓 Reveal" })).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Reveal" })).toHaveCount(3);
   for (const text of ["Essen owns the rock-hopper.", "A map in the lining.", "A cursed ring."]) {
-    await page.locator("aside", { hasText: text }).getByRole("button", { name: "🔓 Reveal" }).click();
+    await page.locator("aside", { hasText: text }).getByRole("button", { name: "Reveal" }).click();
     await page.getByRole("button", { name: "Just reveal" }).click();
     await expect(page.getByText("Revealed to the players")).toBeVisible();
     await expect(page.locator("aside", { hasText: text })).toHaveCount(0);
@@ -111,13 +111,13 @@ test("GM-only paragraphs of a session's summary, rewards and loot, and a day's S
   // a day's Secret notes join its Public notes
   expect((await get(pp, `a=day&cid=${cid}&d=2`)).day.notes).toBe("Rain.");
   await page.goto(`index.html#/c/${cid}/day/2`);
-  await pressMore(page, "this day's notes", "🔓 Reveal secret notes");
+  await pressMore(page, "this day's notes", "Reveal secret notes");
   await page.getByRole("button", { name: "Reveal and log it today" }).click();
   await expect(page.getByText("Revealed, and logged on this day's events")).toBeVisible();
   expect((await get(pp, `a=day&cid=${cid}&d=2`)).day.notes).toBe("<p>Rain.</p><p>The spy slipped away.</p>");
   const mine = (await get(page, `a=day&cid=${cid}&d=2`)).day;
   expect(mine.gm_notes || "").toBe("");
-  await expect(page.getByRole("button", { name: "🔓 Reveal secret notes" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reveal secret notes" })).toHaveCount(0);
   expect((await get(pp, `a=events&cid=${cid}`)).events.map(e => e.title)).toContain("Revealed: secret notes for day 2");
   // nothing secret left, no such day, a stale page, the wrong field, and a player are all refused
   expect((await api(page, "item_reveal", { kind: "day", id: 2 }, cid)).status).toBe(409);

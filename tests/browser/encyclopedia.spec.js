@@ -179,7 +179,7 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   expect((await api(page, "reminder_save", { title: "Pay the toll", body: "At the Kemperbad bridge", due_shift: 20, audience: "gm" }, cid)).status).toBe(200);
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
   await expect(page.locator(".enc-detail")).toContainText("Nothing here yet");
-  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
+  await pressMore(page, "Encyclopedia", "Scan campaign");
   const dlg = page.locator("dialog.noun-dialog");
   await expect(dlg).toBeVisible();
   for (const n of ["Captain Rolf", "Rolf", "Marienburg", "Kemperbad bridge"]) await expect(nounRow(page, n)).toBeVisible();
@@ -196,7 +196,7 @@ test("Scan campaign offers every missing name, starting on Skip, and the GM keep
   await page.locator(".enc-blank button.enc-fold").click();
   await expect(page.locator(".enc-blank .enc-item")).toHaveText([/Captain Rolf/, /Marienburg/]);
   // "Rolf" overlaps the new Captain Rolf entry, so the next scan offers it as another name for him.
-  await pressMore(page, "Encyclopedia", "🔍 Scan campaign");
+  await pressMore(page, "Encyclopedia", "Scan campaign");
   await expect(nounRow(page, "Rolf").locator("input[value=alias]")).toHaveCount(1);
   await expect(nounRow(page, "Marienburg")).toHaveCount(0);
   await nounRow(page, "Rolf").getByText("Alias").click();
@@ -284,7 +284,7 @@ test("the Link dialog connects one entry to many, and each page reads the connec
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${london}`);
   await expect(page.locator(".enc-conns")).toContainText("No connections yet.");
-  await page.getByRole("button", { name: "🔗 Link" }).click();
+  await page.getByRole("button", { name: "Link", exact: true }).click();
   const dlg = page.locator("dialog.conn-dialog");
   await expect(dlg).toBeVisible();
   await dlg.getByLabel("How London is connected").selectOption({ label: "Has resident ↔ Resident of" });
@@ -301,7 +301,7 @@ test("the Link dialog connects one entry to many, and each page reads the connec
   // Gunther's page reads it the other way, and making it from his end finds the same connection.
   await page.goto(`index.html#/c/${cid}/encyclopedia/${gunther}`);
   await expect(connRow(page, "Resident of")).toContainText("London");
-  await page.getByRole("button", { name: "🔗 Link" }).click();
+  await page.getByRole("button", { name: "Link", exact: true }).click();
   await dlg.getByLabel("How Gunther Hoffmann is connected").selectOption({ label: "Resident of ↔ Has resident" });
   await expect(dlg.locator(".conn-row", { hasText: "London" })).toContainText("connected ✓");
   await dlg.getByRole("button", { name: "Cancel" }).click();
@@ -459,9 +459,9 @@ test.describe("Generate Summary", () => {
 
     await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf.id}`);
     const form = page.locator(".enc-form");
-    await expect(form.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(form.getByRole("button", { name: "Generate Summary" })).toBeVisible();
     expect(asked).toEqual([]); // nothing goes to Wikipedia until the button is pressed
-    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await form.getByRole("button", { name: "Generate Summary" }).click();
     const box = form.locator(".enc-wiki");
     // the matching articles, in Wikipedia's order, each with its description, so a namesake can be passed over
     await expect(box.locator(".enc-wiki-hit strong")).toHaveText(["Altdorf, Uri", "Altdorf bei Nürnberg"]);
@@ -485,11 +485,11 @@ test.describe("Generate Summary", () => {
 
     // No article, or no connection: it says so in a line and the notes are left alone.
     await page.goto(`index.html#/c/${cid}/encyclopedia/${inn.id}`);
-    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await form.getByRole("button", { name: "Generate Summary" }).click();
     await expect(form.locator(".enc-wiki")).toContainText("Wikipedia has no article matching \"Grey Lady inn\"");
     expectNoErrors(errors); // checked before the outage, which every browser logs as a failed load
     down = true;
-    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await form.getByRole("button", { name: "Generate Summary" }).click();
     await expect(form.locator(".enc-wiki")).toContainText("Could not reach Wikipedia");
     await expect(form.locator(".notepanel.public .ql-editor")).not.toContainText("Source:");
   });
@@ -534,7 +534,7 @@ test.describe("Generate Summary", () => {
 
     await page.goto(`index.html#/c/${cid}/encyclopedia/${sol.id}`);
     const form = page.locator(".enc-form"), box = form.locator(".enc-wiki");
-    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await form.getByRole("button", { name: "Generate Summary" }).click();
     // the disambiguation page is labelled as a list of meanings before it is opened
     await expect(box.locator(".enc-wiki-hit").first()).toContainText("Several meanings");
     await expect(box.locator(".enc-wiki-hit").nth(1)).not.toContainText("Several meanings");
@@ -549,7 +549,7 @@ test.describe("Generate Summary", () => {
 
     // A result that only turns out to be a list of meanings when opened goes to its meanings too; when they can't be
     // read, it says to search with a more specific name.
-    await form.getByRole("button", { name: "📚 Generate Summary" }).click();
+    await form.getByRole("button", { name: "Generate Summary" }).click();
     parseOk = false;
     await box.locator(".enc-wiki-hit").nth(1).click();
     await expect(box).toContainText("\"Sol (band)\" has several meanings");
@@ -618,7 +618,7 @@ test("entries have a Category: the list is grouped by it, and the Category and T
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
   const heads = page.locator(".enc-lists h3");
   const items = page.locator(".enc-lists .enc-item");
-  await expect(heads).toHaveText(["📍 Location (3)", "👤 Person (1)", "⛵ Vehicle (1)", "No category (1)"]);
+  await expect(heads).toHaveText(["Location (3)", "Person (1)", "Vehicle (1)", "No category (1)"]);
   await expect(page.locator(".enc-lists section[data-cat=location] .enc-item")).toHaveText([/Altdorf/, /Grey Lady/, /Nuln/]);
 
   // Category: Deselect all, then tick Location
@@ -648,9 +648,9 @@ test("entries have a Category: the list is grouped by it, and the Category and T
   await expect(page.getByRole("button", { name: "Show all" })).toBeHidden();
 
   // a Category folds away, and opens again
-  await page.getByRole("button", { name: "📍 Location (3)" }).click();
+  await page.getByRole("button", { name: "Location (3)" }).click();
   await expect(items).toHaveCount(3);
-  await page.getByRole("button", { name: "📍 Location (3)" }).click();
+  await page.getByRole("button", { name: "Location (3)" }).click();
   await expect(items).toHaveCount(6);
 
   // the entry shows its Category over its name, and the editor changes it

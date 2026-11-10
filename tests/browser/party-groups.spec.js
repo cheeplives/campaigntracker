@@ -602,7 +602,7 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
   await api(page, "group_move", { id: main.id, map_id: mapId, x: 100, y: 100 }, cid);
   const t = await tokenUpload(page, cid, "Banner");
   await page.goto(`#/c/${cid}/maps/${mapId}`);
-  await expect(page.locator(".map-party .map-marker-icon")).toHaveText("🚩");   // the flag
+  await expect(page.locator(".map-party .map-marker-icon .ico-flag")).toHaveCount(1);   // the flag
   await expect(page.locator(".map-party img")).toHaveCount(0);
 
   // assign it with Token in the group's ⋯ on Party → Groups
@@ -620,7 +620,7 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
   // set back to none, from the Tokens side
   expect((await api(page, "token_save", { id: t.id, group_ids: [] }, cid)).status).toBe(200);
   await page.reload();
-  await expect(page.locator(".map-party .map-marker-icon")).toHaveText("🚩");
+  await expect(page.locator(".map-party .map-marker-icon .ico-flag")).toHaveCount(1);
   expectNoErrors(errors);
 });
 

@@ -22,7 +22,7 @@ function unzip(buf) {
   return out;
 }
 async function exportZip(page, { format, gmOnly } = {}) {
-  await pressMore(page, "Encyclopedia", "⬇ Export…");
+  await pressMore(page, "Encyclopedia", "Export…");
   const d = page.getByRole("dialog", { name: "Export the Encyclopedia" });
   if (format) await d.getByLabel("Format").selectOption(format);
   if (gmOnly) await d.getByLabel(/Include GM-only/).check();
@@ -78,7 +78,7 @@ test("the Encyclopedia exports as linked Markdown pages with their pictures, and
   // a player never had them, so has no box to tick
   const perrors = watchErrors(pp);
   await pp.goto(`index.html#/c/${cid}/encyclopedia`);
-  await pressMore(pp, "Encyclopedia", "⬇ Export…");
+  await pressMore(pp, "Encyclopedia", "Export…");
   await expect(pp.getByRole("dialog").getByLabel(/Include GM-only/)).toHaveCount(0);
   await pp.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   ({ files } = await exportZip(pp));
@@ -119,7 +119,7 @@ test("Copy as handout puts the entry, formatted, on the clipboard without its GM
   });
   await page.goto(`index.html#/c/${cid}/encyclopedia/${altdorf}`);
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // Copy as handout waits in the entry's ⋯ menu
-  await page.getByRole("button", { name: "📋 Copy as handout" }).click();
+  await page.getByRole("button", { name: "Copy as handout" }).click();
   await expect(page.getByText("Copied. Paste it into a handout or a note")).toBeVisible();
   const got = await page.evaluate(() => window.copied);
   expect(got.html).toContain("<h2>Altdorf</h2>");
@@ -138,7 +138,7 @@ test("Settings downloads the calendar for Seasons & Stars and says what date to 
   const cid = await makeCampaign(page, `Calendar ${gm.id}`);
   const camp = (await api(page, "campaign", undefined, cid)).json.campaign;
   await page.goto(`index.html#/c/${cid}/settings/tools`);
-  await page.getByRole("button", { name: "⬇ For Foundry…" }).click();
+  await page.getByRole("button", { name: "For Foundry…" }).click();
   const d = page.getByRole("dialog", { name: "Calendar for Foundry" });
   await expect(d).toContainText("Then set Foundry's date to");
   const [dl] = await Promise.all([page.waitForEvent("download"), d.getByRole("button", { name: "Download" }).click()]);

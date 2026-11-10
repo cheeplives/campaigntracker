@@ -114,7 +114,7 @@ test("the Events tab switches to a timeline of the same events, remembered, and 
   const marks = tl.locator(".tl-ev");
   await expect(marks).toHaveCount(5);
   await expect(tl.locator(".tl-ev.secret")).toHaveCount(1);
-  await expect(tl.locator(".tl-ev.secret .tl-label")).toHaveText(/🔒 The baron's plot/);
+  await expect(tl.locator(".tl-ev.secret .tl-label")).toHaveText(/The baron's plot/);
   await expect(tl.locator(".tl-ev", { hasText: "Harvest fair" }).locator("rect.tl-bar")).toHaveCount(1); // three days: a bar
   await expect(tl.locator(".tl-ev", { hasText: "Quiet day" }).locator("circle.tl-dot")).toHaveCount(1);  // one day: a dot
   await expect(tl.locator(".tl-now")).toHaveCount(1);
@@ -152,7 +152,7 @@ test("the Events tab switches to a timeline of the same events, remembered, and 
   await expect(marks).toHaveCount(5);
 
   // a picture of it
-  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "⬇ PNG" }).click()]);
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "PNG" }).click()]);
   expect(download.suggestedFilename()).toMatch(/timeline\.png$/);
 
   // clicking an event (tapping it twice on a touch screen) opens its day

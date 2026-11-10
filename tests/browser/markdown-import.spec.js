@@ -81,7 +81,7 @@ test("a GM imports notes: entries, tags, Category, GM notes and connections, and
   await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
 
   const pick = async files => {
-    const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "⬆ Import from Markdown…" }).click()]);
+    const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "Import from Markdown…" }).click()]);
     await chooser.setFiles(files.map(f => ({ name: f.name, mimeType: "text/markdown", buffer: Buffer.from(f.text) })));
   };
   const files = [
@@ -90,7 +90,7 @@ test("a GM imports notes: entries, tags, Category, GM notes and connections, and
     { name: "Altdorf.md", text: "---\ntags: [city]\naliases: The Capital\n---\n# Altdorf\nThe capital.\n\n## 🔒 GM notes\n\nA cult sits under it.\n" },
   ];
   // Not notes: refused before anything is sent.
-  const [bad] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "⬆ Import from Markdown…" }).click()]);
+  const [bad] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "Import from Markdown…" }).click()]);
   await bad.setFiles([{ name: "x.txt", mimeType: "text/plain", buffer: Buffer.from("x") }]);
   await expect(page.locator("#toast")).toHaveText("Pick Markdown (.md) files, or a zip of them");
 
