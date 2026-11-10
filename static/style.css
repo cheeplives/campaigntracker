@@ -2621,3 +2621,9 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .mpc-actions .kit-menu-list > button { width: 100%; }
 @media (pointer: coarse) { .mpc-actions .kit-menu > summary { min-height: 34px; padding: 4px 12px; display: inline-flex; align-items: center; } }
 .dice-look-row select.dice-stay { width: auto; flex: 0 1 auto; }
+
+/* quests a session touches, and the sessions that touch a quest: the ones reached through a connection in a lighter hand */
+.enc-quests { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 6px 0; }
+.enc-quest.implied > a, .enc-quest-sessions li.implied > a { font-style: italic; opacity: .85; }
+.enc-quest-sessions[hidden] { display: none; }
+.enc-conn-by { font-size: .85em; opacity: .75; cursor: help; }

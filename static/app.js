@@ -374,7 +374,7 @@
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.invites = r.invites || []; S.tags = r.tags || []; S.reminders = [];
-    S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.entryFields = r.entry_fields || {};
+    S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.entryFields = r.entry_fields || {}; S.questLinks = r.quest_links || {};
     S.mapIndex = r.maps_index || [];
     S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
@@ -3924,7 +3924,7 @@
   }
 
   // ------------------------------------------------------------ encyclopedia: static/encyclopedia-tab.js
-  let encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile;
+  let encLinker, linked, linkedNote, revealButtons, mentionRow, questRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile;
 
   // ------------------------------------------------------------ pictures and files
   // A portrait on a character, a map on a location: pictures show on the page, other files are downloaded. The server
@@ -4295,6 +4295,14 @@
   /** Whether this member may remove or change connection r: whoever made it, and GMs. */
   const relMine = r => isGM() || r.created_by === S.user.id;
 
+  /** A mark on a connection a player made, so the table's own theories read apart from what the GM set down. */
+  function playerMade(r) {
+    const m = S.members?.find(x => Number(x.id) === r.created_by);
+    if (!m || m.role !== 'player') return null;
+    const who = Number(m.id) === S.user.id ? 'you' : m.character_name || m.display_name || 'a player';
+    return el('span', { class: 'enc-conn-by', 'data-tip': `Added by ${who}${who === 'you' ? '' : ', a player'}` }, ' 👤');
+  }
+
   /** The Connections card on entry e's page, grouped by label as seen from e, with the suggestions from the notes. */
   function connectionsCard(e, ctx) {
     const { rel, conns, entries, st } = ctx;
@@ -4318,6 +4326,7 @@
             el('a', { class: 'enc-link' + (c.other.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${c.other.id}`,
               'data-tip': `${c.other.name}${c.other.is_secret ? ' (GM only)' : ''}: open it in the Encyclopedia` }, c.other.name),
             c.r.note ? el('small', { class: 'muted' }, ` (${c.r.note})`) : null,
+            playerMade(c.r),
             relMine(c.r) ? btn('×', async () => {
               if (!await confirmDialog(`Remove "${c.label} ${c.other.name}" from ${e.name}? It goes from both pages.`, { ok: 'Remove', danger: true })) return;
               try { await post('relation_delete', { id: c.r.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
@@ -7388,12 +7397,12 @@
     DOWNTIME_KINDS, E, ENC_CATEGORIES, entryFields, Fan, S, UNIT_OPTIONS, alertDialog, itemStar, starsOf, api, attachmentsCard, btn, busy, byline,
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
-    leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
+    leapSummary, get linkedNote() { return linkedNote; }, get questRow() { return questRow; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
-  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
+  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, questRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));

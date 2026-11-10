@@ -179,3 +179,63 @@ test("Settings → Encyclopedia sets each Category's fields, a line each, and pu
   await expect(pp.getByLabel("Quest fields")).toHaveCount(0);
   expectNoErrors(errors);
 });
+
+test("a session touches the quests it names and the ones its entries are connected to; a player's connection is marked", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp } = await gmAndPlayer(page, browser, "Quest links");
+  const make = async (who, body) => (await api(who, "entry_save", body, cid)).json.id;
+  const heist = await make(page, { name: "The Mill Heist", category: "quest", notes: "<p>Someone robbed the mill.</p>", facts: { status: "Active" } });
+  const debt = await make(page, { name: "The Baron's Debt", category: "quest", notes: "<p>Owed since spring.</p>" });
+  const hidden = await make(page, { name: "The Quiet Plot", category: "quest", notes: "<p>Unseen.</p>", is_secret: true });
+  const gunther = await make(page, { name: "Gunther", category: "person", notes: "<p>The miller.</p>" });
+  const ilse = await make(page, { name: "Ilse", category: "person", notes: "<p>A carter.</p>" });
+  // the GM ties Gunther to the heist and, in secret, to the hidden plot; the player ties Ilse to the heist
+  expect((await api(page, "relations_save", { entry_id: heist, type: { label: "Involves", inverse_label: "Involved in" }, add: [gunther] }, cid)).status).toBe(200);
+  expect((await api(page, "relations_save", { entry_id: hidden, type: { label: "Involves", inverse_label: "Involved in" }, add: [gunther] }, cid)).status).toBe(200);
+  expect((await api(pp, "relations_save", { entry_id: heist, type: { label: "Has clue", inverse_label: "Clue to" }, add: [ilse] }, cid)).status).toBe(200);
+
+  // the campaign says which entries each quest is connected to; a player never hears of the hidden one
+  const links = (await api(page, "campaign", undefined, cid)).json.quest_links;
+  expect(links[heist].sort()).toEqual([gunther, ilse].sort());
+  expect(links[hidden]).toEqual([gunther]);
+  const seen = (await api(pp, "campaign", undefined, cid)).json.quest_links;
+  expect(seen[heist].sort()).toEqual([gunther, ilse].sort());
+  expect(seen[hidden]).toBeUndefined();
+
+  // one session names a quest outright, another only someone connected to one
+  const session = async (title, summary) => {
+    const s = (await api(page, "session_save", {}, cid)).json.session;
+    expect((await api(page, "session_save", { id: s.id, title, is_published: true }, cid)).status).toBe(200);
+    expect((await api(page, "session_summary_save", { id: s.id, version: s.version, summary }, cid)).status).toBe(200);
+    expect((await api(page, "session_end", { id: s.id }, cid)).status).toBe(200);
+    return s.id;
+  };
+  const s1 = await session("Debts", "<p>The party heard of The Baron's Debt and met Gunther at the mill.</p>");
+  const s2 = await session("On the road", "<p>Ilse gave them a lift.</p>");
+
+  await page.goto(`/#/c/${cid}/sessions/${s1}`);
+  const row = page.locator(".enc-quests");
+  await expect(row.locator(`[data-id="${debt}"]`)).toHaveText("The Baron's Debt");
+  await expect(row.locator(`[data-id="${heist}"]`)).toHaveText("The Mill Heist via Gunther");
+  await expect(row.locator(`[data-id="${heist}"]`)).toHaveClass(/implied/);
+  await expect(row.locator(`[data-id="${hidden}"]`)).toHaveText("The Quiet Plot via Gunther");
+  // the player reads the same session without the hidden quest
+  await pp.goto(`/#/c/${cid}/sessions/${s1}`);
+  await expect(pp.locator(`.enc-quests [data-id="${heist}"]`)).toHaveText("The Mill Heist via Gunther");
+  await expect(pp.locator(`.enc-quests [data-id="${hidden}"]`)).toHaveCount(0);
+
+  // the quest's page lists the sessions that touch it, and marks the connection the player made
+  await page.goto(`/#/c/${cid}/encyclopedia/${heist}`);
+  const box = page.locator(".enc-quest-sessions");
+  await expect(box.locator(`li[data-id="${s1}"]`)).toHaveText("Debts via Gunther");
+  await expect(box.locator(`li[data-id="${s2}"]`)).toHaveText("On the road via Ilse");
+  await expect(page.locator(`.enc-conn[data-id="${ilse}"] .enc-conn-by`)).toBeVisible();
+  await expect(page.locator(`.enc-conn[data-id="${gunther}"] .enc-conn-by`)).toHaveCount(0);
+  await page.goto(`/#/c/${cid}/encyclopedia/${debt}`);
+  await expect(page.locator(`.enc-quest-sessions li[data-id="${s1}"]`)).toHaveText("Debts names it");
+  // an entry that isn't a quest has no such box
+  await page.goto(`/#/c/${cid}/encyclopedia/${gunther}`);
+  await expect(page.locator(".enc-conns")).toBeVisible();
+  await expect(page.locator(".enc-quest-sessions")).toHaveCount(0);
+  expectNoErrors(errors);
+});

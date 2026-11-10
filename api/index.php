@@ -1123,7 +1123,7 @@ try {
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'maps_index' => maps_index($cid, $isGm),
+            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'quest_links' => (object)quest_links($cid, $isGm), 'maps_index' => maps_index($cid, $isGm),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
