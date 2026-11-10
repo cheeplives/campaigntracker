@@ -713,23 +713,44 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await p1.getByRole("button", { name: "Add a portrait" }).click();
   const panel = p1.locator(".sheet-portrait-panel");
   await expect(panel).toContainText("No pictures yet.");
-  await panel.locator("input[type=file]").setInputFiles({ name: "portia.png", mimeType: "image/png", buffer: makePng(8, 8, () => 40) });
+  // a tall picture, the face at its top: straight after the upload, Fit in the circle offers to move and zoom it
+  await panel.locator("input[type=file]").setInputFiles({ name: "portia.png", mimeType: "image/png", buffer: makePng(8, 24, () => 40) });
+  const fit = p1.locator("dialog.framer-dialog");
+  await expect(fit).toBeVisible();
   await expect(panel.locator(".portrait-pick")).toHaveCount(1);
-  await expect(p1.locator(".sheet-head img.character-pic")).toBeVisible();
+  await fit.getByRole("slider", { name: "Zoom" }).fill("200");
+  const view = fit.locator(".framer-disc");
+  await expect(view.locator("img")).toHaveCSS("transform", "matrix(2, 0, 0, 2, 0, 0)");   // the preview zooms as it goes
+  const box = await view.boundingBox();
+  await p1.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await p1.mouse.down();
+  await p1.mouse.move(box.x + box.width / 2, box.y + box.height, { steps: 4 });   // dragged down: the top of the picture comes into view
+  await p1.mouse.up();
+  await view.press("ArrowLeft");   // and the keys move it too
+  await fit.getByRole("button", { name: "Save" }).click();
+  await expect(fit).toHaveCount(0);
   const first = sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim();
   expect(Number(first)).toBeGreaterThan(0);
+  await expect.poll(() => sql(`SELECT frame_zoom FROM attachments WHERE id=${first}`).trim()).toBe("200");
+  const [fx, fy] = sql(`SELECT frame_x, frame_y FROM attachments WHERE id=${first}`).trim().split(/\s+/).map(Number);
+  expect(fx).toBe(48);
+  expect(fy).toBeLessThan(50);
+  const framed = new RegExp(`id=${first}#frame=48,${fy},200$`);
+  await expect(p1.locator(".sheet-head .character-pic img")).toHaveAttribute("src", framed);   // the sheet's disc shows it framed
+  await expect(p1.locator(".sheet-head .character-pic img")).toHaveCSS("object-position", `48% ${fy}%`);
+  await expect(p1.locator(".sheet-head .character-pic img")).toHaveCSS("transform", "matrix(2, 0, 0, 2, 0, 0)");
   // the picture went on the character's Encyclopedia entry, whose page leads with it in the sheet's round disc: pressed,
   // the disc grows (and a tap anywhere else, or Escape, shrinks it again); it is the entry's token face too
   expect(sql(`SELECT parent_id FROM attachments WHERE id=${first}`).trim()).toBe(String(c.entry_id));
   await p1.setViewportSize({ width: 1280, height: 800 });
   await p1.goto(`index.html#/c/${cid}/encyclopedia/${c.entry_id}`);
   const disc = p1.locator(".enc-hero button.enc-disc");
-  await expect(disc.locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+  await expect(disc.locator(".character-pic img")).toHaveAttribute("src", framed);   // framed here too
   await expect(disc).toHaveAttribute("aria-pressed", "false");
-  const small = await disc.locator("img").boundingBox();
+  const small = await disc.locator(".character-pic").boundingBox();
   await disc.click();
   await expect(disc).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(async () => (await disc.locator("img").boundingBox()).width).toBeGreaterThan(small.width * 2.5);
+  await expect.poll(async () => (await disc.locator(".character-pic").boundingBox()).width).toBeGreaterThan(small.width * 2.5);
   await p1.keyboard.press("Escape");
   await expect(disc).toHaveAttribute("aria-pressed", "false");
   await disc.click();
@@ -737,15 +758,16 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await p1.locator(".enc-hero .notepanel.public h4").click();   // anywhere else: off the grown disc, which covers the name
   await expect(disc).toHaveAttribute("aria-pressed", "false");
   const entry = (await api(p1, "encyclopedia", undefined, cid)).json.entries.find(x => x.id === c.entry_id);
-  expect(entry.token_url).toMatch(new RegExp(`id=${first}$`));
+  expect(entry.token_url).toMatch(framed);   // the entry's token face, on the map, is framed the same way
 
   await p1.goto(`index.html#/c/${cid}/characters`);
-  await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+  await expect(p1.locator(".character-card", { hasText: "Portia" }).locator(".character-pic img")).toHaveAttribute("src", framed);
 
   // a second picture on the entry, picked by the GM from the sheet
   await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await p1.getByRole("button", { name: "Change the portrait" }).click();
   await p1.locator(".sheet-portrait-panel input[type=file]").setInputFiles({ name: "second.png", mimeType: "image/png", buffer: makePng(8, 8, () => 200) });
+  await fit.getByRole("button", { name: "Cancel" }).click();   // left as it comes: the middle, filling the circle
   await expect(p1.locator(".sheet-portrait-panel .portrait-pick")).toHaveCount(2);
   const second = Number(sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim());
   expect(second).not.toBe(Number(first));
@@ -772,6 +794,16 @@ test("Characters: someone who isn't its player or a GM can't change a portrait",
   const { cid, p1, p2, tpl } = await party(page, browser);
   const c = await make(p1, cid, { template_id: tpl.id, name: "Mine" });
   expect((await api(p2, "character_portrait", { id: c.id, file_id: 0 }, cid)).status).toBe(403);
+  // nor frame its picture in the circle, which its player can
+  const me = await (await p1.request.get("api/auth/me.php")).json();
+  const up = await p1.request.post(`api/index.php?a=file_upload&cid=${cid}`, { headers: { "X-CSRF-Token": me.csrf },
+    multipart: { parent_type: "encyclopedia", parent_id: String(c.entry_id), file: { name: "x.png", mimeType: "image/png", buffer: makePng(4, 4) } } });
+  const pic = (await up.json()).file.id;
+  expect((await api(p2, "file_frame", { id: pic, x: 50, y: 10, zoom: 150 }, cid)).status).toBe(403);
+  expect((await api(p1, "file_frame", { id: pic, x: 50, y: 10, zoom: 150 }, cid)).status).toBe(200);
+  expect((await api(p1, "file_frame", { id: pic, x: 50, y: 10, zoom: 900 }, cid)).status).toBe(400);   // up to 4×
+  expect((await api(p1, "file_frame", { id: pic, x: 50, y: 50, zoom: 100 }, cid)).json.file.url).toMatch(new RegExp(`id=${pic}$`));   // back to plain
+  expect(sql(`SELECT frame_x FROM attachments WHERE id=${pic}`).trim()).toBe("NULL");
   await p2.goto(`index.html#/c/${cid}/characters/${c.id}`);
   await expect(p2.getByRole("heading", { name: "Mine" })).toBeVisible();
   await expect(p2.getByRole("button", { name: "Add a portrait" })).toHaveCount(0);

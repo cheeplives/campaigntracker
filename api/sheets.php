@@ -348,7 +348,7 @@ function character_row(int $cid, int $id, bool $isGm): array {
 function character_rows(int $cid, bool $isGm, ?int $id = null): array {
     $st = db()->prepare('SELECT c.*, e.name, e.is_secret AS entry_secret, t.name AS template_name, t.game, t.layout, t.version AS tversion,
             ' . user_name_sql() . ' AS owner_name, m.user_id IS NOT NULL AS owner_in_campaign, m.role AS owner_role,
-            pa.id AS portrait_file, pa.is_secret AS portrait_secret
+            pa.id AS portrait_file, pa.is_secret AS portrait_secret, pa.frame_x, pa.frame_y, pa.frame_zoom
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id JOIN sheet_templates t ON t.id=c.template_id
         LEFT JOIN users u ON u.id=c.owner_id LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
         LEFT JOIN attachments pa ON pa.id=c.portrait_id AND pa.campaign_id=c.campaign_id AND pa.parent_type=\'encyclopedia\' AND pa.parent_id=c.entry_id
@@ -365,7 +365,7 @@ function character_full(array $c, bool $isGm): bool {
  * its entry's pictures and not GM only to a player, else its entry's first picture ($pics, from entry_pics()). */
 function character_pic(array $c, bool $isGm, array $pics): ?string {
     if ($c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']))
-        return 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => (int)$c['campaign_id'], 'id' => (int)$c['portrait_file']]);
+        return pic_url((int)$c['campaign_id'], (int)$c['portrait_file'], $c);
     return $pics[(int)$c['entry_id']] ?? null;
 }
 /** The card: who and what it is, its portrait, its Play and Summary fields as this member may see them. */

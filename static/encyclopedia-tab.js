@@ -532,6 +532,13 @@
       // its right. Open sheet (or Edit, for an entry with no sheet) is the one everyday button; Edit stays beside it,
       // and the rest wait in the ⋯ menu.
       const pic = entryPic(e) || e.token_url || null;   // the sheet's portrait, else the entry's first picture, else its token's
+      // Fit in the circle (static/discpic.js): for a GM, the character's player, or whoever added the picture to the entry
+      const picId = DiscPic.fileId(pic);
+      const canFit = picId && (isGM() || (ch?.owner && ch.owner.id === S.user?.id)
+        || (e.files || []).some(f => f.id === picId && f.created_by === S.user?.id));
+      const fitBtn = canFit ? btn('⤢ Fit the picture in the circle', async () => {
+        try { if (await DiscPic.frame(pic, (a, body) => post(a, body, S.camp.id))) { toast('Picture framed'); route(); } } catch (err) { toast(err.message, true); }
+      }, 'small', 'Move and zoom the picture inside its round disc, so the face shows: on this page, the character sheet and the map') : null;
       const edit = btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry');
       const actions = el('div', { class: 'row enc-actions' },
         ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
@@ -542,11 +549,12 @@
           canSheet && (ch || !e.category || e.category === 'person')
             ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
           e.is_secret ? null : pinButton({ kind: 'entry', id: e.id }),
+          fitBtn,
           ...entryTools(e, ctx)], deleteEntryBtn(e)));
       // The disc: the picture, or (like a sheet with no portrait) the kind's icon or the name's initials. With a picture
       // it is a button that grows the disc; pressed again, Escape or a tap anywhere else shrinks it (style.css, .enc-disc).
       const initials = String(e.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-      const face = pic ? el('img', { src: pic, alt: `Picture of ${e.name}`, class: 'character-pic big' })
+      const face = pic ? DiscPic.disc(pic, 'character-pic big', { alt: `Picture of ${e.name}` })
         : el('span', { class: 'character-pic character-initials big' + (encCat(e.category) ? ' enc-icon' : ''), 'aria-hidden': 'true' }, encCat(e.category)?.[2] || initials);
       let outside = null;
       const setBig = on => {

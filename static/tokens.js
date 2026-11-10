@@ -65,7 +65,7 @@ const TokensTab = (() => {
 
   /** The round marker: the picture, or the name's first letter while there is none. */
   function face(el, url, name) {
-    return el('span', { class: 'token-face', 'data-tip': name || null }, url ? el('img', { src: url, alt: name || '', loading: 'lazy' }) : el('span', { 'aria-hidden': 'true' }, (name || '?').trim().charAt(0).toUpperCase()));
+    return el('span', { class: 'token-face', 'data-tip': name || null }, url ? DiscPic.img(url, { alt: name || '', loading: 'lazy' }) : el('span', { 'aria-hidden': 'true' }, (name || '?').trim().charAt(0).toUpperCase()));
   }
 
   /** Send one picture to token_upload (multipart, so not through api()), with name, kind or icon in extra; the new token comes back. */
@@ -273,7 +273,11 @@ const TokensTab = (() => {
       const form = el('form', {}, el('h3', {}, `Token: ${t.name}`),
         el('div', { class: 'row token-edit-face' }, face(el, t.image_url, t.name),
           el('label', { class: 'button small file-add' }, pic, 'Change picture'),
-          btn('Find Image…', () => { d.close(); findFor(t); }, 'small', 'Search open picture libraries for a picture of this')),
+          btn('Find Image…', () => { d.close(); findFor(t); }, 'small', 'Search open picture libraries for a picture of this'),
+          t.image_url ? btn('⤢ Fit in the circle', async () => {
+            d.close();
+            try { if (await DiscPic.frame(t.image_url, (a, body) => post(a, body, cid))) { toast('Picture framed'); await changed(); } } catch (err) { toast(err.message, true); }
+          }, 'small', 'Move and zoom the picture inside the round token, so the face shows') : null),
         t.credit ? ctx.creditLine({ credit: t.credit }) : null,
         field('Name', name), field('Kind', kindSel), field('Size', size, 'How many squares across it covers on a gridded map'),
         field('Character', member, 'The player whose character wears it. A character has one token'),

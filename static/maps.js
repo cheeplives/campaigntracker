@@ -44,7 +44,7 @@ const MapsTab = (() => {
   const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
   function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick, badge }) {
     const tint = color && !image;
-    const face = image ? el('img', { class: 'map-marker-icon', src: image, alt: '' })
+    const face = image ? DiscPic.disc(image, 'map-marker-icon')
       : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
     const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, badge || null, label ? el('span', { class: 'map-marker-label' }, label) : null);
     node.style.setProperty('--marker-size', sizePx + 'px');
@@ -1013,7 +1013,7 @@ const MapsTab = (() => {
       });
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
         const tok = pinToken(p);
-        const face = tok ? el('span', { class: 'map-place-icon', 'aria-hidden': 'true' }, el('img', { class: 'map-place-token', src: tok, alt: '' }))
+        const face = tok ? el('span', { class: 'map-place-icon', 'aria-hidden': 'true' }, DiscPic.disc(tok, 'map-place-token'))
           : el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
         if (p.color && !tok) face.style.setProperty('--pin-colour', p.color);
         return el('div', { class: 'map-place-row', 'data-name': pinTitle(p) }, showTick('p' + p.id, pinTitle(p), hid),

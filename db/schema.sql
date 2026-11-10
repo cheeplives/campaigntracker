@@ -491,6 +491,11 @@ CREATE TABLE IF NOT EXISTS attachments (
   width SMALLINT UNSIGNED NULL,
   height SMALLINT UNSIGNED NULL,
   caption VARCHAR(200) NULL,
+  -- How the picture sits in a round disc (046): the point kept in the middle (percent across, down) and the zoom
+  -- (100-400); NULL: the middle, just filling the circle.
+  frame_x TINYINT UNSIGNED NULL,
+  frame_y TINYINT UNSIGNED NULL,
+  frame_zoom SMALLINT UNSIGNED NULL,
   -- Where a picture found with Find Image came from (see db/migrations/017_attachment_credits.sql); empty for uploads.
   credit_title VARCHAR(200) NULL,
   credit_author VARCHAR(200) NULL,

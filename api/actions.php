@@ -156,6 +156,7 @@ const ACTIONS = [
     'image_search' => ['get' => true, 'who' => 'member'],
     'image_import' => ['who' => 'member', 'touch' => true],
     'file_update' => ['who' => 'member', 'touch' => true],
+    'file_frame' => ['who' => 'member', 'touch' => true],
     'file_delete' => ['who' => 'member', 'touch' => true],
     'maps' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
     'map' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
