@@ -568,6 +568,13 @@
       "cols": 6
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

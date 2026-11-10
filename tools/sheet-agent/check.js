@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* check.js — would db/starter-templates take this file? The same rules as the starter test
  * (tests/browser/starter-templates.spec.js): the file name is the starter key, a name and a game, a valid layout
- * (SheetLayout.validate, which matches the server's), more than three fields, its source (title, owner, url), and
- * labels only, no rules text.
+ * (SheetLayout.validate, which matches the server's), more than three fields, its source (title, owner, url),
+ * labels only, no rules text, and the Holdings page every starter has (SheetLayout.holdingsSection).
  *
  *   node tools/sheet-agent/check.js <template.json> [...more]
  *
@@ -31,6 +31,7 @@ function check(file) {
   out.push(...L.validate(t.layout));
   const fields = L.fields(t.layout);
   if (fields.size <= 3) out.push('more than three fields');
+  if (!L.hasHoldings(t.layout)) out.push('the Holdings page: add ' + JSON.stringify(L.holdingsSection()) + ' as the last section');
   for (const [, { field }] of fields) if (typeof field.label === 'string' && field.label.length > 60) out.push(`"${field.label.slice(0, 40)}…": a label, not rules text (60 characters at most)`);
   return out;
 }

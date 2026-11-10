@@ -6120,27 +6120,56 @@
     },
   };
 
+  /** Whose holdings a panel shows: the party's (Party → Holdings), or one character's (the Holdings page of its sheet,
+   * which looks and works the same). character: the sheet's id, or null for the party's; editable: whether this person
+   * may change them (anyone in the campaign for the party's; its player or a GM for a character's); whose, editors: words
+   * for the tips. A panel sets reload(), which draws it again from the server. */
+  const PARTY_HOLDINGS = { character: null, editable: true, funds: 'Party Funds', whose: 'the party', editors: 'The GM and every player' };
+  const characterHoldings = ch => ({ character: ch.id, editable: !!ch.can_edit, funds: 'Personal Funds', whose: ch.name, editors: `${ch.name}'s player and the GM` });
+  /** The body of a holdings request: with the character's id when they are a character's own. */
+  const holdBody = (scope, body = {}) => (scope.character ? { ...body, character_id: scope.character } : body);
+  const holdPost = (scope, action, body) => post(action, holdBody(scope, body), S.camp.id);
+
   async function viewHoldings() {
-    const [{ funds, gear, holdings, tags }, groups] = await Promise.all([api('holdings', { query: { cid: S.camp.id } }),
-      api('groups', { query: { cid: S.camp.id } }).then(r => r.groups).catch(() => [])]);
-    S.holdingTags = tags || [];
-    const cards = holdings.map(holdingCard);
-    const toggleAll = btn('', () => {
-      const open = !cards.every(c => c.isOpen());
-      cards.forEach(c => c.setOpen(open));
+    const panel = await holdingsPanel({ ...PARTY_HOLDINGS });
+    mount(...campaignHeader('holdings'), el('div', { class: 'card' }, partySubtabs('holdings')), panel);
+  }
+
+  /** The holdings page itself: Funds and Gear and Loot on the left, one card per holding on the right, for the party or
+   * for one character (scope). Read only, the boxes are locked and the buttons that change things are left off. */
+  async function holdingsPanel(scope) {
+    const node = el('div', { class: 'holdings-page' + (scope.editable ? '' : ' holdings-readonly') });
+    const load = async () => {
+      const [{ funds, gear, holdings, tags }, groups] = await Promise.all([api('holdings', { query: holdBody(scope, { cid: S.camp.id }) }),
+        api('groups', { query: { cid: S.camp.id } }).then(r => r.groups).catch(() => [])]);
+      S.holdingTags = tags || [];
+      const cards = holdings.map(h => holdingCard(h, scope));
+      const toggleAll = btn('', () => {
+        const open = !cards.every(c => c.isOpen());
+        cards.forEach(c => c.setOpen(open));
+        showToggle();
+      }, 'small hold-expand', 'Open or close every holding card');
+      const showToggle = () => { toggleAll.textContent = cards.every(c => c.isOpen()) ? 'Collapse all' : 'Expand all'; };
+      cards.forEach(c => c.node.addEventListener('holding-toggle', showToggle));
       showToggle();
-    }, 'small', 'Open or close every holding card');
-    const showToggle = () => { toggleAll.textContent = cards.every(c => c.isOpen()) ? 'Collapse all' : 'Expand all'; };
-    cards.forEach(c => c.node.addEventListener('holding-toggle', showToggle));
-    showToggle();
-    const right = el('div', { class: 'holdings-col' },
-      el('div', { class: 'card' }, el('div', { class: 'row spread' },
-        el('h2', {}, 'Holdings', tip('Vehicles, animals, buildings, assets and anything else the party owns, one card each, with tags of their own. Press a holding\'s name to open it and see its details and storage. The GM and every player can add and change them.')),
-        el('div', { class: 'inline' }, cards.length > 1 ? toggleAll : null,
-          btn('+ New holding', () => holdingDialog(), 'primary new-btn', 'Add a vehicle, animal, building, asset or a type of your own'))),
-        holdings.length ? null : el('p', { class: 'muted' }, 'No holdings yet. Press + New holding to add one.')),
-      cards.map(c => c.node));
-    mount(...campaignHeader('holdings'), el('div', { class: 'card' }, partySubtabs('holdings')), el('div', { class: 'holdings-page' }, el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || []), gearCard(gear, partyClaimants(groups))), right));
+      const right = el('div', { class: 'holdings-col' },
+        el('div', { class: 'card' }, el('div', { class: 'row spread' },
+          el('h2', {}, 'Holdings', tip(`Vehicles, animals, buildings, assets and anything else ${scope.whose} owns, one card each, with tags of their own. Press a holding's name to open it and see its details and storage. ${scope.editors} can add and change them.`)),
+          el('div', { class: 'inline' }, cards.length > 1 ? toggleAll : null,
+            scope.editable ? btn('+ New holding', () => holdingDialog({}, scope), 'primary new-btn', 'Add a vehicle, animal, building, asset or a type of your own') : null)),
+          holdings.length ? null : el('p', { class: 'muted' }, scope.editable ? 'No holdings yet. Press + New holding to add one.' : 'No holdings yet.')),
+        cards.map(c => c.node));
+      node.replaceChildren(el('div', { class: 'holdings-col holdings-left' }, fundsCard(funds || [], scope), gearCard(gear, partyClaimants(groups), scope)), right);
+      if (!scope.editable) {
+        // read only: every box locked, and nothing that adds, removes or edits; the cards still open and close
+        for (const x of node.querySelectorAll('input, select, textarea, .ticker button')) x.disabled = true;
+        for (const x of node.querySelectorAll('.add-line, button.link.danger, .hold-actions, .combo-btn')) x.remove();
+      }
+      Undo.reapply();
+    };
+    scope.reload = () => load().catch(err => toast(err.message, true));
+    await load();
+    return node;
   }
 
   /** The one-box row under a ledger that adds a line: type a name and press Enter or + Add. The box clears before
@@ -6162,7 +6191,7 @@
 
   /** Party Funds: a ledger of the party's money, one line per currency, where it is kept and how much
    * ("Gold pieces", "Bank of Altdorf", 120). Boxes save when you leave them. */
-  function fundsCard(funds) {
+  function fundsCard(funds, scope = PARTY_HOLDINGS) {
     const rows = el('div', { class: 'ledger-rows' });
     const amountBox = (v, label) => el('input', { type: 'number', step: 'any', value: v ?? '', placeholder: 'Amount', 'aria-label': label });
     const line = f => {
@@ -6171,22 +6200,22 @@
       const amt = amountBox(f.amount, `Amount of ${f.currency}`);
       const save = async () => {
         if (!cur.value.trim()) { cur.value = f.currency; return; }
-        try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await holdPost(scope, 'funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
       for (const i of [cur, loc, amt]) i.addEventListener('change', save);
       const row = el('div', { class: 'ledger-row', 'data-undo': `funds_delete:${f.id}` }, cur, loc, amt,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: () =>
-          undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'));
+          undoDelete(row, `Removed "${shortText(cur.value)}" from ${scope.funds}`, 'funds_delete', holdBody(scope, { id: f.id }), () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...funds.map(line));
-    const add = addLine('Add a currency, e.g. Gold pieces', 'New currency', 'Add this currency to Party Funds, then fill in where it is kept and how much', async currency => {
+    const add = addLine('Add a currency, e.g. Gold pieces', 'New currency', `Add this currency to ${scope.funds}, then fill in where it is kept and how much`, async currency => {
       const f = { currency, location: '', amount: 0 };
-      f.id = (await post('funds_save', { currency, location: '', amount: 0 }, S.camp.id)).id;
+      f.id = (await holdPost(scope, 'funds_save', { currency, location: '', amount: 0 })).id;
       rows.append(line(f));
     });
     return el('section', { class: 'card funds' },
-      el('h2', {}, 'Party Funds', tip('The party\'s money, one line per currency, with where it is kept: gold in a strongbox, credits in a bank. Type in a box and it saves when you leave it. The GM and every player can edit it.')),
+      el('h2', {}, scope.funds, tip(`The money ${scope.whose} has, one line per currency, with where it is kept: gold in a strongbox, credits in a bank. Type in a box and it saves when you leave it. ${scope.editors} can edit it.`)),
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Location'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
       rows, add);
   }
@@ -6220,7 +6249,7 @@
 
   /** The Gear and Loot list: the item, who in the party claimed it (or anyone else, as Custom), where it is, and how
    * many. Each box saves when you leave it; the one-box row at the foot adds an item. */
-  function gearCard(gear, names) {
+  function gearCard(gear, names, scope = PARTY_HOLDINGS) {
     const rows = el('div', { class: 'gear-rows' });
     const empty = el('p', { class: 'muted gear-empty' }, 'Nothing yet. Add the first item below.');
     empty.hidden = gear.length > 0;
@@ -6230,27 +6259,27 @@
       item.classList.add('gear-item');
       const fields = () => ({ id: g.id, item: item.value, claimed_by: claimed.get(), location: loc.value });
       const save = async () => {
-        try { await post('gear_save', fields(), S.camp.id); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await holdPost(scope, 'gear_save', fields()); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
       const claimed = claimPicker(g.claimed_by, names, 'Claimed by', save);
       [item, loc].forEach(i => i.addEventListener('change', save));
       const amount = amountTicker(g.amount, { label: `How many ${g.item || 'of this item'}`,
-        onTick: delta => post('gear_tick', { id: g.id, delta }, S.camp.id),
-        onSet: n => post('gear_save', { ...fields(), amount: n }, S.camp.id) });
+        onTick: delta => holdPost(scope, 'gear_tick', { id: g.id, delta }),
+        onSet: n => holdPost(scope, 'gear_save', { ...fields(), amount: n }) });
       const row = el('div', { class: 'gear-row', 'data-undo': `gear_delete:${g.id}` }, item, claimed.node, loc, amount.node,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${g.item || 'this item'}`, 'data-tip': 'Remove this item', onclick: () =>
-          undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', { id: g.id }, () => row.remove()) }, '✕'));
+          undoDelete(row, `Removed "${shortText(item.value || 'the item')}" from Gear and Loot`, 'gear_delete', holdBody(scope, { id: g.id }), () => row.remove()) }, '✕'));
       return row;
     };
     rows.append(...gear.map(gearRow));
     const add = addLine('Add an item', 'New item', 'Add this item to the list, then fill in who claimed it, where it is and how many', async item => {
       const g = { item, claimed_by: '', location: '', amount: 1 };
-      g.id = (await post('gear_save', g, S.camp.id)).id;
+      g.id = (await holdPost(scope, 'gear_save', g)).id;
       rows.append(gearRow(g));
       empty.hidden = true;
     });
     return el('section', { class: 'card gear' },
-      el('h2', {}, 'Gear and Loot', tip('What the party carries and has found. Type in any box and it saves when you leave it; − and + change how many. Claimed by lists the party, or pick Custom… for anyone else. The GM and every player can edit the list.')),
+      el('h2', {}, 'Gear and Loot', tip(`What ${scope.whose} carries and has found. Type in any box and it saves when you leave it; − and + change how many. Claimed by lists the party, or pick Custom… for anyone else. ${scope.editors} can edit the list.`)),
       el('div', { class: 'gear-row gear-head', 'aria-hidden': 'true' }, ['Item', 'Claimed by', 'Location', 'Amount', ''].map(h => el('span', { class: 'lbl' }, h))),
       rows, empty, add);
   }
@@ -6258,9 +6287,9 @@
   /** One holding's card. Closed, it is one line: its name, type and amount. Open, it shows its location, tags,
    * description, fields and storage too, with Edit and Delete. Which cards are open is remembered in this browser.
    * Returns { node, isOpen, setOpen }; the node fires holding-toggle when it opens or closes. */
-  function holdingCard(h) {
+  function holdingCard(h, scope = PARTY_HOLDINGS) {
     const k = HOLDING_KINDS[h.kind] || HOLDING_KINDS.custom;
-    const amount = amountTicker(h.amount, { label: `How many ${h.name}`, onTick: delta => post('holding_tick', { id: h.id, delta }, S.camp.id) });
+    const amount = amountTicker(h.amount, { label: `How many ${h.name}`, onTick: delta => holdPost(scope, 'holding_tick', { id: h.id, delta }) });
     const stats = k.fields.filter(f => h.stats?.[f]).map(f => el('div', {}, el('span', { class: 'lbl' }, HOLDING_FIELDS[f]), el('span', {}, h.stats[f])));
     const toggle = el('button', { type: 'button', class: 'hold-toggle', 'data-tip': 'Show or hide its details and storage' },
       el('span', { class: 'hold-caret', 'aria-hidden': 'true' }, '▸'), `${k.icon} ${h.name}`);
@@ -6269,12 +6298,12 @@
       h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
       h.description ? el('p', { class: 'pre' }, h.description) : null,
       stats.length ? el('div', { class: 'hold-stats' }, stats) : null,
-      storageBox(h),
-      el('div', { class: 'row' },
-        btn('Edit', () => holdingDialog(h), 'small', 'Change this holding'),
+      storageBox(h, scope),
+      el('div', { class: 'row hold-actions' },
+        btn('Edit', () => holdingDialog(h, scope), 'small', 'Change this holding'),
         moreMenu(h.name, btn('Delete…', async () => {
           if (!await confirmDialog(`Delete "${h.name}"?`, { ok: 'Delete', danger: true })) return;
-          try { await post('holding_delete', { id: h.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
+          try { await holdPost(scope, 'holding_delete', { id: h.id }); if (scope.reload) scope.reload(); else route(); } catch (err) { toast(err.message, true); }
         }, 'small danger', 'Delete this holding'))));
     const node = el('section', { class: 'card holding', 'data-kind': h.kind },
       el('div', { class: 'hold-head' },
@@ -6298,7 +6327,7 @@
   const fmtWeight = n => (Math.round(n * 100) / 100).toLocaleString();
   /** A holding's Storage box: a ledger of what is kept in it and how much each weighs, with the total,
    * flagged when it is more than the holding's Cargo. Boxes save when you leave them. */
-  function storageBox(h) {
+  function storageBox(h, scope = PARTY_HOLDINGS) {
     const cap = leadNumber(h.stats?.cargo);
     const lines = el('div', { class: 'ledger-rows' });
     const total = el('div', { class: 'ledger-total' });
@@ -6316,21 +6345,21 @@
       weight.setAttribute('aria-label', `Weight of ${s.item}`);
       const save = async () => {
         if (!item.value.trim()) { item.value = s.item; return; }
-        try { await post('storage_save', { id: s.id, item: item.value, weight: weight.value }, S.camp.id); s.item = item.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+        try { await holdPost(scope, 'storage_save', { id: s.id, item: item.value, weight: weight.value }); s.item = item.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
       };
       item.addEventListener('change', save);
       weight.addEventListener('change', save);
       weight.addEventListener('input', sum);
       const row = el('div', { class: 'ledger-row', 'data-undo': `storage_delete:${s.id}` }, item, weight,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${s.item} from storage`, 'data-tip': 'Remove from storage', onclick: () => {
-          undoDelete(row, `Removed "${shortText(item.value)}" from ${h.name}'s storage`, 'storage_delete', { id: s.id }, () => row.remove(), sum);
+          undoDelete(row, `Removed "${shortText(item.value)}" from ${h.name}'s storage`, 'storage_delete', holdBody(scope, { id: s.id }), () => row.remove(), sum);
         } }, '✕'));
       return row;
     };
     lines.append(...(h.storage || []).map(line));
     const add = addLine('Put an item in storage', `New item in ${h.name}'s storage`, 'Put this item in storage, then fill in its weight', async item => {
       const s = { item, weight: null };
-      s.id = (await post('storage_save', { holding_id: h.id, item, weight: '' }, S.camp.id)).id;
+      s.id = (await holdPost(scope, 'storage_save', { holding_id: h.id, item, weight: '' })).id;
       lines.append(line(s));
       sum();
     });
@@ -6344,7 +6373,7 @@
   }
 
   /** Add a holding, or edit one (h): the common fields, then the fields of the type picked. */
-  function holdingDialog(h = {}) {
+  function holdingDialog(h = {}, scope = PARTY_HOLDINGS) {
     hideTip();
     const CUSTOM = '__custom';
     const kindSel = select([...Object.entries(HOLDING_KINDS).map(([v, x]) => [v, v === 'custom' ? 'Custom…' : x.label])], h.kind || 'vehicle', { name: 'kind', 'aria-label': 'Type' });
@@ -6405,13 +6434,13 @@
       const stats = Object.fromEntries(HOLDING_KINDS[kind].fields.map(f => [f, boxes[f].get().trim()]).filter(([, v]) => v));
       const picked = tags.get();
       try {
-        const r = await post('holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
-          location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked }, S.camp.id);
+        const r = await holdPost(scope, 'holding_save', { id: h.id, name: name.value, kind, type_name: kind === 'custom' ? typeName.value : '',
+          location: loc.value, description: desc.value, amount: amount.get(), stats, tags: picked });
         if (!h.id && r?.id) holdOpen.set(r.id, true);   // a new holding opens, so its storage is ready to fill
       } catch (x) { return fail(x.message); }
       d.close();
       toast(h.id ? 'Holding saved' : 'Holding added');
-      route();
+      if (scope.reload) scope.reload(); else route();
       offerNouns([{ text: `${name.value}\n${loc.value}`, title: true, short: true, label: `holding "${name.value.trim()}"` }, { text: desc.value, label: `holding "${name.value.trim()}"` }]);
     }));
     document.body.append(d);
@@ -7537,7 +7566,7 @@
   }
 
   // Character sheets (static/sheets.js): the template library and editor, and the sheets themselves.
-  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, partySubtabs, isGM, route, rollFromSheet: diceFromSheet, uploadFile, findImage, reloadCampaign: () => loadCampaign(S.camp.id, true) });
+  if (typeof Sheets !== 'undefined') Sheets.mount({ S, api, post, mount, field, campaignHeader, partySubtabs, isGM, route, holdingsPanel: ch => holdingsPanel(characterHoldings(ch)), rollFromSheet: diceFromSheet, uploadFile, findImage, reloadCampaign: () => loadCampaign(S.camp.id, true) });
 
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {

@@ -93,6 +93,13 @@ comment and `validate`); the ones that matter most here:
   location column holding armour points, a tick column named Scroll), give the column `"width": "narrow"`; where a
   label looks short but holds text (a wound Level of Healthy, Nicked, ...), `"width": "normal"`; a long description
   beside a name can be `"width": "wide"` (twice a normal column). Match the PDF: a column printed narrow is narrow.
+- **Holdings page (every template).** The last section is always the character's own Holdings page, exactly:
+  `{ "key": "personal_holdings", "title": "Personal Holdings", "page": "Holdings", "holdings": true, "fields": [] }`.
+  It has no fields: the sheet draws the character's own funds, gear and loot, and holding cards there, laid out and
+  working exactly like Party → Holdings. It is a page of its own, so a one-page sheet then has two tabs (Sheet and
+  Holdings); give no other section that page. It stands beside whatever the PDF has: keep the PDF's own equipment,
+  weapon and armour boxes where the PDF puts them. If the PDF has a page or box that mixes general gear with weapons
+  or armour, say so in the pull request so Josh can decide how to handle it. `check.js` refuses a template without it.
 - **Summary.** Mark `"summary": true` on the two or three fields that say who a character is at a glance
   (class, level, career); `"play": true` on what changes during a session (hit points, stress, luck).
 

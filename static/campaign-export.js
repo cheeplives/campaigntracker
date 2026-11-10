@@ -186,27 +186,40 @@
     const table = (head, list) => (list.length ? [`| ${head.join(' | ')} |`, `|${head.map(() => ' --- ').join('|')}|`, ...list.map(r => `| ${r.map(c => mdText(text(c)).replace(/\n/g, ' ')).join(' | ')} |`), ''] : []);
     const storage = new Map();
     for (const s of rows('holding_storage')) { if (!storage.has(Number(s.holding_id))) storage.set(Number(s.holding_id), []); storage.get(Number(s.holding_id)).push(s); }
-    if (rows('holdings').length || rows('party_funds').length || rows('party_gear').length || rows('party_groups').length) {
-      const L = [`# ${camp.name}: Party`, ''];
-      if (rows('party_groups').length) L.push('## Groups', '', ...rows('party_groups').map(g => `- ${mdText(g.name)}${on(g.is_main) ? ' (main group)' : ''}`), '');
-      if (rows('holdings').length) L.push('## Holdings', '');
-      for (const h of rows('holdings')) {
-        L.push(`### ${h.name}`, '');
+    // the holdings, funds and gear of the party (who null) or of one character (its id: its sheet's Holdings page, 051)
+    const ofWho = (t, who) => rows(t).filter(r => (has(r.character_id) ? Number(r.character_id) : null) === who);
+    const holdingLines = (who, h2) => {
+      const L = [], hs = ofWho('holdings', who), funds = ofWho('party_funds', who), gear = ofWho('party_gear', who);
+      if (hs.length) L.push(`${h2} Holdings`, '');
+      for (const h of hs) {
+        L.push(`${h2}# ${h.name}`, '');
         const about = [h.type_name || h.kind, has(h.location) ? `at ${h.location}` : '', Number(h.amount) > 1 ? `× ${Number(h.amount)}` : ''].filter(has);
         if (about.length) L.push(`*${about.join(' · ')}*`, '');
         if (has(h.description)) L.push(text(h.description), '');
         L.push(...table(['Stored', 'Weight'], (storage.get(Number(h.id)) || []).map(s => [s.item, has(s.weight) ? String(Number(s.weight)) : ''])));
       }
-      if (rows('party_funds').length) L.push('## Funds', '', ...table(['Currency', 'Amount', 'Where'], rows('party_funds').map(f => [f.currency, String(Number(f.amount)), f.location])));
-      if (rows('party_gear').length) L.push('## Gear', '', ...table(['Item', 'Amount', 'Held by', 'Where'], rows('party_gear').map(g => [g.item, String(Number(g.amount)), g.claimed_by, g.location])));
+      if (funds.length) L.push(`${h2} Funds`, '', ...table(['Currency', 'Amount', 'Where'], funds.map(f => [f.currency, String(Number(f.amount)), f.location])));
+      if (gear.length) L.push(`${h2} Gear`, '', ...table(['Item', 'Amount', 'Held by', 'Where'], gear.map(g => [g.item, String(Number(g.amount)), g.claimed_by, g.location])));
+      return L;
+    };
+    const partyHoldings = holdingLines(null, '##');
+    if (partyHoldings.length || rows('party_groups').length) {
+      const L = [`# ${camp.name}: Party`, ''];
+      if (rows('party_groups').length) L.push('## Groups', '', ...rows('party_groups').map(g => `- ${mdText(g.name)}${on(g.is_main) ? ' (main group)' : ''}`), '');
+      L.push(...partyHoldings);
       page('Party.md', L);
     }
 
-    // ---- Characters: who they are; their sheets are in campaign.json
+    // ---- Characters: who they are and what each owns; their sheets are in campaign.json
     if (rows('sheet_characters').length) {
+      const charName = c => entryName.get(Number(c.entry_id)) || `Character ${c.id}`;
       const L = [`# ${camp.name}: Characters`, '', ...table(['Character', 'Kind', 'Player'], rows('sheet_characters').map(c =>
-        [entryName.get(Number(c.entry_id)) || `Character ${c.id}`, c.kind === 'npc' ? 'NPC' : 'PC', who(c.owner_id)])),
+        [charName(c), c.kind === 'npc' ? 'NPC' : 'PC', who(c.owner_id)])),
         'Each character\'s sheet (its filled-in fields) is in campaign.json, under `tables.sheet_characters`.', ''];
+      for (const c of rows('sheet_characters')) {
+        const own = holdingLines(Number(c.id), '###');
+        if (own.length) L.push(`## ${mdText(charName(c))}'s holdings`, '', ...own);
+      }
       page('Characters.md', L);
     }
 
@@ -259,7 +272,7 @@
 
     // ---- the front page, and every row
     const counts = [['Encyclopedia entries', entries.length, 'Encyclopedia/Encyclopedia.md'], ['Events', events.length, 'Events.md'], ['Days and shifts with notes', days.size, 'Calendar notes.md'],
-      ['Sessions', sessions.length, 'Sessions'], ['Library tomes', rows('library_tomes').length, 'Library'], ['Holdings', rows('holdings').length, 'Party.md'],
+      ['Sessions', sessions.length, 'Sessions'], ['Library tomes', rows('library_tomes').length, 'Library'], ['Holdings', ofWho('holdings', null).length, 'Party.md'],
       ['Characters', rows('sheet_characters').length, 'Characters.md'], ['Reminders', rows('reminders').length, 'Reminders.md'], ['Clocks', rows('clocks').length, 'Clocks.md'],
       ['Rests and downtime', rows('downtimes').length, 'Downtime.md'], ['Maps', rows('maps').length, 'Maps.md'], ['Pictures and files', fetch.length, 'files']];
     const R = [`# ${camp.name}`, ''];

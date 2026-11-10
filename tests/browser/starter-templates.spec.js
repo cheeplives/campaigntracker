@@ -25,6 +25,23 @@ test("Starter files: about forty, each a valid layout with its source, named by 
   }
 });
 
+// Sheets whose own tab mixes gear with weapons or armour wait on a decision before they get theirs (remove them from
+// here as they are done).
+const HOLDINGS_WAITING = new Set(["afmbe", "against-the-darkmaster", "agone", "cosmere-stormlight", "death-in-space", "gurps-3e", "gurps-4e",
+  "legend-of-the-five-rings-2e", "lotr-roleplaying-decipher", "shadowrun-3e", "shadowrun-4e", "starfinder-2e", "traveller-classic",
+  "traveller-megatraveller", "trinity-continuum", "unhallowed-metropolis", "warhammer-fantasy-4e", "warhammer-fantasy-5e"]);
+test("Every starter has a Holdings page of the character's own, on a page of its own", () => {
+  for (const f of files()) {
+    const t = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
+    const h = t.layout.sections.filter(s => s.holdings);
+    if (HOLDINGS_WAITING.has(f.replace(/\.json$/, ""))) { expect(h, f).toEqual([]); continue; }
+    expect(h.length, `${f}: one Holdings section`).toBe(1);
+    expect(h[0].fields, f).toEqual([]);
+    // its page holds nothing else
+    expect(t.layout.sections.filter(s => s.page === h[0].page).length, `${f}: the Holdings page is its own`).toBe(1);
+  }
+});
+
 test("Starter templates load, and loading again updates", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "chromium", "the server answers the same whatever the browser");
   await signIn(page, ADMIN);

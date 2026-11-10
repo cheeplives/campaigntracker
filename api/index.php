@@ -674,12 +674,7 @@ const CAMPAIGN_COPY = [
     ['event_notes', 'via' => ['event_id', 'events']],
     // its group and the characters on its activities are set once the party groups are copied, below
     ['downtimes', 'key' => 'downtime', 'later' => ['group_id' => 'group']],
-    ['party_gear'],
-    ['holdings', 'key' => 'holdings'],
-    ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
-    ['holding_storage', 'via' => ['holding_id', 'holdings']],
     ['reminders'],
-    ['party_funds'],
     ['encyclopedia_entries', 'key' => 'encyclopedia'],
     ['encyclopedia_tags', 'via' => ['entry_id', 'encyclopedia'], 'maps' => ['tag_id' => 'entry_tags']],
     ['encyclopedia_ignored'],
@@ -696,6 +691,12 @@ const CAMPAIGN_COPY = [
     ['sheet_characters', 'key' => 'character', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['party_group_id' => 'group', 'portrait_id' => 'attachments']],
     // after the characters: a party character's action points at its sheet (character_id 0: the party's or a player's)
     ['shift_actions', 'maps' => ['character_id' => 'character']],
+    // after the characters too: a character's own holdings (character_id, 051) go with its copy; the party's have none
+    ['party_gear', 'maps' => ['character_id' => 'character']],
+    ['holdings', 'key' => 'holdings', 'maps' => ['character_id' => 'character']],
+    ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
+    ['holding_storage', 'via' => ['holding_id', 'holdings']],
+    ['party_funds', 'maps' => ['character_id' => 'character']],
     // Maps (db/migrations/019_maps.sql)
     ['maps', 'key' => 'map', 'later' => ['image_id' => 'attachments']],
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
