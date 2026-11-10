@@ -35,7 +35,7 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f4eee1; --panel: #fffaf0; --panel-2: #f1e8d6; --line: #dccfb4; --text: #2b2417; --dim: #7a6e57; --accent: #a8741a; --on-accent: #fff;
+  --bg: #f4eee1; --panel: #fffaf0; --panel-2: #f1e8d6; --line: #dccfb4; --text: #2b2417; --dim: #6d624d; --accent: #895f15; --on-accent: #fff;
 }
 /* ---------- Night Sky: deep indigo and moonlight silver, for stargazers and night watches */
 :root[data-scheme="nightsky"]:not([data-theme="light"]) {
@@ -47,24 +47,24 @@
 /* ---------- Ship's Console: phosphor green on a dark bridge display, monospace headings */
 :root[data-scheme="console"] { --disp: var(--mono); }
 :root[data-scheme="console"]:not([data-theme="light"]) {
-  --bg: #0a1210; --panel: #0f1a17; --panel-2: #14231f; --line: #1f3a32; --text: #cfeee2; --dim: #6f9a8b; --accent: #3ee0a0; --on-accent: #032018;
+  --bg: #0a1210; --panel: #0f1a17; --panel-2: #14231f; --line: #1f3a32; --text: #cfeee2; --dim: #759e90; --accent: #3ee0a0; --on-accent: #032018;
 }
 :root[data-scheme="console"][data-theme="light"] {
-  --bg: #eef4f1; --panel: #ffffff; --panel-2: #e3eee9; --line: #c8dcd3; --text: #10241d; --dim: #4f6c62; --accent: #0b7a55; --on-accent: #fff;
+  --bg: #eef4f1; --panel: #ffffff; --panel-2: #e3eee9; --line: #c8dcd3; --text: #10241d; --dim: #4f6c62; --accent: #0b7853; --on-accent: #fff;
 }
 /* ---------- Arctic: glacier blue and snow, for cold-weather campaigns */
 :root[data-scheme="arctic"]:not([data-theme="light"]) {
   --bg: #0e161c; --panel: #15212a; --panel-2: #1c2b36; --line: #2a3d4b; --text: #e4f0f6; --dim: #8aa3b2; --accent: #7cc8f0; --on-accent: #06222f;
 }
 :root[data-scheme="arctic"][data-theme="light"] {
-  --bg: #f2f7fa; --panel: #ffffff; --panel-2: #e6f0f5; --line: #cfe0ea; --text: #12232d; --dim: #587080; --accent: #1f74a8; --on-accent: #fff;
+  --bg: #f2f7fa; --panel: #ffffff; --panel-2: #e6f0f5; --line: #cfe0ea; --text: #12232d; --dim: #536978; --accent: #1d6e9f; --on-accent: #fff;
 }
 /* ---------- Wildwood: moss and bark, for overland travel and hexcrawls */
 :root[data-scheme="wildwood"]:not([data-theme="light"]) {
   --bg: #11160f; --panel: #182016; --panel-2: #1f291c; --line: #314029; --text: #e3ead8; --dim: #96a385; --accent: #9cc45a; --on-accent: #142008;
 }
 :root[data-scheme="wildwood"][data-theme="light"] {
-  --bg: #f1f4ea; --panel: #fcfdf8; --panel-2: #e7ecdc; --line: #d2dcc0; --text: #1e2615; --dim: #63704f; --accent: #4f7a1f; --on-accent: #fff;
+  --bg: #f1f4ea; --panel: #fcfdf8; --panel-2: #e7ecdc; --line: #d2dcc0; --text: #1e2615; --dim: #5c694a; --accent: #4a721d; --on-accent: #fff;
 }
 * { box-sizing: border-box; }
 /* An icon (static/icons.js, drawn by kit.js el() for each emoji in a label): the size of the text and its colour */
@@ -74,7 +74,7 @@ a { color: var(--accent); text-decoration: none; }
 h1, h2, h3, h4 { font-family: var(--disp); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 .4em; line-height: 1.15; }
 h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h4 { font-size: 1.1rem; }
 .muted { color: var(--dim); } .small, small { font-size: .82rem; } .pad { padding: 0 4px; }
-.pre { white-space: pre-wrap; margin: .3em 0; } .bad { color: var(--bad); }
+.pre { white-space: pre-wrap; margin: .3em 0; } .bad { color: var(--bad-text); }
 .mono { font-family: var(--mono); font-size: .85rem; }
 /* The tapered rule under a title, thick at the left and running to a point, like a stat block's */
 .nowbar::after, .daybox-head::after, .enc-hero-head::after, .enc-detail > :first-child:not(.enc-hero)::after {
@@ -135,7 +135,7 @@ button:hover, .button:hover { border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: wait; }
 button.primary, .button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font: 700 1.05rem var(--disp); text-transform: uppercase; letter-spacing: .06em; padding: 6px 16px; }
 button.small.primary { font-size: .95rem; padding: 4px 12px; }
-button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+button.danger { color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 button.small, .button.small { padding: 4px 9px; font-size: .85rem; }
 button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; }
 button.on { background: var(--accent); color: var(--on-accent); }
@@ -337,12 +337,12 @@ button.on { background: var(--accent); color: var(--on-accent); }
 .dnum { font: 700 1.7rem/1 var(--disp); }
 .dc-icons { font-size: .85rem; white-space: nowrap; }
 .evline { font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.evline.secret { color: var(--secret); }
+.evline.secret { color: var(--secret-text); }
 .evdot { color: var(--dim); }
 .dc-notes { min-width: 0; }
 .dc-note, .wr-note { font-size: .72rem; color: var(--dim); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; white-space: pre-line; }
 .wr-note { font-size: .78rem; -webkit-line-clamp: 3; line-clamp: 3; margin-top: 3px; }
-.dc-note.secret, .wr-note.secret { color: var(--secret); }
+.dc-note.secret, .wr-note.secret { color: var(--secret-text); }
 .etags { margin: 2px 0 4px; }
 .weekrow .chip.tag { margin-top: 3px; }
 .tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
@@ -436,7 +436,7 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
 .notepanel { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .notepanel h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
-.notepanel.secret h4 { color: var(--secret); }
+.notepanel.secret h4 { color: var(--secret-text); }
 /* Rich text, as it reads (.richtext) and as it is written (.rt-editor, Quill's snow theme recoloured) */
 .richtext, .rt-editor .ql-editor { line-height: 1.5; overflow-wrap: anywhere; }
 .richtext h1, .richtext h2, .richtext h3 { color: var(--accent); }
@@ -456,7 +456,7 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .richtext aside + aside, .rt-editor .ql-snow .ql-editor aside + aside { margin-top: -.4em; }
 .richtext aside::before, .rt-editor .ql-snow .ql-editor aside::before { content: 'GM only'; display: block; font: 700 .66rem var(--body);
   padding-left: 1.4em; background: var(--lock-img) left center / 1.1em no-repeat;
-  letter-spacing: .06em; text-transform: uppercase; color: var(--secret); }
+  letter-spacing: .06em; text-transform: uppercase; color: var(--secret-text); }
 .richtext aside + aside::before, .rt-editor .ql-snow .ql-editor aside + aside::before { content: none; }
 .richtext aside { position: relative; }
 .richtext aside .rt-reveal { float: right; margin: 0 0 4px 8px; padding: 1px 8px; font-size: .75rem; }
@@ -567,12 +567,12 @@ h4 > .nowpick:hover .nowtag, h4 > .nowpick:focus-visible .nowtag { display: inli
 .shift-edit[open] .shift-preview { display: none; }
 .shift-edit > select { width: auto; max-width: 100%; }
 .shift-preview { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
-.shift-gmn { color: var(--secret); font-size: .9em; }
+.shift-gmn { color: var(--secret-text); font-size: .9em; }
 .shift-edit-label { flex: none; font-size: .8rem; color: var(--accent); white-space: nowrap; }
 .shift-edit[open] .when-closed, .shift-edit:not([open]) .when-open { display: none; }
 .shift-edit[open] > summary { justify-content: flex-end; }
 .shift-status, .sa-status { min-height: 1em; font-size: .78rem; color: var(--dim); }
-.shift-status.ok, .sa-status.ok { color: var(--accent); } .shift-status.bad, .sa-status.bad { color: var(--bad); }
+.shift-status.ok, .sa-status.ok { color: var(--accent); } .shift-status.bad, .sa-status.bad { color: var(--bad-text); }
 .dh-strip.hours .nowtag { font-size: .55rem; padding: 0 2px; letter-spacing: 0; }
 .shiftnotes { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
 .shiftnotes .enotes { margin-top: 0; }
@@ -780,8 +780,8 @@ dialog.framer-dialog { width: min(400px, calc(100vw - 32px)); }
 .btn-oauth { text-align: center; padding: 10px 14px; }
 .status { font-size: .78rem; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; }
 .status.pending { color: var(--accent); border-color: var(--accent); }
-.status.approved { color: var(--ok); border-color: var(--ok); }
-.status.revoked { color: var(--bad); border-color: var(--bad); }
+.status.approved { color: var(--ok-text); border-color: var(--ok); }
+.status.revoked { color: var(--bad-text); border-color: var(--bad); }
 .scheme-pick { position: relative; }
 .scheme-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
 .scheme-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; list-style: none; margin: 0; padding: 4px; min-width: 210px;
@@ -820,7 +820,7 @@ dialog.kit-dialog.report-dialog { width: min(560px, calc(100vw - 32px)); max-hei
 .report-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .report-head .report-status { margin-left: auto; }
 .report-status.open { color: var(--accent); border-color: var(--accent); }
-.report-status.github { color: var(--ok); border-color: var(--ok); }
+.report-status.github { color: var(--ok-text); border-color: var(--ok); }
 .report-msg { margin: 6px 0; }
 .report-thumb { display: inline-block; margin: 6px 0 2px; }
 .report-thumb img { display: block; max-width: min(100%, 360px); max-height: 220px; border: 1px solid var(--line); border-radius: 4px; }
@@ -884,7 +884,7 @@ details.shiftcard[open] > * + * { margin-top: 6px; }
 /* The row under a ledger that adds a line: one box and + Add */
 .add-line { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
 .add-line input { flex: 1; min-width: 0; }
-button.link.danger { color: var(--bad); font-size: 1rem; }
+button.link.danger { color: var(--bad-text); font-size: 1rem; }
 /* − amount +, as one small joined control, 96px wide */
 .ticker { display: inline-flex; align-items: stretch; width: 96px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
 .ticker button, .ticker button.small { flex: 0 0 26px; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; font-weight: 700; box-shadow: none; }
@@ -913,7 +913,7 @@ button.link.danger { color: var(--bad); font-size: 1rem; }
 .ledger-row input { width: 100%; min-width: 0; }
 .ledger-head { border-bottom: 0; padding-bottom: 0; }
 .ledger-total { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: flex-end; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
-.ledger-total.over strong { color: var(--bad); }
+.ledger-total.over strong { color: var(--bad-text); }
 dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
 /* At the Table's Pass time dialog: Skip ahead, then the rests and travel it leads to */
 dialog.kit-dialog.pt-dialog { width: min(480px, calc(100vw - 32px)); }
@@ -1051,7 +1051,7 @@ button.enc-disc:focus-visible { outline: 2px solid var(--accent); outline-offset
 .enc-hero .notepanel.public > .richtext { background: none; border: 0; padding: 0; font-size: 1.02rem; line-height: 1.55; }
 .enc-hero .notepanel.public { margin-top: 2px; }
 .enc-hero .notepanel > h4, .enc-detail > .notepanel.secret > h4 { font: 600 .8rem var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--label); }
-.enc-detail > .notepanel.secret > h4 { color: var(--secret); }
+.enc-detail > .notepanel.secret > h4 { color: var(--secret-text); }
 /* the highlights: each sentence written about the entry elsewhere, behind an arrow, with where it was written after it */
 .enc-highlights[hidden] { display: none; }
 .enc-highlights ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -1284,12 +1284,12 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 /* Session notes: the GM's notes during play, one text box on a session's page */
 .snote-phone { display: none; }
 .snote-err:empty { display: none; }
-.snote-err { color: var(--bad); margin: 0; }
+.snote-err { color: var(--bad-text); margin: 0; }
 .snote-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
 .snote-help dd { margin: 0; }
 @media (pointer: coarse) { .snote-phone { display: inline-flex; } }
 .snote-hint { margin: 0; } .snote-hint:empty { display: none; }
-.snote-status.bad { color: var(--bad); }
+.snote-status.bad { color: var(--bad-text); }
 /* under the title: when it was played, Published, then Details, Export and the ⋯ menu at the right */
 .sess-bar { align-items: center; gap: 6px 10px; margin-top: -4px; }
 .sess-bar > p { margin: 0; }
@@ -1589,7 +1589,7 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .mpc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--line); }
 .mpc-actions button { min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; font-size: .8rem; color: var(--accent); cursor: pointer; }
 .mpc-actions button:hover { text-decoration: underline; background: none; }
-.mpc-actions button.danger { color: var(--bad); margin-left: auto; }
+.mpc-actions button.danger { color: var(--bad-text); margin-left: auto; }
 .mpc-actions select { font-size: .78rem; padding: 1px 4px; max-width: 8rem; }
 .mpc-party { display: flex; gap: 6px; align-items: center; }
 .map-links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 6px; }
@@ -1683,7 +1683,7 @@ body.group-dragging, body.group-dragging * { cursor: grabbing !important; user-s
 .drag-handle { cursor: grab; touch-action: none; user-select: none; padding: 6px 4px; font-size: 1.2rem; color: var(--dim); }
 .drag-handle:active { cursor: grabbing; }
 .num-sm { width: 5em; }
-.sheet-ed-errors { color: var(--bad); margin: 6px 0 0; }
+.sheet-ed-errors { color: var(--bad-text); margin: 6px 0 0; }
 .sheet-ed-errors:empty { display: none; }
 .sheet-pdf .notice { border-left: 3px solid var(--accent); padding-left: 8px; }
 .sheet-pdf-pages { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow: auto; }
@@ -1825,7 +1825,7 @@ button.sheet-portrait { cursor: pointer; }
 .sheet-viewers { margin: 8px 0; padding: 6px 10px; border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 18%, var(--panel)); font-size: .9rem; }
 .sheet-settings { align-items: flex-end; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
 .sheet-settings .field { margin: 0; }
-.sheet-conflict { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--bad); }
+.sheet-conflict { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--bad-text); }
 .sheet-conflict[hidden] { display: none; }
 .sheet-old dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
 .sheet-old dt { font-weight: 600; }
@@ -2526,9 +2526,9 @@ section.daybox, .tv-now, .tv-links { scroll-margin-top: calc(var(--topbar-h, 0px
 /* ✓ Saved, Saving…, Not saved or Offline, at the end of the campaign bar */
 /* Room for its longest word even while empty, so "Saving…" appearing never wraps the bar onto another line and moves the
    page under a finger mid-tap (a phone's notes box saves as it loses focus to the ⇥ button). */
-.save-state { font-size: .82rem; color: var(--ok); white-space: nowrap; margin-left: auto; min-width: 5.5em; text-align: right; }
+.save-state { font-size: .82rem; color: var(--ok-text); white-space: nowrap; margin-left: auto; min-width: 5.5em; text-align: right; }
 .save-state.busy { color: var(--dim); }
-.save-state.bad { color: var(--bad); font-weight: 600; }
+.save-state.bad { color: var(--bad-text); font-weight: 600; }
 .nowbar .save-state + .now-passbtn { margin-left: 0; }
 @media (pointer: coarse) { .now-title .view-as, .jump-menu > summary { min-height: 34px; } }
 
@@ -2624,7 +2624,7 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .mpc-actions button, .mpc-actions button.small { min-width: 0; min-height: 0; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--panel); box-shadow: none; color: var(--text); font: 500 .78rem/1.3 var(--body); cursor: pointer; }
 .mpc-actions button:hover { text-decoration: none; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
-.mpc-actions button.danger { margin-left: 0; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.mpc-actions button.danger { margin-left: 0; color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .mpc-actions button.danger:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--panel)); }
 @media (pointer: coarse) { .mpc-actions button, .mpc-actions button.small { min-height: 34px; padding: 4px 12px; } }
 /* a pin's ⋯ menu: its button matches the card's others and sits at the row's end; its items are plain full-width rows */
@@ -2650,3 +2650,35 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .enc-tree .enc-tree { padding-left: 18px; border-left: 1px solid var(--line, rgba(128,128,128,.35)); margin-left: 8px; }
 .enc-tree li { padding: 2px 0; }
 .enc-visits[hidden] { display: none; }
+
+/* ---------- Accessibility (WCAG 2.1 AA): kept together here so it is easy to find and to keep */
+/* "Skip to main content": the first thing Tab reaches, shown only while it has focus */
+.skip-link { position: absolute; left: 8px; top: -100px; z-index: 100; padding: 8px 14px; border-radius: var(--radius);
+  background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
+.skip-link:focus { top: 8px; outline: 2px solid var(--text); outline-offset: 2px; }
+/* the page's main content takes focus after a move to another page (app.js namePage) or the skip link: no ring on the whole page */
+#app:focus { outline: none; }
+/* a link inside a sentence is underlined as well as coloured, so it doesn't rely on colour alone (1.4.1) */
+:where(p, li, dd, small, .muted, .pre, .hint, td > span) a:not([class]) { text-decoration: underline; text-underline-offset: 2px; }
+/* every link shows where keyboard focus is, as buttons and fields already do */
+:where(a, summary, [role=button], [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* the Legend's group headings fold their tabs: at least 24 pixels to hit (2.5.8) */
+main > nav.tabs .tab-group button { min-height: 24px; }
+.tab-search-kbd { min-width: 24px; min-height: 24px !important; }
+/* fewer moving parts for anyone whose system asks for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+/* Text in the --ok, --bad and --secret colours. Those three keep one value in every theme, for borders, fills and marks; as
+   text they need a shade that reads at 4.5:1 on light cards and on dark ones, so each mode has its own text shade of them. */
+:root { --ok-text: var(--ok); --bad-text: #db8677; --secret-text: #af8fd6; }
+:root[data-theme="light"] { --ok-text: #3c7144; --bad-text: #b1422f; --secret-text: #804dbf; }
+/* the season chips' colours, darker on a light page and the autumn one lighter on a dark one, to read as text */
+.season.s-autumn { color: #d98857; }
+:root[data-theme="light"] .season.s-spring { color: #3c7144; } :root[data-theme="light"] .season.s-summer { color: #85601b; }
+:root[data-theme="light"] .season.s-autumn { color: #9f5224; } :root[data-theme="light"] .season.s-winter { color: #336b9c; }
+/* an unpicked tag reads at full strength: its dimmed look comes from the outline alone */
+button.tagopt { opacity: 1; }
+/* the edge of a text box, list or select stands out at 3:1 from the card it sits on (1.4.11), in every theme */
+:root { --field-line: color-mix(in srgb, var(--dim) 85%, var(--bg)); }
+input, select, textarea { border-color: var(--field-line); }
