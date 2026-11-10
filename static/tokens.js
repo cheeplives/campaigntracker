@@ -277,7 +277,7 @@ const TokensTab = (() => {
         t.credit ? ctx.creditLine({ credit: t.credit }) : null,
         field('Name', name), field('Kind', kindSel), field('Size', size, 'How many squares across it covers on a gridded map'),
         field('Character', member, 'The player whose character wears it. A character has one token'),
-        field('Entry', entry, 'An Encyclopedia entry it stands for, shown on the entry\'s page'),
+        field('Entry', entry, 'An Encyclopedia entry it stands for, shown on the entry\'s page and on the entry\'s pins on a map'),
         el('fieldset', { class: 'token-uses-box' }, el('legend', {}, 'Use for'),
           boxes.length ? boxes.map(({ g, box }) => el('label', { class: 'inline' }, box, ` ${g.name}`)) : el('span', { class: 'muted small' }, 'No party groups yet.')),
         el('label', { class: 'lock-toggle', 'data-tip': 'GM only: players are never shown a GM-only token\'s picture' }, secret, el('span', { 'aria-hidden': 'true' }, '🔒')),
@@ -324,7 +324,7 @@ const TokensTab = (() => {
         el('div', { class: 'row' }, el('label', { class: 'button small primary file-add', 'data-tip': 'Pick pictures (JPEG, PNG, GIF, WebP): each becomes a token named after its file' }, input, 'Upload tokens…'),
           btn('Find Image…', () => findFor(null), 'small', 'Search open picture libraries for a token picture'),
           btn('Game icons…', gameIcons, 'small', 'Pick from over 4,000 game-icons.net icons, or add a starter set for the genre'))),
-      el('p', { class: 'muted small' }, 'Round pictures for the party\'s groups, the players\' characters and the Encyclopedia\'s entries. Players see a token\'s picture only where it is used, and never a 🔒 GM-only one.'),
+      el('p', { class: 'muted small' }, 'Round pictures for the party\'s groups (their marker on a map), the players\' characters (the Members tab) and the Encyclopedia\'s entries (the entry\'s page and its pins on a map). Players see a token\'s picture only where it is used, and never a 🔒 GM-only one.'),
       el('div', { class: 'row' }, search, kind), status, grid));
   }
 

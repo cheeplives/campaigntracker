@@ -490,6 +490,8 @@ const MapsTab = (() => {
     const pinTitle = p => (p.kind === 'entry' && p.entry ? p.entry.name : p.kind === 'event' && p.event ? p.event.title : p.label) || 'Pin';
     const kindIcon = p => p.kind === 'entry' ? (ctx.encCat(p.entry?.category)?.[2] || '📌') : p.kind === 'event' ? '📅' : '📝';
     const pinIcon = p => p.icon || kindIcon(p);
+    /** The picture of the token an entry pin wears: its entry's token, unless the pin has an icon of its own. */
+    const pinToken = p => !p.icon && p.kind === 'entry' && p.entry_id ? S.encyclopedia.find(e => e.id === p.entry_id)?.token_url || null : null;
     /** The small badge a pin that opens another map wears, on the map and in the list of locations. */
     const opensBadge = p => p.child_map ? el('span', { class: 'map-opens-badge', title: `Opens the map ${p.child_map.name}` }, el('span', { class: 'visually-hidden' }, ` (opens the map ${p.child_map.name})`)) : null;
     // Routes and locations hidden from the picture: the viewer's own choice, kept on this device for this map. The lists still show them.
@@ -523,7 +525,7 @@ const MapsTab = (() => {
     function drawPins() {
       pinLayer.clearLayers(); pinMarkers.clear();
       const hid = hiddenIds();
-      for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), label: pinTitle(p), color: p.color,
+      for (const p of pins) if (!hid.has('p' + p.id)) pinMarkers.set(p.id, MapsTab.marker(pinLayer, { x: p.x, y: p.y, icon: pinIcon(p), image: pinToken(p), sizePx: pinToken(p) ? 36 : 28, label: pinTitle(p), color: p.color,
         className: 'map-pin' + (p.is_secret ? ' secret' : '') + (p.is_locked ? ' locked' : '') + (p.child_map ? ' opens-map' : ''), badge: opensBadge(p),
         draggable: mine(p) && !p.is_locked, onMove: async xy => { Object.assign(p, (await post('pin_save', { id: p.id, x: xy.x, y: xy.y }, cid)).pin); }, onOpen: () => pinCard(p), pad: cardPad,
         onPick: () => pickAt(p) }));
@@ -657,6 +659,15 @@ const MapsTab = (() => {
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), '', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), '', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
         mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null,
+        gm ? (() => {
+          // one press makes a placed pin GM only, or shows it to the players again, without opening Edit
+          const b = btn([p.is_secret ? '🔒 ' : '🔓 ', 'GM only', p.is_secret ? ' ✓' : ''], async () => {
+            try { await post('pin_save', { id: p.id, is_secret: !p.is_secret }, cid); lmap_close(); await refresh(); toast(p.is_secret ? 'Players can see this pin again' : 'This pin is GM only now'); }
+            catch (err) { toast(err.message, true); }
+          }, '', p.is_secret ? 'GM only: players never see this pin. Press to show it to them' : 'Players see this pin. Press to make it GM only');
+          b.setAttribute('aria-pressed', String(!!p.is_secret));
+          return b;
+        })() : null,
         mine(p) ? btn(p.is_locked ? 'Unlock' : 'Lock', async () => {
           try { await post('pin_save', { id: p.id, is_locked: !p.is_locked }, cid); lmap_close(); await refresh(); toast(p.is_locked ? 'Pin unlocked' : 'Pin locked in place'); }
           catch (err) { toast(err.message, true); }
@@ -804,7 +815,7 @@ const MapsTab = (() => {
         body, styleFields,
         old && old.author ? el('p', { class: 'small muted' }, `Added by ${old.author}`) : null,
         gm ? field('Opens map', childSel, 'Clicking this pin offers a link to that map') : null,
-        gm ? lockBox(secret, 'players won\'t see this pin') : null,
+        gm ? el('div', { class: 'row map-pin-secret' }, lockBox(secret, 'players won\'t see this pin'), el('span', { class: 'small', 'aria-hidden': 'true' }, 'GM only: players won\'t see this pin')) : null,
         el('div', { class: 'row map-panel-actions' }, el('button', { class: 'primary', type: 'submit' }, old ? 'Save pin' : 'Add pin'), btn('Cancel', closePanel)));
       form.addEventListener('submit', ev => { ev.preventDefault(); save(); });
       panelBox.replaceChildren(form);
@@ -1001,8 +1012,10 @@ const MapsTab = (() => {
               }, 'small danger')] })) : null);
       });
       const placeRows = [...pins].sort((a, b) => pinTitle(a).localeCompare(pinTitle(b), undefined, { sensitivity: 'base' })).map(p => {
-        const face = el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
-        if (p.color) face.style.setProperty('--pin-colour', p.color);
+        const tok = pinToken(p);
+        const face = tok ? el('span', { class: 'map-place-icon', 'aria-hidden': 'true' }, el('img', { class: 'map-place-token', src: tok, alt: '' }))
+          : el('span', { class: 'map-place-icon' + (p.color ? ' has-colour tinted' : ''), 'aria-hidden': 'true', 'data-icon': p.color ? pinIcon(p) : null }, pinIcon(p));
+        if (p.color && !tok) face.style.setProperty('--pin-colour', p.color);
         return el('div', { class: 'map-place-row', 'data-name': pinTitle(p) }, showTick('p' + p.id, pinTitle(p), hid),
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
             face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), opensBadge(p), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
