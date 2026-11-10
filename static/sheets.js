@@ -226,18 +226,26 @@ const Sheets = (() => {
     const send = () => set(rows.filter(r => cols.some(c => String(r[c.key] ?? '').trim() !== '')));
     // with roll, a row with dice in it (an attack's damage, a spell's) has a 🎲 that rolls the first dice it has,
     // named by the row's first cell
+    // without dice, a row with a number in a column called Rating (an ability's, a background's) rolls that number on
+    // the campaign's game roll, as a number field does; a QuestWorlds rating with masteries, 5M or 4M2, is 25 or 44
+    const ratingCol = cols.find(c => /^rating$/i.test(String(c.label || '').trim()));
+    const ratingOf = r => {
+      const m = ratingCol && String(r[ratingCol.key] ?? '').trim().match(/^([+-]?\d{1,3})(?:\s*M(\d?))?$/i);
+      return m ? Number(m[1]) + (m[0].match(/M/i) ? 20 * (Number(m[2]) || 1) : 0) : null;
+    };
     const rowDice = (r, ri) => {
       if (!roll || typeof Dice === 'undefined') return null;
       const hit = () => cols.map(c => [c, Dice.find(r[c.key])]).find(([, d]) => d);
       const name = () => String(r[cols[0]?.key] ?? '').trim();
       const b = button('🎲', () => {
-        const h = hit();
+        const h = hit(), n = h ? null : ratingOf(r);
         if (h) roll({ kind: 'dice', value: h[1], label: [name() || `${label} row ${ri + 1}`, h[0] !== cols[0] ? h[0].label : null].filter(Boolean).join(', ') });
+        else if (n !== null) roll({ kind: 'num', value: n, label: name() || `${label} row ${ri + 1}`, field: ratingCol.label });
       }, 'icon-btn sheet-roll');
       b.update = () => {
-        const h = hit();
-        b.hidden = !h;
-        b.setAttribute('aria-label', h ? `Roll ${h[1]}${name() ? ` for ${name()}` : ''}` : 'Nothing to roll');
+        const h = hit(), n = h ? null : ratingOf(r);
+        b.hidden = !h && n === null;
+        b.setAttribute('aria-label', h ? `Roll ${h[1]}${name() ? ` for ${name()}` : ''}` : n !== null ? `Roll ${name() || 'this row'}'s rating` : 'Nothing to roll');
       };
       b.update();
       return b;
