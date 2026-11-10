@@ -563,6 +563,7 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
     { key: "stats", title: "Stats", fields: [{ key: "str", label: "Strength", type: "number" }, { key: "age", label: "Age", type: "number" },
       { key: "dmg", label: "Unarmed", type: "text" }] },
     { key: "gear", title: "Gear", fields: [{ key: "atk", label: "Attacks", type: "list", columns: [{ key: "name", label: "Name" }, { key: "dmg", label: "Damage" }] }] },
+    { key: "abil", title: "Abilities", fields: [{ key: "abilities", label: "Abilities", type: "list", columns: [{ key: "ability", label: "Ability" }, { key: "rating", label: "Rating" }] }] },
   ] };
   const tpl = (await api(page, "template_save", { name: `Rolling sheet ${Date.now()}`, game: "Test RPG", layout })).json.template;
   const ch = (await api(pp, "character_create", { template_id: tpl.id, name: "Wren" }, cid)).json.character;
@@ -592,13 +593,24 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
   await expect.poll(lastRoll).toBe("1d3+1 # Unarmed");
   await close();
 
-  await sheet.getByRole("button", { name: "+ Row" }).click();
+  await sheet.getByRole("button", { name: "+ Row" }).first().click();
   await sheet.getByLabel("Attacks row 1 Name", { exact: true }).fill("Longsword");
   await sheet.getByLabel("Attacks row 1 Name", { exact: true }).dispatchEvent("change");
   await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).fill("1d8+3 slashing");
   await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).dispatchEvent("change");
   await sheet.getByRole("button", { name: "Roll 1d8+3 for Longsword" }).click();
   await expect.poll(lastRoll).toBe("1d8+3 # Longsword, Damage");
+  await close();
+
+  // a row with a Rating and no dice rolls its rating as a number: free dice only, a d20 plus it
+  await sheet.getByRole("button", { name: "+ Row" }).nth(1).click();
+  await sheet.getByLabel("Abilities row 1 Ability", { exact: true }).fill("Detective");
+  await sheet.getByLabel("Abilities row 1 Ability", { exact: true }).dispatchEvent("change");
+  await expect(sheet.getByRole("button", { name: "Roll Detective's rating" })).toBeHidden();
+  await sheet.getByLabel("Abilities row 1 Rating", { exact: true }).fill("5M");
+  await sheet.getByLabel("Abilities row 1 Rating", { exact: true }).dispatchEvent("change");
+  await sheet.getByRole("button", { name: "Roll Detective's rating" }).click();
+  await expect.poll(lastRoll).toBe("1d20+25 # Detective");
   await close();
 
   // with Pathfinder 2e as the campaign's game, Strength is a score: 16 rolls the game roll with its +3
@@ -610,6 +622,12 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
   await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
   await sheet.getByRole("button", { name: "Roll Strength" }).click();
   await expect.poll(lastRoll).toMatch(/^1d20\+3 @d20 .* # Strength \(\+3\)$/);
+  // with QuestWorlds, the rating is the contest's: 5M is 25 against the resistance
+  const qw = { ...settings, dice: { ...settings.dice, system: { id: "contest", game: "questworlds", params: { tn: 15, mod: 0, res: 10 }, labels: { tn: "Ability rating" } } } };
+  expect((await api(page, "campaign_update", { settings: qw }, cid)).status).toBe(200);
+  await pp.reload();
+  await sheet.getByRole("button", { name: "Roll Detective's rating" }).click();
+  await expect.poll(lastRoll).toBe("1d20+1d20 @contest tn=25 mod=0 res=10 # Detective");
   // the GM rolls from it too, named for the character; the log names the GM as who rolled
   await page.goto(`index.html#/c/${cid}/characters/${ch.id}`);
   await page.locator(".sheet-form").getByRole("button", { name: "Roll Unarmed" }).click();

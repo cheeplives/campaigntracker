@@ -1,0 +1,196 @@
+{
+ "name": "QuestWorlds",
+ "game": "QuestWorlds",
+ "edition": "System Reference Document",
+ "source": {
+  "title": "QuestWorlds System Reference Document",
+  "owner": "Moon Design Publications / Chaosium",
+  "url": "https://github.com/ChaosiumInc/QuestWorlds",
+  "licence": "ORC License"
+ },
+ "layout": {
+  "sections": [
+   {
+    "key": "concept_sec",
+    "title": "Concept",
+    "width": "two-thirds",
+    "fields": [
+     {
+      "key": "concept",
+      "label": "Concept",
+      "type": "text",
+      "size": "full",
+      "summary": true
+     },
+     {
+      "key": "occupation",
+      "label": "Occupation Keyword",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "characteristic",
+      "label": "Distinguishing Characteristic",
+      "type": "text",
+      "size": "full"
+     },
+     {
+      "key": "description",
+      "label": "Three Things Others Notice",
+      "type": "longtext"
+     }
+    ]
+   },
+   {
+    "key": "points",
+    "title": "Story & Experience",
+    "width": "third",
+    "fields": [
+     {
+      "key": "story_points",
+      "label": "Story Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "experience_points",
+      "label": "Experience Points",
+      "type": "counter",
+      "size": "full",
+      "min": 0,
+      "play": true
+     },
+     {
+      "key": "advances",
+      "label": "Advances Taken",
+      "type": "counter",
+      "size": "full",
+      "min": 0
+     }
+    ]
+   },
+   {
+    "key": "abilities_sec",
+    "title": "Abilities",
+    "fields": [
+     {
+      "key": "abilities",
+      "label": "Abilities",
+      "type": "list",
+      "play": true,
+      "columns": [
+       {
+        "key": "ability",
+        "label": "Ability",
+        "width": "wide"
+       },
+       {
+        "key": "keyword",
+        "label": "Keyword or Breakout Of"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "flaws_sec",
+    "title": "Flaws",
+    "width": "half",
+    "fields": [
+     {
+      "key": "flaws",
+      "label": "Flaws",
+      "type": "list",
+      "play": true,
+      "columns": [
+       {
+        "key": "flaw",
+        "label": "Flaw",
+        "width": "wide"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "states",
+    "title": "Benefits & Consequences",
+    "width": "half",
+    "fields": [
+     {
+      "key": "benefits_consequences",
+      "label": "Benefits & Consequences",
+      "type": "list",
+      "play": true,
+      "columns": [
+       {
+        "key": "state",
+        "label": "Benefit or Consequence",
+        "width": "wide"
+       },
+       {
+        "key": "modifier",
+        "label": "Modifier"
+       },
+       {
+        "key": "applies",
+        "label": "Applies To"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "relationships_sec",
+    "title": "Relationships",
+    "width": "half",
+    "fields": [
+     {
+      "key": "relationships",
+      "label": "Relationships",
+      "type": "list",
+      "play": true,
+      "columns": [
+       {
+        "key": "who",
+        "label": "Patron, Contact, Follower or Sidekick",
+        "width": "wide"
+       },
+       {
+        "key": "rating",
+        "label": "Rating"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "notes_sec",
+    "title": "Possessions & Notes",
+    "width": "half",
+    "fields": [
+     {
+      "key": "possessions",
+      "label": "Possessions",
+      "type": "longtext"
+     },
+     {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longtext"
+     }
+    ]
+   }
+  ]
+ }
+}
