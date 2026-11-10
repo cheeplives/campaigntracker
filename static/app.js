@@ -4979,9 +4979,21 @@
     const tokenParty = async g => {
       let tokens;
       try { tokens = (await api('tokens', { query: { cid: S.camp.id } })).tokens; } catch (err) { return toast(err.message, true); }
-      const sel = select([['', 'None (a flag)'], ...tokens.map(t => [t.id, t.name])], g.token_id ?? '');
-      partyDialog(`Token for ${g.name}`, [field('Token', sel, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
-        () => post('group_save', { id: g.id, token_id: sel.value ? Number(sel.value) : null }, S.camp.id));
+      // the token pictures themselves to pick from, with the flag as the first choice
+      const opt = (id, pic, name) => el('label', { class: 'token-option', 'data-name': name.toLowerCase() },
+        el('input', { type: 'radio', name: 'party-token', value: id, checked: String(g.token_id ?? '') === id, 'aria-label': name }),
+        pic, el('span', { class: 'token-option-name' }, name));
+      const grid = el('div', { class: 'token-choice', role: 'radiogroup', 'aria-label': 'Token' },
+        opt('', el('span', { class: 'token-face token-flag', 'aria-hidden': 'true' }, '🚩'), 'None (a flag)'),
+        tokens.map(t => opt(String(t.id), face(t.image_url, t.name), t.name)));
+      const find = tokens.length > 12 ? el('input', { type: 'search', class: 'token-choice-find', placeholder: 'Find a token', 'aria-label': 'Find a token', autocomplete: 'off',
+        oninput: ev => { const q = ev.target.value.trim().toLowerCase(); grid.querySelectorAll('.token-option').forEach(o => { o.hidden = !!q && !o.dataset.name.includes(q) && !o.querySelector(':checked'); }); } }) : null;
+      partyDialog(`Token for ${g.name}`, [find, grid,
+        el('p', { class: 'small muted' }, tokens.length ? 'Its picture is the group\'s marker on the maps' : 'Add tokens on the Tokens tab first')], 'Save',
+        () => {
+          const v = grid.querySelector('input:checked')?.value ?? '';
+          return post('group_save', { id: g.id, token_id: v ? Number(v) : null }, S.camp.id);
+        });
     };
     /** Move… : pick the group (a GM can also pick Not travelling, to take them out of the party). */
     const moveTo = (from, who, name) => {

@@ -607,10 +607,19 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
 
   // assign it with Token in the group's ⋯ on Party → Groups
   await page.goto(`#/c/${cid}/groups`);
+  // the dialog shows the token pictures themselves, the flag picked to begin with
   await moreIn(rowOf(page, "The party"), "Token");
-  await page.locator("dialog.party-dialog").getByLabel("Token").selectOption({ label: "Banner" });
-  await page.locator("dialog.party-dialog").getByRole("button", { name: "Save" }).click();
+  const dlg = page.locator("dialog.party-dialog");
+  await expect(dlg.getByRole("radio", { name: "None (a flag)" })).toBeChecked();
+  const pic = dlg.locator(".token-option", { hasText: "Banner" }).locator("img");
+  await expect.poll(() => pic.evaluate(i => i.complete && i.naturalWidth)).toBeGreaterThan(0);
+  await dlg.locator(".token-option", { hasText: "Banner" }).click();
+  await expect(dlg.getByRole("radio", { name: "Banner" })).toBeChecked();
+  await dlg.getByRole("button", { name: "Save" }).click();
   await expect.poll(async () => (await groups(page, cid))[0].token_id).toBe(t.id);
+  await moreIn(rowOf(page, "The party"), "Token");
+  await expect(dlg.getByRole("radio", { name: "Banner" })).toBeChecked();
+  await dlg.getByRole("button", { name: "Cancel" }).click();
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   const img = page.locator(".map-party img");
   await expect(img).toHaveCount(1);
