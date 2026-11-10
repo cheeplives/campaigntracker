@@ -929,7 +929,7 @@
       });
       show();
     }
-    mount(profile, prefs, scanner);
+    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -984,7 +984,7 @@
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
-      el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {})), users.map(row)))),
+      el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {}, el('span', { class: 'visually-hidden' }, 'Actions'))), users.map(row)))),
       el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
   /** Site Admin's Sheets tab: load the starter templates, and the games people asked for with Request a game. */
@@ -1026,7 +1026,7 @@
       requests.length
         ? [el('p', { class: 'muted' }, `${total} ${total === 1 ? 'request' : 'requests'} for ${requests.length} ${requests.length === 1 ? 'game' : 'games'}, most asked for first. Each person counts once per game.`),
           el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl game-requests' },
-            el('tr', {}, el('th', {}, 'Game'), el('th', { class: 'num' }, 'Asked'), el('th', {}, 'Who'), el('th', {}, 'When'), el('th', {})),
+            el('tr', {}, el('th', {}, 'Game'), el('th', { class: 'num' }, 'Asked'), el('th', {}, 'Who'), el('th', {}, 'When'), el('th', {}, el('span', { class: 'visually-hidden' }, 'Actions'))),
             requests.map(row)))]
         : el('p', { class: 'muted' }, off ? 'No requests yet, and requests are off.' : 'No requests yet. People ask with Request a game on the Sheet templates page.'));
     mount(adminHead('sheets'), typeof Sheets !== 'undefined' ? starters : null, asked);
@@ -1323,6 +1323,7 @@
     ['World', 'What the party has learned, and tools for making more', [['encyclopedia', 'Encyclopedia'], ['library', 'Library'], ['generators', 'Generators'], ['maps', 'Maps']]],
     ['Setup', 'The campaign\'s places, holidays, people and options', [['regions', 'Regions'], ['holidays', 'Holidays'], ['members', 'Members'], ['tokens', 'Tokens'], ['settings', 'Settings']]],
   ];
+  const TAB_LABELS = Object.fromEntries([...TAB_GROUPS.flatMap(g => g[2]), ['characters', 'Characters'], ['groups', 'Groups'], ['holdings', 'Holdings'], ['search', 'Search'], ['today', 'At the Table']]);
   const TAB_TIPS = {
     calendar: 'Month and week views of days, weather, visibility, moons and events',
     events: 'Every event in one list, searched and filtered by tag, and every reminder beside it',
@@ -1439,12 +1440,12 @@
     draw();
     const folds = legendFolds();
     const legendAt = isPartyTab(active) ? 'party' : active;   // Characters, Groups and Holdings are the Party tab's halves
-    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : '') }, legendTuck(), searchBox(active), legendQuick(), TAB_GROUPS.map(([g, gTip, ts]) => {
+    const tabs = el('nav', { class: 'tabs' + (legendHidden() ? ' tucked' : ''), 'aria-label': 'Campaign' }, legendTuck(), searchBox(active), legendQuick(), TAB_GROUPS.map(([g, gTip, ts]) => {
       const folded = !!folds[g];
       const toggle = el('button', { type: 'button', 'aria-expanded': String(!folded), 'data-tip': `${gTip}. Click to fold or unfold. It stays as you leave it in this browser` },
         el('span', { class: 'tab-group-caret', 'aria-hidden': 'true' }), g);
       const links = ts.filter(([k]) => (k !== 'settings' && k !== 'tokens') || isGM()).map(([k, l]) =>
-        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === legendAt ? 'on' : '') + (folded ? ' folded' : ''), 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
+        el('a', { href: `#/c/${S.camp.id}/${k}`, class: (k === legendAt ? 'on' : '') + (folded ? ' folded' : ''), 'aria-current': k === legendAt ? 'page' : null, 'data-group': g, 'data-tip': TAB_TIPS[k] }, l));
       const heading = el('span', { class: 'tab-group' + (folded ? ' folded' : ''), 'data-group': g }, toggle);
       toggle.addEventListener('click', () => {
         const f = !heading.classList.contains('folded');
@@ -7528,7 +7529,32 @@
     const seq = ++routeSeq;
     let drawn = null;   // the address this run drew, for Recent, even if the address has moved on since
     return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
-      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) noteRecent(drawn); }));
+      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) { noteRecent(drawn); namePage(); } }));
+  }
+  // Each page gets its own title in the browser's tab and history ("Calendar · Waterdeep · Campaign Chronicle"), which is
+  // also what a screen reader reads first. After a move to another page, focus goes to the page's main content (unless the
+  // page put it somewhere itself, as a form does), so the keyboard starts there rather than back at the top of the site, and
+  // the new title is announced.
+  let namedHash = null;
+  function namePage() {
+    const [path] = location.hash.replace(/^#\/?/, '').split('?');
+    const parts = path.split('/');
+    // a day's page is named by its date (its own heading), every other tab by the tab
+    const isDay = parts[2] === 'day' || (parts[2] === 'today' && parts[3]);
+    const tabLabel = parts[0] === 'c' && !isDay ? TAB_LABELS[parts[2] || 'table'] || TAB_LABELS.table : null;
+    const dayHead = isDay ? $('#app h2') : null;
+    const heading = $('#app h1') || $('#app h2');
+    const own = heading ? KIT.noIcons(heading.textContent).replace(/\s+/g, ' ').trim() : '';
+    const day = dayHead ? KIT.noIcons(dayHead.textContent).replace(/\s+/g, ' ').trim() : '';
+    const bits = parts[0] === 'c' && S.camp ? [tabLabel || day || 'Day', S.camp.name] : [own];
+    const title = [...new Set(bits.filter(Boolean)), 'Campaign Chronicle'].join(' · ');
+    document.title = title;
+    if (namedHash === null || namedHash === location.hash) { namedHash = location.hash; return; }   // the first page, or the same one drawn again
+    namedHash = location.hash;
+    const main = app(), at = document.activeElement;
+    if (!at || at === document.body || !at.isConnected || $('#topnav')?.contains(at)) main.focus({ preventScroll: true });
+    const say = $('#page-announcer');
+    if (say) { say.textContent = ''; setTimeout(() => { say.textContent = title; }, 50); }
   }
   // Back keeps your place: each page's scroll, and its list's scroll, are noted as you leave it, and put back when Back (or
   // Forward) returns to it. Opening an item from a list (the Encyclopedia, Library, Sessions) keeps the list where it was too.
@@ -7607,7 +7633,11 @@
       mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Cannot reach the server'), el('p', {}, 'Check that the config is in place and install.php has been run.')));
       return;
     }
-    if (res.status === 401) { S.user = null; S.pending = null; renderNav(); return location.hash.startsWith('#/about') ? viewAbout() : viewLogin(data.providers || []); }
+    if (res.status === 401) {
+      S.user = null; S.pending = null; renderNav();
+      await (location.hash.startsWith('#/about') ? viewAbout() : viewLogin(data.providers || []));
+      return namePage();
+    }
     if (!res.ok) { S.user = null; renderNav(); return mount(el('div', { class: 'card narrow' }, el('h2', {}, 'Server error'), el('p', {}, data.message || data.error || `Error ${res.status}`))); }
     S.csrf = data.csrf;
     if (data.status !== 'approved') {
@@ -7615,7 +7645,7 @@
       // tab is closed and they come back to the site's front page.
       const join = location.hash.match(/^#\/join\/([0-9a-f]{32})/);
       if (join) try { localStorage.setItem(JOIN_KEY, join[1]); } catch { /* the link still works when opened again */ }
-      S.user = null; S.pending = data; renderNav(); return viewPending(data);
+      S.user = null; S.pending = data; renderNav(); await viewPending(data); return namePage();
     }
     S.pending = null;
     if (!location.hash.startsWith('#/join/')) {
@@ -7637,6 +7667,9 @@
   // Signed out, leaving the About page goes back through the gate.
   if (!PANEL) {
     window.addEventListener('hashchange', () => (S.user ? route() : boot()));
+    // The skip link jumps past the top bar and the campaign's tabs. It can't be a plain #app link, as the address after
+    // # is the page here, so it moves focus itself.
+    $('.skip-link')?.addEventListener('click', e => { e.preventDefault(); const m = app(); m.focus(); m.scrollIntoView(); });
     $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
     $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
     // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.

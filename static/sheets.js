@@ -284,7 +284,7 @@ const Sheets = (() => {
         el('colgroup', {}, cols.flatMap((c, i) => (widths[i] === 'narrow' ? [el('col', { class: 'sheet-col-narrow', style: { width: `${narrowRem(c)}rem` } })]
           : Array.from({ length: span(widths[i]) }, () => el('col', {})))),
           roll ? el('col', { class: 'sheet-col-btn' }) : null, off ? null : el('col', { class: 'sheet-col-btn' })),
-        el('tr', {}, cols.map((c, ci) => el('th', { colspan: span(widths[ci]), 'data-width': widths[ci] }, c.label)), roll ? el('th', {}) : null, off ? null : el('th', {})),
+        el('tr', {}, cols.map((c, ci) => el('th', { colspan: span(widths[ci]), 'data-width': widths[ci] }, c.label)), roll ? el('th', {}, el('span', { class: 'visually-hidden' }, 'Roll')) : null, off ? null : el('th', {}, el('span', { class: 'visually-hidden' }, 'Remove'))),
         rows.map((r, ri) => {
           const die = rowDice(r, ri);
           return el('tr', {}, cols.map((c, ci) => {

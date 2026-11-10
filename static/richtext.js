@@ -211,6 +211,12 @@ const RichText = (() => {
       quill.root.setAttribute('aria-label', label);
       quill.root.setAttribute('aria-multiline', 'true');
       quill.root.setAttribute('role', 'textbox');
+      // Quill swaps each <select> for a picker of spans and copies the select's aria-label onto the wrapper, where it names
+      // nothing; the part that takes focus and opens the list is the picker's label, so the name goes there instead.
+      bar.node.querySelectorAll('.ql-picker[aria-label]').forEach(p => {
+        const lab = p.querySelector('.ql-picker-label');
+        if (lab) { lab.setAttribute('aria-label', p.getAttribute('aria-label')); p.removeAttribute('aria-label'); }
+      });
       if (mentions) mentionPicker(quill, node, mentions);
       node.classList.remove('loading');
     }).catch(err => { node.classList.remove('loading'); area.textContent = err.message; });

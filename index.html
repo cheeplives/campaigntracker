@@ -15,13 +15,15 @@
   <script src="static/theme-init.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#app">Skip to main content</a>
   <header class="topbar">
     <a class="brand" href="#/">Campaign Chronicle</a>
-    <nav id="topnav"></nav>
+    <nav id="topnav" aria-label="Site"></nav>
   </header>
-  <main id="app"><p class="muted pad">Loading…</p></main>
+  <main id="app" tabindex="-1"><p class="muted pad">Loading…</p></main>
   <footer class="footer"><span id="version" class="small muted"></span></footer>
   <div id="toast" role="status" aria-live="polite"></div>
+  <div id="page-announcer" class="visually-hidden" role="status" aria-live="polite"></div>
   <script src="static/icons.js"></script>
   <script src="static/kit.js"></script>
   <script src="static/discpic.js"></script>
