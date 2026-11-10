@@ -448,7 +448,9 @@
     camera = new T.PerspectiveCamera(22, 1, 0.5, 400);
     scene.add(new T.HemisphereLight(0xffffff, 0x3a3328, 1.7));
     sun = new T.DirectionalLight(0xffffff, 2.4);
-    sun.position.set(-6, 14, -4);
+    // low enough that its glare misses the faces lying flat under the camera: higher, it washed the top face (the one
+    // that's read) to grey and hid its pattern
+    sun.position.set(-10, 9, -7);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.radius = 4;
@@ -492,7 +494,8 @@
         const glow = new T.CanvasTexture(glowLayer(look));
         glow.colorSpace = T.SRGBColorSpace;
         glow.wrapS = glow.wrapT = T.RepeatWrapping ?? 1000;
-        glow.repeat.set(look.tex === 'ember' ? 1 : 3, look.tex === 'ember' ? 1 : 3);
+        const rep = look.tex === 'ember' ? 1 : 2;   // fewer repeats, bigger flakes and stars: big enough to see move
+        glow.repeat.set(rep, rep);
         mat.emissiveMap = glow;
         mat.emissive.setRGB(1, 1, 1);
         mat.emissiveIntensity = 0.8;
@@ -551,14 +554,15 @@
       if (!m.userData.anim || seen.has(m.emissiveMap)) continue;
       seen.add(m.emissiveMap);
       const g = m.emissiveMap;
+      // strong enough to see in the second or two the dice rest before they fade (the flat dice's CSS is the yardstick)
       if (m.userData.anim === 'sparkle') {
-        if (t - lastSpark > 0.11) { g.offset.set(Math.random(), Math.random()); lastSpark = t; }
-        m.emissiveIntensity = 1.4 + 0.4 * Math.sin(t * 9);
+        if (t - lastSpark > 0.12) { g.offset.set(Math.random(), Math.random()); lastSpark = t; }
+        m.emissiveIntensity = 1.6 + 0.8 * Math.sin(t * 9);
       } else if (m.userData.anim === 'drift') {
-        g.offset.set(t * 0.015, t * 0.006);
-        m.emissiveIntensity = 0.75 + 0.25 * Math.sin(t * 3.1) * Math.sin(t * 1.7);
+        g.offset.set(t * 0.07, t * 0.03);
+        m.emissiveIntensity = 1 + 0.6 * Math.sin(t * 4.1) * Math.sin(t * 2.3);
       } else {
-        m.emissiveIntensity = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.3) * Math.sin(t * 0.9 + 1));
+        m.emissiveIntensity = 0.25 + 1.1 * (0.5 + 0.5 * Math.sin(t * 3.2) * Math.sin(t * 1.3 + 1));
       }
     }
   }
@@ -688,7 +692,7 @@
       try { preview = { r: new T.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true }), s: new T.Scene(), c: new T.PerspectiveCamera(32, 1, 0.5, 50) }; } catch { return false; }
       preview.s.add(new T.HemisphereLight(0xffffff, 0x3a3328, 1.7));
       const sunP = new T.DirectionalLight(0xffffff, 2.4);
-      sunP.position.set(-6, 14, -4);
+      sunP.position.set(-10, 9, -7);
       preview.s.add(sunP);
       preview.c.position.set(0, 4.6, 0.01);
       preview.c.up.set(0, 0, -1);
