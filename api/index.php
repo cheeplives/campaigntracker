@@ -1970,13 +1970,13 @@ try {
         $isGm = role($cid) === 'gm';
         out(['groups' => party_groups($cid, $isGm)]);
 
-    case 'group_split': // GMs: from_id, name, members [user ids from that group], characters [ids of its characters with no player], region_id (default: the group's)
+    case 'group_split': // GMs: from_id, name, members [user ids from that group], characters [ids of its characters with no player], region_id (default: the group's).
+        // A player: from_id, name and members [their own id], to start a group of their own (when from_id lets players move)
         $cid = cid();
-        need_gm($cid);
-        group_split($cid);
-        out(['ok' => true, 'groups' => party_groups($cid)]);
+        group_split($cid, role($cid) === 'gm');
+        out(['ok' => true, 'groups' => party_groups($cid, role($cid) === 'gm')]);
 
-    case 'group_save': // GMs: id, then name, region_id, is_main, token_id
+    case 'group_save': // GMs: id, then name, region_id, is_main, token_id, players_can_move
         $cid = cid();
         need_gm($cid);
         group_save($cid);
@@ -1988,11 +1988,11 @@ try {
         group_move($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
-    case 'group_join': // GMs: id (the group to join), and member (a player's user id) or character (a character with no player)
+    case 'group_join': // id (the group to join; GMs: null takes them out of the party), and member (a player's user id) or
+        // character (a character; a player's active one moves its player). A player moves only themselves, between groups that let players move
         $cid = cid();
-        need_gm($cid);
-        group_join($cid);
-        out(['ok' => true, 'groups' => party_groups($cid)]);
+        group_join($cid, role($cid) === 'gm');
+        out(['ok' => true, 'groups' => party_groups($cid, role($cid) === 'gm')]);
 
     case 'trail_clear': // GMs: map_id, and id for one group's trail (every group's without)
         $cid = cid();

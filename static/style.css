@@ -1599,6 +1599,24 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .group-who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .group-member-name { overflow-wrap: anywhere; }
 .group-card > .row { margin-top: 0; }
+.group-member.me { box-shadow: inset 3px 0 0 var(--accent); }
+.group-kept { margin-left: 8px; font-size: .75rem; color: var(--dim); white-space: nowrap; }
+/* dragging someone by ⠿: the handle takes the finger (no page scroll), the row lifts, and a group it can land on lights up */
+.group-grip { flex: none; display: grid; place-items: center; width: 22px; align-self: stretch; margin: -6px 0 -6px -4px; color: var(--dim); cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none; font-size: 1.1rem; }
+.group-grip:hover { color: var(--text); }
+.group-member.dragging { opacity: .35; border-style: dashed; }
+.group-ghost { position: fixed; z-index: 50; pointer-events: none; list-style: none; margin: 0; background: var(--stock); transform: rotate(-2deg);
+  box-shadow: 0 14px 30px -8px rgb(0 0 0 / .5); }
+body.group-dragging, body.group-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.group-drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 8px; text-align: center; }
+[data-drop].drop-hot { outline: 3px solid var(--accent); outline-offset: 2px; }
+[data-drop].drop-hot .group-drop { border-color: var(--accent); color: var(--accent); }
+.group-tray summary { cursor: pointer; }
+.group-tray-title { font: 700 1.05rem var(--disp); text-transform: uppercase; letter-spacing: .05em; }
+.group-tray > p { margin: 8px 0; }
+.group-tray input[type=search] { max-width: 280px; margin-bottom: 8px; }
+.group-tray-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 6px; }
 /* Travel's line per group, pointing at Party → Groups */
 .party-summary { display: flex; flex-direction: column; gap: 6px; }
 .party-summary h2 { margin: 0; }
