@@ -55,6 +55,7 @@ function campaign_export(int $cid): array {
             'description' => $c['description'],
             'calendar' => dec($c['calendar_json']),
             'settings' => dec($c['settings_json']),
+            'entry_fields' => entry_fields(dec($c['settings_json'])),
             'current_shift' => (int)$c['current_shift'],
             'seed' => $c['seed'],
         ],

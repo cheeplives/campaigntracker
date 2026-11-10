@@ -7,7 +7,7 @@
   'use strict';
   const E = root.Engine;
   function make(ctx) {
-    const { S, api, trail, pinButton, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
+    const { S, api, trail, pinButton, attachmentsCard, btn, busy, cal, campaignHeader, clean, confirmDialog, el, encMentions, field, isGM, linkedNote, questRow, revealButtons, listPage, mount, notesEntry, offerNouns, post, readerEmpty, route, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, nowShift, tip, toast } = ctx;
 
     // ------------------------------------------------------------ sessions tab
     /** The Sessions tab: every game night, newest first, and the one picked: for GMs its notes beside the summary written
@@ -80,9 +80,11 @@
         DiceUI.rollList(el, s.rolls, { table: DiceSystems.campaignSystem(S.camp?.settings?.dice ? { system: S.camp.settings.dice.system } : null)?.table })) : null;
       const head = [el('h2', {}, sessionName(s)),
         el('p', { class: 'small muted' }, [s.played_on ? `Played ${s.played_on}` : null, Sessions.daysCovered(cal(), s)].filter(Boolean).join(' · '))];
+      // the quests it touches: named in it, or reached through an entry connected to one
+      const quests = () => questRow([s.summary, 'html'], [s.rewards, 'html'], [s.loot, 'html'], s.notes_text || '', ...(notes || []).map(n => n.text || ''));
       if (!gm) {
         placesFrom('');
-        return [where, head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn),
+        return [where, head[0], el('div', { class: 'row sess-bar' }, head[1], el('span', { class: 'sess-bar-gap' }), exportBtn), quests(),
           el('div', { class: 'lib-body' }, (s.summary || '').trim() ? linkedNote(s.summary, 'html') : el('p', { class: 'muted' }, 'Nothing written yet.')),
           ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
             el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, linkedNote(s[k], 'html')))), rollsCard, places, pictures];
@@ -177,7 +179,7 @@
       // The GM reads the session as players do, with the Encyclopedia's names linked (and the GM-only paragraphs marked),
       // and Edit opens the editors. A session with nothing written yet opens in them.
       const reading = el('div', { class: 'sess-read' });
-      const drawReading = () => reading.replaceChildren(
+      const drawReading = () => reading.replaceChildren(...[quests()].filter(Boolean),
         el('div', { class: 'lib-body' }, (s.summary || '').trim() ? revealButtons(linkedNote(s.summary, 'html'), 'session', s.id, { field: 'summary' }) : el('p', { class: 'muted' }, 'Nothing written yet.')),
         ...[['rewards', 'Session Rewards'], ['loot', 'Loot Found']].filter(([k]) => (s[k] || '').trim()).map(([k, title]) =>
           el('div', { class: 'sess-extra', 'data-box': k }, el('h3', {}, title), el('div', { class: 'lib-body' }, revealButtons(linkedNote(s[k], 'html'), 'session', s.id, { field: k })))));

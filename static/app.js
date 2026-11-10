@@ -374,7 +374,7 @@
     if (!force && S.camp && S.camp.id === cid) return;
     const r = await api('campaign', { query: { cid } });
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.invites = r.invites || []; S.tags = r.tags || []; S.reminders = [];
-    S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || [];
+    S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.entryFields = r.entry_fields || {}; S.questLinks = r.quest_links || {};
     S.mapIndex = r.maps_index || [];
     S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
@@ -541,7 +541,10 @@
   const secretTag = () => el('span', { class: 'secret-tag', 'data-tip': 'Only GMs can see this' }, '🔒 SECRET');
   const holidayChip = x => el('span', { class: 'chip', style: { background: x.color }, 'data-tip': x.description || `Holiday: ${x.name}` }, x.name);
   /** The Categories an Encyclopedia entry can be in (one each, or none): key, name, icon. */
-  const ENC_CATEGORIES = [['location', 'Location', '📍'], ['person', 'Person', '👤'], ['item', 'Item', '🗝️'], ['group', 'Group', '👥'], ['vehicle', 'Vehicle', '⛵']];
+  const ENC_CATEGORIES = [['location', 'Location', '📍'], ['person', 'Person', '👤'], ['item', 'Item', '🗝️'], ['group', 'Group', '👥'], ['vehicle', 'Vehicle', '⛵'], ['quest', 'Quest', '🧭']];
+  /** The fields a Category's entries have in their facts box: [{ key, label, options, gm }], from the campaign's settings
+   * or the built-in lists (api/encyclopedia.php, entry_fields). */
+  const entryFields = cat => (S.entryFields || {})[cat || ''] || [];
   const encCat = k => ENC_CATEGORIES.find(c => c[0] === k) || null;
   /** The Category named n (any case), for the detector's guesses: "Location" → 'location'. */
   const encCatNamed = n => ENC_CATEGORIES.find(c => c[1].toLowerCase() === String(n || '').toLowerCase())?.[0] || null;
@@ -3921,7 +3924,7 @@
   }
 
   // ------------------------------------------------------------ encyclopedia: static/encyclopedia-tab.js
-  let encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile;
+  let encLinker, linked, linkedNote, revealButtons, mentionRow, questRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile;
 
   // ------------------------------------------------------------ pictures and files
   // A portrait on a character, a map on a location: pictures show on the page, other files are downloaded. The server
@@ -4292,6 +4295,14 @@
   /** Whether this member may remove or change connection r: whoever made it, and GMs. */
   const relMine = r => isGM() || r.created_by === S.user.id;
 
+  /** A mark on a connection a player made, so the table's own theories read apart from what the GM set down. */
+  function playerMade(r) {
+    const m = S.members?.find(x => Number(x.id) === r.created_by);
+    if (!m || m.role !== 'player') return null;
+    const who = Number(m.id) === S.user.id ? 'you' : m.character_name || m.display_name || 'a player';
+    return el('span', { class: 'enc-conn-by', 'data-tip': `Added by ${who}${who === 'you' ? '' : ', a player'}` }, ' 👤');
+  }
+
   /** The Connections card on entry e's page, grouped by label as seen from e, with the suggestions from the notes. */
   function connectionsCard(e, ctx) {
     const { rel, conns, entries, st } = ctx;
@@ -4315,6 +4326,7 @@
             el('a', { class: 'enc-link' + (c.other.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${c.other.id}`,
               'data-tip': `${c.other.name}${c.other.is_secret ? ' (GM only)' : ''}: open it in the Encyclopedia` }, c.other.name),
             c.r.note ? el('small', { class: 'muted' }, ` (${c.r.note})`) : null,
+            playerMade(c.r),
             relMine(c.r) ? btn('×', async () => {
               if (!await confirmDialog(`Remove "${c.label} ${c.other.name}" from ${e.name}? It goes from both pages.`, { ok: 'Remove', danger: true })) return;
               try { await post('relation_delete', { id: c.r.id }, S.camp.id); route(); } catch (err) { toast(err.message, true); }
@@ -4586,6 +4598,22 @@
     const aliases = el('input', { name: 'aliases', value: (e.aliases || []).join(', '), maxlength: 2000, placeholder: 'e.g. Hoffmann, the innkeeper' });
     const tags = tagPicker(e.tags || [], 'entry', S.encTags);
     const category = select([['', 'None'], ...ENC_CATEGORIES.map(([k, n, i]) => [k, `${i} ${n}`])], e.category || '', { name: 'category' });
+    // the facts: a box for each field of the Category picked. What is typed is kept while the Category changes, so a
+    // mis-pick loses nothing, and only the boxes showing are sent
+    const factInputs = new Map(), factsBox = el('div', { class: 'grid2 enc-facts-form' });
+    const factsShown = () => entryFields(category.value).filter(f => isGM() || !f.gm);
+    const drawFacts = () => {
+      factsBox.replaceChildren(...factsShown().map(f => {
+        if (!factInputs.has(f.key)) factInputs.set(f.key, el('input', { maxlength: 200, value: e.facts?.[f.key] || '' }));
+        const input = factInputs.get(f.key), listId = `fact-${f.key}-${category.value}`;
+        if (f.options.length) input.setAttribute('list', listId); else input.removeAttribute('list');
+        return el('div', {}, field(f.gm ? `${f.label} 🔒` : f.label, input),
+          f.options.length ? el('datalist', { id: listId }, f.options.map(o => el('option', { value: o }))) : null);
+      }));
+      factsBox.hidden = !factsBox.children.length;
+    };
+    category.addEventListener('change', drawFacts);
+    drawFacts();
     const secret = isGM() ? el('input', { type: 'checkbox', name: 'is_secret', checked: !!e.is_secret }) : null;
     const pub = RichText.editor({ text: e.notes || '', format: 'html', label: 'Public notes', placeholder: 'What the party knows: who or what it is, where, what happened there', secret: isGM(), mentions: encMentions() });
     const gm = isGM() ? RichText.editor({ text: e.gm_notes || '', format: 'html', label: 'GM notes', placeholder: 'Secrets, plans and the truth of it, for GMs only', mentions: encMentions() }) : null;
@@ -4617,6 +4645,7 @@
         category ? field('Category', category, null, 'What kind of thing it is. The Encyclopedia lists entries by Category; use tags to tell entries of one Category apart') : null,
         field('Other names', aliases, null, 'Other ways the same thing is written, separated by commas. Each one links to this entry and is never offered by the Feature Highlighter'),
         secret ? lockField(secret, 'players won\'t see this entry at all, or have its name linked') : null),
+      factsBox,
       // the notes straight under the name, where the writing is; tags, the quotes found elsewhere and Generate Summary after
       el('div', { class: 'notes-grid' },
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these, and change them')), pub.node),
@@ -4635,13 +4664,14 @@
       const p = pub.value(), g = gm?.value();
       const body = { id: e.id, version: e.id ? e.version : undefined, name: name.value, aliases: aliases.value.split(',').map(x => x.trim()).filter(Boolean), notes: p.text, tags: tags.get() };
       if (category) body.category = category.value;
+      body.facts = Object.fromEntries(factsShown().map(f => [f.key, factInputs.get(f.key).value.trim()]));
       if (gm) Object.assign(body, { gm_notes: g.text, is_secret: secret.checked });
       try {
         const { id, version } = await post('entry_save', body, S.camp.id);
         e.version = version;
         for (const t of body.tags) if (!S.encTags.some(x => x.name.toLowerCase() === t.name.toLowerCase())) S.encTags.push(t);
         const was = S.encyclopedia.filter(x => x.id !== id);
-        S.encyclopedia = [...was, { id, name: name.value.trim(), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text, pic: S.encyclopedia.find(x => x.id === id)?.pic || null, token_url: S.encyclopedia.find(x => x.id === id)?.token_url || null,
+        S.encyclopedia = [...was, { id, name: name.value.trim(), category: category.value || null, facts: Object.fromEntries(Object.entries(body.facts).filter(([, v]) => v)), aliases: body.aliases, is_secret: !!secret?.checked, blank: !p.text && !g?.text && !Object.values(body.facts).some(Boolean), pic: S.encyclopedia.find(x => x.id === id)?.pic || null, token_url: S.encyclopedia.find(x => x.id === id)?.token_url || null,
           preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
@@ -7084,8 +7114,25 @@
       el('div', { class: 'tv-stage' }, el('div', { class: 'tv-nav' }, side(prevAbs, true), side(at + 1, false)), big),
       (await tableClocks(dayBox)) || '',
       ...(today0 ? dayBoxes(today0, true) : []),
-      await tableLinksBox(), dock);
+      tableQuests(), await tableLinksBox(), dock);
     mount(...campaignHeader('table'), view);
+  }
+  /** At the Table's Active quests: the Quest entries whose Status is Active, with their other facts. Only campaigns
+   * that have a Quest entry get the box. */
+  function tableQuests() {
+    const quests = S.encyclopedia.filter(e => e.category === 'quest');
+    if (!quests.length) return '';
+    const active = quests.filter(e => String(e.facts?.status || '').trim().toLowerCase() === 'active');
+    const rest = entryFields('quest').filter(f => f.key !== 'status');
+    const row = e => {
+      const facts = rest.filter(f => e.facts?.[f.key]).map(f => `${f.label}: ${e.facts[f.key]}`).join(' · ');
+      return el('div', { class: 'quest-row' }, el('a', { href: `#/c/${S.camp.id}/encyclopedia/${e.id}` }, el('b', {}, e.name)), e.is_secret ? [' ', secretTag()] : null,
+        facts || e.preview ? el('div', { class: 'small muted' }, facts || e.preview) : null);
+    };
+    return dayBox('quests', 'Active quests', { folded: true, summary: active.length ? `${active.length} active` : 'None active',
+      tip: 'Encyclopedia entries in the Quest Category whose Status is Active. Change a quest\'s Status on its entry',
+      actions: [el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia?cat=quest` }, 'All quests')] },
+      el('div', { class: 'quest-list' }, active.length ? active.map(row) : el('p', { class: 'muted small' }, 'No quest is Active.')));
   }
   async function loadTableEntries() {
     if (!tableEntries) tableEntries = (await api('encyclopedia', { query: { cid: S.camp.id } })).entries;
@@ -7347,15 +7394,15 @@
   // Everything the moved tabs use from here, built once everything above exists. A tab's own exports that another tab
   // uses are getters, as they are filled in just below.
   const tabCtx = {
-    DOWNTIME_KINDS, E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, itemStar, starsOf, api, attachmentsCard, btn, busy, byline,
+    DOWNTIME_KINDS, E, ENC_CATEGORIES, entryFields, Fan, S, UNIT_OPTIONS, alertDialog, itemStar, starsOf, api, attachmentsCard, btn, busy, byline,
     cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat,
     encCatNamed, get encMentions() { return encMentions; }, entryForm, fanCtx, field, formData, hideTip, isGM,
-    leapSummary, get linkedNote() { return linkedNote; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
+    leapSummary, get linkedNote() { return linkedNote; }, get questRow() { return questRow; }, listPage, loadCampaign, lockBox, mapLinks, mount, multiPick,
     notesEntry, get offerNouns() { return offerNouns; }, post, promptDialog, readerEmpty, relationKinds, route,
     get saveFile() { return saveFile; }, secretTag, select, sessionName, sessionStart, sessionShiftNotes, sessionActionsBox, newSessionDialog, sessionDatesDialog, pickShiftDialog, sessionPlaces, settings, shiftNames, nowShift, tagChip,
     tagsOf, tip, tipped, toast, today, trail, copyButton, pinButton, vs
   };
-  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
+  ({ encLinker, linked, linkedNote, revealButtons, mentionRow, questRow, encMentions, offerNouns, sourceLabel, scanOneBtn, entryBlank, deleteEntryBtn, entryMenu, viewEncyclopedia, sourcesNaming, saveFile } = EncyclopediaTab.make(tabCtx));
   tabCtx.revealButtons = revealButtons;
   ({ viewSessions } = SessionsTab.make(tabCtx));
   ({ viewGenerators } = GeneratorsTab.make(tabCtx));

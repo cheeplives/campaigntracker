@@ -12,7 +12,7 @@
 'use strict';
 
 (function (root) {
-  const CATEGORIES = { location: 'Location', person: 'Person', item: 'Item', group: 'Group', vehicle: 'Vehicle' };
+  const CATEGORIES = { location: 'Location', person: 'Person', item: 'Item', group: 'Group', vehicle: 'Vehicle', quest: 'Quest' };
   const SECRET_RE = /<aside>[\s\S]*?<\/aside>/g;
   const has = v => v !== null && v !== undefined && String(v).trim() !== '';
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -26,6 +26,7 @@
       ...e,
       notes: gmOnly ? e.notes || '' : String(e.notes || '').replace(SECRET_RE, ''),
       gm_notes: gmOnly ? e.gm_notes || '' : '',
+      fields: (e.fields || []).filter(f => gmOnly || !f.gm),
       files: (e.files || []).filter(f => gmOnly || !f.is_secret),
       links: (e.links || []).filter(l => ids.has(l.to) && (gmOnly || !l.is_secret)),
     }));
@@ -75,6 +76,8 @@
       const about = [CATEGORIES[e.category], e.is_secret ? '🔒 GM only' : null, e.aliases?.length ? `Also called ${e.aliases.join(', ')}` : null,
         e.tags?.length ? `Tags: ${e.tags.map(t => t.name).join(', ')}` : null].filter(Boolean);
       if (about.length) L.push(`*${about.join(' · ')}*`, '');
+      // its Category's fields that have something in them: [{ label, value }]
+      if (e.fields?.length) L.push(e.fields.map(f => `**${mdText(f.label)}:** ${mdText(f.value)}`).join(' · '), '');
       const mine = pictures.filter(p => p.entry.id === e.id);
       for (const p of mine.filter(p => p.file.kind === 'image')) {
         L.push(`![${mdText(p.file.caption || e.name)}](${mdHref(p.path)})`);

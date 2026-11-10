@@ -22,7 +22,7 @@ const HISTORY_JOIN_SECONDS = 600;   // a second save by the same person this soo
  * absolute day number. */
 function history_live(int $cid, string $kind, int $ref): ?array {
     $queries = [
-        'entry' => 'SELECT name, aliases_json AS aliases, notes, gm_notes, is_secret, category FROM encyclopedia_entries WHERE campaign_id=? AND id=?',
+        'entry' => 'SELECT name, aliases_json AS aliases, notes, gm_notes, is_secret, category, facts_json AS facts FROM encyclopedia_entries WHERE campaign_id=? AND id=?',
         'tome' => 'SELECT kind, title, description, body FROM library_tomes WHERE campaign_id=? AND id=?',
         'session' => 'SELECT title, summary, rewards, loot, notes_text FROM play_sessions WHERE campaign_id=? AND id=?',
         'day' => 'SELECT notes, notes_format, gm_notes, gm_notes_format FROM days WHERE campaign_id=? AND abs_day=?',
@@ -102,8 +102,8 @@ function history_apply(int $cid, array $v): void {
         $name = (string)$d['name'];
         $same = entry_named($cid, $name);
         if ($same && (int)$same['id'] !== $ref) fail("\"$name\" is a name of \"{$same['name']}\" now. Rename that one first, then restore", 409, 'name_taken');
-        db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=?, category=?' . entry_bump() . ' WHERE campaign_id=? AND id=?')
-            ->execute([$name, $s('aliases'), $s('notes'), $s('gm_notes'), (int)($d['is_secret'] ?? 0) ? 1 : 0, $s('category'), $cid, $ref]);
+        db()->prepare('UPDATE encyclopedia_entries SET name=?, aliases_json=?, notes=?, gm_notes=?, is_secret=?, category=?, facts_json=?' . entry_bump() . ' WHERE campaign_id=? AND id=?')
+            ->execute([$name, $s('aliases'), $s('notes'), $s('gm_notes'), (int)($d['is_secret'] ?? 0) ? 1 : 0, $s('category'), $s('facts'), $cid, $ref]);
         if (function_exists('character_names_sync')) character_names_sync($ref);
         break;
     case 'tome':

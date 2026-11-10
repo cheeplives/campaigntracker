@@ -21,6 +21,76 @@ function category_in($v): ?string {
     if (!in_array($c, ENTRY_CATEGORIES, true)) fail('Pick a Category: ' . implode(', ', ENTRY_CATEGORIES));
     return $c;
 }
+/** The fields each Category's entries have in their facts box, where the campaign hasn't set its own (settings
+ * entry_fields): [label] or [label, the choices its list offers]. Any field takes any text; the choices are offered. */
+const ENTRY_FIELD_DEFAULTS = [
+    'location' => [['Type'], ['Region'], ['Ruler'], ['Population']],
+    'person' => [['Role'], ['Ancestry'], ['Affiliation'], ['Status', ['Alive', 'Dead', 'Missing', 'Unknown']], ['Home']],
+    'item' => [['Type'], ['Owner'], ['Value']],
+    'group' => [['Type'], ['Leader'], ['Base'], ['Goal']],
+    'vehicle' => [['Type'], ['Owner'], ['Crew']],
+    'quest' => [['Status', ['Rumoured', 'Active', 'Done', 'Failed', 'Abandoned']], ['Given by'], ['Reward'], ['Deadline']],
+];
+const ENTRY_FIELDS_MAX = 12;       // fields a Category may have
+const ENTRY_FACT_MAX = 200;        // characters in one fact
+/** A field's key in facts_json: its label in lower case, anything but letters and digits as _. */
+function entry_field_key(string $label): string {
+    return mb_substr(trim((string)preg_replace('/[^\p{L}\p{N}]+/u', '_', mb_strtolower($label)), '_'), 0, 40);
+}
+/** Every Category's fields for a campaign with these settings: category => [{key, label, options, gm}]. A Category the
+ * settings list (even as []) uses that list; any other, the built-in one. Whatever the settings hold is read with
+ * care, since a GM's page saves them as it likes: odd entries are left out, never an error. */
+function entry_fields(?array $settings): array {
+    $set = is_array($settings['entry_fields'] ?? null) ? $settings['entry_fields'] : [];
+    $out = [];
+    foreach (ENTRY_CATEGORIES as $cat) {
+        $list = is_array($set[$cat] ?? null) ? $set[$cat]
+            : array_map(fn($d) => ['label' => $d[0], 'options' => $d[1] ?? []], ENTRY_FIELD_DEFAULTS[$cat] ?? []);
+        $fields = [];
+        foreach ($list as $f) {
+            if (!is_array($f) || !is_string($f['label'] ?? null)) continue;
+            $label = mb_substr(trim((string)preg_replace('/\s+/u', ' ', $f['label'])), 0, 40);
+            $key = entry_field_key($label);
+            if ($key === '' || isset($fields[$key]) || count($fields) >= ENTRY_FIELDS_MAX) continue;
+            $opts = [];
+            foreach (is_array($f['options'] ?? null) ? $f['options'] : [] as $o) {
+                $o = is_string($o) ? mb_substr(trim($o), 0, 40) : '';
+                if ($o !== '' && !in_array($o, $opts, true) && count($opts) < 12) $opts[] = $o;
+            }
+            $fields[$key] = ['key' => $key, 'label' => $label, 'options' => $opts, 'gm' => !empty($f['gm'])];
+        }
+        $out[$cat] = array_values($fields);
+    }
+    return $out;
+}
+/** This campaign's fields, read once a request. */
+function campaign_entry_fields(int $cid): array {
+    static $memo = [];
+    return $memo[$cid] ??= entry_fields(dec(campaign_row($cid)['settings_json']));
+}
+/** An entry's facts as this member sees them: its Category's fields that have something in them, GM-only ones for GMs. */
+function facts_out(?string $json, ?string $cat, array $fields, bool $isGm): object {
+    $have = dec($json);
+    $out = [];
+    foreach ($fields[$cat ?? ''] ?? [] as $f) {
+        $v = is_array($have) ? ($have[$f['key']] ?? null) : null;
+        if (is_string($v) && $v !== '' && ($isGm || !$f['gm'])) $out[$f['key']] = $v;
+    }
+    return (object)$out;
+}
+/** The facts to store from what a save sent: each field of the entry's Category that was sent, and that this member
+ * may change, is set (or cleared when blank); GM-only fields a player can't see, and facts kept from another Category, stay as they were. */
+function facts_in($sent, ?string $cat, array $fields, bool $isGm, ?string $oldJson): ?string {
+    if ($sent !== null && !is_array($sent)) fail('Expected an object of facts');
+    $have = dec($oldJson);
+    $have = is_array($have) ? array_filter($have, 'is_string') : [];
+    foreach ($fields[$cat ?? ''] ?? [] as $f) {
+        if (($f['gm'] && !$isGm) || !is_array($sent) || !array_key_exists($f['key'], $sent)) continue;
+        $v = mb_substr(trim((string)preg_replace('/\s+/u', ' ', (string)str_in($sent[$f['key']] ?? '', 1000, false))), 0, ENTRY_FACT_MAX);
+        if ($v === '') unset($have[$f['key']]); else $have[$f['key']] = $v;
+    }
+    return $have ? json_encode($have, JSON_UNESCAPED_UNICODE) : null;
+}
 /** The Encyclopedia's tags plus any starter tag the campaign hasn't used yet (id null), by name. */
 function entry_tags(int $cid): array {
     $st = db()->prepare('SELECT id, name, color FROM encyclopedia_tag_names WHERE campaign_id=?');
@@ -37,13 +107,15 @@ function entry_index(int $cid, bool $isGm, array $tokens = []): array {
     // Only the start of the notes, for the 140-character preview: every campaign load reads this, so not the whole
     // Encyclopedia's text. A player's blank test needs to know whether anything outside the GM's paragraphs is there,
     // which the start shows unless it is all secret; then the rest decides, in SQL.
-    $st = db()->prepare("SELECT id, name, category, aliases_json, LEFT(notes, " . ENTRY_PREVIEW_READ . ") AS notes,
+    $st = db()->prepare("SELECT id, name, category, facts_json, aliases_json, LEFT(notes, " . ENTRY_PREVIEW_READ . ") AS notes,
         CHAR_LENGTH(notes) > " . ENTRY_PREVIEW_READ . " AS cut, is_secret, (COALESCE(notes, '') = '' AND " . ($isGm ? "COALESCE(gm_notes, '') = ''" : '1') . ') AS blank
         FROM encyclopedia_entries WHERE campaign_id=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY name');
     $st->execute([$cid]);
     $pics = entry_pics($cid, $isGm);
-    return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'category' => $e['category'], 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
-        'blank' => (bool)$e['blank'] || (!$isGm && !(int)$e['cut'] && rich_open($e['notes']) === ''), 'preview' => entry_preview(rich_for(entry_head($e['notes'], (bool)(int)$e['cut'], $isGm), $isGm)),
+    $fields = campaign_entry_fields($cid);
+    return array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name'], 'category' => $e['category'], 'facts' => $f = facts_out($e['facts_json'], $e['category'], $fields, $isGm), 'aliases' => entry_aliases($e), 'is_secret' => (bool)$e['is_secret'],
+        // nothing written and no facts: a quest with only its Status isn't blank
+        'blank' => !(array)$f && ((bool)$e['blank'] || (!$isGm && !(int)$e['cut'] && rich_open($e['notes']) === '')), 'preview' => entry_preview(rich_for(entry_head($e['notes'], (bool)(int)$e['cut'], $isGm), $isGm)),
         'pic' => $pics[(int)$e['id']] ?? null, 'token_url' => $tokens[(int)$e['id']] ?? null], $st->fetchAll());
 }
 /** Each entry's first picture this member may see, as entry id => its file URL, for the picture on its links' tooltips. */
@@ -149,13 +221,16 @@ function encyclopedia_action(string $action): void {
         $cid = cid();
         $role = role($cid);
         $isGm = $role === 'gm';
-        $st = db()->prepare('SELECT e.id, e.name, e.category, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
+        $st = db()->prepare('SELECT e.id, e.name, e.category, e.facts_json, e.aliases_json, e.notes, ' . ($isGm ? 'e.gm_notes, ' : '') . 'e.is_secret, e.version, e.created_by, e.updated_at, ' . AUTHOR_SQL . ' AS author, ' . user_name_sql() . ' AS player
             FROM encyclopedia_entries e LEFT JOIN users u ON u.id=e.created_by LEFT JOIN campaign_members m ON m.campaign_id=e.campaign_id AND m.user_id=e.created_by
             WHERE e.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0') . ' ORDER BY e.name');
         $st->execute([$cid]);
         $tokens = token_urls($cid, $isGm)['entry'];
-        $entries = array_map(function ($e) use ($isGm, $tokens) {
+        $fields = campaign_entry_fields($cid);
+        $entries = array_map(function ($e) use ($isGm, $tokens, $fields) {
             $e['id'] = (int)$e['id'];
+            $e['facts'] = facts_out($e['facts_json'], $e['category'], $fields, $isGm);
+            unset($e['facts_json']);
             $e['token_url'] = $tokens[$e['id']] ?? null;
             $e['aliases'] = entry_aliases($e);
             $e['notes'] = rich_for($e['notes'], $isGm);
@@ -337,7 +412,8 @@ function encyclopedia_action(string $action): void {
                 ->execute([$cid, $name, $aliases, $notes, $gmNotes, $secret, me()['id']]);
             $id = (int)db()->lastInsertId();
         }
-        db()->prepare('UPDATE encyclopedia_entries SET category=? WHERE id=?')->execute([$category, $id]);
+        $facts = array_key_exists('facts', body()) ? facts_in(p('facts'), $category, campaign_entry_fields($cid), $isGm, $old['facts_json'] ?? null) : ($old['facts_json'] ?? null);
+        db()->prepare('UPDATE encyclopedia_entries SET category=?, facts_json=? WHERE id=?')->execute([$category, $facts, $id]);
         if (array_key_exists('tags', body())) {
             save_event_tags($cid, $id, p('tags'), 'entry');
             character_kind_from_tags($cid, $id, $isGm);   // a PC or NPC tag changed here changes the character's Kind

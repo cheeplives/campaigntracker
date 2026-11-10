@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { E, Fan, S, UNIT_OPTIONS, alertDialog, api, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
+    const { E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, api, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
 
     // ------------------------------------------------------------ season editor
     /** A season's sunrise and sunset boxes as saved: both trimmed, or neither when both are blank. */
@@ -356,7 +356,7 @@
     }
 
     /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
-    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
+    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['encyclopedia', 'Encyclopedia'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
     function viewSettings(sub) {
       if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
       const at = SETTINGS_TABS.some(([k]) => k === sub) ? sub : 'campaign';
@@ -777,9 +777,46 @@
         });
         return form;
       };
+      // Encyclopedia: the fields each Category's entries have in their facts box, a line each ("Status: Alive, Dead" offers
+      // those choices; "(GM only)" at the end keeps a field from players). Saved in the settings as entry_fields.
+      const encyclopedia = () => {
+        const line = f => `${f.label}${f.options.length ? `: ${f.options.join(', ')}` : ''}${f.gm ? ' (GM only)' : ''}`;
+        const parse = text => text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+          const gm = /\(GM only\)$/i.test(l);
+          if (gm) l = l.replace(/\s*\(GM only\)$/i, '');
+          const at = l.indexOf(':');
+          return { label: (at < 0 ? l : l.slice(0, at)).trim(), options: at < 0 ? [] : l.slice(at + 1).split(',').map(o => o.trim()).filter(Boolean), gm };
+        }).filter(f => f.label);
+        const boxes = ENC_CATEGORIES.map(([k, name, icon]) => [k, el('textarea', { name: `fields_${k}`, rows: 6, class: 'mono', 'aria-label': `${name} fields`,
+          value: ((S.entryFields || {})[k] || []).map(line).join('\n') }), `${icon} ${name}`]);
+        const save = async fields => {
+          const s = { ...settings() };
+          if (fields) s.entry_fields = fields; else delete s.entry_fields;
+          try { await post('campaign_update', { settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
+          catch (err) { toast(err.message, true); }
+        };
+        const form = el('form', { class: 'card' }, el('h2', {}, 'Encyclopedia'),
+          el('h3', {}, 'Fields for each Category'),
+          el('p', { class: 'muted small' }, 'Every entry shows a box of short facts under its name, and each Category has its own: a Person\'s Role and Status, a Quest\'s Status and Reward. Write one field on each line, up to 12 for a Category. To offer choices, put them after a colon: ',
+            el('code', {}, 'Status: Alive, Dead, Missing'), '. To keep a field from players, end its line with ', el('code', {}, '(GM only)'), '.'),
+          el('p', { class: 'muted small' }, 'A field you rename starts empty, and what was written under the old name comes back if you name it that again. At the Table lists the Quest entries whose Status is Active.'),
+          el('div', { class: 'grid2' }, boxes.map(([, box, label]) => field(label, box))),
+          el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save fields'),
+            btn('Back to the built-in fields', async () => {
+              if (await confirmDialog('Put every Category back to its built-in fields? What entries hold is kept, and shows again under a field of the same name.', { ok: 'Use the built-in fields' })) await save(null);
+            }, 'small', 'Forget this campaign\'s own fields and use the ones the app comes with')));
+        form.addEventListener('submit', async ev => {
+          ev.preventDefault();
+          const fields = Object.fromEntries(boxes.map(([k, box]) => [k, parse(box.value)]));
+          const long = boxes.find(([k]) => fields[k].length > 12);
+          if (long) { toast(`${long[2]} has more than 12 fields`, true); return; }
+          await save(fields);
+        });
+        return form;
+      };
       const tabs = el('nav', { class: 'settings-tabs', 'aria-label': 'Settings' }, SETTINGS_TABS.map(([k, label]) =>
         el('a', { href: `#/c/${S.camp.id}/settings${k === 'campaign' ? '' : '/' + k}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
-      const card = { campaign: () => general, calendar: () => calForm, dice, weather: tuningCard, tools: () => danger }[at]();
+      const card = { campaign: () => general, calendar: () => calForm, dice, encyclopedia, weather: tuningCard, tools: () => danger }[at]();
       card.prepend(tabs);
       mount(...campaignHeader('settings'), card);
     }
