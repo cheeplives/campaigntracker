@@ -140,15 +140,23 @@ return [
   'backups' => ['path' => ''],
 
   // --- Find Image ------------------------------------------------------------
-  // The Encyclopedia's Find Image button searches Openverse, The Met and the Art
-  // Institute of Chicago (no keys needed), the Smithsonian and DeviantArt (keys needed). The server
-  // does the searching, so these keys never reach the browser.
+  // Find Image (on Encyclopedia entries, character portraits, maps and tokens) searches Openverse,
+  // Wikimedia Commons, The Met, the Art Institute of Chicago and the Cleveland Museum of Art (no
+  // keys needed), and Pixabay, Pexels, the Smithsonian, Europeana and DeviantArt (free keys needed;
+  // each is left out until its key is here). The server does the searching, so these keys never
+  // reach the browser.
   // contact: an email or web address sent with each request, as the Art Institute
   //   and Openverse ask, so they can reach you about your app's traffic.
   // openverse: optional. Without keys the anonymous rate limit applies; register at
   //   https://api.openverse.org/v1/#tag/auth/operation/register for higher limits.
   // smithsonian: optional. A free api.data.gov key (https://api.data.gov/signup/)
   //   adds the Smithsonian's CC0 pictures to the Museums tab.
+  // europeana: optional. A free key (https://pro.europeana.eu/pages/get-api) adds Europeana's openly
+  //   licensed pictures (thousands of European museums, the Rijksmuseum and SMK among them) to Museums.
+  // pixabay: optional. A free key (sign in, then https://pixabay.com/api/docs/) turns on Pixabay, the
+  //   best source of fantasy and science fiction illustrations. Its searches are kept for a day in
+  //   the uploads folder, as Pixabay asks.
+  // pexels: optional. A free key (https://www.pexels.com/api/) turns on Pexels' photos.
   // deviantart: register an app at https://www.deviantart.com/developers/ (any
   //   redirect URI will do; the app only uses "client credentials"). Leave the keys
   //   empty and the DeviantArt tab says it isn't set up.
@@ -156,6 +164,9 @@ return [
     'contact'    => '',
     'openverse'  => ['client_id' => '', 'client_secret' => ''],
     'smithsonian' => ['api_key' => ''],
+    'europeana'  => ['api_key' => ''],
+    'pixabay'    => ['api_key' => ''],
+    'pexels'     => ['api_key' => ''],
     'deviantart' => ['client_id' => '', 'client_secret' => ''],
   ],
 

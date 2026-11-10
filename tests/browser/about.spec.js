@@ -32,7 +32,12 @@ test("About & sources: open signed out from the footer, with every travel sample
   await expect(find.getByRole("link", { name: /Art Institute of Chicago/ })).toBeVisible();
   await expect(find.getByRole("link", { name: /Smithsonian/ })).toBeVisible();
   await expect(find.getByRole("link", { name: "DeviantArt" })).toBeVisible();
+  for (const name of ["Wikimedia Commons", "OpenGameArt.org", "Europeana", "Pixabay", "Pexels"]) await expect(find.getByRole("link", { name, exact: true })).toBeVisible();
+  await expect(find.getByRole("link", { name: /Cleveland Museum of Art/ })).toHaveAttribute("href", "https://openaccess-api.clevelandart.org/");
   await expect(page.locator("li", { hasText: "DeviantArt, through its API and oEmbed" })).toBeVisible();
+  const free = page.locator("li", { hasText: "Pixabay and Pexels, through their APIs" });
+  await expect(free.getByRole("link", { name: "Pixabay Content License" })).toHaveAttribute("href", "https://pixabay.com/service/license-summary/");
+  await expect(free.getByRole("link", { name: "Pexels License" })).toHaveAttribute("href", "https://www.pexels.com/license/");
   // and where Import on a character's sheet reads from
   const imp = page.locator("li", { hasText: "Import on a character's sheet" });
   await expect(imp.getByRole("link", { name: "Pathbuilder 2e" })).toHaveAttribute("href", "https://pathbuilder2e.com/");

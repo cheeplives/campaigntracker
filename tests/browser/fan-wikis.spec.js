@@ -120,8 +120,15 @@ test.describe("Fan wikis API", () => {
 });
 
 test.describe("Fan wikis in the app", () => {
+  // Find Image's museum pictures are answered by page.route() below, which WebKit skips while a service worker runs.
+  test.use({ serviceWorkers: "block" });
+
   test("the GM picks the campaign's wiki in Settings, and an entry adds its summary with the source and licence", async ({ page, browser }) => {
     const errors = watchErrors(page);
+    // Find Image opens on All, which also shows the stub museums' pictures from their real hosts: answered here, so
+    // a made-up picture there isn't a 404.
+    await page.route(/^https:\/\/(www\.artic\.edu|ids\.si\.edu)\//, route => route.fulfill({ status: 200, contentType: "image/png",
+      body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAD0lEQVQImWNgYGBgYGAAAAAHAAHV3tbYAAAAAElFTkSuQmCC", "base64") }));
     const { cid, id, pp } = await setup(page, browser, "Settings");
     await page.goto(`index.html#/c/${cid}/settings`);
     const pickWiki = page.getByRole("combobox", { name: "Fan wiki" });
@@ -153,7 +160,7 @@ test.describe("Fan wikis in the app", () => {
     if (NONOPEN) {
       await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
       await page.getByRole("button", { name: "🖼️ Find Image" }).click();
-      await page.getByRole("tab", { name: "Wookieepedia" }).click();
+      await page.getByRole("combobox", { name: "Where to search" }).selectOption({ label: "Wookieepedia" });
       const promo = page.locator(".find-result", { hasText: "Luke promo" });
       await expect(promo).toContainText("Personal fair use, not openly licensed");
       await expect(page.locator(".find-result", { hasText: "X-wing fan drawing" }).getByRole("button", { name: "Use this picture" })).toBeVisible();
