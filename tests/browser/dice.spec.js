@@ -622,6 +622,7 @@ test("rolling from a character sheet: numbers, dice written on it and an attack'
   await sheet.getByLabel("Strength", { exact: true }).dispatchEvent("change");
   await sheet.getByRole("button", { name: "Roll Strength" }).click();
   await expect.poll(lastRoll).toMatch(/^1d20\+3 @d20 .* # Strength \(\+3\)$/);
+  await close();
   // with QuestWorlds, the rating is the contest's: 5M is 25 against the resistance
   const qw = { ...settings, dice: { ...settings.dice, system: { id: "contest", game: "questworlds", params: { tn: 15, mod: 0, res: 10 }, labels: { tn: "Ability rating" } } } };
   expect((await api(page, "campaign_update", { settings: qw }, cid)).status).toBe(200);
