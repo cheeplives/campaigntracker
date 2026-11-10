@@ -696,3 +696,53 @@ test("Party: a side group's trip leaves the main party's region and shifts alone
   expect(JSON.stringify((await r.json()).shifts)).not.toContain("In transit");
   expectNoErrors(errors);
 });
+
+test("Party: when the last one leaves a split-off group, it asks to merge it", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, ids, players } = await setup(page, browser, "Party empty", 2);
+  const main = (await groups(page, cid))[0];
+  await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[0]] }, cid);
+  await page.goto(`#/c/${cid}/groups`);
+  const asked = page.locator("dialog.kit-dialog", { hasText: "Scouts is empty" });
+  // the GM moves Pat0 back with Move…: asked, and keeping it leaves an empty Scouts
+  await rowOf(page, "Scouts").getByRole("button", { name: "Move Pat0" }).click();
+  await page.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(asked).toContainText("Merge it into The party?");
+  await asked.getByRole("button", { name: "Keep it" }).click();
+  await expect(rowOf(page, "Scouts")).toContainText("No one yet");
+  expect(await groups(page, cid)).toHaveLength(2);
+  // someone joining and leaving again by drag: asked again, and Merge folds it into the group they went to
+  await api(page, "group_join", { id: (await groups(page, cid))[1].id, member: ids[1] }, cid);
+  await page.reload();
+  const row = rowOf(page, "Scouts").locator(".group-member", { hasText: "Pat1" });
+  await row.evaluate(e => { e.scrollIntoView({ block: "start" }); scrollBy(0, -90); });
+  const from = await row.locator(".group-grip").boundingBox(), to = await rowOf(page, "The party").boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 30, from.y + 30, { steps: 4 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await asked.getByRole("button", { name: "Merge" }).click();
+  await expect(page.locator(".group-card")).toHaveCount(1);
+  expect(sorted((await groups(page, cid))[0].members)).toEqual(sorted(ids));
+
+  // a player who leaves their own group last is asked too, and may merge it; but not a group someone is still in
+  const pp = players[0].pp;
+  const split = await api(pp, "group_split", { from_id: main.id, name: "Scouts", members: [ids[0]] }, cid);
+  expect(split.status).toBe(200);
+  const scouts = (await groups(page, cid)).find(g => g.name === "Scouts");
+  expect((await api(pp, "group_merge", { id: scouts.id, into_id: main.id }, cid)).status).toBe(403);
+  await pp.goto(`#/c/${cid}/groups`);
+  await rowOf(pp, "Scouts").getByRole("button", { name: "Move Pat0" }).click();
+  await pp.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await pp.locator("dialog.kit-dialog", { hasText: "Scouts is empty" }).getByRole("button", { name: "Merge" }).click();
+  await expect(pp.locator(".group-card")).toHaveCount(1);
+  expect(await groups(page, cid)).toHaveLength(1);
+  // a group the GM keeps together isn't the player's to merge, even empty
+  expect((await api(page, "group_split", { from_id: main.id, name: "Camp", members: [ids[1]] }, cid)).status).toBe(200);
+  const camp = (await groups(page, cid)).find(g => g.name === "Camp");
+  await api(page, "group_save", { id: camp.id, players_can_move: false }, cid);
+  await api(page, "group_join", { id: main.id, member: ids[1] }, cid);
+  expect((await api(pp, "group_merge", { id: camp.id, into_id: main.id }, cid)).status).toBe(403);
+  expectNoErrors(errors);
+});

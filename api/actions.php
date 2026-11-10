@@ -165,7 +165,7 @@ const ACTIONS = [
     'group_split' => ['who' => 'member'],
     'group_save' => ['who' => 'gm'],
     'group_move' => ['who' => 'gm'],
-    'group_merge' => ['who' => 'gm'],
+    'group_merge' => ['who' => 'member'],
     'group_join' => ['who' => 'member'],
     'party_on_map' => ['who' => 'member'],
     'trail_clear' => ['who' => 'gm'],

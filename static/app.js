@@ -4941,21 +4941,33 @@
     /** The groups someone in group `from` may be sent to: every other group for a GM, only those letting players move for a player. */
     const targets = from => groups.filter(x => x.id !== from?.id && (gm || x.players_can_move));
     /** Put one person (who: { member } or { character }) in group id, or (null, GMs) take them out of the party. */
-    const join = async (id, who, name) => {
+    /** After someone left group fromId for toId (null: out of the party): when that was a split-off group's last one, ask
+     * to merge it into where they went (the main group when they left the party), rather than leave an empty marker on the maps. */
+    const offerMerge = async (fromId, toId) => {
+      const g = groups.find(x => x.id === fromId);
+      if (!g || g.is_main || size(g) || !(gm || g.players_can_move)) return;
+      const into = groups.find(x => x.id === toId) || groups[0];
+      if (!await confirmDialog(`Everyone has left ${g.name}. Merge it into ${into.name}? Its marker and trail on the maps go with it.`,
+        { title: `${g.name} is empty`, ok: 'Merge', cancel: 'Keep it' })) return;
+      try { await post('group_merge', { id: g.id, into_id: into.id }, S.camp.id); toast(`${g.name} is merged into ${into.name}`); await reload(); } catch (err) { toast(err.message, true); }
+    };
+    const join = async (id, who, name, from = null) => {
       try {
         await post('group_join', { id, ...who }, S.camp.id);
         toast(id === null ? `${name} is out of the party` : `${name} joins ${groups.find(g => g.id === id)?.name || 'the group'}`);
         await reload();
-      } catch (err) { toast(err.message, true); }
+      } catch (err) { return toast(err.message, true); }
+      await offerMerge(from, id);
     };
-    /** A small modal form: run() does the work, and the board is drawn again after. */
-    const partyDialog = (title, kids, ok, run) => {
+    /** A small modal form: run() does the work, and the board is drawn again after; then after(), if given. */
+    const partyDialog = (title, kids, ok, run, after = null) => {
       const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
       const go = el('button', { class: 'primary', type: 'submit' }, ok);
       const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
       form.addEventListener('submit', async ev => {
         ev.preventDefault(); go.disabled = true;
-        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; }
+        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; return; }
+        if (after) await after();
       });
       d.addEventListener('close', () => d.remove());
       d.append(form); document.body.append(d); d.showModal();
@@ -5021,8 +5033,9 @@
       const opts = targets(from).map(x => [x.id, x.name]);
       if (gm && from) opts.push(['out', 'Not travelling (out of the party)']);
       const to = select(opts, opts[0]?.[0] ?? '');
+      const dest = () => (to.value === 'out' ? null : Number(to.value));
       partyDialog(`Move ${name}`, [field('Move to', to, from ? `${name} leaves ${from.name}` : `${name} starts travelling with the party`)], 'Move',
-        () => post('group_join', { id: to.value === 'out' ? null : Number(to.value), ...who }, S.camp.id));
+        () => post('group_join', { id: dest(), ...who }, S.camp.id), () => offerMerge(from?.id ?? null, dest()));
     };
 
     // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
@@ -5077,7 +5090,7 @@
         if (!d.ghost) return;
         d.ghost.remove();
         const t = ev.type === 'pointerup' ? dropAt(ev.clientX, ev.clientY, d.from) || d.hot : null;
-        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name);
+        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name, d.from);
       };
       h.addEventListener('pointerup', end);
       h.addEventListener('pointercancel', end);

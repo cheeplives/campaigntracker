@@ -2014,11 +2014,11 @@ try {
         trail_clear($cid);
         out(['ok' => true]);
 
-    case 'group_merge': // GMs: id, into_id
+    case 'group_merge': // GMs: id, into_id. A player may fold in a split-off group that everyone has left, if it lets players move
         $cid = cid();
-        need_gm($cid);
-        group_merge($cid);
-        out(['ok' => true, 'groups' => party_groups($cid)]);
+        $gm = role($cid) === 'gm';
+        group_merge($cid, $gm);
+        out(['ok' => true, 'groups' => party_groups($cid, $gm)]);
 
     case 'map_save': // GMs: id (to change one), name, is_secret, image_id, scale_per_px, scale_unit, grid_px, grid_offset_x, grid_offset_y, grid_type, grid_shown
         $cid = cid();
