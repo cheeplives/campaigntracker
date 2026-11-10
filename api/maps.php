@@ -682,17 +682,22 @@ function trail_clear(int $cid): void {
     } else db()->prepare('DELETE FROM party_trail WHERE map_id=?')->execute([$map['id']]);
     touch_campaign($cid);
 }
-/** GM: fold group id into into_id. Merging the main group makes into_id the main one. */
-function group_merge(int $cid): void {
+/** Fold group id into into_id. Merging the main group makes into_id the main one. A GM merges any group; a player only a
+ * split-off group that everyone has left and that lets players move (so the last one out can tidy it away). */
+function group_merge(int $cid, bool $isGm = true): void {
     $body = body();
     $g = group_row($cid, $body['id'] ?? null);
     $into = group_row($cid, $body['into_id'] ?? null);
+    $mayEmpty = fn(array $g) => !$g['is_main'] && $g['players_can_move'] && !party_members($g)
+        && !(int)db()->query('SELECT COUNT(*) FROM sheet_characters WHERE party_group_id=' . (int)$g['id'])->fetchColumn();
+    if (!$isGm && !$mayEmpty($g)) fail('Only the GM merges groups', 403);
     if ($g['id'] === $into['id']) fail('Pick a different group to merge into');
     db()->beginTransaction();
     try {
         party_lock($cid);
         $g = party_reread($cid, $g['id']);
         $into = party_reread($cid, $into['id']);
+        if (!$isGm && !$mayEmpty($g)) fail('Someone has joined that group again', 409);
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
             ->execute([json_encode(array_values(array_unique([...party_members($into), ...party_members($g)]))), $into['id']]);
         db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE party_group_id=?')->execute([$into['id'], $g['id']]);
