@@ -2627,3 +2627,10 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .enc-quest.implied > a, .enc-quest-sessions li.implied > a { font-style: italic; opacity: .85; }
 .enc-quest-sessions[hidden] { display: none; }
 .enc-conn-by { font-size: .85em; opacity: .75; cursor: help; }
+
+/* places inside places, and the days the party was at one */
+.enc-inside { margin: 2px 0; }
+.enc-tree { list-style: none; margin: 4px 0 0; padding-left: 0; }
+.enc-tree .enc-tree { padding-left: 18px; border-left: 1px solid var(--line, rgba(128,128,128,.35)); margin-left: 8px; }
+.enc-tree li { padding: 2px 0; }
+.enc-visits[hidden] { display: none; }

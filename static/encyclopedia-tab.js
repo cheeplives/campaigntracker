@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, entryFields, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
+    const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, entryFields, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs, promptDialog, loadCampaign } = ctx;
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
@@ -299,7 +299,7 @@
         web: opts => WebView.open({ conns, byId, href, campaignName: S.camp.name, ...opts }) };
       // Each entry is a small card: its name, its other names under it, and its tags along the bottom.
       const starred = new Set(starsOf('entry'));
-      const item = e => el('a', { class: 'enc-item enc-card has-star' + (current?.id === e.id ? ' on' : '') + (starred.has(e.id) ? ' starred' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
+      const item = (e, depth = 0) => el('a', { style: depth ? { marginLeft: `${Math.min(depth, 4) * 14}px` } : null, 'data-depth': depth || null, class: 'enc-item enc-card has-star' + (current?.id === e.id ? ' on' : '') + (starred.has(e.id) ? ' starred' : ''), href: href(e.id), 'aria-current': current?.id === e.id ? 'page' : null },
         itemStar('entry', e.id, e.name, { inLink: true }),
         el('span', { class: 'enc-name' }, e.is_secret ? el('span', { 'data-tip': 'GM only' }, '🔒 ') : null, e.name,
           chars[e.id]?.sheet_visible ? el('span', { class: 'enc-sheet', role: 'link', tabindex: 0, 'aria-label': `Open ${e.name}'s sheet`, 'data-tip': 'Open the character sheet',
@@ -365,7 +365,16 @@
           const folded = st.folded.has(key);
           const head = el('button', { type: 'button', class: 'enc-fold', 'aria-expanded': String(!folded), onclick: () => { folded ? st.folded.delete(key) : st.folded.add(key); draw(); } },
             title);
-          return el('section', { class: key === 'blank' ? 'enc-blank' : null, 'data-cat': key }, el('h3', {}, head, tipText ? tip(tipText) : null), folded ? [] : list.map(item));
+          return el('section', { class: key === 'blank' ? 'enc-blank' : null, 'data-cat': key }, el('h3', {}, head, tipText ? tip(tipText) : null), folded ? [] : key === 'location' ? nested(list).map(([e, d]) => item(e, d)) : list.map(e => item(e)));
+        };
+        // Locations: a place sits under the place it is inside, when both are listed
+        const nested = list => {
+          const inList = new Set(list.map(e => e.id)), byId = new Map(list.map(e => [e.id, e])), done = new Set(), out = [];
+          const kidsOf = id => placeChildren(conns, id).filter(c => inList.has(c.id)).map(c => byId.get(c.id));
+          const put = (e, d) => { if (done.has(e.id)) return; done.add(e.id); out.push([e, d]); for (const k of kidsOf(e.id)) put(k, d + 1); };
+          for (const e of list) if (!placeParents(conns, e.id).some(x => inList.has(x.id))) put(e, 0);
+          for (const e of list) put(e, 0);   // whatever a loop left out
+          return out;
         };
         const of = entries.length !== shown.length ? ` of ${entries.length}` : '';
         // Grouped by Category, in the order they are listed, then the entries with none.
@@ -599,6 +608,7 @@
         characterCard(e),
         e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,   // the Category is the kicker over the name
         e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
+        placeIn(e, ctx),
         mapLinks('entry_id', e.id),
         facts(e),
         // the Public notes read as the entry's summary beside the portrait, the highlights after them
@@ -611,10 +621,97 @@
         isGM() ? el('div', { class: 'notepanel secret' }, el('h4', {}, '🔒 GM notes', tip('Only GMs ever see these. The server never sends them to players')),
           (e.gm_notes || '').trim() ? note(e.gm_notes) : el('p', { class: 'muted' }, 'Nothing written yet.')) : null,
         connectionsCard(e, ctx),
+        placesInside(e, ctx),
+        placeVisits(e, ctx),
         questSessions(e, ctx),
         e.author ? el('small', { class: 'muted' }, 'Added by ', byline(e)) : null,
         attachmentsCard('encyclopedia', e.id, e.files || [], { uploads: S.encUploads, secret: e.is_secret, name: e.name }),
         box]);
+    }
+
+    // ---- places inside places: the "Contains" / "Located in" connection read as a tree, with no second way to say it
+    const sameLabel = (c, l) => c.label.toLowerCase() === l;
+    const placeParents = (conns, id) => (conns.get(id) || []).filter(c => sameLabel(c, 'located in')).map(c => c.other);
+    const placeChildren = (conns, id) => (conns.get(id) || []).filter(c => sameLabel(c, 'contains')).map(c => c.other).sort((a, b) => a.name.localeCompare(b.name));
+    /** What e is inside, outermost first, following the first "Located in" at each step (a loop stops where it closes). */
+    function placeChain(conns, e) {
+      const chain = [], seen = new Set([e.id]);
+      for (let at = e; chain.length < 8;) {
+        const up = placeParents(conns, at.id).find(x => !seen.has(x.id));
+        if (!up) break;
+        seen.add(up.id); chain.unshift(up); at = up;
+      }
+      return chain;
+    }
+    /** Everything inside e, however deep, each once. */
+    function placeWithin(conns, e) {
+      const out = new Map(), walk = (x, depth) => {
+        for (const c of placeChildren(conns, x.id)) if (c.id !== e.id && !out.has(c.id) && depth < 8) { out.set(c.id, c); walk(c, depth + 1); }
+      };
+      walk(e, 0);
+      return [...out.values()];
+    }
+    const placeLink = x => el('a', { class: 'enc-link' + (x.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${x.id}` }, x.is_secret ? '🔒 ' : null, x.name);
+    /** "In Empire › Reikland" under an entry's name. */
+    function placeIn(e, ctx) {
+      const chain = placeChain(ctx.conns, e);
+      if (!chain.length) return null;
+      return el('div', { class: 'small enc-inside' }, el('span', { class: 'muted', 'data-tip': 'What this is inside, from its "Located in" connections, outermost first' }, 'In '),
+        chain.flatMap((x, i) => [i ? el('span', { class: 'muted', 'aria-hidden': 'true' }, ' › ') : null, placeLink(x)]));
+    }
+    /** On a Location's page (or any entry that contains others): what is inside it as a tree, and + Place inside. */
+    function placesInside(e, ctx) {
+      const kids = placeChildren(ctx.conns, e.id);
+      if (!kids.length && e.category !== 'location') return null;
+      const seen = new Set([e.id]);
+      const tree = (list, depth) => el('ul', { class: 'enc-tree' }, list.filter(x => !seen.has(x.id)).map(x => {
+        seen.add(x.id);
+        const below = depth < 6 ? placeChildren(ctx.conns, x.id).filter(y => !seen.has(y.id)) : [];
+        return el('li', { 'data-id': x.id }, encCat(x.category)?.[2] ? `${encCat(x.category)[2]} ` : null, placeLink(x), below.length ? tree(below, depth + 1) : null);
+      }));
+      const add = e.category === 'location' ? btn('+ Place inside', async () => {
+        const name = (await promptDialog(`Name a place inside ${e.name}. It is added as a Location, connected as "Located in" ${e.name}.`, { title: 'Place inside', ok: 'Add', placeholder: 'e.g. The Grey Lady inn' }) || '').trim();
+        if (!name) return;
+        try {
+          const made = await post('entry_save', { name, category: 'location', is_secret: !!e.is_secret }, S.camp.id);
+          await post('relations_save', { entry_id: e.id, type: { label: 'Contains', inverse_label: 'Located in' }, add: [made.id] }, S.camp.id);
+          await loadCampaign(S.camp.id);
+          location.hash = `#/c/${S.camp.id}/encyclopedia/${made.id}`;
+        } catch (err) { toast(err.message, true); }
+      }, 'small', `Add a Location that is inside ${e.name}: a district of a city, a room of a dungeon, a town of a region`) : null;
+      return el('section', { class: 'enc-places' },
+        el('div', { class: 'row spread' }, el('h4', {}, `Inside ${e.name}`, tip('The entries this one contains, and what they contain in turn. It reads the "Contains" / "Located in" connections, so Link does the same')), add),
+        kids.length ? tree(kids, 0) : el('p', { class: 'muted small' }, 'Nothing inside it yet.'));
+    }
+    /** On a Location's page, the days the party was there: the days whose Locations visited name it, or a place inside
+     * it (Travel writes both ends of a trip there). Newest first; gone when there are none. */
+    function placeVisits(e, ctx) {
+      if (e.category !== 'location') return null;
+      const all = [e, ...placeWithin(ctx.conns, e)];
+      const box = el('section', { class: 'enc-visits', hidden: true }, el('h4', {}, 'Visits',
+        tip('The days whose Locations visited name this place or a place inside it. Travel adds a trip\'s two ends there, and a GM writes the rest on the day')));
+      api('encyclopedia_sources', { query: { cid: S.camp.id, names: JSON.stringify(all.flatMap(x => Nouns.namesOf(x))) } }).then(({ sources }) => {
+        const linker = Nouns.linker(all, () => null), days = new Map();
+        for (const s of sources) {
+          if (s.kind !== 'locations') continue;
+          const found = linker.mentions(Nouns.plain(s.text, s.format));
+          if (!found.length) continue;
+          days.set(s.abs_day, { day: s.abs_day, here: found.some(x => x.id === e.id), via: found.filter(x => x.id !== e.id) });
+        }
+        if (!days.size) { box.remove(); return; }
+        const rows = [...days.values()].sort((a, b) => b.day - a.day);
+        const date = d => E.fmtDate(cal(), d, { noWeekday: true });
+        const more = rows.length > 12 ? rows.splice(12) : [];
+        const line = r => el('li', { 'data-day': r.day }, el('a', { href: `#/c/${S.camp.id}/day/${r.day}` }, date(r.day)),
+          r.here ? null : el('small', { class: 'muted' }, ` at ${r.via.slice(0, 3).map(x => x.name).join(', ')}`));
+        const n = rows.length + more.length;
+        box.append(el('p', { class: 'small muted enc-visit-sum' }, n === 1 ? `Once, on ${date(rows[0].day)}.`
+          : `${n} days, from ${date((more.at(-1) || rows.at(-1)).day)} to ${date(rows[0].day)}.`),
+          el('ul', { class: 'enc-where' }, rows.map(line)),
+          ...(more.length ? [el('details', {}, el('summary', { class: 'small' }, `${more.length} earlier`), el('ul', { class: 'enc-where' }, more.map(line)))] : []));
+        box.hidden = false;
+      }).catch(() => box.remove());
+      return box;
     }
 
     /** On a quest's page, the sessions that touch it: the ones that name it, then the ones that name an entry connected
