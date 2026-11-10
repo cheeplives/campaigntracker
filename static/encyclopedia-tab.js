@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
+    const { DOWNTIME_KINDS, E, trail, itemStar, starsOf, pinButton, ENC_CATEGORIES, entryFields, S, api, attachmentsCard, btn, busy, byline, cal, campaignHeader, clean, confirmDialog, connIndex, connectionsCard, el, encCat, encCatNamed, entryForm, hideTip, isGM, listPage, lockBox, mapLinks, mount, multiPick, post, readerEmpty, relationKinds, route, secretTag, select, shiftNames, tagChip, tagsOf, tip, toast, vs } = ctx;
 
     // ------------------------------------------------------------ encyclopedia
     // The Encyclopedia tab keeps the people, places, items and the like that turn up in play. Each save of a note,
@@ -231,7 +231,7 @@
     }
 
     // an entry with a character sheet isn't blank: the sheet is what's written about it
-    const entryBlank = e => !(e.notes || '').trim() && !(isGM() && (e.gm_notes || '').trim()) && !S.encChars?.[e.id];
+    const entryBlank = e => !(e.notes || '').trim() && !(isGM() && (e.gm_notes || '').trim()) && !Object.keys(e.facts || {}).length && !S.encChars?.[e.id];
     /** The Encyclopedia tab: the entries down the left (Blank Entries first), the one picked on the right. sel: an entry
      * id, 'new' for a new entry, or nothing. A blank entry, or a new one, opens straight in its editor. */
     async function viewEncyclopedia(sel) {
@@ -243,7 +243,7 @@
       const files = { list: r.files || [], uploads: r.uploads || { ready: false } };
       S.encUploads = files.uploads;
       for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
-      S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, category: e.category || null, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
+      S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, category: e.category || null, facts: e.facts || {}, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
         pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null, token_url: e.token_url || null }));   // token_url: the picture its map pins wear
       S.encChars = r.characters || {};
       const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
@@ -264,7 +264,7 @@
       const href = id => `#/c/${S.camp.id}/encyclopedia${id ? `/${id}` : ''}`;
 
       // --- the list
-      const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), encCat(e.category)?.[1] || '', ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
+      const hay = new Map(entries.map(e => [e, [...Nouns.namesOf(e), encCat(e.category)?.[1] || '', ...Object.values(e.facts || {}), ...(e.tags || []).map(t => t.name), Nouns.plain(e.notes, 'html'), isGM() ? Nouns.plain(e.gm_notes, 'html') : '',
         ...conns.get(e.id).flatMap(c => [c.label, c.other.name]), ...files.list.filter(f => f.parent_id === e.id).flatMap(f => [f.name, f.caption || ''])].join('\n').toLowerCase()]));
       // The connection labels in use, as seen from either end: "has resident" and "resident of".
       const relUsed = new Map();
@@ -579,6 +579,7 @@
         e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,   // the Category is the kicker over the name
         e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
         mapLinks('entry_id', e.id),
+        facts(e),
         // the Public notes read as the entry's summary beside the portrait, the highlights after them
         el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
           (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
@@ -594,9 +595,17 @@
         box]);
     }
 
+    /** The entry's facts: its Category's fields that have something in them, names of other entries linked. */
+    function facts(e) {
+      const list = entryFields(e.category).filter(f => e.facts?.[f.key]);
+      return list.length ? el('div', { class: 'kv enc-facts' }, list.map(f => el('div', {},
+        el('span', { class: 'lbl' }, f.label, f.gm ? el('span', { 'data-tip': 'Only GMs can see this' }, ' 🔒') : null), el('span', {}, ...linked(e.facts[f.key]))))) : null;
+    }
+
     // ------------------------------------------------------------ the Encyclopedia for virtual tabletops
     /** Entries as static/lore-export.js takes them: each with its connections as seen from it. */
     const loreEntries = (list, conns) => list.map(e => ({ ...e, files: e.files || [],
+      fields: entryFields(e.category).filter(f => e.facts?.[f.key]).map(f => ({ label: f.label, value: e.facts[f.key], gm: f.gm })),
       links: (conns.get(e.id) || []).map(c => ({ label: c.label, to: c.other.id, note: c.r.note, is_secret: !!c.r.is_secret })) }));
     function saveFile(blob, name) {
       const a = el('a', { href: URL.createObjectURL(blob), download: name });

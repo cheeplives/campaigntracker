@@ -449,7 +449,7 @@ const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => [
  * the like are Categories (ENTRY_CATEGORIES), not tags. */
 const ENTRY_STARTER_TAGS = ['Event' => '#e11d48', 'Religion' => '#0891b2'];
 /** The Categories an Encyclopedia entry can be in, one each (or none). */
-const ENTRY_CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle'];
+const ENTRY_CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle', 'quest'];
 /** Starter tags of what carries tags, by $of: the events' and the Encyclopedia's (holdings have none). */
 function starter_tags(string $of): array { return ['event' => STARTER_TAGS, 'entry' => ENTRY_STARTER_TAGS][$of] ?? []; }
 /** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
@@ -1123,7 +1123,7 @@ try {
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'maps_index' => maps_index($cid, $isGm),
+            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'maps_index' => maps_index($cid, $isGm),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 

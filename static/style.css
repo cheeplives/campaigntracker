@@ -384,6 +384,10 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 /* day */
 .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .kv > div { display: flex; flex-direction: column; gap: 2px; }
+/* an entry's facts sit closer together than a day's conditions; its form's boxes fold away when the Category has none */
+.enc-facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 16px; }
+.enc-facts-form[hidden] { display: none; }
+.quest-row + .quest-row { margin-top: 8px; }
 /* Current Day tab: the current shift large, then the day's shifts at a glance */
 .dayhero { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: space-between; }
 .dh-now { display: flex; gap: 16px; align-items: center; min-width: 0; }

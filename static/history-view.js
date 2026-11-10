@@ -10,9 +10,10 @@ const HistoryView = (() => {
   const aliases = v => { try { return (JSON.parse(v || '[]') || []).join(', '); } catch (e) { return String(v || ''); } };
   const html = v => Diff.htmlText(v);
   const text = v => String(v ?? '');
+  const facts = v => { try { return Object.entries(JSON.parse(v || '{}') || {}).map(([k, x]) => `${k.replace(/_/g, ' ')}: ${x}`).join('\n'); } catch (e) { return String(v || ''); } };
   // What each kind keeps: [key, label, how to read it as text]. A day's notes are plain or rich, by their own format.
   const FIELDS = {
-    entry: [['name', 'Name', text, true], ['aliases', 'Other names', aliases, true], ['category', 'Category', text, true], ['is_secret', 'GM only', yes, true],
+    entry: [['name', 'Name', text, true], ['aliases', 'Other names', aliases, true], ['category', 'Category', text, true], ['facts', 'Facts', facts, true], ['is_secret', 'GM only', yes, true],
       ['notes', 'Public notes', html], ['gm_notes', 'GM notes', html]],
     tome: [['title', 'Title', text, true], ['kind', 'Kind', text, true], ['description', 'Description', text, true], ['body', 'Contents', html]],
     session: [['title', 'Title', text, true], ['summary', 'Summary', html], ['rewards', 'Session Rewards', html], ['loot', 'Loot Found', html], ['notes_text', 'Notes', text]],

@@ -83,8 +83,13 @@
       link(Number(r.from_id), { label: t.label, to: Number(r.to_id), note: r.note, is_secret: on(r.is_secret) });
       link(Number(r.to_id), { label: has(t.inverse_label) ? t.inverse_label : t.label, to: Number(r.from_id), note: r.note, is_secret: on(r.is_secret) });
     }
+    // an entry's facts, labelled as its campaign's settings label them, else by their keys
+    const labels = new Map();
+    for (const [cat, list] of Object.entries(camp.entry_fields || {})) for (const f of list || []) labels.set(`${cat}:${f.key}`, f.label);
+    const factsOf = e => Object.entries(json(e.facts_json) || {}).filter(([, v]) => has(v))
+      .map(([k, v]) => ({ label: labels.get(`${e.category}:${k}`) || k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), value: String(v) }));
     const entries = rows('encyclopedia_entries').map(e => ({
-      id: Number(e.id), name: e.name, category: e.category || '', aliases: json(e.aliases_json) || [], tags: entryTags.get(Number(e.id)) || [],
+      id: Number(e.id), name: e.name, category: e.category || '', fields: factsOf(e), aliases: json(e.aliases_json) || [], tags: entryTags.get(Number(e.id)) || [],
       notes: e.notes || '', gm_notes: e.gm_notes || '', is_secret: on(e.is_secret), links: links.get(Number(e.id)) || [],
       files: filesFor('encyclopedia', e.id).map(f => ({ id: Number(f.id), name: f.original_name || '', mime: f.mime, kind: f.kind, caption: f.caption, is_secret: on(f.is_secret),
         credit: f.credit_title || f.credit_author ? { title: f.credit_title, author: f.credit_author, license: f.credit_license, source: f.credit_source } : null,
