@@ -22,7 +22,8 @@ jobs:
   test:
     # Each project is split across runners with Playwright's --shard: on one runner each, the iPad took 21 minutes,
     # the iPhone 17, WebKit 15, Firefox 12.5, Chromium 10 and the Pixel 8.5, plus about 2 minutes of setup, so the
-    # run took as long as the iPad. Split as below, each runner has about 5 to 8.5 minutes of tests. Every test still
+    # run took as long as the iPad. Split as below, each runner has about 4 to 9 minutes of tests (shards split by test
+    # count, not time, so they come out uneven: the shard holding the map tests is the long one). Every test still
     # runs in every project: a project's shards together are the whole suite. The "Browser tests" job sums them up.
     # Two workers per runner: the runners have 4 cores and the tests are CPU-bound, so 4 workers made every test
     # slower and brought out timing races for little gain; more runners is the faster way.
@@ -38,7 +39,7 @@ jobs:
       options: --ipc=host
     strategy:
       fail-fast: false          # one engine failing must not hide another's result
-      # One row per runner (14 of the 20 a free account runs at once). The slower engines get more shards. PHP 8.5,
+      # One row per runner (16 of the 20 a free account runs at once). The slower engines get more shards. PHP 8.5,
       # the newest PHP the server may move to, runs once with Chromium: the server side doesn't change with the browser.
       matrix:
         include:
@@ -48,11 +49,13 @@ jobs:
           - { project: chromium, php: '8.5', shard: 2, of: 2 }
           - { project: firefox, php: '8.3', shard: 1, of: 2 }
           - { project: firefox, php: '8.3', shard: 2, of: 2 }
-          - { project: webkit, php: '8.3', shard: 1, of: 2 }
-          - { project: webkit, php: '8.3', shard: 2, of: 2 }
+          - { project: webkit, php: '8.3', shard: 1, of: 3 }
+          - { project: webkit, php: '8.3', shard: 2, of: 3 }
+          - { project: webkit, php: '8.3', shard: 3, of: 3 }
           - { project: mobile-safari, php: '8.3', shard: 1, of: 2 }
           - { project: mobile-safari, php: '8.3', shard: 2, of: 2 }
-          - { project: mobile-chrome, php: '8.3', shard: 1, of: 1 }
+          - { project: mobile-chrome, php: '8.3', shard: 1, of: 2 }
+          - { project: mobile-chrome, php: '8.3', shard: 2, of: 2 }
           - { project: ipad, php: '8.3', shard: 1, of: 3 }
           - { project: ipad, php: '8.3', shard: 2, of: 3 }
           - { project: ipad, php: '8.3', shard: 3, of: 3 }
@@ -86,7 +89,7 @@ jobs:
       # PHP and the MySQL client, from Ubuntu's own archive: a few MB, where WebKit's libraries were hundreds.
       # Ubuntu 24.04 ships PHP 8.3 only; a newer PHP comes from Ondřej Surý's PPA, the usual source of PHP on Ubuntu.
       # Only Ubuntu's main component (where PHP 8.3 and every package it needs live), and not the image's Node.js
-      # repository: the full set of package lists was some 35 MB, and with 14 runners fetching it at once the archive
+      # repository: the full set of package lists was some 35 MB, and with 16 runners fetching it at once the archive
       # served it slowly enough to time a runner out. main alone is about 5 MB. The PPA's PHP may need universe too.
       - name: Install PHP ${{ matrix.php }} and the MySQL client
         timeout-minutes: 8

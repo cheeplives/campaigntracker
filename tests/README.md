@@ -7,8 +7,8 @@ Sinless's suite, with PHP and MySQL added because this app has a server.
 
 They run on GitHub Actions on every pull request and every push to main
 (`.github/workflows/browser-tests.yml`), every project in full, each split
-across one to three runners with Playwright's `--shard` so the slow engines finish
-as soon as the fast ones (about 11 minutes in all is the aim, where one runner per project
+across two or three runners with Playwright's `--shard` so the slow engines finish
+as soon as the fast ones (about 12 minutes in all, where one runner per project
 took 23). The single **Browser tests** check is green only when every shard passed:
 
 | Project | Engine | Emulates |

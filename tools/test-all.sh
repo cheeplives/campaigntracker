@@ -10,7 +10,7 @@
 #
 # The whole suite here is about 560 tests in each of six projects, and it is CPU-bound: two browsers at once on a
 # 4-core cloud machine take about 9 minutes per project, so close to an hour for all six. GitHub Actions runs the
-# same suite split across 14 runners instead.
+# same suite split across 16 runners instead.
 #
 # Runs tools/test-setup.sh first, which installs what is missing (MySQL, PHP extensions, browsers) and is quick
 # when everything is already there; set SKIP_SETUP=1 to skip it. Uses its own database, chronicle_test, which
