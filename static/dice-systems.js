@@ -24,6 +24,16 @@
   /** The kept dice of a term, as numbers. */
   const kept = t => t.dice.filter(d => !d.dropped).map(d => d.v);
   const all = t => t.dice.map(d => d.v);
+  /** A contest's target number over 20 counts masteries: 25 is 5 and one mastery (5M), 45 is 5M2, 20 is 20. */
+  const masteries = tn => (tn > 20 ? Math.floor((tn - 1) / 20) : 0);
+  const rating = tn => { if (tn <= 0) return `${tn}, which always fails`; const m = masteries(tn), base = tn - 20 * m; return m ? `${base}M${m > 1 ? m : ''}` : `${tn}`; };
+  /** Successes on a d20 rolled against a target number: equal to it two, under it one, over it none, plus one for each
+   * mastery. A target of 0 or less always fails. */
+  function contestSuccesses(roll, tn) {
+    if (tn <= 0) return 0;
+    const m = masteries(tn), base = tn - 20 * m;
+    return (roll === base ? 2 : roll < base ? 1 : 0) + m;
+  }
 
   /** What a die rolled before anything changed it: its first roll, unless the system reads it another way (bonus and
    * penalty dice, flip-flop: d.note says so). A compounded explosion keeps its first roll there, so a d20 that exploded
@@ -313,6 +323,27 @@
         if (p.nat && v === 20) return { big: v, words: 'Fumble', tier: 'botch' };
         if (p.exact && v === target) return { big: v, words: 'Critical success', tier: 'crit' };
         return { big: v, words: v <= target ? 'Success' : 'Failure', tier: v <= target ? 'good' : 'bad', note: `needed ${target} or under` };
+      } },
+    // 10b
+    { id: 'contest', group: 'under', name: 'Contest: both sides roll d20 under', hint: 'your rating vs a resistance, masteries',
+      params: [
+        num('tn', 'Your rating', 15, 1, 100, { main: true, help: 'Over 20 counts masteries: 25 is 5M, 45 is 5M2' }),
+        num('mod', 'Bonus or penalty', 0, -60, 60, { main: true, help: 'Augments, benefits and consequences' }),
+        num('res', 'Resistance', 10, 0, 100, { main: true, help: 'Base 10; Hard 20; Punishing 25 (5M); 0 is assured' }),
+      ],
+      build: () => '1d20+1d20',          // your die, then the resistance's
+      read: (r, p) => {
+        const you = kept(r.terms[0])[0], them = kept(r.terms[1])[0];
+        const a = contestSuccesses(you, p.tn + p.mod), b = contestSuccesses(them, p.res);
+        const deg = Math.abs(a - b);
+        const side = a > b || (a === b && you > them) ? 'Victory' : a < b || (a === b && you < them) ? 'Defeat' : null;
+        const note = `${you} vs ${rating(p.tn + p.mod)}: ${plural(a, 'success', 'successes')}; resistance ${them} vs ${rating(p.res)}: ${b}`;
+        if (!side) return { big: `${a}–${b}`, words: 'Standoff: a tie', tier: 'partial', note };
+        // the bonus or penalty a degree is worth, should the GM give a benefit or consequence
+        const worth = Math.min(20, 5 * (deg + 1));
+        const words = `${side}, ${a === b ? 'on the higher roll' : plural(deg, 'degree')}`;
+        const tier = side === 'Victory' ? (deg >= 2 ? 'crit' : 'good') : (deg >= 2 ? 'botch' : 'bad');
+        return { big: `${a}–${b}`, words, tier, note: `${note} · as a ${side === 'Victory' ? 'benefit +' : 'consequence −'}${worth}` };
       } },
     // 11
     { id: 'pool', group: 'pool', name: 'Count successes', hint: 'd10 or d6 pool', extras: 'mc', counts: true,
@@ -610,6 +641,7 @@
     { id: 'wfrp4', name: 'Warhammer Fantasy Roleplay 4th edition', system: 'percent', params: { mode: 'sl', doubles: true } },
     { id: 'ua', name: 'Unknown Armies', system: 'percent', params: { mode: 'plain', doubles: true, flip: true } },
     { id: 'gurps', name: 'GURPS', system: 'under3d6', params: { n: 3 } },
+    { id: 'questworlds', name: 'QuestWorlds', system: 'contest', params: { tn: 15, res: 10 }, labels: { tn: 'Ability rating' } },
     { id: 'cairn', name: 'Into the Odd / Cairn / Black Hack saves', system: 'under20', params: { nat: true } },
     { id: 'v20', name: 'Vampire: The Masquerade 20th anniversary / classic World of Darkness', system: 'pool', params: { d: 10, t: 6, ones: true, botch: 'wod' }, labels: { t: 'Difficulty', n: 'Dice pool' } },
     { id: 'cofd', name: 'Chronicles of Darkness', system: 'pool', params: { d: 10, t: 8, again: 10, exc: 5 } },

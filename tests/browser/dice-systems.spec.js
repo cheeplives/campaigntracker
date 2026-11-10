@@ -19,7 +19,7 @@ const SEED = "0123456789abcdef0123456789abcdef";
 const read = (id, r, p = {}, ctx = {}) => { const sys = DS.BY_ID[id]; return sys.read(r, DS.params(sys, p), ctx); };
 
 test("every system and preset builds dice that roll, and its numbers go round the @ and back", () => {
-  expect(DS.SYSTEMS.length).toBe(19);
+  expect(DS.SYSTEMS.length).toBe(20);
   for (const g of DS.GROUPS) expect(DS.SYSTEMS.some(s => s.group === g[0])).toBe(true);
   const setups = [...DS.SYSTEMS.map(s => [s, {}]), ...DS.PRESETS.map(g => [DS.BY_ID[g.system], g.params])];
   for (const [sys, given] of setups) {
@@ -100,6 +100,25 @@ test("bands, roll-under and percentile read as their games do", () => {
   expect(read("under3d6", fake([[4, 4, 4]]), { skill: 12 }).words).toBe("Success");
   expect(read("under20", fake([[13]]), { stat: 12 }).words).toBe("Failure");
   expect(read("under20", fake([[12]]), { stat: 12, exact: true }).tier).toBe("crit");
+});
+
+test("a QuestWorlds contest: both sides roll a d20 under, masteries add successes, the higher roll breaks a tie", () => {
+  // 7 under 15 is one success, 12 over 10 none: one degree of victory, worth +10 as a benefit
+  expect(read("contest", fake([[7], [12]]), { tn: 15, res: 10 })).toMatchObject({ big: "1–0", words: "Victory, 1 degree", tier: "good" });
+  expect(read("contest", fake([[7], [12]]), { tn: 15, res: 10 }).note).toMatch(/benefit \+10$/);
+  // rolling the rating exactly is two successes; 25 is 5M, so a 5 is three
+  expect(read("contest", fake([[5], [3]]), { tn: 25, res: 10 })).toMatchObject({ big: "3–1", words: "Victory, 2 degrees", tier: "crit" });
+  expect(read("contest", fake([[5], [3]]), { tn: 25, res: 10 }).note).toMatch(/vs 5M:/);
+  expect(read("contest", fake([[9], [9]]), { tn: 45, res: 10 }).note).toMatch(/vs 5M2:/);
+  // the same successes: the higher roll wins, the same roll is a standoff
+  expect(read("contest", fake([[8], [4]]), { tn: 15, res: 10 }).words).toBe("Victory, on the higher roll");
+  expect(read("contest", fake([[18], [16]]), { tn: 15, res: 10 }).words).toBe("Victory, on the higher roll");
+  expect(read("contest", fake([[6], [6]]), { tn: 15, res: 10 })).toMatchObject({ words: "Standoff: a tie", tier: "partial" });
+  // a penalty that takes the rating to 0 always fails; the resistance's mastery beats a plain success
+  expect(read("contest", fake([[1], [15]]), { tn: 10, mod: -10, res: 10 }).words).toBe("Defeat, on the higher roll");
+  expect(read("contest", fake([[3], [4]]), { tn: 15, res: 25 })).toMatchObject({ words: "Defeat, 1 degree", tier: "bad" });
+  expect(read("contest", fake([[19], [2]]), { tn: 15, res: 30 })).toMatchObject({ words: "Defeat, 2 degrees", tier: "botch" });
+  expect(DS.PRESETS.find(g => g.id === "questworlds").system).toBe("contest");
 });
 
 test("pools count successes, botches and glitches; highest die, roll-offs, keeps, sets and symbols", () => {

@@ -32,7 +32,9 @@
   # picture from the browser to Anthropic's API (with the GM's own key), so connect-src allows api.anthropic.com.
   # 'wasm-unsafe-eval' lets the map text scanner (static/vendor/tesseract) compile its WebAssembly OCR engine; it
   # allows WebAssembly only, never eval() or inline scripts.
-  # Keep this in step with the meta tag in index.html: a browser applies both.
+  # This header is the page's only policy: index.html and panel.html carry no CSP meta tag, because a meta CSP turns
+  # off Chrome's preload scanner and the 40-odd scripts then load one after another (about 5 s on the live site
+  # instead of under 1). The test server sends this same header, read from this file (tests/support/router.php).
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.openverse.org https://www.artic.edu https://images.metmuseum.org https://ids.si.edu https://openaccess-cdn.clevelandart.org https://api.europeana.eu https://upload.wikimedia.org https://pixabay.com https://cdn.pixabay.com https://images.pexels.com https://*.wixmp.com https://*.deviantart.net; font-src 'self'; connect-src 'self' https://en.wikipedia.org https://api.anthropic.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 </IfModule>
 
@@ -69,6 +71,16 @@
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
+# ...and let that check work. mod_deflate adds "-gzip" to a compressed file's ETag, and Apache then never matches the
+# ETag the browser sends back, so every "has it changed?" got the whole file again: every page load downloaded all
+# the scripts and styles (about 700 KB compressed) even when nothing had changed. Without ETags the browser asks by
+# date (If-Modified-Since), which Apache answers with a small 304 when the file is unchanged.
+<FilesMatch "\.(html|m?js|css|json|svg|webmanifest)$">
+  FileETag None
+  <IfModule mod_headers.c>
+    Header unset ETag
+  </IfModule>
+</FilesMatch>
 
 # --- Installable app ------------------------------------------------------
 # Older Apache builds don't know the manifest's extension.

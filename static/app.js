@@ -6439,7 +6439,12 @@
         ])),
       section('Game rules',
         p('The four shifts of a day, the shift tasks under "Add an action" and the terrain multipliers follow ', cite('yze'), '. ',
-          'The visibility score (0–5), its base values per shift and its modifiers are this app\'s own design.')),
+          'The visibility score (0–5), its base values per shift and its modifiers are this app\'s own design.'),
+        p('The QuestWorlds contest on the die roller (each side rolls a d20 under its rating, masteries add successes, the degree of victory or defeat and what it is worth as a benefit or consequence) and the QuestWorlds starter template follow the ',
+          extLink({ url: 'https://github.com/ChaosiumInc/QuestWorlds', title: 'QuestWorlds System Reference Document' }), ', the original work of Moon Design Publications. ',
+          'This app\'s QuestWorlds roll and template are licensed under the ', extLink({ url: 'https://www.chaosium.com/orclicense', title: 'ORC License' }),
+          ' held in the Library of Congress at TX 9-307-067. All warranties are disclaimed as set forth therein. QuestWorlds © copyright 2019–2023 Moon Design Publications LLC. ',
+          'No rules text, artwork, logos or trade dress are copied; Chaosium\'s trademarks are Reserved Material under the licence and are only named. Not affiliated with or endorsed by Chaosium or Moon Design.')),
       section('Software and fonts',
         list([
           ['The notes editor: ', cite('quill'), '.'],

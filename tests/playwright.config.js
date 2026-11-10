@@ -38,7 +38,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     // With PHP_ERROR_LOG set (CI does), PHP's own warnings go to that file, which the workflow checks for deprecations.
-    command: `php ${process.env.PHP_ERROR_LOG ? `-d log_errors=1 -d error_log=${process.env.PHP_ERROR_LOG} ` : ""}-S 127.0.0.1:${PORT} -t ..`,
+    command: `php ${process.env.PHP_ERROR_LOG ? `-d log_errors=1 -d error_log=${process.env.PHP_ERROR_LOG} ` : ""}-S 127.0.0.1:${PORT} -t .. support/router.php`,
     url: `http://127.0.0.1:${PORT}/index.html`,
     env: { ...process.env, PORT, CHRONICLE_CONFIG: path.join(__dirname, "support", "config.test.php") },
     reuseExistingServer: !process.env.CI,
