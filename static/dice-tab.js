@@ -33,6 +33,7 @@
       ['!', 'Explode: a top roll rolls again and adds', '3d6!'],
       ['!>=N', 'Explode on N or more', '10d10!>=8'],
       ['!!', 'Compound: explosions add into one die', 'd6!!'],
+      ['!mN', 'Explode on matches: N dice showing the same face (2 for doubles, 3 for triples) roll again and add', '2d6!m2'],
       ['rN · r<N', 'Reroll Ns (and again if it comes up again)', '2d6r1'],
       ['roN', 'Reroll once', 'd20ro1'],
       ['>=N', 'Count successes instead of a total', '7d10>=6'],

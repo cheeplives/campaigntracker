@@ -71,7 +71,23 @@
   function outcome(res, ctx) {
     let got = null;
     try { got = DS.read(res, ctx); } catch { got = null; }
-    if (got) return { big: String(got.big), words: got.words || '', tier: got.tier || null, note: got.note || null, faces: got.faces || null, sys: got.sys };
+    const boom = exploded(res);
+    if (got) return { big: String(got.big), words: got.words || '', tier: got.tier || null, note: [got.note, boom].filter(Boolean).join('; ') || null, faces: got.faces || null, sys: got.sys };
+    const o = plainOutcome(res);
+    return { ...o, note: boom };
+  }
+  /** What the explosions added, in a few words ("exploded: 3 more dice", "matches rolled again: 2 more dice"), or null. */
+  function exploded(res) {
+    let more = 0, matched = false;
+    for (const one of res.results) for (const t of one.terms) for (const d of t.dice) {
+      if (d.extra) more++;
+      else if (d.exploded && !d.note && d.rolls.length > 1) more += d.rolls.length - 1;     // compounded into one die
+      if (d.matched) matched = true;
+    }
+    if (!more) return null;
+    return `${matched ? 'matches rolled again' : 'exploded'}: ${more} more ${more === 1 ? 'die' : 'dice'}`;
+  }
+  function plainOutcome(res) {
     const one = res.results.length === 1 ? res.results[0] : null;
     if (one && one.mode === 'sets') {
       const [best, ...rest] = one.sets;
@@ -90,13 +106,19 @@
     if (d.success) cls.push('hit');
     if (d.fail) cls.push('miss');
     if (d.exploded) cls.push('boom');
+    if (d.crit) cls.push('crit');
+    if (d.fumble) cls.push('fumble');
     if (d.extra) cls.push('extra');
     if (face) cls.push('face');
     const tips = [];
     if (face) tips.push(`rolled ${d.v}`);
     if (d.rerolled.length) tips.push(`rerolled ${d.rerolled.join(', ')}`);
     if (d.byHand) { cls.push('byhand'); tips.push(`rerolled by hand, was ${d.byHand.map(v => show(t, v)).join(', then ')}`); }
-    if (d.exploded) tips.push('exploded');
+    if (d.matched) tips.push('matched: rolled again');
+    else if (d.exploded) tips.push('exploded');
+    if (d.extra) tips.push('added by an explosion');
+    if (d.crit) tips.push('critical');
+    if (d.fumble) tips.push('critical failure');
     if (d.rolls.length > 1 && !d.note) tips.push(`rolls ${d.rolls.join(' + ')}`);
     if (d.note) tips.push(d.note);
     if (d.dropped) tips.push('dropped');

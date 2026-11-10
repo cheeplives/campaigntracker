@@ -35,6 +35,79 @@
     return (roll === base ? 2 : roll < base ? 1 : 0) + m;
   }
 
+  /** What a die rolled before anything changed it: its first roll, unless the system reads it another way (bonus and
+   * penalty dice, flip-flop: d.note says so). A compounded explosion keeps its first roll there, so a d20 that exploded
+   * on 20 still rolled a natural 20. */
+  const natural = d => (d.note || !d.rolls.length ? d.v : d.rolls[0]);
+
+  // ------------------------------------------------------------ explosions and criticals, for any system that has them
+  // A system's extras say which it takes: x, dice explode on their top faces; m, dice explode on matches; c, critical
+  // successes and failures. They are numbers like any other (xt, xm, cs, cf), shown under More options.
+  /** Explode on the top p.xt faces of a die of this many sides: "!>=5" (bang "!!" compounds). '' for none. */
+  const top = (p, sides, bang) => (p.xt > 0 ? `${bang}>=${Math.max(2, sides - Math.min(p.xt, sides - 1) + 1)}` : '');
+  /** Explode when p.xm dice match: "!m2". '' for none, or when there are too few dice to make that many of a kind. */
+  const matches = (p, count) => (p.xm >= 2 && p.xm <= count ? `!m${p.xm}` : '');
+  const CRIT = { high: 'Highest', low: 'Lowest', exact: 'Exact target', doubles: 'Doubles' };
+  const CRIT_HELP = 'Highest: every die on its top face (a natural 20, double sixes). Lowest: every die a 1. '
+    + 'Exact target: the roll is the target or skill exactly (QuestWorlds, blackjack). Doubles: two dice match (11, 22… on d100)';
+  function extraParams(sys) {
+    const out = [];
+    const f = sys.extras || '';
+    if (f.includes('x')) out.push(num('xt', 'Explode on top faces', 0, 0, 99,
+      { help: 'How many top faces roll again and add: 1 for the top face only, 2 on a d6 for a 5 or 6; 0 for none', extra: true }));
+    if (f.includes('m')) out.push(num('xm', 'Explode on matches', 0, 0, 10,
+      { help: 'How many dice must match to roll again and add: 2 for doubles, 3 for triples; 0 for none', extra: true }));
+    if (f.includes('c')) {
+      const opts = [['none', 'Off'],
+        ...Object.entries(CRIT).filter(([k]) => (k !== 'exact' || sys.target) && (k !== 'doubles' || !sys.oneDie))];
+      out.push(sel('cs', 'Critical success', 'none', opts, { extra: true, help: CRIT_HELP }));
+      out.push(sel('cf', 'Critical failure', 'none', opts, { extra: true, help: CRIT_HELP }));
+    }
+    return out;
+  }
+  /** Did trigger k (a key of CRIT) happen on roll r? Gives the dice that made it happen, [] if it took no die in
+   * particular (exactly the target), or null if it didn't happen. */
+  function triggered(k, sys, r, p) {
+    const pick = (sys.naturals ? sys.naturals(r) : r.terms).flatMap(t => t.dice.filter(d => !d.extra).map(d => ({ d, t })));
+    const kept = pick.filter(x => !x.d.dropped);
+    const dice = kept.length ? kept : pick;
+    if (!dice.length) return null;
+    const topOf = t => (t.sides === 'F' ? 1 : t.sides === 66 ? 66 : Number(t.sides));
+    const lowOf = t => (t.sides === 'F' ? -1 : t.sides === 66 ? 11 : 1);
+    if (k === 'high') return dice.every(x => natural(x.d) === topOf(x.t)) ? dice.map(x => x.d) : null;
+    if (k === 'low') return dice.every(x => natural(x.d) === lowOf(x.t)) ? dice.map(x => x.d) : null;
+    if (k === 'exact') { const g = sys.target && sys.target(r, p); return g && g[0] === g[1] ? [] : null; }
+    if (k === 'doubles') {
+      if (pick.length === 1 && Number(pick[0].t.sides) === 100) { const v = natural(pick[0].d); return v < 100 && v % 11 === 0 ? [pick[0].d] : null; }
+      // among the kept dice, unless only one is kept (advantage): then both dice rolled
+      const among = kept.length >= 2 ? kept : pick;
+      const count = new Map();
+      for (const x of among) count.set(natural(x.d), (count.get(natural(x.d)) || 0) + 1);
+      const hit = among.filter(x => count.get(natural(x.d)) >= 2).map(x => x.d);
+      return hit.length ? hit : null;
+    }
+    return null;
+  }
+  const WHY = { high: 'every die on its top face', low: 'every die on a 1', exact: 'exactly the target', doubles: 'doubles' };
+  /** The system's reading of r, with the campaign's critical successes and failures (p.cs, p.cf) laid over it. A die
+   * that made a critical is marked (d.crit, d.fumble) so the roll's dice show it. Both at once: the one with the narrower
+   * trigger wins (doubles is the widest), else the success. */
+  function reading(sys, r, p, ctx) {
+    const got = sys.read(r, p, ctx || {});
+    const cs = p.cs && p.cs !== 'none' ? triggered(p.cs, sys, r, p) : null;
+    const cf = p.cf && p.cf !== 'none' ? triggered(p.cf, sys, r, p) : null;
+    if (!cs && !cf) return got;
+    const good = cs && (!cf || p.cs !== 'doubles' || p.cf === 'doubles');
+    for (const d of good ? cs : cf) d[good ? 'crit' : 'fumble'] = true;
+    const kind = good ? 'success' : 'failure';
+    const words = sys.counts ? `${got.words}, critical${good ? '' : ' failure'}` : `Critical ${kind}`;
+    const why = WHY[good ? p.cs : p.cf];
+    // say what it would have been only where the critical turned it round (a failure made a critical success)
+    const turned = good ? ['bad', 'botch', 'partial'].includes(got.tier) : ['good', 'crit', 'partial'].includes(got.tier);
+    const before = !sys.counts && turned && got.words ? ` (would be ${got.words.charAt(0).toLowerCase()}${got.words.slice(1)})` : '';
+    return { ...got, words, tier: good ? 'crit' : 'botch', note: [`${why}${before}`, got.note].filter(Boolean).join('; ') };
+  }
+
   /** The tiers a reading falls in, best first, and what the odds bar calls them. */
   const TIERS = ['crit', 'good', 'partial', 'bad', 'botch'];
 
@@ -50,7 +123,8 @@
   // ------------------------------------------------------------ the systems
   const SYSTEMS = [
     // 1
-    { id: 'd20', group: 'add', name: 'Single die + modifier vs target', hint: 'd20, d10, d100',
+    { id: 'd20', group: 'add', name: 'Single die + modifier vs target', hint: 'd20, d10, d100', extras: 'xc',
+      target: (r, p) => (p.tn ? [r.total, p.tn] : null), naturals: r => [r.terms[0]],
       params: [
         num('mod', 'Modifier', 0, -30, 60, { main: true }),
         num('tn', 'Target', 15, 0, 200, { main: true, help: '0 for no target' }),
@@ -62,12 +136,14 @@
         num('boons', 'Boons (+) or banes (−)', 0, -6, 6, { help: 'Add (or take away) the highest of that many d6' }),
       ],
       build: p => {
-        const base = p.adv === 'adv' ? `2d${p.die}kh1` : p.adv === 'dis' ? `2d${p.die}kl1` : `1d${p.die}`;
+        // explosions compound, so the die stays one die and its natural roll still reads as a natural 20 or 1
+        const x = top(p, p.die, '!!');
+        const base = p.adv === 'adv' ? `2d${p.die}${x}kh1` : p.adv === 'dis' ? `2d${p.die}${x}kl1` : `1d${p.die}${x}`;
         const boons = p.boons > 0 ? `+${p.boons}d6kh1` : p.boons < 0 ? `-${-p.boons}d6kh1` : '';
         return `${base}${boons}${sign(p.mod)}`;
       },
       read: (r, p) => {
-        const nat = kept(r.terms[0])[0], total = r.total;
+        const nat = natural(r.terms[0].dice.find(d => !d.dropped)), total = r.total;
         const hiCrit = p.crit > 0 && nat >= p.crit, natOne = nat === 1;
         if (!p.tn) return { big: total, words: hiCrit ? 'Natural critical' : natOne && p.fumble ? 'Natural 1' : '', tier: hiCrit ? 'crit' : natOne && p.fumble ? 'botch' : null };
         let k;   // 0 botch, 1 failure, 2 success, 3 critical
@@ -85,7 +161,8 @@
         return { big: total, words, tier: ['botch', 'bad', 'good', 'crit'][k], note: by >= 0 ? `beat ${p.tn} by ${by}` : `missed ${p.tn} by ${-by}` };
       } },
     // 2
-    { id: 'sum', group: 'add', name: 'Several dice added up vs target', hint: '2d6, 3d6, Nd6',
+    { id: 'sum', group: 'add', name: 'Several dice added up vs target', hint: '2d6, 3d6, Nd6', extras: 'xmc',
+      target: (r, p) => (p.tn ? [r.total, p.tn] : null),
       params: [
         num('n', 'Dice', 2, 1, 30, { main: true }),
         num('mod', 'Modifier', 0, -30, 60, { main: true }),
@@ -95,9 +172,10 @@
         bool('explode', 'Every die explodes on its top face', false),
       ],
       build: p => {
-        const x = p.explode ? '!' : '';
-        if (!p.wild) return `${p.n}d${p.sides}${x}${sign(p.mod)}`;
-        return `${p.n > 1 ? `${p.n - 1}d${p.sides}${x}+` : ''}1d${p.sides}!${sign(p.mod)}`;
+        const x = top(p, p.sides, '!') || (p.explode ? '!' : '');
+        if (!p.wild) return `${p.n}d${p.sides}${x}${matches(p, p.n)}${sign(p.mod)}`;
+        // matches are looked for among the plain dice; the wild die is a term of its own
+        return `${p.n > 1 ? `${p.n - 1}d${p.sides}${x}${matches(p, p.n - 1)}+` : ''}1d${p.sides}${top(p, p.sides, '!') || '!'}${sign(p.mod)}`;
       },
       read: (r, p) => {
         const wild = p.wild ? r.terms[r.terms.length - 1].dice[0] : null;
@@ -135,7 +213,7 @@
         return { big: r.total, words: row ? row.text : '', tier: row?.tier || null };
       } },
     // 5
-    { id: 'pbta', group: 'bands', name: '2d6 + stat into fixed bands', hint: '6− · 7–9 · 10+',
+    { id: 'pbta', group: 'bands', name: '2d6 + stat into fixed bands', hint: '6− · 7–9 · 10+', extras: 'c',
       params: [
         num('stat', 'Stat', 0, -3, 5, { main: true }),
         sel('adv', 'Advantage', 'none', [['none', 'Normal'], ['adv', 'Advantage (3d6, best 2)'], ['dis', 'Disadvantage (3d6, worst 2)']], { main: true }),
@@ -182,7 +260,8 @@
         return { big: r.total, words: `${ok ? 'Success' : 'Failure'} with ${side}`, tier: ok ? 'good' : 'bad', note: `${p.first} ${a}, ${p.second} ${b}` };
       } },
     // 8
-    { id: 'percent', group: 'under', name: 'Percentile roll-under', hint: 'd100 vs skill %',
+    { id: 'percent', group: 'under', name: 'Percentile roll-under', hint: 'd100 vs skill %', extras: 'c',
+      target: (r, p) => [r.total, p.skill],
       params: [
         num('skill', 'Skill %', 50, 1, 200, { main: true }),
         sel('bp', 'Bonus or penalty dice', 0, [[2, '2 bonus dice'], [1, '1 bonus die'], [0, 'None'], [-1, '1 penalty die'], [-2, '2 penalty dice']], { main: true }),
@@ -209,7 +288,8 @@
         return { big: v, words: 'Failure', tier: 'bad' };
       } },
     // 9
-    { id: 'under3d6', group: 'under', name: '3d6 or 2d6 roll-under', hint: '3d6 vs skill',
+    { id: 'under3d6', group: 'under', name: '3d6 or 2d6 roll-under', hint: '3d6 vs skill', extras: 'c',
+      target: (r, p) => [r.total, p.skill + p.mod],
       params: [
         num('skill', 'Skill', 12, 1, 30, { main: true }),
         num('mod', 'Modifier', 0, -20, 20, { main: true }),
@@ -228,7 +308,8 @@
         return { big: v, words: v <= eff ? 'Success' : 'Failure', tier: v <= eff ? 'good' : 'bad', note: v <= eff ? `made it by ${by}` : `missed by ${-by}` };
       } },
     // 10
-    { id: 'under20', group: 'under', name: 'd20 roll-under', hint: 'd20 vs a stat',
+    { id: 'under20', group: 'under', name: 'd20 roll-under', hint: 'd20 vs a stat', extras: 'c', oneDie: true,
+      target: (r, p) => [r.total, p.stat + p.mod],
       params: [
         num('stat', 'Stat', 12, 1, 40, { main: true }),
         num('mod', 'Modifier', 0, -20, 20, { main: true }),
@@ -265,7 +346,7 @@
         return { big: `${a}–${b}`, words, tier, note: `${note} · as a ${side === 'Victory' ? 'benefit +' : 'consequence −'}${worth}` };
       } },
     // 11
-    { id: 'pool', group: 'pool', name: 'Count successes', hint: 'd10 or d6 pool',
+    { id: 'pool', group: 'pool', name: 'Count successes', hint: 'd10 or d6 pool', extras: 'mc', counts: true,
       params: [
         num('n', 'Pool', 5, 1, 60, { main: true }),
         num('t', 'Difficulty', 6, 1, 30, { main: true, help: 'A die this high or higher is a success' }),
@@ -278,7 +359,7 @@
         num('auto', 'Automatic successes', 0, 0, 10, { help: 'Willpower and the like' }),
         num('exc', 'Exceptional at this many (0: none)', 0, 0, 20),
       ],
-      build: p => `${p.n}d${p.d}${p.again > 1 ? `!>=${p.again}` : ''}>=${p.t}${p.ones ? 'f1' : ''}`,
+      build: p => `${p.n}d${p.d}${p.again > 1 ? `!>=${p.again}` : ''}${matches(p, p.n)}>=${p.t}${p.ones ? 'f1' : ''}`,
       read: (r, p) => {
         const dice = all(r.terms[0]);
         const hits = dice.filter(v => v >= p.t).length + (p.dbl > 0 ? dice.filter(v => v >= p.dbl && v >= p.t).length : 0);
@@ -329,7 +410,8 @@
         return { big: wins, words: `${aWins ? 'You win' : 'They win'}: ${plural(wins, 'victory', 'victories')}`, tier: aWins ? 'good' : 'bad', note: `your best ${A[0]}, theirs ${B[0]}` };
       } },
     // 14
-    { id: 'keep', group: 'pool', name: 'Roll and keep', hint: 'roll X, keep Y',
+    { id: 'keep', group: 'pool', name: 'Roll and keep', hint: 'roll X, keep Y', extras: 'xmc',
+      target: (r, p) => (p.tn ? [r.total, p.tn] : null),
       params: [
         num('x', 'Roll', 5, 1, 20, { main: true }),
         num('y', 'Keep', 3, 1, 20, { main: true }),
@@ -339,7 +421,7 @@
         bool('explode', 'Top faces explode', true),
         num('raise', 'A raise is every', 5, 0, 20, { help: '0 for no raises' }),
       ],
-      build: p => `${p.x}d${p.d}${p.explode ? '!' : ''}kh${Math.min(p.y, p.x)}${sign(p.mod)}`,
+      build: p => `${p.x}d${p.d}${top(p, p.d, '!') || (p.explode ? '!' : '')}${matches(p, p.x)}kh${Math.min(p.y, p.x)}${sign(p.mod)}`,
       read: (r, p) => {
         if (!p.tn) return { big: r.total, words: '', tier: null };
         const by = r.total - p.tn;
@@ -453,6 +535,7 @@
         return { big: v, words: 'No' + twist, tier: 'bad' };
       } },
   ];
+  for (const s of SYSTEMS) s.params.push(...extraParams(s));
   const BY_ID = Object.fromEntries(SYSTEMS.map(s => [s.id, s]));
 
   // Narrative symbol dice: [parameter, sides, faces]. s success, f failure, a advantage, t threat, tr triumph, de despair.
@@ -499,7 +582,9 @@
   }
   /** "pool n=7 t=6 …": a system and its numbers, as stored after the @ of a roll. */
   function encode(sys, p) {
-    return [sys.id, ...sys.params.map(d => `${d.key}=${encodeURIComponent(d.type === 'bool' ? (p[d.key] ? 1 : 0) : p[d.key])}`)].join(' ');
+    // explosions and criticals left off are left out, so the roll stays short and reads as it did before they existed
+    return [sys.id, ...sys.params.filter(d => !d.extra || p[d.key] !== d.def)
+      .map(d => `${d.key}=${encodeURIComponent(d.type === 'bool' ? (p[d.key] ? 1 : 0) : p[d.key])}`)].join(' ');
   }
   function decode(str) {
     const [id, ...kv] = String(str || '').trim().split(/\s+/);
@@ -520,14 +605,14 @@
     const d = decode(res.system);
     if (!d) return null;
     const one = res.results[0];
-    return { sys: d.sys, p: d.p, ...d.sys.read(one, d.p, ctx || {}) };
+    return { sys: d.sys, p: d.p, ...reading(d.sys, one, d.p, ctx) };
   }
   /** How likely each tier is, from n rolls of fresh dice: { crit, good, partial, bad, botch } adding up to 1. */
   function odds(sys, p, ctx, n = 3000) {
     const count = Object.fromEntries(TIERS.map(t => [t, 0]));
     let none = 0;
     Dice.simulate(sys.build(p), n, one => {
-      const t = sys.read(one, p, ctx || {}).tier;
+      const t = reading(sys, one, p, ctx).tier;
       if (t) count[t]++; else none++;
     });
     if (none === n) return null;
@@ -604,7 +689,7 @@
     return { n, note: '' };
   }
 
-  const DiceSystems = { SYSTEMS, BY_ID, GROUPS, PRESETS, TIERS, SYMBOL, params, encode, decode, rollText, read, odds, tableRows, campaignSystem, sheetKey, sheetNumber };
+  const DiceSystems = { SYSTEMS, BY_ID, GROUPS, PRESETS, TIERS, SYMBOL, CRIT, params, reading, encode, decode, rollText, read, odds, tableRows, campaignSystem, sheetKey, sheetNumber };
   if (typeof module !== 'undefined' && module.exports) module.exports = DiceSystems;
   else root.DiceSystems = DiceSystems;
 })(typeof window !== 'undefined' ? window : globalThis);

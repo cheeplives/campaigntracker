@@ -192,6 +192,46 @@ test("the server refuses what isn't a roll, an engine it doesn't know, and anyon
   expect((await api(op, "dice_roll", { expr: "d6", engine: 1 }, cid)).status).toBe(403);
 });
 
+test("explosions and criticals: the GM turns on doubles exploding and critting, and the log shows both", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await gmAndPlayer(page, browser, "Dice crits");
+  await page.goto(`index.html#/c/${cid}/settings/dice`);
+  const form = page.locator(".dice-settings");
+  await form.locator("#dice-game").selectOption("custom");
+  await form.locator("#dice-system").selectOption("sum");
+  await form.locator("#set-sum-xm").fill("2");
+  await form.locator("#set-sum-xm").dispatchEvent("change");
+  await form.locator("#set-sum-cs").selectOption("doubles");
+  await expect(form.locator(".dice-try .mono")).toHaveText("Rolls 2d6!m2");
+  await form.getByRole("button", { name: "Save dice settings" }).click();
+  await expect(page.locator("#toast")).toContainText("Saved");
+
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  await expect(page.locator(".dice-sys-n")).toHaveText("2d6!m2");
+  await page.locator(".dice-more summary").click();
+  await expect(page.getByRole("combobox", { name: "Critical success" })).toHaveValue("doubles");
+  await page.locator(".dice-sys-go").click();
+  await expect(page.locator(".dice-e.latest .dice-e-out b")).not.toHaveText("?");
+  const roll = (await api(page, "dice_rolls", undefined, cid)).json.rolls.at(-1);
+  expect(roll.expr).toBe("2d6!m2 @sum n=2 mod=0 tn=8 sides=6 wild=0 explode=0 xm=2 cs=doubles");
+  // a seed whose dice are known (4 and 4: doubles, so they roll 1 and 4 more), so the log is the same every run
+  sql(`UPDATE dice_rolls SET seed='f1bbcd88f1bbcd88f1bbcd88f1bbcd88' WHERE id=${roll.id}`);
+  await page.reload();
+  await expect(page.locator(".dice-panel")).toBeVisible();       // it stays open
+  const latest = page.locator(".dice-e.latest");
+  await expect(latest.locator(".die")).toHaveText(["4", "4", "1", "4"]);
+  await expect(latest.locator(".die.boom")).toHaveCount(2);
+  await expect(latest.locator(".die.extra")).toHaveCount(2);
+  await expect(latest.locator(".die.crit")).toHaveCount(2);
+  await expect(latest.locator(".die.crit").first()).toHaveAttribute("title", /matched: rolled again; critical/);
+  await expect(latest.locator(".dice-e-out b")).toHaveText("13");
+  await expect(latest.locator(".dice-e-out small.tier")).toHaveText("Critical success");
+  await expect(latest).toHaveClass(/t-crit/);
+  await expect(latest.locator(".dice-e-meta")).toContainText("doubles; beat 8 by 5; matches rolled again: 2 more dice");
+  expectNoErrors(errors);
+});
+
 test("a dice system: the GM starts from a game in Settings, tries a roll, and players roll it with odds and saved rolls", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await gmAndPlayer(page, browser, "Dice system");
