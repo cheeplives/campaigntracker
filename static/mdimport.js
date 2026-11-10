@@ -22,7 +22,7 @@
   const CATEGORY = { location: 'location', locations: 'location', place: 'location', places: 'location', person: 'person', people: 'person',
     npc: 'person', npcs: 'person', character: 'person', characters: 'person', pc: 'person', pcs: 'person', item: 'item', items: 'item',
     group: 'group', groups: 'group', faction: 'group', factions: 'group', organization: 'group', organizations: 'group', organisation: 'group',
-    organisations: 'group', vehicle: 'vehicle', vehicles: 'vehicle' };
+    organisations: 'group', vehicle: 'vehicle', vehicles: 'vehicle', quest: 'quest', quests: 'quest', plot: 'quest', plots: 'quest' };
   const TRUE = /^(true|yes|y|1|on)$/i;
 
   const str = v => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');

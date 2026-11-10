@@ -29,6 +29,7 @@ require __DIR__ . '/sessions.php';
 require __DIR__ . '/reports.php';
 require __DIR__ . '/panel.php';
 require __DIR__ . '/upgrade.php';
+require __DIR__ . '/export.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
 if (is_file(__DIR__ . '/fanwikis.php')) require __DIR__ . '/fanwikis.php';
 
@@ -448,7 +449,7 @@ const TAG_LINKS = ['event' => ['event_tags', 'event_id', 'tags'], 'holding' => [
  * the like are Categories (ENTRY_CATEGORIES), not tags. */
 const ENTRY_STARTER_TAGS = ['Event' => '#e11d48', 'Religion' => '#0891b2'];
 /** The Categories an Encyclopedia entry can be in, one each (or none). */
-const ENTRY_CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle'];
+const ENTRY_CATEGORIES = ['location', 'person', 'item', 'group', 'vehicle', 'quest'];
 /** Starter tags of what carries tags, by $of: the events' and the Encyclopedia's (holdings have none). */
 function starter_tags(string $of): array { return ['event' => STARTER_TAGS, 'entry' => ENTRY_STARTER_TAGS][$of] ?? []; }
 /** Add each event's (or holding's, $of 'holding') tags ([{id, name, color}]) as $e['tags']. */
@@ -1122,7 +1123,7 @@ try {
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'maps_index' => maps_index($cid, $isGm),
+            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'quest_links' => (object)quest_links($cid, $isGm), 'maps_index' => maps_index($cid, $isGm),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -1230,6 +1231,12 @@ try {
         @set_time_limit(300);
         [$new, $tables] = campaign_copy($cid, $name, !empty(p('setup')));
         out(['ok' => true, 'id' => $new, 'tables' => $tables]);
+
+    case 'campaign_export': // GMs: every row of the campaign as JSON, which the browser zips with its files (api/export.php)
+        $cid = cid(); need_gm($cid);
+        rate_limit('campaign_export', (string)me()['id'], 10, 60);   // each one reads every row of a campaign
+        @set_time_limit(300);
+        out(campaign_export($cid));
 
     case 'set_time':
         $cid = cid(); need_gm($cid);

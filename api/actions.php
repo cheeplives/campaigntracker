@@ -68,6 +68,7 @@ const ACTIONS = [
     'campaign_update' => ['who' => 'gm', 'touch' => true],
     'campaign_delete' => ['who' => 'gm'],
     'campaign_copy' => ['who' => 'gm'],
+    'campaign_export' => ['get' => true, 'who' => 'gm'],
     'set_time' => ['who' => 'gm', 'touch' => true, 'panel' => 'write', 'key' => 'write'],
     'member_candidates' => ['get' => true, 'who' => 'gm'],
     'invite_link' => ['who' => 'gm'],

@@ -18,6 +18,7 @@ const RELATION_STARTER_TYPES = [
     ['Has resident', 'Resident of', '#16a34a'], ['Contains', 'Located in', '#15803d'], ['Has member', 'Member of', '#9333ea'],
     ['Rules', 'Ruled by', '#b45309'], ['Owns', 'Owned by', '#d97706'], ['Serves', 'Served by', '#2563eb'],
     ['Worships', 'Worshipped by', '#0891b2'], ['Parent of', 'Child of', '#db2777'], ['Partner of', '', '#be185d'], ['Sibling of', '', '#a21caf'],
+    ['Involves', 'Involved in', '#7c3aed'], ['Has clue', 'Clue to', '#0d9488'],
     ['Ally of', '', '#059669'], ['Enemy of', '', '#dc2626'], ['Related to', '', '#6b7280'],
 ];
 /** SQL (aliases r, a, b) for the connections of campaign ? that this member may see. */
@@ -28,6 +29,18 @@ function relations_visible_sql(bool $isGm): string {
 function relation_out(array $r): array {
     return ['id' => (int)$r['id'], 'from_id' => (int)$r['from_id'], 'to_id' => (int)$r['to_id'], 'type_id' => (int)$r['type_id'],
         'note' => $r['note'], 'is_secret' => (bool)$r['is_secret'], 'created_by' => $r['created_by'] !== null ? (int)$r['created_by'] : null];
+}
+/** For each Quest entry this member may see, the entries connected to it (any relationship, either end): what the
+ * session pages read to say which quests a session touches. id => [entry ids]; empty when no quest is connected. */
+function quest_links(int $cid, bool $isGm): array {
+    $st = db()->prepare("SELECT r.from_id, r.to_id, a.category AS ca, b.category AS cb " . relations_visible_sql($isGm) . " AND (a.category='quest' OR b.category='quest')");
+    $st->execute([$cid]);
+    $out = [];
+    foreach ($st->fetchAll() as $r) {
+        if ($r['ca'] === 'quest') $out[(int)$r['from_id']][] = (int)$r['to_id'];
+        if ($r['cb'] === 'quest') $out[(int)$r['to_id']][] = (int)$r['from_id'];
+    }
+    return array_map(fn($ids) => array_values(array_unique($ids)), $out);
 }
 /** Every connection this member may see. */
 function relations_list(int $cid, bool $isGm): array {

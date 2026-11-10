@@ -137,6 +137,8 @@ function upgrade_steps(): array {
             'The party is now made of characters: each one travels with its own group, so a player\'s two characters can be in different groups. Each player\'s active character starts where its player was.'],
         ['049_party_map_display.sql', fn(PDO $p) => db_has_table($p, 'party_groups') && !db_has_column($p, 'party_groups', 'map_display'),
             'Each party group can now show on the maps as one marker, as its characters\' tokens around it, or not at all to players, set on Party → Groups.'],
+        ['050_entry_facts.sql', fn(PDO $p) => db_has_table($p, 'encyclopedia_entries') && !db_has_column($p, 'encyclopedia_entries', 'facts_json'),
+            'Encyclopedia entries now have a facts box with their Category\'s fields (a Person\'s Role and Status, a Location\'s Ruler), set per Category in Settings, and there is a Quest Category whose Active ones show on At the Table.'],
     ];
 }
 

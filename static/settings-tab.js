@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { E, Fan, S, UNIT_OPTIONS, alertDialog, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
+    const { E, ENC_CATEGORIES, Fan, S, UNIT_OPTIONS, alertDialog, api, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
 
     // ------------------------------------------------------------ season editor
     /** A season's sunrise and sunset boxes as saved: both trimmed, or neither when both are blank. */
@@ -356,7 +356,7 @@
     }
 
     /** Settings' own tabs, each an address of its own (#/c/1/settings/calendar) so a save, a reload or a link keeps it. */
-    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
+    const SETTINGS_TABS = [['campaign', 'Campaign'], ['calendar', 'Calendar'], ['dice', 'Dice'], ['encyclopedia', 'Encyclopedia'], ['weather', 'Weather tuning'], ['tools', 'Tools']];
     function viewSettings(sub) {
       if (!isGM()) { mount(...campaignHeader('settings'), el('div', { class: 'card' }, el('p', {}, 'Only the GM can change campaign settings.'))); return; }
       const at = SETTINGS_TABS.some(([k]) => k === sub) ? sub : 'campaign';
@@ -604,6 +604,49 @@
         document.body.append(d);
         d.showModal();
       }
+      /** Export the whole campaign: every row from the server, laid out as Markdown pages and campaign.json
+       * (static/campaign-export.js), then each picture and file fetched in turn, all in one zip. */
+      function exportCampaign() {
+        const withFiles = el('input', { type: 'checkbox', checked: true });
+        const status = el('p', { class: 'small muted', 'aria-live': 'polite' });
+        const go = el('button', { type: 'button', class: 'primary' }, 'Download');
+        const cancel = el('button', { value: 'cancel' }, 'Cancel');
+        const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the whole campaign' },
+          el('form', { method: 'dialog' },
+            el('h3', {}, '⬇ Export the whole campaign'),
+            el('p', { class: 'small' }, 'One zip with everything in this campaign: the Encyclopedia, events, calendar notes, sessions, the Library, the party\'s holdings, characters, reminders, clocks, downtime and maps as Markdown pages to read, and a campaign.json file with every row for a program to read.'),
+            el('p', { class: 'small muted' }, 'It is your copy as GM, so GM-only entries, notes and paragraphs are in it, marked 🔒. Keep it as a backup, or open the folder in Obsidian. Members, edit history and API keys are left out.'),
+            el('label', { class: 'row small' }, withFiles, ' Include the pictures and files (a bigger download)'),
+            status,
+            el('div', { class: 'kit-dialog-actions' }, go, cancel)));
+        d.addEventListener('close', () => d.remove());
+        d.addEventListener('cancel', ev => { if (go.disabled) ev.preventDefault(); });
+        go.addEventListener('click', busy(go, async () => {
+          status.textContent = 'Gathering the campaign…';
+          const cid = S.camp.id;
+          const data = await api('campaign_export', { query: { cid } });
+          const date = new Date().toISOString().slice(0, 10);
+          const built = CampaignExport.build(data, { Engine: E, LoreExport, toMarkdown: RichText.toMarkdown, date, calendar: S.camp.calendar });
+          const out = built.files.slice(), missing = [];
+          if (withFiles.checked) {
+            let done = 0;
+            for (const f of built.fetch) {
+              status.textContent = `Fetching pictures and files: ${++done} of ${built.fetch.length}`;
+              const res = await fetch(`api/index.php?a=file&cid=${cid}&id=${f.id}`, { credentials: 'same-origin' });
+              // one that has gone from the server is named in the zip, not a reason to lose the rest
+              if (res.ok) out.push({ path: f.path, data: new Uint8Array(await res.arrayBuffer()) });
+              else missing.push(`${f.path} (${f.name}): ${res.status}`);
+            }
+            if (missing.length) out.push({ path: 'files/MISSING.txt', data: `These files could not be fetched when the campaign was exported:\n\n${missing.join('\n')}\n` });
+          }
+          const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
+          saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} (Campaign Chronicle ${date}).zip`);
+          d.close();
+          toast(missing.length ? `Exported, but ${missing.length} file${missing.length === 1 ? '' : 's'} could not be fetched (see files/MISSING.txt)` : 'Exported', !!missing.length);
+        }));
+        document.body.append(d);
+        d.showModal();
+      }
       /** Import from Markdown: pick .md files or a zip (an Obsidian vault, or our own Markdown export), say what is in
        * them, then send the entries in batches and the links between them, saying where it has got to. */
       async function importMarkdown() {
@@ -684,6 +727,8 @@
             'Download this calendar for Seasons & Stars, the calendar module most Foundry VTT worlds use, so Foundry shows the same months, weekdays, moons, seasons and holidays'),
           btn('Import calendar…', importCalendar, 'small',
             'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
+        el('div', { class: 'row' }, btn('⬇ Export the whole campaign…', exportCampaign, 'small',
+          'Download everything in this campaign as one zip: Markdown pages to read, a campaign.json file with every row, and the pictures and files. A backup you keep')),
         el('div', { class: 'row' }, btn('⬆ Import from Scabard…', importScabard, 'small',
           'Bring a campaign over from Scabard: its Export campaign .json file becomes Encyclopedia entries with their tags, other names, notes, GM secrets, connections and pictures, and its dated session logs become Sessions. Safe to run again: nothing is added twice or deleted')),
         el('div', { class: 'row' }, btn('⬆ Import from Markdown…', importMarkdown, 'small',
@@ -732,9 +777,46 @@
         });
         return form;
       };
+      // Encyclopedia: the fields each Category's entries have in their facts box, a line each ("Status: Alive, Dead" offers
+      // those choices; "(GM only)" at the end keeps a field from players). Saved in the settings as entry_fields.
+      const encyclopedia = () => {
+        const line = f => `${f.label}${f.options.length ? `: ${f.options.join(', ')}` : ''}${f.gm ? ' (GM only)' : ''}`;
+        const parse = text => text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+          const gm = /\(GM only\)$/i.test(l);
+          if (gm) l = l.replace(/\s*\(GM only\)$/i, '');
+          const at = l.indexOf(':');
+          return { label: (at < 0 ? l : l.slice(0, at)).trim(), options: at < 0 ? [] : l.slice(at + 1).split(',').map(o => o.trim()).filter(Boolean), gm };
+        }).filter(f => f.label);
+        const boxes = ENC_CATEGORIES.map(([k, name, icon]) => [k, el('textarea', { name: `fields_${k}`, rows: 6, class: 'mono', 'aria-label': `${name} fields`,
+          value: ((S.entryFields || {})[k] || []).map(line).join('\n') }), `${icon} ${name}`]);
+        const save = async fields => {
+          const s = { ...settings() };
+          if (fields) s.entry_fields = fields; else delete s.entry_fields;
+          try { await post('campaign_update', { settings: s }, S.camp.id); await loadCampaign(S.camp.id, true); toast('Saved'); route(); }
+          catch (err) { toast(err.message, true); }
+        };
+        const form = el('form', { class: 'card' }, el('h2', {}, 'Encyclopedia'),
+          el('h3', {}, 'Fields for each Category'),
+          el('p', { class: 'muted small' }, 'Every entry shows a box of short facts under its name, and each Category has its own: a Person\'s Role and Status, a Quest\'s Status and Reward. Write one field on each line, up to 12 for a Category. To offer choices, put them after a colon: ',
+            el('code', {}, 'Status: Alive, Dead, Missing'), '. To keep a field from players, end its line with ', el('code', {}, '(GM only)'), '.'),
+          el('p', { class: 'muted small' }, 'A field you rename starts empty, and what was written under the old name comes back if you name it that again. At the Table lists the Quest entries whose Status is Active.'),
+          el('div', { class: 'grid2' }, boxes.map(([, box, label]) => field(label, box))),
+          el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save fields'),
+            btn('Back to the built-in fields', async () => {
+              if (await confirmDialog('Put every Category back to its built-in fields? What entries hold is kept, and shows again under a field of the same name.', { ok: 'Use the built-in fields' })) await save(null);
+            }, 'small', 'Forget this campaign\'s own fields and use the ones the app comes with')));
+        form.addEventListener('submit', async ev => {
+          ev.preventDefault();
+          const fields = Object.fromEntries(boxes.map(([k, box]) => [k, parse(box.value)]));
+          const long = boxes.find(([k]) => fields[k].length > 12);
+          if (long) { toast(`${long[2]} has more than 12 fields`, true); return; }
+          await save(fields);
+        });
+        return form;
+      };
       const tabs = el('nav', { class: 'settings-tabs', 'aria-label': 'Settings' }, SETTINGS_TABS.map(([k, label]) =>
         el('a', { href: `#/c/${S.camp.id}/settings${k === 'campaign' ? '' : '/' + k}`, class: k === at ? 'on' : '', ...(k === at ? { 'aria-current': 'page' } : {}) }, label)));
-      const card = { campaign: () => general, calendar: () => calForm, dice, weather: tuningCard, tools: () => danger }[at]();
+      const card = { campaign: () => general, calendar: () => calForm, dice, encyclopedia, weather: tuningCard, tools: () => danger }[at]();
       card.prepend(tabs);
       mount(...campaignHeader('settings'), card);
     }

@@ -388,6 +388,10 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 /* day */
 .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .kv > div { display: flex; flex-direction: column; gap: 2px; }
+/* an entry's facts sit closer together than a day's conditions; its form's boxes fold away when the Category has none */
+.enc-facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 16px; }
+.enc-facts-form[hidden] { display: none; }
+.quest-row + .quest-row { margin-top: 8px; }
 /* Current Day tab: the current shift large, then the day's shifts at a glance */
 .dayhero { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: space-between; }
 .dh-now { display: flex; gap: 16px; align-items: center; min-width: 0; }
@@ -2620,3 +2624,16 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
 .mpc-actions .kit-menu-list > button { width: 100%; }
 @media (pointer: coarse) { .mpc-actions .kit-menu > summary { min-height: 34px; padding: 4px 12px; display: inline-flex; align-items: center; } }
 .dice-look-row select.dice-stay { width: auto; flex: 0 1 auto; }
+
+/* quests a session touches, and the sessions that touch a quest: the ones reached through a connection in a lighter hand */
+.enc-quests { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin: 6px 0; }
+.enc-quest.implied > a, .enc-quest-sessions li.implied > a { font-style: italic; opacity: .85; }
+.enc-quest-sessions[hidden] { display: none; }
+.enc-conn-by { font-size: .85em; opacity: .75; cursor: help; }
+
+/* places inside places, and the days the party was at one */
+.enc-inside { margin: 2px 0; }
+.enc-tree { list-style: none; margin: 4px 0 0; padding-left: 0; }
+.enc-tree .enc-tree { padding-left: 18px; border-left: 1px solid var(--line, rgba(128,128,128,.35)); margin-left: 8px; }
+.enc-tree li { padding: 2px 0; }
+.enc-visits[hidden] { display: none; }

@@ -629,7 +629,7 @@ test("entries have a Category: the list is grouped by it, and the Category and T
   await expect(items).toHaveCount(0);
   await cats.locator(".mpick-opt", { hasText: "Location" }).locator("input").check();
   await expect(items).toHaveCount(3);
-  await expect(cats.locator("summary")).toHaveText(/Category: 1 of 6/);
+  await expect(cats.locator("summary")).toHaveText(/Category: 1 of 7/);
   await expect(cats.locator(".mpick-opt", { hasText: "Person" })).toContainText("1"); // what ticking it would add
 
   // Tags, within the Locations: the counts follow the Category picked

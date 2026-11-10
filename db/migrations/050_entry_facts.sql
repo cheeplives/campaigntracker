@@ -1,0 +1,12 @@
+-- 050_entry_facts.sql — an Encyclopedia entry's facts: the short fields its Category gives it (a Person's Role and
+-- Status, a Location's Ruler, a Quest's Status, Given by, Reward and Deadline), shown as a box on the entry's page.
+-- encyclopedia_entries.facts_json holds them as {"status": "Active", "given_by": "Gringle"}, keyed by the field's name in
+-- lower case with _ for anything that isn't a letter or digit. Which fields a Category has comes from the campaign's
+-- settings (entry_fields), or the built-in lists in api/encyclopedia.php (ENTRY_FIELD_DEFAULTS) where a campaign hasn't
+-- set its own. NULL: no facts. This also brings the Quest Category, which needs no change here (category is text).
+--
+-- Run ONCE on an install created before this change:
+--   mysql -u <user> -p <database> < db/migrations/050_entry_facts.sql
+-- (deploy.sh and install.php run it for you when encyclopedia_entries has no facts_json column.)
+-- Fresh installs already get the column from db/schema.sql.
+ALTER TABLE encyclopedia_entries ADD COLUMN facts_json TEXT NULL AFTER category;
