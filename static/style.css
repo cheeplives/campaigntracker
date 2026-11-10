@@ -30,10 +30,6 @@
   --stock: color-mix(in srgb, var(--panel) 88%, var(--accent));
   --tab-bg: color-mix(in srgb, var(--panel-2) 70%, var(--bg));
   --label: color-mix(in srgb, var(--accent) 70%, var(--dim));
-  /* the Encyclopedia portrait behind an entry's head: how faded, blurred and desaturated it sits under the text. A
-     theme may set its own; a browser can try others live with portraitFade({ fade, blur, sat }) in the console
-     (static/theme-init.js), which keeps them in this browser until portraitFade() with nothing puts them back */
-  --portrait-fade: .32; --portrait-blur: 2.5px; --portrait-sat: .6;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -1001,24 +997,31 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 /* the editor fills the entry's card in place of its title row, so it takes none of that row's wrap and rule (which left a gap under Name) */
 .enc-detail > .enc-form { flex-wrap: nowrap; } .enc-detail > .enc-form::after { content: none; }
 .enc-where { margin: 0; padding-left: 18px; }
-/* The entry's head as a profile: the portrait down the left, the kind in small capitals over the name and its buttons on
-   the right, the tapered rule under them, then the character strip, tags and other names. Narrow (Wide view, a phone),
-   the portrait goes above the name instead. */
-.enc-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 20px; align-items: start; }
-.enc-hero.has-pic { grid-template-columns: 200px minmax(0, 1fr); }
-.enc-hero-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.enc-hero-head { display: flex; flex-direction: column; gap: 4px; }
+/* The entry's head as a profile: the round portrait disc from the character sheets down the left of the kind in small
+   capitals and the name (the entry's picture, else its kind's icon, else its initials), the buttons on the right, the
+   tapered rule under them, then the character strip, tags and other names. A disc with a picture grows while hovered
+   (a pointer) or when tapped (an iPad; tapped again, Escape or a tap elsewhere shrinks it), out over the head from
+   its top left so it stays on the card. */
+.enc-hero { display: flex; flex-direction: column; gap: 8px; }
+.enc-hero-top { display: flex; gap: 14px; align-items: flex-start; }
+.enc-hero-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .enc-hero-head::after { margin-top: 4px; }
 .enc-detail > .trail:has(+ .enc-hero)::after { content: none; }   /* the rule is the hero's, not the breadcrumb's */
 .enc-kicker { font: 600 .8rem var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--label); display: flex; align-items: center; gap: 8px; margin: 0; }
 .enc-kicker .secret-tag { margin: 0; letter-spacing: 0; }
 .enc-title-row { align-items: flex-start; gap: 6px 12px; }
 .enc-actions { flex-wrap: nowrap; gap: 6px; align-items: center; flex: none; }
-.enc-portrait { display: block; width: 200px; max-width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2);
-  box-shadow: 0 10px 24px -14px rgb(0 0 0 / .6); }
-.enc-portrait img { display: block; width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
-.enc-portrait.tall img { aspect-ratio: 3 / 4; }
-a.enc-portrait:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.enc-disc { flex: none; display: block; position: relative; z-index: 1; padding: 0; margin: 0; border: 0; background: none; border-radius: 50%; line-height: 0; cursor: default; }
+.enc-disc > .character-pic { border: 3px solid var(--accent); box-shadow: 0 6px 16px -8px rgb(0 0 0 / .6); transform-origin: top left; transition: transform .25s, box-shadow .25s; }
+.enc-disc > .character-initials.enc-icon { font-size: 2.4rem; }
+button.enc-disc { cursor: zoom-in; }
+button.enc-disc:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.enc-disc[aria-pressed="true"] { z-index: 3; cursor: zoom-out; }
+.enc-disc[aria-pressed="true"] > .character-pic { transform: scale(3); box-shadow: 0 20px 48px -14px rgb(0 0 0 / .65); }
+@media (hover: hover) {
+  button.enc-disc:hover { z-index: 3; }
+  button.enc-disc:hover > .character-pic { transform: scale(3); box-shadow: 0 20px 48px -14px rgb(0 0 0 / .65); }
+}
 /* the Public notes read as the entry's summary: prose on the card, no box; GM notes keep their locked box */
 .enc-hero .notepanel.public > .richtext { background: none; border: 0; padding: 0; font-size: 1.02rem; line-height: 1.55; }
 .enc-hero .notepanel.public { margin-top: 2px; }
@@ -1030,39 +1033,12 @@ a.enc-portrait:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
 .enc-highlights li { position: relative; padding-left: 26px; line-height: 1.45; overflow-wrap: anywhere; }
 .enc-highlights li::before { content: '→'; position: absolute; left: 2px; top: 0; color: var(--accent); font-weight: 700; }
 .enc-hl-src { white-space: nowrap; } .enc-hl-src::before { content: '— '; }
-.enc-page.wide .enc-hero.has-pic { grid-template-columns: minmax(0, 1fr); }
-.enc-page.wide .enc-portrait { width: 160px; }
+/* narrow (Wide view, a phone): the disc is the sheet's smaller one and grows less, so it stays on the card */
+.enc-page.wide .enc-disc > .character-pic.big { width: 64px; height: 64px; font-size: 1.1rem; }
+.enc-page.wide .enc-disc > .character-initials.enc-icon { font-size: 1.7rem; }
 @media (max-width: 600px) {
-  .enc-hero.has-pic { grid-template-columns: minmax(0, 1fr); }
-  .enc-portrait { width: 160px; }
+  .enc-disc > .character-initials.enc-icon { font-size: 1.7rem; }
   .enc-title-row { flex-direction: column; }
-}
-/* ---- Portrait behind the text (.enc-hero.behind, Nov 2026): on a wide entry (two-column page, not Wide view) the
-   portrait leaves its column and sits down the right of the head, faded and lightly blurred (--portrait-fade, --portrait-blur
-   and --portrait-sat on :root, which a theme may set and a browser may try live, see there), fading out to the
-   left so the start of every line stays on the card; the buttons and the line ends run over it. Faded, it takes no
-   clicks (the head's buttons and text do). Its tab along the bottom edge brings it forward whole and sharp while hovered,
-   or pressed (iPad), and pressed again tucks it back; forward, it is the link to the sheet again. Narrow, the hero is
-   the stacked column above. To back this out, delete this block and the "behind" class and the peek button in
-   encyclopedia-tab.js: the column layout above comes back as it was. */
-.enc-portrait-peek { display: none; }
-@media (min-width: 901px) {
-  .enc-page:not(.wide) .enc-hero.behind { position: relative; grid-template-columns: minmax(0, 1fr); }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait { position: absolute; top: -16px; right: -16px; bottom: -8px; width: min(360px, 45%); max-height: 460px; z-index: 0; pointer-events: none;
-    border: 0; border-radius: 0; box-shadow: none; opacity: var(--portrait-fade); filter: blur(var(--portrait-blur)) saturate(var(--portrait-sat)); transition: opacity .25s, filter .25s, box-shadow .25s;
-    -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%); mask-image: linear-gradient(to left, #000 55%, transparent 100%); }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait img { aspect-ratio: auto; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-hero-body { position: relative; z-index: 1; }
-  /* the tab: a faint handle bar along the portrait's bottom edge (the portrait is as tall as the head plus the card's
-     padding, up to 460px, so the tab's top is worked out from that), clearer on hover; it is the hover target too */
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait-peek { display: grid; place-items: center; position: absolute; right: -16px; width: min(360px, 45%); top: calc(min(460px, 100% + 24px) - 16px - 20px); height: 28px;
-    z-index: 3; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; color: var(--accent); font-size: 1.4rem; line-height: 1; opacity: .35; cursor: pointer; }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait-peek > span { display: block; width: 56px; height: 5px; border-radius: 3px; background: currentColor; font-size: 0; }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait-peek:hover, .enc-page:not(.wide) .enc-hero.behind.portrait-out > .enc-portrait-peek { opacity: 1; }
-  .enc-page:not(.wide) .enc-hero.behind > .enc-portrait-peek:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; opacity: 1; }
-  /* forward while the tab is hovered or pressed, and stays forward while the pointer is on the portrait itself */
-  .enc-page:not(.wide) .enc-hero.behind:has(> .enc-portrait-peek:hover) > .enc-portrait, .enc-page:not(.wide) .enc-hero.behind > .enc-portrait:hover, .enc-page:not(.wide) .enc-hero.behind.portrait-out > .enc-portrait {
-    z-index: 2; opacity: 1; filter: none; mask-image: none; -webkit-mask-image: none; border-radius: 10px 0 0 10px; box-shadow: -8px 0 24px -8px rgb(0 0 0 / .5); pointer-events: auto; }
 }
 /* the ⋯ menu's items are plain rows: the Delete keeps its red */
 .enc-actions .kit-menu-list > button, .enc-actions .kit-menu-list > a, .enc-actions .kit-menu-list > label { width: 100%; }
@@ -1335,7 +1311,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .token-face { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; vertical-align: middle;
   border: 3px solid var(--accent); background: var(--panel-2); color: var(--text); font: 700 1.1rem var(--disp); }
 .token-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.listrow.member > .who > .token-face, .enc-detail h2 > .token-face { width: 32px; height: 32px; margin-right: 8px; }
+.listrow.member > .who > .token-face { width: 32px; height: 32px; margin-right: 8px; }
 .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
 .token-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
 .token-card .token-face { width: 72px; height: 72px; font-size: 1.8rem; }

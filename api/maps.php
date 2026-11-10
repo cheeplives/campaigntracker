@@ -710,7 +710,10 @@ function tokens_list(int $cid): array {
     $st->execute([$cid]);
     return array_map(fn($t) => token_out($t, true), $st->fetchAll());
 }
-/** The picture addresses of the tokens this member may see, as ['member' => user id => url, 'entry' => entry id => url]. */
+/** The picture addresses of the tokens this member may see, as ['member' => user id => url, 'entry' => entry id => url].
+ * An entry with no token shows its portrait instead (the picture picked on its character's sheet, else its first
+ * picture, as the Encyclopedia shows it), so an entry's face is the same wherever it is drawn; a player gets none for a
+ * GM-only entry or picture. */
 function token_urls(int $cid, bool $isGm): array {
     $out = ['member' => [], 'entry' => []];
     $st = db()->prepare('SELECT t.member_id, t.entry_id, t.image_id FROM tokens t LEFT JOIN encyclopedia_entries e ON e.id=t.entry_id
@@ -722,6 +725,18 @@ function token_urls(int $cid, bool $isGm): array {
         if ($r['member_id'] !== null) $out['member'][(int)$r['member_id']] ??= $url;
         if ($r['entry_id'] !== null) $out['entry'][(int)$r['entry_id']] ??= $url;
     }
+    $st = db()->prepare('SELECT c.entry_id, c.portrait_id FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
+        JOIN attachments pa ON pa.id=c.portrait_id AND pa.campaign_id=c.campaign_id AND pa.parent_type=\'encyclopedia\' AND pa.parent_id=c.entry_id
+        WHERE c.campaign_id=?' . ($isGm ? '' : ' AND e.is_secret=0 AND pa.is_secret=0'));
+    $st->execute([$cid]);
+    foreach ($st->fetchAll() as $r)
+        $out['entry'][(int)$r['entry_id']] ??= 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['portrait_id']]);
+    $st = db()->prepare('SELECT a.parent_id, MIN(a.id) AS id FROM attachments a JOIN encyclopedia_entries e ON e.id=a.parent_id AND e.campaign_id=a.campaign_id
+        WHERE a.campaign_id=? AND a.parent_type=\'encyclopedia\' AND (a.kind=\'image\' OR (a.kind=\'embed\' AND a.embed_src IS NOT NULL))'
+        . ($isGm ? '' : ' AND a.is_secret=0 AND e.is_secret=0') . ' GROUP BY a.parent_id');
+    $st->execute([$cid]);
+    foreach ($st->fetchAll() as $r)
+        $out['entry'][(int)$r['parent_id']] ??= 'api/index.php?' . http_build_query(['a' => 'file', 'cid' => $cid, 'id' => (int)$r['id']]);
     return $out;
 }
 /** A token's name from its file's: no extension, _ and - as spaces, a capital first letter ("pip-the-bold.png": "Pip the bold"). */

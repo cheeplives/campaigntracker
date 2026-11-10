@@ -152,7 +152,7 @@ test("Tokens: assigning one to a character, an entry and the party", async ({ pa
   await page.goto(`#/c/${cid}/members`);
   await expect(page.locator(".listrow.member").filter({ hasText: "Pip" }).locator(".token-face img")).toBeVisible();
   await page.goto(`#/c/${cid}/encyclopedia/${entry}`);
-  await expect(page.locator(".enc-detail .token-face img")).toBeVisible();
+  await expect(page.locator(".enc-detail .enc-disc img")).toHaveAttribute("src", b.image_url);   // the entry's disc wears its token's picture
 
   // a second token for Pip takes the character from the first
   const c = (await tokenUpload(page, cid, "Pip again")).json.token;

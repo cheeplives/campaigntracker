@@ -718,34 +718,26 @@ test("Characters: a player uploads a portrait on the sheet; it shows on the card
   await expect(p1.locator(".sheet-head img.character-pic")).toBeVisible();
   const first = sql(`SELECT portrait_id FROM sheet_characters WHERE id=${c.id}`).trim();
   expect(Number(first)).toBeGreaterThan(0);
-  // the picture went on the character's Encyclopedia entry, whose page leads with it: faded behind the head and taking
-  // no clicks (the band above the buttons is not a link to the sheet), forward and clickable while its tab is pressed
+  // the picture went on the character's Encyclopedia entry, whose page leads with it in the sheet's round disc: pressed,
+  // the disc grows (and a tap anywhere else, or Escape, shrinks it again); it is the entry's token face too
   expect(sql(`SELECT parent_id FROM attachments WHERE id=${first}`).trim()).toBe(String(c.entry_id));
   await p1.setViewportSize({ width: 1280, height: 800 });
   await p1.goto(`index.html#/c/${cid}/encyclopedia/${c.entry_id}`);
-  const hero = p1.locator(".enc-hero.has-pic");
-  await expect(hero.locator(".enc-portrait img")).toHaveAttribute("src", new RegExp(`id=${first}$`));
-  await expect(hero.locator(".enc-portrait")).toHaveCSS("pointer-events", "none");
-  const peek = hero.getByRole("button", { name: "Show the portrait" });
-  const peekBox = await peek.boundingBox(), picBox = await hero.locator(".enc-portrait").boundingBox();
-  expect(peekBox.width).toBeGreaterThan(peekBox.height); // the tab lies along the bottom edge of the portrait
-  expect(Math.abs(peekBox.y + peekBox.height - 8 - (picBox.y + picBox.height))).toBeLessThan(2);
-  await peek.click();
-  await expect(hero).toHaveClass(/portrait-out/);
-  await expect(peek).toHaveAttribute("aria-pressed", "true");
-  await expect(hero.locator(".enc-portrait")).toHaveCSS("pointer-events", "auto");
-  await peek.click();
-  await expect(hero).not.toHaveClass(/portrait-out/);
-  // how faded it sits is the theme's (--portrait-fade), and a browser can try its own live, kept across pages
-  await p1.mouse.move(5, 5); // off the tab, so the portrait settles back
-  await expect(hero.locator(".enc-portrait")).toHaveCSS("opacity", "0.32");
-  await p1.evaluate(() => window.portraitFade({ fade: 0.5, blur: 1, sat: 0.8 }));
-  await expect(hero.locator(".enc-portrait")).toHaveCSS("opacity", "0.5");
-  await expect(hero.locator(".enc-portrait")).toHaveCSS("filter", "blur(1px) saturate(0.8)");
-  await p1.reload();
-  await expect(p1.locator(".enc-hero.has-pic .enc-portrait")).toHaveCSS("opacity", "0.5");
-  await p1.evaluate(() => window.portraitFade());
-  await expect(p1.locator(".enc-hero.has-pic .enc-portrait")).toHaveCSS("opacity", "0.32");
+  const disc = p1.locator(".enc-hero button.enc-disc");
+  await expect(disc.locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
+  await expect(disc).toHaveAttribute("aria-pressed", "false");
+  const small = await disc.locator("img").boundingBox();
+  await disc.click();
+  await expect(disc).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => (await disc.locator("img").boundingBox()).width).toBeGreaterThan(small.width * 2.5);
+  await p1.keyboard.press("Escape");
+  await expect(disc).toHaveAttribute("aria-pressed", "false");
+  await disc.click();
+  await expect(disc).toHaveAttribute("aria-pressed", "true");
+  await p1.locator(".enc-hero .notepanel.public h4").click();   // anywhere else: off the grown disc, which covers the name
+  await expect(disc).toHaveAttribute("aria-pressed", "false");
+  const entry = (await api(p1, "encyclopedia", undefined, cid)).json.entries.find(x => x.id === c.entry_id);
+  expect(entry.token_url).toMatch(new RegExp(`id=${first}$`));
 
   await p1.goto(`index.html#/c/${cid}/characters`);
   await expect(p1.locator(".character-card", { hasText: "Portia" }).locator("img.character-pic")).toHaveAttribute("src", new RegExp(`id=${first}$`));
