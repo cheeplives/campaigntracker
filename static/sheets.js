@@ -13,7 +13,7 @@ const Sheets = (() => {
   const { el, toast, confirmDialog, promptDialog } = KIT;
   const L = SheetLayout, I = SheetImport;
   let ctx = null;
-  /** app.js's helpers: { S, api, post, mount, field, campaignHeader, isGM, route }. */
+  /** app.js's helpers: { S, api, post, mount, field, campaignHeader, partySubtabs, isGM, route }. */
   function mount(c) { ctx = c; }
 
   const TYPE_NAMES = { text: 'Text', longtext: 'Long text', number: 'Number', counter: 'Counter (current / max)', pips: 'Pips (dots or boxes)',
@@ -898,8 +898,11 @@ const Sheets = (() => {
     };
     draw();
     ctx.mount(...ctx.campaignHeader('characters'),
-      el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Characters'),
-        button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary new-btn', { 'data-tip': 'Make a PC or an NPC from a sheet template' })), seg),
+      el('div', { class: 'card' }, (() => {
+        const add = button('+ New character', () => newCharacter().catch(err => toast(err.message, true)), 'primary new-btn', { 'data-tip': 'Make a PC or an NPC from a sheet template' });
+        // the Party tab's bar (Characters, Groups, Holdings) when app.js has one; this page's own title when not
+        return ctx.partySubtabs ? ctx.partySubtabs('characters', add) : el('div', { class: 'row spread' }, el('h2', {}, 'Characters'), add);
+      })(), seg),
       list);
   }
   /** A GM's Player and party boxes for a new character: who plays it (no one, a player or a GM) and, for one no player

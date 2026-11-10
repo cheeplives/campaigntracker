@@ -1987,6 +1987,12 @@ try {
         group_move($cid);
         out(['ok' => true, 'groups' => party_groups($cid)]);
 
+    case 'group_join': // GMs: id (the group to join), and member (a player's user id) or character (a character with no player)
+        $cid = cid();
+        need_gm($cid);
+        group_join($cid);
+        out(['ok' => true, 'groups' => party_groups($cid)]);
+
     case 'trail_clear': // GMs: map_id, and id for one group's trail (every group's without)
         $cid = cid();
         need_gm($cid);

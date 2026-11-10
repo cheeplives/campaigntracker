@@ -218,6 +218,24 @@ test("Party: groups on maps, bounds, tokens and GM-only maps", async ({ page, br
   expectNoErrors(errors);
 });
 
+test("Party: group_join moves one player to another group, and refuses anyone not in the party", async ({ page, browser }) => {
+  const { cid, ids } = await setup(page, browser, "Party join", 3);
+  const main = (await groups(page, cid))[0];
+  const scouts = (await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[0]] }, cid)).json.groups[1];
+  const r = await api(page, "group_join", { id: scouts.id, member: ids[1] }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(sorted(r.json.groups.find(g => g.id === scouts.id).members)).toEqual(sorted([ids[0], ids[1]]));
+  expect(r.json.groups.find(g => g.id === main.id).members).toEqual([ids[2]]);
+  // joining the group they're in already changes nothing, and they're never listed twice
+  expect((await api(page, "group_join", { id: scouts.id, member: ids[1] }, cid)).json.groups.find(g => g.id === scouts.id).members.filter(u => u === ids[1])).toHaveLength(1);
+  // not a player, both or neither, or a group of nobody's
+  expect((await api(page, "group_join", { id: scouts.id, member: 999999 }, cid)).status).toBe(400);
+  expect((await api(page, "group_join", { id: scouts.id }, cid)).status).toBe(400);
+  expect((await api(page, "group_join", { id: scouts.id, member: ids[2], character: 1 }, cid)).status).toBe(400);
+  expect((await api(page, "group_join", { id: scouts.id, character: 999999 }, cid)).status).toBe(400);
+  expect((await api(page, "group_join", { id: 999999, member: ids[2] }, cid)).status).toBe(404);
+});
+
 test("Party: a member made a GM drops out of every group on the next read", async ({ page, browser }) => {
   const { cid, ids } = await setup(page, browser, "Party role", 3);
   const main = (await groups(page, cid))[0];
@@ -232,40 +250,72 @@ test("Party: a member made a GM drops out of every group on the next read", asyn
   expect(r.status).toBe(400);
 });
 
-// ---- the Travel tab's party card, and the markers on the map
+test("Party: one tab in the Legend over Characters, Groups and Holdings, opening the one used last", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid } = await setup(page, browser, "Party tab", 1);
+  await page.goto(`#/c/${cid}/party`);
+  await expect(page).toHaveURL(/\/characters$/);   // the first time: Characters
+  await expect(page.locator(".tabs a.on")).toHaveText("Party");
+  await expect(page.locator(".subtabs a")).toHaveText(["Characters", "Groups", "Holdings"]);
+  await expect(page.locator(".subtabs a.on")).toHaveText("Characters");
+  await expect(page.getByRole("button", { name: "+ New character" })).toBeVisible();
+  await page.locator(".subtabs").getByRole("link", { name: "Holdings" }).click();
+  await expect(page).toHaveURL(/\/holdings$/);
+  await expect(page.locator(".tabs a.on")).toHaveText("Party");
+  await expect(page.locator(".gear")).toBeVisible();
+  await page.goto(`#/c/${cid}/table`);
+  await page.goto(`#/c/${cid}/party`);
+  await expect(page).toHaveURL(/\/holdings$/);   // then the one you were on
+  expectNoErrors(errors);
+});
 
-const rowOf = (page, name) => page.locator(".party-row").filter({ has: page.locator(".party-name", { hasText: name }) });
+// ---- Party → Groups, Travel's line per group, and the markers on the map
 
-test("Party: the GM splits and merges on the Travel tab", async ({ page, browser }) => {
+const rowOf = (page, name) => page.locator(".group-card").filter({ has: page.locator(".party-name", { hasText: name }) });
+
+test("Party: the GM splits and merges on Party → Groups", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, players } = await setup(page, browser, "Party card", 3);
-  await page.goto(`#/c/${cid}/travel`);
-  await expect(page.locator(".party-row")).toHaveCount(1);
-  await expect(page.locator(".party-row .party-members")).toContainText("Pat0");
-  await page.getByRole("button", { name: "Split the party…" }).click();
+  await page.goto(`#/c/${cid}/groups`);
+  await expect(page.locator(".tabs a.on")).toHaveText("Party");
+  await expect(page.locator(".subtabs a.on")).toHaveText("Groups");
+  await expect(page.locator(".group-card")).toHaveCount(1);
+  await expect(page.locator(".group-card .group-members")).toContainText("Pat0");
+  await page.getByRole("button", { name: "+ New group" }).click();
   const d = page.locator("dialog.party-dialog");
   await d.getByLabel("Group name").fill("Scouts");
   await d.getByLabel("Pat1", { exact: true }).check();
   await d.getByRole("button", { name: "Split", exact: true }).click();
-  await expect(page.locator(".party-row")).toHaveCount(2);
+  await expect(page.locator(".group-card")).toHaveCount(2);
   const g = await groups(page, cid);
   expect(g[1]).toMatchObject({ name: "Scouts", members: [players[1].id] });
-  await expect(rowOf(page, "Scouts").locator(".party-members")).toContainText("Pat1");
-  await expect(rowOf(page, "The party").locator(".party-members")).not.toContainText("Pat1");
+  await expect(rowOf(page, "Scouts").locator(".group-members")).toContainText("Pat1");
+  await expect(rowOf(page, "The party").locator(".group-members")).not.toContainText("Pat1");
+
+  // Move… sends one person to another group, and Travel lists each group in a line
+  await rowOf(page, "The party").getByRole("button", { name: "Move Pat2" }).click();
+  await page.locator("dialog.party-dialog").getByLabel("Move to").selectOption({ label: "Scouts" });
+  await page.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(rowOf(page, "Scouts").locator(".group-members")).toContainText("Pat2");
+  expect(sorted((await groups(page, cid))[1].members)).toEqual(sorted([players[1].id, players[2].id]));
+  await page.goto(`#/c/${cid}/travel`);
+  await expect(page.locator(".party-summary .party-line")).toHaveCount(2);
+  await page.locator(".party-summary").getByRole("link", { name: "Groups →" }).click();
+  await expect(page).toHaveURL(/\/groups$/);
 
   await moreIn(rowOf(page, "Scouts"), "Rename");
   await page.locator("dialog .kit-dialog-input").fill("Advance party");
   await page.locator("dialog").getByRole("button", { name: "Save" }).click();
   await expect(rowOf(page, "Advance party")).toHaveCount(1);
 
-  await rowOf(page, "Advance party").getByRole("button", { name: "Make main group" }).click();
+  await moreIn(rowOf(page, "Advance party"), "Make main group");
   await expect(rowOf(page, "Advance party").locator(".party-main")).toHaveCount(1);
   expect((await groups(page, cid))[0].name).toBe("Advance party");
 
   await moreIn(rowOf(page, "Advance party"), "Merge into…");
   await page.locator("dialog.party-dialog").getByLabel("Merge into").selectOption({ label: "The party" });
   await page.locator("dialog.party-dialog").getByRole("button", { name: "Merge", exact: true }).click();
-  await expect(page.locator(".party-row")).toHaveCount(1);
+  await expect(page.locator(".group-card")).toHaveCount(1);
   const after = await groups(page, cid);
   expect(after).toHaveLength(1);
   expect(sorted(after[0].members)).toEqual(sorted(players.map(p => p.id)));
@@ -288,10 +338,12 @@ test("Party: a player sees the markers but can't drag them", async ({ page, brow
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(page.locator(".leaflet-marker-draggable .map-party")).toHaveCount(1);
 
-  // the Travel card is read-only for a player
-  await pp.goto(`#/c/${cid}/travel`);
-  await expect(pp.locator(".party-row")).toHaveCount(2);
-  await expect(pp.locator(".party-card").getByRole("button")).toHaveCount(0);
+  // Party → Groups is read-only for a player
+  await pp.goto(`#/c/${cid}/groups`);
+  await expect(pp.locator(".group-card")).toHaveCount(2);
+  await expect(pp.locator(".group-board").getByRole("button")).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "+ New group" })).toHaveCount(0);
+  expect((await api(pp, "group_join", { id: main.id, member: ids[0] }, cid)).status).toBe(403);
   expect((await api(pp, "group_move", { id: main.id, map_id: mapId, x: 5, y: 5 }, cid)).status).toBe(403);
   expectNoErrors(errors);
 });
@@ -358,8 +410,8 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
   await expect(page.locator(".map-party .map-marker-icon")).toHaveText("🚩");   // the flag
   await expect(page.locator(".map-party img")).toHaveCount(0);
 
-  // assign it with Token on the Travel row
-  await page.goto(`#/c/${cid}/travel`);
+  // assign it with Token in the group's ⋯ on Party → Groups
+  await page.goto(`#/c/${cid}/groups`);
   await moreIn(rowOf(page, "The party"), "Token");
   await page.locator("dialog.party-dialog").getByLabel("Token").selectOption({ label: "Banner" });
   await page.locator("dialog.party-dialog").getByRole("button", { name: "Save" }).click();
@@ -408,7 +460,7 @@ test("Party: Party is here on Regions moves the main group", async ({ page, brow
   await page.locator(".listrow").filter({ hasText: "Gamma" }).getByRole("button", { name: "Party is here" }).click();
   await expect(page.locator("#toast")).toContainText("Party moved to Gamma");
   expect((await groups(page, cid))[0].region_id).toBe(c);
-  await page.goto(`#/c/${cid}/travel`);
+  await page.goto(`#/c/${cid}/groups`);
   await expect(rowOf(page, "The party").locator(".party-region")).toHaveText("Gamma");
   expectNoErrors(errors);
 });

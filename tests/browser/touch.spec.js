@@ -92,7 +92,7 @@ test("the Legend groups its tabs under Play, Party, World and Setup", async ({ p
   await expect(page.locator("nav.tabs a").last()).toHaveText("Settings");
   // each heading sits just before its group's first tab
   const order = await page.locator("nav.tabs > *").allTextContents();
-  for (const [g, first] of [["Play", "At the Table"], ["Party", "Characters"], ["World", "Encyclopedia"], ["Setup", "Regions"]])
+  for (const [g, first] of [["Play", "At the Table"], ["Party", "Party"], ["World", "Encyclopedia"], ["Setup", "Regions"]])
     expect(order[order.indexOf(g) + 1]).toBe(first);
   // headings show in the side Legend (and its drawer); across the top on a phone they are a thin divider
   const heading = page.locator("nav.tabs .tab-group", { hasText: "World" });

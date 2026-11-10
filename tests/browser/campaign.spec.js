@@ -16,7 +16,7 @@ test("a GM creates a campaign and every tab renders", async ({ page, browser }) 
   await expect(page.getByRole("heading", { name: "The Long Road" })).toBeVisible();
   await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
   // goTab unfolds the Legend's Setup group (it starts folded) and opens the iPad's drawer when it has to
-  for (const tab of ["Calendar", "Travel", "Party Holdings", "Regions", "Holidays", "Members", "Settings", "At the Table"]) {
+  for (const tab of ["Calendar", "Travel", "Party", "Regions", "Holidays", "Members", "Settings", "At the Table"]) {
     await goTab(page, tab);
     await expect(page.locator(".tabs a.on")).toHaveText(tab);
   }

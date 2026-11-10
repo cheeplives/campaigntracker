@@ -429,9 +429,9 @@ test("Characters: a GM makes a PC with no player, and it travels with the party"
   await expect(gm.locator(".sheet-page")).toContainText("No player · In the party");
   expect(sql(`SELECT owner_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
 
-  // the Travel tab's party card lists it with the players, for the players too
-  await p1.goto(`index.html#/c/${cid}/travel`);
-  await expect(p1.locator(".party-members")).toContainText("Wanderer");
+  // Party → Groups lists it with the players, for the players too
+  await p1.goto(`index.html#/c/${cid}/groups`);
+  await expect(p1.locator(".group-members")).toContainText("Wanderer");
 
   // the GM takes it out of the party, then hands it to a player: it is in the party with them, not on its own
   await gm.getByLabel("Travels with the party").uncheck();
@@ -451,8 +451,8 @@ test("Characters: a GM takes a player's character out of the party, and puts it 
   const pc = await make(p1, cid, { template_id: tpl.id, name: "Sir Benched" });
   const groups = () => sql(`SELECT GROUP_CONCAT(members_json) FROM party_groups WHERE campaign_id=${cid}`).trim();
 
-  await gm.goto(`index.html#/c/${cid}/travel`);
-  await expect(gm.locator(".party-members")).toContainText("Sir Benched");
+  await gm.goto(`index.html#/c/${cid}/groups`);
+  await expect(gm.locator(".group-members")).toContainText("Sir Benched");
   expect(groups()).toContain(String(ids.p1));
 
   // the GM unticks it on the sheet: the character, and its player with it, leave the party
@@ -462,9 +462,9 @@ test("Characters: a GM takes a player's character out of the party, and puts it 
   await box.uncheck();
   await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
   await expect(gm.locator(".sheet-page")).toContainText("Out of the party");
-  await gm.goto(`index.html#/c/${cid}/travel`);
-  await expect(gm.locator(".party-members")).toBeVisible();
-  await expect(gm.locator(".party-members")).not.toContainText("Sir Benched");
+  await gm.goto(`index.html#/c/${cid}/groups`);
+  await expect(gm.locator(".group-board")).toBeVisible();
+  await expect(gm.locator(".group-board")).not.toContainText("Sir Benched");
   expect(groups()).not.toContain(String(ids.p1));
 
   // a player can't put it back; the GM can, and it rejoins the main group
@@ -473,8 +473,8 @@ test("Characters: a GM takes a player's character out of the party, and puts it 
   await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
   await gm.getByLabel("Travels with the party").check();
   await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
-  await gm.goto(`index.html#/c/${cid}/travel`);
-  await expect(gm.locator(".party-members")).toContainText("Sir Benched");
+  await gm.goto(`index.html#/c/${cid}/groups`);
+  await expect(gm.locator(".group-members")).toContainText("Sir Benched");
 
   // the player sees no box on their own sheet
   await p1.goto(`index.html#/c/${cid}/characters/${pc.id}`);
@@ -499,13 +499,13 @@ test("Characters: the party's characters with no player split off and merge back
   groups = (await api(gm, "groups", undefined, cid)).json.groups;
   expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Hireling", "Spy"]);
 
-  await gm.goto(`index.html#/c/${cid}/travel`);
-  await gm.getByRole("button", { name: "Split the party…" }).click();
+  await gm.goto(`index.html#/c/${cid}/groups`);
+  await gm.getByRole("button", { name: "+ New group" }).click();
   await gm.getByPlaceholder("e.g. Scouts").fill("Scouts");
   await gm.locator(".party-pick label", { hasText: "Hireling (NPC)" }).locator("input").check();
   await gm.locator(".party-pick label", { hasText: "Pip" }).locator("input").check();
   await gm.getByRole("button", { name: "Split", exact: true }).click();
-  await expect(gm.locator(".party-row", { hasText: "Scouts" }).locator(".party-members")).toHaveText("Pip, Hireling (NPC)");
+  await expect(gm.locator(".group-card", { hasText: "Scouts" }).locator(".group-member-name")).toHaveText(["Pip", "Hireling"]);
   groups = (await api(gm, "groups", undefined, cid)).json.groups;
   expect(groups[0].characters.map(c => c.name)).toEqual(["Absent Friend", "Spy"]);
   expect(groups[1].members).toEqual([ids.p1]);
