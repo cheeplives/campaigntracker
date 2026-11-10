@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { E, Fan, S, UNIT_OPTIONS, alertDialog, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
+    const { E, Fan, S, UNIT_OPTIONS, alertDialog, api, btn, busy, cal, campHidesTemps, campUnits, campaignHeader, clean, confirmDialog, el, fanCtx, field, formData, isGM, leapSummary, loadCampaign, mount, post, promptDialog, route, saveFile, select, settings, tipped, toast, today } = ctx;
 
     // ------------------------------------------------------------ season editor
     /** A season's sunrise and sunset boxes as saved: both trimmed, or neither when both are blank. */
@@ -604,6 +604,49 @@
         document.body.append(d);
         d.showModal();
       }
+      /** Export the whole campaign: every row from the server, laid out as Markdown pages and campaign.json
+       * (static/campaign-export.js), then each picture and file fetched in turn, all in one zip. */
+      function exportCampaign() {
+        const withFiles = el('input', { type: 'checkbox', checked: true });
+        const status = el('p', { class: 'small muted', 'aria-live': 'polite' });
+        const go = el('button', { type: 'button', class: 'primary' }, 'Download');
+        const cancel = el('button', { value: 'cancel' }, 'Cancel');
+        const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'Export the whole campaign' },
+          el('form', { method: 'dialog' },
+            el('h3', {}, '⬇ Export the whole campaign'),
+            el('p', { class: 'small' }, 'One zip with everything in this campaign: the Encyclopedia, events, calendar notes, sessions, the Library, the party\'s holdings, characters, reminders, clocks, downtime and maps as Markdown pages to read, and a campaign.json file with every row for a program to read.'),
+            el('p', { class: 'small muted' }, 'It is your copy as GM, so GM-only entries, notes and paragraphs are in it, marked 🔒. Keep it as a backup, or open the folder in Obsidian. Members, edit history and API keys are left out.'),
+            el('label', { class: 'row small' }, withFiles, ' Include the pictures and files (a bigger download)'),
+            status,
+            el('div', { class: 'kit-dialog-actions' }, go, cancel)));
+        d.addEventListener('close', () => d.remove());
+        d.addEventListener('cancel', ev => { if (go.disabled) ev.preventDefault(); });
+        go.addEventListener('click', busy(go, async () => {
+          status.textContent = 'Gathering the campaign…';
+          const cid = S.camp.id;
+          const data = await api('campaign_export', { query: { cid } });
+          const date = new Date().toISOString().slice(0, 10);
+          const built = CampaignExport.build(data, { Engine: E, LoreExport, toMarkdown: RichText.toMarkdown, date, calendar: S.camp.calendar });
+          const out = built.files.slice(), missing = [];
+          if (withFiles.checked) {
+            let done = 0;
+            for (const f of built.fetch) {
+              status.textContent = `Fetching pictures and files: ${++done} of ${built.fetch.length}`;
+              const res = await fetch(`api/index.php?a=file&cid=${cid}&id=${f.id}`, { credentials: 'same-origin' });
+              // one that has gone from the server is named in the zip, not a reason to lose the rest
+              if (res.ok) out.push({ path: f.path, data: new Uint8Array(await res.arrayBuffer()) });
+              else missing.push(`${f.path} (${f.name}): ${res.status}`);
+            }
+            if (missing.length) out.push({ path: 'files/MISSING.txt', data: `These files could not be fetched when the campaign was exported:\n\n${missing.join('\n')}\n` });
+          }
+          const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
+          saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} (Campaign Chronicle ${date}).zip`);
+          d.close();
+          toast(missing.length ? `Exported, but ${missing.length} file${missing.length === 1 ? '' : 's'} could not be fetched (see files/MISSING.txt)` : 'Exported', !!missing.length);
+        }));
+        document.body.append(d);
+        d.showModal();
+      }
       /** Import from Markdown: pick .md files or a zip (an Obsidian vault, or our own Markdown export), say what is in
        * them, then send the entries in batches and the links between them, saying where it has got to. */
       async function importMarkdown() {
@@ -684,6 +727,8 @@
             'Download this calendar for Seasons & Stars, the calendar module most Foundry VTT worlds use, so Foundry shows the same months, weekdays, moons, seasons and holidays'),
           btn('Import calendar…', importCalendar, 'small',
             'Replace this campaign\'s calendar with one from a JSON file exported here. Days, events and regions stay, and you can add the file\'s holidays too')),
+        el('div', { class: 'row' }, btn('⬇ Export the whole campaign…', exportCampaign, 'small',
+          'Download everything in this campaign as one zip: Markdown pages to read, a campaign.json file with every row, and the pictures and files. A backup you keep')),
         el('div', { class: 'row' }, btn('⬆ Import from Scabard…', importScabard, 'small',
           'Bring a campaign over from Scabard: its Export campaign .json file becomes Encyclopedia entries with their tags, other names, notes, GM secrets, connections and pictures, and its dated session logs become Sessions. Safe to run again: nothing is added twice or deleted')),
         el('div', { class: 'row' }, btn('⬆ Import from Markdown…', importMarkdown, 'small',
