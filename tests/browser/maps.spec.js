@@ -1671,8 +1671,17 @@ test("Maps: a location with a picture shows that picture in place of its pin, al
   await form.getByRole("button", { name: "Save pin" }).click();
   await expect(form).toBeHidden();
   await expect(page.locator(".map-pin img")).toHaveCount(0);
-  expect((await api(page, "pin_save", { id: pinId, icon: null }, cid)).status).toBe(200);
-  await page.reload();
+  await expect(page.locator(".map-pin")).toContainText("🏰");
+  // its card says the icon was picked by hand, and one press puts the entry's picture back
+  await page.locator(".map-pin").click();
+  const card = page.locator(".leaflet-popup");
+  await expect(card).toContainText("Custom icon");
+  await card.getByRole("button", { name: "Use picture" }).click();
   await expect(page.locator(".map-pin img")).toHaveCount(1);
+  expect((await getMap(page, cid, mapId)).json.pins.find(p => p.id === pinId).icon).toBeNull();
+  await expect(card).toHaveCount(0);   // the old card has closed before the pin is clicked again
+  await page.locator(".map-pin").click();
+  await expect(page.locator(".leaflet-popup")).not.toContainText("Custom icon");
+  await expect(page.locator(".leaflet-popup").getByRole("button", { name: "Use picture" })).toHaveCount(0);
   expectNoErrors(errors);
 });

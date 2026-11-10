@@ -646,9 +646,11 @@ const MapsTab = (() => {
       return m === null ? null : `${G.fmtDistance(m, system(), G.isSpace(map))} from ${g.name}`;
     }
     function pinCard(p) {
+      // an entry with a picture whose pin has an icon picked by hand: say so, and offer the picture back
+      const overPic = p.icon && p.kind === 'entry' && p.entry_id ? S.encyclopedia.find(e => e.id === p.entry_id)?.token_url || null : null;
       const kindName = p.kind === 'entry' ? ctx.encCat(p.entry?.category)?.[1] || 'Entry' : p.kind === 'event' ? 'Event' : 'Note';
       const name = p.kind === 'entry' && p.entry ? el('a', { href: `#/c/${cid}/encyclopedia/${p.entry.id}`, 'data-tip': 'Open this entry' }, pinTitle(p)) : el('span', {}, pinTitle(p));
-      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.is_locked ? 'Locked in place' : null].filter(Boolean).join(' · ');
+      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.is_locked ? 'Locked in place' : null, overPic ? 'Custom icon' : null].filter(Boolean).join(' · ');
       const match = gm && p.kind === 'note' ? entryNamed(p.label) : null;
       const dist = fromParty(p);
       const facts = [dist ? el('span', {}, dist) : null,
@@ -659,6 +661,10 @@ const MapsTab = (() => {
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), '', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), '', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
         mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null,
+        overPic && mine(p) ? btn('Use picture', async () => {
+          try { await post('pin_save', { id: p.id, icon: null }, cid); lmap_close(); await refresh(); toast('This pin shows the entry\'s picture again'); }
+          catch (err) { toast(err.message, true); }
+        }, '', 'Drop the icon picked for this pin and show the Encyclopedia entry\'s picture on the map') : null,
         gm ? (() => {
           // one press makes a placed pin GM only, or shows it to the players again, without opening Edit
           const b = btn([p.is_secret ? '🔒 ' : '🔓 ', 'GM only', p.is_secret ? ' ✓' : ''], async () => {
