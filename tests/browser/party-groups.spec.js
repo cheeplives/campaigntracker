@@ -346,6 +346,9 @@ test("Party: the GM drags someone onto another group, and into and out of the pa
   await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[2]] }, cid);
   await page.goto(`#/c/${cid}/groups`);
   const dragTo = async (row, target) => {
+    // on a phone the groups stack: start with the row near the top of the screen (clear of the edge that scrolls), so the
+    // group below it is on screen too
+    await row.evaluate(e => { e.scrollIntoView({ block: "start" }); scrollBy(0, -90); });
     const from = await row.locator(".group-grip").boundingBox(), to = await target.boundingBox();
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();

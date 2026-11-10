@@ -4965,6 +4965,14 @@
     // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
     // finger on an iPad drags it as a mouse does; Move… does the same without dragging.
     let drag = null;
+    // near the top or bottom of the window the page scrolls while dragging, so a group below the screen (on a phone, or
+    // an iPad upright) can be reached; it keeps going while the finger rests there
+    let edge = 0, edgeTimer = null;
+    const edgeScroll = y => {
+      edge = y < 56 ? -1 : y > innerHeight - 56 ? 1 : 0;
+      if (edge && !edgeTimer) edgeTimer = setInterval(() => { if (edge) scrollBy(0, edge * 14); }, 16);
+      if (!edge && edgeTimer) { clearInterval(edgeTimer); edgeTimer = null; }
+    };
     const dropAt = (x, y, from) => {
       const t = document.elementFromPoint(x, y)?.closest('[data-drop]');
       return t && t.dataset.drop !== String(from ?? 'out') && (t.dataset.drop !== 'out' || gm) ? t : null;
@@ -4992,12 +5000,14 @@
         }
         drag.ghost.style.left = `${ev.clientX - drag.dx}px`;
         drag.ghost.style.top = `${ev.clientY - drag.dy}px`;
+        edgeScroll(ev.clientY);
         const hot = dropAt(ev.clientX, ev.clientY, drag.from);
         if (hot !== drag.hot) { drag.hot?.classList.remove('drop-hot'); hot?.classList.add('drop-hot'); drag.hot = hot; }
       });
       const end = ev => {
         if (!drag || drag.row !== row) return;
         const d = drag; drag = null;
+        edgeScroll(innerHeight / 2);
         d.hot?.classList.remove('drop-hot');
         row.classList.remove('dragging');
         document.body.classList.remove('group-dragging');
