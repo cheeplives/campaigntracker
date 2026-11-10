@@ -528,9 +528,10 @@
       const ch = S.encChars?.[e.id] || null;
       const sheetHref = ch ? `#/c/${S.camp.id}/characters/${ch.id}` : null;
       const canSheet = isGM() && typeof Sheets !== 'undefined';
-      // The head: the portrait down the left; the kind, the name and the buttons to its right. Open sheet (or Edit, for
-      // an entry with no sheet) is the one everyday button; Edit stays beside it, and the rest wait in the ⋯ menu.
-      const pic = entryPic(e);
+      // The head: the round portrait disc (the character sheet's) down the left; the kind, the name and the buttons to
+      // its right. Open sheet (or Edit, for an entry with no sheet) is the one everyday button; Edit stays beside it,
+      // and the rest wait in the ⋯ menu.
+      const pic = entryPic(e) || e.token_url || null;   // the sheet's portrait, else the entry's first picture, else its token's
       const edit = btn('Edit', ev => ev.currentTarget.closest('.enc-detail').replaceChildren(entryEditor(e, ctx)), ch?.sheet_visible ? 'small' : 'small primary', 'Change this entry');
       const actions = el('div', { class: 'row enc-actions' },
         ch?.sheet_visible ? el('a', { class: 'button small primary', href: sheetHref, 'data-tip': `Open ${e.name}'s character sheet` }, 'Open sheet') : null,
@@ -542,33 +543,38 @@
             ? btn('Link a member…', () => Sheets.linkMember(e).catch(err => toast(err.message, true)), 'small', 'Say which member of the campaign plays this person: it becomes their character (a sheet is made if it has none)') : null,
           e.is_secret ? null : pinButton({ kind: 'entry', id: e.id }),
           ...entryTools(e, ctx)], deleteEntryBtn(e)));
-      const portrait = pic ? el(ch?.sheet_visible ? 'a' : 'div', { class: 'enc-portrait' + (ch || e.category === 'person' ? ' tall' : ''), href: ch?.sheet_visible ? sheetHref : null, 'data-tip': ch?.sheet_visible ? 'Open the character sheet' : null },
-        el('img', { src: pic, alt: ch?.sheet_visible ? `${e.name}'s portrait` : '' })) : null;
-      // Behind the text (the "behind" class, style.css): on a wide entry the portrait sits faded down the right of the
-      // head, under the buttons and the line ends, taking no clicks; its tab along the bottom edge, hovered or pressed,
-      // brings it forward whole (and clickable). Pressed again (or Escape) tucks it back. Drop the class and the tab to go back to the portrait in its own column.
-      const peek = portrait ? el('button', { type: 'button', class: 'enc-portrait-peek', 'aria-label': 'Show the portrait', 'aria-pressed': 'false',
-        'data-tip': 'Bring the portrait forward; press again to tuck it back',
-        onclick: ev => { const on = head.classList.toggle('portrait-out'); ev.currentTarget.setAttribute('aria-pressed', String(on)); },
-        onkeydown: ev => { if (ev.key === 'Escape' && head.classList.contains('portrait-out')) { ev.stopPropagation(); ev.currentTarget.click(); } } },
-        el('span', { 'aria-hidden': 'true' }, '‹')) : null;
-      const head = el('header', { class: 'enc-hero' + (portrait ? ' has-pic behind' : '') },
-        portrait, peek,
-        el('div', { class: 'enc-hero-body' },
+      // The disc: the picture, or (like a sheet with no portrait) the kind's icon or the name's initials. With a picture
+      // it is a button that grows the disc; pressed again, Escape or a tap anywhere else shrinks it (style.css, .enc-disc).
+      const initials = String(e.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+      const face = pic ? el('img', { src: pic, alt: `Picture of ${e.name}`, class: 'character-pic big' })
+        : el('span', { class: 'character-pic character-initials big' + (encCat(e.category) ? ' enc-icon' : ''), 'aria-hidden': 'true' }, encCat(e.category)?.[2] || initials);
+      let outside = null;
+      const setBig = on => {
+        disc.setAttribute('aria-pressed', String(on));
+        if (outside) { document.removeEventListener('pointerdown', outside, true); outside = null; }
+        if (on) { outside = ev => { if (!disc.contains(ev.target)) setBig(false); }; document.addEventListener('pointerdown', outside, true); }
+      };
+      const disc = pic ? el('button', { type: 'button', class: 'enc-disc', 'aria-label': 'Enlarge the picture', 'aria-pressed': 'false',
+        onclick: () => setBig(disc.getAttribute('aria-pressed') !== 'true'),
+        onkeydown: ev => { if (ev.key === 'Escape' && disc.getAttribute('aria-pressed') === 'true') { ev.stopPropagation(); setBig(false); } } }, face)
+        : el('span', { class: 'enc-disc' }, face);
+      const head = el('header', { class: 'enc-hero' },
+        el('div', { class: 'enc-hero-top' },
+          disc,
           el('div', { class: 'enc-hero-head' },
             el('div', { class: 'enc-kicker enc-kind' }, entryKind(e), e.is_secret ? secretTag() : null),
             el('div', { class: 'row spread enc-title-row' },
               // the star sits beside the heading, not in it, so the heading's name stays the entry's
-              el('div', { class: 'title-star' }, el('h2', {}, e.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, e.token_url, e.name) : null, e.name), itemStar('entry', e.id, e.name)),
-              actions)),
-          characterCard(e),
-          e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,   // the Category is the kicker over the name
-          e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
-          mapLinks('entry_id', e.id),
-          // the Public notes read as the entry's summary beside the portrait, the highlights after them
-          el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
-            (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
-          highlights(e, others)));
+              el('div', { class: 'title-star' }, el('h2', {}, e.name), itemStar('entry', e.id, e.name)),
+              actions))),
+        characterCard(e),
+        e.tags?.length ? el('div', { class: 'etags' }, e.tags.map(tagChip)) : null,   // the Category is the kicker over the name
+        e.aliases?.length ? el('div', { class: 'small' }, el('span', { class: 'muted' }, 'Also called '), e.aliases.join(', ')) : null,
+        mapLinks('entry_id', e.id),
+        // the Public notes read as the entry's summary beside the portrait, the highlights after them
+        el('div', { class: 'notepanel public' }, el('h4', {}, 'Public notes', tip('Everyone in the campaign can read these')),
+          (e.notes || '').trim() ? publicNote(e.notes) : el('p', { class: 'muted' }, 'Nothing written yet.')),
+        highlights(e, others));
       return clean([
         trail(['Encyclopedia', `#/c/${S.camp.id}/encyclopedia`], encCat(e.category) ? [encCat(e.category)[1], `#/c/${S.camp.id}/encyclopedia?cat=${encodeURIComponent(e.category)}`] : null, [e.name]),
         head,
