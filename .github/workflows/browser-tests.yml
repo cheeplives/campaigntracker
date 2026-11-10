@@ -20,8 +20,13 @@ concurrency:
 
 jobs:
   test:
-    # The PHP 8.3 jobs keep their plain names, so any required checks that name them still match.
-    name: ${{ matrix.project }}${{ matrix.php != '8.3' && format(' (PHP {0})', matrix.php) || '' }}
+    # Each project is split across runners with Playwright's --shard: on one runner each, the iPad took 21 minutes,
+    # the iPhone 17, WebKit 15, Firefox 12.5, Chromium 10 and the Pixel 8.5, plus about 2 minutes of setup, so the
+    # run took as long as the iPad. Split as below, each runner has about 5 to 8.5 minutes of tests. Every test still
+    # runs in every project: a project's shards together are the whole suite. The "Browser tests" job sums them up.
+    # Two workers per runner: the runners have 4 cores and the tests are CPU-bound, so 4 workers made every test
+    # slower and brought out timing races for little gain; more runners is the faster way.
+    name: ${{ matrix.project }}${{ matrix.php != '8.3' && format(' (PHP {0})', matrix.php) || '' }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     # Playwright's own image, with every browser and the system libraries they need already in it. Installing WebKit's
@@ -33,13 +38,24 @@ jobs:
       options: --ipc=host
     strategy:
       fail-fast: false          # one engine failing must not hide another's result
+      # One row per runner (14 of the 20 a free account runs at once). The slower engines get more shards. PHP 8.5,
+      # the newest PHP the server may move to, runs once with Chromium: the server side doesn't change with the browser.
       matrix:
-        project: [chromium, firefox, webkit, mobile-safari, mobile-chrome, ipad]
-        php: ['8.3']
-        # The newest PHP the server may move to, once: the server side doesn't change with the browser.
         include:
-          - project: chromium
-            php: '8.5'
+          - { project: chromium, php: '8.3', shard: 1, of: 2 }
+          - { project: chromium, php: '8.3', shard: 2, of: 2 }
+          - { project: chromium, php: '8.5', shard: 1, of: 2 }
+          - { project: chromium, php: '8.5', shard: 2, of: 2 }
+          - { project: firefox, php: '8.3', shard: 1, of: 2 }
+          - { project: firefox, php: '8.3', shard: 2, of: 2 }
+          - { project: webkit, php: '8.3', shard: 1, of: 2 }
+          - { project: webkit, php: '8.3', shard: 2, of: 2 }
+          - { project: mobile-safari, php: '8.3', shard: 1, of: 2 }
+          - { project: mobile-safari, php: '8.3', shard: 2, of: 2 }
+          - { project: mobile-chrome, php: '8.3', shard: 1, of: 1 }
+          - { project: ipad, php: '8.3', shard: 1, of: 3 }
+          - { project: ipad, php: '8.3', shard: 2, of: 3 }
+          - { project: ipad, php: '8.3', shard: 3, of: 3 }
     services:
       mysql:
         image: mysql:8.0
@@ -95,7 +111,7 @@ jobs:
           php ../tools/migrate.php --no-backup
           php ../tools/migrate.php --check
       - run: npm ci
-      - run: npx playwright test --project=${{ matrix.project }}
+      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.of }}
       # A deprecation today is an error in the next PHP: none may be logged while the tests use the app.
       - name: No PHP deprecations or fatal errors
         if: always()
@@ -105,9 +121,19 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: report-${{ matrix.project }}-php${{ matrix.php }}
+          name: report-${{ matrix.project }}-php${{ matrix.php }}-${{ matrix.shard }}of${{ matrix.of }}
           path: |
             tests/playwright-report/
             tests/test-results/
             /tmp/php-errors.log
           retention-days: 14
+
+  # One check that is green only when every shard of every project passed: the name to require in branch protection,
+  # since the shard jobs' names change whenever the shard counts do.
+  summary:
+    name: Browser tests
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.test.result }}" = success || { echo "::error::A browser test job ended ${{ needs.test.result }}"; exit 1; }

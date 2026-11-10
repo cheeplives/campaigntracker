@@ -6,6 +6,11 @@
 #   tools/test-all.sh                          # everything, every project
 #   tools/test-all.sh --project=chromium       # extra arguments go to `npx playwright test`
 #   tools/test-all.sh browser/clocks.spec.js --project=ipad
+#   tools/test-all.sh --workers=4              # all of a 4-core machine: about a quarter faster, every test slower
+#
+# The whole suite here is about 560 tests in each of six projects, and it is CPU-bound: two browsers at once on a
+# 4-core cloud machine take about 9 minutes per project, so close to an hour for all six. GitHub Actions runs the
+# same suite split across 14 runners instead.
 #
 # Runs tools/test-setup.sh first, which installs what is missing (MySQL, PHP extensions, browsers) and is quick
 # when everything is already there; set SKIP_SETUP=1 to skip it. Uses its own database, chronicle_test, which
