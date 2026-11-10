@@ -5022,14 +5022,25 @@
     };
 
     /** A row for one person (who: { member } or { character }): the ⠿ handle and Move… where this member may move them.
-     * own: it is this player's. */
-    const personRow = (from, who, name, sub, url, { npc = false, own = false } = {}) => {
+     * own: it is this player's. eye: its map eye, when its group shows tokens. */
+    const personRow = (from, who, name, sub, url, { npc = false, own = false, eye = null } = {}) => {
       const movable = canMove(own, from) && (targets(from).length || (gm && from));
       const row = el('li', { class: 'group-member' + (npc ? ' npc' : '') + (own ? ' me' : '') });
       row.append(...clean([movable ? handle(row, who, name, from) : null, face(url, name),
         el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
+        eye,
         movable ? labelled(btn('Move…', () => moveTo(from, who, name), 'small', from ? `Send ${name} to another group` : `Bring ${name} into a group of the party`), `Move ${name}`) : null]));
       return row;
+    };
+    const MAP_DISPLAYS = [['marker', '🚩 One marker'], ['tokens', '👥 Each character\'s token'], ['hidden', '🙈 Hidden from players']];
+    /** A character's eye: whether its token shows around its group's marker on the maps. */
+    const eyeFor = c => {
+      const b = labelled(btn(c.on_map ? '👁' : '🙈', async () => {
+        try { await post('party_on_map', { character: c.id, on_map: !c.on_map }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
+      }, 'small group-eye' + (c.on_map ? '' : ' off'), c.on_map ? `${c.name}'s token shows on the maps. Click to leave it off` : `${c.name}'s token is left off the maps. Click to show it`),
+      c.on_map ? `Hide ${c.name} on the map` : `Show ${c.name} on the map`);
+      b.setAttribute('aria-pressed', String(!!c.on_map));
+      return b;
     };
     const groupCard = g => {
       // players with no sheet stand in as themselves; everyone else is a character, a player's first
@@ -5038,8 +5049,15 @@
         const m = c.player_id ? member(c.player_id) : null;
         const sub = c.player_id === me ? 'You' : m ? `Played by ${m.display_name || m.character_name}` : c.kind === 'npc' ? 'NPC' : 'PC with no player';
         const url = S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || (m && Number(m.active_character_id) === c.id ? m.token_url : null) || null;
-        return personRow(g, { character: c.id }, c.name, sub, url, { npc: c.kind === 'npc', own: c.player_id === me });
+        return personRow(g, { character: c.id }, c.name, sub, url, { npc: c.kind === 'npc', own: c.player_id === me,
+          eye: g.map_display === 'tokens' && (gm || c.player_id === me) ? eyeFor(c) : null });
       });
+      // how it shows on the maps: the GM picks; a player sees it said when it isn't the usual one marker
+      const display = gm ? el('label', { class: 'group-display small' }, 'On the maps ',
+        select(MAP_DISPLAYS, g.map_display, { 'aria-label': `How ${g.name} shows on the maps`, onchange: async ev => {
+          try { await post('group_save', { id: g.id, map_display: ev.target.value }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
+        } }))
+        : g.map_display === 'tokens' ? el('small', { class: 'muted group-display' }, 'On the maps: each character\'s token') : null;
       const dropOk = gm || g.players_can_move;
       return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name, 'data-drop': dropOk ? g.id : null },
         el('div', { class: 'group-head' }, face(g.token_url, g.name),
@@ -5047,7 +5065,7 @@
             el('div', {}, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null,
               g.players_can_move ? null : el('span', { class: 'group-kept', 'data-tip': 'Players can\'t move in or out of this group until the GM lets them' }, '🔒 Kept together')),
             el('small', { class: 'muted' }, '📍 ', el('span', { class: 'party-region' }, regionById(g.region_id)?.name || 'No region'),
-              ' · 🗺 ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || 'Not on a map'))),
+              ' · 🗺 ', el('span', { class: 'party-map' }, mapNames.get(g.map_id) || 'Not on a map')), display),
           gm ? moreMenu(g.name,
             btn('Rename', async () => {
               const name = await promptDialog('Rename this group:', { value: g.name, ok: 'Save' });

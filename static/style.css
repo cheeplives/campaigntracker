@@ -1482,6 +1482,15 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-party.beside .map-marker-label { top: auto; bottom: 100%; margin: 0 0 1px; }   /* its name above it, clear of the pin below */
 .map-party.beside::before { content: ''; position: absolute; left: 50%; top: 50%; width: calc(var(--beside) * 1.414 - 13px); height: 2px; transform-origin: 0 50%;
   transform: rotate(135deg); background: var(--accent); box-shadow: 0 0 0 1px var(--halo, var(--panel)); border-radius: 1px; z-index: -1; pointer-events: none; }
+/* a group shown as tokens: its characters' faces in a ring around its marker; its name below the ring */
+.map-ring { position: absolute; inset: 0; pointer-events: none; }
+.map-ring-face { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 2px solid var(--accent);
+  background: var(--panel); box-sizing: border-box; object-fit: cover; pointer-events: auto; box-shadow: 0 1px 3px rgb(0 0 0 / .35); }
+.map-ring-face.initials { display: flex; align-items: center; justify-content: center; font: 700 .62rem/1 var(--body); color: var(--text); }
+.map-party.with-ring .map-marker-label { margin-top: 30px; }
+.map-party.with-ring.beside .map-marker-label { margin: 0 0 30px; }
+/* hidden from players: the GM still sees it, faded */
+.map-party-hidden { opacity: .55; }
 .map-body { position: relative; }
 /* the drawer: over the map's right edge, under GM only and ⚙, sliding away to its tab (so the map never changes size) */
 .map-routes { position: absolute; top: 56px; right: 0; bottom: 0; z-index: 1001; width: 300px; display: flex; flex-direction: column;
@@ -1602,6 +1611,10 @@ path.map-route-line.secret.coloured { stroke-opacity: .6; }
 .group-card > .row { margin-top: 0; }
 .group-member.me { box-shadow: inset 3px 0 0 var(--accent); }
 .group-kept { margin-left: 8px; font-size: .75rem; color: var(--dim); white-space: nowrap; }
+.group-display { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin-top: 4px; color: var(--dim); white-space: nowrap; }
+.group-display select { font-size: .8rem; padding: 2px 4px; max-width: 100%; }
+.group-eye { flex: none; min-width: 34px; }
+.group-eye.off { opacity: .6; }
 /* dragging someone by ⠿: the handle takes the finger (no page scroll), the row lifts, and a group it can land on lights up */
 .group-grip { flex: none; display: grid; place-items: center; width: 22px; align-self: stretch; margin: -6px 0 -6px -4px; color: var(--dim); cursor: grab;
   touch-action: none; user-select: none; -webkit-user-select: none; font-size: 1.1rem; }

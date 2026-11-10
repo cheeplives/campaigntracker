@@ -42,11 +42,22 @@ const MapsTab = (() => {
     return el('label', { class: 'lock-toggle', 'data-tip': `GM only: ${tipText}` }, input, el('span', { 'aria-hidden': 'true' }, '🔒'));
   }
   const lockBtn = (onclick, tipText, cls) => el('button', { type: 'button', class: `lock-toggle ${cls || ''}`.trim(), 'aria-label': 'GM only', 'aria-pressed': 'false', 'data-tip': `GM only: ${tipText}`, onclick }, '🔒');
-  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick, badge }) {
+  /** ring: [{ image, name }], small faces in a circle around the marker (a party group's characters), each named on hover. */
+  function marker(layer, { x, y, icon, image, label, className, color, sizePx = 28, draggable = false, onMove, onOpen, pad, onPick, badge, ring }) {
     const tint = color && !image;
     const face = image ? DiscPic.disc(image, 'map-marker-icon')
       : el('span', { class: 'map-marker-icon' + (tint ? ' tinted' : ''), 'aria-hidden': 'true', 'data-icon': tint ? icon || '' : null }, icon || '');
-    const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, badge || null, label ? el('span', { class: 'map-marker-label' }, label) : null);
+    const faces = ring?.length ? el('span', { class: 'map-ring', 'aria-hidden': 'true' }, ring.map((r, i) => {
+      // evenly round the marker, the first at the top; a few more than fit just sit closer together
+      const a = (i / ring.length) * 2 * Math.PI - Math.PI / 2, d = sizePx / 2 + 16;
+      const initials = String(r.name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+      const f = r.image ? DiscPic.disc(r.image, 'map-ring-face') : el('span', { class: 'map-ring-face initials' }, initials);
+      f.title = r.name || '';
+      f.style.left = `calc(50% + ${Math.round(Math.cos(a) * d)}px)`;
+      f.style.top = `calc(50% + ${Math.round(Math.sin(a) * d)}px)`;
+      return f;
+    })) : null;
+    const node = el('div', { class: `map-marker ${tint ? 'has-colour ' : ''}${className || ''}`.trim() }, face, faces, badge || null, label ? el('span', { class: 'map-marker-label' }, label) : null);
     node.style.setProperty('--marker-size', sizePx + 'px');
     if (color) node.style.setProperty('--pin-colour', color);
     const m = L.marker(toLatLng(x, y), { icon: L.divIcon({ html: node, className: 'map-marker-box', iconSize: [sizePx, sizePx], iconAnchor: [sizePx / 2, sizePx / 2] }),
@@ -589,9 +600,15 @@ const MapsTab = (() => {
       groupLayer.clearLayers(); groupMarkers = [];
       drawTrail();
       for (const g of (gm ? groups : here).filter(q => q.map_id === map.id && q.x !== null)) {
-        groupMarkers.push(MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: g.name, className: 'map-party', sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
+        // tokens: its characters' tokens in a ring around it (those whose eye is open); hidden: only the GM sees it, faded
+        const ring = g.map_display === 'tokens' ? (g.characters || []).filter(c => c.on_map)
+          .map(c => ({ name: c.name, image: S.encyclopedia?.find(e => e.id === c.entry_id)?.token_url || null })) : null;
+        const hidden = g.map_display === 'hidden';
+        groupMarkers.push(MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: hidden ? `${g.name} (hidden)` : g.name, ring,
+          className: 'map-party' + (hidden ? ' map-party-hidden' : '') + (ring?.length ? ' with-ring' : ''), sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
           draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); spreadParty(); offerLog(g, xy); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
+            hidden ? el('small', { class: 'muted' }, '🙈 Hidden from players on the maps') : null,
             el('small', {}, partyNames(g).join(', ') || 'No one yet'),
             gm ? el('div', { class: 'row' }, btn('New location here', () => { lmap_close(); pinForm(null, { x: g.x, y: g.y }); }, 'small',
               'Pin a place where the party is now, as a new Encyclopedia entry or a note'),

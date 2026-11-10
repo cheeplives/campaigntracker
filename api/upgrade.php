@@ -135,6 +135,8 @@ function upgrade_steps(): array {
             'Players can now move their own character to another group of the party, and start a group of their own, on Party → Groups. A GM can turn that off for a group.'],
         ['048_party_by_character.sql', fn(PDO $p) => db_has_column($p, 'sheet_characters', 'party_out'),
             'The party is now made of characters: each one travels with its own group, so a player\'s two characters can be in different groups. Each player\'s active character starts where its player was.'],
+        ['049_party_map_display.sql', fn(PDO $p) => db_has_table($p, 'party_groups') && !db_has_column($p, 'party_groups', 'map_display'),
+            'Each party group can now show on the maps as one marker, as its characters\' tokens around it, or not at all to players, set on Party → Groups.'],
     ];
 }
 

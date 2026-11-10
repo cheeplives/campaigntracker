@@ -469,8 +469,8 @@ function party_rows(int $cid): array {
     }
     return $load();
 }
-/** Campaign $cid's party groups, main first, as the browser gets them. A player gets no position on a GM-only map and
- * no picture of a token that is GM only or sits on a GM-only entry. */
+/** Campaign $cid's party groups, main first, as the browser gets them. A player gets no position on a GM-only map, nor
+ * for a group the GM hides from the maps, and no picture of a token that is GM only or sits on a GM-only entry. */
 function party_groups(int $cid, bool $isGm = true): array {
     $rows = party_rows($cid);
     $ids = array_map(fn($g) => (int)$g['id'], $rows);
@@ -483,7 +483,7 @@ function party_groups(int $cid, bool $isGm = true): array {
     $chars = party_characters($cid, $isGm);
     return array_map(function ($g) use ($cid, $isGm, $extra, $chars) {
         $e = $extra[(int)$g['id']] ?? [];
-        $hideMap = !$isGm && !empty($e['map_secret']);
+        $hideMap = !$isGm && (!empty($e['map_secret']) || $g['map_display'] === 'hidden');
         $hideTok = !$isGm && !empty($e['tsecret']);
         $url = null;
         if (!$hideTok && ($e['timg'] ?? null) !== null)
@@ -493,14 +493,15 @@ function party_groups(int $cid, bool $isGm = true): array {
             'region_id' => $g['region_id'] !== null ? (int)$g['region_id'] : null,
             'map_id' => $g['map_id'] !== null && !$hideMap ? (int)$g['map_id'] : null, 'x' => $num('x'), 'y' => $num('y'),
             'token_id' => $g['token_id'] !== null && !$hideTok ? (int)$g['token_id'] : null, 'token_url' => $url, 'is_main' => (bool)(int)$g['is_main'],
-            'players_can_move' => (bool)(int)$g['players_can_move']];
+            'players_can_move' => (bool)(int)$g['players_can_move'], 'map_display' => $g['map_display']];
     }, $rows);
 }
-/** The characters who travel with the party, as group id => [{id, name, kind, entry_id, player_id}]: players' characters
- * first, then those with no player, A to Z. player_id is the player who plays it, or null (no player, or a GM's). A player
+/** The characters who travel with the party, as group id => [{id, name, kind, entry_id, player_id, on_map}]: players'
+ * characters first, then those with no player, A to Z. player_id is the player who plays it, or null (no player, or a
+ * GM's). on_map: its token shows around its group's marker when the group shows tokens. A player
  * isn't told of one whose entry is GM only, unless it is their own. */
 function party_characters(int $cid, bool $isGm): array {
-    $st = db()->prepare("SELECT c.id, c.kind, c.entry_id, c.party_group_id, e.name, IF(m.role='player', c.owner_id, NULL) AS player_id
+    $st = db()->prepare("SELECT c.id, c.kind, c.entry_id, c.party_group_id, c.on_map, e.name, IF(m.role='player', c.owner_id, NULL) AS player_id
         FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id
         LEFT JOIN campaign_members m ON m.campaign_id=c.campaign_id AND m.user_id=c.owner_id
         WHERE c.campaign_id=? AND c.party_group_id IS NOT NULL" . ($isGm ? '' : ' AND (e.is_secret=0 OR c.owner_id=?)') . "
@@ -509,7 +510,7 @@ function party_characters(int $cid, bool $isGm): array {
     $out = [];
     foreach ($st->fetchAll() as $c)
         $out[(int)$c['party_group_id']][] = ['id' => (int)$c['id'], 'name' => $c['name'], 'kind' => $c['kind'], 'entry_id' => (int)$c['entry_id'],
-            'player_id' => $c['player_id'] !== null ? (int)$c['player_id'] : null];
+            'player_id' => $c['player_id'] !== null ? (int)$c['player_id'] : null, 'on_map' => (bool)(int)$c['on_map']];
     return $out;
 }
 /** Character $id of campaign $cid as group_split and group_join need it: its group and the player who plays it (null:
@@ -605,9 +606,11 @@ function group_save(int $cid): void {
     }
     if ($has('is_main') && !$body['is_main'] && $g['is_main']) fail('Make another group the main one instead');
     $moves = $has('players_can_move') ? (int)(bool)$body['players_can_move'] : (int)$g['players_can_move'];
+    $display = $has('map_display') ? $body['map_display'] : $g['map_display'];
+    if (!in_array($display, ['marker', 'tokens', 'hidden'], true)) fail('Show a group on the maps as marker, tokens or hidden');
     db()->beginTransaction();
     try {
-        db()->prepare('UPDATE party_groups SET name=?, region_id=?, token_id=?, players_can_move=? WHERE id=?')->execute([$name, $region, $token, $moves, $g['id']]);
+        db()->prepare('UPDATE party_groups SET name=?, region_id=?, token_id=?, players_can_move=?, map_display=? WHERE id=?')->execute([$name, $region, $token, $moves, $display, $g['id']]);
         if (!empty($body['is_main']) && !$g['is_main']) party_make_main($cid, (int)$g['id']);
         elseif ($g['is_main'] && $has('region_id')) party_set_current_region($cid, $region);
         db()->commit();
@@ -759,6 +762,17 @@ function group_join(int $cid, bool $isGm = true): void {
         if (db()->inTransaction()) db()->rollBack();
         throw $e;
     }
+    touch_campaign($cid);
+}
+
+/** Show or hide one character's token around its group's marker (character: its id, on_map). A GM sets any; a player
+ * only their own characters'. */
+function party_on_map(int $cid, bool $isGm = true): void {
+    $body = body();
+    $c = party_character($cid, $body['character'] ?? null);
+    if (!$isGm && $c['player'] !== me()['id']) fail('You can only show or hide your own characters', 403);
+    if (!array_key_exists('on_map', $body)) fail('Say whether it shows on the map');
+    db()->prepare('UPDATE sheet_characters SET on_map=? WHERE id=?')->execute([(int)(bool)$body['on_map'], $c['id']]);
     touch_campaign($cid);
 }
 

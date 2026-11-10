@@ -694,6 +694,7 @@ CREATE TABLE IF NOT EXISTS party_groups (
   token_id INT UNSIGNED NULL,
   is_main TINYINT(1) NOT NULL DEFAULT 0,
   players_can_move TINYINT(1) NOT NULL DEFAULT 1,   -- players may move their characters in and out of it (047)
+  map_display ENUM('marker','tokens','hidden') NOT NULL DEFAULT 'marker',   -- one marker, its characters' tokens around it, or hidden from players (049)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL,
@@ -866,6 +867,7 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   entry_id INT UNSIGNED NOT NULL,
   kind ENUM('pc','npc') NOT NULL DEFAULT 'pc',
   party_group_id INT UNSIGNED NULL,                  -- the party group the character travels with, a player's or not (033, 048); null: not travelling
+  on_map TINYINT(1) NOT NULL DEFAULT 1,              -- its token shows around its group's marker when the group shows tokens (049)
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
   portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
   template_version INT UNSIGNED NOT NULL,
