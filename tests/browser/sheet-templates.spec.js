@@ -46,6 +46,8 @@ test("Templates: build one by hand, save it, and find it in the library", async 
   expect((await layoutOf(page, id)).layout).toEqual({ sections: [
     { key: "stats", title: "Stats", fields: [{ key: "hp", label: "HP", type: "counter", play: true }, { key: "luck", label: "Luck", type: "pips", count: 5 }] },
     { key: "notes", title: "Notes", fields: [{ key: "story", label: "Story", type: "longtext" }] },
+    // every new template starts with the Holdings page, kept last
+    { key: "personal_holdings", title: "Personal Holdings", page: "Holdings", holdings: true, fields: [] },
   ] });
 
   await page.goto("index.html#/templates");
@@ -208,7 +210,7 @@ test("Templates: sections can sit on pages, shown as tabs on the sheet", async (
 
   // the preview shows the tabs: sections without a page are on the first, named Sheet
   const preview = page.locator(".sheet-preview");
-  await expect(preview.getByRole("tab")).toHaveText(["Sheet", "Magic"]);
+  await expect(preview.getByRole("tab")).toHaveText(["Sheet", "Magic", "Holdings"]);
   await expect(preview.getByRole("heading", { name: "Stats" })).toBeVisible();
   await expect(preview.getByRole("heading", { name: "Gear" })).toBeVisible();
   await expect(preview.getByRole("heading", { name: "Spells" })).toBeHidden();
@@ -220,7 +222,7 @@ test("Templates: sections can sit on pages, shown as tabs on the sheet", async (
   await expect(page).toHaveURL(/#\/templates\/\d+$/);
   const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
   const secs = (await layoutOf(page, id)).layout.sections;
-  expect(secs.map(s => s.page ?? null)).toEqual([null, "Magic", null]);
+  expect(secs.map(s => s.page ?? null)).toEqual([null, "Magic", null, "Holdings"]);
 
   const bad = { sections: [{ key: "a", title: "A", page: "", fields: [] }] };
   const r = await api(page, "template_save", { name: "No page name", game: "X", layout: bad });
@@ -304,7 +306,7 @@ test("Templates: sections sit side by side, a compact section puts labels beside
   await expect(page).toHaveURL(/#\/templates\/\d+$/);
   const id = Number(page.url().match(/templates\/(\d+)$/)[1]);
   const secs = (await layoutOf(page, id)).layout.sections;
-  expect(secs.map(s => [s.width ?? null, s.compact ?? null])).toEqual([["half", null], ["half", true]]);
+  expect(secs.map(s => [s.width ?? null, s.compact ?? null])).toEqual([["half", null], ["half", true], [null, null]]);   // and the Holdings page
   expect(secs[0].fields.map(f => [f.size ?? null, f.cols ?? null])).toEqual([[null, null], [null, 6], ["full", null]]);
 
 
