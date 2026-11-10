@@ -244,7 +244,7 @@
       S.encUploads = files.uploads;
       for (const e of entries) e.files = files.list.filter(f => f.parent_id === e.id);
       S.encyclopedia = entries.map(e => ({ id: e.id, name: e.name, category: e.category || null, aliases: e.aliases || [], is_secret: e.is_secret, blank: entryBlank(e), preview: Nouns.plain(e.notes, 'html').replace(/\s+/g, ' ').trim().slice(0, 140),
-        pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null }));
+        pic: e.files.find(f => f.kind === 'image' || (f.kind === 'embed' && !f.embed?.gone))?.url || null, token_url: e.token_url || null }));   // token_url: the picture its map pins wear
       S.encChars = r.characters || {};
       const chars = S.encChars, hasChars = Object.keys(chars).length > 0;
       // Each filter keeps what is unticked, so everything shows at first and a tag made later starts ticked.

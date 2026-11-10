@@ -646,9 +646,11 @@ const MapsTab = (() => {
       return m === null ? null : `${G.fmtDistance(m, system(), G.isSpace(map))} from ${g.name}`;
     }
     function pinCard(p) {
+      // an entry with a picture whose pin has an icon picked by hand: say so, and offer the picture back
+      const overPic = p.icon && p.kind === 'entry' && p.entry_id ? S.encyclopedia.find(e => e.id === p.entry_id)?.token_url || null : null;
       const kindName = p.kind === 'entry' ? ctx.encCat(p.entry?.category)?.[1] || 'Entry' : p.kind === 'event' ? 'Event' : 'Note';
       const name = p.kind === 'entry' && p.entry ? el('a', { href: `#/c/${cid}/encyclopedia/${p.entry.id}`, 'data-tip': 'Open this entry' }, pinTitle(p)) : el('span', {}, pinTitle(p));
-      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.is_locked ? 'Locked in place' : null].filter(Boolean).join(' · ');
+      const sub = [kindName, p.is_secret ? '🔒 GM only' : null, p.is_locked ? 'Locked in place' : null, overPic ? 'Custom icon' : null].filter(Boolean).join(' · ');
       const match = gm && p.kind === 'note' ? entryNamed(p.label) : null;
       const dist = fromParty(p);
       const facts = [dist ? el('span', {}, dist) : null,
@@ -659,6 +661,10 @@ const MapsTab = (() => {
           ? btn(`Link to ${match.name}`, () => toEntry(p, match.id), '', 'Pin this to the entry that already has this name, without making another')
           : btn('Add to Encyclopedia', () => toEntry(p), '', 'Make an Encyclopedia entry of this pin\'s label and note, and keep the pin where it is')) : null,
         mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null,
+        overPic && mine(p) ? btn('Use picture', async () => {
+          try { await post('pin_save', { id: p.id, icon: null }, cid); lmap_close(); await refresh(); toast('This pin shows the entry\'s picture again'); }
+          catch (err) { toast(err.message, true); }
+        }, '', 'Drop the icon picked for this pin and show the Encyclopedia entry\'s picture on the map') : null,
         gm ? (() => {
           // one press makes a placed pin GM only, or shows it to the players again, without opening Edit
           const b = btn([p.is_secret ? '🔒 ' : '🔓 ', 'GM only', p.is_secret ? ' ✓' : ''], async () => {
@@ -701,7 +707,7 @@ const MapsTab = (() => {
       const drawEntries = () => {
         const k = qEntry.value.trim().toLowerCase();
         const found = S.encyclopedia.filter(e => !k || [e.name, ...(e.aliases || [])].some(n => n.toLowerCase().includes(k))).slice(0, 8);
-        entryList.replaceChildren(...(found.length ? found.map(e => pick(entry?.id === e.id, e.is_secret ? `🔒 ${e.name} (GM only)` : e.name, () => { entry = e; qEntry.value = e.name; drawEntries(); }))
+        entryList.replaceChildren(...(found.length ? found.map(e => pick(entry?.id === e.id, e.is_secret ? `🔒 ${e.name} (GM only)` : e.name, () => { entry = e; qEntry.value = e.name; drawEntries(); drawStyle(); }))
           : [el('small', { class: 'muted' }, 'No entry has that name yet')]));
       };
       const drawEvents = () => {
@@ -711,7 +717,7 @@ const MapsTab = (() => {
         eventList.replaceChildren(...(found.length ? found.map(e => pick(event?.id === e.id, `${ctx.fmtDay(Number(e.abs_day))} · ${e.is_secret ? '🔒 ' : ''}${e.title}`, () => { event = e; qEvent.value = e.title; drawEvents(); }))
           : [el('small', { class: 'muted' }, 'No event has that title yet')]));
       };
-      qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) entry = null; drawEntries(); });
+      qEntry.addEventListener('input', () => { if (entry && qEntry.value !== entry.name) { entry = null; drawStyle(); } drawEntries(); });
       qEvent.addEventListener('input', () => { if (event && qEvent.value !== event.title) event = null; drawEvents(); });
       const kinds = [['entry', 'Encyclopedia entry'], ['note', 'Note'], ['event', 'Event']];
       // its icon (none: the kind's own) and colour, once the database has them
@@ -722,7 +728,10 @@ const MapsTab = (() => {
         const fake = { kind, entry: entry ? { category: S.encyclopedia.find(e => e.id === entry.id)?.category || (entry.blank ? 'location' : null) } : null };
         const opt = (v, face, name, on) => el('button', { type: 'button', class: 'map-icon-opt' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,
           onclick: () => { icon = v; drawStyle(); } }, face);
-        iconBox.replaceChildren(opt(null, kindIcon(fake), 'The kind\'s own icon', !icon), ...PIN_ICONS.map(([e, name]) => opt(e, e, name, icon === e)));
+        // an entry with a picture: the pin wears that picture unless an icon is picked here
+        const pic = kind === 'entry' && entry ? S.encyclopedia.find(e => e.id === entry.id)?.token_url || null : null;
+        iconBox.replaceChildren(pic ? opt(null, (typeof DiscPic !== 'undefined' ? DiscPic.disc(pic, 'map-icon-pic') : el('img', { class: 'map-icon-pic', src: pic, alt: '' })), 'The entry\'s picture', !icon)
+          : opt(null, kindIcon(fake), 'The kind\'s own icon', !icon), ...PIN_ICONS.map(([e, name]) => opt(e, e, name, icon === e)));
         const sw = (v, name) => {
           const on = (colour || null) === v;
           const b = el('button', { type: 'button', class: 'map-swatch' + (v ? '' : ' none') + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': name, 'data-tip': name,
