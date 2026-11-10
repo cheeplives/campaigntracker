@@ -687,8 +687,7 @@
    {
     "key": "combat",
     "title": "Combat",
-    "page": "Equipment & Powers",
-    "width": "two-thirds",
+    "page": "Combat & Powers",
     "fields": [
      {
       "key": "init",
@@ -738,8 +737,8 @@
    {
     "key": "mount_sec",
     "title": "Mount",
-    "page": "Equipment & Powers",
-    "width": "third",
+    "page": "Combat & Powers",
+    "width": "half",
     "fields": [
      {
       "key": "mount",
@@ -765,23 +764,10 @@
     ]
    },
    {
-    "key": "equipment_sec",
-    "title": "Equipment",
-    "page": "Equipment & Powers",
-    "width": "two-thirds",
-    "fields": [
-     {
-      "key": "equipment",
-      "label": "Equipment",
-      "type": "longtext"
-     }
-    ]
-   },
-   {
     "key": "armor_sec",
     "title": "Armor",
-    "page": "Equipment & Powers",
-    "width": "third",
+    "page": "Combat & Powers",
+    "width": "half",
     "fields": [
      {
       "key": "armor_type",
@@ -811,7 +797,7 @@
    {
     "key": "powers",
     "title": "Seasonlings Powers",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "third",
     "fields": [
      {
@@ -824,7 +810,7 @@
    {
     "key": "flame_powers_sec",
     "title": "Flame Powers",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "third",
     "fields": [
      {
@@ -837,7 +823,7 @@
    {
     "key": "gifts_sec",
     "title": "Gifts",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "third",
     "fields": [
      {
@@ -850,7 +836,7 @@
    {
     "key": "assets_sec",
     "title": "Assets",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "half",
     "fields": [
      {
@@ -863,7 +849,7 @@
    {
     "key": "faults_sec",
     "title": "Faults",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "half",
     "fields": [
      {
@@ -876,7 +862,7 @@
    {
     "key": "darkness",
     "title": "Darkness Sorrows",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "half",
     "fields": [
      {
@@ -903,7 +889,7 @@
    {
     "key": "perfidy",
     "title": "Perfidy Sorrows",
-    "page": "Equipment & Powers",
+    "page": "Combat & Powers",
     "width": "half",
     "fields": [
      {
@@ -1178,6 +1164,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

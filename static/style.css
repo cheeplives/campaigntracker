@@ -928,6 +928,10 @@ dialog.kit-dialog.pt-dialog { width: min(480px, calc(100vw - 32px)); }
 .hold-fields { margin: 4px 0; padding-top: 6px; border-top: 1px dashed var(--line); }
 .hold-fields:empty { display: none; }
 @media (max-width: 1180px) { .holdings-page { grid-template-columns: 1fr; } }  /* up to 1000px, then beside the Legend */
+/* a character sheet's Holdings page (a section with holdings: true) is the same page, inside the sheet: two columns while
+ * the sheet is wide enough for them, else one */
+.sheet-holdings .holdings-page { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+@container (max-width: 940px) { .sheet-holdings .holdings-page { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
   /* each item takes two lines: its name, then who claimed it, where it is and how many */
   .gear-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 96px; }

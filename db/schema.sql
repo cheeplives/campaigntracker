@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS downtimes (
 CREATE TABLE IF NOT EXISTS party_gear (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
+  character_id INT UNSIGNED NULL,                 -- a character's own (051, its sheet's Holdings page); NULL: the party's
   item VARCHAR(200) NOT NULL DEFAULT '',
   claimed_by VARCHAR(200) NOT NULL DEFAULT '',
   location VARCHAR(200) NOT NULL DEFAULT '',
@@ -277,6 +278,7 @@ CREATE TABLE IF NOT EXISTS party_gear (
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_gear_character (character_id),
   INDEX idx_gear_campaign (campaign_id, id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -285,6 +287,7 @@ CREATE TABLE IF NOT EXISTS party_gear (
 CREATE TABLE IF NOT EXISTS holdings (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
+  character_id INT UNSIGNED NULL,                 -- a character's own (051, its sheet's Holdings page); NULL: the party's
   name VARCHAR(200) NOT NULL,
   kind VARCHAR(16) NOT NULL,                        -- vehicle | animal | building | asset | custom
   type_name VARCHAR(60) NOT NULL DEFAULT '',        -- the type a custom holding is, e.g. "Ship"
@@ -295,6 +298,7 @@ CREATE TABLE IF NOT EXISTS holdings (
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_holdings_character (character_id),
   INDEX idx_holdings_campaign (campaign_id, id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -365,11 +369,13 @@ CREATE TABLE IF NOT EXISTS reminder_dismissals (
 CREATE TABLE IF NOT EXISTS party_funds (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
+  character_id INT UNSIGNED NULL,                 -- a character's own (051, its sheet's Holdings page); NULL: the party's
   currency VARCHAR(60) NOT NULL,
   location VARCHAR(200) NOT NULL DEFAULT '',
   amount DECIMAL(16,2) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_funds_character (character_id),
   INDEX idx_funds_campaign (campaign_id, id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

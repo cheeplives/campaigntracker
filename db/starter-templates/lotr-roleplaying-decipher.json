@@ -484,15 +484,10 @@
    },
    {
     "key": "equipment",
-    "title": "Equipment, Background & Notes",
-    "page": "Gear & Health",
+    "title": "Background & Notes",
+    "page": "Weapons & Health",
     "width": "half",
     "fields": [
-     {
-      "key": "equipment_gear",
-      "label": "Equipment & Gear",
-      "type": "longtext"
-     },
      {
       "key": "background",
       "label": "Background",
@@ -512,8 +507,8 @@
    },
    {
     "key": "health",
-    "title": "Health, Wealth & Weariness",
-    "page": "Gear & Health",
+    "title": "Health & Weariness",
+    "page": "Weapons & Health",
     "width": "half",
     "fields": [
      {
@@ -578,43 +573,13 @@
       ],
       "cols": 6,
       "play": true
-     },
-     {
-      "key": "copper_pennies",
-      "label": "Copper Pennies",
-      "type": "number",
-      "cols": 4
-     },
-     {
-      "key": "silver_pennies",
-      "label": "Silver Pennies",
-      "type": "number",
-      "cols": 4
-     },
-     {
-      "key": "silver_pieces",
-      "label": "Silver Pieces",
-      "type": "number",
-      "cols": 4
-     },
-     {
-      "key": "gold_pennies",
-      "label": "Gold Pennies",
-      "type": "number",
-      "cols": 6
-     },
-     {
-      "key": "gold_pieces",
-      "label": "Gold Pieces",
-      "type": "number",
-      "cols": 6
      }
     ]
    },
    {
     "key": "weapons_sec",
     "title": "Weapons",
-    "page": "Gear & Health",
+    "page": "Weapons & Health",
     "fields": [
      {
       "key": "weapons",
@@ -649,6 +614,13 @@
       "play": true
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

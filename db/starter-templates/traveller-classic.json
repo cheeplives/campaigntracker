@@ -390,7 +390,7 @@
    },
    {
     "key": "equipment",
-    "title": "Armor & Equipment",
+    "title": "Armor",
     "page": "Skills & Weapons",
     "width": "two-thirds",
     "fields": [
@@ -399,23 +399,15 @@
       "label": "Armor",
       "type": "text",
       "size": "full"
-     },
-     {
-      "key": "gear",
-      "label": "Equipment",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

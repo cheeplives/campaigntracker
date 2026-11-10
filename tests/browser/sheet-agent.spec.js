@@ -57,8 +57,8 @@ test("Agent: preview draws each page of a template at desktop and iPad widths an
   test.skip(info.project.name !== "chromium", "the scripts start their own browser");
   const out = tmp();
   const { shots, problems } = await preview(path.join(STARTERS, "dnd-5e-2024.json"), out);
-  // the 2024 starter has two pages, each drawn at both widths
-  expect(shots.map(s => `${s.width} ${s.page}`).sort()).toEqual(["1280 Character", "1280 Spells & Gear", "820 Character", "820 Spells & Gear"]);
+  // the 2024 starter has three pages (the last its Holdings page), each drawn at both widths
+  expect(shots.map(s => `${s.width} ${s.page}`).sort()).toEqual(["1280 Character", "1280 Holdings", "1280 Spells & Gear", "820 Character", "820 Holdings", "820 Spells & Gear"]);
   for (const s of shots) expect(fs.existsSync(path.join(out, s.image))).toBe(true);
   expect(problems).toEqual([]);
 });

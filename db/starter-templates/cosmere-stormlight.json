@@ -436,7 +436,7 @@
    },
    {
     "key": "equipment",
-    "title": "Armor & Equipment",
+    "title": "Armor",
     "page": "Story & Gear",
     "width": "third",
     "fields": [
@@ -445,28 +445,6 @@
       "label": "Armor",
       "type": "text",
       "cols": 4
-     },
-     {
-      "key": "marks",
-      "label": "Marks",
-      "type": "number",
-      "cols": 4,
-      "play": true
-     },
-     {
-      "key": "gear_list",
-      "label": "Equipment",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "notes",
-        "label": "Notes"
-       }
-      ]
      }
     ]
    },
@@ -653,6 +631,13 @@
       ]
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

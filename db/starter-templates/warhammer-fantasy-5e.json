@@ -922,37 +922,10 @@
     ]
    },
    {
-    "key": "wealth",
-    "title": "Wealth",
-    "page": "Gear & Spells",
-    "width": "third",
-    "compact": true,
-    "fields": [
-     {
-      "key": "money_d",
-      "label": "Brass Pennies (D)",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "money_ss",
-      "label": "Silver Shillings (SS)",
-      "type": "number",
-      "play": true
-     },
-     {
-      "key": "money_gc",
-      "label": "Gold Crowns (GC)",
-      "type": "number",
-      "play": true
-     }
-    ]
-   },
-   {
     "key": "encumbrance",
     "title": "Encumbrance",
-    "page": "Gear & Spells",
-    "width": "third",
+    "page": "Combat & Spells",
+    "width": "half",
     "compact": true,
     "fields": [
      {
@@ -990,8 +963,8 @@
    {
     "key": "corruption_sec",
     "title": "Corruption & Mutation",
-    "page": "Gear & Spells",
-    "width": "third",
+    "page": "Combat & Spells",
+    "width": "half",
     "fields": [
      {
       "key": "corruption",
@@ -1021,7 +994,7 @@
    {
     "key": "weapons_sec",
     "title": "Weapons",
-    "page": "Gear & Spells",
+    "page": "Combat & Spells",
     "fields": [
      {
       "key": "weapons",
@@ -1060,7 +1033,7 @@
    {
     "key": "armour_sec",
     "title": "Armour",
-    "page": "Gear & Spells",
+    "page": "Combat & Spells",
     "fields": [
      {
       "key": "armour",
@@ -1092,29 +1065,9 @@
     ]
    },
    {
-    "key": "trappings_sec",
-    "title": "Trappings",
-    "page": "Gear & Spells",
-    "width": "half",
-    "fields": [
-     {
-      "key": "trappings",
-      "label": "Trappings",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Trapping"
-       }
-      ]
-     }
-    ]
-   },
-   {
     "key": "notes_sec",
     "title": "Notes",
-    "page": "Gear & Spells",
-    "width": "half",
+    "page": "Combat & Spells",
     "fields": [
      {
       "key": "notes",
@@ -1126,7 +1079,7 @@
    {
     "key": "spells_sec",
     "title": "Spells and Prayers",
-    "page": "Gear & Spells",
+    "page": "Combat & Spells",
     "fields": [
      {
       "key": "spells",
@@ -1169,6 +1122,13 @@
       "play": true
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

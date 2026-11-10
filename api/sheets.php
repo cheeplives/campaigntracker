@@ -41,6 +41,7 @@ function sheet_layout_in($layout): array {
     $out = [];
     $n = 0;
     $pages = [];
+    $holdings = false;
     foreach ($layout['sections'] as $s) {
         if (!is_array($s) || !isset($s['fields']) || !is_array($s['fields']) || !array_is_list($s['fields'])) fail('Each section needs a list of fields');
         $sec = ['key' => $key($s['key'] ?? null, 'A section'), 'title' => $label($s['title'] ?? null, 'Section titles')];
@@ -52,6 +53,15 @@ function sheet_layout_in($layout): array {
         if (isset($s['compact'])) {
             if (!is_bool($s['compact'])) fail("Section \"{$sec['title']}\": compact is on or off");
             if ($s['compact']) $sec['compact'] = true;
+        }
+        // the Holdings page: the character's own funds, gear and holdings, drawn like Party → Holdings, in place of fields
+        if (isset($s['holdings'])) {
+            if (!is_bool($s['holdings'])) fail("Section \"{$sec['title']}\": holdings is on or off");
+            if ($s['holdings']) {
+                if ($s['fields']) fail("Section \"{$sec['title']}\": a Holdings section has no fields of its own");
+                if ($holdings) fail('A template can have one Holdings section');
+                $sec['holdings'] = $holdings = true;
+            }
         }
         $sec['fields'] = [];
         foreach ($s['fields'] as $f) {
@@ -714,6 +724,8 @@ function characters_action(string $action, int $cid): void {
             $pdo->beginTransaction();
             $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=?')->execute([$c['id']]);
             $pdo->prepare('DELETE FROM shift_actions WHERE campaign_id=? AND character_id=?')->execute([$cid, $c['id']]);   // its At the Table actions
+            foreach (['party_gear', 'holdings', 'party_funds'] as $t)   // its own holdings (its sheet's Holdings page); storage and tags go with them
+                $pdo->prepare("DELETE FROM $t WHERE campaign_id=? AND character_id=?")->execute([$cid, $c['id']]);
             $pdo->prepare('DELETE FROM sheet_characters WHERE id=?')->execute([$c['id']]);
             $pdo->commit();
             out(['ok' => true]);

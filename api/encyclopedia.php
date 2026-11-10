@@ -305,19 +305,19 @@ function encyclopedia_action(string $action): void {
             if ($isGm) $add(['kind' => 'downtime_gm_notes'] + $src, $d['gm_notes'], true);
         }
         // Party Holdings: short boxes (names, places, items) are read as titles, where an everyday first word isn't a name.
-        $st = db()->prepare('SELECT id, name, location, description FROM holdings WHERE campaign_id=? ORDER BY id');
+        $st = db()->prepare('SELECT id, name, location, description FROM holdings WHERE campaign_id=? AND character_id IS NULL ORDER BY id');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $h) {
             $add(['kind' => 'holding', 'id' => (int)$h['id'], 'title' => $h['name'], 'short' => true], trim($h['name'] . "\n" . $h['location']));
             $add(['kind' => 'holding', 'id' => (int)$h['id'], 'title' => $h['name']], $h['description']);
         }
-        $st = db()->prepare('SELECT h.name, s.item FROM holding_storage s JOIN holdings h ON h.id=s.holding_id WHERE h.campaign_id=? ORDER BY s.id');
+        $st = db()->prepare('SELECT h.name, s.item FROM holding_storage s JOIN holdings h ON h.id=s.holding_id WHERE h.campaign_id=? AND h.character_id IS NULL ORDER BY s.id');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $x) $add(['kind' => 'storage', 'title' => $x['name'], 'short' => true], $x['item']);
-        $st = db()->prepare('SELECT item, location FROM party_gear WHERE campaign_id=? ORDER BY id');
+        $st = db()->prepare('SELECT item, location FROM party_gear WHERE campaign_id=? AND character_id IS NULL ORDER BY id');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $g) $add(['kind' => 'gear', 'short' => true], trim($g['item'] . "\n" . $g['location']));
-        $st = db()->prepare('SELECT currency, location FROM party_funds WHERE campaign_id=? ORDER BY id');
+        $st = db()->prepare('SELECT currency, location FROM party_funds WHERE campaign_id=? AND character_id IS NULL ORDER BY id');
         $st->execute([$cid]);
         foreach ($st->fetchAll() as $f) $add(['kind' => 'funds', 'short' => true], trim($f['currency'] . "\n" . $f['location']));
         $st = db()->prepare('SELECT id, title, description, body FROM library_tomes WHERE campaign_id=? ORDER BY title');

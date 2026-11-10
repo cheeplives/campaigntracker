@@ -78,10 +78,26 @@ const Sheets = (() => {
       { 'aria-pressed': String(hidden.has(key)), 'aria-label': hidden.has(key) ? `Show ${what} to the party` : `Hide ${what} from the party`,
         'data-tip': hidden.has(key) ? 'Hidden from the rest of the party. Tap to show it' : 'Seen by the party. Tap to hide it' }) : null;
     const slots = new Map();
+    // the Holdings section: the character's own funds, gear and holdings (opts.holdings() draws them, as Party →
+    // Holdings does), fetched the first time its page is shown; a preview says what will be there
+    const holdingBoxes = new Map();
+    const holdingsBox = s => {
+      const box = el('div', { class: 'sheet-holdings' }, opts.holdings ? el('p', { class: 'muted small' }, 'Loading…')
+        : el('p', { class: 'muted small' }, 'The character\'s own funds, gear and holdings, laid out and working like Party → Holdings.'));
+      if (opts.holdings) holdingBoxes.set(s, box);
+      return box;
+    };
+    const loadHoldings = () => {
+      for (const [s, box] of holdingBoxes) {
+        if (box.closest('[hidden]')) continue;
+        holdingBoxes.delete(s);
+        opts.holdings().then(n => box.replaceChildren(n), err => box.replaceChildren(el('p', { class: 'bad small' }, err.message)));
+      }
+    };
     const sections = (layout?.sections || []).map(s => el('section', { class: 'sheet-sec' + (hidden.has(s.key) ? ' is-hidden' : '') + (s.compact ? ' compact' : '')
-        + (s.width && s.width !== 'full' ? ` w-${s.width}` : ''), 'data-key': s.key },
+        + (s.holdings ? ' sheet-holdings-sec' : '') + (s.width && s.width !== 'full' ? ` w-${s.width}` : ''), 'data-key': s.key },
       el('div', { class: 'sheet-sec-head' }, el('h3', {}, s.title || ''), eye(s.key, `the ${s.title} section`)),
-      el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
+      s.holdings ? holdingsBox(s) : el('div', { class: 'sheet-fields' }, (s.fields || []).map(f => {
         if (!TYPE_NAMES[f.type]) return null;
         // its width in half-columns: medium is two, small one, large four, or the number the template gives; full is all
         const wide = f.type === 'longtext' || f.type === 'list' || f.size === 'full';
@@ -107,9 +123,10 @@ const Sheets = (() => {
         tabs.replaceChildren(...pages.map(p => button(p.name, () => { open = p; opts.onPage?.(p.name); show(); }, p === open ? 'on' : '',
           { role: 'tab', 'aria-selected': String(p === open) })));
         for (const p of pages) for (const sec of p.sections) secOf.get(sec).hidden = p !== open;
+        loadHoldings();
       };
       show();
-    }
+    } else loadHoldings();
     const form = el('div', { class: `sheet-form sheet-${mode}` }, tabs, el('div', { class: 'sheet-secs' }, sections));
     /** Show a value someone else saved, in place of what the field shows. */
     form.setValue = (key, v) => {
@@ -445,8 +462,16 @@ const Sheets = (() => {
       obj.key = L.newKey(label, taken);
       fresh.add(obj.key);
     };
-    const addSection = () => { const s = { key: '', title: 'New section', fields: [] }; layout.sections.push(s); freshKey(s, s.title); };
-    if (!layout.sections.length) addSection();
+    const addSection = () => {
+      const s = { key: '', title: 'New section', fields: [] };
+      // new sections go before the Holdings page, which stays last
+      const at = layout.sections.findIndex(x => x.holdings);
+      layout.sections.splice(at < 0 ? layout.sections.length : at, 0, s);
+      freshKey(s, s.title);
+    };
+    /** Every new template gets the Holdings page: the character's own funds, gear and holdings. */
+    const addHoldings = () => { if (!L.hasHoldings(layout)) layout.sections.push(L.holdingsSection(allKeys())); };
+    if (!layout.sections.length) { addSection(); addHoldings(); }
 
     const name = el('input', { value: t.name, maxlength: 150, 'aria-label': 'Template name', required: true });
     const game = el('input', { value: t.game, maxlength: 100, 'aria-label': 'Game', required: true, placeholder: 'e.g. Mothership' });
@@ -610,8 +635,11 @@ const Sheets = (() => {
     // the page names already in use, offered in each section's Page box
     const pageOptions = el('datalist', { id: 'sheet-ed-pages' });
     const pageList = () => pageOptions.replaceChildren(...[...new Set(layout.sections.map(s => s.page).filter(Boolean))].map(p => el('option', { value: p })));
+    const holdingsBtn = button('Add Holdings page', () => { addHoldings(); draw(); }, 'small', { 'data-tip': 'A page of the character\'s own funds, gear and holdings, like Party → Holdings' });
     function draw() {
       pageList();
+      holdingsBtn.hidden = L.hasHoldings(layout);
+      holdingsBtn.style.display = holdingsBtn.hidden ? 'none' : '';   // a button's own display would show it hidden or not
       list.replaceChildren(...layout.sections.map((s, si) => {
         const title = el('input', { value: s.title, maxlength: L.LIMITS.label, 'aria-label': 'Section title' });
         const sec = el('div', { class: 'sheet-ed-section', 'data-key': s.key });
@@ -629,8 +657,8 @@ const Sheets = (() => {
         const compact = el('input', { type: 'checkbox', checked: !!s.compact });
         compact.addEventListener('change', () => { if (compact.checked) s.compact = true; else delete s.compact; refresh(); });
         sec.append(
-          el('div', { class: 'row sheet-ed-sec-head' }, title, page, width,
-            el('label', { class: 'small check', 'data-tip': 'Each field on a line, its label beside its box, like a skill list' }, compact, ' Compact rows'),
+          el('div', { class: 'row sheet-ed-sec-head' }, title, page, s.holdings ? null : width,
+            s.holdings ? null : el('label', { class: 'small check', 'data-tip': 'Each field on a line, its label beside its box, like a skill list' }, compact, ' Compact rows'),
             button('↑', () => { if (moveIn(layout.sections, si, -1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} up`, disabled: si === 0 }),
             button('↓', () => { if (moveIn(layout.sections, si, 1)) draw(); }, 'icon-btn', { 'aria-label': `Move ${s.title} down`, disabled: si === layout.sections.length - 1 }),
             button('Remove section', async () => {
@@ -638,8 +666,9 @@ const Sheets = (() => {
               layout.sections.splice(si, 1);
               draw();
             }, 'small')),
-          el('div', { class: 'sheet-ed-fields' }, s.fields.map((f, i) => fieldRow(s, f, i))),
-          button('Add field', () => {
+          s.holdings ? el('p', { class: 'small muted' }, 'The Holdings page: the character\'s own funds, gear and holdings, laid out and working like Party → Holdings. It has no fields of its own.') : null,
+          s.holdings ? null : el('div', { class: 'sheet-ed-fields' }, s.fields.map((f, i) => fieldRow(s, f, i))),
+          s.holdings ? null : button('Add field', () => {
             const f = { key: '', label: 'New field', type: 'text' };
             s.fields.push(f);
             freshKey(f, f.label);
@@ -666,6 +695,7 @@ const Sheets = (() => {
       layout.sections = r.layout.sections;
       fresh.clear();
       for (const k of allKeys()) fresh.add(k);
+      addHoldings();
       draw();
       toast(r.from === 'fields' ? 'Drafted from the PDF\'s form fields. Check the labels and types' : 'Drafted from the PDF\'s text. Check the labels and types');
       const pages = el('div', { class: 'sheet-pdf-pages' });
@@ -709,7 +739,8 @@ const Sheets = (() => {
       pdfPanel,
       el('div', { class: 'sheet-ed' },
         el('div', { class: 'card sheet-ed-pane' }, list, pageOptions,
-          el('div', { class: 'row' }, button('Add section', () => { addSection(); draw(); }, 'small'), save)),
+          el('div', { class: 'row' }, button('Add section', () => { addSection(); draw(); }, 'small'),
+            holdingsBtn, save)),
         el('div', { class: 'card sheet-ed-preview' }, preview)));
     draw();
   }
@@ -1255,6 +1286,7 @@ const Sheets = (() => {
       if (play) return body.replaceChildren(playView(ch, values, canChange(), (k, v) => sender.send(k, v), rollHere, caps));
       form = renderSheetForm(ch.layout, values, {
         mode: canChange() ? 'edit' : 'view', hidden, canHide: mine, page: openPage, onPage: p => { openPage = p; },
+        holdings: ctx.holdingsPanel ? () => ctx.holdingsPanel(ch) : null,
         onChange: (k, v) => sender.send(k, v),
         onHide: (k, on) => save({ hidden: on ? [...new Set([...hidden, k])] : hidden.filter(x => x !== k) }),
         onRoll: rollHere, caps,

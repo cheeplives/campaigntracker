@@ -139,6 +139,8 @@ function upgrade_steps(): array {
             'Each party group can now show on the maps as one marker, as its characters\' tokens around it, or not at all to players, set on Party → Groups.'],
         ['050_entry_facts.sql', fn(PDO $p) => db_has_table($p, 'encyclopedia_entries') && !db_has_column($p, 'encyclopedia_entries', 'facts_json'),
             'Encyclopedia entries now have a facts box with their Category\'s fields (a Person\'s Role and Status, a Location\'s Ruler), set per Category in Settings, and there is a Quest Category whose Active ones show on At the Table.'],
+        ['051_personal_holdings.sql', fn(PDO $p) => db_has_table($p, 'party_gear') && !db_has_column($p, 'party_gear', 'character_id'),
+            'Every character sheet can now have a Holdings page of the character\'s own funds, gear and holdings, laid out like Party → Holdings.'],
     ];
 }
 

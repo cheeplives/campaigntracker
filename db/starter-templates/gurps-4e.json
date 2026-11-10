@@ -331,7 +331,7 @@
    {
     "key": "weapons",
     "title": "Weapons",
-    "page": "Equipment",
+    "page": "Weapons & Armor",
     "fields": [
      {
       "key": "melee",
@@ -422,7 +422,7 @@
    {
     "key": "notes_sec",
     "title": "Character Notes & Points",
-    "page": "Equipment",
+    "page": "Weapons & Armor",
     "width": "half",
     "fields": [
      {
@@ -464,13 +464,13 @@
    },
    {
     "key": "possessions",
-    "title": "Armor & Possessions",
-    "page": "Equipment",
+    "title": "Armor",
+    "page": "Weapons & Armor",
     "width": "half",
     "fields": [
      {
       "key": "gear",
-      "label": "Armor & Possessions",
+      "label": "Armor",
       "type": "list",
       "columns": [
        {
@@ -490,15 +490,15 @@
         "label": "Weight"
        }
       ]
-     },
-     {
-      "key": "money",
-      "label": "Money",
-      "type": "number",
-      "cols": 3,
-      "play": true
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }

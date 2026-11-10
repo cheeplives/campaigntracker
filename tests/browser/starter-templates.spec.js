@@ -25,6 +25,17 @@ test("Starter files: about forty, each a valid layout with its source, named by 
   }
 });
 
+test("Every starter has a Holdings page of the character's own, on a page of its own", () => {
+  for (const f of files()) {
+    const t = JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8"));
+    const h = t.layout.sections.filter(s => s.holdings);
+    expect(h.length, `${f}: one Holdings section`).toBe(1);
+    expect(h[0].fields, f).toEqual([]);
+    // its page holds nothing else
+    expect(t.layout.sections.filter(s => s.page === h[0].page).length, `${f}: the Holdings page is its own`).toBe(1);
+  }
+});
+
 test("Starter templates load, and loading again updates", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "chromium", "the server answers the same whatever the browser");
   await signIn(page, ADMIN);

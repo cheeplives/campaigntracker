@@ -2,9 +2,12 @@
  * template made from a PDF.
  *
  * Plain script, no build step, and no page needed, so the same file runs under Node in the tests. A layout is
- * { sections: [{ key, title, page?, width?, compact?, fields: [{ key, label, type, size?, cols?, play?, summary?, min?, max?,
+ * { sections: [{ key, title, page?, width?, compact?, holdings?, fields: [{ key, label, type, size?, cols?, play?, summary?, min?, max?,
  * count?, options?, columns: [{ key, label, width? }]? }] }] };
  * keys are permanent (values are stored by key) and unique across a template's sections and fields together.
+ * A section with holdings: true is the sheet's Holdings page: no fields of its own, it shows the character's own funds,
+ * gear and holdings, laid out and working like Party → Holdings (app.js holdingsPanel). One per template at most; every
+ * starter template has one (holdingsSection). 
  * api/sheets.php checks the same rules and is the authority; these give the editor its messages and the drafts.
  * The drafts come from what static/pdfimport.js reads with pdf.js: a fillable PDF's form fields and the text near
  * them, or a flat PDF's lines of text. They're allowed to be imperfect: the editor is where they're tidied. */
@@ -57,13 +60,18 @@
       else keys.add(k);
     };
     if (layout.sections.length > LIMITS.sections) out.push(`A template can have ${LIMITS.sections} sections at most`);
-    let n = 0;
+    let n = 0, holdings = 0;
     const pageNames = new Set();
     for (const s of layout.sections) {
       if (!isObj(s)) { out.push('A section is not a section'); continue; }
       key(s.key, `Section "${s.title}"`);
       if (s.width !== undefined && !WIDTHS.includes(s.width)) out.push(`Section "${s.title}": a section's width is full, half, third or two-thirds`);
       if (s.compact !== undefined && typeof s.compact !== 'boolean') out.push(`Section "${s.title}": compact is on or off`);
+      if (s.holdings !== undefined && typeof s.holdings !== 'boolean') out.push(`Section "${s.title}": holdings is on or off`);
+      if (s.holdings === true) {
+        if (++holdings === 2) out.push('A template can have one Holdings section');
+        if (Array.isArray(s.fields) && s.fields.length) out.push(`Section "${s.title}": a Holdings section has no fields of its own`);
+      }
       if (s.page !== undefined) {
         if (okLabel(s.page)) pageNames.add(s.page);
         else out.push(`Section "${s.title}": page names are 1 to ${LIMITS.label} characters`);
@@ -165,6 +173,13 @@
     }
     return [...out.values()];
   }
+
+  /** The Holdings page every template gets: the character's own funds, gear and holdings, on a page of its own. Its key
+   * is personal_holdings, or the next free one when a template already uses that (taken: the keys in use). */
+  function holdingsSection(taken = new Set()) {
+    return { key: newKey('personal_holdings', taken), title: 'Personal Holdings', page: 'Holdings', holdings: true, fields: [] };
+  }
+  const hasHoldings = layout => (layout?.sections || []).some(s => s.holdings === true);
 
   /** Every field by key: Map key → { field, section }. */
   function fields(layout) {
@@ -325,7 +340,7 @@
     return { sections: sections.filter(s => s.fields.length).slice(0, LIMITS.sections).map(({ labels, ...s }) => s) };
   }
 
-  const SheetLayout = { TYPES, LIMITS, SIZES, COLS, WIDTHS, COLUMN_WIDTHS, columnWidth, columnWidths, validate, newKey, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
+  const SheetLayout = { TYPES, LIMITS, SIZES, COLS, WIDTHS, COLUMN_WIDTHS, columnWidth, columnWidths, validate, newKey, holdingsSection, hasHoldings, fields, pages, coerce, reconcile, visibleTo, draftFromFormFields, draftFromText };
   if (typeof module !== 'undefined' && module.exports) module.exports = SheetLayout;
   else root.SheetLayout = SheetLayout;
 })(typeof window !== 'undefined' ? window : globalThis);

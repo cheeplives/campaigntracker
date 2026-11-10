@@ -179,36 +179,9 @@
     "page": "Character"
    },
    {
-    "key": "belongings",
-    "title": "Personal Belongings",
-    "page": "Belongings",
-    "fields": [
-     {
-      "key": "items",
-      "label": "Items (slots = 12 + Body)",
-      "type": "list",
-      "columns": [
-       {
-        "key": "item",
-        "label": "Item"
-       },
-       {
-        "key": "condition",
-        "label": "Condition"
-       }
-      ]
-     },
-     {
-      "key": "small_items",
-      "label": "Small Items",
-      "type": "longtext"
-     }
-    ]
-   },
-   {
     "key": "gear",
     "title": "Weapons & Armor",
-    "page": "Belongings",
+    "page": "Weapons & Armor",
     "fields": [
      {
       "key": "weapons",
@@ -253,12 +226,6 @@
       "cols": 2
      },
      {
-      "key": "holos",
-      "label": "Holos",
-      "type": "number",
-      "cols": 3
-     },
-     {
       "key": "debt",
       "label": "Debt",
       "type": "number",
@@ -269,7 +236,7 @@
    {
     "key": "notes_sec",
     "title": "Notes",
-    "page": "Belongings",
+    "page": "Weapons & Armor",
     "fields": [
      {
       "key": "notes",
@@ -277,6 +244,13 @@
       "type": "longtext"
      }
     ]
+   },
+   {
+    "key": "personal_holdings",
+    "title": "Personal Holdings",
+    "page": "Holdings",
+    "holdings": true,
+    "fields": []
    }
   ]
  }
