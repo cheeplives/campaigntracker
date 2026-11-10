@@ -30,6 +30,10 @@
   --stock: color-mix(in srgb, var(--panel) 88%, var(--accent));
   --tab-bg: color-mix(in srgb, var(--panel-2) 70%, var(--bg));
   --label: color-mix(in srgb, var(--accent) 70%, var(--dim));
+  /* the Encyclopedia portrait behind an entry's head: how faded, blurred and desaturated it sits under the text. A
+     theme may set its own; a browser can try others live with portraitFade({ fade, blur, sat }) in the console
+     (static/theme-init.js), which keeps them in this browser until portraitFade() with nothing puts them back */
+  --portrait-fade: .32; --portrait-blur: 2.5px; --portrait-sat: .6;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -1034,7 +1038,8 @@ a.enc-portrait:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
   .enc-title-row { flex-direction: column; }
 }
 /* ---- Portrait behind the text (.enc-hero.behind, Nov 2026): on a wide entry (two-column page, not Wide view) the
-   portrait leaves its column and sits down the right of the head, faded to a third and lightly blurred, fading out to the
+   portrait leaves its column and sits down the right of the head, faded and lightly blurred (--portrait-fade, --portrait-blur
+   and --portrait-sat on :root, which a theme may set and a browser may try live, see there), fading out to the
    left so the start of every line stays on the card; the buttons and the line ends run over it. Faded, it takes no
    clicks (the head's buttons and text do). Its tab along the bottom edge brings it forward whole and sharp while hovered,
    or pressed (iPad), and pressed again tucks it back; forward, it is the link to the sheet again. Narrow, the hero is
@@ -1044,7 +1049,7 @@ a.enc-portrait:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (min-width: 901px) {
   .enc-page:not(.wide) .enc-hero.behind { position: relative; grid-template-columns: minmax(0, 1fr); }
   .enc-page:not(.wide) .enc-hero.behind > .enc-portrait { position: absolute; top: -16px; right: -16px; bottom: -8px; width: min(360px, 45%); max-height: 460px; z-index: 0; pointer-events: none;
-    border: 0; border-radius: 0; box-shadow: none; opacity: .32; filter: blur(2.5px) saturate(.6); transition: opacity .25s, filter .25s, box-shadow .25s;
+    border: 0; border-radius: 0; box-shadow: none; opacity: var(--portrait-fade); filter: blur(var(--portrait-blur)) saturate(var(--portrait-sat)); transition: opacity .25s, filter .25s, box-shadow .25s;
     -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%); mask-image: linear-gradient(to left, #000 55%, transparent 100%); }
   .enc-page:not(.wide) .enc-hero.behind > .enc-portrait img { aspect-ratio: auto; width: 100%; height: 100%; object-fit: cover; object-position: top; }
   .enc-page:not(.wide) .enc-hero.behind > .enc-hero-body { position: relative; z-index: 1; }
