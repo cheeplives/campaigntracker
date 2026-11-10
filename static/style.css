@@ -650,7 +650,7 @@ svg.tl.dragging { cursor: grabbing; }
 .tl .tl-bar { fill-opacity: .35; stroke-width: 1.5; }
 .tl .tl-ev.secret .tl-dot, .tl .tl-ev.secret .tl-bar { stroke: var(--secret); stroke-width: 2; stroke-dasharray: 4 2; }
 .tl .tl-ev.past { opacity: .7; }
-.tl .tl-ev:hover .tl-label, .tl .tl-ev:focus .tl-label { font-weight: 700; }
+.tl .tl-ev:hover .tl-label, .tl .tl-ev:focus .tl-label { text-decoration: underline; }   /* not bold: a wider label would move under the finger between two taps */
 .tl .tl-now line { stroke: var(--bad); stroke-width: 2; }
 .tl .tl-now-hit, .tl .tl-hit { fill: transparent; }
 .tl-help { margin: 6px 0 0; }
