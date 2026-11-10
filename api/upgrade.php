@@ -104,7 +104,8 @@ function upgrade_steps(): array {
             'At the Table now has an action for each player and one for the party on every shift, listed on the session\'s page.'],
         ['033_party_characters.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_group_id'),
             'A character with no player can now travel with the party, and every character\'s Encyclopedia entry is tagged PC or NPC.'],
-        ['034_party_out.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_out'),
+        // 048 takes party_out away again, and an install that has had 047 is past this one
+        ['034_party_out.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'party_out') && !db_has_column($p, 'party_groups', 'players_can_move'),
             'A GM can now take a player\'s character out of the party, and put it back, with Travels with the party on its sheet.'],
         ['035_route_terrain.sql', fn(PDO $p) => db_has_table($p, 'map_routes') && !db_has_column($p, 'map_routes', 'terrain_json'),
             'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
@@ -132,6 +133,8 @@ function upgrade_steps(): array {
             'A portrait or token can now be moved and zoomed inside its circle, so a face isn\'t cut off on the sheet, the Encyclopedia or the map.'],
         ['047_party_group_moves.sql', fn(PDO $p) => db_has_table($p, 'party_groups') && !db_has_column($p, 'party_groups', 'players_can_move'),
             'Players can now move their own character to another group of the party, and start a group of their own, on Party → Groups. A GM can turn that off for a group.'],
+        ['048_party_by_character.sql', fn(PDO $p) => db_has_column($p, 'sheet_characters', 'party_out'),
+            'The party is now made of characters: each one travels with its own group, so a player\'s two characters can be in different groups. Each player\'s active character starts where its player was.'],
     ];
 }
 

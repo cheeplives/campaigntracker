@@ -433,46 +433,48 @@ test("Characters: a GM makes a PC with no player, and it travels with the party"
   await p1.goto(`index.html#/c/${cid}/groups`);
   await expect(p1.locator(".group-board")).toContainText("Wanderer");
 
-  // the GM takes it out of the party, then hands it to a player: it is in the party with them, not on its own
+  // the GM takes it out of the party and back, then hands it to a player: it keeps its group
   await gm.getByLabel("Travels with the party").uncheck();
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
   await expect(gm.locator(".sheet-page")).not.toContainText("In the party");   // drawn again from the save
   await gm.getByLabel("Travels with the party").check();
   await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).not.toBe("NULL");
   await expect(gm.locator(".sheet-page")).toContainText("In the party");
+  const was = sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim();
   await gm.getByLabel("Whose sheet").selectOption({ label: "Pip" });
-  await expect.poll(() => sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe("NULL");
-  // a player's character is in the party with its player: ticked, and the GM can still take it out
+  await expect.poll(() => sql(`SELECT owner_id IS NOT NULL FROM sheet_characters WHERE id=${id}`).trim()).toBe("1");
+  expect(sql(`SELECT party_group_id FROM sheet_characters WHERE id=${id}`).trim()).toBe(was);
+  // still ticked, and the GM can still take it out
   await expect(gm.getByLabel("Travels with the party")).toBeChecked();
 });
 
 test("Characters: a GM takes a player's character out of the party, and puts it back", async ({ page, browser }) => {
   const { cid, gm, p1, tpl, ids } = await party(page, browser);
   const pc = await make(p1, cid, { template_id: tpl.id, name: "Sir Benched" });
-  const groups = () => sql(`SELECT GROUP_CONCAT(members_json) FROM party_groups WHERE campaign_id=${cid}`).trim();
+  const group = () => sql(`SELECT COALESCE(party_group_id, 'none') FROM sheet_characters WHERE id=${pc.id}`).trim();
 
   await gm.goto(`index.html#/c/${cid}/groups`);
   await expect(gm.locator(".group-board")).toContainText("Sir Benched");
-  expect(groups()).toContain(String(ids.p1));
+  expect(group()).not.toBe("none");   // a player's new character starts in the main group
+  expect(sql(`SELECT GROUP_CONCAT(members_json) FROM party_groups WHERE campaign_id=${cid}`).trim()).not.toContain(String(ids.p1));   // it stands for them
 
-  // the GM unticks it on the sheet: the character, and its player with it, leave the party
+  // the GM unticks it on the sheet: the character leaves the party
   await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
   const box = gm.getByLabel("Travels with the party");
   await expect(box).toBeChecked();
   await box.uncheck();
-  await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("1");
+  await expect.poll(group).toBe("none");
   await expect(gm.locator(".sheet-page")).toContainText("Out of the party");
   await gm.goto(`index.html#/c/${cid}/groups`);
   await expect(gm.locator(".group-board")).toBeVisible();
   await expect(gm.locator(".group-board")).not.toContainText("Sir Benched");
-  expect(groups()).not.toContain(String(ids.p1));
 
   // a player can't put it back; the GM can, and it rejoins the main group
   const version = Number(sql(`SELECT version FROM sheet_characters WHERE id=${pc.id}`).trim());
   expect((await api(p1, "character_save", { id: pc.id, version, party: true }, cid)).status).toBe(403);
   await gm.goto(`index.html#/c/${cid}/characters/${pc.id}`);
   await gm.getByLabel("Travels with the party").check();
-  await expect.poll(() => sql(`SELECT party_out FROM sheet_characters WHERE id=${pc.id}`).trim()).toBe("0");
+  await expect.poll(group).not.toBe("none");
   await gm.goto(`index.html#/c/${cid}/groups`);
   await expect(gm.locator(".group-board")).toContainText("Sir Benched");
 

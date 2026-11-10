@@ -145,7 +145,7 @@ test("a short rest costs no shift, and downtime covers whole days and comes off 
   expectNoErrors(errors);
 });
 
-test("a split party's downtime is for one group, and offers its players and its characters with no player", async ({ page, browser }) => {
+test("a split party's downtime offers every player and every character with no player in the party, whatever their group", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Gwen"), p1 = person("Ash"), p2 = person("Bryn");
   await signIn(page, gm);
@@ -171,74 +171,51 @@ test("a split party's downtime is for one group, and offers its players and its 
   const split = await api(page, "group_split", { from_id: groups[0].id, name: "Scouts", members: [ids.p2], characters: [hireling.id] }, cid);
   expect(split.status).toBe(200);
   groups = split.json.groups;
-  const [main, scouts] = groups;
-
-  // The dialog asks which group it is for, the main one first.
+  // Time passes for everyone alike: the dialog asks for no group, and the card names none.
   await page.goto(`index.html#/c/${cid}/downtime`);
   await page.getByRole("button", { name: "+ New downtime" }).click();
   const dlg = page.locator("dialog.dt-dialog");
-  const party = dlg.getByLabel("Party", { exact: true });
-  await expect(party).toHaveValue(String(main.id));
-  await party.selectOption({ label: "Scouts" });
+  await expect(dlg.getByLabel("Party", { exact: true })).toHaveCount(0);
   await dlg.getByLabel("Short Rest").check();
   await dlg.getByRole("button", { name: "Create" }).click();
   await expect(dlg).toHaveCount(0);
   const card = page.locator(".downtime");
-  await expect(card).toContainText("👥 Scouts");
-  expect((await api(page, "downtimes", undefined, cid)).json.downtimes[0].group_id).toBe(scouts.id);
+  await expect(card).not.toContainText("👥");
+  await expect(card.getByLabel("Party", { exact: true })).toHaveCount(0);
 
-  // Only the Scouts are offered: Bryn and the hireling, never Ash or the characters who stayed behind.
+  // Everyone is offered, from both groups: the players, then the characters with no player, the GM-only spy among them.
   await card.getByLabel("Relax", { exact: true }).check();
   const who = card.getByRole("group", { name: "Who does Relax" });
-  await expect(who.getByRole("button")).toHaveText(["Bryn", "Hireling (NPC)"]);
-  await who.getByRole("button", { name: "Hireling (NPC)" }).click();
-  await who.getByRole("button", { name: "Bryn" }).click();
+  await expect(who.getByRole("button")).toHaveCount(5);
+  expect((await who.getByRole("button").allTextContents()).sort()).toEqual(["Absent Friend", "Ash", "Bryn", "Hireling (NPC)", "Spy (NPC)"]);
+  for (const name of ["Bryn", "Hireling (NPC)", "Absent Friend", "Spy (NPC)"]) await who.getByRole("button", { name }).click();
   await card.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Short Rest saved")).toBeVisible();
   let saved = (await api(page, "downtimes", undefined, cid)).json.downtimes[0];
-  expect(saved.activities).toEqual([{ name: "Relax", members: [ids.p2], characters: [hireling.id] }]);
-
-  // Switched to the main group, the Scouts come off and its own people are offered, the GM-only spy among them.
-  await card.getByLabel("Party", { exact: true }).selectOption({ label: main.name });
-  await expect(who.getByRole("button")).toHaveText(["Ash", "Absent Friend", "Spy (NPC)"]);
-  await expect(who.locator("button.on")).toHaveCount(0);
-  await who.getByRole("button", { name: "Absent Friend" }).click();
-  await who.getByRole("button", { name: "Spy (NPC)" }).click();
-  await card.getByRole("button", { name: "Save", exact: true }).click();
-  // the first save's toast, with the same words, may still be up: wait for this save to reach the server instead
-  await expect.poll(async () => (await api(page, "downtimes", undefined, cid)).json.downtimes[0].group_id).toBe(main.id);
-  await expect(card.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
-  saved = (await api(page, "downtimes", undefined, cid)).json.downtimes[0];
-  expect(saved.activities[0].characters.sort()).toEqual([absent.id, spy.id].sort());
+  expect(saved.activities[0].members).toEqual([ids.p2]);
+  expect(saved.activities[0].characters.sort()).toEqual([hireling.id, absent.id, spy.id].sort());
+  expect(saved.group_id).toBeNull();
 
   // A player reads the names, but not the GM-only character's.
   const mine = await api(pp, "downtimes", undefined, cid);
-  expect(mine.json.downtimes[0].activities[0].characters).toEqual([absent.id]);
+  expect(mine.json.downtimes[0].activities[0].characters.sort()).toEqual([hireling.id, absent.id].sort());
   expect(JSON.stringify(mine.json)).not.toContain("Spy");
   await pp.goto(`index.html#/c/${cid}/downtime`);
-  await expect(pp.locator(".downtime")).toContainText("Relax · Absent Friend");
+  await expect(pp.locator(".downtime")).toContainText("Absent Friend");
   await expect(pp.locator(".downtime")).not.toContainText("Spy");
 
-  // A group of another campaign, and a player's own character, are refused or dropped.
-  expect((await api(page, "downtime_save", { kind: "short_rest", slots: 0, group_id: 999999 }, cid)).status).toBe(404);
+  // A character of another campaign is dropped.
   expect((await api(page, "downtime_save", { id: saved.id, activities: [{ name: "Relax", members: [], characters: [999999] }] }, cid)).status).toBe(200);
   expect((await api(page, "downtimes", undefined, cid)).json.downtimes[0].activities[0].characters).toEqual([]);
 
-  // Merged back, the card is for the whole party again.
-  expect((await api(page, "downtime_save", { id: saved.id, group_id: scouts.id, activities: [{ name: "Relax", members: [], characters: [hireling.id] }] }, cid)).status).toBe(200);
-  // a copy of the campaign points at its own group and characters
+  // a copy of the campaign points at its own characters
+  expect((await api(page, "downtime_save", { id: saved.id, activities: [{ name: "Relax", members: [], characters: [hireling.id] }] }, cid)).status).toBe(200);
   const copy = await api(page, "campaign_copy", { name: `Split copy ${gm.id}` }, cid);
   expect(copy.status).toBe(200);
   const cc = Number(sql(`SELECT id FROM campaigns WHERE name='Split copy ${gm.id}'`).trim());
-  const cdt = sql(`SELECT d.group_id, g.name, d.activities_json FROM downtimes d JOIN party_groups g ON g.id=d.group_id WHERE d.campaign_id=${cc}`).trim().split("\t");
-  expect(cdt[1]).toBe("Scouts");
-  const cch = JSON.parse(cdt[2])[0].characters;
+  const cch = JSON.parse(sql(`SELECT activities_json FROM downtimes WHERE campaign_id=${cc}`).trim())[0].characters;
   expect(sql(`SELECT e.name FROM sheet_characters c JOIN encyclopedia_entries e ON e.id=c.entry_id WHERE c.id=${cch[0]} AND c.campaign_id=${cc}`).trim()).toBe("Hireling");
-  expect((await api(page, "group_merge", { id: scouts.id, into_id: main.id }, cid)).status).toBe(200);
-  saved = (await api(page, "downtimes", undefined, cid)).json.downtimes[0];
-  expect(saved.group_id).toBeNull();
   await page.reload();
-  await expect(card).not.toContainText("👥");
   await expect(card.getByLabel("Relax", { exact: true })).toBeChecked();
   await expect(card.getByRole("group", { name: "Who does Relax" }).locator("button.on")).toHaveText(["Hireling (NPC)"]);
   expectNoErrors(errors);

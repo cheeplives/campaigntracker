@@ -391,7 +391,7 @@ function character_card(array $c, bool $isGm, array $pics = []): array {
         'template' => ['id' => (int)$c['template_id'], 'name' => $c['template_name'], 'game' => $c['game']],
         'play' => $play, 'has_play' => $hasPlay, 'summary' => $summary, 'sheet_visible' => $visible, 'sheet_public' => (bool)(int)$c['sheet_public'],
         'can_edit' => $full, 'version' => (int)$c['version'], 'pic' => character_pic($c, $isGm, $pics), 'portrait_id' => $c['portrait_file'] !== null && ($isGm || !(int)$c['portrait_secret']) ? (int)$c['portrait_file'] : null,
-        'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'party_out' => (bool)(int)$c['party_out'], 'owner_is_player' => $c['owner_role'] === 'player'];
+        'party_group_id' => $c['party_group_id'] !== null ? (int)$c['party_group_id'] : null, 'owner_is_player' => $c['owner_role'] === 'player'];
 }
 /** Each entry's character for the Encyclopedia, as entry id => {id, kind, sheet_visible, owner, game, summary, pic}: the
  * Summary fields as this member may see them (none when the sheet is hidden from them). */
@@ -522,8 +522,8 @@ function characters_action(string $action, int $cid): void {
             if (!$isGm && ($kind !== 'pc' || p('party') || (p('owner_id') !== null && (int)p('owner_id') !== $me['id']))) fail('Players make their own PCs', 403);
             // no owner_id: whoever makes it; 0: no player (a GM runs it)
             $owner = p('owner_id') === null ? $me['id'] : character_owner_in($cid, p('owner_id'), $isGm);
-            // in the party: a character with no player in this campaign travels with the main group when the GM says so
-            $party = $isGm && p('party') && ($owner === null || member_role($cid, $owner) !== 'player') ? party_main_id($cid) : null;
+            // in the party: a player's PC starts in the main group; one with no player in this campaign joins it when the GM says so
+            $party = $kind === 'pc' && $owner !== null && member_role($cid, $owner) === 'player' || $isGm && p('party') ? party_main_id($cid) : null;
             $pdo = db();
             $pdo->beginTransaction();
             // use_entry: an entry that already has the name gets the sheet (a member's character from the Members tab)
@@ -627,15 +627,16 @@ function characters_action(string $action, int $cid): void {
                 $args[] = $owner;
                 $handed = $owner ?? 0;
                 $toPlayer = $to === 'player';
-                if (p('party') === null && $owner !== ($c['owner_id'] !== null ? (int)$c['owner_id'] : null)) $set[] = 'party_out=0';   // a new player starts in the party
+                // handed to a new player, it travels with the main group unless it was in one already
+                if (p('party') === null && $toPlayer && $c['party_group_id'] === null && $owner !== ($c['owner_id'] !== null ? (int)$c['owner_id'] : null)) {
+                    $set[] = 'party_group_id=?';
+                    $args[] = party_main_id($cid);
+                }
             }
-            // in the party: a character no player of this campaign plays travels in a party group of its own choosing; a
-            // player's is in the party with its player, unless a GM takes it out (party_out), which takes them out too
+            // in the party: every character travels in a party group of its own (Party → Groups moves it); this ticks it in,
+            // to the main group, or out
             if (p('party') !== null && !$isGm) fail('Only a GM can say who travels with the party', 403);
-            if ($toPlayer) {
-                $set[] = 'party_group_id=NULL';
-                if (p('party') !== null) { $set[] = 'party_out=?'; $args[] = p('party') ? 0 : 1; }
-            } elseif (p('party') !== null) {
+            if (p('party') !== null) {
                 $set[] = 'party_group_id=?';
                 $args[] = !p('party') ? null : ($c['party_group_id'] !== null ? (int)$c['party_group_id'] : party_main_id($cid));
             }
@@ -760,11 +761,13 @@ function characters_action(string $action, int $cid): void {
             $c = character_row($cid, int_in(p('character_id'), 1), $isGm);
             if (!$isGm && (int)$c['owner_id'] !== $me['id']) fail('Pick one of your own characters', 403);
             if ((int)$c['entry_secret']) fail("A GM-only character can't be someone's character", 409);
+            $main = $to === 'player' ? party_main_id($cid) : null;   // before the transaction: it may make the main group
             $pdo = db();
             $pdo->beginTransaction();
             if ((int)$c['owner_id'] !== $uid) {
-                $pdo->prepare('UPDATE sheet_characters SET owner_id=?, party_out=0, party_group_id=' . ($to === 'player' ? 'NULL' : 'party_group_id') . ', version=version+1 WHERE id=?')
-                    ->execute([$uid, $c['id']]);
+                // a player's character travels with the main group unless it was in one already
+                $pdo->prepare('UPDATE sheet_characters SET owner_id=?, party_group_id=' . ($to === 'player' ? 'COALESCE(party_group_id, ?)' : 'party_group_id') . ', version=version+1 WHERE id=?')
+                    ->execute($to === 'player' ? [$uid, $main, $c['id']] : [$uid, $c['id']]);
                 $pdo->prepare('UPDATE campaign_members SET active_character_id=NULL WHERE active_character_id=? AND user_id<>?')->execute([$c['id'], $uid]);
             }
             character_make_active($cid, $uid, (int)$c['id'], true);

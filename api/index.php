@@ -1339,9 +1339,10 @@ try {
         $st->execute([$cid, $uid]);
         $isGmTarget = db()->prepare("SELECT role FROM campaign_members WHERE campaign_id=? AND user_id=?");
         $isGmTarget->execute([$cid, $uid]);
-        if ($isGmTarget->fetchColumn() === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
+        $was = $isGmTarget->fetchColumn();
+        if ($was === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
-        party_remove_member($cid, $uid);
+        party_remove_member($cid, $uid, $was === 'player');
         db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=?')->execute([$cid, $uid]);   // their token is free for another
         out(['ok' => true]);
 
@@ -1528,8 +1529,8 @@ try {
         $shiftNotes = $st->fetchAll();
         out(['day' => $day, 'shifts' => $shifts, 'shift_notes' => $shiftNotes, 'shift_actions' => shift_actions_of($cid, $ad, null, $isGm), 'events' => $events, 'today' => $today,
             'sessions' => day_sessions($cid, $c, $ad, $isGm),
-            // the characters with no player who travel with the party, in any of its groups: each gets an action line
-            'party_characters' => array_merge(...array_values(party_characters($cid, $isGm)) ?: [[]])]);
+            // the characters with no player who travel with the party, who get an action of their own (a player's has its player's)
+            'party_characters' => array_values(array_filter(array_merge(...array_values(party_characters($cid, $isGm)) ?: [[]]), fn($c) => $c['player_id'] === null))]);
 
     case 'days_save': // GM: batch upsert generated weather (+ region) — never touches notes
         $cid = cid(); need_gm($cid);
