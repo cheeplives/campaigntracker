@@ -6,7 +6,10 @@ iPhone/iPad), on desktop, phone and iPad-sized screens. Set up the same way as
 Sinless's suite, with PHP and MySQL added because this app has a server.
 
 They run on GitHub Actions on every pull request and every push to main
-(`.github/workflows/browser-tests.yml`), one job per project:
+(`.github/workflows/browser-tests.yml`), every project in full, each split
+across two or three runners with Playwright's `--shard` so the slow engines finish
+as soon as the fast ones (about 12 minutes in all, where one runner per project
+took 23). The single **Browser tests** check is green only when every shard passed:
 
 | Project | Engine | Emulates |
 |---|---|---|
@@ -17,7 +20,7 @@ They run on GitHub Actions on every pull request and every push to main
 | `mobile-chrome` | Chromium | Pixel 7 (touch, 412px) |
 | `ipad` | WebKit | iPad, 7th generation (touch, no hover, 810px portrait) |
 
-A failed job uploads a `report-<project>` artifact with the HTML report,
+A failed job uploads a `report-<project>-php<version>-<shard>of<shards>` artifact with the HTML report,
 screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 
 ## What's covered
