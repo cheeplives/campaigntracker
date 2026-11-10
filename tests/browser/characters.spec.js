@@ -661,8 +661,8 @@ test("Encyclopedia: an entry's editor has every button its page has, and a Perso
   const more = form.locator(".enc-actions .kit-menu");
   const openMore = async () => { if (!await more.evaluate(d => d.open)) await more.locator("summary").click(); };
   await openMore();
-  await expect(form.getByRole("button", { name: "📋 Copy as handout" })).toBeVisible();
-  await expect(form.getByRole("button", { name: "🔍 Scan" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Copy as handout" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Scan" })).toBeVisible();
   await expect(form.getByRole("heading", { name: "Connections" })).toBeVisible();
   const add = gm.getByRole("button", { name: "Add character sheet" });
   await expect(add).toBeVisible();
@@ -829,7 +829,7 @@ test("Characters cards: Play shows on a blank sheet, a GM's Party switch, and ev
   // the GM's group picker puts it in a group of the party and takes it out again
   const sw = card("Katrina").getByLabel("Group for Katrina");
   await expect(sw).toHaveValue("");
-  await sw.selectOption({ label: "👥 The party" });
+  await sw.selectOption({ label: "The party" });
   await expect(page.locator("#toast")).toHaveText("Katrina travels with The party");
   await expect(card("Katrina")).toContainText("In the party");
   expect(sql(`SELECT party_group_id IS NOT NULL FROM sheet_characters WHERE id=${kat.id}`).trim()).toBe("1");

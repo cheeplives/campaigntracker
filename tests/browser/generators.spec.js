@@ -97,7 +97,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(names.locator(".gen-item .muted").first()).toHaveText(/^Real name: /);
   const handle = await names.locator(".gen-name").first().textContent();
   await names.locator(".gen-add").first().click();
-  await expect(names.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  await expect(names.getByRole("link", { name: "Open", exact: true })).toHaveCount(1);
   const hj = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.name === handle);
   expect(hj.category).toBe("person");
   expect(hj.notes).toContain("Real name: ");
@@ -117,7 +117,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(names.locator(".gen-item .muted")).toHaveCount(10);
   await expect(names.locator(".gen-item .muted").first()).toHaveText(/^[A-Z].+\. [A-Z].+\.$/);
   const before = await names.locator(".gen-name").allTextContents();
-  await names.getByRole("button", { name: "🎲 Generate" }).click();
+  await names.getByRole("button", { name: "Generate", exact: true }).click();
   await expect.poll(async () => (await names.locator(".gen-name").allTextContents()).join()).not.toBe(before.join());
   await page.reload();
   await expect(page.getByLabel("Genre", { exact: true })).toHaveValue("western");
@@ -130,10 +130,10 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await expect(town.locator(".gen-town-title .muted")).toContainText("Mining camp");
   const townName = await town.locator(".gen-town-title h3").textContent();
   await town.locator(".gen-town-title").getByRole("button", { name: `Add ${townName} to the Encyclopedia` }).click();
-  await expect(town.locator(".gen-town-title").getByRole("link", { name: "📖 Open" })).toBeVisible();
+  await expect(town.locator(".gen-town-title").getByRole("link", { name: "Open", exact: true })).toBeVisible();
   const personName = await town.locator(".gen-sub").nth(1).locator(".gen-name").first().textContent();
   await town.locator(".gen-sub").nth(1).locator(".gen-add").first().click();
-  await expect(town.locator(".gen-sub").nth(1).getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  await expect(town.locator(".gen-sub").nth(1).getByRole("link", { name: "Open", exact: true })).toHaveCount(1);
   const { json } = await api(page, "encyclopedia", undefined, cid);
   const byName = Object.fromEntries(json.entries.map(e => [e.name, e]));
   expect(byName[townName].is_secret).toBe(true);
@@ -147,8 +147,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   const company = cards.nth(2);
   const coName = await company.locator(".gen-name").first().textContent();
   await company.locator(".gen-add").first().click();
-  await expect(company.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
-  await company.getByRole("link", { name: "📖 Open" }).click();
+  await expect(company.getByRole("link", { name: "Open", exact: true })).toHaveCount(1);
+  await company.getByRole("link", { name: "Open", exact: true }).click();
   await expect(page.locator(".enc-detail h2")).toHaveText(coName);
 
   // A player has no GM-only switch; what they add is public.
@@ -163,7 +163,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   const tav = pp.locator(".gen-card").nth(1);
   const tavName = await tav.locator(".gen-name").first().textContent();
   await tav.locator(".gen-add").first().click();
-  await expect(tav.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  await expect(tav.getByRole("link", { name: "Open", exact: true })).toHaveCount(1);
   const pj = (await api(pp, "encyclopedia", undefined, cid)).json;
   expect(pj.entries.map(e => e.name).sort()).toEqual([coName, tavName].sort());
   // nothing else names the GM-only town (a company named after it, like "Badwater Gulch Herbalists", is fine)
@@ -176,14 +176,14 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   const rumors = cards.filter({ has: page.getByRole("heading", { name: /^Rumors/ }) });
   await expect(rumors.getByRole("checkbox", { name: "Use Encyclopedia names" })).toBeChecked();
   await expect.poll(async () => {
-    await rumors.getByRole("button", { name: "🎲 Generate" }).click();
+    await rumors.getByRole("button", { name: "Generate", exact: true }).click();
     const text = (await rumors.locator(".gen-rumor").allTextContents()).join("\n");
     return text.includes(townName) || text.includes(personName);
   }, { timeout: 15000 }).toBe(true);
   await expect(rumors.locator(".gen-item .muted").first()).toHaveText(/^Heard from .+\.$/);
   const rumor = await rumors.locator(".gen-rumor").first().textContent();
   await rumors.locator(".gen-add").first().click();
-  await expect(rumors.getByRole("link", { name: "📖 Open" })).toHaveCount(1);
+  await expect(rumors.getByRole("link", { name: "Open", exact: true })).toHaveCount(1);
   const entry = (await api(page, "encyclopedia", undefined, cid)).json.entries.find(e => e.tags.some(t => t.name === "Rumor"));
   expect(entry.name).toMatch(/^Rumor: /);
   const plain = entry.notes.replace(/<[^>]+>/g, " ").replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");

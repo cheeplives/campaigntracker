@@ -1427,7 +1427,7 @@ const MapsTab = (() => {
     }, 'small map-tools-fold');
     const syncToolsFold = () => {
       toolbar.classList.toggle('folded', toolsFolded);
-      toolsFold.textContent = toolsFolded ? '🧰' : '⟨';
+      toolsFold.replaceChildren(...KIT.withIcons(toolsFolded ? '🧰' : '⟨'));
       toolsFold.setAttribute('aria-label', toolsFolded ? 'Show the toolbar' : 'Hide the toolbar');
       toolsFold.setAttribute('aria-expanded', String(!toolsFolded));
       toolsFold.dataset.tip = toolsFolded ? 'Show the map tools' : 'Fold the map tools away';

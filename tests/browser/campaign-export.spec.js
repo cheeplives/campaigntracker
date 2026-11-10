@@ -126,7 +126,7 @@ test("a GM downloads the whole campaign as a zip; a player can't", async ({ page
 
   // the button
   await page.goto(`index.html#/c/${cid}/settings/tools`);
-  await page.getByRole("button", { name: "⬇ Export the whole campaign…" }).click();
+  await page.getByRole("button", { name: "Export the whole campaign…" }).click();
   const dialog = page.getByRole("dialog", { name: "Export the whole campaign" });
   await expect(dialog.getByLabel("Include the pictures and files (a bigger download)")).toBeChecked();
   const [dl] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Download" }).click()]);
@@ -148,7 +148,7 @@ test("a GM downloads the whole campaign as a zip; a player can't", async ({ page
   expect(text("Maps.md")).toContain(`(${pic[0].split("/").map(encodeURIComponent).join("/")})`);
 
   // without the files
-  await page.getByRole("button", { name: "⬇ Export the whole campaign…" }).click();
+  await page.getByRole("button", { name: "Export the whole campaign…" }).click();
   await dialog.getByLabel("Include the pictures and files (a bigger download)").uncheck();
   const [dl2] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Download" }).click()]);
   const zip2 = unzip(fs.readFileSync(await dl2.path()));
@@ -163,6 +163,6 @@ test("a GM downloads the whole campaign as a zip; a player can't", async ({ page
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
   expect((await api(pp, "campaign_export", undefined, cid)).status).toBe(403);
   await pp.goto(`index.html#/c/${cid}/settings`);
-  await expect(pp.getByRole("button", { name: "⬇ Export the whole campaign…" })).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "Export the whole campaign…" })).toHaveCount(0);
   expectNoErrors(errors);
 });

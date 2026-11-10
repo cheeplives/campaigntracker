@@ -80,7 +80,7 @@ test("a GM sets sunrise and sunset on the seasons and the day page shows them", 
   await rows.nth(1).getByLabel("Sunrise").fill("8:00");
   await rows.nth(1).getByLabel("Sunset").fill("16:00");
   // the season table previews the first of each month
-  await expect(page.locator(".seasonmap")).toContainText("☀ 08:00–16:00");
+  await expect(page.locator(".seasonmap")).toContainText("08:00–16:00");
   await page.getByRole("button", { name: "Save calendar" }).click();
   await expect(page.getByText("Calendar saved")).toBeVisible();
   const saved = (await api(page, "campaign", undefined, cid)).json.campaign.calendar.seasons;

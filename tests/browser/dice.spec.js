@@ -244,7 +244,7 @@ test("a dice system: the GM starts from a game in Settings, tries a roll, and pl
   await expect(form.locator(".dice-set-params")).toContainText("DC");                       // the game's own name for the target
   await expect(form.locator("#set-d20-margin")).toHaveValue("10");
   await expect(form.locator(".dice-odds-key")).toContainText("Success");
-  await form.getByRole("button", { name: "🎲 Try a roll" }).click();
+  await form.getByRole("button", { name: "Try a roll" }).click();
   await expect(form.locator(".dice-try-res small.tier")).toHaveText(/success|failure/i);
   await expect(form.locator(".dice-try-out .die")).toHaveCount(1);
   await form.locator("#set-d20-tn").fill("12");

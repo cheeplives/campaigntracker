@@ -79,7 +79,7 @@ test("the GM formats Public and Secret notes; players read only the Public ones"
   expect(range.notes[0].items[0].text).toMatch(/^Gunther runs the inn\nRope/);
   expect(JSON.stringify(range.notes)).not.toContain("<");
   await page.reload();
-  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "⬇ Export")]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "Export")]);
   const md = require("fs").readFileSync(await dl.path(), "utf8");
   expect(md).toContain("**Gunther** runs the inn");
   expect(md).toContain("| Rope |  |  |");

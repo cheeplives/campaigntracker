@@ -43,7 +43,7 @@ test("a campaign opens on At the Table: the clock's shift in a big box, End shif
   await expect.poll(async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day.locations).toBe("Altdorf; the Grey Lady inn");
   // The re-roll saves, then redraws the page: wait for the redraw, so the next click doesn't land on a link it replaces.
   await page.getByLabel("Locations visited").evaluate(e => { e.dataset.beforeReroll = "1"; });
-  await page.getByRole("button", { name: "🎲 Re-roll weather" }).click();
+  await page.getByRole("button", { name: "Re-roll weather" }).click();
   await expect(page.locator("[data-before-reroll]")).toHaveCount(0);
   await expect(page.getByLabel("Locations visited")).toHaveValue("Altdorf; the Grey Lady inn");   // the editor stays open as the page redraws
   await expect(page.locator(".tv-summary .notes-locs")).toContainText("Altdorf; the Grey Lady inn");

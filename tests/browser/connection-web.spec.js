@@ -95,7 +95,7 @@ test("the web dialog opens from an entry and from the menu, follows a click, and
   await link("Alda", { label: "Ally of", symmetric: true }, ["Mira"], { is_secret: true });
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${ids.Cora}`);
-  await page.getByRole("button", { name: "🕸 Web" }).click();
+  await page.getByRole("button", { name: "Web" }).click();
   const dlg = page.locator("dialog.web-dialog");
   await expect(dlg).toBeVisible();
   await expect(dlg.locator("[data-node]")).toHaveCount(4);                       // Cora, her parents and Dov
@@ -116,7 +116,7 @@ test("the web dialog opens from an entry and from the menu, follows a click, and
   await expect(dlg).toHaveCount(0);
 
   // the family tree is offered where there is family, and not where there is none
-  await page.getByRole("button", { name: "🌳 Family" }).click();
+  await page.getByRole("button", { name: "Family" }).click();
   await expect(dlg.locator("h3")).toHaveText("Cora: family");
   await expect(dlg.locator("[data-node]")).toHaveCount(3);                       // Cora and her two parents
   const box = id => dlg.locator(`[data-node="${id}"]`).boundingBox();
@@ -124,10 +124,10 @@ test("the web dialog opens from an entry and from the menu, follows a click, and
   expect(c.y).toBeGreaterThan(a.y + 20);                                         // children below parents
   await dlg.getByRole("button", { name: "Close" }).click();
   await page.goto(`index.html#/c/${cid}/encyclopedia/${ids.Mira}`);
-  await expect(page.getByRole("button", { name: "🌳 Family" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Family" })).toHaveCount(0);
 
   // the whole campaign, from the list's menu
-  await pressMore(page, "Encyclopedia", "🕸 Campaign web");
+  await pressMore(page, "Encyclopedia", "Campaign web");
   await expect(dlg.locator("h3")).toContainText("every connection");
   await expect(dlg.locator("[data-node]")).toHaveCount(5);                       // The Vault has no connections
   expect(await dlg.locator("[data-edge]").count()).toBe(6);
@@ -142,7 +142,7 @@ test("the web dialog opens from an entry and from the menu, follows a click, and
   await approve(browser, player.email);
   await ok("member_add", { email: player.email, role: "player" });
   await pp.goto(`index.html#/c/${cid}/encyclopedia/${ids.Alda}`);
-  await pp.getByRole("button", { name: "🕸 Web" }).click();
+  await pp.getByRole("button", { name: "Web" }).click();
   const pd = pp.locator("dialog.web-dialog");
   await expect(pd.locator("[data-node]")).toHaveCount(3);                        // Alda, Bram and Cora, not Mira
   await expect(pd.locator(`[data-node="${ids.Mira}"]`)).toHaveCount(0);

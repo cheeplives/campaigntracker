@@ -678,7 +678,7 @@ test("Maps: a GM exports the picture, and a gridded map as Universal VTT that re
   await page.goto(`#/c/${cid}/maps/${id}`);
   await gearAction(page, "Export…");
   await expect(page.getByRole("button", { name: "Universal VTT (.dd2vtt)" })).toBeDisabled();   // no grid yet
-  await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("Set grid squares first (⚙ → Set scale… → Grid squares)");
+  await expect(page.getByRole("dialog", { name: "Export the map" })).toContainText("→ Set scale… → Grid squares)");
   const [pic] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Export the map" }).getByRole("button", { name: "Picture", exact: true }).click()]);
   expect(pic.suggestedFilename()).toBe("Keep Upper Lower.png");
   expect(Buffer.compare(require("fs").readFileSync(await pic.path()), MAP_PNG)).toBe(0);
@@ -756,7 +756,7 @@ test("Maps: a GM renames a map, hides it and deletes it", async ({ page, browser
   const up = await upload(page, cid, "map", id);
   await api(page, "map_save", { id, image_id: up.json.file.id }, cid);
   await page.goto(`#/c/${cid}/maps/${id}`);
-  await expect(page.getByRole("button", { name: "Rename" })).toBeHidden();   // in the ⚙ menu
+  await expect(page.getByRole("button", { name: "Rename" })).toBeHidden();   // in the menu
   await page.getByLabel("Map settings").click();
   await page.getByRole("button", { name: "Rename" }).click();
   await page.getByLabel("New name").fill("Fresh name");
@@ -792,9 +792,9 @@ test("Maps: marker() draws a labelled marker and the coordinates map to the pict
     const layer = L.layerGroup().addTo(map);
     const m = MapsTab.marker(layer, { x: 150, y: 100, icon: "📍", label: "Inn", className: "test-pin", draggable: false, onOpen: () => document.createTextNode("Hello") });
     return { ll: MapsTab.toLatLng(10, 20), xy: MapsTab.toXY({ lat: -20, lng: 10 }), isMarker: m instanceof L.Marker,
-      label: host.querySelector(".map-marker.test-pin .map-marker-label")?.textContent, icon: host.querySelector(".map-marker-icon")?.textContent };
+      label: host.querySelector(".map-marker.test-pin .map-marker-label")?.textContent, icon: host.querySelector(".map-marker-icon .ico")?.getAttribute("class") };
   });
-  expect(out).toMatchObject({ ll: [-20, 10], xy: { x: 10, y: 20 }, isMarker: true, label: "Inn", icon: "📍" });
+  expect(out).toMatchObject({ ll: [-20, 10], xy: { x: 10, y: 20 }, isMarker: true, label: "Inn", icon: "ico ico-place" });
   expectNoErrors(errors);
 });
 
@@ -867,13 +867,13 @@ test("Maps: a GM pins a new entry and an existing event, and the entry links bac
   await pinForm(page).getByLabel("Entry name").fill("Weathertop");
   await pinForm(page).getByRole("button", { name: "New entry here" }).click();
   await expect(page.locator(".map-pin")).toHaveCount(1);
-  await expect(page.locator(".map-pin .map-marker-icon")).toHaveText("📍");
+  await expect(page.locator(".map-pin .map-marker-icon .ico-place")).toHaveCount(1);
   await expect(page.locator(".map-pin")).toContainText("Weathertop");
   await page.goto(`#/c/${cid}/encyclopedia`);
   await expect(page.locator("section[data-cat=location]")).toContainText("Weathertop");   // listed under the Location Category
   await page.getByRole("link", { name: /Weathertop/ }).first().click();
   await expect(page.locator("select[name=category]")).toHaveValue("location");
-  const back = page.getByRole("link", { name: "📍 On the map: Sartar" });
+  const back = page.getByRole("link", { name: "On the map: Sartar" });
   await expect(back).toBeVisible();
   await back.click();
   await expect(page.locator(".leaflet-popup")).toContainText("Weathertop");
@@ -886,9 +886,9 @@ test("Maps: a GM pins a new entry and an existing event, and the entry links bac
   await pinForm(page).getByRole("button", { name: "Add pin" }).click();
   await expect(page.locator(".map-pin")).toHaveCount(2);
   await page.goto(`#/c/${cid}/day/${day}`);
-  await expect(page.getByRole("link", { name: "📍 On the map: Sartar" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "On the map: Sartar" })).toBeVisible();
   await page.goto(`#/c/${cid}/events`);
-  await page.getByRole("link", { name: "📍 On the map: Sartar" }).click();
+  await page.getByRole("link", { name: "On the map: Sartar" }).click();
   await expect(page.locator(".leaflet-popup")).toContainText("Council at dawn");
   expectNoErrors(errors);
 });
@@ -913,7 +913,7 @@ test("Maps: a GM saves a route and a player sees its length", async ({ page, bro
   await expect(pp.locator(".map-route").getByRole("button", { name: "Delete" })).toHaveCount(0);
   await openDrawer(page);
   await moreIn(row, "GM only");   // in the route's ⋯ menu
-  await expect(row).toContainText("🔒");
+  await expect(row.locator(".ico-lock")).not.toHaveCount(0);
   await pp.reload();
   await expect(pp.locator(".map-view .leaflet-container")).toHaveCount(1);
   await expect(pp.locator(".map-route")).toHaveCount(0);
@@ -934,7 +934,7 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
   await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await page.getByRole("button", { name: "Add to Encyclopedia" }).click();
-  await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📍" })).toHaveCount(1);
+  await expect(page.locator(".map-pin .map-marker-icon .ico-place")).toHaveCount(1);
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card went with the redraw
   await page.locator(".map-pin", { hasText: "Burnt Ford" }).click();
   await expect(page.locator(".leaflet-popup").getByRole("link", { name: /Burnt Ford/ })).toBeVisible();
@@ -943,7 +943,7 @@ test("Maps: Add to Encyclopedia from a player's pin", async ({ page, browser }) 
   await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   await expect(page.getByRole("button", { name: "Add to Encyclopedia" })).toHaveCount(0);
   await page.getByRole("button", { name: "Link to Old Mill" }).click();
-  await expect(page.locator(".map-pin .map-marker-icon", { hasText: "📌" })).toHaveCount(1);   // an entry without a Category
+  await expect(page.locator(".map-pin .map-marker-icon .ico-pin")).toHaveCount(1);   // an entry without a Category
   expect(sql(`SELECT COUNT(*) FROM encyclopedia_entries WHERE campaign_id=${cid}`).trim()).toBe("2");
   expectNoErrors(errors);
 });
@@ -1374,7 +1374,7 @@ test("Map page: a legend sits bottom-left, and P, L, M, T and Escape drive the m
   await notePins(page, cid, mid, ["Camp"]);
   await page.goto(`index.html#/c/${cid}/maps/${mid}`);
   const legend = page.getByLabel("Legend");
-  await expect(legend.locator(".map-legend-item")).toHaveText(["📍 Place", "📅 Event", "📝 Note", "🚩 Party", "GM only"]);
+  await expect(legend.locator(".map-legend-item")).toHaveText(["Place", "Event", "Note", "Party", "GM only"]);
   if (page.viewportSize().width > 720) {
     const s = await page.locator(".map-stage").boundingBox(), g = await legend.boundingBox();
     expect(g.x - s.x).toBeLessThan(40); expect(s.y + s.height - (g.y + g.height)).toBeLessThan(40);
@@ -1548,11 +1548,11 @@ test("Sessions: a session's page shows the pinned places it names, on their map"
   const places = page.locator(".sess-places");
   await expect(places.locator(".mini-map")).toBeVisible();
   await expect(places.locator(".mm-pin")).toHaveCount(2);
-  await expect(places.locator(".sess-place-list a")).toHaveText(["📍 Burnt Ford", "📍 Mirewood"]);
+  await expect(places.locator(".sess-place-list a")).toHaveText(["Burnt Ford", "Mirewood"]);
   // a player reads the published summary: only Mirewood is named there
   await api(page, "session_save", { id: sid, is_published: true }, cid);
   await pp.goto(`index.html#/c/${cid}/sessions/${sid}`);
-  await expect(pp.locator(".sess-places .sess-place-list a")).toHaveText(["📍 Mirewood"]);
+  await expect(pp.locator(".sess-places .sess-place-list a")).toHaveText(["Mirewood"]);
   expectNoErrors(errors);
 });
 
@@ -1591,7 +1591,7 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   const pin = page.locator(".map-pin");
   await expect(pin).toContainText("Old mill");
   await expect(pin).not.toHaveClass(/\bsecret\b/);
-  const lock = () => pin.evaluate(n => getComputedStyle(n, "::after").content);
+  const lock = () => pin.evaluate(n => getComputedStyle(n, "::after").backgroundImage);
   expect(await lock()).toBe("none");
   // Edit: the lock in the form, which now says what it does
   await pin.click();
@@ -1605,7 +1605,7 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   await expect(form).toHaveCount(0);
   await expect.poll(async () => (await getMap(page, cid, mapId)).json.pins[0].is_secret).toBe(true);
   await expect(pin).toHaveClass(/\bsecret\b/);
-  expect(await lock()).toContain("🔒");
+  expect(await lock()).toContain("data:image/svg+xml");   // the padlock
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
   // the card's switch shows it to the players again, and back
   await pin.click();
@@ -1647,7 +1647,7 @@ test("Maps: an entry's pin wears the entry's token, unless the pin has an icon o
   expect((await api(page, "pin_save", { id: pinId, icon: "🏰" }, cid)).status).toBe(200);
   await page.reload();
   await expect(page.locator(".map-pin .map-marker-icon img")).toHaveCount(0);
-  await expect(page.locator(".map-pin")).toContainText("🏰");
+  await expect(page.locator(".map-pin .ico-castle")).toHaveCount(1);
   expectNoErrors(errors);
 });
 
@@ -1684,13 +1684,13 @@ test("Maps: a location with a picture shows that picture in place of its pin, al
   const pinId = (await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, kind: "entry", entry_id: entryId }, cid)).json.pin.id;
   await page.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(page.locator(".map-pin img")).toHaveCount(1);
-  await expect(page.locator(".map-pin")).not.toContainText("📍");
+  await expect(page.locator(".map-pin .ico-place")).toHaveCount(0);
   await pp.goto(`#/c/${cid}/maps/${mapId}`);
   await expect(pp.locator(".map-pin img")).toHaveCount(1);   // the players see it too
   // the Encyclopedia reloads its list of entries; the pin keeps its picture when the GM comes back to the map from there
   await page.goto(`#/c/${cid}/encyclopedia`);
   await page.getByRole("link", { name: /Greywater Keep/ }).first().click();
-  await page.getByRole("link", { name: "📍 On the map: Sartar" }).click();
+  await page.getByRole("link", { name: "On the map: Sartar" }).click();
   await expect(page.locator(".map-pin img")).toHaveCount(1);
   // the pin form offers the picture as the pin's face, picked until an icon is
   await page.locator(".leaflet-popup").getByRole("button", { name: "Edit" }).click();
@@ -1701,7 +1701,7 @@ test("Maps: a location with a picture shows that picture in place of its pin, al
   await form.getByRole("button", { name: "Save pin" }).click();
   await expect(form).toBeHidden();
   await expect(page.locator(".map-pin img")).toHaveCount(0);
-  await expect(page.locator(".map-pin")).toContainText("🏰");
+  await expect(page.locator(".map-pin .ico-castle")).toHaveCount(1);
   // its card says the icon was picked by hand, and one press puts the entry's picture back
   await page.locator(".map-pin").click();
   const card = page.locator(".leaflet-popup");

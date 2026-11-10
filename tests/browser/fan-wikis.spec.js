@@ -135,7 +135,7 @@ test.describe("Fan wikis in the app", () => {
     if (NONOPEN) await expect(pickWiki.locator("optgroup[label='Star Trek'] option")).toHaveText(["Memory Alpha (not open)", "Memory Beta (not open)"]);
     await expect(pickWiki).toHaveValue("none");          // nothing in the name or calendar to guess from
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
-    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Generate Summary" })).toBeVisible();
     await expect(page.locator(".fanwiki")).toHaveCount(0);   // no fan wiki yet: no button
     await page.goto(`index.html#/c/${cid}/settings`);
     await pickWiki.selectOption("starwars");
@@ -145,7 +145,7 @@ test.describe("Fan wikis in the app", () => {
 
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const form = page.locator(".enc-form"), box = form.locator(".fanwiki");
-    await box.getByRole("button", { name: "🗂️ Summary from Wookieepedia" }).click();
+    await box.getByRole("button", { name: "Summary from Wookieepedia" }).click();
     await expect(box.locator(".enc-wiki-hit strong")).toHaveText(["Luke Skywalker", "Luke Skywalker (clone)"]);
     await box.locator(".enc-wiki-hit").first().click();
     await expect(box.locator("blockquote")).toContainText("He grew up on Tatooine.");
@@ -159,7 +159,7 @@ test.describe("Fan wikis in the app", () => {
     // Find Image has a tab for the wiki; a picture that isn't open can only be kept as personal fair use
     if (NONOPEN) {
       await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
-      await page.getByRole("button", { name: "🖼️ Find Image" }).click();
+      await page.getByRole("button", { name: "Find Image" }).click();
       await page.getByRole("combobox", { name: "Where to search" }).selectOption({ label: "Wookieepedia" });
       const promo = page.locator(".find-result", { hasText: "Luke promo" });
       await expect(promo).toContainText("Personal fair use, not openly licensed");
@@ -171,7 +171,7 @@ test.describe("Fan wikis in the app", () => {
 
     // the player gets the GM's pick too
     await pp.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
-    await expect(pp.locator(".fanwiki").getByRole("button", { name: "🗂️ Summary from Wookieepedia" })).toBeVisible();
+    await expect(pp.locator(".fanwiki").getByRole("button", { name: "Summary from Wookieepedia" })).toBeVisible();
     expectNoErrors(errors);
   });
 
@@ -184,7 +184,7 @@ test.describe("Fan wikis in the app", () => {
     const e = (await api(page, "entry_save", { name: "Stardate", notes: "" }, cid)).json;
     // nothing saved yet: no fan wiki button, though Settings offers Memory Alpha
     await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
-    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Generate Summary" })).toBeVisible();
     await expect(page.locator(".fanwiki")).toHaveCount(0);
     await page.goto(`index.html#/c/${cid}/settings`);
     const pickWiki = page.getByRole("combobox", { name: "Fan wiki" });
@@ -193,7 +193,7 @@ test.describe("Fan wikis in the app", () => {
     await expect(page.locator("#toast", { hasText: "Saved" })).toBeVisible();
     await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
     const box = page.locator(".fanwiki");
-    await box.getByRole("button", { name: "🗂️ Summary from Memory Alpha" }).click();
+    await box.getByRole("button", { name: "Summary from Memory Alpha" }).click();
     await box.locator(".enc-wiki-hit").first().click();
     await expect(box.locator(".fanwiki-terms")).toContainText("CC BY-NC 4.0, non-commercial use");
     // None, for a game of its own: no button and no Find Image tab, and Settings keeps None
@@ -203,7 +203,7 @@ test.describe("Fan wikis in the app", () => {
     await expect(page.locator("#toast", { hasText: "Saved" })).toBeVisible();
     expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.fan_wiki).toBe("none");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${e.id}`);
-    await expect(page.getByRole("button", { name: "📚 Generate Summary" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Generate Summary" })).toBeVisible();
     await expect(page.locator(".fanwiki")).toHaveCount(0);
     await page.goto(`index.html#/c/${cid}/settings`);
     await expect(pickWiki).toHaveValue("none");

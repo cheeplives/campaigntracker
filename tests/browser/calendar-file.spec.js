@@ -5,7 +5,7 @@ const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign } = require("./helpers");
 
 async function exportCalendar(page) {
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "⬇ Export calendar" }).click()]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export calendar" }).click()]);
   expect(dl.suggestedFilename()).toMatch(/-calendar\.json$/);
   return JSON.parse(fs.readFileSync(await dl.path(), "utf8"));
 }

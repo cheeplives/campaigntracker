@@ -245,7 +245,7 @@ test.describe("Find Image panel", () => {
       return [...d.querySelectorAll(".notepanel")].every(before) && before(d.querySelector(".enc-conn, .enc-connections") || d.querySelector(".notepanel"))
         && !before(d.querySelector(".enc-mentioned"));
     })).toBe(true);
-    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box.getByRole("button", { name: "Find Image" }).click();
     const panel = box.locator(".find-image");
     await expect(panel.getByRole("searchbox", { name: "Search for pictures" })).toHaveValue("Greywater Keep");
     const where = panel.getByRole("combobox", { name: "Where to search" });
@@ -278,7 +278,7 @@ test.describe("Find Image panel", () => {
 
     // Changing the words searches again; Museums and an empty search.
     const box2 = page.locator(".enc-detail .enc-files");
-    await box2.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box2.getByRole("button", { name: "Find Image" }).click();
     const panel2 = box2.locator(".find-image");
     await panel2.getByRole("combobox", { name: "Where to search" }).selectOption("museums");
     await expect(panel2.locator(".find-result")).toHaveCount(6);
@@ -297,7 +297,7 @@ test.describe("Find Image panel", () => {
     const { cid, id } = await setup(page, browser, "Deviant");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const box = page.locator(".enc-detail .enc-files");
-    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box.getByRole("button", { name: "Find Image" }).click();
     const panel = box.locator(".find-image");
     await panel.getByRole("combobox", { name: "Where to search" }).selectOption("deviantart");
     const grey = panel.locator(".find-result", { hasText: "The Grey Keep" });
@@ -327,7 +327,7 @@ test.describe("Find Image panel", () => {
     const { cid, id } = await setup(page, browser, "All");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const box = page.locator(".enc-detail .enc-files");
-    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box.getByRole("button", { name: "Find Image" }).click();
     const panel = box.locator(".find-image");
     // 3 from Openverse, 3 from Commons, 2 from Pixabay, 6 from the museums, 1 from Pexels and 3 from DeviantArt (no game art is called "Greywater Keep")
     const results = panel.locator(".find-result");
@@ -346,7 +346,7 @@ test.describe("Find Image panel", () => {
 
     // A source that is down is named; the rest still show.
     const box2 = page.locator(".enc-detail .enc-files");
-    await box2.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box2.getByRole("button", { name: "Find Image" }).click();
     const panel2 = box2.locator(".find-image");
     await panel2.getByRole("searchbox").fill("broken");
     await panel2.getByRole("button", { name: "Search", exact: true }).click();
@@ -363,7 +363,7 @@ test.describe("Find Image panel", () => {
     const { cid, id } = await setup(page, browser, "Game art");
     await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
     const box = page.locator(".enc-detail .enc-files");
-    await box.getByRole("button", { name: "🖼️ Find Image" }).click();
+    await box.getByRole("button", { name: "Find Image" }).click();
     const panel = box.locator(".find-image");
     await panel.getByRole("combobox", { name: "Where to search" }).selectOption("gameart");
     await panel.getByRole("searchbox").fill("cyberpunk woman");

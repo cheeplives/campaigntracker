@@ -6,7 +6,7 @@ const { watchErrors, expectNoErrors, person, signIn, api, approve, makeCampaign,
 test.afterEach(closeContexts);
 
 async function exportDay(page) {
-  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "⬇ Export")]);
+  const [dl] = await Promise.all([page.waitForEvent("download"), pressMore(page, "this day", "Export")]);
   expect(dl.suggestedFilename()).toMatch(/\.md$/);
   return fs.readFileSync(await dl.path(), "utf8");
 }

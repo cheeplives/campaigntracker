@@ -727,7 +727,7 @@
       const t = isLight() ? 'dark' : 'light';
       document.documentElement.dataset.theme = t;
       try { localStorage.setItem(THEME_KEY, t); } catch { /* private mode: just this page */ }
-      b.textContent = t === 'light' ? '☀' : '🌙';
+      b.replaceChildren(...KIT.withIcons(t === 'light' ? '☀' : '🌙'));
     }, 'theme-toggle nav-pill', 'Toggle light / dark mode');
     b.setAttribute('aria-label', 'Toggle light / dark mode');
     return b;
@@ -4238,7 +4238,7 @@
     const show = () => {
       const f = pics[i];
       img.src = f.url; img.alt = f.caption || f.name; img.referrerPolicy = f.embed ? 'no-referrer' : '';
-      cap.replaceChildren(...clean([opts.hidden(f) ? '🔒 ' : '', f.caption || f.name, f.embed ? null : el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`),
+      cap.replaceChildren(...clean([opts.hidden(f) ? el('span', {}, '🔒 ') : '', f.caption || f.name, f.embed ? null : el('small', { class: 'muted' }, ` · ${f.width && f.height ? `${f.width}×${f.height} · ` : ''}${fileSize(f.size)}`),
         f.credit ? creditLine(f) : null]));
       tools.replaceChildren(...clean([
         pics.length > 1 ? btn('‹', () => { i = (i + pics.length - 1) % pics.length; show(); }, 'small', 'Previous picture') : null,
@@ -6701,9 +6701,9 @@
             extLink({ url: 'https://pixabay.com/', title: 'Pixabay' }), ', ', extLink({ url: 'https://www.pexels.com/', title: 'Pexels' }), ' and ',
             extLink({ url: 'https://www.deviantart.com/', title: 'DeviantArt' }), '. Only pictures under CC0, a public domain mark, CC BY or CC BY-SA, or Pixabay\'s and Pexels\' own free licences, are copied, ',
             'each with its title, artist, licence and source shown under it. Other DeviantArt works can only be embedded: the app keeps the link, and the picture is shown from DeviantArt, credited to its artist.'],
-          ['Game icons and the starter tokens on the Tokens tab: ', extLink({ url: 'https://game-icons.net/', title: 'game-icons.net' }),
+          ['The icons across the app (the padlock, the weather, the map pins and the rest), the game icons and the starter tokens on the Tokens tab: ', extLink({ url: 'https://game-icons.net/', title: 'game-icons.net' }),
             ', over 4,000 icons by Lorc, Delapouite and other artists under ', extLink({ url: 'https://creativecommons.org/licenses/by/3.0/', title: 'CC BY 3.0' }),
-            ' (Viscious Speed\'s and Zeromancer\'s under CC0), copied into the app. A token made from one is drawn in your browser and keeps its icon\'s title, artist and licence, shown when the token is edited.'],
+            ' (Viscious Speed\'s and Zeromancer\'s under CC0), copied into the app. A handful of plain shapes (arrows, a link, the phases of the moon) were drawn for the app itself. A token made from one is drawn in your browser and keeps its icon\'s title, artist and licence, shown when the token is edited.'],
           fanAbout ? [fanAbout.used] : null,
           'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
@@ -7067,7 +7067,7 @@
     }, 'small tv-bar-fold');
     const syncBarFold = () => {
       bar.classList.toggle('folded', barFolded);
-      barFold.textContent = barFolded ? '🧰' : '⟩';
+      barFold.replaceChildren(...KIT.withIcons(barFolded ? '🧰' : '⟩'));
       barFold.setAttribute('aria-label', barFolded ? 'Show the bar' : 'Hide the bar');
       barFold.setAttribute('aria-expanded', String(!barFolded));
       if (barFolded) openPop(null);

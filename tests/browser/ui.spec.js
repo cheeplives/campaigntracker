@@ -139,9 +139,9 @@ test("Encyclopedia, Library and Sessions share one list-and-reader layout, and w
   }
   // the Encyclopedia's rarer actions wait behind its ⋯
   await page.goto(`index.html#/c/${cid}/encyclopedia`);
-  await expect(page.getByRole("button", { name: "🔍 Scan campaign" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Scan campaign" })).toBeHidden();
   await page.getByLabel("More for Encyclopedia", { exact: true }).click();
-  await expect(page.getByRole("button", { name: "🔍 Scan campaign" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "⬇ Export…" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Scan campaign" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export…" })).toBeVisible();
   expectNoErrors(errors);
 });

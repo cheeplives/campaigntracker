@@ -158,7 +158,8 @@ test("Settings → Encyclopedia sets each Category's fields, a line each, and pu
   // the entry form follows, and a player's form has no GM-only field
   await page.goto(`index.html#/c/${cid}/encyclopedia/new`);
   await page.locator(".enc-form").locator("select[name=category]").selectOption("quest");
-  await expect(page.locator(".enc-facts-form .lbl")).toHaveText(["Status", "Patron 🔒", "Clue count"]);
+  await expect(page.locator(".enc-facts-form .lbl")).toHaveText(["Status", /^Patron\s*$/, "Clue count"]);
+  await expect(page.locator(".enc-facts-form .lbl").nth(1).locator(".ico-lock")).toHaveCount(1);   // the GM-only field shows the padlock
   await pp.goto(`index.html#/c/${cid}/encyclopedia/new`);
   await pp.locator(".enc-form").locator("select[name=category]").selectOption("quest");
   await expect(pp.locator(".enc-facts-form .lbl")).toHaveText(["Status", "Clue count"]);

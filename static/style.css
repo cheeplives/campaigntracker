@@ -30,6 +30,8 @@
   --stock: color-mix(in srgb, var(--panel) 88%, var(--accent));
   --tab-bg: color-mix(in srgb, var(--panel-2) 70%, var(--bg));
   --label: color-mix(in srgb, var(--accent) 70%, var(--dim));
+  /* the padlock icon (static/icons.js "lock") in the --secret colour, for the places only CSS can draw it */
+  --lock-img: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%238b5cc4'><path d='M254.28 17.313c-81.048 0-146.624 65.484-146.624 146.406V236h49.594v-69.094c0-53.658 43.47-97.187 97.03-97.187 53.563 0 97.032 44.744 97.032 97.186V236h49.594v-72.28c0-78.856-65.717-146.407-146.625-146.407zM85.157 254.688c-14.61 22.827-22.844 49.148-22.844 76.78 0 88.358 84.97 161.5 191.97 161.5 106.998 0 191.968-73.142 191.968-161.5 0-27.635-8.26-53.95-22.875-76.78H85.155zM254 278.625c22.34 0 40.875 17.94 40.875 40.28 0 16.756-10.6 31.23-25.125 37.376l32.72 98.126h-96.376l32.125-98.125c-14.526-6.145-24.532-20.62-24.532-37.374 0-22.338 17.972-40.28 40.312-40.28z'/></svg>");
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -65,6 +67,8 @@
   --bg: #f1f4ea; --panel: #fcfdf8; --panel-2: #e7ecdc; --line: #d2dcc0; --text: #1e2615; --dim: #63704f; --accent: #4f7a1f; --on-accent: #fff;
 }
 * { box-sizing: border-box; }
+/* An icon (static/icons.js, drawn by kit.js el() for each emoji in a label): the size of the text and its colour */
+.ico { width: 1.15em; height: 1.15em; vertical-align: -.2em; fill: currentColor; flex: none; overflow: visible; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--body); }
 a { color: var(--accent); text-decoration: none; }
 h1, h2, h3, h4 { font-family: var(--disp); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 .4em; line-height: 1.15; }
@@ -450,7 +454,8 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .richtext aside, .rt-editor .ql-snow .ql-editor aside { margin: .4em 0; padding: 3px 10px 3px 12px; border-left: 3px solid var(--secret);
   background: color-mix(in srgb, var(--secret) 13%, transparent); }
 .richtext aside + aside, .rt-editor .ql-snow .ql-editor aside + aside { margin-top: -.4em; }
-.richtext aside::before, .rt-editor .ql-snow .ql-editor aside::before { content: '🔒 GM only'; display: block; font: 700 .66rem var(--body);
+.richtext aside::before, .rt-editor .ql-snow .ql-editor aside::before { content: 'GM only'; display: block; font: 700 .66rem var(--body);
+  padding-left: 1.4em; background: var(--lock-img) left center / 1.1em no-repeat;
   letter-spacing: .06em; text-transform: uppercase; color: var(--secret); }
 .richtext aside + aside::before, .rt-editor .ql-snow .ql-editor aside + aside::before { content: none; }
 .richtext aside { position: relative; }
@@ -1458,8 +1463,8 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-pin.selected.has-colour .map-marker-icon.tinted { filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--halo, #fff)); }
 .map-pin.secret .map-marker-icon { opacity: .8; }
 /* a GM-only pin wears a small lock at its upper right, so a GM sees at a glance which pins the players don't */
-.map-pin.secret::after { content: '🔒'; position: absolute; right: -6px; top: -6px; z-index: 1; pointer-events: none; font-size: 11px; line-height: 1;
-  padding: 2px; border-radius: 50%; background: var(--panel); box-shadow: 0 0 0 1px var(--secret, var(--line)), 0 1px 2px rgb(0 0 0 / .35); }
+.map-pin.secret::after { content: ''; position: absolute; right: -6px; top: -6px; z-index: 1; pointer-events: none; width: 15px; height: 15px;
+  border-radius: 50%; background: var(--lock-img) center / 9px no-repeat, var(--panel); box-shadow: 0 0 0 1px var(--secret, var(--line)), 0 1px 2px rgb(0 0 0 / .35); }
 .map-panel .map-pin-secret { align-items: center; gap: 8px; }
 /* an entry pin wearing its entry's token: the round picture, ringed, not a glyph (and so not inked in the genre's style) */
 .map-pin .map-marker-icon.disc-pic { width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--halo, #fff); background: var(--panel); box-sizing: border-box;
@@ -1533,11 +1538,9 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 .map-place-icon { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
 /* a pin's colour tints its icon itself (no disc behind it, which would hide more of the map): a grey copy of the
    icon keeps its shading, and a copy filled with the colour is multiplied over it */
-.tinted { position: relative; display: inline-flex; align-items: center; justify-content: center; color: transparent;
-  filter: drop-shadow(0 0 1px rgb(255 255 255 / .9)) drop-shadow(0 1px 1px rgb(0 0 0 / .45)); }
-.tinted::before, .tinted::after { content: attr(data-icon); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.tinted::before { color: initial; filter: grayscale(1) brightness(1.4) contrast(1.05); }
-.tinted::after { background: var(--pin-colour); -webkit-background-clip: text; background-clip: text; color: transparent; mix-blend-mode: multiply; }
+.tinted { position: relative; display: inline-flex; align-items: center; justify-content: center; color: var(--pin-colour); }
+/* a pin's icon has a pale edge and a soft shadow, so it reads on light and dark parts of the map alike */
+.map-marker-icon .ico, .map-place-icon .ico { filter: drop-shadow(0 0 1px rgb(255 255 255 / .9)) drop-shadow(0 1px 1px rgb(0 0 0 / .45)); }
 .map-icon-pick { display: flex; flex-wrap: wrap; gap: 4px; max-height: 9.5rem; overflow-y: auto; }
 .map-icon-opt { width: 36px; height: 36px; padding: 0; font-size: 1.2rem; line-height: 1; }
 .map-icon-opt.on, .map-swatch.on { outline: 3px solid var(--accent); outline-offset: 1px; }

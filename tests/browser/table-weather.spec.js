@@ -35,7 +35,7 @@ test("the GM sets this shift's weather, wind and ground by hand, and a player se
   await expect(top.locator(".tv-sky .wind")).toContainText("Gale");
   await expect(top.locator(".tv-sky .ground")).toContainText("Muddy");
   // the forecast button: today and the next two days
-  await top.getByText("🌦 Weather forecast").click();
+  await top.getByText("Weather forecast").click();
   const fc = top.locator(".tv-fc-pop");
   await expect(fc.locator("li")).toHaveCount(3);
   await expect(fc.locator("li").first()).toContainText("Today");
@@ -57,7 +57,7 @@ test("the GM sets this shift's weather, wind and ground by hand, and a player se
   await expect(ptop.locator(".tv-wx .wx")).toContainText("Heavy rain");
   await expect(ptop.locator(".tv-sky .wind")).toContainText("Gale");
   await expect(ptop.locator(".tv-sky .ground")).toContainText("Muddy");
-  await ptop.getByText("🌦 Weather forecast").click();
+  await ptop.getByText("Weather forecast").click();
   await expect(ptop.locator(".tv-fc-pop li")).toHaveCount(3);
   expect(await ptop.locator(".tv-fc-pop ul").innerText()).toBe(gmOutlook);
   await expect(ptop.getByRole("button", { name: "✎ Day" })).toHaveCount(0);

@@ -153,7 +153,7 @@ test("the History dialog lists the versions, shows what changed, and restores on
 
   await page.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
   await page.locator(".enc-detail").getByLabel(/^More for /).click();   // History waits in the entry's ⋯ menu
-  await page.getByRole("button", { name: "🕘 History" }).click();
+  await page.getByRole("button", { name: "History" }).click();
   const dlg = page.locator("dialog.history-dialog");
   await expect(dlg.locator(".hist-ver")).toHaveCount(2);
   await expect(dlg.locator(".hist-head")).toContainText("changed");
@@ -180,5 +180,5 @@ test("the History dialog lists the versions, shows what changed, and restores on
   await pp.goto(`index.html#/c/${cid}/encyclopedia/${id}`);
   await expect(pp.getByRole("heading", { name: "Gunther" }).first()).toBeVisible();
   await pp.locator(".enc-detail").getByLabel(/^More for /).click();   // a player's ⋯ menu has no History
-  await expect(pp.getByRole("button", { name: "🕘 History" })).toHaveCount(0);
+  await expect(pp.getByRole("button", { name: "History" })).toHaveCount(0);
 });
