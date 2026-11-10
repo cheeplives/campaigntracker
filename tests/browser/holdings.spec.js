@@ -296,3 +296,63 @@ test("Party Funds tracks the party's money, one line per currency, for players a
   expectNoErrors(perrors);
   await pctx.close();
 });
+
+test("a funds line's location suggests the Encyclopedia's Locations and Vehicles, and offers to add a new place", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, pp, pctx } = await campaignWithPlayer(page, browser, "Funds places");
+  const perrors = watchErrors(pp);
+  for (const [name, category, aliases] of [["Bank of Altdorf", "location", ["Altdorf Bank"]], ["Iron Wagon", "vehicle", []], ["Brother Alto", "person", []]])
+    expect((await api(page, "entry_save", { name, category, aliases }, cid)).status).toBe(200);
+
+  await pp.goto(`index.html#/c/${cid}/holdings`);
+  const funds = pp.locator(".funds");
+  await funds.getByLabel("New currency", { exact: true }).fill("Crowns");
+  await funds.getByRole("button", { name: "+ Add" }).click();
+  const where = funds.getByLabel("Where the Crowns is kept");
+  const list = funds.locator(".combo-list");
+
+  // Typing offers the Locations and Vehicles with it in their name, not people; a pick saves it.
+  await where.fill("alt");
+  await expect(list).toBeVisible();
+  await expect(list.locator(".combo-opt")).toHaveText([/^\s*\S*\s*Bank of Altdorf$/]);
+  await expect(list).not.toContainText("Brother Alto");
+  await list.getByText("Bank of Altdorf").click();
+  await expect(where).toHaveValue("Bank of Altdorf");
+  await expect(list).toBeHidden();
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds[0].location).toBe("Bank of Altdorf");
+  await expect(funds.locator(".ledger-offer")).toBeHidden();
+
+  // The keyboard picks too, and the ▾ shows both groups.
+  await where.fill("wag");
+  await where.press("ArrowDown");
+  await where.press("Enter");
+  await expect(where).toHaveValue("Iron Wagon");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds[0].location).toBe("Iron Wagon");
+  await where.fill("");
+  await funds.getByRole("button", { name: "Show Locations and Vehicles" }).click();
+  await expect(list.locator(".combo-group")).toHaveText(["Locations", "Vehicles"]);
+  await where.press("Escape");
+
+  // A place the Encyclopedia doesn't have is kept as typed, with an offer to add it.
+  await where.fill("Under the floorboards");
+  await where.press("Tab");
+  await expect.poll(async () => (await api(pp, "holdings", undefined, cid)).json.funds[0].location).toBe("Under the floorboards");
+  const offer = funds.locator(".ledger-offer");
+  await expect(offer).toContainText("to the Encyclopedia?");
+  await offer.getByRole("button", { name: "Not now" }).click();
+  await expect(offer).toBeHidden();
+
+  await where.fill("Smuggler's cache");
+  await where.press("Tab");
+  await offer.getByRole("button", { name: "As a Location" }).click();
+  await expect(offer).toBeHidden();
+  await expect.poll(async () => (await api(pp, "campaign", undefined, cid)).json.encyclopedia
+    .filter(e => e.name === "Smuggler's cache").map(e => e.category)).toEqual(["location"]);
+  // It is a suggestion straight away.
+  await where.fill("smug");
+  await expect(list.locator(".combo-opt")).toHaveText([/Smuggler.s cache$/]);
+
+  expectNoErrors(errors);
+  expectNoErrors(perrors);
+  await pctx.close();
+});

@@ -461,12 +461,13 @@
   function visPill(v) {
     return el('span', { class: `vis v${v.score}`, 'data-tip': `Visibility ${v.score} of 5 (${v.label}): how well the party can see this ${word()}.\n${v.parts.join(' · ')}` }, `👁 ${v.score} ${v.label}`);
   }
-  /** A single-line activity box with its own drop-down of the baseline shift actions, filtered as you type.
+  /** A single-line box with its own drop-down of suggestions, filtered as you type. The box stays free text.
    * Not a <datalist>: Android Chrome shows those as a sideways strip above the keyboard, not a list.
-   * Picking an action puts its name in the box, which stays free text. */
-  function actionCombo(input) {
-    const list = el('ul', { class: 'combo-list', role: 'listbox', id: `combo-${++actionCombo.n}`, hidden: true });
-    const toggle = el('button', { type: 'button', class: 'combo-btn', tabindex: -1, 'aria-label': 'Show actions' }, '▾');
+   * source(q) gives the suggestions for what is typed (q is '' for all of them) as [[group heading, [{ value, name,
+   * desc }]]]; picking one puts its value in the box and calls onPick(it). */
+  function comboBox(input, { source, onPick = () => {}, button = 'Show suggestions' }) {
+    const list = el('ul', { class: 'combo-list', role: 'listbox', id: `combo-${++comboBox.n}`, hidden: true });
+    const toggle = el('button', { type: 'button', class: 'combo-btn', tabindex: -1, 'aria-label': button }, '▾');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-expanded', 'false');
@@ -485,26 +486,22 @@
       if (opts[i]) { input.setAttribute('aria-activedescendant', opts[i].id); opts[i].scrollIntoView({ block: 'nearest' }); }
       else input.removeAttribute('aria-activedescendant');
     };
-    const pick = a => { input.value = a.name; close(); };
-    /** Fill the list with the actions matching q (all of them when q is empty), under their group headings. */
+    const pick = it => { input.value = it.value; close(); onPick(it); };
+    /** Fill the list with the suggestions for q, under their group headings. */
     function open(q = '') {
-      const needle = q.trim().toLowerCase();
-      const hits = E.SHIFT_ACTIONS.filter(a => !needle || a.name.toLowerCase().includes(needle));
-      if (!hits.length) return close();
+      const groups = source(q.trim().toLowerCase()).filter(([, items]) => items.length);
+      if (!groups.length) return close();
       opts = [];
-      list.replaceChildren(...Object.entries(E.SHIFT_ACTION_GROUPS).flatMap(([g, label]) => {
-        const mine = hits.filter(a => a.group === g);
-        return mine.length ? [el('li', { class: 'combo-group', role: 'presentation' }, label), ...mine.map(a => {
-          const o = el('li', { class: 'combo-opt', role: 'option', id: `${list.id}-${opts.length}`, 'aria-selected': 'false' },
-            el('span', { class: 'combo-name' }, `${a.icon} ${a.name}`), el('small', {}, a.desc));
-          // keep focus (and the on-screen keyboard state) in the box while choosing
-          o.addEventListener('mousedown', e => e.preventDefault());
-          o.addEventListener('click', () => pick(a));
-          o._action = a;
-          opts.push(o);
-          return o;
-        })] : [];
-      }));
+      list.replaceChildren(...groups.flatMap(([label, items]) => [el('li', { class: 'combo-group', role: 'presentation' }, label), ...items.map(it => {
+        const o = el('li', { class: 'combo-opt', role: 'option', id: `${list.id}-${opts.length}`, 'aria-selected': 'false' },
+          el('span', { class: 'combo-name' }, it.name), it.desc ? el('small', {}, it.desc) : null);
+        // keep focus (and the on-screen keyboard state) in the box while choosing
+        o.addEventListener('mousedown', e => e.preventDefault());
+        o.addEventListener('click', () => pick(it));
+        o._item = it;
+        opts.push(o);
+        return o;
+      })]));
       at = -1;
       hideTip(); // its tooltip would sit on top of the list
       if (list.hidden) { list.hidden = false; input.setAttribute('aria-expanded', 'true'); document.addEventListener('pointerdown', outside); }
@@ -520,14 +517,38 @@
         if (list.hidden) { open(); if (e.key === 'ArrowUp') mark(opts.length - 1); else mark(0); return; }
         mark(e.key === 'ArrowDown' ? Math.min(at + 1, opts.length - 1) : Math.max(at - 1, 0));
       } else if (e.key === 'Enter' && !list.hidden && opts[at]) {
-        e.preventDefault(); pick(opts[at]._action);
+        e.preventDefault(); pick(opts[at]._item);
       } else if (e.key === 'Escape' && !list.hidden) {
         e.preventDefault(); close();
       } else if (e.key === 'Tab') close();
     });
     return (wrap = el('span', { class: 'combo grow' }, input, toggle, list));
   }
-  actionCombo.n = 0;
+  comboBox.n = 0;
+  /** A single-line activity box with its own drop-down of the baseline shift actions. Picking an action puts its name
+   * in the box, which stays free text. */
+  const actionCombo = input => comboBox(input, { button: 'Show actions', source: needle => Object.entries(E.SHIFT_ACTION_GROUPS).map(([g, label]) =>
+    [label, E.SHIFT_ACTIONS.filter(a => a.group === g && (!needle || a.name.toLowerCase().includes(needle))).map(a => ({ value: a.name, name: `${a.icon} ${a.name}`, desc: a.desc }))]) });
+  /** The Encyclopedia's Locations and Vehicles whose name or other name has needle in it (all of them for ''), names
+   * that start with it first, as comboBox suggestions. */
+  function placeSuggestions(needle) {
+    const score = e => {
+      const names = [e.name, ...(e.aliases || [])].map(n => String(n || '').toLowerCase());
+      if (!needle) return 1;
+      return names.some(n => n.startsWith(needle)) ? 2 : names.some(n => n.includes(needle)) ? 1 : 0;
+    };
+    const group = cat => S.encyclopedia.filter(e => e.category === cat).map(e => [e, score(e)]).filter(([, k]) => k)
+      .sort((a, b) => b[1] - a[1] || a[0].name.localeCompare(b[0].name)).slice(0, 40).map(([e]) => {
+        const alias = needle && !e.name.toLowerCase().includes(needle) ? (e.aliases || []).find(a => a.toLowerCase().includes(needle)) : null;
+        return { value: e.name, name: `${encCat(cat)[2]} ${e.name}`, desc: alias ? `Also called ${alias}` : '', entry: e };
+      });
+    return [['Locations', group('location')], ['Vehicles', group('vehicle')]];
+  }
+  /** The Encyclopedia entry named n (by name or other name, any case), or null. */
+  const entryNamed = n => {
+    const k = String(n || '').trim().toLowerCase();
+    return k ? S.encyclopedia.find(e => e.name.toLowerCase() === k || (e.aliases || []).some(a => String(a).toLowerCase() === k)) || null : null;
+  };
 
   const SHIFT_TIPS = {
     shifts4: 'Every day is split into four shifts of about six hours (by default Dawn, Midday, Dusk and Overnight, in that order). Time passes, activities are logged and visibility is worked out shift by shift.',
@@ -4921,21 +4942,33 @@
     /** The groups someone in group `from` may be sent to: every other group for a GM, only those letting players move for a player. */
     const targets = from => groups.filter(x => x.id !== from?.id && (gm || x.players_can_move));
     /** Put one person (who: { member } or { character }) in group id, or (null, GMs) take them out of the party. */
-    const join = async (id, who, name) => {
+    /** After someone left group fromId for toId (null: out of the party): when that was a split-off group's last one, ask
+     * to merge it into where they went (the main group when they left the party), rather than leave an empty marker on the maps. */
+    const offerMerge = async (fromId, toId) => {
+      const g = groups.find(x => x.id === fromId);
+      if (!g || g.is_main || size(g) || !(gm || g.players_can_move)) return;
+      const into = groups.find(x => x.id === toId) || groups[0];
+      if (!await confirmDialog(`Everyone has left ${g.name}. Merge it into ${into.name}? Its marker and trail on the maps go with it.`,
+        { title: `${g.name} is empty`, ok: 'Merge', cancel: 'Keep it' })) return;
+      try { await post('group_merge', { id: g.id, into_id: into.id }, S.camp.id); toast(`${g.name} is merged into ${into.name}`); await reload(); } catch (err) { toast(err.message, true); }
+    };
+    const join = async (id, who, name, from = null) => {
       try {
         await post('group_join', { id, ...who }, S.camp.id);
         toast(id === null ? `${name} is out of the party` : `${name} joins ${groups.find(g => g.id === id)?.name || 'the group'}`);
         await reload();
-      } catch (err) { toast(err.message, true); }
+      } catch (err) { return toast(err.message, true); }
+      await offerMerge(from, id);
     };
-    /** A small modal form: run() does the work, and the board is drawn again after. */
-    const partyDialog = (title, kids, ok, run) => {
+    /** A small modal form: run() does the work, and the board is drawn again after; then after(), if given. */
+    const partyDialog = (title, kids, ok, run, after = null) => {
       const d = el('dialog', { class: 'kit-dialog party-dialog', 'aria-label': title });
       const go = el('button', { class: 'primary', type: 'submit' }, ok);
       const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
       form.addEventListener('submit', async ev => {
         ev.preventDefault(); go.disabled = true;
-        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; }
+        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; return; }
+        if (after) await after();
       });
       d.addEventListener('close', () => d.remove());
       d.append(form); document.body.append(d); d.showModal();
@@ -5001,8 +5034,9 @@
       const opts = targets(from).map(x => [x.id, x.name]);
       if (gm && from) opts.push(['out', 'Not travelling (out of the party)']);
       const to = select(opts, opts[0]?.[0] ?? '');
+      const dest = () => (to.value === 'out' ? null : Number(to.value));
       partyDialog(`Move ${name}`, [field('Move to', to, from ? `${name} leaves ${from.name}` : `${name} starts travelling with the party`)], 'Move',
-        () => post('group_join', { id: to.value === 'out' ? null : Number(to.value), ...who }, S.camp.id));
+        () => post('group_join', { id: dest(), ...who }, S.camp.id), () => offerMerge(from?.id ?? null, dest()));
     };
 
     // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
@@ -5057,7 +5091,7 @@
         if (!d.ghost) return;
         d.ghost.remove();
         const t = ev.type === 'pointerup' ? dropAt(ev.clientX, ev.clientY, d.from) || d.hot : null;
-        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name);
+        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name, d.from);
       };
       h.addEventListener('pointerup', end);
       h.addEventListener('pointercancel', end);
@@ -6170,14 +6204,44 @@
       const cur = el('input', { maxlength: 60, value: f.currency, 'aria-label': 'Currency' });
       const loc = el('input', { maxlength: 200, value: f.location || '', placeholder: 'Location', 'aria-label': `Where the ${f.currency} is kept` });
       const amt = amountBox(f.amount, `Amount of ${f.currency}`);
+      let sent = [f.currency, f.location || '', String(f.amount ?? '')].join('\n');
       const save = async () => {
         if (!cur.value.trim()) { cur.value = f.currency; return; }
-        try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); } catch (err) { toast(err.message, true); }
+        // picking a suggestion saves, and leaving the box afterwards mustn't save it again
+        const now = [cur.value, loc.value, amt.value].join('\n');
+        if (now === sent) return;
+        sent = now;
+        try { await post('funds_save', { id: f.id, currency: cur.value, location: loc.value, amount: amt.value }, S.camp.id); f.currency = cur.value.trim(); toast('Saved'); offerPlace(); } catch (err) { sent = ''; toast(err.message, true); }
       };
       for (const i of [cur, loc, amt]) i.addEventListener('change', save);
-      const row = el('div', { class: 'ledger-row', 'data-undo': `funds_delete:${f.id}` }, cur, loc, amt,
+      const offer = el('div', { class: 'ledger-offer', hidden: true });
+      /** When the location names nothing in the Encyclopedia, a line under the row offers to add it, as a Location or
+       * a Vehicle. Not now hides it, and it doesn't come back for that name on this page. */
+      const offerPlace = () => {
+        const name = loc.value.trim();
+        const key = name.toLowerCase();
+        if (!name || entryNamed(name) || fundsCard.declined.has(key)) { offer.hidden = true; return; }
+        const add = cat => {
+          const b = btn(`${encCat(cat)[2]} As a ${encCat(cat)[1]}`, null, 'small', `Add an Encyclopedia entry named ${name}, as a ${encCat(cat)[1]}`);
+          b.addEventListener('click', busy(b, async () => {
+            const { id } = await post('entry_save', { name, category: cat }, S.camp.id);
+            S.encyclopedia = [...S.encyclopedia.filter(x => x.id !== id), { id, name, category: cat, aliases: [], facts: {}, is_secret: false, blank: true }]
+              .sort((a, x) => a.name.localeCompare(x.name));
+            offer.hidden = true;
+            toast(`Added ${name} to the Encyclopedia`);
+          }));
+          return b;
+        };
+        offer.replaceChildren(el('span', { class: 'small muted' }, `Add "${shortText(name)}" to the Encyclopedia?`),
+          el('span', { class: 'inline' }, add('location'), add('vehicle'),
+            btn('Not now', () => { fundsCard.declined.add(key); offer.hidden = true; }, 'small link', 'Keep it as typed, without an Encyclopedia entry')));
+        offer.hidden = false;
+      };
+      const where = comboBox(loc, { source: placeSuggestions, button: 'Show Locations and Vehicles', onPick: save });
+      const row = el('div', { class: 'ledger-row', 'data-undo': `funds_delete:${f.id}` }, cur, where, amt,
         el('button', { type: 'button', class: 'link danger', 'aria-label': `Remove ${f.currency}`, 'data-tip': 'Remove this line', onclick: () =>
-          undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'));
+          undoDelete(row, `Removed "${shortText(cur.value)}" from Party Funds`, 'funds_delete', { id: f.id }, () => row.remove()) }, '✕'),
+        offer);
       return row;
     };
     rows.append(...funds.map(line));
@@ -6191,6 +6255,8 @@
       el('div', { class: 'ledger-row ledger-head', 'aria-hidden': 'true' }, el('span', { class: 'lbl' }, 'Currency'), el('span', { class: 'lbl' }, 'Location'), el('span', { class: 'lbl' }, 'Amount'), el('span')),
       rows, add);
   }
+  /** Places someone said Not now to adding to the Encyclopedia, in any case, while this page is open. */
+  fundsCard.declined = new Set();
 
   /** Who claimed an item: a list of the party (names), Nobody, or Custom… with a box for any other name. A name not in
    * the list opens as Custom. onChange() saves; get() is the name, or '' for nobody. Clearing the custom box goes back
@@ -6698,7 +6764,7 @@
           ['The 3D dice on the die roller: ', cite('three'), '. The dice shapes, the numbers on them and the dice patterns (marble, wood, stone and the rest) are drawn in your browser by this app; no picture files are used.'],
           ['The screenshot the Report (!) button offers, taken in your browser and sent only with the report, to the site admins: ', cite('htmlToImage'), '.'],
           'Send to GitHub on Site Admin\'s Reports tab opens an issue on the app\'s GitHub repository, only when a site admin presses it. The issue carries the report\'s text and page details, never who sent it or the screenshot.',
-          ['Typefaces, self-hosted: ', cite('inter'), ' and ', cite('barlow'), '.'],
+          ['Typefaces, self-hosted: ', cite('spectral'), ' and ', cite('atkinson'), '.'],
           'The Feature Highlighter\'s list of common English words, and every other word list in the app, was written for it.',
           ['Generate Summary on an Encyclopedia entry: the matching articles and their summaries come from ', extLink({ url: 'https://en.wikipedia.org/', title: 'Wikipedia' }),
             ' (CC BY-SA 4.0), through its public API, and only when the button is pressed. Each summary added to an entry\'s notes links to its article and names the licence.'],
