@@ -15,9 +15,9 @@ test("the GM sets this shift's weather, wind and ground by hand, and a player se
   await page.goto(`index.html#/c/${cid}/table`);
   const top = page.locator(".tv-summary");
   // the wind is always said, calm or not, with its speed, on the season line beside the ground
-  await expect(top.locator(".tv-sky .wind")).toContainText(/Calm|Breezy/);
-  await expect(top.locator(".tv-sky .wind")).toContainText(/km\/h|mph/);
-  await expect(top.locator(".tv-sky .ground")).toBeVisible();
+  await expect(top.locator(".tv-wind .wind")).toContainText(/Calm|Breezy/);
+  await expect(top.locator(".tv-wind .wind")).toContainText(/km\/h|mph/);
+  await expect(top.locator(".tv-ground .ground")).toBeVisible();
 
   // ✎ Day: this shift's conditions, each Auto until set
   await top.getByRole("button", { name: "✎ Day" }).click();
@@ -32,8 +32,8 @@ test("the GM sets this shift's weather, wind and ground by hand, and a player se
   await ed.getByRole("button", { name: "Save day" }).click();
   await expect(top.locator(".tv-wx .wx")).toContainText("Heavy rain");
   await expect(top.locator(".tv-wx .wx")).toContainText("4°C");
-  await expect(top.locator(".tv-sky .wind")).toContainText("Gale");
-  await expect(top.locator(".tv-sky .ground")).toContainText("Muddy");
+  await expect(top.locator(".tv-wind .wind")).toContainText("Gale");
+  await expect(top.locator(".tv-ground .ground")).toContainText("Muddy");
   // the forecast button: today and the next two days
   await top.getByText("Weather forecast").click();
   const fc = top.locator(".tv-fc-pop");
@@ -55,8 +55,8 @@ test("the GM sets this shift's weather, wind and ground by hand, and a player se
   await pp.goto(`index.html#/c/${cid}/table`);
   const ptop = pp.locator(".tv-summary");
   await expect(ptop.locator(".tv-wx .wx")).toContainText("Heavy rain");
-  await expect(ptop.locator(".tv-sky .wind")).toContainText("Gale");
-  await expect(ptop.locator(".tv-sky .ground")).toContainText("Muddy");
+  await expect(ptop.locator(".tv-wind .wind")).toContainText("Gale");
+  await expect(ptop.locator(".tv-ground .ground")).toContainText("Muddy");
   await ptop.getByText("Weather forecast").click();
   await expect(ptop.locator(".tv-fc-pop li")).toHaveCount(3);
   expect(await ptop.locator(".tv-fc-pop ul").innerText()).toBe(gmOutlook);
