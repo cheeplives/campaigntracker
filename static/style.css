@@ -797,6 +797,9 @@ dialog.framer-dialog { width: min(400px, calc(100vw - 32px)); }
 .scheme-opt small { display: block; color: var(--dim); }
 @media (max-width: 1000px) { .scheme-name { display: none; } }   /* the dot alone, so the top bar keeps to one line on an iPad */
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: right; }
+/* on a phone, room under the page for the dice button, so the last row of a page can always be scrolled out from under
+   it (wider screens have the Legend's sticky rail, which would scroll away into extra room after the page) */
+@media (max-width: 560px) { body:has(.dice-fab:not([hidden])) .footer { padding-bottom: 140px; } }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }
 .admin-head { padding-bottom: 0; } .admin-head h1 { margin: 0 0 8px; }
