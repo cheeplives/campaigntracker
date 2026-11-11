@@ -55,6 +55,8 @@ test("a colour theme is picked from the account menu, remembered, and follows th
   await page.getByLabel(/^Account menu for /).click();
   await expect(page.getByRole("button", { name: "Ship's Console" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Parchment & Brass" })).toHaveAttribute("aria-pressed", "false");
+  // every theme is offered, Lamplight among them
+  for (const name of ["Parchment & Brass", "Night Sky", "Ship's Console", "Arctic", "Wildwood", "Lamplight"]) await expect(page.getByRole("button", { name })).toBeVisible();
   // light / dark sits beside the themes
   const mode = await html.getAttribute("data-theme");
   await page.getByRole("button", { name: "Toggle light / dark mode" }).click();
