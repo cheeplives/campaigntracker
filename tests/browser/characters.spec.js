@@ -192,6 +192,29 @@ test("Characters: someone else's change doesn't overwrite a tap still being save
   await expect(p1.locator(".play-counter", { hasText: "HP" })).toContainText("11 / 20");
 });
 
+test("Characters: a second cell of a list row changed while the first is still being saved is saved too", async ({ page, browser }) => {
+  const { cid, p1 } = await party(page, browser);
+  const layout = { sections: [{ key: "gear", title: "Gear", fields: [{ key: "atk", label: "Attacks", type: "list",
+    columns: [{ key: "name", label: "Name" }, { key: "dmg", label: "Damage" }] }] }] };
+  const tpl = (await api(page, "template_save", { name: `List sheet ${Date.now()}`, game: "Test RPG", layout })).json.template;
+  const c = await make(p1, cid, { template_id: tpl.id, name: "Quick" });
+  await api(p1, "character_field", { id: c.id, key: "atk", value: [{ name: "" }] }, cid);
+  await p1.goto(`index.html#/c/${cid}/characters/${c.id}`);
+  const sheet = p1.locator(".sheet-form");
+  // the first cell's save is slow, so the second cell changes while it is on its way
+  let release;
+  const held = new Promise(r => (release = r));
+  await p1.route("**/api/index.php?a=character_field*", async route => { await held; await route.continue(); }, { times: 1 });
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).fill("Longsword");
+  await sheet.getByLabel("Attacks row 1 Name", { exact: true }).dispatchEvent("change");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).fill("1d8");
+  await sheet.getByLabel("Attacks row 1 Damage", { exact: true }).dispatchEvent("change");
+  release();
+  await expect.poll(() => stored(c.id, "atk")).toEqual([{ name: "Longsword", dmg: "1d8" }]);
+  await p1.reload();
+  await expect(sheet.getByLabel("Attacks row 1 Damage", { exact: true })).toHaveValue("1d8");
+});
+
 test("Characters: Use theirs keeps the other person's value, on screen and saved", async ({ page, browser }) => {
   const { cid, gm, p1, tpl } = await party(page, browser);
   const c = await make(p1, cid, { template_id: tpl.id, name: "Torn" });

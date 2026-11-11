@@ -760,12 +760,14 @@ const Sheets = (() => {
       busy.add(key);
       try {
         while (waiting.has(key)) {
-          const v = waiting.get(key);
+          // what goes is taken down now: a list's rows are changed in place, so by the time the post is answered the
+          // same value may hold a later change, which must still go
+          const json = JSON.stringify(waiting.get(key));
           waiting.delete(key);
-          if (sent.has(key) && sent.get(key) === JSON.stringify(v)) continue;
+          if (sent.has(key) && sent.get(key) === json) continue;
           try {
-            await ctx.post('character_field', { id, key, value: v }, cid());
-            sent.set(key, JSON.stringify(v));
+            await ctx.post('character_field', { id, key, value: json === undefined ? undefined : JSON.parse(json) }, cid());
+            sent.set(key, json);
           } catch (err) {
             // nothing more goes; the page is drawn again from what the server has
             waiting.clear();

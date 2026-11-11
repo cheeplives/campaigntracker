@@ -481,10 +481,15 @@
     const savedList = () => (cid && S.user?.prefs?.dice_saved?.[cid]) || [];
     function drawSaved() {
       const list = savedList();
+      // the roll picked stays picked while it is still the one on the roller: the roller's first load (which redraws
+      // this) can land just after a quick pick, and must not take it away
+      const k = Number(savedSel.value), was = savedSel.selectedOptions[0]?.textContent, r = list[k - 1];
+      const keep = !!r && r.n === was && r.e === (mode === 'game' && sysNow ? gameText() : input.value.trim());
       savedSel.replaceChildren(el('option', { value: '' }, list.length ? `Saved rolls (${list.length})` : 'No saved rolls yet'),
         ...list.map((r, k) => el('option', { value: String(k + 1) }, r.n)));
       savedSel.disabled = !list.length;
-      forgetBtn.hidden = rollSavedBtn.hidden = true;
+      if (keep) savedSel.value = String(k);
+      forgetBtn.hidden = rollSavedBtn.hidden = !keep;
     }
     /** Put a saved roll on the roller: its numbers on the game roll if it is one of this campaign's system, else in the
      * free-roll box (which rolls anything, a roll from another system included). */
