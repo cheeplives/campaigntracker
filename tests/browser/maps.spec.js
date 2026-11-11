@@ -1582,6 +1582,31 @@ test("Trail: At the Table says where the party was the shift before, and the day
   expectNoErrors(errors);
 });
 
+test("Maps: the pin form on a big screen fits without scrollbars, so it does not flicker", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });   // room for the whole form: it must not overflow by its buttons' pixel
+  const { cid } = await setup(page, browser, "Maps pin form fits");
+  const mapId = await mapWithPicture(page, cid);
+  await api(page, "pin_save", { map_id: mapId, x: 150, y: 100, label: "Old mill", kind: "note" }, cid);
+  await page.goto(`#/c/${cid}/maps/${mapId}`);
+  await page.locator(".map-pin").click();
+  await page.locator(".leaflet-popup").getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog", { name: "Edit pin" });
+  await expect(form.getByRole("button", { name: "Save pin" })).toBeVisible();
+  const fit = await form.evaluate(f => {
+    const box = f.getBoundingClientRect(), bar = f.querySelector(".map-panel-actions").getBoundingClientRect();
+    return { wide: f.scrollWidth - f.clientWidth, tall: f.scrollHeight - f.clientHeight,
+      // the buttons' bar stays inside the card's border, on both sides and at the foot
+      left: bar.left - (box.left + f.clientLeft), right: box.left + f.clientLeft + f.clientWidth - bar.right, foot: box.top + f.clientTop + f.clientHeight - bar.bottom };
+  });
+  expect(fit.wide).toBe(0);
+  expect(fit.tall).toBe(0);
+  expect(fit.left).toBeGreaterThanOrEqual(-0.5);
+  expect(fit.right).toBeGreaterThanOrEqual(-0.5);
+  expect(fit.foot).toBeGreaterThanOrEqual(-0.5);
+  expectNoErrors(errors);
+});
+
 test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map shows it with a lock", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const { cid, pp } = await setup(page, browser, "Maps pin to GM only");
