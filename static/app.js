@@ -7097,9 +7097,7 @@
     // the season, the sun and the moons on one quiet line
     const hemi = region?.settings?.hemisphere, sea = E.season(c, d, hemi), sun = E.sunTimes(c, d, hemi);
     const wind = cur?.sw && E.openAir(region) ? windText(cur.sw) : null;
-    const skyLine = el('span', { class: 'tv-fact tv-sky' }, clean([
-      ground ? el('span', { class: 'tv-cond' }, ground) : null,
-      wind ? el('span', { class: 'tv-cond' }, wind) : null,
+    const skyLine = el('span', { class: 'tv-sky' }, clean([
       sea.name ? el('span', { 'data-tip': 'The season, from the calendar\'s season dates (flipped for the other hemisphere)' }, sea.name) : null,
       sun ? el('span', { class: 'sun', 'data-tip': `${fmtDaylight(sun.daylight)} of daylight` }, `☀ ${E.fmtClock(sun.sunrise)}–${E.fmtClock(sun.sunset)}`) : null,
       ...moons.map(m => el('span', { 'data-tip': `${m.name}: ${m.label} (${Math.round(m.illum * 100)}%)` }, moonGlyph(m), ` ${m.name} ${m.label}`))]).flatMap((x, k) => k ? [' · ', x] : [x]));
@@ -7114,6 +7112,7 @@
     };
     const dayEditBtn = dayEdit ? btn('✎ Day', () => showDayEdit(dayEdit.hidden), 'small', `Change the day's region, set or re-roll its weather, set any of this ${word()}'s conditions by hand, and write its Locations visited`) : null;
     if (dayEdit) showDayEdit(tableDayEdit);
+    const tvFact = (label, cls, ...kids) => el('div', { class: `tv-fact ${cls}` }, el('span', { class: 'tv-fact-lbl' }, label), el('span', { class: 'tv-fact-val' }, ...kids));
     const summary = el('section', { class: 'tv-summary', 'aria-label': `This ${word()}` },
       el('div', { class: 'tv-sum-main' },
         el('div', { class: 'tv-sum-top' },
@@ -7122,12 +7121,16 @@
             el('div', { class: 'tv-shift' }, hourMode() ? names[ai] : `${names[ai]} · ${n === 2 ? (ai ? 'night' : 'day') : `${['1st', '2nd', '3rd', '4th'][ai]} shift of 4`}`,
               ...E.holidaysOn(c, S.holidays, d).map(holidayChip))),
           el('div', { class: 'tv-sum-acts' }, forecastButton(d0, days.get(d0)?.region || currentRegion(), days.get(d0)?.w), remBadge, dayEditBtn)),
+        // the facts row: each fact a small label over its value, like the Lamplight mockup; the season, sun and moons under it
         el('div', { class: 'tv-facts' },
-          el('span', { class: 'tv-fact tv-wx' }, wx),
-          el('span', { class: 'tv-fact tv-party' }, '📍 ', clean([party.region ? el('b', { 'data-tip': region ? regionSummary(region) : null }, party.region) : null,
+          tvFact('Weather', 'tv-wx', wx),
+          tvFact('Region', 'tv-party', clean([party.region ? el('b', { 'data-tip': region ? regionSummary(region) : null }, party.region) : null,
             party.groupRegion ? el('span', { class: 'muted', 'data-tip': 'The main party group\'s own region, which differs from the day\'s' }, `group in ${party.groupRegion}`) : null,
             party.near, party.link, party.groups ? el('span', { class: 'muted' }, party.groups) : null]).flatMap((x, k) => k ? [' · ', x] : [x]),
             party.region || party.near ? null : el('span', { class: 'muted' }, 'Party not placed')),
+          ground ? tvFact('Ground', 'tv-ground', ground) : null,
+          wind ? tvFact('Wind', 'tv-wind', wind) : null),
+        el('div', { class: 'tv-facts tv-facts-more' },
           skyLine,
           locs ? el('span', { class: 'tv-fact notes-locs' }, el('span', { class: 'lbl', 'data-tip': LOC_TIP }, 'Visited'), el('span', {}, linked(locs))) : null),
         cur ? dayStrip(cur.d, cur.x.sws) : null),

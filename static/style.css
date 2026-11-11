@@ -80,7 +80,7 @@ h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h
 .nowbar::after, .daybox-head::after, .enc-hero-head::after, .enc-detail > :first-child:not(.enc-hero)::after {
   content: ''; display: block; height: 5px; background: var(--accent); clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%); }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 3px solid var(--accent); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font: 600 1.55rem var(--disp); color: var(--text); }
 .brand::before { content: '⬢ '; color: var(--accent); }
 #topnav { display: flex; gap: 4px 6px; align-items: center; flex-wrap: wrap; }
@@ -249,7 +249,7 @@ button.on { background: var(--accent); color: var(--on-accent); }
   main:has(> nav.tabs) > * { grid-column: 2; }
   main:has(> nav.tabs) > * + :not(nav.tabs) { margin-top: 14px; }
   main > nav.tabs { grid-column: 1; grid-row: 1 / -1; top: calc(var(--topbar-h, 0px) + 14px); max-height: calc(100vh - var(--topbar-h, 0px) - 28px); overflow-y: auto;
-    flex-direction: column; flex-wrap: nowrap; gap: 1px; padding: 10px 0 8px; border: 0; border-top: 6px solid var(--accent); border-radius: var(--radius);
+    flex-direction: column; flex-wrap: nowrap; gap: 1px; padding: 10px 0 8px; border: 0; border-radius: var(--radius);
     background: var(--stock); box-shadow: inset 0 0 0 1px var(--line); }
   /* the search box shares the top row with the « button that tucks the Legend away */
   main > nav.tabs .legend-tuck { display: block; position: absolute; top: 10px; right: 8px; width: 30px; height: 30px; padding: 0; line-height: 1;
@@ -279,8 +279,8 @@ button.on { background: var(--accent); color: var(--on-accent); }
   main > nav.tabs a::before { content: ''; flex: none; width: 8px; height: 8px; border: 1.5px solid currentColor; transform: rotate(45deg); opacity: .6; }
   main > nav.tabs a:hover { background: var(--tab-bg); }
   /* the open one is filled and points at the page */
-  main > nav.tabs a.on { color: var(--on-accent); background: var(--accent); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
-  main > nav.tabs a.on::before { background: currentColor; opacity: 1; }
+  main > nav.tabs a.on { color: var(--text); background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+  main > nav.tabs a.on::before { background: var(--accent); opacity: 1; }
   :root[data-scheme="console"] main > nav.tabs a { padding-left: 14px; padding-right: 14px; }
   main:has(> nav.tabs) ~ .footer { max-width: 1400px; }
   /* On a shorter screen (an iPad in landscape is 820 high) the Legend tightens so every tab fits without scrolling inside
@@ -406,8 +406,9 @@ button.tagopt.on { background: var(--tag); color: #fff; font-weight: 700; opacit
 .dh-shift { font: 600 2.8rem/1 var(--disp); color: var(--accent); margin-bottom: 4px; }
 .dh-act { margin: 6px 0 0; font-weight: 600; font-size: 1.05rem; }
 .dh-strip { display: grid; grid-template-columns: repeat(4, minmax(64px, 1fr)); gap: 4px; flex: 1 1 280px; max-width: 420px; }
-.dh-step { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border: 0; border-top: 4px solid var(--line); border-radius: var(--radius); background: var(--bg); min-width: 0; }
-.dh-step.now { border-top-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--bg)); }
+.dh-step { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); min-width: 0; }
+.dh-step.now { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.dh-step.now > .small { color: var(--text); font-weight: 700; }
 .dh-step > .small { font: 600 1rem var(--disp); }
 .dh-step.past { opacity: .6; }
 .dh-step-icon { font-size: 1.6rem; line-height: 1.2; }
@@ -428,7 +429,7 @@ button.dh-step:hover, button.dh-step:focus-visible { opacity: 1; background: col
 .daybox-head h3 { margin: 0; display: flex; align-items: center; gap: 4px; }
 .daybox-sum { display: none; margin-right: auto; color: var(--dim); } .daybox.folded .daybox-sum { display: inline; }
 .daybox[data-box=notes] .rt-editor .ql-editor, .enc-form .rt-editor .ql-editor { min-height: 220px; }
-button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; color: var(--accent); font: 600 1.6rem var(--disp); display: inline-flex; align-items: center; gap: 8px; min-height: 36px; }
+button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; color: var(--text); font: 600 1.6rem var(--disp); display: inline-flex; align-items: center; gap: 8px; min-height: 36px; }
 .daybox-caret::before { content: '▼'; font-size: .7em; display: inline-block; width: 1em; color: var(--accent); transition: transform .15s; }
 .daybox.folded .daybox-caret::before { transform: rotate(-90deg); }
 .daybox-body[hidden] { display: none; }
@@ -442,7 +443,7 @@ button.daybox-toggle { background: none; border: 0; padding: 2px 4px 2px 0; colo
 .notes-locs { display: flex; flex-direction: column; gap: 2px; }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
 .notepanel { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.notepanel h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+.notepanel h4 { margin: 0; font-size: 1.25rem; color: var(--text); }
 .notepanel.secret h4 { color: var(--secret-text); }
 /* Rich text, as it reads (.richtext) and as it is written (.rt-editor, Quill's snow theme recoloured) */
 .richtext, .rt-editor .ql-editor { line-height: 1.5; overflow-wrap: anywhere; }
@@ -543,9 +544,7 @@ html.rt-focusing { overflow: hidden; }
 .shiftcard.card { background: var(--bg); padding: 0 12px 12px; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
 .shiftcard > .row.spread:first-child, details.shiftcard > summary { margin: 0 -12px 4px; padding: 8px 12px; background: var(--panel-2); }
 .shiftcard h4 { font-size: 1.4rem; margin: 0; }
-.shiftcard.now { box-shadow: inset 0 0 0 2px var(--accent); }
-.shiftcard.now > .row.spread:first-child { background: var(--accent); color: var(--on-accent); }
-.shiftcard.now .nowtag { background: var(--on-accent); color: var(--accent); }
+.shiftcard.now { border-color: var(--accent); }
 /* A GM moves the NOW flag by clicking another shift's title: there the flag waits as a faint outline, filled on hover or focus */
 h4 > .nowpick { all: unset; cursor: pointer; display: inline-flex; align-items: center; border-radius: var(--radius); }
 .nowpick .nowtag { background: var(--bg); color: var(--dim); box-shadow: inset 0 0 0 1px var(--line); opacity: .7; transition: opacity .12s, background .12s, color .12s; }
@@ -798,6 +797,9 @@ dialog.framer-dialog { width: min(400px, calc(100vw - 32px)); }
 .scheme-opt small { display: block; color: var(--dim); }
 @media (max-width: 1000px) { .scheme-name { display: none; } }   /* the dot alone, so the top bar keeps to one line on an iPad */
 .footer { max-width: 1180px; margin: 0 auto; padding: 8px 16px 24px; text-align: right; }
+/* on a phone, room under the page for the dice button, so the last row of a page can always be scrolled out from under
+   it (wider screens have the Legend's sticky rail, which would scroll away into extra room after the page) */
+@media (max-width: 560px) { body:has(.dice-fab:not([hidden])) .footer { padding-bottom: 140px; } }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }
 .admin-head { padding-bottom: 0; } .admin-head h1 { margin: 0 0 8px; }
@@ -958,20 +960,19 @@ a.enc-link.secret { text-decoration-color: var(--secret); }
 @media (min-width: 1001px) { .enc-page { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); } }  /* beside the Legend */
 .enc-index { display: flex; flex-direction: column; gap: 8px; }
 .enc-index input[type=search] { width: 100%; }
-.enc-lists h3 { font-size: 1.05rem; color: var(--accent); margin: 10px 0 4px; }
+.enc-lists h3 { font-size: 1.05rem; color: var(--text); margin: 10px 0 4px; }
 .enc-item, .lp-start-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; padding: 7px 8px; border-radius: var(--radius); color: var(--text); border-left: 3px solid transparent; }
 .enc-item:hover, .lp-start-item:hover { background: var(--bg); }
-.enc-item.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.enc-item.on { background: var(--panel-2); color: var(--text); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
 .enc-item .etags { display: inline-flex; flex-wrap: wrap; }
 /* the Encyclopedia's entries as small cards, close together, tags along the bottom so they line up */
 .enc-lists > section { display: flex; flex-direction: column; gap: 4px; }
 .enc-lists > section > h3 { margin-bottom: 0; }
 :is(.enc-item, .lp-start-item).enc-card { flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; align-items: flex-start; gap: 1px; padding: 5px 10px; background: var(--panel); border: 1px solid var(--line); }
 :is(.enc-item, .lp-start-item).enc-card:hover { background: var(--panel-2); }
-.enc-item.enc-card.on { background: var(--accent); border-color: var(--accent); }
+.enc-item.enc-card.on { background: var(--panel-2); border-color: var(--line); box-shadow: inset 3px 0 0 var(--accent); }
 .enc-card .enc-name { font-weight: 600; max-width: 100%; overflow-wrap: anywhere; }
 .enc-card .enc-alias { color: var(--dim); font-size: .76rem; }
-.enc-card.on .enc-alias { color: inherit; opacity: .8; }
 .enc-card .etags { display: flex; gap: 3px; margin: auto 0 0; padding-top: 2px; max-width: 100%; }
 .enc-card .chip { margin: 0; font-size: .72rem; }
 .enc-card .enc-name > .sess-open { margin-left: 6px; }
@@ -1023,15 +1024,13 @@ button.enc-fold[aria-expanded=false]::before { content: '▸'; }
 .title-star > .item-star { flex: none; font-size: 1.25rem; }
 .enc-card.has-star { position: relative; padding-right: 30px; }
 .enc-card.has-star > .item-star { position: absolute; top: 1px; right: 2px; }
-.enc-card.on > .item-star, .enc-card.on > .item-star:hover { color: inherit; }
-.enc-blank h3 { color: var(--accent); }
+.enc-blank h3 { color: var(--text); }
 .enc-blank .enc-item:hover { background: var(--stock); }
 /* the entry as a stat block: the title in accent caps over a tapered rule */
 .enc-detail { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.enc-detail.card { border-top: 6px solid var(--accent); }
 .enc-detail > :first-child { flex-wrap: wrap; }
 .enc-detail > :first-child::after { flex-basis: 100%; margin-top: 2px; }
-.enc-detail h2 { margin: 0; overflow-wrap: anywhere; font-size: 2.8rem; line-height: 1; color: var(--accent); }
+.enc-detail h2 { margin: 0; overflow-wrap: anywhere; font-size: 2.8rem; line-height: 1; color: var(--text); }
 .enc-form { display: flex; flex-direction: column; gap: 10px; }
 /* the editor fills the entry's card in place of its title row, so it takes none of that row's wrap and rule (which left a gap under Name) */
 .enc-detail > .enc-form { flex-wrap: nowrap; } .enc-detail > .enc-form::after { content: none; }
@@ -1170,7 +1169,7 @@ dialog.kit-dialog.scabard-dialog { width: min(600px, calc(100vw - 32px)); }
 /* Connections between Encyclopedia entries */
 /* Pictures and files on an entry (attachmentsCard in app.js) */
 .enc-files { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; border-radius: var(--radius); }
-.enc-files h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+.enc-files h4 { margin: 0; font-size: 1.25rem; color: var(--text); }
 .enc-files.drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
 .file-add { position: relative; cursor: pointer; }
 .file-input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; font-size: 0; }
@@ -1211,7 +1210,7 @@ dialog.file-viewer { max-width: min(96vw, 1400px); width: auto; text-align: cent
 .file-credit { margin: 0; overflow-wrap: anywhere; }
 .file-gone { display: flex; align-items: center; justify-content: center; height: 100%; padding: 6px; }
 .enc-conns { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
-.enc-conns h4 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+.enc-conns h4 { margin: 0; font-size: 1.25rem; color: var(--text); }
 .enc-conn-list { display: flex; flex-direction: column; gap: 6px; }
 .enc-conn-row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .enc-conn-row .chip.enc-rel { flex: none; font-size: .8rem; background: var(--panel-2); color: var(--text); }
@@ -1272,9 +1271,8 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 
 /* Library: the tomes reuse the Encyclopedia's list and page layout */
 .enc-card .lib-desc { color: var(--dim); font-size: .8rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.enc-card.on .lib-desc { color: inherit; opacity: .85; }
 .lib-list { display: flex; flex-direction: column; gap: 4px; }
-.lib-list h3, .lp-start h3 { font-size: 1.05rem; color: var(--accent); margin: 10px 0 4px; }
+.lib-list h3, .lp-start h3 { font-size: 1.05rem; color: var(--text); margin: 10px 0 4px; }
 .lib-page.wide .lib-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 8px; align-content: start; }
 .lib-page.wide .lib-list > :not(.enc-item) { grid-column: 1 / -1; }
 .lib-kind { color: var(--dim); font-weight: 600; }
@@ -1897,7 +1895,7 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .tv-side b { font: 600 15px/1.2 var(--disp); }
 .tv-side-act { overflow-wrap: anywhere; }
 .tv-side-hint { margin-top: 4px; }
-.shiftcard.tv-now { border: 2px solid var(--accent); padding: 14px 16px; margin: 0; }
+.shiftcard.tv-now { border: 1px solid var(--accent); padding: 14px 16px; margin: 0; }
 .shiftcard.tv-now h4 { font-size: 1.35rem; }
 .tv-now .shift-edit textarea { min-height: 4.5em; }
 .tv-peek { justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: color-mix(in srgb, var(--accent) 12%, var(--bg)); padding: 6px 10px; border-radius: var(--radius); margin-bottom: 8px; }
@@ -2044,9 +2042,14 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .tv-sum-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
 .tv-summary .tv-date { font-size: clamp(20px, 3vw, 26px); }
 .tv-summary .tv-shift { font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
-.tv-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; }
-.tv-fact { display: inline-flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
-.tv-wx .wx { font-weight: 600; }
+.tv-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: flex-start; }
+.tv-facts-more { gap: 4px 18px; align-items: baseline; }
+/* a fact: a small label over its value, the value in the text colour and bold */
+.tv-fact { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tv-fact-lbl { font-size: .78rem; color: var(--dim); }
+.tv-fact-val { display: inline-flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; font-weight: 600; overflow-wrap: anywhere; }
+.tv-fact-val .muted, .tv-fact-val .small { font-weight: 400; }
+.tv-facts .notes-locs { flex-direction: row; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
 .tv-moon-line { color: var(--dim); font-size: .9rem; }
 .tv-sum-map .mini-map { width: 170px; max-width: 170px; margin: 0; }
 .tv-rem { position: relative; }
@@ -2067,8 +2070,17 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 /* the floating bar at the foot of the screen */
 .table-view.tv-wide { padding-bottom: 90px; }
 .tv-dock { position: fixed; z-index: 50; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 110px); }
-.tv-bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px; }
+.tv-bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px; background: var(--panel); }
 .tv-bar > button { margin: 0; white-space: nowrap; }
+/* In light mode the bar is dark ink, like the Lamplight mockup: its colours are the page's own text and paper swapped, so
+   each scheme keeps its own ink. --bar-ink and --bar-paper are taken on the dock so the bar's own swap does not loop. */
+:root[data-theme="light"] .tv-dock { --bar-ink: var(--text); --bar-paper: var(--bg); }
+:root[data-theme="light"] .tv-bar { background: var(--bar-ink); border-color: var(--bar-ink); --text: var(--bar-paper);
+  --bg: color-mix(in srgb, var(--bar-paper) 9%, var(--bar-ink));
+  --panel: color-mix(in srgb, var(--bar-paper) 9%, var(--bar-ink)); --panel-2: color-mix(in srgb, var(--bar-paper) 16%, var(--bar-ink));
+  --line: color-mix(in srgb, var(--bar-paper) 30%, var(--bar-ink)); --dim: color-mix(in srgb, var(--bar-paper) 72%, var(--bar-ink)); color: var(--text); }
+:root[data-theme="light"] .tv-bar button:hover { border-color: var(--bar-paper); }
+:root[data-theme="light"] .tv-bar button:focus-visible { outline-color: var(--bar-paper); }
 .tv-bar > button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .tv-bar.folded > :not(.tv-bar-fold) { display: none; }
 .tv-dock:has(.tv-bar.folded) { left: auto; right: 74px; transform: none; }   /* folded: one button in the corner, by ↑ */
@@ -2094,9 +2106,6 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 .tv-sum-acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .tv-sum-acts .button, .tv-sum-acts button { margin: 0; }
 .tv-sky { color: var(--dim); font-size: .9rem; }
-/* the ground underfoot and the wind lead the season line, in full colour so they catch the eye */
-.tv-sky .tv-cond { color: var(--text); font-weight: 600; font-size: .95rem; }
-.tv-sky .tv-cond .small { font-weight: 400; }
 .forecast-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .forecast-list li { display: grid; grid-template-columns: 6.5em 1fr; gap: 0 10px; align-items: baseline; }
 .forecast-list li > .small { grid-column: 2; }
