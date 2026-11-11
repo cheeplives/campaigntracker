@@ -205,7 +205,9 @@
     const partyHoldings = holdingLines(null, '##');
     if (partyHoldings.length || rows('party_groups').length) {
       const L = [`# ${camp.name}: Party`, ''];
-      if (rows('party_groups').length) L.push('## Groups', '', ...rows('party_groups').map(g => `- ${mdText(g.name)}${on(g.is_main) ? ' (main group)' : ''}`), '');
+      // each group, and the party's vehicles that travel with it (052)
+      const cars = g => ofWho('holdings', null).filter(h => h.kind === 'vehicle' && has(h.party_group_id) && Number(h.party_group_id) === Number(g.id)).map(h => h.name);
+      if (rows('party_groups').length) L.push('## Groups', '', ...rows('party_groups').map(g => `- ${mdText(g.name)}${on(g.is_main) ? ' (main group)' : ''}${cars(g).length ? `, with ${mdText(cars(g).join(', '))}` : ''}`), '');
       L.push(...partyHoldings);
       page('Party.md', L);
     }

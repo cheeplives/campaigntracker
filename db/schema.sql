@@ -288,6 +288,7 @@ CREATE TABLE IF NOT EXISTS holdings (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   character_id INT UNSIGNED NULL,                 -- a character's own (051, its sheet's Holdings page); NULL: the party's
+  party_group_id INT UNSIGNED NULL,               -- a party vehicle: the party group it travels with (052); NULL: none
   name VARCHAR(200) NOT NULL,
   kind VARCHAR(16) NOT NULL,                        -- vehicle | animal | building | asset | custom
   type_name VARCHAR(60) NOT NULL DEFAULT '',        -- the type a custom holding is, e.g. "Ship"
@@ -299,6 +300,7 @@ CREATE TABLE IF NOT EXISTS holdings (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_holdings_character (character_id),
+  INDEX idx_holdings_group (party_group_id),
   INDEX idx_holdings_campaign (campaign_id, id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

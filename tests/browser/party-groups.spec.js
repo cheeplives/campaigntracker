@@ -747,3 +747,76 @@ test("Party: when the last one leaves a split-off group, it asks to merge it", a
   expect((await api(pp, "group_merge", { id: camp.id, into_id: main.id }, cid)).status).toBe(403);
   expectNoErrors(errors);
 });
+
+test("Party: the party's vehicles travel with a group, and players move them only where the GM lets them", async ({ page, browser }) => {
+  const { cid, ids, players } = await setup(page, browser, "Party vehicles", 2);
+  const p0 = players[0].pp;
+  const wagon = (await api(page, "holding_save", { name: "Wagon", kind: "vehicle" }, cid)).json.id;
+  const shed = (await api(page, "holding_save", { name: "Shed", kind: "building" }, cid)).json.id;
+  const main = (await groups(page, cid))[0];
+  const scouts = (await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[1]] }, cid)).json.groups[1];
+  const vehicles = async who => (await api(who, "groups", undefined, cid)).json.vehicles;
+  // a new vehicle travels with no group; only vehicles are listed
+  expect(await vehicles(p0)).toEqual([{ id: wagon, name: "Wagon", kind: "vehicle", amount: 1, group_id: null }]);
+  let r = await api(page, "vehicle_group", { holding: wagon, id: main.id }, cid);
+  expect(r.status, JSON.stringify(r.json)).toBe(200);
+  expect(r.json.vehicles[0].group_id).toBe(main.id);
+  expect((await api(page, "vehicle_group", { holding: shed, id: main.id }, cid)).status).toBe(404);   // a building stays put
+  expect((await api(page, "vehicle_group", { holding: wagon, id: 999999 }, cid)).status).toBe(404);
+  // a player moves it between groups that let players move, and leaves it behind
+  expect((await api(p0, "vehicle_group", { holding: wagon, id: scouts.id }, cid)).status).toBe(200);
+  expect((await vehicles(page))[0].group_id).toBe(scouts.id);
+  // Party → Holdings says which group it is with
+  const h = (await api(p0, "holdings", undefined, cid)).json.holdings.find(x => x.id === wagon);
+  expect(h.party_group_id).toBe(scouts.id);
+  // a group the GM keeps together: a player can't take its vehicle away, nor bring one in
+  await api(page, "group_save", { id: scouts.id, players_can_move: false }, cid);
+  r = await api(p0, "vehicle_group", { holding: wagon, id: null }, cid);
+  expect(r.status).toBe(403);
+  expect(r.json.message).toBe("The GM has kept that group together for now");
+  // merging the group brings its vehicle along
+  await api(page, "group_merge", { id: scouts.id, into_id: main.id }, cid);
+  expect((await vehicles(page))[0].group_id).toBe(main.id);
+  expect((await api(p0, "vehicle_group", { holding: wagon, id: null }, cid)).status).toBe(200);
+  expect((await vehicles(page))[0].group_id).toBe(null);
+});
+
+test("Party: the GM drags a vehicle onto a group on Party → Groups, and Holdings says where it is", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, ids, players } = await setup(page, browser, "Party vehicle drag", 2);
+  await api(page, "holding_save", { name: "Mule cart", kind: "vehicle", amount: 2 }, cid);
+  const main = (await groups(page, cid))[0];
+  await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [ids[1]] }, cid);
+  await page.goto(`#/c/${cid}/groups`);
+  const garage = page.locator(".vehicle-tray");
+  await expect(garage).toContainText("Mule cart");
+  await expect(garage).toContainText("Vehicle · × 2");
+  const row = garage.locator(".group-member", { hasText: "Mule cart" });
+  await row.evaluate(e => { e.scrollIntoView({ block: "center" }); });
+  const target = rowOf(page, "Scouts");
+  await target.evaluate(e => { e.scrollIntoView({ block: "start" }); });
+  await row.evaluate(e => { if (e.getBoundingClientRect().bottom > innerHeight - 60) e.scrollIntoView({ block: "end" }); });
+  const from = await row.locator(".group-grip").boundingBox(), to = await target.boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 30, from.y - 30, { steps: 4 });
+  await page.mouse.move(to.x + to.width / 2, to.y + Math.min(to.height / 2, 60), { steps: 8 });
+  await page.mouse.up();
+  await expect(rowOf(page, "Scouts").locator(".group-vehicles")).toContainText("Mule cart");
+  await expect(garage).toContainText("Every vehicle is travelling with a group.");
+  // Move… sends it with the main group
+  await rowOf(page, "Scouts").getByRole("button", { name: "Move Mule cart" }).click();
+  await page.locator("dialog.party-dialog").getByLabel("Travels with").selectOption({ label: "The party" });
+  await page.locator("dialog.party-dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(rowOf(page, "The party").locator(".group-vehicles")).toContainText("Mule cart");
+  // a player sees it on the board too
+  const pp = players[0].pp;
+  await pp.goto(`#/c/${cid}/groups`);
+  await expect(rowOf(pp, "The party").locator(".group-vehicles")).toContainText("Mule cart");
+  // Party → Holdings: the card says which group it travels with
+  await page.goto(`#/c/${cid}/holdings`);
+  const card = page.locator(".holding", { hasText: "Mule cart" });
+  await card.locator(".hold-toggle").click();
+  await expect(card.locator(".hold-group")).toContainText("Travels with The party");
+  expectNoErrors(errors);
+});

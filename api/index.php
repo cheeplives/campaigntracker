@@ -693,7 +693,7 @@ const CAMPAIGN_COPY = [
     ['shift_actions', 'maps' => ['character_id' => 'character']],
     // after the characters too: a character's own holdings (character_id, 051) go with its copy; the party's have none
     ['party_gear', 'maps' => ['character_id' => 'character']],
-    ['holdings', 'key' => 'holdings', 'maps' => ['character_id' => 'character']],
+    ['holdings', 'key' => 'holdings', 'maps' => ['character_id' => 'character'], 'later' => ['party_group_id' => 'group']],   // a vehicle's group (052) once the groups are copied
     ['holding_tags', 'via' => ['holding_id', 'holdings'], 'maps' => ['tag_id' => 'holding_tags']],
     ['holding_storage', 'via' => ['holding_id', 'holdings']],
     ['party_funds', 'maps' => ['character_id' => 'character']],
@@ -1991,7 +1991,13 @@ try {
     case 'groups': // every member: the party's groups, main first
         $cid = cid();
         $isGm = role($cid) === 'gm';
-        out(['groups' => party_groups($cid, $isGm)]);
+        out(['groups' => party_groups($cid, $isGm), 'vehicles' => party_vehicles($cid)]);
+
+    case 'vehicle_group': // holding (a party vehicle's id) and id (the group it goes with; null: none). A GM moves any;
+        // a player only out of and into groups that let players move
+        $cid = cid();
+        vehicle_group($cid, role($cid) === 'gm');
+        out(['ok' => true, 'vehicles' => party_vehicles($cid)]);
 
     case 'group_split': // GMs: from_id, name, members [user ids from that group], characters [ids of its characters with no player], region_id (default: the group's).
         // A player: from_id, name and members [their own id], to start a group of their own (when from_id lets players move)

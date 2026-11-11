@@ -76,10 +76,11 @@ function holdings_action(string $action): void {
         $st = db()->prepare('SELECT id, item, claimed_by, location, amount FROM party_gear WHERE campaign_id=? AND character_id <=> ? ORDER BY id');
         $st->execute([$cid, $owner]);
         $gear = array_map(function ($r) { $r['id'] = (int)$r['id']; $r['amount'] = (int)$r['amount']; return $r; }, $st->fetchAll());
-        $st = db()->prepare('SELECT id, name, kind, type_name, location, description, amount, stats_json FROM holdings WHERE campaign_id=? AND character_id <=> ? ORDER BY id');
+        $st = db()->prepare('SELECT id, name, kind, type_name, location, description, amount, stats_json, party_group_id FROM holdings WHERE campaign_id=? AND character_id <=> ? ORDER BY id');
         $st->execute([$cid, $owner]);
         $holdings = array_map(function ($r) {
             $r['id'] = (int)$r['id']; $r['amount'] = (int)$r['amount'];
+            $r['party_group_id'] = $r['party_group_id'] !== null ? (int)$r['party_group_id'] : null;   // a vehicle's group (052)
             $r['stats'] = (object)(dec($r['stats_json']) ?: []);
             unset($r['stats_json']);
             return $r;
