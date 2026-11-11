@@ -719,3 +719,32 @@ test("a saved roll rolls again and again from its 🎲 Roll, and each device set
   await expect(stay).toHaveValue("0");
   expectNoErrors(errors);
 });
+
+test("a saved roll picked before the roller has loaded stays picked once it loads", async ({ browser }) => {
+  // The service worker would see the page's requests first, and in WebKit page.route() then never slows them.
+  const page = await (await newContext(browser, { serviceWorkers: "block" })).newPage();
+  const errors = watchErrors(page);
+  const gm = person("Gwen");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Dice early pick ${gm.id}`);
+  await api(page, "prefs_save", { dice_saved: { cid, list: [{ n: "Fireball", e: "8d6 # fireball" }] } });
+  await page.goto(`index.html#/c/${cid}/table`);
+  // the roller's first load is slow, so the pick comes before it lands
+  let release;
+  const held = new Promise(res => { release = res; });
+  await page.route(/[?&]a=dice_rolls(&|$)/, async r => { await held; await r.continue(); }, { times: 1 });
+  await page.locator(".dice-fab").click();
+  await page.locator(".dice-saved").selectOption("1");
+  const again = page.getByRole("button", { name: "Roll this saved roll" });
+  await expect(again).toBeVisible();
+  const loaded = page.waitForResponse(/[?&]a=dice_rolls(&|$)/);
+  release();
+  await loaded;
+  await expect(page.locator(".dice-log")).toContainText("No rolls yet");
+  await expect(page.locator(".dice-saved")).toHaveValue("1");
+  await expect(again).toBeVisible();
+  await again.click();
+  await expect.poll(async () => (await api(page, "dice_rolls", undefined, cid)).json.rolls.filter(r => r.expr === "8d6 # fireball").length).toBe(1);
+  expectNoErrors(errors);
+});

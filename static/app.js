@@ -1687,8 +1687,9 @@
 
   /** At the Table's Pass time dialog: skip ahead by an amount or to a date (with an activity for the time passed, and
    * when it lands shown as you type), or start a rest or downtime, or plan a trip on the Travel tab. Resolves once the
-   * clock has moved (true), or not (false). */
-  function passTimeDialog() {
+   * clock has moved (true), or not (false). after() (the page's redraw) runs once the clock has moved and before the
+   * dialog closes, so the page behind it is never the old one. */
+  function passTimeDialog(after = null) {
     hideTip();
     return new Promise(resolve => {
       const c = cal(), n = spd(), now = nowShift();
@@ -1744,6 +1745,7 @@
         catch (x) { err.textContent = x.message; err.hidden = false; return; }
         moved = true;
         vs().anchor = today();
+        if (after) await after();
         d.close();
         toast(`Now: ${E.fmtShift(cal(), nowShift())}`);
       }));
@@ -4983,7 +4985,10 @@
       const form = el('form', {}, el('h3', {}, title), kids, el('div', { class: 'kit-dialog-actions' }, go, btn('Cancel', () => d.close())));
       form.addEventListener('submit', async ev => {
         ev.preventDefault(); go.disabled = true;
-        try { await run(); d.close(); await reload(); } catch (err) { toast(err.message, true); go.disabled = false; return; }
+        try { await run(); } catch (err) { toast(err.message, true); go.disabled = false; return; }
+        // the page redraws before the dialog closes, so what shows behind it (and a ⋯ menu opened next) is never the old state
+        try { await reload(); } catch (err) { toast(err.message, true); }
+        d.close();
         if (after) await after();
       });
       d.addEventListener('close', () => d.remove());
@@ -7147,7 +7152,7 @@
         await offerSession();
         route();
       }));
-      const more = btn('Pass time…', async () => { if (await passTimeDialog()) route(); }, '',
+      const more = btn('Pass time…', () => passTimeDialog(route), '',
         'Pass more time at once: skip ahead by an amount or to a date with an activity for the time passed, or start a rest, downtime or a trip');
       tools.push(end, more, el('span', { class: 'tv-bar-gap', 'aria-hidden': 'true' }));
     }

@@ -616,6 +616,7 @@ test("Party: a group's token is its marker", async ({ page, browser }) => {
   await dlg.locator(".token-option", { hasText: "Banner" }).click();
   await expect(dlg.getByRole("radio", { name: "Banner" })).toBeChecked();
   await dlg.getByRole("button", { name: "Save" }).click();
+  await expect(dlg).toHaveCount(0);   // it closes once the page has redrawn with the new token
   await expect.poll(async () => (await groups(page, cid))[0].token_id).toBe(t.id);
   await moreIn(rowOf(page, "The party"), "Token");
   await expect(dlg.getByRole("radio", { name: "Banner" })).toBeChecked();
