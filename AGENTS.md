@@ -7,6 +7,27 @@
 - **A phone is a nice to have.** Keep a phone usable where it's cheap to do (nothing running off the screen), but
   don't let phone layout drive a design, hold up a change, or cost desktop or iPad anything.
 
+## How the site looks
+
+The look is "Lamplight": quiet surfaces, one accent, and type doing most of the work. Keep new screens in it.
+
+- **Type:** headings use Spectral (`--disp`) and everything else uses Atkinson Hyperlegible (`--body`), both served
+  from `static/fonts`. Write titles and labels in sentence case, never all capitals.
+- **Colour:** use the theme tokens in `static/style.css` (`--bg`, `--panel`, `--panel-2`, `--line`, `--text`, `--dim`,
+  `--accent`, `--label`) rather than raw colours, so all five schemes and both modes follow. Don't change `--ok`,
+  `--bad` or `--secret` per theme.
+- **One accent:** fill a button with the accent only for the page's main action. A picked toggle, tab or row gets an
+  accent tint with an accent edge, and its text stays in the text colour. Headings and labels never use the accent
+  colour.
+- **Edges:** a coloured side or top edge must mean something (GM-only, NPC, GM or player clock). Don't add one for
+  decoration. The tapered rule under a title is the one ornament.
+- **Surfaces:** keep panels flat, with a 1px `--line` border and the shared `--radius`. Use no gradients and no glow,
+  and keep shadows to floating things only (menus, dialogs, the action bar).
+- **Icons:** use the drawn icons from `static/icons.js`. `KIT.el()` draws an emoji in a label as its icon, or
+  `KIT.icon(name)` makes one directly; never let a raw emoji reach the page.
+- **Contrast:** text must pass AA in every scheme and in both light and dark. `tests/browser/accessibility.spec.js`
+  checks this with axe, so run it whenever you change a colour.
+
 ## Tests before and after opening a pull request
 
 GitHub Actions (`.github/workflows/browser-tests.yml`) runs the whole suite on every pull request: PHP lint, the
