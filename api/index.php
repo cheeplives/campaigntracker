@@ -98,7 +98,7 @@ function user_prefs(int $uid): array {
 /** A user's units preference (static/app.js unitSystem). */
 const UNIT_SYSTEMS = ['metric', 'imperial'];
 /** Colour themes (data-scheme blocks in static/style.css, SCHEMES in static/app.js). */
-const SCHEMES = ['parchment', 'nightsky', 'console', 'arctic', 'wildwood'];
+const SCHEMES = ['parchment', 'nightsky', 'console', 'arctic', 'wildwood', 'lamplight'];
 /** SQL condition, on users column $col, for accounts approved for Chronicle (users.status until migration 020 is run). */
 function approved_sql(string $col = 'id'): string {
     return has_access_table() ? "$col IN (SELECT user_id FROM chronicle_access WHERE status='approved')" : "status='approved'";

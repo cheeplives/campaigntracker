@@ -773,6 +773,7 @@
     { id: 'console', name: 'Ship\'s Console', dot: '#3ee0a0', blurb: 'Phosphor green on a bridge display' },
     { id: 'arctic', name: 'Arctic', dot: '#7cc8f0', blurb: 'Glacier blue and snow' },
     { id: 'wildwood', name: 'Wildwood', dot: '#9cc45a', blurb: 'Moss and bark, for the overland road' },
+    { id: 'lamplight', name: 'Lamplight', dot: '#d98b4a', blurb: 'Slate and lamp amber, quiet for long sessions' },
   ];
   const schemeOf = id => SCHEMES.find(s => s.id === id) || SCHEMES[0];
   const currentScheme = () => schemeOf(document.documentElement.dataset.scheme).id;

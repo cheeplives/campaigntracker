@@ -66,6 +66,13 @@
 :root[data-scheme="wildwood"][data-theme="light"] {
   --bg: #f1f4ea; --panel: #fcfdf8; --panel-2: #e7ecdc; --line: #d2dcc0; --text: #1e2615; --dim: #5c694a; --accent: #4a721d; --on-accent: #fff;
 }
+/* ---------- Lamplight: slate and lamp amber, the palette of the Lamplight look's first preview */
+:root[data-scheme="lamplight"]:not([data-theme="light"]) {
+  --bg: #15191b; --panel: #1c2124; --panel-2: #232a2d; --line: #2e3538; --text: #e9e3d6; --dim: #9a9a8f; --accent: #d98b4a; --on-accent: #1a120a;
+}
+:root[data-scheme="lamplight"][data-theme="light"] {
+  --bg: #f2f0eb; --panel: #fcfbf8; --panel-2: #e9e6df; --line: #d4d0c6; --text: #1e2326; --dim: #535a5d; --accent: #8f4810; --on-accent: #fff;
+}
 * { box-sizing: border-box; }
 /* An icon (static/icons.js, drawn by kit.js el() for each emoji in a label): the size of the text and its colour */
 .ico { width: 1.15em; height: 1.15em; vertical-align: -.2em; fill: currentColor; flex: none; overflow: visible; }

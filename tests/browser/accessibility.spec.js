@@ -2,7 +2,7 @@
 // light and dark mode, and the things axe can't see work: the skip link, a title for each page, and where focus goes when
 // the page changes.
 const { test, expect } = require("@playwright/test");
-const { signIn, api, makeCampaign, ADMIN, watchErrors, expectNoErrors, goTab } = require("./helpers");
+const { signIn, api, makeCampaign, ADMIN, watchErrors, expectNoErrors, goTab, person, approve } = require("./helpers");
 
 // axe is injected as a script, which the app's Content Security Policy would refuse
 test.use({ bypassCSP: true });
@@ -50,6 +50,34 @@ for (const mode of ["light", "dark"]) {
     expect(found).toEqual({});
     expectNoErrors(errors);
   });
+}
+
+// Each colour theme beyond the default is checked on a few pages that between them show every kind of surface and text
+for (const scheme of ["lamplight"]) {
+  for (const mode of ["light", "dark"]) {
+    test(`axe finds nothing in the ${scheme} theme in ${mode} mode`, async ({ page, browser }, testInfo) => {
+      test.skip(!["chromium", "ipad"].includes(testInfo.project.name), "the markup is the same in every browser: a desk and an iPad are enough");
+      test.setTimeout(120_000);
+      await page.emulateMedia({ colorScheme: mode });
+      const errors = watchErrors(page);
+      const who = person("Lena");
+      await signIn(page, who);
+      await approve(browser, who.email);
+      await api(page, "prefs_save", { scheme });
+      const cid = await campaignWithThings(page);
+      const found = {};
+      let n = 0;
+      for (const at of ["#/", "#/account", ...["table", "calendar", "clocks", "encyclopedia", "settings"].map(t => `#/c/${cid}/${t}`)]) {
+        await page.goto(`index.html?page=${++n}${at}`);
+        await expect(page.locator("html")).toHaveAttribute("data-scheme", scheme);
+        await expect(page.locator("#app h1, #app h2").first()).toBeVisible();
+        const v = await axeFindings(page);
+        if (v.length) found[at] = v;
+      }
+      expect(found).toEqual({});
+      expectNoErrors(errors);
+    });
+  }
 }
 
 test("each page has its own title, and moving to another page puts focus on its content", async ({ page }) => {
