@@ -217,6 +217,10 @@ return [
   // See docs/DEPLOY.md, "Behind a CDN or proxy".
   'trusted_proxies' => [],
 
+  // The welcome tutorial (static/tour.js): tips that point out each page's parts the first time someone opens it. On
+  // by default; false keeps it off for everyone who hasn't turned it on from their Account page.
+  'tutorial' => true,
+
   // Set true only while debugging locally — leaks errors to the client. Keep
   // false in production (errors go to the PHP error log instead).
   'debug' => false,

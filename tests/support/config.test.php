@@ -40,5 +40,7 @@ return [
   'rate_limit_enabled' => true,
   'allow_install' => false,
   // Turns on tests/support/login.php. Never set this in a real config.
+  // Off, so the welcome tutorial's tips don't cover the pages every other spec clicks on; tutorial.spec.js turns it on.
+  'tutorial' => false,
   'test_login' => true,
 ];
