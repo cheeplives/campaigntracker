@@ -701,6 +701,7 @@ function group_merge(int $cid, bool $isGm = true): void {
         db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')
             ->execute([json_encode(array_values(array_unique([...party_members($into), ...party_members($g)]))), $into['id']]);
         db()->prepare('UPDATE sheet_characters SET party_group_id=? WHERE party_group_id=?')->execute([$into['id'], $g['id']]);
+        db()->prepare('UPDATE holdings SET party_group_id=? WHERE campaign_id=? AND party_group_id=?')->execute([$into['id'], $cid, $g['id']]);   // its vehicles go too
         db()->prepare('DELETE FROM party_groups WHERE id=?')->execute([$g['id']]);
         if ($g['is_main']) party_make_main($cid, (int)$into['id']);
         db()->commit();
@@ -762,6 +763,50 @@ function group_join(int $cid, bool $isGm = true): void {
             if ($to && (int)$g['id'] === (int)$to['id']) $keep[] = $user;
             if ($keep !== $m) db()->prepare('UPDATE party_groups SET members_json=? WHERE id=?')->execute([json_encode($keep), $g['id']]);
         }
+        db()->commit();
+    } catch (Throwable $e) {
+        if (db()->inTransaction()) db()->rollBack();
+        throw $e;
+    }
+    touch_campaign($cid);
+}
+
+// ---------- the party's vehicles ----------
+// A vehicle on Party → Holdings (the party's own, not a character's) travels with one of the party's groups, or with none
+// (holdings.party_group_id, 052). There is no foreign key on it (see the migration), so a group that is gone reads as none.
+
+/** The kinds of the party's holdings that travel with a group. */
+const PARTY_VEHICLE_KINDS = ['vehicle'];
+
+/** Campaign $cid's party vehicles, A to Z: [{id, name, kind, amount, group_id}], group_id null when it is with no group. */
+function party_vehicles(int $cid): array {
+    $in = implode(',', array_fill(0, count(PARTY_VEHICLE_KINDS), '?'));
+    $st = db()->prepare("SELECT h.id, h.name, h.kind, h.type_name, h.amount, g.id AS group_id FROM holdings h
+        LEFT JOIN party_groups g ON g.id=h.party_group_id AND g.campaign_id=h.campaign_id
+        WHERE h.campaign_id=? AND h.character_id IS NULL AND h.kind IN ($in) ORDER BY h.name, h.id");
+    $st->execute([$cid, ...PARTY_VEHICLE_KINDS]);
+    return array_map(fn($v) => ['id' => (int)$v['id'], 'name' => $v['name'], 'kind' => $v['kind'], 'amount' => (int)$v['amount'],
+        'group_id' => $v['group_id'] !== null ? (int)$v['group_id'] : null], $st->fetchAll());
+}
+/** Send one of the party's vehicles (holding: its id) with group id, or (id null) with no group. Holdings are every
+ * member's to change, so a player may move one too, but only out of and into groups that let players move. */
+function vehicle_group(int $cid, bool $isGm = true): void {
+    $body = body();
+    $h = row_of('holdings', $cid, int_in($body['holding'] ?? null, 1), 'Vehicle not found',
+        fn($r) => $r['character_id'] !== null || !in_array($r['kind'], PARTY_VEHICLE_KINDS, true));
+    if (!array_key_exists('id', $body)) fail('Say which group it goes with');
+    $to = $body['id'] === null || $body['id'] === '' ? null : group_row($cid, $body['id']);
+    db()->beginTransaction();
+    try {
+        party_lock($cid);
+        if ($to) $to = party_reread($cid, $to['id']);
+        $st = db()->prepare('SELECT g.* FROM holdings h JOIN party_groups g ON g.id=h.party_group_id AND g.campaign_id=h.campaign_id WHERE h.id=?');
+        $st->execute([$h['id']]);
+        $from = $st->fetch() ?: null;
+        $same = $from && $to && (int)$from['id'] === (int)$to['id'];
+        if (!$isGm && !$same && ($from && !(int)$from['players_can_move'] || $to && !(int)$to['players_can_move']))
+            fail('The GM has kept that group together for now', 403);
+        db()->prepare('UPDATE holdings SET party_group_id=? WHERE id=?')->execute([$to ? $to['id'] : null, $h['id']]);
         db()->commit();
     } catch (Throwable $e) {
         if (db()->inTransaction()) db()->rollBack();

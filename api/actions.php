@@ -168,6 +168,7 @@ const ACTIONS = [
     'group_merge' => ['who' => 'member'],
     'group_join' => ['who' => 'member'],
     'party_on_map' => ['who' => 'member'],
+    'vehicle_group' => ['who' => 'member'],
     'trail_clear' => ['who' => 'gm'],
     'map_save' => ['who' => 'gm'],
     'map_delete' => ['who' => 'gm'],

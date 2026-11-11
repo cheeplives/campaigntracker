@@ -1,0 +1,11 @@
+-- 052_party_vehicles.sql — the party's vehicles travel with a group of the party. holdings.party_group_id names the
+-- party group (party_groups.id) a vehicle of Party → Holdings goes with, set by dragging it on Party → Groups; NULL is
+-- with no group (left behind, stabled, in dock). Only the party's own vehicles use it (character_id NULL, kind
+-- 'vehicle'). There is no foreign key, as db/schema.sql makes holdings before party_groups: merging a group moves its
+-- vehicles to the group it joins, and a vehicle whose group is gone reads as with no group.
+--
+-- Run ONCE on an install created before this change:
+--   mysql -u <user> -p <database> < db/migrations/052_party_vehicles.sql
+-- (deploy.sh and install.php run it for you when holdings has no party_group_id column.)
+-- Fresh installs already get the column from db/schema.sql.
+ALTER TABLE holdings ADD COLUMN party_group_id INT UNSIGNED NULL AFTER character_id, ADD INDEX idx_holdings_group (party_group_id);

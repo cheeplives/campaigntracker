@@ -5164,9 +5164,9 @@
    * can start a group of their own with one, between groups that let players move. */
   async function viewGroups() {
     const gm = isGM(), me = Number(S.user.id);
-    let groups = [], mapNames = new Map(), characters = [];
+    let groups = [], mapNames = new Map(), characters = [], vehicles = [];
     const load = async () => {
-      groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+      ({ groups, vehicles = [] } = await api('groups', { query: { cid: S.camp.id } }));
       try { mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name])); } catch { /* names only */ }
       // the GM's tray: characters who aren't travelling
       if (gm && typeof Sheets !== 'undefined') try { characters = (await api('characters', { query: { cid: S.camp.id } })).characters; } catch { characters = []; }
@@ -5174,6 +5174,8 @@
     await load();
     const board = el('div', { class: 'group-board' });
     const tray = el('details', { class: 'card group-tray', 'data-drop': 'out' });
+    // the party's vehicles (Party → Holdings) that travel with no group: anyone may drag one onto a group from here
+    const garage = el('section', { class: 'card vehicle-tray', 'data-drop': 'parked', 'aria-label': 'Vehicles with no group' });
     const reload = async () => { await load(); draw(); };
     const member = uid => S.members.find(x => Number(x.id) === uid);
     const memberName = uid => { const m = member(uid); return m ? m.character_name || m.display_name : 'Someone'; };
@@ -5209,6 +5211,14 @@
         await reload();
       } catch (err) { return toast(err.message, true); }
       await offerMerge(from, id);
+    };
+    /** Send vehicle v with group id, or (null) with no group. */
+    const sendVehicle = async (id, v) => {
+      try {
+        await post('vehicle_group', { holding: v.id, id }, S.camp.id);
+        toast(id === null ? `${v.name} travels with no group` : `${v.name} travels with ${groups.find(g => g.id === id)?.name || 'the group'}`);
+        await reload();
+      } catch (err) { toast(err.message, true); }
     };
     /** A small modal form: run() does the work, and the board is drawn again after; then after(), if given. */
     const partyDialog = (title, kids, ok, run, after = null) => {
@@ -5292,6 +5302,14 @@
         () => post('group_join', { id: dest(), ...who }, S.camp.id), () => offerMerge(from?.id ?? null, dest()));
     };
 
+    /** Move… for a vehicle: pick the group it travels with, or none. */
+    const moveVehicle = (from, v) => {
+      const opts = [...targets(from).map(x => [x.id, x.name]), ...(from ? [['none', 'No group (left behind)']] : [])];
+      const to = select(opts, opts[0]?.[0] ?? '');
+      partyDialog(`Move ${v.name}`, [field('Travels with', to, from ? `${v.name} leaves ${from.name}` : `${v.name} goes along with the group`)], 'Move',
+        () => post('vehicle_group', { holding: v.id, id: to.value === 'none' ? null : Number(to.value) }, S.camp.id));
+    };
+
     // ---- dragging a row (by its ⠿ handle) onto a group card, or a GM's onto the tray to take them out. Pointer events, so a
     // finger on an iPad drags it as a mouse does; Move… does the same without dragging.
     let drag = null;
@@ -5303,9 +5321,15 @@
       if (edge && !edgeTimer) edgeTimer = setInterval(() => { if (edge) scrollBy(0, edge * 14); }, 16);
       if (!edge && edgeTimer) { clearInterval(edgeTimer); edgeTimer = null; }
     };
-    const dropAt = (x, y, from) => {
+    /** The group card (or tray) under x, y that what is dragged out of group `from` may land on. A person goes to a group
+     * or (GMs) the characters' tray; a vehicle (who.holding) to a group or the vehicles' tray. */
+    const dropAt = (x, y, from, who) => {
       const t = document.elementFromPoint(x, y)?.closest('[data-drop]');
-      return t && t.dataset.drop !== String(from ?? 'out') && (t.dataset.drop !== 'out' || gm) ? t : null;
+      if (!t) return null;
+      const d = t.dataset.drop, car = !!who?.holding;
+      if (d === String(from ?? (car ? 'parked' : 'out'))) return null;
+      if (car) return d === 'out' ? null : t;
+      return d === 'parked' || d === 'out' && !gm ? null : t;
     };
     const handle = (row, who, name, from) => {
       const h = el('span', { class: 'group-grip', 'aria-hidden': 'true' }, '⠿');
@@ -5331,7 +5355,7 @@
         drag.ghost.style.left = `${ev.clientX - drag.dx}px`;
         drag.ghost.style.top = `${ev.clientY - drag.dy}px`;
         edgeScroll(ev.clientY);
-        const hot = dropAt(ev.clientX, ev.clientY, drag.from);
+        const hot = dropAt(ev.clientX, ev.clientY, drag.from, drag.who);
         if (hot !== drag.hot) { drag.hot?.classList.remove('drop-hot'); hot?.classList.add('drop-hot'); drag.hot = hot; }
       });
       const end = ev => {
@@ -5343,8 +5367,10 @@
         document.body.classList.remove('group-dragging');
         if (!d.ghost) return;
         d.ghost.remove();
-        const t = ev.type === 'pointerup' ? dropAt(ev.clientX, ev.clientY, d.from) || d.hot : null;
-        if (t) join(t.dataset.drop === 'out' ? null : Number(t.dataset.drop), d.who, d.name, d.from);
+        const t = ev.type === 'pointerup' ? dropAt(ev.clientX, ev.clientY, d.from, d.who) || d.hot : null;
+        const to = t && (t.dataset.drop === 'out' || t.dataset.drop === 'parked' ? null : Number(t.dataset.drop));
+        if (t && d.who.holding) sendVehicle(to, vehicles.find(v => v.id === d.who.holding));
+        else if (t) join(to, d.who, d.name, d.from);
       };
       h.addEventListener('pointerup', end);
       h.addEventListener('pointercancel', end);
@@ -5360,6 +5386,17 @@
         el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, name), el('small', { class: 'muted' }, sub)),
         eye,
         movable ? labelled(btn('Move…', () => moveTo(from, who, name), 'small', from ? `Send ${name} to another group` : `Bring ${name} into a group of the party`), `Move ${name}`) : null]));
+      return row;
+    };
+    /** A row for one of the party's vehicles in group `from` (null: with no group), with ⠿ and Move… where this member may move it. */
+    const vehicleRow = (from, v) => {
+      const movable = (gm || !from || from.players_can_move) && (targets(from).length || from);
+      const sub = [HOLDING_KINDS[v.kind]?.label || 'Vehicle', v.amount !== 1 ? `× ${v.amount}` : ''].filter(Boolean).join(' · ');
+      const row = el('li', { class: 'group-member group-vehicle' });
+      row.append(...clean([movable ? handle(row, { holding: v.id }, v.name, from) : null,
+        el('span', { class: 'token-face group-vehicle-face', 'aria-hidden': 'true' }, HOLDING_KINDS[v.kind]?.icon || '🚙'),
+        el('span', { class: 'group-who' }, el('strong', { class: 'group-member-name' }, v.name), el('small', { class: 'muted' }, sub)),
+        movable ? labelled(btn('Move…', () => moveVehicle(from, v), 'small', from ? `Send ${v.name} with another group` : `Send ${v.name} with a group of the party`), `Move ${v.name}`) : null]));
       return row;
     };
     const MAP_DISPLAYS = [['marker', '🚩 One marker'], ['tokens', '👥 Each character\'s token'], ['hidden', '🙈 Hidden from players']];
@@ -5389,6 +5426,7 @@
         } }))
         : g.map_display === 'tokens' ? el('small', { class: 'muted group-display' }, 'On the maps: each character\'s token') : null;
       const dropOk = gm || g.players_can_move;
+      const cars = vehicles.filter(v => v.group_id === g.id);
       return el('section', { class: 'card group-card' + (g.is_main ? ' main' : ''), 'aria-label': g.name, 'data-drop': dropOk ? g.id : null },
         el('div', { class: 'group-head' }, face(g.token_url, g.name),
           el('div', { class: 'group-title' },
@@ -5412,7 +5450,10 @@
             groups.length > 1 ? el('hr') : null,
             groups.length > 1 ? btn('Merge into…', () => mergeParty(g), 'small', 'Its members join another group, and this one is gone') : null) : null),
         players.length || chars.length ? el('ul', { class: 'group-members' }, players, chars) : el('p', { class: 'muted small' }, 'No one yet'),
-        dropOk && groups.length > 1 ? el('div', { class: 'group-drop small muted', 'aria-hidden': 'true' }, 'Drag someone here') : null,
+        cars.length ? el('div', { class: 'group-vehicles' }, el('h4', { class: 'group-vehicles-title' }, 'Vehicles'),
+          el('ul', { class: 'group-members', 'aria-label': `${g.name}'s vehicles` }, cars.map(v => vehicleRow(g, v)))) : null,
+        dropOk && (groups.length > 1 || vehicles.length) ? el('div', { class: 'group-drop small muted', 'aria-hidden': 'true' },
+          vehicles.length ? 'Drag someone or a vehicle here' : 'Drag someone here') : null,
         gm && !g.is_main ? el('div', { class: 'row' }, btn(`Rejoin ${groups[0].name}`, async () => {
           try { await post('group_merge', { id: g.id, into_id: groups[0].id }, S.camp.id); await reload(); } catch (err) { toast(err.message, true); }
         }, 'small', `Everyone in ${g.name} goes back to ${groups[0].name}, and ${g.name} is gone`)) : null);
@@ -5435,7 +5476,17 @@
         el('p', { class: 'small muted' }, 'Characters who don\'t travel with any group: players\' characters sitting this out, and characters with no player. Drag one onto a group to bring them along, or drag someone here to take them out.'),
         out.length > 6 ? find : null, list]));
     };
+    /** The party's vehicles with no group, for anyone to drag onto one. Left off when the party has no vehicles. */
+    const drawGarage = () => {
+      const loose = vehicles.filter(v => v.group_id === null);
+      garage.style.display = vehicles.length ? '' : 'none';
+      garage.replaceChildren(el('h3', { class: 'group-tray-title' }, 'Vehicles with no group', el('span', { class: 'muted small' }, ` ${loose.length}`)),
+        el('p', { class: 'small muted' }, 'The party\'s vehicles from Holdings that aren\'t travelling with any group. Drag one onto a group to take it along, or drag one here to leave it behind.'),
+        loose.length ? el('ul', { class: 'group-members group-tray-list' }, loose.map(v => vehicleRow(null, v)))
+          : el('p', { class: 'muted small' }, 'Every vehicle is travelling with a group.'));
+    };
     const draw = () => {
+      drawGarage();
       board.replaceChildren(...(groups.length ? groups.map(groupCard)
         : [el('p', { class: 'muted' }, 'No one is in the party yet. A player\'s character joins it when it is made, and any other with Travels with the party.')]));
       if (gm && typeof Sheets !== 'undefined') drawTray();
@@ -5448,19 +5499,19 @@
     draw();
     mount(...campaignHeader('groups'), el('div', { class: 'card' }, partySubtabs('groups', start),
       el('p', { class: 'small muted party-intro' }, gm
-        ? 'Who travels with whom. Drag someone by ⠿ onto another group, or press their Move… button. The main group\'s region is the campaign\'s, and each group has its own marker on the maps.'
-        : 'Who travels with whom, and where each group is. Drag your character by ⠿ onto another group, or press Move…, unless the GM has kept a group together.')), board, tray);
+        ? 'Who travels with whom, and in which vehicles. Drag someone (or a vehicle) by ⠿ onto another group, or press their Move… button. The main group\'s region is the campaign\'s, and each group has its own marker on the maps.'
+        : 'Who travels with whom, in which vehicles, and where each group is. Drag your character or a vehicle by ⠿ onto another group, or press Move…, unless the GM has kept a group together.')), board, garage, tray);
   }
 
   // ------------------------------------------------------------ travel tab
   async function viewTravel() {
     const out = el('div', { class: 'travel-out' });
     // The party's groups (main first), the maps' names and, for Depart, the pins of the map a group is on.
-    let groups = [], mapNames = new Map(), result = null;
+    let groups = [], vehicles = [], mapNames = new Map(), result = null;
     const pinCache = new Map();
     const loadParty = async () => {
       try {
-        groups = (await api('groups', { query: { cid: S.camp.id } })).groups;
+        ({ groups, vehicles = [] } = await api('groups', { query: { cid: S.camp.id } }));
         mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
       } catch { /* the card is only a convenience; the planner still works */ }
     };
@@ -5481,7 +5532,8 @@
     const partyCard = el('div', { class: 'card party-summary' }, el('div', { class: 'row spread' }, el('h2', {}, 'Where the party is'),
       el('a', { class: 'button small', href: `#/c/${S.camp.id}/groups`, 'data-tip': 'Split the party, move people between groups, and choose each group\'s token on Party → Groups' }, 'Groups →')),
       groups.map(g => el('div', { class: 'party-line' }, el('strong', { class: 'party-name' }, g.name), g.is_main ? el('span', { class: 'party-main', 'data-tip': 'Its region is the campaign\'s current region' }, 'MAIN') : null,
-        el('span', { class: 'muted small' }, ` 📍 ${regionById(g.region_id)?.name || 'No region'} · 🗺 ${mapNames.get(g.map_id) || 'Not on a map'}`))));
+        el('span', { class: 'muted small' }, ` 📍 ${regionById(g.region_id)?.name || 'No region'} · 🗺 ${mapNames.get(g.map_id) || 'Not on a map'}`,
+          ...vehicles.filter(v => v.group_id === g.id).map((v, i) => `${i ? ', ' : ' · 🚙 '}${v.name}`)))));
     partyCard.hidden = !groups.length;
     const genre = E.genreOf(settings());
     const modes = [
@@ -6431,6 +6483,8 @@
       const [{ funds, gear, holdings, tags }, groups] = await Promise.all([api('holdings', { query: holdBody(scope, { cid: S.camp.id }) }),
         api('groups', { query: { cid: S.camp.id } }).then(r => r.groups).catch(() => [])]);
       S.holdingTags = tags || [];
+      // a party vehicle says which group it travels with (Party → Groups)
+      if (!scope.character) for (const h of holdings) if (h.kind === 'vehicle') h.group = groups.find(g => g.id === h.party_group_id) || false;
       const cards = holdings.map(h => holdingCard(h, scope));
       const toggleAll = btn('', () => {
         const open = !cards.every(c => c.isOpen());
@@ -6615,6 +6669,8 @@
       el('span', { class: 'hold-caret', 'aria-hidden': 'true' }, '▸'), `${k.icon} ${h.name}`);
     const body = el('div', { class: 'hold-body' },
       h.location ? el('small', { class: 'muted' }, `📍 ${h.location}`) : null,
+      h.group !== undefined ? el('a', { class: 'small hold-group', href: `#/c/${S.camp.id}/groups`, 'data-tip': 'Choose the group it travels with on Party → Groups' },
+        h.group ? `🚩 Travels with ${h.group.name}` : '🚩 Travels with no group') : null,
       h.tags?.length ? el('div', { class: 'etags' }, h.tags.map(tagChip)) : null,
       h.description ? el('p', { class: 'pre' }, h.description) : null,
       stats.length ? el('div', { class: 'hold-stats' }, stats) : null,

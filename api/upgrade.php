@@ -141,6 +141,8 @@ function upgrade_steps(): array {
             'Encyclopedia entries now have a facts box with their Category\'s fields (a Person\'s Role and Status, a Location\'s Ruler), set per Category in Settings, and there is a Quest Category whose Active ones show on At the Table.'],
         ['051_personal_holdings.sql', fn(PDO $p) => db_has_table($p, 'party_gear') && !db_has_column($p, 'party_gear', 'character_id'),
             'Every character sheet can now have a Holdings page of the character\'s own funds, gear and holdings, laid out like Party → Holdings.'],
+        ['052_party_vehicles.sql', fn(PDO $p) => db_has_table($p, 'holdings') && !db_has_column($p, 'holdings', 'party_group_id'),
+            'The party\'s vehicles can now travel with a group: drag one onto a group on Party → Groups, and it goes where the group goes.'],
     ];
 }
 

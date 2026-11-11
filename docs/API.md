@@ -70,7 +70,7 @@ shifts that have come round so far, unless the GM lets players see future weathe
 | `events` | | Every event the key's member may see: `{ events: [{ id, abs_day, end_day, shift, shift_end, title, body, … }] }`. |
 | `reminders` | | `{ reminders: [{ id, due_shift, title, body, due, dismissed, … }], current_shift }`. |
 | `encyclopedia` | | `{ entries: [{ id, name, category, aliases, notes, tags, … }], relations, relation_types, files, … }`. Notes are rich text (HTML). A player's key never gets GM notes, GM-only entries or GM-only paragraphs. |
-| `groups` | | The party groups and where each one is: `{ groups: [{ id, name, members, region_id, map_id, x, y, … }] }`. |
+| `groups` | | The party groups and where each one is: `{ groups: [{ id, name, members, region_id, map_id, x, y, … }], vehicles: [{ id, name, kind, amount, group_id }] }` (the party's vehicles from Holdings, each with the group it travels with, or null). |
 | `maps` | | `{ maps: [...] }`. |
 | `map` | `id` | One map with its pins and routes. |
 | `clocks` | | `{ clocks: [{ id, name, description, segments, filled, visibility, by_gm, entry, archived, ticks, … }] }`. A player's key never gets secret clocks, and gets `filled: null` and no `ticks` on a vague clock someone else made. |

@@ -1656,6 +1656,12 @@ body.group-dragging, body.group-dragging * { cursor: grabbing !important; user-s
 .group-tray-title { font: 600 1.05rem var(--disp); }
 .group-tray > p { margin: 8px 0; }
 .group-tray input[type=search] { max-width: 280px; margin-bottom: 8px; }
+.group-vehicles { display: flex; flex-direction: column; gap: 6px; }
+.group-vehicles-title { margin: 0; font: 600 .95rem var(--disp); color: var(--dim); }
+.group-member > .group-vehicle-face { border-color: var(--line); background: var(--panel); color: var(--text); font-size: 1.05rem; }
+.vehicle-tray .group-tray-title { margin: 0; }
+.vehicle-tray > p { margin: 8px 0; }
+.hold-group { align-self: flex-start; }
 .group-tray-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 6px; }
 /* Travel's line per group, pointing at Party → Groups */
 .party-summary { display: flex; flex-direction: column; gap: 6px; }
