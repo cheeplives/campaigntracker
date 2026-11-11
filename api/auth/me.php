@@ -31,5 +31,6 @@ json_out([
   'status'   => $u['status'],       // pending | approved | revoked
   'is_admin' => (bool) (int) $u['is_admin'],
   'prefs'    => (object) (is_array($prefs) ? $prefs : []),
+  'tutorial' => (bool) cfg('tutorial', true), // the welcome tutorial shows to someone who hasn't turned it on or off (prefs.tour)
   'csrf'     => csrf_token(),
 ]);

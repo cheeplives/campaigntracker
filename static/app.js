@@ -735,6 +735,8 @@
         tip: `Signed in as ${S.user.email}`, items: [
           el('a', { href: '#/account', class: 'button small', 'data-tip': 'Your name and pronouns, your units and the map scanner key' }, 'Account'),
           S.user.is_admin ? el('a', { href: '#/admin', class: 'button small', 'data-tip': 'Approve sign-ups, manage accounts, and see game requests and problem reports (site admins only)' }, 'Site Admin') : null,
+          btn('Tips for this page', () => { if (!tourFor(location.hash, [], true)) toast('This page has no tips of its own'); else maybeTour(true); }, 'small',
+            'Show the welcome tutorial\'s tips for the page you are on again'),
           el('hr'),
           el('div', { class: 'menu-head' }, 'Theme'),
           schemeButtons(),
@@ -945,7 +947,28 @@
       });
       show();
     }
-    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, scanner);
+    // The welcome tutorial: back on after Skip tutorial, from the start again, or off (prefs.tour)
+    const tutorial = el('section', { class: 'card narrow tour-card-account', 'aria-labelledby': 'tour-account-h' });
+    const drawTutorial = () => {
+      const t = tourState();
+      const on = t.state === 'on';
+      const setTour = (state, go) => async () => {
+        await saveTour({ state, seen: state === 'on' ? [] : t.seen });
+        if (go) { location.hash = '#/'; return; }
+        toast(state === 'on' ? 'Tutorial on' : 'Tutorial off');
+        drawTutorial();
+      };
+      tutorial.replaceChildren(el('h2', { id: 'tour-account-h' }, 'Welcome tutorial'),
+        el('p', { class: 'muted' }, on
+          ? `The tutorial is on: the first time you open a page, a few tips point out its parts.${t.seen.length ? ` You have been through ${t.seen.length === 1 ? 'one page' : `${t.seen.length} pages`} so far.` : ''}`
+          : 'The tutorial is off. Turn it back on and each page shows its tips again the first time you open it, starting with your campaign list.'),
+        el('p', { class: 'muted small' }, 'Your name\'s menu at the top has Tips for this page, to see one page\'s tips again at any time.'),
+        el('div', { class: 'row' }, on
+          ? [btn(t.seen.length ? 'Start again from the beginning' : 'Start now', setTour('on', true), 'primary'), btn('Turn the tutorial off', setTour('off'))]
+          : btn('Turn the tutorial back on', setTour('on', true), 'primary')));
+    };
+    drawTutorial();
+    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, tutorial, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -1648,6 +1671,214 @@
     }
     if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.target.closest?.('input, textarea, select, [contenteditable]') && !jumpBox) { ev.preventDefault(); keysSheet(); }
   });
+
+  // ------------------------------------------------------------ welcome tutorial
+  // The first time someone opens a page, a few tips point out its parts (static/tour.js draws them). Which pages' tips
+  // they have been through, and whether the tutorial is on at all, are kept in their preferences (prefs.tour), so each
+  // shows once, on every device. Skip tutorial turns it off; the Account page turns it back on. The site's own default
+  // (config 'tutorial', sent as S.user.tutorial) applies to someone who has never turned it on or off.
+  const tourState = () => {
+    const t = S.user?.prefs?.tour;
+    return t && (t.state === 'on' || t.state === 'off') ? { state: t.state, seen: [...(t.seen || [])] } : { state: S.user?.tutorial === false ? 'off' : 'on', seen: [] };
+  };
+  async function saveTour(t) {
+    S.user.prefs = { ...(S.user.prefs || {}), tour: t };
+    try { S.user.prefs = (await post('prefs_save', { tour: t })).prefs; } catch (err) { toast(err.message, true); }
+  }
+  const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  /** The tips for the page at this address: { ids, label, steps }, or null for a page that has none. A campaign page
+   * opened for the first time starts with the campaign's own bar and tabs ('campaign'), then the tab's ('tab-<key>'). */
+  function tourFor(hash, seen, all = false) {
+    const [path] = hash.replace(/^#\/?/, '').split('?');
+    const parts = path.split('/');
+    const want = id => all || !seen.includes(id);
+    if (parts[0] === '' && parts.length === 1) return want('welcome') ? { ids: ['welcome'], label: 'Welcome', steps: welcomeSteps() } : null;
+    if (parts[0] === 'templates' && parts.length === 1) return want('templates') ? { ids: ['templates'], label: 'Sheet templates', steps: templateSteps() } : null;
+    if (parts[0] === 'account') return want('account') ? { ids: ['account'], label: 'Your account', steps: accountSteps() } : null;
+    if (parts[0] !== 'c' || !S.camp) return null;
+    let tab = parts[2] || 'table';
+    if (tab === 'today') tab = parts[3] ? 'day' : 'table';
+    if (parts[3] && tab !== 'day') return null;   // an open entry, map or sheet: its tab's tips wait for the tab itself
+    const tabSteps = TAB_TOURS[tab];
+    const ids = [], steps = [];
+    if (want('campaign')) { ids.push('campaign'); steps.push(...campaignSteps().map(st => ({ ...st, label: 'Your campaign' }))); }
+    if (tabSteps && want(`tab-${tab}`)) { ids.push(`tab-${tab}`); steps.push(...tabSteps().map(st => ({ ...st, label: tab === 'day' ? 'A day' : TAB_LABELS[tab] }))); }
+    return ids.length ? { ids, label: ids[0] === 'campaign' ? 'Your campaign' : TAB_LABELS[tab] || 'This page', steps } : null;
+  }
+  function welcomeSteps() {
+    return [
+      { title: 'Welcome to Campaign Chronicle', text: [
+        'Chronicle keeps a tabletop campaign in one place: its calendar and weather, what happened each session, the party\'s characters and gear, and everything the party has learned about the world.',
+        'These tips point out the parts of each page the first time you open it. Next moves on, Escape closes the tips for this page, and Skip tutorial turns them all off. Your Account page can turn them back on.'] },
+      { at: '#app .new-btn', title: 'Start a campaign', text: 'Make a campaign of your own here. You pick its calendar, its regions and its options, and you are its GM. To play in someone else\'s, ask its GM to add you on their Members tab, and it shows up in this list.' },
+      { at: '#app .camplist .camp-row', optional: true, title: 'Your campaigns', text: 'Every campaign you play in or run. Open one by its name. The star beside it keeps it at the top of the list, and a GM\'s menu at the end of the row copies or deletes it.' },
+      { at: 'a.nav-link[href="#/templates"]', optional: true, title: 'Sheet templates', text: 'Character sheets for many games. Use one as it is, copy one to change it, or make your own. A campaign\'s characters are kept on these sheets.' },
+      { at: '.report-btn', optional: true, title: 'Report a problem', text: 'Something not working, or an idea? This sends a note to the site\'s admins, with a screenshot of the page if you like.' },
+      { at: '.account-menu > summary', optional: true, title: 'Your account', text: `Your name opens a menu with your Account page (your name, pronouns, units and this tutorial),${S.user?.is_admin ? ' Site Admin,' : ''} the colour theme, light or dark mode, and Sign out.` },
+      { title: 'Open a campaign to carry on', text: 'Each page of a campaign has a few tips of its own the first time you open it. Most buttons also say what they do when you rest the pointer on them or reach them with the Tab key, and a ? beside a heading explains its box.' },
+    ];
+  }
+  function templateSteps() {
+    return [
+      { title: 'Sheet templates', text: 'A template is a game\'s character sheet: its boxes, tracks and dice. Pick one when you make a character, and every character made from it shares its layout.' },
+      { at: '#app .new-btn', optional: true, title: 'Make your own', text: 'Start a template from nothing, or from a PDF of the game\'s sheet. Opening a template lets you use it, copy it or change your copy.' },
+      { at: ['#app button:not(.primary):not(.small)'], optional: true, title: 'Ask for a game', text: 'No template for your game yet? Ask for one here, and the site\'s admins see the request.' },
+    ];
+  }
+  function accountSteps() {
+    return [
+      { at: '#app form:first-of-type', title: 'Your account', text: 'Set the name and pronouns Chronicle calls you by, and the units you see temperatures, distances and speeds in.' },
+      { at: '#app .tour-card-account', optional: true, title: 'This tutorial', text: 'Turn the tutorial back on here after skipping it, or start it again from the beginning.' },
+    ];
+  }
+  function campaignSteps() {
+    const gm = isGM();
+    const drawer = legendIsDrawer() && $('nav.tabs')?.classList.contains('tucked');
+    return [
+      { at: '.nowbar .now-title h1', title: 'The campaign bar', text: gm
+        ? 'The campaign\'s name, and that you are its GM. As GM you see the secrets, GM notes and future weather your players don\'t.'
+        : 'The campaign\'s name, and that you are a player here. GM notes, secret events and (unless the GM allows it) future weather are kept from players.' },
+      gm ? { at: '.nowbar .view-as', optional: true, title: 'View as player', text: 'See the campaign exactly as your players do, with no secrets or GM notes. Nothing can be changed until you leave player view.' } : null,
+      { at: '.nowbar .now-date', optional: true, title: 'Where the clock is', text: 'The campaign\'s current shift and date, with where the party is, the weather, the light and the moons. Select the date to go to At the Table.' },
+      gm ? { at: '.nowbar .now-passbtn', optional: true, title: 'Pass time', text: 'Moves the campaign clock on, by an amount or to a date. The weather, light, reminders and clocks follow along.' } : null,
+      drawer
+        ? { at: 'nav.tabs .legend-tuck', title: 'The tabs', text: 'The campaign\'s pages are tucked away to the left on this screen. This button brings them out: Play for the days and sessions, Party for the characters and what they own, World for what the party has learned, and Setup for places, people and options.' }
+        : { at: ['nav.tabs .tab-group[data-group="Play"]', 'nav.tabs'], title: 'The tabs', text: 'The campaign\'s pages, in four groups: Play for the days and sessions, Party for the characters and what they own, World for what the party has learned, and Setup for places, people and options. Select a group\'s name to fold it away.' },
+      { at: ['nav.tabs .tab-search', 'nav.tabs .tab-search-link'], optional: true, title: 'Search and jump', text: `Search the whole campaign from here, or press / to jump to it. ${mac() ? '⌘K' : 'Ctrl K'} opens a box that goes straight to any name, tab or action, or rolls dice, and ? lists every key.` },
+      { at: '.dice-fab', optional: true, title: 'Dice', text: 'Roll dice from any page. Everyone in the campaign sees the rolls in the log.' },
+    ].filter(Boolean);
+  }
+  /** The first tip of a tab: what the tab is for, pointing at the tab itself. */
+  const tabIntro = (tab, ...text) => ({ at: 'nav.tabs a[aria-current="page"]', title: TAB_LABELS[tab], text });
+  const mainAction = (title, text) => ({ at: '#app .new-btn, #app button.primary:not(.now-passbtn)', optional: true, title, text });
+  const helpTip = { at: '#app h2 .tip, #app h3 .tip', optional: true, title: 'Help for each box', text: 'A ? beside a heading explains that box. Select it, or rest the pointer on it.' };
+  const TAB_TOURS = {
+    table: () => [
+      tabIntro('table', 'Where you play from. It shows the shift the clock is on, what the party is doing in it, and the day\'s weather, events and notes.'),
+      { at: '#app .tv-now', optional: true, title: 'Now', text: 'The shift the clock is on: what the party does in it, its notes and its events. Write in it as you play.' },
+      { at: '#app .tv-bar', optional: true, title: 'Tools for play', text: isGM()
+        ? 'End the shift to move the clock on to the next one, or pass more time. Add an event, a reminder or a note, and look things up, without leaving the page.'
+        : 'Add a note, and look things up in the campaign, without leaving the page.' },
+      { at: '#app section.daybox', optional: true, title: 'The rest of today', text: 'Today\'s clocks, shifts, events and reminders are folded underneath. Select a box\'s name to open or fold it, and it stays as you leave it.' },
+      isGM() ? { at: '#app .tv-links', optional: true, title: 'Use in a VTT or on stream', text: 'Links that show the clock and weather in a virtual tabletop or a stream overlay, and keys for programs that read the campaign.' } : null,
+    ].filter(Boolean),
+    calendar: () => [
+      tabIntro('calendar', 'The campaign\'s days laid out by month, week or year, with each day\'s weather, light, moons and events.'),
+      { at: '#app .calbar', optional: true, title: 'Moving around', text: 'Step back and forward, go to today, and switch between month, week and year.' },
+      { at: '#app .daycell:not(.empty)', optional: true, title: 'A day', text: 'Select a day to open it: its weather, every shift, its notes and its events.' },
+    ],
+    day: () => [
+      { at: '#app h2', title: 'A day', text: 'Everything about one day: its weather and region, each shift, the day\'s notes and its events. Each box folds away by its name.' },
+      { at: '#app nav.trail', optional: true, title: 'Where you are', text: 'The month and the calendar this day belongs to. The buttons beside the date step to the day before or after.' },
+      helpTip,
+    ],
+    events: () => [
+      tabIntro('events', 'Every event in the campaign in one list, which you can search and filter by tag, or see along a timeline.'),
+      { at: '#app nav.subtabs', optional: true, title: 'Events and reminders', text: 'Reminders sit beside the events: notes that pop up when the clock reaches a day or shift.' },
+      mainAction('Add an event', 'Add something that happens on a day, or over several, with tags to find it again.'),
+    ],
+    sessions: () => [
+      tabIntro('sessions', 'One entry per game night: quick notes as you play, and the summary written from them afterwards.'),
+      mainAction('Start a session', 'Start tonight\'s session. Notes written At the Table while it is open go into it.'),
+      helpTip,
+    ],
+    clocks: () => [
+      tabIntro('clocks', 'Circles of segments that fill as something comes closer: the GM\'s plots and dangers, and the players\' own plans.'),
+      mainAction('Add a clock', 'Give it a name and a number of segments, then fill them in as things move on.'),
+      { at: '#app .clock-tag-gm, #app .clock-tag-player', optional: true, title: 'Whose clocks', text: 'Show the GM\'s clocks, the players\' clocks, or both. A GM\'s clock can be kept secret from the players.' },
+    ],
+    characters: () => [
+      tabIntro('characters', 'Everyone\'s characters and their sheets, the players\' and the GM\'s.'),
+      { at: '#app nav.subtabs', optional: true, title: 'The party', text: 'Characters, Groups and Holdings are the party\'s three pages: who is in it, how it is split up, and what it owns.' },
+      mainAction('Add a character', 'Make a character on one of the sheet templates. A player\'s character is theirs to fill in.'),
+    ],
+    groups: () => [
+      tabIntro('groups', 'Who travels with whom: the main party and any groups split off from it, where each one is, and how it shows on the maps.'),
+      mainAction('Split the party', 'Start a new group, then move characters into it. Each group keeps its own place and its own clock of travel.'),
+    ],
+    holdings: () => [
+      tabIntro('holdings', 'What the party owns: its money, its gear and loot, and its vehicles, animals, buildings and other assets.'),
+      { at: '#app section.funds', optional: true, title: 'Funds', text: 'The party\'s money, in each currency and wherever it is kept.' },
+      { at: '#app section.gear', optional: true, title: 'Gear and loot', text: 'Everything carried or stored, and who has claimed it.' },
+    ],
+    travel: () => [
+      tabIntro('travel', 'Work out how long a journey takes, then pass that much time in one go.'),
+      { at: '#app h2', optional: true, title: 'Where the party is', text: 'Each group\'s region now, and the way to the Groups page to change it.' },
+      mainAction('Plan a journey', 'Pick the distance, the terrain and how the party travels, and Calculate says how long it takes.'),
+    ],
+    downtime: () => [
+      tabIntro('downtime', 'Rests and longer downtime: what the party does with the time, and who does it.'),
+      mainAction('Add downtime', 'Start a rest or a stretch of downtime, give each character an activity, and pass the time it takes.'),
+    ],
+    encyclopedia: () => [
+      tabIntro('encyclopedia', 'The people, places, items and groups met in play. A name written anywhere in the campaign links to its entry.'),
+      mainAction('Add an entry', 'Write up someone or somewhere new. Saving a note that names something new also offers to add it here.'),
+      { at: '#app .enc-filterbtn', optional: true, title: 'Find an entry', text: 'Filter the list by category and tag, or search it.' },
+    ],
+    library: () => [
+      tabIntro('library', 'The campaign\'s books, journals and notes, written out in full. Anyone in the campaign can add one or change one.'),
+      mainAction('Add a tome', 'A book the party found, a character\'s journal, or the GM\'s notes, each with its own pages.'),
+    ],
+    generators: () => [
+      tabIntro('generators', 'Random names, taverns, companies and towns, to use on the spot.'),
+      { at: '#app .gen-card', optional: true, title: 'A generator', text: 'Generate gives a fresh batch. Add puts one straight into the Encyclopedia.' },
+    ],
+    maps: () => [
+      tabIntro('maps', 'Pictures of the world you can zoom, scale and measure on, with pins, labels and the party\'s markers.'),
+      mainAction('Add a map', 'Upload a picture of a map. Set its scale once and distances on it are measured for you.'),
+    ],
+    regions: () => [
+      tabIntro('regions', 'The places the party goes, each with its own climate, light and terrain, which drive its weather.'),
+      mainAction('Add a region', 'Name a place and pick its climate. The party\'s current region sets the weather you see.'),
+    ],
+    holidays: () => [
+      tabIntro('holidays', 'Festivals and recurring days, shown on the calendar each time they come round.'),
+      mainAction('Add a holiday', 'Name a day and how often it comes round.'),
+    ],
+    members: () => [
+      tabIntro('members', 'Who plays in this campaign, and who can GM it.'),
+      { at: '#app h3', optional: true, title: 'Add a member', text: isGM() ? 'Add a player by their email. They get a link to join, and the campaign shows on their list.' : 'Only a GM can add or remove members.' },
+    ],
+    tokens: () => [
+      tabIntro('tokens', 'Round pictures for the party\'s groups, characters and Encyclopedia entries, shown on the maps.'),
+    ],
+    settings: () => [
+      tabIntro('settings', 'The campaign\'s options and its calendar. Only a GM sees this tab.'),
+      { at: '#app nav.settings-tabs', optional: true, title: 'Each part of the setup', text: 'The campaign itself, its calendar, its dice, the Encyclopedia\'s categories, the weather and the tools each have a page here.' },
+      mainAction('Save', 'Changes here take effect once saved.'),
+    ],
+    search: () => [
+      tabIntro('search', 'Searches the whole campaign at once: the Encyclopedia, days and events, the Library, the party\'s holdings and downtime.'),
+    ],
+  };
+  TAB_TOURS.party = TAB_TOURS.characters;
+
+  /** Show the page's tips, if it has some its viewer hasn't seen. all: show them again even if seen (the account menu). */
+  let tourTimer = null;
+  function maybeTour(all = false) {
+    clearTimeout(tourTimer);
+    if (PANEL || !S.user || typeof Tour === 'undefined' || Tour.isOpen()) return;
+    const t = tourState();
+    if (!all && t.state !== 'on') return;
+    const hash = location.hash;
+    let tries = 0;
+    const attempt = () => {
+      if (location.hash !== hash || Tour.isOpen()) return;
+      // wait for a dialog the page opened itself (a reminder, Start a session?) to close first
+      if (document.querySelector('dialog[open]') || jumpBox) { if (++tries < 40) tourTimer = setTimeout(attempt, 750); return; }
+      const now = tourState();
+      const tour = tourFor(hash, now.seen, all);
+      if (!tour) return;
+      Tour.run(tour.steps, { label: tour.label, onEnd: how => {
+        const after = tourState();
+        const seen = [...new Set([...after.seen, ...tour.ids])];
+        if (how === 'skipped') { saveTour({ state: 'off', seen }); toast('Tutorial off. Your Account page can turn it back on'); }
+        else if (!all || after.state === 'on') saveTour({ state: after.state, seen });
+      } });
+    };
+    tourTimer = setTimeout(attempt, all ? 0 : 450);
+  }
+  addEventListener('hashchange', () => { clearTimeout(tourTimer); if (typeof Tour !== 'undefined') Tour.close(); });
 
   let passTimeOpen = false;   // the Pass time row, open or closed, for this visit
   function passTimeWidget() {
@@ -7553,7 +7784,7 @@
     const seq = ++routeSeq;
     let drawn = null;   // the address this run drew, for Recent, even if the address has moved on since
     return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
-      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) { noteRecent(drawn); namePage(); } }));
+      .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) { noteRecent(drawn); namePage(); maybeTour(); } }));
   }
   // Each page gets its own title in the browser's tab and history ("Calendar · Waterdeep · Campaign Chronicle"), which is
   // also what a screen reader reads first. After a move to another page, focus goes to the page's main content (unless the

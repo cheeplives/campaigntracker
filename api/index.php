@@ -953,6 +953,19 @@ try {
                 $prefs['dice_look'] = $look;
             }
         }
+        // tour: { state: 'on'|'off', seen: [ids] }, the welcome tutorial (static/tour.js): whether it shows, and which pages'
+        // tips they have been through, so each shows once. Skip tutorial sends 'off'; the Account page turns it back on with
+        // nothing seen. Null forgets it, so the site's default (config 'tutorial') applies again.
+        if (array_key_exists('tour', body())) {
+            $t = p('tour');
+            if ($t === null) unset($prefs['tour']);
+            else {
+                if (!is_array($t) || !in_array($t['state'] ?? null, ['on', 'off'], true) || !is_array($t['seen'] ?? [])) fail('The tutorial is on or off, with a list of pages seen');
+                $seen = array_values(array_unique(array_filter($t['seen'] ?? [], fn($v) => is_string($v) && preg_match('/^[a-z][a-z0-9-]{0,39}$/', $v))));
+                if (count($seen) > 80) fail('That is more pages than the tutorial has');
+                $prefs['tour'] = ['state' => $t['state'], 'seen' => $seen];
+            }
+        }
         db()->prepare('INSERT INTO user_prefs (user_id, prefs_json) VALUES (?,?) ON DUPLICATE KEY UPDATE prefs_json=VALUES(prefs_json)')
             ->execute([$u['id'], json_encode((object)$prefs)]);
         out(['prefs' => (object)$prefs]);

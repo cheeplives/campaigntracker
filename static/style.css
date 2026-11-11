@@ -2708,3 +2708,23 @@ button.tagopt { opacity: 1; }
 input, select, textarea { border-color: var(--field-line); }
 /* a header's hidden name stays inside its cell, so in a table that scrolls sideways it can't widen the page */
 th:has(> .visually-hidden) { position: relative; }
+
+/* ------------------------------------------------------------ welcome tutorial (static/tour.js)
+   A modal layer over the whole page: the page dims, the part a tip is about is ringed in the accent, and the tip floats
+   beside it. The tip is a floating thing, so it alone has a shadow. */
+dialog.tour { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0;
+  border: 0; background: transparent; overflow: hidden; color: var(--text); }
+dialog.tour::backdrop { background: transparent; }
+dialog.tour.no-target { background: rgb(0 0 0 / .55); }
+.tour-hole { position: absolute; border: 2px solid var(--accent); border-radius: var(--radius); pointer-events: none;
+  box-shadow: 0 0 0 200vmax rgb(0 0 0 / .55); transition: left .2s, top .2s, width .2s, height .2s; }
+.tour-card { position: absolute; background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px 12px; box-shadow: 0 10px 40px rgb(0 0 0 / .45); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.tour-label { margin: 0 0 2px; color: var(--label); }
+.tour-title { font: 600 1.3rem var(--disp); margin: 0 0 6px; color: var(--text); }
+.tour-text p { margin: 0 0 8px; line-height: 1.45; }
+.tour-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.tour-count { margin: 0; color: var(--dim); }
+.tour-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.tour-buttons .tour-skip { margin-right: auto; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
