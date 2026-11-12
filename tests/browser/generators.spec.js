@@ -103,6 +103,8 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
     }
     const pick = () => { Enc.seed(42); return Enc.draw({ genre: "apoc" }).map(Enc.text).join("\n"); };
     // Escalations happen to the party; they never list what the party could choose to do.
+    // Titles name cards in the deck, so no two templates may share one
+    const titles = Enc.TEMPLATES.map(t => t.t), dupTitles = titles.filter((t, i) => titles.indexOf(t) !== i);
     const choices = Enc.TEMPLATES.filter(t => [t.s, ...t.esc].some(x => /\b(the party (can|could|may|might) |choose|option)/i.test(x))).map(t => t.t);
     // The deck: a hand never repeats a card dealt before, until every card that fits has gone round
     let dealt = [], hands = [], reshuffles = 0, first;
@@ -113,12 +115,13 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
     }
     const seen = new Set(); let repeatBeforeRound = false;
     for (const h of hands.slice(0, Math.floor(first.total / 3))) for (const t of h) { if (seen.has(t)) repeatBeforeRound = true; seen.add(t); }
-    return { bad, named, same: pick() === pick(), choices, deck: { total: first.total, left: first.left, hands, reshuffles, repeatBeforeRound, distinct: seen.size }, night: Enc.draw({ genre: "apoc", tone: "hostile", where: "road", when: "night", n: 9 }) };
+    return { bad, named, same: pick() === pick(), choices, dupTitles, deck: { total: first.total, left: first.left, hands, reshuffles, repeatBeforeRound, distinct: seen.size }, night: Enc.draw({ genre: "apoc", tone: "hostile", where: "road", when: "night", n: 9 }) };
   });
   expect(r.bad).toEqual([]);
   expect(r.named).toBeGreaterThan(20); // the campaign's own names turn up
   expect(r.same).toBe(true);
   expect(r.choices).toEqual([]);
+  expect(r.dupTitles).toEqual([]);
   // Helpful cards go round the whole deck before any comes back, and the deck is shuffled again when it runs out
   expect(r.deck.total).toBeGreaterThan(9);
   expect(r.deck.left).toBe(r.deck.total - 3);
