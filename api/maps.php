@@ -170,13 +170,17 @@ function pin_row(int $cid, int $id, bool $isGm): array {
     if (!$rows) fail('Pin not found', 404);
     return $rows[0];
 }
-/** Every pin this member may see on a map they may see, short: for knowing which entries and events are on a map. */
+/** Every pin this member may see on a map they may see, short: for knowing which entries and events are on a map, and
+ * for finding a pin by its own label or note (the search page, Ctrl K). */
 function maps_index(int $cid, bool $isGm): array {
-    $st = db()->prepare('SELECT p.id, p.map_id, m.name, p.entry_id, p.event_id FROM map_pins p JOIN maps m ON m.id=p.map_id' . MAP_PIN_JOINS . '
+    $st = db()->prepare('SELECT p.id, p.map_id, m.name, p.entry_id, p.event_id, p.label, p.note, p.is_secret OR m.is_secret AS secret, c.id AS opens_id, c.name AS opens_name FROM map_pins p JOIN maps m ON m.id=p.map_id
+        LEFT JOIN maps c ON c.id=p.child_map_id' . ($isGm ? '' : ' AND c.is_secret=0') . MAP_PIN_JOINS . '
         WHERE p.campaign_id=?' . ($isGm ? '' : ' AND m.is_secret=0') . map_pin_visible_sql($isGm) . ' ORDER BY p.id');
     $st->execute([$cid]);
     return array_map(fn($r) => ['pin_id' => (int)$r['id'], 'map_id' => (int)$r['map_id'], 'map_name' => $r['name'],
-        'entry_id' => $r['entry_id'] !== null ? (int)$r['entry_id'] : null, 'event_id' => $r['event_id'] !== null ? (int)$r['event_id'] : null], $st->fetchAll());
+        'entry_id' => $r['entry_id'] !== null ? (int)$r['entry_id'] : null, 'event_id' => $r['event_id'] !== null ? (int)$r['event_id'] : null,
+        'label' => (string)$r['label'], 'note' => (string)($r['note'] ?? ''), 'secret' => (bool)$r['secret'],
+        'opens' => $r['opens_id'] !== null ? ['id' => (int)$r['opens_id'], 'name' => $r['opens_name']] : null], $st->fetchAll());
 }
 /** A coordinate from a request, which must lie within 0..$max. */
 function map_coord($v, $max): float {

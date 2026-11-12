@@ -283,6 +283,7 @@ const MapsTab = (() => {
     new ResizeObserver(() => stage.style.setProperty('--panel-bottom', `${panelBox.offsetTop + panelBox.offsetHeight}px`)).observe(panelBox);
 
     // sheetAway: on a phone the sheet folds away while a tool is in use or a card is open, without changing how it was left
+    let placing = null;   // { id, name }: the entry the next pin placed is for (?place=)
     let lf = null, mode = null, toolMode = null, sheetAway = false;   // mode: 'measure' | 'scale' | 'pin' (the next click places a pin) | 'party' (the next click moves a group there) | 'label' (each click asks for a place's name and pins it) | null
     const bounds = () => [toLatLng(0, map.height), toLatLng(map.width, 0)];
     /** The whole picture in view. While the scale panel is open it floats over the map's left side, and its two points
@@ -673,7 +674,12 @@ const MapsTab = (() => {
       const facts = [dist ? el('span', {}, dist) : null,
         p.kind === 'event' && p.event ? el('a', { href: `#/c/${cid}/day/${p.event.abs_day}`, 'data-tip': 'Open this day' }, ctx.fmtDay(p.event.abs_day)) : null,
         p.child_map ? el('a', { class: 'map-pin-opens', href: `#/c/${cid}/maps/${p.child_map.id}`, 'data-tip': 'Open the map inside this place' }, `🗺️ Open ${p.child_map.name}`) : null].filter(Boolean);
-      const acts = [partyHere(p), mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }) : null].filter(Boolean);
+      // an entry's pin: change the entry itself here, without leaving the map
+      const editEntry = p.kind === 'entry' && p.entry ? btn('📖 Entry here', async () => {
+        lmap_close();
+        if (await ctx.editEntry(p.entry.id)) await refresh();
+      }, '', `Change ${p.entry.name}'s notes, fields and the rest without leaving the map`) : null;
+      const acts = [partyHere(p), editEntry, mine(p) ? btn('Edit', () => { lmap_close(); pinForm(p, p); }, '', 'Change this pin: what it points to, its icon and colour') : null].filter(Boolean);
       // the actions done now and then go under ⋯, so the card stays one row of buttons tall
       const more = [
         gm && p.kind === 'note' ? (match
@@ -686,9 +692,16 @@ const MapsTab = (() => {
         gm ? (() => {
           // one press makes a placed pin GM only, or shows it to the players again, without opening Edit
           const b = btn([p.is_secret ? '🔒 ' : '🔓 ', 'GM only', p.is_secret ? ' ✓' : ''], async () => {
-            try { await post('pin_save', { id: p.id, is_secret: !p.is_secret }, cid); lmap_close(); await refresh(); toast(p.is_secret ? 'Players can see this pin again' : 'This pin is GM only now'); }
+            if (p.is_secret) {
+              lmap_close();
+              const hid = p.kind === 'entry' && p.entry?.is_secret ? `Its entry, ${p.entry.name}, is GM only too, so they see the pin once you reveal the entry.`
+                : p.kind === 'event' && p.event?.is_secret ? 'Its event is GM only too, so they see the pin once you reveal the event.' : '';
+              if (await revealItem('pin', p.id, `The pin "${pinTitle(p)}"`, hid)) await refresh();
+              return;
+            }
+            try { await post('pin_save', { id: p.id, is_secret: true }, cid); lmap_close(); await refresh(); toast('This pin is GM only now'); }
             catch (err) { toast(err.message, true); }
-          }, '', p.is_secret ? 'GM only: players never see this pin. Press to show it to them' : 'Players see this pin. Press to make it GM only');
+          }, '', p.is_secret ? 'GM only: players never see this pin. Press to reveal it to them' : 'Players see this pin. Press to make it GM only');
           b.setAttribute('aria-pressed', String(!!p.is_secret));
           return b;
         })() : null,
@@ -718,11 +731,24 @@ const MapsTab = (() => {
         acts.length ? el('div', { class: 'mpc-actions' }, acts) : null);
     }
     const lmap_close = () => lf?.map.closePopup();
+    /** Show a GM-only map, pin or route to the players, as Reveal does for an entry: logged as an event on the current
+     * day ("Revealed: …") or quietly. Resolves true once it is public. */
+    async function revealItem(kind, id, name, note) {
+      const v = await KIT.dialog({ title: `Show ${kind === 'map' ? 'this map' : `this ${kind}`} to the players?`,
+        message: `${name} stops being GM only: players see it from now on.${note ? ` ${note}` : ''}`,
+        buttons: [{ value: 'log', label: 'Reveal and log it today', cls: 'primary', focus: true }, { value: 'quiet', label: 'Just reveal' }, { value: 'cancel', label: 'Cancel' }] });
+      if (v !== 'log' && v !== 'quiet') return false;
+      try {
+        await post('item_reveal', { kind, id, log: v === 'log' }, cid);
+        toast(v === 'log' ? 'Revealed, and logged on today\'s events' : 'Revealed to the players');
+        return true;
+      } catch (err) { toast(err.message, true); return false; }
+    }
 
     /** The pin form, in the panel above the map: a new pin at xy, or pin `old` being changed. */
     function pinForm(old, xy) {
       closePanel();
-      let kind = old?.kind || (gm ? 'entry' : 'note'), entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : null, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
+      let kind = old?.kind || (gm ? 'entry' : 'note'), entry = old?.entry ? { id: old.entry.id, name: old.entry.name } : placing, event = old?.event ? { id: old.event.id, title: old.event.title } : null;
       let events = null, working = false;
       const label = el('input', { maxlength: 150, autocomplete: 'off', value: old?.kind === 'note' ? old.label : '' });
       const noteIn = el('textarea', { rows: 2, maxlength: 1000, placeholder: 'A short note, if you like' }, old?.kind === 'note' ? old.note || '' : '');
@@ -1035,8 +1061,9 @@ const MapsTab = (() => {
               (() => {
                 // in the menu the lock gets its words, and a tick while it is on
                 const b = btn([r.is_secret ? '🔒 ' : '🔓 ', 'GM only', r.is_secret ? ' ✓' : ''], async () => {
-                  try { await post('route_save', { id: r.id, is_secret: !r.is_secret }, cid); await refresh(); } catch (err) { toast(err.message, true); }
-                }, 'small', r.is_secret ? 'GM only: players never see this route. Press to show it to them' : 'Players see this route. Press to make it GM only');
+                  if (r.is_secret) { if (await revealItem('route', r.id, `The route "${r.name}"`)) await refresh(); return; }
+                  try { await post('route_save', { id: r.id, is_secret: true }, cid); await refresh(); } catch (err) { toast(err.message, true); }
+                }, 'small', r.is_secret ? 'GM only: players never see this route. Press to reveal it to them' : 'Players see this route. Press to make it GM only');
                 b.setAttribute('aria-label', 'GM only');
                 b.setAttribute('aria-pressed', String(r.is_secret));
                 return b;
@@ -1073,7 +1100,7 @@ const MapsTab = (() => {
       if (mode === 'measure') { pts.push(p); drawMeasure(); }
       else if (mode === 'pin') {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
-        mode = null; note.textContent = ''; syncTools(); pinForm(null, p);
+        mode = null; note.textContent = ''; syncTools(); pinForm(null, p); placing = null;
       }
       else if (mode === 'label') {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
@@ -1096,6 +1123,7 @@ const MapsTab = (() => {
       mode = 'measure'; note.textContent = gm ? 'Click the map to lay down points, then Save route… to keep it' : 'Click the map to lay down points'; syncTools();
     }, gm ? 'Click along a path to add up its length, and keep it as a route (M)' : 'Click along a path to add up its length (M)');
     const addPinBtn = tbtn('📍', 'Pin', 'Add pin', () => {
+      placing = null;
       if (mode === 'pin') { closePanel(); note.textContent = ''; return; }
       if (mode === 'label') closePanel();
       if (mode === 'scale' || mode === 'measure') { if (mode === 'measure') { pts = []; drawMeasure(); } closePanel(); }
@@ -1265,6 +1293,12 @@ const MapsTab = (() => {
     };
     const exportBtn = gm && map.image_url ? btn('Export…', exportMap, '', 'Download the picture, or the map for another virtual tabletop') : null;
     const secretBtn = gm ? lockBtn(async () => {
+      if (map.is_secret) {
+        if (!await revealItem('map', map.id, `The map "${map.name}"`, 'Its GM-only pins and routes stay hidden.')) return;
+        map = { ...map, is_secret: false };
+        secretBtn.setAttribute('aria-pressed', 'false'); ctx.reloadCampaign().catch(() => {});
+        return;
+      }
       try {
         map = (await post('map_save', { id: map.id, is_secret: !map.is_secret }, cid)).map;
         secretBtn.setAttribute('aria-pressed', String(map.is_secret)); ctx.reloadCampaign().catch(() => {});
@@ -1534,6 +1568,14 @@ const MapsTab = (() => {
       const at = pins.find(q => q.id === Number(params.get('pin')));
       if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); linked = want; for (const t of [250, 800]) setTimeout(keepLinked, t); setTimeout(() => { linked = null; }, 3000); }
       else if (params.get('pin')) note.textContent = 'That pin is not on this map';
+      // ?place=<entry> (a GM, from a place's page): the next click pins that entry, already picked in the pin's form
+      const placeE = gm && map.image_url ? S.encyclopedia.find(x => x.id === Number(params.get('place'))) : null;
+      if (placeE) {
+        placing = { id: placeE.id, name: placeE.name };
+        mode = 'pin'; syncTools(); note.textContent = `Click the map where ${placeE.name} is to pin it`;
+        if (at) lmap.closePopup();
+        history.replaceState(null, '', base);   // reloading the page does not ask again
+      }
     });
     syncTools();
 

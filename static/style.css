@@ -2757,3 +2757,6 @@ dialog.tour.no-target { background: rgb(0 0 0 / .55); }
 .tour-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .tour-buttons .tour-skip { margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+
+/* an entry's editor in a dialog over the map */
+.kit-dialog.entry-dialog { width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
