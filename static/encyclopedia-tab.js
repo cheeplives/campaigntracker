@@ -652,12 +652,27 @@
       return [...out.values()];
     }
     const placeLink = x => el('a', { class: 'enc-link' + (x.is_secret ? ' secret' : ''), href: `#/c/${S.camp.id}/encyclopedia/${x.id}` }, x.is_secret ? '🔒 ' : null, x.name);
-    /** "In Empire › Reikland" under an entry's name. */
+    /** Where a place inside `outer` would be pinned: the map outer's pin opens (a town's own map), else the map outer is
+     * pinned on, centred on it. null when outer has no pin. */
+    function pinMapFor(outer) {
+      const pins = (S.mapIndex || []).filter(p => p.entry_id === outer.id);
+      const opens = pins.find(p => p.opens);
+      if (opens) return { href: `#/c/${S.camp.id}/maps/${opens.opens.id}`, name: opens.opens.name };
+      return pins[0] ? { href: `#/c/${S.camp.id}/maps/${pins[0].map_id}?pin=${pins[0].pin_id}`, name: pins[0].map_name } : null;
+    }
+    const withPlace = (href, id) => href + (href.includes('?') ? '&' : '?') + `place=${id}`;
+    /** "In Empire › Reikland" under an entry's name; and, for a place with no pin of its own, the map the nearest place
+     * it is inside sits on, with Pin it there for a GM. */
     function placeIn(e, ctx) {
       const chain = placeChain(ctx.conns, e);
       if (!chain.length) return null;
+      const pinned = (S.mapIndex || []).some(p => p.entry_id === e.id);
+      const near = pinned ? null : [...chain].reverse().map(x => [x, pinMapFor(x)]).find(([, m]) => m);
       return el('div', { class: 'small enc-inside' }, el('span', { class: 'muted', 'data-tip': 'What this is inside, from its "Located in" connections, outermost first' }, 'In '),
-        chain.flatMap((x, i) => [i ? el('span', { class: 'muted', 'aria-hidden': 'true' }, ' › ') : null, placeLink(x)]));
+        chain.flatMap((x, i) => [i ? el('span', { class: 'muted', 'aria-hidden': 'true' }, ' › ') : null, placeLink(x)]),
+        near ? el('span', { class: 'enc-inside-map' }, el('span', { class: 'muted' }, ' · '),
+          el('a', { href: near[1].href, 'data-tip': `${e.name} has no pin. ${near[0].name} is on this map` }, `🗺 ${near[1].name}`),
+          isGM() ? [' ', el('a', { class: 'button small', href: withPlace(near[1].href, e.id), 'data-tip': `Open ${near[1].name} and click where ${e.name} is to pin it` }, '📍 Pin it there')] : null) : null);
     }
     /** On a Location's page (or any entry that contains others): what is inside it as a tree, and + Place inside. */
     function placesInside(e, ctx) {
@@ -676,6 +691,11 @@
           const made = await post('entry_save', { name, category: 'location', is_secret: !!e.is_secret }, S.camp.id);
           await post('relations_save', { entry_id: e.id, type: { label: 'Contains', inverse_label: 'Located in' }, add: [made.id] }, S.camp.id);
           await loadCampaign(S.camp.id);
+          // where the outer place is on a map, a GM goes there next to pin the new one; else to its page
+          const there = isGM() ? pinMapFor(e) : null;
+          if (there && await confirmDialog(`${name} is in the Encyclopedia, inside ${e.name}. Pin it on ${there.name} now?`, { ok: 'Pin it on the map', cancel: 'Not now' })) {
+            location.hash = withPlace(there.href, made.id); return;
+          }
           location.hash = `#/c/${S.camp.id}/encyclopedia/${made.id}`;
         } catch (err) { toast(err.message, true); }
       }, 'small', `Add a Location that is inside ${e.name}: a district of a city, a room of a dungeon, a town of a region`) : null;

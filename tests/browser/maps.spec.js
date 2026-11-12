@@ -1632,12 +1632,13 @@ test("Maps: a GM makes a placed pin GM only, from Edit or its card, and the map 
   await expect(pin).toHaveClass(/\bsecret\b/);
   expect(await lock()).toContain("data:image/svg+xml");   // the padlock
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(0);
-  // the card's switch shows it to the players again, and back
+  // the card's switch shows it to the players again (asking whether to log it, as Reveal does), and back
   await pin.click();
   await page.locator(".leaflet-popup .kit-menu > summary").last().click();
   const gmOnly = page.locator(".leaflet-popup").getByRole("button", { name: "GM only" });
   await expect(gmOnly).toHaveAttribute("aria-pressed", "true");
   await gmOnly.click();
+  await page.getByRole("dialog", { name: "Show this pin to the players?" }).getByRole("button", { name: "Just reveal" }).click();
   await expect(pin).not.toHaveClass(/\bsecret\b/);
   expect((await getMap(pp, cid, mapId)).json.pins).toHaveLength(1);
   await expect(page.locator(".leaflet-popup")).toHaveCount(0);   // the old card is gone before the pin is opened again

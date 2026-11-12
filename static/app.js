@@ -1614,6 +1614,12 @@
           (b.name.toLowerCase().startsWith(ql) ? 1 : 0) - (a.name.toLowerCase().startsWith(ql) ? 1 : 0) || a.name.localeCompare(b.name)).slice(0, 6);
         if (ents.length) groups.push(['Encyclopedia', ents.map(e => ({ icon: encCat(e.category)?.[2] || '📖', name: e.name, hint: encCat(e.category)?.[1] || '',
           run: () => { location.hash = `#/c/${cid}/encyclopedia/${e.id}`; } }))]);
+        // pins by their own label, and maps by name
+        const pinHits = (S.mapIndex || []).filter(p => p.label.trim() && hit(p.label)).slice(0, 4);
+        const seenMap = new Set(), mapHits = (S.mapIndex || []).filter(p => !seenMap.has(p.map_id) && seenMap.add(p.map_id) && hit(p.map_name)).slice(0, 3);
+        if (pinHits.length || mapHits.length) groups.push(['On the maps', [
+          ...pinHits.map(p => ({ icon: '📍', name: p.label, hint: p.map_name, run: () => { location.hash = `#/c/${cid}/maps/${p.map_id}?pin=${p.pin_id}`; } })),
+          ...mapHits.map(p => ({ icon: '🗺', name: p.map_name, hint: 'Map', run: () => { location.hash = `#/c/${cid}/maps/${p.map_id}`; } }))]]);
         const tabHits = tabs.filter(([, l]) => hit(l)).slice(0, 4);
         if (tabHits.length) groups.push(['Go to', tabHits.map(([k, l, g]) => ({ icon: '🧭', name: l, hint: g, run: () => { location.hash = `#/c/${cid}/${k}`; } }))]);
       }
@@ -1854,7 +1860,7 @@
       mainAction('Save', 'Changes here take effect once saved.'),
     ],
     search: () => [
-      tabIntro('search', 'Searches the whole campaign at once: the Encyclopedia, days and events, the Library, the party\'s holdings and downtime.'),
+      tabIntro('search', 'Searches the whole campaign at once: the Encyclopedia, days and events, the Library, the party\'s holdings, downtime and the pins on the maps.'),
     ],
   };
   TAB_TOURS.party = TAB_TOURS.characters;
@@ -4789,10 +4795,26 @@
   const Fan = typeof FanWikis === 'undefined' ? null : FanWikis;
   const fanCtx = extra => ({ el, btn, api, extLink, cid: S.camp?.id, key: S.camp ? settings().fan_wiki : null, gm: isGM(),
     hint: S.camp ? `${S.camp.name} ${cal().name || ''}` : '', ...extra });
+  /** Entry id's editor in a dialog over the page, so it can be changed without leaving where it was opened (a map's pin).
+   * Resolves true once it is saved, false if closed without saving. */
+  async function editEntryDialog(id) {
+    const { entries } = await api('encyclopedia', { query: { cid: S.camp.id } });
+    const e = entries.find(x => x.id === id);
+    if (!e) { toast('That entry is gone', true); return false; }
+    hideTip();
+    return new Promise(resolve => {
+      let saved = false;
+      const d = el('dialog', { class: 'kit-dialog entry-dialog', 'aria-label': `Edit ${e.name}` });
+      const form = entryForm(e, { onSaved: () => { saved = true; d.close(); }, onCancel: () => d.close() });
+      d.append(el('div', { class: 'row spread' }, el('h3', {}, `Edit ${e.name}`), btn('✕', () => d.close(), 'link', 'Close without saving')), form);
+      d.addEventListener('close', () => { d.remove(); resolve(saved); });
+      document.body.append(d); d.showModal();
+    });
+  }
   /** What the Maps tab's modules (static/tokens.js, and the Maps tab itself) get of the page: they need nothing else of it. */
   const mapsCtx = extra => ({ el, btn, api, post, mount, campaignHeader, toast, confirmDialog, field, select, isGM, unitSystem, findImage, S,
     encCat, genre: () => E.genreOf(settings()), genres: E.GENRES, creditLine, offerNouns, today, fmtDay: d => E.fmtDate(cal(), d, { noWeekday: true }), fmtShift: a => E.fmtShift(cal(), a), uploadFile, reloadCampaign: () => loadCampaign(S.camp.id, true),
-    nowShift, slotWord: word, logOnShift, ...extra });
+    nowShift, slotWord: word, logOnShift, editEntry: editEntryDialog, ...extra });
   const wikiPage = title => `${WIKI}/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%2C/g, ',')}`;
   async function wikiJson(url) {
     const res = await fetch(url, { credentials: 'omit' });
@@ -4935,8 +4957,9 @@
       e.id && Fan ? Fan.summary(fanCtx({ name, pub })) : null,
       e.id ? attachmentsCard('encyclopedia', e.id, e.files || (e.files = []), { uploads: S.encUploads, secret: e.is_secret, name: e.name }) : null,
       el('div', { class: 'row' }, el('button', { class: 'primary small' }, e.id ? 'Save entry' : 'Add entry'),
-        e.id && !entryBlank(e) ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia` }, 'Cancel'),
-        deleteEntryBtn(e)));
+        opt.onCancel ? btn('Cancel', opt.onCancel, 'small')
+          : e.id && !entryBlank(e) ? btn('Cancel', () => route(), 'small') : el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia` }, 'Cancel'),
+        opt.onSaved ? null : deleteEntryBtn(e)));
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
       const p = pub.value(), g = gm?.value();
@@ -4953,7 +4976,7 @@
           preview: Nouns.plain(p.text, 'html').replace(/\s+/g, ' ').trim().slice(0, 140) }].sort((a, b) => a.name.localeCompare(b.name));
         toast('Entry saved');
         const to = `#/c/${S.camp.id}/encyclopedia/${id}`;
-        if (location.hash === to) route(); else location.hash = to;
+        if (opt.onSaved) opt.onSaved(id); else if (location.hash === to) route(); else location.hash = to;
         offerNouns([{ text: p.text, format: 'html', secret: !!secret?.checked, label: 'Public notes' }, gm ? { text: g.text, format: 'html', secret: true, label: 'GM notes' } : null].filter(Boolean));
       } catch (err) { toast(err.message, true); }
     });
@@ -7201,7 +7224,7 @@
   // ------------------------------------------------------------ search page
   // Which heading each kind of text from encyclopedia_sources goes under. Encyclopedia entries and events come from their
   // own lists instead, which also carry their aliases and tags.
-  const SEARCH_GROUPS = [['entry', 'Encyclopedia'], ['day', 'Days and events'], ['session', 'Sessions'], ['tome', 'Library'], ['holding', 'Party Holdings'], ['downtime', 'Downtime']];
+  const SEARCH_GROUPS = [['entry', 'Encyclopedia'], ['day', 'Days and events'], ['session', 'Sessions'], ['tome', 'Library'], ['holding', 'Party Holdings'], ['downtime', 'Downtime'], ['map', 'Maps']];
   const searchGroupOf = kind => (kind.startsWith('downtime') ? 'downtime' : kind.startsWith('session') ? 'session' : ['holding', 'storage', 'gear', 'funds'].includes(kind) ? 'holding'
     : kind === 'tome' ? 'tome' : 'day');
 
@@ -7237,6 +7260,13 @@
       let text = Nouns.plain(s.text, s.format);
       if (s.short && s.title && text.startsWith(s.title)) text = text.slice(s.title.length);
       it.segs.push({ text, secret: !!s.secret });
+    }
+    // pins found by their own label or note (an entry's or event's pin is found as the entry or event)
+    for (const p of S.mapIndex || []) {
+      if (!p.label.trim() && !p.note.trim()) continue;
+      const it = item(`pin:${p.pin_id}`, 'map', `${p.label.trim() || 'A pin'} · ${p.map_name}`, `#/c/${cid}/maps/${p.map_id}?pin=${p.pin_id}`);
+      it.secret = !!p.secret;
+      it.segs.push({ text: p.note || '' });
     }
     const all = [...items.values()].map(it => ({ ...it, segs: it.segs.filter(g => g.text.trim()),
       hay: [it.title, ...it.extra, ...it.segs.map(g => g.text)].join('\n').toLowerCase() }));
