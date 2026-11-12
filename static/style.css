@@ -1287,6 +1287,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-enc-label .lbl { font-size: .82rem; color: var(--label); font-weight: 600; }
 .gen-enc-tools { margin-top: auto; padding-top: 6px; flex-wrap: wrap; gap: 6px; }
 .gen-kept { align-self: center; }
+.gen-deck { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 @media (max-width: 1180px) { .gen-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gen-cols > :last-child { grid-column: 1 / -1; } }
 @media (max-width: 760px) { .gen-page, .gen-cols { grid-template-columns: 1fr; } }
 

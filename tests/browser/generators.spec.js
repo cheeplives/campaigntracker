@@ -104,12 +104,28 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
     const pick = () => { Enc.seed(42); return Enc.draw({ genre: "apoc" }).map(Enc.text).join("\n"); };
     // Escalations happen to the party; they never list what the party could choose to do.
     const choices = Enc.TEMPLATES.filter(t => [t.s, ...t.esc].some(x => /\b(the party (can|could|may|might) |choose|option)/i.test(x))).map(t => t.t);
-    return { bad, named, same: pick() === pick(), choices, night: Enc.draw({ genre: "apoc", tone: "hostile", where: "road", when: "night", n: 9 }) };
+    // The deck: a hand never repeats a card dealt before, until every card that fits has gone round
+    let dealt = [], hands = [], reshuffles = 0, first;
+    for (let i = 0; i < 12; i++) {
+      const r = Enc.deal({ genre: "apoc", tone: "helpful", dealt });
+      if (i === 0) first = r;
+      dealt = r.dealt; hands.push(r.cards.map(c => c.title)); if (r.reshuffled) reshuffles++;
+    }
+    const seen = new Set(); let repeatBeforeRound = false;
+    for (const h of hands.slice(0, Math.floor(first.total / 3))) for (const t of h) { if (seen.has(t)) repeatBeforeRound = true; seen.add(t); }
+    return { bad, named, same: pick() === pick(), choices, deck: { total: first.total, left: first.left, hands, reshuffles, repeatBeforeRound, distinct: seen.size }, night: Enc.draw({ genre: "apoc", tone: "hostile", where: "road", when: "night", n: 9 }) };
   });
   expect(r.bad).toEqual([]);
   expect(r.named).toBeGreaterThan(20); // the campaign's own names turn up
   expect(r.same).toBe(true);
   expect(r.choices).toEqual([]);
+  // Helpful cards go round the whole deck before any comes back, and the deck is shuffled again when it runs out
+  expect(r.deck.total).toBeGreaterThan(9);
+  expect(r.deck.left).toBe(r.deck.total - 3);
+  expect(r.deck.repeatBeforeRound).toBe(false);
+  expect(r.deck.distinct).toBe(Math.floor(r.deck.total / 3) * 3);
+  expect(r.deck.reshuffles).toBeGreaterThan(0);
+  expect(r.deck.hands.every(h => new Set(h).size === 3)).toBe(true);
   // A hostile road at night: only hostile cards, and "twice as many by day" reads as the night's number
   expect(r.night.every(c => c.tone === "hostile")).toBe(true);
   expect(r.night.some(c => c.many === "About as many as the party")).toBe(true);
@@ -236,8 +252,17 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expect(noted.gm_notes).toContain(`Twist: ${twist2}`);
   expect(noted.gm_notes).toContain("If it escalates:");
   if (twist2 !== twist) expect(noted.gm_notes).not.toContain(twist);
+  // The deck remembers what was dealt across a reload; Reshuffle puts every card back
+  await expect(enc.locator(".gen-deck")).toContainText(/^\d+ of the \d+ cards that fit are still in the deck/);
+  const left = async () => Number((await enc.locator(".gen-deck").textContent()).match(/^(\d+) of/)[1]);
+  const wasLeft = await left();
   await page.reload();
   await expect(enc.getByLabel("Tone", { exact: true })).toHaveValue("tense");
+  await expect(enc.locator(".gen-enc-card")).toHaveCount(3);
+  expect(await left()).toBeLessThan(wasLeft);
+  await enc.getByRole("button", { name: "Reshuffle", exact: true }).click();
+  const total = Number((await enc.locator(".gen-deck").textContent()).match(/of the (\d+) cards/)[1]);
+  await expect.poll(left).toBe(total - 3); // a fresh deck, less the hand just dealt
 
   // Rumors name the campaign's own entries (the town and its person are in the Location and Person Categories); one goes in as a Rumor.
   const rumors = cards.filter({ has: page.getByRole("heading", { name: /^Rumors/ }) });

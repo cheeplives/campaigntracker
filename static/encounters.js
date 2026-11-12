@@ -9,6 +9,7 @@
  * twist, two ways it can escalate if the scene runs on, and one thing worth having.
  *
  *   draw({ genre, where, when, tone, cast, n }) -> [card]   n different cards (3 by default)
+ *   deal({ ...the same, dealt })                -> { cards, dealt, left, total, reshuffled }   the same from a deck, so no card comes back until every one that fits has been dealt
  *   reroll(card, part)                         -> card     the same card with a new 'twist', 'esc' or 'gain'
  *   text(card)                                 -> string   the card as plain text, for copying and for notes
  *
@@ -522,16 +523,44 @@ const Enc = (() => {
     return card;
   }
 
-  /** n cards that fit the choices, each from a different template. If too few fit, the time and then the place are
-   * let go, so there's always something to show. f: { genre, where, when, tone, cast, n }. */
-  function draw(f = {}) {
-    const genre = SLOTS[f.genre] ? f.genre : GENRES[0][0], n = f.n || 3;
-    const opts = { ...f, genre };
+  /** The templates that fit the choices. If too few fit, the time and then the place are let go, so there's always
+   * something to show. */
+  function poolFor(genre, opts, n) {
     let pool = T.filter(t => fits(t, genre, opts));
     if (pool.length < n) pool = T.filter(t => fits(t, genre, { ...opts, when: '' }));
     if (pool.length < n) pool = T.filter(t => fits(t, genre, { ...opts, when: '', where: '' }));
     if (pool.length < n) pool = T.filter(t => fits(t, genre, {}));
-    return shuffle(pool).slice(0, n).map(t => make(t, opts));
+    return pool;
+  }
+
+  /** n cards that fit the choices, each from a different template. f: { genre, where, when, tone, cast, n }. */
+  function draw(f = {}) {
+    const genre = SLOTS[f.genre] ? f.genre : GENRES[0][0], n = f.n || 3;
+    const opts = { ...f, genre };
+    return shuffle(poolFor(genre, opts, n)).slice(0, n).map(t => make(t, opts));
+  }
+
+  /** Like draw(), but from a deck: f.dealt lists the titles already dealt, and none of them comes back until every
+   * card that fits has been dealt. When fewer than n are left, the last of them are dealt and the deck is shuffled
+   * again for the rest. Returns { cards, dealt, left, total, reshuffled }: dealt is the list to keep for next time,
+   * left how many that fit are still in the deck, total how many fit at all. */
+  function deal(f = {}) {
+    const genre = SLOTS[f.genre] ? f.genre : GENRES[0][0], n = f.n || 3;
+    const opts = { ...f, genre };
+    const pool = poolFor(genre, opts, n);
+    const dealt = new Set(f.dealt || []);
+    let fresh = shuffle(pool.filter(t => !dealt.has(t.t))), reshuffled = false;
+    let picked = fresh.slice(0, n);
+    if (picked.length < n) {
+      // the deck runs out: deal what's left, then start again with the rest (never the same card twice in one hand)
+      reshuffled = true;
+      const names = new Set(picked.map(t => t.t));
+      picked = [...picked, ...shuffle(pool.filter(t => !names.has(t.t))).slice(0, n - picked.length)];
+      for (const t of pool) dealt.delete(t.t);
+    }
+    for (const t of picked) dealt.add(t.t);
+    const left = pool.filter(t => !dealt.has(t.t)).length;
+    return { cards: picked.map(t => make(t, opts)), dealt: [...dealt], left, total: pool.length, reshuffled };
   }
 
   /** The card with a new twist ('twist'), new escalations ('esc') or a new reward ('gain'), different from the last. */
@@ -553,5 +582,5 @@ const Enc = (() => {
       `Twist: ${c.twist}`, 'If it escalates:', ...c.esc.map(x => `- ${x}`), `Worth having: ${c.gain}`].join('\n');
   }
 
-  return { GENRES, TONES, WHEN, WHERE, TEMPLATES: T, SLOTS, seed, draw, reroll, text };
+  return { GENRES, TONES, WHEN, WHERE, TEMPLATES: T, SLOTS, seed, draw, deal, reroll, text };
 })();
