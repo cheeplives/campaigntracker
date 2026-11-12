@@ -93,7 +93,7 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
         if (![c.situation, c.twist, c.gain, ...c.esc].every(x => /^[A-Z0-9"'].*[.!?]$/.test(x))) bad.push(`sentences: ${text}`);
         if (tone && c.tone !== tone) bad.push(`tone ${tone}: ${text}`);
         if (/Iron Combine|Gallows Rock|Ada Quill/.test(text)) named++;
-        if (/\bThe Iron Combine\b/.test(text.replace(/(^|[.:] |\n)The Iron/g, "$1the Iron"))) bad.push(`"the" mid-sentence: ${text}`);
+        if (/\bThe Iron Combine\b/.test(text.replace(/(^|[.:] |\n|\n- )The Iron/g, "$1the Iron"))) bad.push(`"the" mid-sentence: ${text}`);
         for (const part of ["twist", "esc", "gain"]) {
           const again = Enc.reroll(c, part);
           if (/[{}]|undefined/.test(Enc.text(again))) bad.push(Enc.text(again));
