@@ -1274,7 +1274,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-hooks { margin: 0; padding-left: 18px; border-top: 1px solid var(--line); padding-top: 6px; }
 .gen-hooks li + li { margin-top: 6px; }
 /* encounters: three cards across, fewer as the page narrows */
-.gen-encs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.gen-encs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .gen-enc-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
 .gen-enc-card header { display: flex; flex-direction: column; gap: 2px; }
 .gen-enc-card h3 { margin: 0; font-size: 1.25rem; }
