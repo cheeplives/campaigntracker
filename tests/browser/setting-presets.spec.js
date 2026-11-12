@@ -187,18 +187,23 @@ test("a Glorantha campaign shows the Red Moon red and black, and each region see
   await expect(moons).toContainText("Red Moon: Crescent-Going");
   await expect(moons.locator(".moon-glyph svg path")).toHaveAttribute("fill", "#c8513a");
   await expect(moons.locator(".moon-glyph svg circle")).toHaveAttribute("fill", "#111");
-  // A region's form picks the land it sees the Red Moon from.
+  // A region's form picks the way it lies from the Red Moon.
   const glamour = json.regions.find(r => r.name.startsWith("Peloria"));
   expect(glamour.settings.moon_shift).toBe("full");
+  expect(json.regions.find(r => r.name === "Ralios").settings.moon_bearing).toBe(240);
   await page.goto(`index.html#/c/${cid}/regions`);
   await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByLabel("Red Moon seen as from")).toHaveValue("1");
-  await page.getByLabel("Red Moon seen as from").selectOption("full");
+  await expect(page.getByLabel("Direction from the Red Moon")).toHaveValue("240");
+  await page.getByLabel("Direction from the Red Moon").selectOption("full");
   await page.getByRole("button", { name: "Save region" }).click();
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.regions.find(r => r.name === "Ralios").settings.moon_shift).toBe("full");
-  await expect(page.getByLabel("Red Moon seen as from")).toHaveCount(0); // the list has been drawn again
+  await expect(page.getByLabel("Direction from the Red Moon")).toHaveCount(0); // the list has been drawn again
+  // moving the party on a day already recorded in Sartar shows today's Red Moon from where the party is now
   await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Party is here" }).click();
   await expect(page.locator("#toast")).toContainText("Party moved to Ralios");
+  await page.goto(`index.html#/c/${cid}/day/${day}`);
+  await expect(moons).toContainText("Red Moon: Full (100%) from Ralios");
+  await expect(page.locator(".kv div", { has: page.locator(".lbl", { hasText: "Region" }) }).first()).toContainText("Sartar");
   // a day not yet recorded is where the party is now (a recorded day keeps the region it was in)
   await page.goto(`index.html#/c/${cid}/day/${day + 7}`);
   await expect(moons).toContainText("Red Moon: Full (100%)");

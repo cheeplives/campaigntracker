@@ -404,21 +404,42 @@
   // Each phase is placed in an ordinary moon's cycle (0 black, 0.5 full) for the light it gives and its icon.
   const RED_MOON_PHASES = [['Black', 0], ['Crescent-Coming', 0.125], ['Empty Half', 0.25], ['Full', 0.5], ['Full Half', 0.75],
     ['Crescent-Going', 0.875], ['Dying', 0.92]];
-  /** Where a region sees the Red Moon from: days ahead of Dragon Pass's phase, or 'full' under it. In the order the
-   * bands sweep, from the moment Dragon Pass sees it Full (redMoonForum). */
-  const RED_MOON_BANDS = [[0, 'Dragon Pass, Kethalia & Prax'], [1, 'Ralios'], [2, 'Fronela'], [3, 'Carmania'], [4, 'Eol & the White Sea'],
-    [5, 'Blue Moon Plateau & Pent'], [6, 'Kralorela & the Wastelands'], ['full', 'Glamour (always Full)']];
+  // A region sees it by where it lies around the Red Moon: its bearing from Glamour, in degrees clockwise from north.
+  // Each phase is a wedge of 360/7 degrees and the wedges turn clockwise once a week, so a land a seventh of the way
+  // round from Dragon Pass sees Dragon Pass's phase a day later. The bearings put each land in the band the thread names.
+  const RED_MOON_DEGREES_A_DAY = 360 / 7;
+  const RED_MOON_DRAGON_PASS = 175;
+  /** The sixteen compass points a region can be placed at around the Red Moon, with the lands that lie that way. */
+  const RED_MOON_POINTS = [[0, 'North', 'Valind\'s Glacier, Eol & the White Sea'], [22.5, 'North-northeast', ''], [45, 'Northeast', ''],
+    [67.5, 'East-northeast', 'Pent & the Blue Moon Plateau'], [90, 'East', 'Kralorela'], [112.5, 'East-southeast', 'Teshnos & the East Isles'],
+    [135, 'Southeast', 'the Wastelands & Dagori Inkarth'], [157.5, 'South-southeast', 'Prax & the Storm Mountains'],
+    [180, 'South', 'Dragon Pass, Sartar & Kethaela'], [202.5, 'South-southwest', 'Maniria & Fonrit'], [225, 'Southwest', ''],
+    [247.5, 'West-southwest', 'Ralios & Seshnela'], [270, 'West', 'the Rockwood Mountains'], [292.5, 'West-northwest', 'Fronela'],
+    [315, 'Northwest', ''], [337.5, 'North-northwest', 'Carmania']];
+  /** A region's bearing from the Red Moon, 'full' under it, or null when it has none of its own: set on it, or from the
+   * days-ahead band of campaigns made before bearings (0 Dragon Pass, 1 Ralios … 6 Kralorela), or else the Glorantha
+   * preset's for a region of the same name, so campaigns made from the preset before every land had one still get it. */
+  function redMoonBearing(region) {
+    const s = region?.settings || {};
+    if (s.moon_shift === 'full') return 'full';
+    if (s.moon_bearing !== undefined && s.moon_bearing !== null && s.moon_bearing !== '' && Number.isFinite(Number(s.moon_bearing))) return mod(Number(s.moon_bearing), 360);
+    if (s.moon_shift !== undefined && s.moon_shift !== null && Number.isFinite(Number(s.moon_shift))) return mod(RED_MOON_DRAGON_PASS + Number(s.moon_shift) * RED_MOON_DEGREES_A_DAY, 360);
+    const p = region?.name && PRESETS.glorantha.regions.find(r => r.name === region.name);
+    return p && p.settings !== s ? redMoonBearing(p) : null;
+  }
   const RED_MOON_CLAYDAY = 2;
   /** Whether a moon is Glorantha's Red Moon: marked so, or (in campaigns made before it was) the preset's weekly Red Moon. */
   const isRedMoon = moon => moon.kind === 'red_moon' || (moon.kind === undefined && moon.name === 'Red Moon' && Number(moon.cycle) === 7);
   /** A moon on day d. cal and region are needed for the Red Moon, whose phase follows the weekday and the region. */
   function moonPhase(moon, d, cal, region) {
     if (cal && isRedMoon(moon)) {
-      const band = region?.settings?.moon_shift ?? 0;
+      const bearing = redMoonBearing(region) ?? RED_MOON_DRAGON_PASS;
       const wd = weekday(cal, d);
       // a festival day outside the week keeps counting from the days around it
       const day = wd ?? mod(d - RED_MOON_CLAYDAY, 7);
-      const idx = band === 'full' ? 3 : mod(day - RED_MOON_CLAYDAY + (Number(band) || 0), 7);
+      // days ahead of Dragon Pass, from -3.5 to 3.5, and the phase the land is in at midday
+      const ahead = bearing === 'full' ? 0 : (mod(bearing - RED_MOON_DRAGON_PASS + 180, 360) - 180) / RED_MOON_DEGREES_A_DAY;
+      const idx = bearing === 'full' ? 3 : mod(Math.floor(day - RED_MOON_CLAYDAY + ahead + 0.5), 7);
       const [label, ph] = RED_MOON_PHASES[idx];
       const illum = Math.round((1 - Math.cos(2 * Math.PI * ph)) / 2 * 1e9) / 1e9;
       return { name: moon.name, phase: ph, illum, label, icon: MOON_PHASES[mod(Math.round(ph * 8), 8)][1], color: moon.color, redMoon: true };
@@ -1758,8 +1779,9 @@
     name, ...(i ? {} : { current: true }),
     settings: { climate: `koppen:${code}`, hemisphere, lighting: 'natural', terrain_mod: terrain },
   }));
-  /** Regions with the Red Moon band (RED_MOON_BANDS) each named one sees it from. */
-  const redMoonBands = (regions, bands) => regions.map(r => (r.name in bands ? { ...r, settings: { ...r.settings, moon_shift: bands[r.name] } } : r));
+  /** Regions placed around the Red Moon: each named one's bearing from it (redMoonBearing), or 'full' under it. */
+  const redMoonPlaces = (regions, places) => regions.map(r => (r.name in places
+    ? { ...r, settings: { ...r.settings, ...(places[r.name] === 'full' ? { moon_shift: 'full' } : { moon_bearing: places[r.name] }) } } : r));
   // Real-world regions for the Gregorian presets, each listed under the hemisphere it lies in. Regions that
   // straddle the equator (the Amazon and Congo basins, the East African highlands) sit with the south, where most of them lie.
   const EARTH_REGIONS = {
@@ -2001,8 +2023,9 @@
       // every region sits in the north; it runs cold toward Valind's Glacier and hot toward Pamaltela (gloranthaGeo).
       // Each region takes the Köppen climate of what it reads like, a judgement call: Sartar and Dragon Pass as
       // snowy uplands, Prax and Pent as cold steppe, Peloria warmed by the Glowline, Kralorela as China, Teshnos as India.
-      // Where the Red Moon thread places a land, its region sees that band's phase (RED_MOON_BANDS); the rest see Dragon Pass's.
-      regions: redMoonBands(koppenRegions('north', [
+      // Each region lies at a bearing from the Red Moon over Glamour (gloranthaGeo), which sets the phase it sees; those the
+      // Red Moon thread names fall in its bands (redMoonForum), and Glamour, under it, always sees it Full.
+      regions: redMoonPlaces(koppenRegions('north', [
         ['Sartar (Jonstown, Boldhome, the Colymar lands)', 'Dfb'], ['Old Woods & the Stinking Forest', 'Dfb', -1],
         ['Grazelands & Beast Valley', 'BSk'], ['Tarsh & Dragon Pass lowlands', 'Dfb'],
         ['Storm Mountains & Kero Fin', 'ET'], ['Dagori Inkarth & the Shadows Dance', 'Dfc'],
@@ -2013,7 +2036,13 @@
         ['Ralios', 'Cfb'], ['Seshnela', 'Cfb'], ['Maniria', 'Cfa', -1],
         ['Kralorela', 'Cwa'], ['Teshnos', 'Am'], ['East Isles', 'Af'],
         ['Fonrit', 'Aw'], ['Errinoru Jungle & the Maslo Coast', 'Af', -2], ['Pamaltelan plains (Agimori)', 'BSh'],
-      ]), { 'The Wastelands': 6, 'Peloria: the Lunar heartland & Glamour': 'full', 'Pent': 5, 'Fronela': 2, 'Ralios': 1, 'Kralorela': 6 }),
+      ]), {
+        'Sartar (Jonstown, Boldhome, the Colymar lands)': 172, 'Old Woods & the Stinking Forest': 165, 'Grazelands & Beast Valley': 167,
+        'Tarsh & Dragon Pass lowlands': 182, 'Storm Mountains & Kero Fin': 160, 'Dagori Inkarth & the Shadows Dance': 140,
+        'Esrolia (Nochet)': 193, 'Heortland': 186, 'Caladraland': 176, 'Prax & the River of Cradles (Pavis)': 153, 'The Wastelands': 128,
+        'Peloria: the Lunar heartland & Glamour': 'full', 'Pent': 70, 'Fronela': 290, 'Rockwood Mountains': 268, "Valind's Glacier": 0,
+        'Ralios': 240, 'Seshnela': 252, 'Maniria': 215, 'Kralorela': 100, 'Teshnos': 117, 'East Isles': 108,
+        'Fonrit': 205, 'Errinoru Jungle & the Maslo Coast': 196, 'Pamaltelan plains (Agimori)': 186 }),
       // the cults' holy days (runequestCults): a weekday of a named week in every season, and a high holy day once a year
       holidays: [
         { name: 'Sacred Time', color: '#7b4fa0', rule: { type: 'fixed', month: 5, day: 1, span: 14 }, description: 'The two weeks between the years, when the gods are near and the coming year\'s fortunes are set in the great rites.' },
@@ -2625,7 +2654,7 @@
   const Engine = {
     SHIFT_KEYS, SHIFT_ACTIONS, SHIFT_ACTION_GROUPS, addShiftAction, isOnTheMove, VIS_LABELS, WEATHER, WIND, CLIMATES, PRESETS, presetOptions,
     prep, shiftNames, quarterNames, TIME_MODES, timeMode, slotsPerDay, slotHours, slotWord, slotQuarter, slotsFromQuarters, isLeap, yearStart, yearLength, monthLength, fromAbs, toAbs, weekday, weekLength, maxWeekdaysInMonth, ordinal,
-    eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, RED_MOON_BANDS, holidaysOn, holidayActive,
+    eraList, eraOf, eraYear, yearLabel, fmtDate, parseDate, fmtShift, addMonths, SEASON_TYPES, season, seasonStarts, monthSeasons, parseClock, fmtClock, sunTimes, sunLight, moons, moonPhase, MOON_PHASES, moonPhaseDay, isRedMoon, redMoonBearing, RED_MOON_POINTS, holidaysOn, holidayActive,
     genWeather, shiftWeather, weatherLabel, WIND_SPEEDS, windSpeed, PRECIP_RATES, precipRate, GROUND_DAYS, GROUND_PRESETS, groundConditions, groundLabel, openAir, withOverrides, outlook, outlookWords, TEMP_UNITS, isImperial, fmtTemp, toTempUnit, fromTempUnit, visibility, climateFor, mod,
     KOPPEN, KOPPEN_GROUPS, KOPPEN_LETTERS, KOPPEN_SEASONS, WET_LABELS, koppenBase, koppenClimate, koppenCode, buildClimate, baselineWeights, describeBaseline,
     tuningDefaults, mergeTuning, tuningChanges, tuningProblem, setTuning, OUTDOOR_WEATHER, GROUND_WET_STEPS, GROUND_SNOW_STEPS,

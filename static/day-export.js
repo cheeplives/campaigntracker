@@ -49,7 +49,8 @@ const DayExport = (() => {
     L.push([
       `**${w?.partial ? 'Weather now' : 'Forecast'}** ${w ? `${wxDef.icon || ''} ${E.weatherLabel(w, unit)}`.trim() : 'not known'}`,
       sun ? `**Sun** rises ${E.fmtClock(sun.sunrise)}, sets ${E.fmtClock(sun.sunset)}` : null,
-      ...E.moons(c, d, region).map(m => `**${m.name}** ${m.icon} ${m.label} (${Math.round(m.illum * 100)}%)`),
+      // today's are seen from where the party is now, as the day page shows them
+      ...E.moons(c, d, d === today ? ctx.regions.find(r => r.id === Number(s.current_region)) || region : region).map(m => `**${m.name}** ${m.icon} ${m.label} (${Math.round(m.illum * 100)}%)`),
       d === today ? `**Now** ${names[E.mod(now, spd)]}` : null,
     ].filter(Boolean).join(' · '));
     L.push('');
