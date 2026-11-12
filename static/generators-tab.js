@@ -145,7 +145,7 @@
     /** The Encounters card: three situations that fit the setting, place, time and tone, each with its own rerolls. */
     function genEncounters(pref, keep) {
       // Until the GM picks a setting, follow the tab's genre where one of the encounter settings fits it
-      const fromGenre = { fantasy: 'high', modern: 'modern', western: 'west' }[pref.genre];
+      const fromGenre = { fantasy: 'high', scifi: 'hardsf', cyberpunk: 'cyber', modern: 'modern', western: 'west' }[pref.genre];
       const setting = keep('encGenre', select(Enc.GENRES, pref.encGenre || fromGenre || Enc.GENRES[0][0], { 'aria-label': 'Setting' }));
       const where = keep('encWhere', select([['', 'Anywhere'], ...Enc.WHERE[setting.value]], pref.encWhere || '', { 'aria-label': 'Where' }));
       // The time the party is at now, unless the GM picks another
