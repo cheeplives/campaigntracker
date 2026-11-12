@@ -198,12 +198,12 @@ test("a Glorantha campaign shows the Red Moon red and black, and each region see
   await page.getByRole("button", { name: "Save region" }).click();
   await expect.poll(async () => (await api(page, "campaign", undefined, cid)).json.regions.find(r => r.name === "Ralios").settings.moon_shift).toBe("full");
   await expect(page.getByLabel("Direction from the Red Moon")).toHaveCount(0); // the list has been drawn again
-  // moving the party on a day already recorded in Sartar shows today's Red Moon from where the party is now
+  // moving the party on a day already recorded in Sartar moves today there too, and shows its Red Moon from Ralios
   await page.locator(".listrow", { hasText: "Ralios" }).getByRole("button", { name: "Party is here" }).click();
   await expect(page.locator("#toast")).toContainText("Party moved to Ralios");
   await page.goto(`index.html#/c/${cid}/day/${day}`);
-  await expect(moons).toContainText("Red Moon: Full (100%) from Ralios");
-  await expect(page.locator(".kv div", { has: page.locator(".lbl", { hasText: "Region" }) }).first()).toContainText("Sartar");
+  await expect(moons).toContainText("Red Moon: Full (100%)");
+  await expect(page.locator(".kv div", { has: page.locator(".lbl", { hasText: "Region" }) }).first()).toContainText("Ralios");
   // a day not yet recorded is where the party is now (a recorded day keeps the region it was in)
   await page.goto(`index.html#/c/${cid}/day/${day + 7}`);
   await expect(moons).toContainText("Red Moon: Full (100%)");

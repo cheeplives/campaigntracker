@@ -62,6 +62,50 @@ test("At the Table leads the Play group and shows the date, the party, the moons
   expectNoErrors(errors);
 });
 
+test("At the Table's region follows the party wherever it is moved, today's weather already rolled or not", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const { cid, player } = await table(page, browser, "Follows");
+  const playerId = (await api(page, "campaign", undefined, cid)).json.members.find(m => m.email === player.email).id;
+  const coast = (await api(page, "region_save", { name: "Coast" }, cid)).json.id;
+  const peaks = (await api(page, "region_save", { name: "Peaks" }, cid)).json.id;
+  const view = page.locator(".table-view");
+  const region = view.locator(".tv-summary .tv-fact.tv-party");
+  const dayRegion = async () => (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=2`)).json()).day?.region_id ?? null;   // today
+  await page.goto(`index.html#/c/${cid}`);
+  await goTab(page, "At the Table");   // today's weather is rolled, in Home
+  await expect(region).toContainText("Home");
+  // Regions → Party is here
+  await goTab(page, "Regions");
+  await page.locator(".listrow", { hasText: "Coast" }).getByRole("button", { name: "Party is here" }).click();
+  await expect(page.locator(".listrow", { hasText: "Coast" }).locator(".nowtag")).toBeVisible();
+  expect(await dayRegion()).toBe(coast);
+  await goTab(page, "At the Table");
+  await expect(region).toContainText("Coast");
+  await expect(region).not.toContainText("Home");
+  await expect(page.locator(".nowbar .now-meta")).toContainText("Coast");
+  // Settings → the party's current region
+  expect((await api(page, "campaign_update", { settings: { current_region: peaks } }, cid)).status).toBe(200);
+  expect(await dayRegion()).toBe(peaks);
+  // a split party: the other group's region is named; making it the main group moves the party there
+  const [main] = (await api(page, "groups", undefined, cid)).json.groups;
+  const split = await api(page, "group_split", { from_id: main.id, name: "Scouts", members: [playerId], characters: [], region_id: coast }, cid);
+  expect(split.status, JSON.stringify(split.json)).toBe(200);
+  await page.reload();
+  await expect(region).toContainText("Peaks");
+  await expect(region).toContainText("Scouts (in Coast)");
+  const scouts = (await api(page, "groups", undefined, cid)).json.groups.find(g => g.name === "Scouts");
+  expect((await api(page, "group_save", { id: scouts.id, is_main: true }, cid)).status).toBe(200);
+  expect(await dayRegion()).toBe(coast);
+  await page.reload();
+  await expect(region).toContainText("Coast");
+  await expect(region).toContainText("The party (in Peaks)");
+  // the main group's region set on its own moves the party too; another day keeps its region
+  expect((await api(page, "group_save", { id: scouts.id, region_id: peaks }, cid)).status).toBe(200);
+  expect(await dayRegion()).toBe(peaks);
+  expect((await api(page, "campaign", undefined, cid)).json.campaign.settings.current_region).toBe(peaks);
+  expectNoErrors(errors);
+});
+
 test("Pass time… skips ahead by an amount or to a date, labels the time passed, and leads to rests and travel", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Pell");

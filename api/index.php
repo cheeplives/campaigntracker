@@ -1207,6 +1207,7 @@ try {
     case 'campaign_update':
         $cid = cid(); need_gm($cid);
         $c = campaign_row($cid);
+        $oldRegion = party_current_region($cid);
         $name = p('name') !== null ? trim((string)str_in(p('name'), 150, false)) : $c['name'];
         if ($name === '') fail('Name required');
         $desc = p('description', $c['description']);
@@ -1225,7 +1226,7 @@ try {
             $pdo->rollBack();
             throw $e;
         }
-        try { party_sync_main_region($cid); }   // the main group's region follows current_region; the settings are saved either way
+        try { party_sync_main_region($cid); party_today_follows($cid, $oldRegion); }   // the main group's region and today's follow current_region; the settings are saved either way
         catch (Throwable $e) { error_log('campaign-chronicle: party_sync_main_region: ' . $e->getMessage()); }
         out(['ok' => true]);
 

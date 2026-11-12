@@ -376,9 +376,22 @@ function party_current_region(int $cid): ?int {
 }
 /** Make settings current_region $rid (null for none), leaving the rest of the settings alone. */
 function party_set_current_region(int $cid, ?int $rid): void {
+    $old = party_current_region($cid);
     $s = dec(campaign_row($cid)['settings_json']) ?: [];
     $s['current_region'] = $rid;
     db()->prepare('UPDATE campaigns SET settings_json=? WHERE id=?')->execute([json_in($s), $cid]);
+    party_today_follows($cid, $old);
+}
+/** Once the campaign's current region has changed from $old, today (the day the clock is on) moves with the party: its
+ * stored row, if it has one, takes the new region, so At the Table, the day page and the bar show where the party is
+ * now and its light and terrain come from there. The weather already rolled for it stays. Past and future days keep
+ * theirs. */
+function party_today_follows(int $cid, ?int $old): void {
+    $c = campaign_row($cid);
+    $new = party_region($cid, (dec($c['settings_json']) ?: [])['current_region'] ?? null);
+    if ($new === $old) return;
+    db()->prepare('UPDATE days SET region_id=? WHERE campaign_id=? AND abs_day=?')
+        ->execute([$new, $cid, floordiv((int)$c['current_shift'], camp_spd($c))]);
 }
 /** The main group's region := the campaign's current region (after the settings change). */
 function party_sync_main_region(int $cid): void {

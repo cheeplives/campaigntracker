@@ -430,14 +430,14 @@
     if (n === 0) return;
     if (activity && n > 0) await post('shifts_fill', { from_shift: from + 1, to_shift: to, activity, transit: E.isOnTheMove(activity) }, S.camp.id);
     const d0 = Math.floor(from / spd()), d1 = Math.floor(to / spd());
-    if (n > 0) {
-      // transit days use the travel region (or wherever the party was), arrival day uses the new region
-      if (d1 > d0 + 1) await ensureWeather(d0 + 1, d1 - 1, travelRegionId || settings().current_region);
-      if (arrivalRegionId) await setCurrentRegion(arrivalRegionId);
-      await ensureWeather(d0, d1);
-    }
+    // transit days use the travel region (or wherever the party was), arrival day uses the new region
+    if (n > 0 && d1 > d0 + 1) await ensureWeather(d0 + 1, d1 - 1, travelRegionId || settings().current_region);
     await post('set_time', { current_shift: to }, S.camp.id);
     S.camp.current_shift = to;
+    // the party arrives once the clock is there, so the arrival day (even one already rolled) takes the new region and
+    // the day they left keeps its own
+    if (arrivalRegionId) await setCurrentRegion(arrivalRegionId);
+    if (n > 0) await ensureWeather(d0, d1);
   }
   async function setCurrentRegion(id) {
     const s = { ...settings(), current_region: Number(id) || null };
@@ -584,7 +584,8 @@
     return a === b && (e.end_day === null || e.end_day === undefined) ? names[a] : `${names[a]} → ${names[b]}`;
   }
   /** Where the moons of day d are seen from: the day's region, except today, when it is wherever the party is now, so
-   * moving the party mid-day shows the Red Moon's phase from its new land (the day keeps its region for its weather). */
+   * the Red Moon's phase is from the party's land even when the GM has set today's region by hand (moving the party
+   * moves today with it). */
   const moonRegion = (d, region) => (d === today() ? currentRegion() || region : region);
   function moonBadges(d, region = currentRegion()) {
     region = moonRegion(d, region);
@@ -5172,6 +5173,12 @@
     let groups = [], mapNames = new Map(), characters = [], vehicles = [];
     const load = async () => {
       ({ groups, vehicles = [] } = await api('groups', { query: { cid: S.camp.id } }));
+      // the main group's region is the campaign's current region: a merge or a new main group may have moved it
+      const main = groups.find(g => g.is_main);
+      if (main && (Number(settings().current_region) || null) !== (main.region_id ?? null)) {
+        S.camp.settings = { ...settings(), current_region: main.region_id ?? null };
+        if (isGM()) await ensureWeather(today(), today()).catch(() => {});
+      }
       try { mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name])); } catch { /* names only */ }
       // the GM's tray: characters who aren't travelling
       if (gm && typeof Sheets !== 'undefined') try { characters = (await api('characters', { query: { cid: S.camp.id } })).characters; } catch { characters = []; }
@@ -5517,6 +5524,12 @@
     const loadParty = async () => {
       try {
         ({ groups, vehicles = [] } = await api('groups', { query: { cid: S.camp.id } }));
+      // the main group's region is the campaign's current region: a merge or a new main group may have moved it
+      const main = groups.find(g => g.is_main);
+      if (main && (Number(settings().current_region) || null) !== (main.region_id ?? null)) {
+        S.camp.settings = { ...settings(), current_region: main.region_id ?? null };
+        if (isGM()) await ensureWeather(today(), today()).catch(() => {});
+      }
         mapNames = new Map((await api('maps', { query: { cid: S.camp.id } })).maps.map(m => [m.id, m.name]));
       } catch { /* the card is only a convenience; the planner still works */ }
     };
@@ -7319,7 +7332,9 @@
     const party = await (async () => {
       // the region is the day's (the one its weather and light come from); the main group's own is added only when it differs
       const g = mainGroup, gReg = g && regionById(g.region_id), out = { region: (region || gReg)?.name || null, groupRegion: gReg && region && gReg.id !== region.id ? gReg.name : null, near: null, link: null, mini: null,
-        groups: groups.length > 1 ? `${groups.length} groups: ${groups.map(x => x.name).join(', ')}` : null };
+        // a split party: each other group's region, where it isn't the main group's
+        groups: groups.length > 1 ? `${groups.length} groups: ${groups.map(x => (x !== g && x.region_id && x.region_id !== g?.region_id && regionById(x.region_id)
+          ? `${x.name} (in ${regionById(x.region_id).name})` : x.name)).join(', ')}` : null };
       if (g?.map_id) {
         try {
           const m = await api('map', { query: { cid, id: g.map_id } });
