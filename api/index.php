@@ -1631,6 +1631,26 @@ try {
         if (p('transit')) tag_transit_events($cid, $day * ($maxSlot + 1) + $slot, $day * ($maxSlot + 1) + $slot);
         out(['ok' => true]);
 
+    case 'shift_gm_note_add': // GM: add text under the GM notes of the shift the party is in now (an encounter card kept from the Generators tab)
+        $cid = cid(); need_gm($cid);
+        $text = trim((string)str_in(p('text'), 5000, false));
+        if ($text === '') fail('Nothing to add');
+        $c = campaign_row($cid);
+        $spd = camp_spd($c);
+        $day = floordiv((int)$c['current_shift'], $spd);
+        $slot = (int)$c['current_shift'] - $day * $spd;
+        need_row_room($cid, 'shifts', 1);
+        db()->beginTransaction();
+        $st = db()->prepare('SELECT gm_notes FROM shifts WHERE campaign_id=? AND abs_day=? AND shift=? FOR UPDATE');
+        $st->execute([$cid, $day, $slot]);
+        $old = rtrim((string)($st->fetchColumn() ?: ''));
+        $notes = $old === '' ? $text : "$old\n\n$text";
+        if (mb_strlen($notes) > 5000) { db()->rollBack(); fail('The GM notes for this shift are full (5000 characters). Make room in them first'); }
+        db()->prepare('INSERT INTO shifts (campaign_id, abs_day, shift, gm_notes) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE gm_notes=VALUES(gm_notes)')
+            ->execute([$cid, $day, $slot, $notes]);
+        db()->commit();
+        out(['ok' => true, 'abs_day' => $day, 'shift' => $slot]);
+
     case 'shifts_fill': // GM: label a span of shifts (e.g. "Travelling to Altdorf") without overwriting existing activity
         $cid = cid(); need_gm($cid);
         $from = int_in(p('from_shift')); $to = int_in(p('to_shift'));

@@ -1383,7 +1383,7 @@
     holdings: 'The party\'s gear and loot, and its vehicles, animals, buildings and assets',
     encyclopedia: 'The people, places, items and groups met in play, linked wherever their names are written',
     library: 'The campaign\'s books, journals and notes, written out in full. Anyone can add or change one',
-    generators: 'Random names, taverns, companies and towns, to use on the spot or add to the Encyclopedia',
+    generators: 'Random names, taverns, companies, towns and encounters, to use on the spot or add to the Encyclopedia',
     regions: 'Places with their own climate, light source and terrain',
     holidays: 'Festivals and recurring days shown on the calendar',
     members: 'Who plays in this campaign, and who can GM it',
@@ -1826,7 +1826,7 @@
       mainAction('Add a tome', 'A book the party found, a character\'s journal, or the GM\'s notes, each with its own pages.'),
     ],
     generators: () => [
-      tabIntro('generators', 'Random names, taverns, companies and towns, to use on the spot.'),
+      tabIntro('generators', 'Random names, taverns, companies, towns and encounters, to use on the spot.'),
       { at: '#app .gen-card', optional: true, title: 'A generator', text: 'Generate gives a fresh batch. Add puts one straight into the Encyclopedia.' },
     ],
     maps: () => [
@@ -7152,7 +7152,7 @@
             ', over 4,000 icons by Lorc, Delapouite and other artists under ', extLink({ url: 'https://creativecommons.org/licenses/by/3.0/', title: 'CC BY 3.0' }),
             ' (Viscious Speed\'s and Zeromancer\'s under CC0), copied into the app. A handful of plain shapes (arrows, a link, the phases of the moon) were drawn for the app itself. A token made from one is drawn in your browser and keeps its icon\'s title, artist and licence, shown when the token is edited.'],
           fanAbout ? [fanAbout.used] : null,
-          'The Generators tab\'s names, syllables, rumors and templates were written for it too. Its real-world given and family names are common names picked by hand; no name list or database was copied.',
+          'The Generators tab\'s names, syllables, rumors, templates and encounter cards were written for it too (the encounter cards take their shape from published encounter decks, but no card\'s text is copied from one). Its real-world given and family names are common names picked by hand; no name list or database was copied.',
         ])),
       starterAbout(section),
       section('No open source',

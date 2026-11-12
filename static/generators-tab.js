@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   function make(ctx) {
-    const { S, api, btn, busy, cal, campaignHeader, clean, el, encCatNamed, field, hideTip, isGM, lockBox, mount, post, select, tip, toast } = ctx;
+    const { E, S, api, btn, busy, cal, campaignHeader, clean, el, encCatNamed, field, hideTip, isGM, lockBox, mount, nowShift, post, select, tip, toast } = ctx;
 
     // ------------------------------------------------------------ generators tab
     // Random names, taverns, companies and towns from static/generators.js. Nothing is stored until someone presses 📖 on
@@ -130,13 +130,61 @@
       const towns = genCard('Towns', 'A whole settlement: who runs it, what pays for it, a few places and people, and trouble for the party to walk into. 📖 Add puts the town, or any place or person in it, in the Encyclopedia',
         [field('Size', size)], () => genTown(Gen.town(g, size.value)), 'gen-town');
 
+      const encounters = genEncounters(pref, keep);
+
       const secret = isGM() ? lockBox(el('input', { type: 'checkbox', checked: pref.secret !== false, 'aria-label': 'Add to the Encyclopedia as GM only', onchange: e => setGenPrefs({ secret: e.target.checked }) }),
         'what you add with 📖 stays hidden from players until you turn GM only off on its entry') : null;
       mount(...campaignHeader('generators'), el('div', { class: 'gen-page' },
         el('div', { class: 'card gen-head' }, el('div', { class: 'row spread' },
-          el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors and towns for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
+          el('h2', {}, 'Generators', tip('Random names, handles, places, businesses, rumors, towns and encounters for when the players go somewhere you didn\'t plan. Everything here is made in your browser and nothing is saved unless you press 📖 Add')),
           el('div', { class: 'row gen-head-tools' }, el('label', { class: 'gen-genre' }, el('span', { class: 'lbl' }, 'Genre'), genre), secret))),
-        names, taverns, companies, rumors, towns));
+        names, taverns, companies, rumors, towns, encounters));
+    }
+
+    // ------------------------------------------------------------ encounters (static/encounters.js)
+    /** The Encounters card: three situations that fit the setting, place, time and tone, each with its own rerolls. */
+    function genEncounters(pref, keep) {
+      const setting = keep('encGenre', select(Enc.GENRES, pref.encGenre || Enc.GENRES[0][0], { 'aria-label': 'Setting' }));
+      const where = keep('encWhere', select([['', 'Anywhere'], ...Enc.WHERE[setting.value]], pref.encWhere || '', { 'aria-label': 'Where' }));
+      // The time the party is at now, unless the GM picks another
+      const q = E.slotQuarter(cal(), E.mod(nowShift(), E.slotsPerDay(cal())));
+      const when = select(Enc.WHEN, ['dawn', 'day', 'dusk', 'night'][q] || '', { 'aria-label': 'When' });
+      const tone = keep('encTone', select(Enc.TONES, pref.encTone || '', { 'aria-label': 'Tone' }));
+      const useEnc = el('input', { type: 'checkbox', checked: pref.encUseEnc !== false, onchange: e => setGenPrefs({ encUseEnc: e.target.checked }) });
+      return genCard('Encounters', 'Three situations already under way, for the party to walk into. Each gives who is there and roughly how many, what is going on, a twist, two ways it can escalate if the scene runs on, and something worth having; what the party does about it is up to them. '
+        + 'When starts at the party\'s time now. With the box ticked, groups, places and people from your Encyclopedia can turn up in them. 🎲 beside a part draws that part again. '
+        + (isGM() ? '📝 Keep adds a card to the GM notes of the shift the party is in now; 📖 Add puts it in the Encyclopedia, tagged Encounter' : '📖 Add puts one in the Encyclopedia, tagged Encounter'),
+      [field('Setting', setting), field('Where', where), field('When', when), field('Tone', tone),
+        el('label', { class: 'inline small gen-traits', 'data-tip': 'Use groups, places and people from your Encyclopedia' }, useEnc, 'Use Encyclopedia names')],
+      () => el('div', { class: 'gen-encs' }, Enc.draw({ genre: setting.value, where: where.value, when: when.value, tone: tone.value,
+        cast: useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {} }).map(genEncounter)), 'gen-enc');
+    }
+
+    /** One encounter card, redrawn in place when one of its parts is rolled again. */
+    function genEncounter(c) {
+      const again = (part, what) => el('button', { type: 'button', class: 'small gen-again', 'aria-label': `Draw another ${what} for ${c.title}`, 'data-tip': `Draw another ${what}`,
+        onclick: e => { hideTip(); e.currentTarget.closest('.gen-enc-card').replaceWith(genEncounter(Enc.reroll(c, part))); } }, '🎲');
+      const part = (label, roll, what, body) => el('div', { class: 'gen-enc-part' }, el('div', { class: 'gen-enc-label' }, el('span', { class: 'lbl' }, label), again(roll, what)), body);
+      const notes = () => genHtml(el('p', {}, el('em', {}, `${c.toneLabel} · ${c.where}`)), el('p', {}, el('strong', {}, 'Who: '), c.who, c.many ? ` · ${c.many}` : ''),
+        el('p', {}, c.situation), el('p', {}, el('strong', {}, 'Twist: '), c.twist), el('p', {}, el('strong', {}, 'If it escalates:')), el('ul', {}, c.esc.map(x => el('li', {}, x))),
+        el('p', {}, el('strong', {}, 'Worth having: '), c.gain));
+      const keepBtn = isGM() ? el('button', { type: 'button', class: 'small', 'aria-label': `Keep ${c.title} in this shift's GM notes`,
+        'data-tip': `Add it to the GM notes for ${E.fmtShift(cal(), nowShift())}, the shift the party is in now` }, '📝 Keep') : null;
+      keepBtn?.addEventListener('click', busy(keepBtn, async () => {
+        await post('shift_gm_note_add', { text: Enc.text(c) }, S.camp.id);
+        toast(`Added ${c.title} to the GM notes for ${E.fmtShift(cal(), nowShift())}`);
+        keepBtn.replaceWith(el('span', { class: 'small muted gen-kept' }, '📝 Kept in this shift\'s GM notes'));
+      }));
+      return el('article', { class: 'gen-enc-card' },
+        el('header', {}, el('h3', {}, c.title), el('span', { class: 'small muted' }, `${c.toneLabel} · ${c.where}`)),
+        el('p', { class: 'gen-enc-who' }, el('strong', {}, c.who), c.many ? el('span', { class: 'muted' }, ` · ${c.many}`) : null),
+        el('p', { class: 'gen-enc-sit' }, c.situation),
+        part('Twist', 'twist', 'twist', el('p', {}, c.twist)),
+        part('If it escalates', 'esc', 'pair of escalations', el('ul', {}, c.esc.map(x => el('li', {}, x)))),
+        part('Worth having', 'gain', 'thing worth having', el('p', {}, c.gain)),
+        el('div', { class: 'row gen-enc-tools' }, keepBtn,
+          el('button', { type: 'button', class: 'small', 'aria-label': `Copy ${c.title}`, 'data-tip': 'Copy the card as text', onclick: () => genCopy(Enc.text(c)) }, '📋 Copy'),
+          genAddButton(`Encounter: ${c.title}`, 'Encounter', notes)));
     }
 
     /** A generated town as a stat block, with 📖 Add for the town and for each place and person in it. */

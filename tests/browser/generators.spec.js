@@ -1,5 +1,6 @@
-// The Generators tab: names, taverns, companies and towns made in the browser from static/generators.js,
-// with 📖 Add putting a result in the Encyclopedia (GM only by default for a GM).
+// The Generators tab: names, taverns, companies, towns and encounters made in the browser from static/generators.js and
+// static/encounters.js, with 📖 Add putting a result in the Encyclopedia (GM only by default for a GM), and 📝 Keep putting an
+// encounter in the GM notes of the shift the party is in.
 const { test, expect } = require("@playwright/test");
 const { watchErrors, expectNoErrors, person, signIn, approve, api, makeCampaign, newContext, closeContexts } = require("./helpers");
 test.afterEach(closeContexts);
@@ -75,6 +76,45 @@ test("every generator gives real text in every genre, and a seed repeats it", as
   expect(modern.en.some(n => /^(Alex|Avery|Casey|Charlie|Jordan|Morgan|Quinn|Riley|Robin|Sam|Taylor) /.test(n))).toBe(true);
 });
 
+test("every encounter fills its slots, fits the choices, and rerolls one part at a time", async ({ page }) => {
+  await page.goto("about:blank");
+  await page.addScriptTag({ path: require("path").join(__dirname, "..", "..", "static", "encounters.js") });
+  const r = await page.evaluate(() => {
+    const bad = [], cast = { group: ["The Iron Combine"], place: ["Gallows Rock"], person: ["Ada Quill"] };
+    let named = 0;
+    Enc.seed(3);
+    for (let i = 0; i < 40; i++) for (const [g] of Enc.GENRES) for (const [tone] of Enc.TONES) for (const [where] of [["", ""], ...Enc.WHERE[g]]) for (const [when] of Enc.WHEN) {
+      const cards = Enc.draw({ genre: g, tone, where, when, cast: i % 2 ? cast : {} });
+      if (cards.length !== 3 || new Set(cards.map(c => c.title)).size !== 3) bad.push(`three different cards: ${cards.map(c => c.title)}`);
+      for (const c of cards) {
+        const text = Enc.text(c);
+        if (/[{}]|undefined|null|NaN/.test(text)) bad.push(text);
+        if (c.esc.length !== 2 || c.esc[0] === c.esc[1]) bad.push(`two escalations: ${text}`);
+        if (![c.situation, c.twist, c.gain, ...c.esc].every(x => /^[A-Z0-9"'].*[.!?]$/.test(x))) bad.push(`sentences: ${text}`);
+        if (tone && c.tone !== tone) bad.push(`tone ${tone}: ${text}`);
+        if (/Iron Combine|Gallows Rock|Ada Quill/.test(text)) named++;
+        if (/\bThe Iron Combine\b/.test(text.replace(/(^|[.:] |\n|\n- )The Iron/g, "$1the Iron"))) bad.push(`"the" mid-sentence: ${text}`);
+        for (const part of ["twist", "esc", "gain"]) {
+          const again = Enc.reroll(c, part);
+          if (/[{}]|undefined/.test(Enc.text(again))) bad.push(Enc.text(again));
+          if (again.situation !== c.situation || again.who !== c.who) bad.push(`a reroll keeps the rest: ${Enc.text(again)}`);
+        }
+      }
+    }
+    const pick = () => { Enc.seed(42); return Enc.draw({ genre: "apoc" }).map(Enc.text).join("\n"); };
+    // Escalations happen to the party; they never list what the party could choose to do.
+    const choices = Enc.TEMPLATES.filter(t => [t.s, ...t.esc].some(x => /\b(the party (can|could|may|might) |choose|option)/i.test(x))).map(t => t.t);
+    return { bad, named, same: pick() === pick(), choices, night: Enc.draw({ genre: "apoc", tone: "hostile", where: "road", when: "night", n: 9 }) };
+  });
+  expect(r.bad).toEqual([]);
+  expect(r.named).toBeGreaterThan(20); // the campaign's own names turn up
+  expect(r.same).toBe(true);
+  expect(r.choices).toEqual([]);
+  // A hostile road at night: only hostile cards, and "twice as many by day" reads as the night's number
+  expect(r.night.every(c => c.tone === "hostile")).toBe(true);
+  expect(r.night.some(c => c.many === "About as many as the party")).toBe(true);
+});
+
 test("a GM rolls each generator and adds results to the Encyclopedia; a player adds one too", async ({ page, browser }) => {
   const errors = watchErrors(page);
   const gm = person("Gwen"), player = person("Pip");
@@ -85,7 +125,7 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   await page.goto(`index.html#/c/${cid}/generators`);
   await expect(page.locator(".tabs a.on")).toHaveText("Generators");
   const cards = page.locator(".gen-card");
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   const names = cards.filter({ has: page.getByRole("heading", { name: /^Names/ }) });
   await expect(names.locator(".gen-item")).toHaveCount(10);
   await expect(names.locator(".gen-item .muted")).toHaveCount(0);
@@ -160,6 +200,8 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
   await pp.goto(`index.html#/c/${cid}/generators`);
   await expect(pp.getByLabel("Add to the Encyclopedia as GM only")).toHaveCount(0);
+  await expect(pp.locator(".gen-enc-card")).toHaveCount(3);
+  await expect(pp.getByRole("button", { name: /^Keep / })).toHaveCount(0);
   const tav = pp.locator(".gen-card").nth(1);
   const tavName = await tav.locator(".gen-name").first().textContent();
   await tav.locator(".gen-add").first().click();
@@ -171,8 +213,33 @@ test("a GM rolls each generator and adds results to the Encyclopedia; a player a
   expectNoErrors(perrors);
   await pctx.close();
 
-  // Rumors name the campaign's own entries (the town and its person are in the Location and Person Categories); one goes in as a Rumor.
   await page.goto(`index.html#/c/${cid}/generators`);
+  // Encounters: three cards that follow the tone; 🎲 draws one part again, and 📝 Keep adds the card to this shift's GM notes.
+  const enc = page.locator(".gen-enc");
+  await enc.getByLabel("Tone", { exact: true }).selectOption("tense");
+  await expect(enc.locator(".gen-enc-card")).toHaveCount(3);
+  await expect(enc.locator(".gen-enc-card header .muted").first()).toHaveText(/^Tense · /);
+  const first = enc.locator(".gen-enc-card").first();
+  const title = await first.locator("h3").textContent();
+  const situation = await first.locator(".gen-enc-sit").textContent();
+  const twist = await first.locator(".gen-enc-part").first().locator("p").textContent();
+  await first.getByRole("button", { name: `Draw another twist for ${title}` }).click();
+  await expect(enc.locator(".gen-enc-card").first().locator(".gen-enc-sit")).toHaveText(situation);
+  const twist2 = await enc.locator(".gen-enc-card").first().locator(".gen-enc-part").first().locator("p").textContent();
+  const kept = enc.locator(".gen-enc-card").first();
+  await kept.getByRole("button", { name: `Keep ${title} in this shift's GM notes` }).click();
+  await expect(kept.getByText("Kept in this shift's GM notes")).toBeVisible();
+  const today = (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=0`)).json()).today;
+  const shifts = (await (await page.request.get(`api/index.php?a=day&cid=${cid}&d=${today}`)).json()).shifts;
+  const noted = shifts.find(x => (x.gm_notes || "").includes(title));
+  expect(noted.gm_notes).toContain(situation);
+  expect(noted.gm_notes).toContain(`Twist: ${twist2}`);
+  expect(noted.gm_notes).toContain("If it escalates:");
+  if (twist2 !== twist) expect(noted.gm_notes).not.toContain(twist);
+  await page.reload();
+  await expect(enc.getByLabel("Tone", { exact: true })).toHaveValue("tense");
+
+  // Rumors name the campaign's own entries (the town and its person are in the Location and Person Categories); one goes in as a Rumor.
   const rumors = cards.filter({ has: page.getByRole("heading", { name: /^Rumors/ }) });
   await expect(rumors.getByRole("checkbox", { name: "Use Encyclopedia names" })).toBeChecked();
   await expect.poll(async () => {
