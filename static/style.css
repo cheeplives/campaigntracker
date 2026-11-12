@@ -1547,8 +1547,9 @@ path.map-dot { stroke: var(--on-accent); fill: var(--accent); fill-opacity: 1; }
 /* the show ticks sit at the right of each row and each group's heading, away from the group's fold arrow */
 .map-route-top .map-show, .map-place-row .map-show { order: 2; }
 .map-side-sec > summary .map-show { float: right; }
-/* a form taller than the stage scrolls under its buttons, which stay at its foot */
-.map-panel-actions { position: sticky; bottom: -16px; margin: 8px -16px -16px; padding: 10px 16px 16px; background: var(--panel); border-top: 1px solid var(--line); z-index: 1; }
+/* a form taller than the stage scrolls under its buttons, which stay at its foot. They reach out exactly as far as the
+   card's padding (15px): a pixel more pokes into its border, and a form that fits then flickers as its scrollbars come and go */
+.map-panel-actions { position: sticky; bottom: -15px; margin: 8px -15px -15px; padding: 10px 15px 15px; background: var(--panel); border-top: 1px solid var(--line); z-index: 1; }
 .map-route-top, .map-place-row { display: flex; align-items: center; gap: 6px; }
 .map-route-top .map-route-name { flex: 1; min-width: 0; }
 .map-place-row .map-place { flex: 1; min-width: 0; }
