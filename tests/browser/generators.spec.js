@@ -106,7 +106,7 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
     const choices = Enc.TEMPLATES.filter(t => [t.s, ...t.esc].some(x => /\b(the party (can|could|may|might) |choose|option)/i.test(x))).map(t => t.t);
     // The deck: a hand never repeats a card dealt before, until every card that fits has gone round
     let dealt = [], hands = [], reshuffles = 0, first;
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 2 || i < Math.ceil(first.total / 3) + 2; i++) { // enough hands to go round the deck and start again
       const r = Enc.deal({ genre: "apoc", tone: "helpful", dealt });
       if (i === 0) first = r;
       dealt = r.dealt; hands.push(r.cards.map(c => c.title)); if (r.reshuffled) reshuffles++;
