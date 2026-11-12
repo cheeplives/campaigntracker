@@ -376,6 +376,7 @@
     S.camp = r.campaign; S.role = r.role; S.regions = r.regions; S.holidays = r.holidays; S.members = r.members; S.invites = r.invites || []; S.tags = r.tags || []; S.reminders = [];
     S.encyclopedia = r.encyclopedia || []; S.encIgnored = r.encyclopedia_ignored || []; S.encTags = r.encyclopedia_tags || []; S.entryFields = r.entry_fields || {}; S.questLinks = r.quest_links || {};
     S.mapIndex = r.maps_index || [];
+    S.areasIndex = r.areas_index || [];
     S.openSession = r.open_session || null;
     S.viewAs = !!r.viewing_as_player;
     E.prep(S.camp.calendar);
@@ -1617,7 +1618,9 @@
         // pins by their own label, and maps by name
         const pinHits = (S.mapIndex || []).filter(p => p.label.trim() && hit(p.label)).slice(0, 4);
         const seenMap = new Set(), mapHits = (S.mapIndex || []).filter(p => !seenMap.has(p.map_id) && seenMap.add(p.map_id) && hit(p.map_name)).slice(0, 3);
-        if (pinHits.length || mapHits.length) groups.push(['On the maps', [
+        const areaHits = (S.areasIndex || []).filter(a => hit(a.name)).slice(0, 3);
+        if (pinHits.length || mapHits.length || areaHits.length) groups.push(['On the maps', [
+          ...areaHits.map(a => ({ icon: '⬠', name: a.name, hint: `Area on ${a.map_name}`, run: () => { location.hash = `#/c/${cid}/maps/${a.map_id}?area=${a.area_id}`; } })),
           ...pinHits.map(p => ({ icon: '📍', name: p.label, hint: p.map_name, run: () => { location.hash = `#/c/${cid}/maps/${p.map_id}?pin=${p.pin_id}`; } })),
           ...mapHits.map(p => ({ icon: '🗺', name: p.map_name, hint: 'Map', run: () => { location.hash = `#/c/${cid}/maps/${p.map_id}`; } }))]]);
         const tabHits = tabs.filter(([, l]) => hit(l)).slice(0, 4);
@@ -3452,6 +3455,9 @@
   const mapLinks = (key, id) => {
     const links = (S.mapIndex || []).filter(p => p[key] === id).map(p =>
       el('a', { class: 'map-link', href: `#/c/${S.camp.id}/maps/${p.map_id}?pin=${p.pin_id}`, 'data-tip': 'Open the map at this pin' }, `📍 On the map: ${p.map_name}`));
+    // an entry that is an area: "⬠ An area on: <map>"
+    if (key === 'entry_id') links.push(...(S.areasIndex || []).filter(a => a.entry_id === id).map(a =>
+      el('a', { class: 'map-link', href: `#/c/${S.camp.id}/maps/${a.map_id}?area=${a.area_id}`, 'data-tip': 'Open the map with this area in view' }, `⬠ An area on: ${a.map_name}`)));
     return links.length ? el('div', { class: 'map-links small' }, links) : null;
   };
 
@@ -5820,17 +5826,18 @@
           try { await post('group_save', { id: g.id, region_id: Number(arriveId) }, S.camp.id); }
           catch (err) { toast(`${g.name}'s region did not change: ${err.message}`, true); }
         }
+        let entered = null;   // the area (a weather region) the group's marker ended in, when it took that area's region
         if (g && trip) {   // a planned trip ends where its route does
           const end = trip.points[trip.points.length - 1];
           // its trail gets a stop for each shift on the way (each day's start, on a long trip), along the route
           const step = n > 48 ? spd() : 1, stops = [];
           for (let k = step; k < n && stops.length < 400; k += step) stops.push({ ...pointAlong(trip.points, k / n), abs_shift: startShift + k });
-          try { await post('group_move', { id: g.id, map_id: trip.map.id, x: end.x, y: end.y, stops }, S.camp.id); }
+          try { entered = (await post('group_move', { id: g.id, map_id: trip.map.id, x: end.x, y: end.y, stops, keep_region: !!arriveId }, S.camp.id)).entered; }
           catch (err) { toast(`The marker did not move: ${err.message}`, true); }
         } else if (g && g.map_id && toName.value.trim()) {
           try {
             const pin = MapGeo.pinFor(await pinsOf(g.map_id), toName.value);
-            if (pin) await post('group_move', { id: g.id, map_id: g.map_id, x: pin.x, y: pin.y }, S.camp.id);
+            if (pin) entered = (await post('group_move', { id: g.id, map_id: g.map_id, x: pin.x, y: pin.y, keep_region: !!arriveId }, S.camp.id)).entered;
           } catch (err) { toast(`The marker did not move: ${err.message}`, true); }
         }
         // From joins the departure day's Locations visited and To the arrival day's (one day's list for a same-day trip).
@@ -5839,7 +5846,8 @@
         vs().anchor = today();
         await post('event_save', { abs_day: startDay, end_day: today() > startDay ? today() : null, shift: null,
           title: `${label}`, body: result.lines.join('\n'), is_secret: false, tags: [{ name: 'Transit' }] }, S.camp.id);
-        toast(`Arrived: ${E.fmtShift(cal(), nowShift())}`);
+        if (entered) await loadCampaign(S.camp.id, true);
+        toast(`Arrived: ${E.fmtShift(cal(), nowShift())}${entered ? `. ${g.name} is in ${entered.area}, so the weather is ${entered.region}'s now` : ''}`);
         location.hash = `#/c/${S.camp.id}/calendar`;
       }));
       return el('div', { class: 'depart' }, el('h3', {}, 'Make the trip'),
@@ -7267,6 +7275,11 @@
       const it = item(`pin:${p.pin_id}`, 'map', `${p.label.trim() || 'A pin'} · ${p.map_name}`, `#/c/${cid}/maps/${p.map_id}?pin=${p.pin_id}`);
       it.secret = !!p.secret;
       it.segs.push({ text: p.note || '' });
+    }
+    // areas, by name (one that is an entry is found as the entry too)
+    for (const a of S.areasIndex || []) {
+      const it = item(`area:${a.area_id}`, 'map', `${a.name} · area on ${a.map_name}`, `#/c/${cid}/maps/${a.map_id}?area=${a.area_id}`);
+      it.secret = !!a.secret;
     }
     const all = [...items.values()].map(it => ({ ...it, segs: it.segs.filter(g => g.text.trim()),
       hay: [it.title, ...it.extra, ...it.segs.map(g => g.text)].join('\n').toLowerCase() }));

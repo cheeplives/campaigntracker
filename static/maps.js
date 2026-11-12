@@ -253,6 +253,7 @@ const MapsTab = (() => {
       return ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'card' }, el('p', {}, 'Map not found'), el('a', { href: `#/c/${cid}/maps` }, 'Back to the maps')));
     }
     let map = data.map, pins = data.pins || [], routes = data.routes || [], here = data.groups || [];   // here: the groups on this map
+    let areas = data.areas || [];   // the areas drawn on it (053), biggest first
     let trail = data.trail || [];   // where the groups were put on this map, oldest first, each with the shift it was on
     let groups = here;   // every group, for the GM's Party is here (players only ever need the ones drawn)
     const loadGroups = async () => { if (gm) groups = (await api('groups', { query: { cid } })).groups; };
@@ -512,7 +513,7 @@ const MapsTab = (() => {
       const ids = hiddenIds();
       if (hide) ids.add(id); else ids.delete(id);
       try { localStorage.setItem(`chronicle-map-hidden-${map.id}`, JSON.stringify([...ids])); } catch { /* hidden for this visit only */ }
-      drawPins(); drawRoutes(); renderRoutes();
+      drawAreas(); drawPins(); drawRoutes(); renderRoutes();
     }
     /** A group's tick in the side panel: off hides every row of the group, on shows them all; part shown is "mixed". */
     function groupTick(title, ids, hid) {
@@ -524,11 +525,11 @@ const MapsTab = (() => {
         const now = hiddenIds();
         for (const i of ids) { if (box.checked) now.delete(i); else now.add(i); }
         try { localStorage.setItem(`chronicle-map-hidden-${map.id}`, JSON.stringify([...now])); } catch { /* hidden for this visit only */ }
-        drawPins(); drawRoutes(); renderRoutes();
+        drawAreas(); drawPins(); drawRoutes(); renderRoutes();
       });
       return el('label', { class: 'map-show', 'data-tip': `Show or hide all the ${title.toLowerCase()} on the map` }, box);
     }
-    /** The "show on the map" tick of a route or location in the side panel: id is 'r' + route id or 'p' + pin id. */
+    /** The "show on the map" tick of a route, area or location in the side panel: id is 'r' + route id, 'a' + area id or 'p' + pin id. */
     function showTick(id, name, hid) {
       const box = el('input', { type: 'checkbox', checked: !hid.has(id), 'aria-label': `Show ${name} on the map` });
       box.addEventListener('change', () => setHidden(id, !box.checked));
@@ -548,11 +549,11 @@ const MapsTab = (() => {
     /** After a change: this map's pins and routes again, and the campaign's index of which entries and events are pinned where. */
     async function refresh() {
       const [d] = await Promise.all([api('map', { query: { cid, id } }), ctx.reloadCampaign().catch(() => {})]);
-      map = d.map; pins = d.pins || []; routes = d.routes || []; here = d.groups || []; trail = d.trail || [];
+      map = d.map; pins = d.pins || []; routes = d.routes || []; areas = d.areas || []; here = d.groups || []; trail = d.trail || [];
       await loadGroups().catch(() => {});
       if (gone) return;
       lmap_close();   // a card open on a marker about to be redrawn would outlive it
-      drawPins(); drawRoutes(); renderRoutes(); drawGroups();
+      drawAreas(); drawPins(); drawRoutes(); renderRoutes(); drawGroups();
       meta.textContent = metaText();
     }
     // ---- the party's groups: a flag, or the group's token, with its name
@@ -607,7 +608,7 @@ const MapsTab = (() => {
         const hidden = g.map_display === 'hidden';
         groupMarkers.push(MapsTab.marker(groupLayer, { x: g.x, y: g.y, icon: '🚩', image: g.token_url, label: hidden ? `${g.name} (hidden)` : g.name, ring,
           className: 'map-party' + (hidden ? ' map-party-hidden' : '') + (ring?.length ? ' with-ring' : ''), sizePx: g.token_url ? 40 : 28, pad: cardPad, onPick: () => pickAt(g),
-          draggable: gm, onMove: async xy => { await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); spreadParty(); offerLog(g, xy); },
+          draggable: gm, onMove: async xy => { const r = await post('group_move', { id: g.id, map_id: map.id, x: xy.x, y: xy.y }, cid); Object.assign(g, { x: xy.x, y: xy.y }); spreadParty(); offerLog(g, xy); crossed(r, g); },
           onOpen: () => el('div', { class: 'map-pin-card' }, el('strong', {}, g.name), g.is_main ? el('small', { class: 'muted' }, 'The main group') : null,
             hidden ? el('small', { class: 'muted' }, '🙈 Hidden from players on the maps') : null,
             el('small', {}, partyNames(g).join(', ') || 'No one yet'),
@@ -617,6 +618,13 @@ const MapsTab = (() => {
       }
       spreadParty();
     };
+    /** After a group_move: the group was put inside an area that is a weather region, so it has that region now (and
+     * the campaign, for the main group). Say so, and fetch the campaign again so the bar shows the new weather. */
+    function crossed(r, g) {
+      if (!r?.entered) return;
+      toast(`${g.name} crossed into ${r.entered.area}: ${g.is_main ? 'the weather is' : 'its weather is'} ${r.entered.region}'s now`);
+      ctx.reloadCampaign().catch(() => {});
+    }
     /** The main group was moved on this map: offer, under the toolbar, to write it on the clock's shift ("Moved to Tarsk",
      * by the pin nearest where it now stands). Nothing is written unless Log it is pressed. */
     function offerLog(g, at) {
@@ -640,8 +648,8 @@ const MapsTab = (() => {
       return el('span', { class: 'mpc-party' }, which, btn('Party is here', async () => {
         const g = groups.find(q => q.id === Number(which ? which.value : groups[0].id));
         try {
-          await post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid);
-          lmap_close(); await refresh(); toast(`${g.name} is at ${pinTitle(p)}`); offerLog(g, p);
+          const r = await post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid);
+          lmap_close(); await refresh(); toast(`${g.name} is at ${pinTitle(p)}`); offerLog(g, p); crossed(r, g);
         } catch (err) { toast(err.message, true); }
       }, 'small', 'Put a group of the party here, with its marker'));
     }
@@ -982,6 +990,156 @@ const MapsTab = (() => {
         await refresh(); toast('Route saved');
       } catch (err) { toast(err.message, true); }
     }
+    // ---- areas (053): a closed outline with a name and a colour. GMs draw one in Area mode (A): a click for each corner,
+    // then Finish, or a click back on the first corner, asks its name, the Encyclopedia entry it is and the weather region
+    // it is. The party's group moved inside an area that is a weather region takes that region (api/maps.php group_move).
+    const areaPolys = new Map();
+    let apts = [], redrawing = null;   // the corners laid so far; the area whose outline is being drawn again
+    const regionName = rid => (S.regions || []).find(r => Number(r.id) === rid)?.name || null;
+    const areaEntry = a => (a.entry_id ? S.encyclopedia.find(e => e.id === a.entry_id) || null : null);
+    function drawAreas() {
+      if (!areaLayer) return;
+      areaLayer.clearLayers(); areaPolys.clear();
+      const hid = hiddenIds();
+      for (const a of areas) {
+        if (hid.has('a' + a.id)) continue;
+        const poly = L.polygon(a.points.map(([x, y]) => toLatLng(x, y)), { weight: 2, fillOpacity: 0.14, ...(a.color ? { color: a.color, fillColor: a.color } : {}),
+          className: 'map-area' + (a.color ? ' coloured' : '') + (a.is_secret ? ' secret' : '') });
+        poly.bindTooltip(el('span', {}, a.is_secret ? '🔒 ' : '', a.name), { permanent: true, direction: 'center', className: 'map-area-label' });
+        poly.on('click', ev => { if (!mode) openAreaCard(a, ev.latlng); });   // in a mode the map's own click takes it
+        poly.addTo(areaLayer);
+        areaPolys.set(a.id, poly);
+      }
+    }
+    function openAreaCard(a, at) {
+      const poly = areaPolys.get(a.id);
+      if (!lf || !poly) return;
+      L.popup({ className: 'map-card-popup', minWidth: 160, autoPanPaddingTopLeft: cardPad.tl, autoPanPaddingBottomRight: cardPad.br })
+        .setLatLng(at || poly.getCenter()).setContent(areaCard(a)).openOn(lf.map);
+    }
+    /** Fit area a in view and open its card (from the drawer, or ?area=). */
+    function showArea(a) {
+      if (hiddenIds().has('a' + a.id)) setHidden('a' + a.id, false);
+      const poly = areaPolys.get(a.id);
+      if (!poly || !lf) return;
+      lf.map.fitBounds(poly.getBounds(), { paddingTopLeft: cardPad.tl, paddingBottomRight: cardPad.br, animate: false });
+      openAreaCard(a);
+    }
+    function areaCard(a) {
+      const e = areaEntry(a), region = regionName(a.region_id);
+      const sub = ['Area', region ? `Weather: ${region}` : null, a.is_secret ? '🔒 GM only' : null].filter(Boolean).join(' · ');
+      const gmOnly = () => {
+        const b = btn([a.is_secret ? '🔒 ' : '🔓 ', 'GM only', a.is_secret ? ' ✓' : ''], async () => {
+          lmap_close();
+          if (a.is_secret) { if (await revealItem('area', a.id, `The area "${a.name}"`)) await refresh(); return; }
+          try { await post('area_save', { id: a.id, is_secret: true }, cid); await refresh(); toast('This area is GM only now'); } catch (err) { toast(err.message, true); }
+        }, '', a.is_secret ? 'GM only: players never see this area. Press to reveal it to them' : 'Players see this area. Press to make it GM only');
+        b.setAttribute('aria-label', 'GM only'); b.setAttribute('aria-pressed', String(a.is_secret));
+        return b;
+      };
+      const acts = [
+        e ? btn('📖 Entry here', async () => { lmap_close(); if (await ctx.editEntry(e.id)) await refresh(); }, '', `Change ${e.name}'s notes, fields and the rest without leaving the map`) : null,
+        gm ? btn('Edit', () => { lmap_close(); editArea(a); }, '', 'Its name, colour, Encyclopedia entry and weather region') : null,
+        gm ? KIT.menu({ label: '⋯', ariaLabel: `More for ${a.name}`, tip: 'More: redraw, GM only, delete', cls: 'more-menu', items: [
+          btn('Redraw outline', () => { lmap_close(); startArea(a); }, '', 'Draw this area\'s outline again, keeping its name and the rest'),
+          gmOnly(),
+          el('hr'),
+          btn('Delete', async () => {
+            lmap_close();
+            if (!await ctx.confirmDialog(`Delete the area "${a.name}"?${e ? ` ${e.name} stays in the Encyclopedia.` : ''}`, { ok: 'Delete', danger: true })) return;
+            try { await post('area_delete', { id: a.id }, cid); await refresh(); toast('Area deleted'); } catch (err) { toast(err.message, true); }
+          }, 'danger')] }) : null].filter(Boolean);
+      return el('div', { class: 'map-pin-card map-area-card' },
+        el('div', { class: 'mpc-head' }, el('span', { class: 'mpc-glyph', 'aria-hidden': 'true' }, el('span', {}, '⬠')),
+          el('div', { class: 'mpc-title' }, el('strong', {}, e ? el('a', { href: `#/c/${cid}/encyclopedia/${e.id}`, 'data-tip': 'Open this entry' }, a.name) : a.name),
+            el('span', { class: 'mpc-sub' }, sub))),
+        e?.preview ? el('p', { class: 'mpc-text' }, e.preview) : null,
+        region && gm ? el('p', { class: 'small muted' }, `A group of the party put inside it takes ${region} and its weather.`) : null,
+        acts.length ? el('div', { class: 'mpc-actions' }, acts) : null);
+    }
+    /** The area dialog: name, colour, the Encyclopedia entry it is, the weather region it is, GM only (a new one). */
+    function areaDialog(title, a, ok) {
+      return new Promise(resolve => {
+        const d = el('dialog', { class: 'kit-dialog map-route-dialog', 'aria-label': title });
+        const nameIn = el('input', { value: a.name || '', maxlength: 150, required: true, 'aria-label': 'Area name', autocomplete: 'off' });
+        const colour = select([['', 'The usual colour'], ...COLOURS], a.color || '', { 'aria-label': 'Area colour' });
+        const ents = [...S.encyclopedia].sort((x, y) => x.name.localeCompare(y.name));
+        const entry = select([['', '— none —'], ...ents.map(x => [String(x.id), `${x.is_secret ? '🔒 ' : ''}${x.name}`])], a.entry_id ? String(a.entry_id) : '', { 'aria-label': 'Encyclopedia entry' });
+        let entryPicked = !!a.entry_id;
+        entry.addEventListener('change', () => { entryPicked = true; });
+        // a name that is an entry's picks that entry, until one is picked by hand
+        nameIn.addEventListener('input', () => { if (!entryPicked) entry.value = String(entryNamed(nameIn.value)?.id || ''); });
+        const regions = S.regions || [];
+        const region = select([['', '— none —'], ...regions.map(r => [String(r.id), r.name])], a.region_id ? String(a.region_id) : '', { 'aria-label': 'Weather region' });
+        const box = a.id ? null : el('input', { type: 'checkbox', checked: !!a.is_secret });
+        let out = null;
+        const form = el('form', {}, el('h3', {}, title), field('Area name', nameIn),
+          el('div', { class: 'row' }, field('Colour', colour), field('Encyclopedia entry', entry, null, 'The entry this area is: a kingdom, a forest, a district. Its card links to it, and the entry\'s page to this area')),
+          regions.length ? field('Weather region', region, null, 'A group of the party put inside this area takes this region, and its weather. Where areas overlap, the smallest wins')
+            : el('p', { class: 'small muted' }, 'Add weather regions in Settings → Weather tuning to tie the weather to an area.'),
+          box ? lockBox(box, 'players never see a GM only area') : null,
+          el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', type: 'submit' }, ok), btn('Cancel', () => d.close())));
+        form.addEventListener('submit', ev => {
+          ev.preventDefault();
+          if (!nameIn.value.trim()) return;
+          out = { name: nameIn.value.trim(), color: colour.value || null, entry_id: entry.value ? Number(entry.value) : null,
+            region_id: region.value ? Number(region.value) : null, ...(box ? { is_secret: box.checked } : {}) };
+          d.close();
+        });
+        d.addEventListener('close', () => { d.remove(); resolve(out); });
+        d.append(form); document.body.append(d); d.showModal();
+        nameIn.focus();
+      });
+    }
+    async function editArea(a) {
+      const got = await areaDialog('Edit the area', a, 'Save');
+      if (!got) return;
+      try { await post('area_save', { id: a.id, ...got }, cid); await refresh(); toast('Area saved'); } catch (err) { toast(err.message, true); }
+    }
+    function startArea(a = null) {
+      if (mode === 'measure') { pts = []; drawMeasure(); }
+      if (mode) closePanel();
+      redrawing = a; apts = []; mode = 'area';
+      note.textContent = a ? `Click round ${a.name} again, a corner at a time, then Finish` : 'Click round the area, a corner at a time. Finish, or a click on the first corner, closes it';
+      drawArea(); syncTools();
+    }
+    function stopArea() {
+      apts = []; redrawing = null;
+      if (mode === 'area') { mode = null; note.textContent = ''; }
+      drawArea(); syncTools();
+    }
+    function drawArea() {
+      if (!areaDraft) return;
+      areaDraft.clearLayers();
+      finishAreaBtn.disabled = apts.length < 3;
+      if (!apts.length) return;
+      const at = apts.map(p => toLatLng(p.x, p.y));
+      (apts.length >= 3 ? L.polygon(at, { weight: 2, dashArray: '6 4', fillOpacity: 0.1, className: 'map-area-draft', interactive: false })
+        : L.polyline(at, { weight: 2, dashArray: '6 4', className: 'map-area-draft', interactive: false })).addTo(areaDraft);
+      apts.forEach((p, i) => L.circleMarker(toLatLng(p.x, p.y), { radius: i ? 4 : 6, className: 'map-dot' + (i ? '' : ' first'), interactive: false }).addTo(areaDraft));
+    }
+    async function finishArea() {
+      if (apts.length < 3) return;
+      const points = apts.map(p => [p.x, p.y]);
+      try {
+        if (redrawing) {
+          await post('area_save', { id: redrawing.id, points }, cid);
+          stopArea(); await refresh(); toast('Outline saved');
+          return;
+        }
+        const got = await areaDialog('Save area', { points }, 'Save area');
+        if (!got) return;   // the outline stays, to finish or change
+        await post('area_save', { map_id: map.id, points, ...got }, cid);
+        stopArea(); await refresh(); toast('Area saved');
+      } catch (err) { toast(err.message, true); }
+    }
+    const finishAreaBtn = btn('Finish…', () => finishArea(), 'small primary', 'Close the outline and name the area');
+    const areaBar = el('div', { class: 'map-area-bar surface-float' },
+      el('span', { class: 'small' }, 'Area'), btn('Undo point', () => { apts.pop(); drawArea(); }, 'small'), btn('Clear', () => { apts = []; drawArea(); }, 'small'),
+      finishAreaBtn, btn('Cancel', () => stopArea(), 'small'));
+    areaBar.hidden = true;
+    let areaLayer = null, areaDraft = null;
+
     /** The drawer over the map's right edge: a search box, then Routes and Locations (every pin), each folding up. It
      * slides away to its tab, never changing the map's size. How it was left is remembered on this device. */
     const sideKey = `chronicle-map-side-${cid}`;
@@ -1017,7 +1175,7 @@ const MapsTab = (() => {
     };
     function syncDrawer() {
       const shut = !!sideState().collapsed || sheetAway;
-      routeBox.hidden = !routes.length && !pins.length;
+      routeBox.hidden = !routes.length && !pins.length && !areas.length;
       routeBox.className = 'map-routes surface-float ' + (shut ? 'closed' : 'open');
       stage.classList.toggle('drawer-open', !shut && !routeBox.hidden);
       syncPad();
@@ -1083,7 +1241,15 @@ const MapsTab = (() => {
           el('button', { type: 'button', class: 'map-place' + (p.is_secret ? ' secret' : ''), 'data-tip': 'Show this pin on the map', onclick: () => showPin(p) },
             face, el('span', {}, p.is_secret ? '🔒 ' : '', pinTitle(p)), opensBadge(p), p.is_locked ? el('span', { class: 'muted small' }, ' (locked)') : null));
       });
+      const areaRows = [...areas].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(a => {
+        const face = el('span', { class: 'map-place-icon map-area-swatch' + (a.color ? '' : ' plain'), 'aria-hidden': 'true' }, '⬠');
+        if (a.color) face.style.setProperty('--swatch', a.color);
+        return el('div', { class: 'map-place-row', 'data-name': a.name }, showTick('a' + a.id, a.name, hid),
+          el('button', { type: 'button', class: 'map-place' + (a.is_secret ? ' secret' : ''), 'data-tip': 'Show this area on the map', onclick: () => showArea(a) },
+            face, el('span', {}, a.is_secret ? '🔒 ' : '', a.name), a.region_id && regionName(a.region_id) ? el('span', { class: 'muted small' }, ` · ${regionName(a.region_id)}`) : null));
+      });
       sections.replaceChildren(...[routes.length ? section('routes', 'Routes', routeRows, routes.map(r => 'r' + r.id)) : null,
+        areas.length ? section('areas', 'Areas', areaRows, areas.map(a => 'a' + a.id)) : null,
         pins.length ? section('places', 'Locations', placeRows, pins.map(p => 'p' + p.id)) : null].filter(Boolean));
       filterRows();
     }
@@ -1106,11 +1272,16 @@ const MapsTab = (() => {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         labelAt(p);
       }
+      else if (mode === 'area') {
+        // a click back on the first corner closes the outline
+        if (apts.length >= 3 && lf.map.latLngToContainerPoint(toLatLng(apts[0].x, apts[0].y)).distanceTo(ev.containerPoint) < 12) { finishArea(); return; }
+        apts.push({ x: Math.min(Math.max(p.x, 0), map.width), y: Math.min(Math.max(p.y, 0), map.height) }); drawArea();
+      }
       else if (mode === 'party') {
         if (p.x < 0 || p.y < 0 || p.x > map.width || p.y > map.height) { note.textContent = 'Click on the map\'s picture'; return; }
         const g = groups.find(q => q.id === Number(partyWhich.value)) || groups[0];
         mode = null; note.textContent = ''; syncTools();
-        post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid).then(() => refresh()).then(() => { toast(`${g.name} moved`); offerLog(g, p); }).catch(err => toast(err.message, true));
+        post('group_move', { id: g.id, map_id: map.id, x: p.x, y: p.y }, cid).then(async r => { await refresh(); toast(`${g.name} moved`); offerLog(g, p); crossed(r, g); }).catch(err => toast(err.message, true));
       }
       else if (mode === 'scale') { picks = picks.length >= 2 ? [p] : [...picks, p]; drawPicks(); if (picks.length === 2) panelBox.querySelector('input[aria-label="How many squares"]')?.dispatchEvent(new Event('input')); }
     }
@@ -1139,6 +1310,9 @@ const MapsTab = (() => {
       mode = 'label'; note.textContent = 'Click a place on the map, then type its name. Press Quick label again when you\'re done'; syncTools();
     }, 'Click each place on the map and type its name: each becomes a pin and an Encyclopedia location (L)') : null;
     if (labelBtn) labelBtn.hidden = !map.image_url;
+    const areaBtn = gm ? tbtn('⬠', 'Area', 'Draw area', () => (mode === 'area' ? stopArea() : startArea()),
+      'Draw an area on the map, a click for each corner: a kingdom, a forest, a weather region the party crosses into (A)') : null;
+    if (areaBtn) areaBtn.hidden = !map.image_url;
     function labelAt(xy) {
       picks = [xy]; drawPicks();
       const name = el('input', { maxlength: 150, autocomplete: 'off', required: true, 'aria-label': 'Name of this place', placeholder: 'Name of this place' });
@@ -1214,6 +1388,9 @@ const MapsTab = (() => {
       measureBtn.setAttribute('aria-pressed', String(m));
       addPinBtn.setAttribute('aria-pressed', String(mode === 'pin'));
       labelBtn?.setAttribute('aria-pressed', String(mode === 'label'));
+      areaBtn?.setAttribute('aria-pressed', String(mode === 'area'));
+      areaBar.hidden = mode !== 'area';
+      if (mode !== 'area' && (apts.length || redrawing)) { apts = []; redrawing = null; drawArea(); }   // another tool picked: the outline drawn so far goes
       partyBtn?.setAttribute('aria-pressed', String(mode === 'party'));
       partyWhich.hidden = !(mode === 'party' && groups.length > 1);
       if (!groups.some(g => String(g.id) === partyWhich.value)) partyWhich.replaceChildren(...groups.map(g => el('option', { value: g.id }, g.name)));
@@ -1443,11 +1620,12 @@ const MapsTab = (() => {
       else if (k === 'l') press(labelBtn);
       else if (k === 'm') press(measureBtn);
       else if (k === 't') press(partyBtn);
+      else if (k === 'a') press(areaBtn);
       else if (k === 'Escape') {
         if (gear?.open) gear.open = false;
         else if (lf?.map.getContainer().querySelector('.leaflet-popup')) lmap_close();
         else if (mode === 'scale') closePanel();
-        else press({ pin: addPinBtn, label: labelBtn, measure: measureBtn, party: partyBtn }[mode]);
+        else press({ pin: addPinBtn, label: labelBtn, measure: measureBtn, party: partyBtn, area: areaBtn }[mode]);
       }
     }, { signal: off.signal });
     // the toolbar: the modes used all the time, then what is only seen; the measure bar while measuring; GM only and ⚙ top-right
@@ -1467,16 +1645,16 @@ const MapsTab = (() => {
       toolsFold.dataset.tip = toolsFolded ? 'Show the map tools' : 'Fold the map tools away';
       if (lf) syncPad();
     };
-    toolbar.append(el('div', { class: 'map-tool-group' }, ...[addPinBtn, labelBtn, measureBtn, partyBtn, partyWhich].filter(Boolean)),
+    toolbar.append(el('div', { class: 'map-tool-group' }, ...[addPinBtn, labelBtn, measureBtn, areaBtn, partyBtn, partyWhich].filter(Boolean)),
       el('div', { class: 'map-tool-group' }, labelsBtn, gridBtn), toolsFold);
     syncToolsFold();
     const measureBar = el('div', { class: 'map-measure-bar surface-float' }, total, undoBtn, clearBtn, saveRouteBtn, planBtn);
     measureBar.hidden = true;
-    stage.append(toolbar, panelBox, note, measureBar, routeBox);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
+    stage.append(toolbar, panelBox, note, measureBar, areaBar, routeBox);   // panelBox: the scale, pin and Quick label forms, floating under the toolbar
     if (gm) stage.append(el('div', { class: 'map-corner' }, secretBtn, gear));
     const title = el('h2', {}, map.name);
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-    const metaText = () => `${plural(pins.length, 'location')} · ${plural(routes.length, 'route')}${hasScale() ? ' · scale set' : ''}`;
+    const metaText = () => `${plural(pins.length, 'location')} · ${plural(routes.length, 'route')}${areas.length ? ` · ${plural(areas.length, 'area')}` : ''}${hasScale() ? ' · scale set' : ''}`;
     const meta = el('span', { class: 'map-meta small muted' }, metaText());
 
     ctx.mount(...ctx.campaignHeader('maps'), el('div', { class: 'map-view' },
@@ -1499,8 +1677,10 @@ const MapsTab = (() => {
     if (map.width * map.height > BIG_PICTURE) bigPicture(map.image_url, map.width, map.height, bounds()).addTo(lmap);
     else L.imageOverlay(map.image_url, bounds(), { pane: 'mapPicture' }).addTo(lmap);
     lmap.fitBounds(bounds());
+    areaLayer = L.layerGroup().addTo(lmap);   // under everything else drawn on the picture
     measureLayer = L.layerGroup().addTo(lmap);
     pickLayer = L.layerGroup().addTo(lmap);
+    areaDraft = L.layerGroup().addTo(lmap);
     routeLayer = L.layerGroup().addTo(lmap);
     trailLayer = L.layerGroup().addTo(lmap);
     pinLayer = L.layerGroup().addTo(lmap);
@@ -1513,7 +1693,7 @@ const MapsTab = (() => {
       .on('popupclose', () => { if (sheetAway && !mode) { sheetAway = false; syncDrawer(); } });
     // what the markers mean, bottom-left under the scale bar
     stage.append(el('div', { class: 'map-legend surface-float', role: 'note', 'aria-label': 'Legend' },
-      ['📍 Place', '📅 Event', '📝 Note', '🚩 Party'].map(t => el('span', { class: 'map-legend-item' }, t)),
+      ['📍 Place', '📅 Event', '📝 Note', '🚩 Party', ...(areas.length ? ['⬠ Area'] : [])].map(t => el('span', { class: 'map-legend-item' }, t)),
       trail.length ? (() => {
         const b = el('button', { type: 'button', class: 'map-legend-item map-legend-trail', 'aria-pressed': String(trailShown),
           'data-tip': 'The party\'s trail: where each group was put on this map, shift by shift. Press to hide or show it' },
@@ -1560,7 +1740,7 @@ const MapsTab = (() => {
     window.addEventListener('hashchange', teardown);   // leaving the page (or reopening it) takes the map down at once
     window.addEventListener('resize', fit);
     ro.observe(stage); ro.observe(document.body);
-    drawRoutes(); renderRoutes(); drawPins(); drawGroups();
+    drawAreas(); drawRoutes(); renderRoutes(); drawPins(); drawGroups();
     requestAnimationFrame(() => {
       if (!host.isConnected || gone) return;
       lmap.invalidateSize({ animate: false }); fitPicture(); baseZoom = lmap.getZoom(); syncZoom();
@@ -1568,6 +1748,10 @@ const MapsTab = (() => {
       const at = pins.find(q => q.id === Number(params.get('pin')));
       if (want && at) { lmap.setView(toLatLng(at.x, at.y), 0, { animate: false }); want.openPopup(); linked = want; for (const t of [250, 800]) setTimeout(keepLinked, t); setTimeout(() => { linked = null; }, 3000); }
       else if (params.get('pin')) note.textContent = 'That pin is not on this map';
+      // ?area=<id> (from an entry's page, the search): fit that area in view and open its card
+      const wantArea = areas.find(a => a.id === Number(params.get('area')));
+      if (wantArea) showArea(wantArea);
+      else if (params.get('area')) note.textContent = 'That area is not on this map';
       // ?place=<entry> (a GM, from a place's page): the next click pins that entry, already picked in the pin's form
       const placeE = gm && map.image_url ? S.encyclopedia.find(x => x.id === Number(params.get('place'))) : null;
       if (placeE) {

@@ -179,6 +179,8 @@ const ACTIONS = [
     'pin_to_entry' => ['who' => 'gm'],
     'route_save' => ['who' => 'gm'],
     'route_delete' => ['who' => 'gm'],
+    'area_save' => ['who' => 'gm'],
+    'area_delete' => ['who' => 'gm'],
     'tokens' => ['get' => true, 'who' => 'gm'],
     'token_upload' => ['who' => 'gm'],
     'token_save' => ['who' => 'gm'],

@@ -304,6 +304,103 @@ function map_routes_visible(int $cid, int $mapId, bool $isGm): array {
     $st->execute([$cid, $mapId]);
     return array_map('route_out', $st->fetchAll());
 }
+// ---------- areas ----------
+// A closed outline on a map (053): a kingdom, a forest, a district. It may be an Encyclopedia entry's area, and a weather
+// region's: the party's group put inside it takes that region. Players see the ones that aren't GM only and whose entry
+// they can see.
+function area_out(array $a): array {
+    return ['id' => (int)$a['id'], 'map_id' => (int)$a['map_id'], 'name' => $a['name'], 'points' => dec($a['points_json']) ?: [],
+        'color' => $a['color'] ?? null, 'entry_id' => $a['entry_id'] !== null ? (int)$a['entry_id'] : null,
+        'region_id' => $a['region_id'] !== null ? (int)$a['region_id'] : null, 'is_secret' => (bool)(int)$a['is_secret']];
+}
+function areas_visible_sql(bool $isGm): string {
+    return 'FROM map_areas a LEFT JOIN encyclopedia_entries e ON e.id=a.entry_id WHERE a.campaign_id=?' . ($isGm ? '' : ' AND a.is_secret=0 AND (e.id IS NULL OR e.is_secret=0)');
+}
+/** The areas on map $mapId this member may see, biggest first (so a smaller one inside it is drawn over it). */
+function map_areas_visible(int $cid, int $mapId, bool $isGm): array {
+    if (!db_has_table(db(), 'map_areas')) return [];   // before 053
+    $st = db()->prepare('SELECT a.* ' . areas_visible_sql($isGm) . ' AND a.map_id=? ORDER BY a.id');
+    $st->execute([$cid, $mapId]);
+    $out = array_map('area_out', $st->fetchAll());
+    usort($out, fn($x, $y) => area_size($y['points']) <=> area_size($x['points']));
+    return $out;
+}
+/** Every area this member may see, short: which entries have an area on which map, and finding one by name. */
+function areas_index(int $cid, bool $isGm): array {
+    if (!db_has_table(db(), 'map_areas')) return [];
+    $st = db()->prepare('SELECT a.id, a.map_id, a.name, a.entry_id, a.is_secret OR m.is_secret AS secret, m.name AS map_name '
+        . str_replace('FROM map_areas a ', 'FROM map_areas a JOIN maps m ON m.id=a.map_id ', areas_visible_sql($isGm)) . ($isGm ? '' : ' AND m.is_secret=0') . ' ORDER BY a.id');
+    $st->execute([$cid]);
+    return array_map(fn($r) => ['area_id' => (int)$r['id'], 'map_id' => (int)$r['map_id'], 'map_name' => $r['map_name'], 'name' => $r['name'],
+        'entry_id' => $r['entry_id'] !== null ? (int)$r['entry_id'] : null, 'secret' => (bool)$r['secret']], $st->fetchAll());
+}
+/** The size of a closed outline [[x, y], ...], in square pixels (the shoelace formula). */
+function area_size(array $pts): float {
+    $n = count($pts); $s = 0.0;
+    for ($i = 0; $i < $n; $i++) { [$x1, $y1] = $pts[$i]; [$x2, $y2] = $pts[($i + 1) % $n]; $s += $x1 * $y2 - $x2 * $y1; }
+    return abs($s) / 2;
+}
+/** Whether x, y lies inside the closed outline $pts (even-odd ray casting). */
+function area_holds(array $pts, float $x, float $y): bool {
+    $in = false; $n = count($pts);
+    for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+        [$xi, $yi] = $pts[$i]; [$xj, $yj] = $pts[$j];
+        if (($yi > $y) !== ($yj > $y) && $x < ($xj - $xi) * ($y - $yi) / ($yj - $yi) + $xi) $in = !$in;
+    }
+    return $in;
+}
+/** The smallest area on map $mapId holding x, y that is a weather region, as [area row, region id], or null. Every
+ * area counts, GM-only ones too: the GM drew the border, whether or not the players can see it. */
+function area_region_at(int $cid, int $mapId, float $x, float $y): ?array {
+    if (!db_has_table(db(), 'map_areas')) return null;
+    $st = db()->prepare('SELECT a.* FROM map_areas a JOIN regions r ON r.id=a.region_id WHERE a.campaign_id=? AND a.map_id=?');
+    $st->execute([$cid, $mapId]);
+    $best = null; $size = INF;
+    foreach ($st->fetchAll() as $a) {
+        $pts = dec($a['points_json']) ?: [];
+        if (count($pts) < 3 || !area_holds($pts, $x, $y)) continue;
+        $s = area_size($pts);
+        if ($s < $size) { $best = $a; $size = $s; }
+    }
+    return $best ? [$best, (int)$best['region_id']] : null;
+}
+/** Add an area (GM), or change area $id. Returns it as the browser gets it. */
+function area_save(int $cid): array {
+    $body = body();
+    $has = fn($k) => array_key_exists($k, $body);
+    $old = isset($body['id']) ? row_of('map_areas', $cid, int_in($body['id'], 1), 'Area not found') : null;
+    $map = map_row($cid, $old ? (int)$old['map_id'] : int_in($body['map_id'] ?? null, 1), true);
+    if ($map['width'] === null || $map['height'] === null) fail('Give the map a picture before drawing on it');
+    $name = $has('name') || !$old ? trim((string)str_in($body['name'] ?? null, 150)) : $old['name'];
+    if ($name === '') fail('Give the area a name');
+    $points = $has('points') || !$old ? $body['points'] ?? null : dec($old['points_json']);
+    if (!is_array($points) || count($points) < 3 || count($points) > 500) fail('An area needs 3 to 500 points');
+    $pts = [];
+    foreach ($points as $pt) {
+        if (!is_array($pt) || count($pt) !== 2) fail('An area is a list of [x, y] points');
+        $pts[] = [map_coord(array_values($pt)[0], $map['width']), map_coord(array_values($pt)[1], $map['height'])];
+    }
+    if (area_size($pts) < 1) fail('Draw the area around some of the map');
+    $colour = $has('color') ? map_colour($body['color']) : ($old['color'] ?? null);
+    $entry = $old && $old['entry_id'] !== null ? (int)$old['entry_id'] : null;
+    if ($has('entry_id')) $entry = $body['entry_id'] === null || $body['entry_id'] === '' ? null : (int)entry_row($cid, int_in($body['entry_id'], 1), 'gm')['id'];
+    $region = $old && $old['region_id'] !== null ? (int)$old['region_id'] : null;
+    if ($has('region_id')) $region = party_region_in($body['region_id'], $cid);
+    $secret = $has('is_secret') ? (!empty($body['is_secret']) ? 1 : 0) : (int)($old['is_secret'] ?? 0);
+    $json = json_encode($pts);
+    if ($old) {
+        db()->prepare('UPDATE map_areas SET name=?, points_json=?, color=?, entry_id=?, region_id=?, is_secret=? WHERE id=?')
+            ->execute([$name, $json, $colour, $entry, $region, $secret, $old['id']]);
+        $id = (int)$old['id'];
+    } else {
+        db()->prepare('INSERT INTO map_areas (map_id, campaign_id, name, points_json, color, entry_id, region_id, is_secret, created_by) VALUES (?,?,?,?,?,?,?,?,?)')
+            ->execute([$map['id'], $cid, $name, $json, $colour, $entry, $region, $secret, me()['id']]);
+        $id = (int)db()->lastInsertId();
+    }
+    touch_campaign($cid);
+    return area_out(row_of('map_areas', $cid, $id, 'Area not found'));
+}
+
 /** Add a route (GM), or change route $id. Returns it as the browser gets it. */
 function route_save(int $cid): array {
     $body = body();
@@ -637,8 +734,10 @@ function group_save(int $cid): void {
     }
     touch_campaign($cid);
 }
-/** GM: put group id on a map at x, y, or (map_id null) off the maps. */
-function group_move(int $cid): void {
+/** GM: put group id on a map at x, y, or (map_id null) off the maps. Put inside an area that is a weather region (the
+ * smallest, where they overlap), the group takes that region, and the campaign too for the main group. Returns
+ * ['area' => name, 'region' => name] when that changed the group's region, else null. */
+function group_move(int $cid): ?array {
     $body = body();
     $g = group_row($cid, $body['id'] ?? null);
     if (($body['map_id'] ?? null) === null || $body['map_id'] === '') {
@@ -662,8 +761,19 @@ function group_move(int $cid): void {
             $prev = $at;
         }
         trail_add($cid, (int)$g['id'], (int)$map['id'], $x, $y);
+        // keep_region: the move came with a region picked by hand (Travel's Arrive in), which wins over the area's
+        $hit = empty($body['keep_region']) ? area_region_at($cid, (int)$map['id'], $x, $y) : null;
+        if ($hit && $hit[1] !== ($g['region_id'] !== null ? (int)$g['region_id'] : null)) {
+            db()->prepare('UPDATE party_groups SET region_id=? WHERE id=?')->execute([$hit[1], $g['id']]);
+            if ((int)$g['is_main']) party_set_current_region($cid, $hit[1]);
+            $st = db()->prepare('SELECT name FROM regions WHERE id=?');
+            $st->execute([$hit[1]]);
+            touch_campaign($cid);
+            return ['area' => $hit[0]['name'], 'region' => (string)$st->fetchColumn(), 'region_id' => $hit[1]];
+        }
     }
     touch_campaign($cid);
+    return null;
 }
 
 // ---------- the party's trail ----------
