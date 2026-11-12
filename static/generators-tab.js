@@ -151,13 +151,25 @@
       const when = select(Enc.WHEN, ['dawn', 'day', 'dusk', 'night'][q] || '', { 'aria-label': 'When' });
       const tone = keep('encTone', select(Enc.TONES, pref.encTone || '', { 'aria-label': 'Tone' }));
       const useEnc = el('input', { type: 'checkbox', checked: pref.encUseEnc !== false, onchange: e => setGenPrefs({ encUseEnc: e.target.checked }) });
-      return genCard('Encounters', 'Three situations already under way, for the party to walk into. Each gives who is there and roughly how many, what is going on, a twist, two ways it can escalate if the scene runs on, and something worth having; what the party does about it is up to them. '
+      // The deck: the titles dealt so far, kept per campaign, so no card comes back until every one that fits has been dealt.
+      const deck = el('div', { class: 'small muted gen-deck' });
+      const reshuffle = el('button', { type: 'button', class: 'small', 'data-tip': 'Put every card back in the deck' }, 'Reshuffle');
+      const hand = () => {
+        const r = Enc.deal({ genre: setting.value, where: where.value, when: when.value, tone: tone.value, dealt: genPrefs().encDealt || [],
+          cast: useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {} });
+        setGenPrefs({ encDealt: r.dealt });
+        deck.replaceChildren(`${r.left} of the ${r.total} cards that fit ${r.left === 1 ? 'is' : 'are'} still in the deck`, r.reshuffled ? ' (reshuffled)' : '', ' · ', reshuffle);
+        return [el('div', { class: 'gen-encs' }, r.cards.map(genEncounter)), deck];
+      };
+      const card = genCard('Encounters', 'Three situations already under way, for the party to walk into. Each gives who is there and roughly how many, what is going on, a twist, two ways it can escalate if the scene runs on, and something worth having; what the party does about it is up to them. '
         + 'When starts at the party\'s time now. With the box ticked, groups, places and people from your Encyclopedia can turn up in them. 🎲 beside a part draws that part again. '
+        + 'The cards come from a deck: none comes back until every card that fits has been dealt, and Reshuffle puts them all back. '
         + (isGM() ? '📝 Keep adds a card to the GM notes of the shift the party is in now; 📖 Add puts it in the Encyclopedia, tagged Encounter' : '📖 Add puts one in the Encyclopedia, tagged Encounter'),
       [field('Setting', setting), field('Where', where), field('When', when), field('Tone', tone),
         el('label', { class: 'inline small gen-traits', 'data-tip': 'Use groups, places and people from your Encyclopedia' }, useEnc, 'Use Encyclopedia names')],
-      () => el('div', { class: 'gen-encs' }, Enc.draw({ genre: setting.value, where: where.value, when: when.value, tone: tone.value,
-        cast: useEnc.checked ? genCast(() => useEnc.dispatchEvent(new Event('change'))) : {} }).map(genEncounter)), 'gen-enc');
+      hand, 'gen-enc');
+      reshuffle.addEventListener('click', () => { setGenPrefs({ encDealt: [] }); hideTip(); card.querySelector('.gen-controls .primary').click(); toast('Deck reshuffled'); });
+      return card;
     }
 
     /** One encounter card, redrawn in place when one of its parts is rolled again. */
