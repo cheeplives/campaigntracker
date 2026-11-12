@@ -1244,7 +1244,7 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 
 /* generators tab: a card per generator, two across, the town as a full-width stat block */
 .gen-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.gen-page > .gen-head, .gen-page > .gen-town { grid-column: 1 / -1; }
+.gen-page > .gen-head, .gen-page > .gen-town, .gen-page > .gen-enc { grid-column: 1 / -1; }
 .gen-head .row { margin-top: 0; }
 .gen-head .field { margin: 0; }
 /* Genre sits beside its label, level with the title and the 🔒, so the header stays one line tall */
@@ -1273,6 +1273,20 @@ dialog.kit-dialog.conn-dialog { width: min(640px, calc(100vw - 32px)); }
 .gen-sub h3 { font-size: 1.05rem; color: var(--accent); margin: 4px 0; }
 .gen-hooks { margin: 0; padding-left: 18px; border-top: 1px solid var(--line); padding-top: 6px; }
 .gen-hooks li + li { margin-top: 6px; }
+/* encounters: three cards across, fewer as the page narrows */
+.gen-encs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.gen-enc-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.gen-enc-card header { display: flex; flex-direction: column; gap: 2px; }
+.gen-enc-card h3 { margin: 0; font-size: 1.25rem; }
+.gen-enc-card p, .gen-enc-card ul { margin: 0; }
+.gen-enc-card ul { padding-left: 18px; }
+.gen-enc-card li + li { margin-top: 4px; }
+.gen-enc-who, .gen-enc-sit { overflow-wrap: anywhere; }
+.gen-enc-part { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.gen-enc-label { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.gen-enc-label .lbl { font-size: .82rem; color: var(--label); font-weight: 600; }
+.gen-enc-tools { margin-top: auto; padding-top: 6px; flex-wrap: wrap; gap: 6px; }
+.gen-kept { align-self: center; }
 @media (max-width: 1180px) { .gen-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gen-cols > :last-child { grid-column: 1 / -1; } }
 @media (max-width: 760px) { .gen-page, .gen-cols { grid-template-columns: 1fr; } }
 
