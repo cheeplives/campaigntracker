@@ -97,6 +97,18 @@ test("Glorantha: seasons of named weeks, Sacred Time, the Red Moon and holy days
     expect(Engine.moons(cal, d, region("Kralorela"))[0].label).toBe(week[(wd + 6) % 7]);
     expect(Engine.moons(cal, d, region("Peloria"))[0].label).toBe("Full");
   }
+  // every preset land lies at a bearing from the Red Moon, and the lands round it see six different phases on one day
+  for (const r of p.regions) expect(Engine.redMoonBearing(r), r.name).not.toBeNull();
+  expect(new Set(p.regions.map(r => Engine.moons(cal, 0, r)[0].label)).size).toBe(6);
+  // a land a seventh of the way clockwise round from Dragon Pass sees its phase a day later; the other way, a day sooner
+  const at = b => ({ name: "Somewhere", settings: { moon_bearing: b } });
+  expect(Engine.moons(cal, 0, at(175 + 360 / 7))[0].label).toBe(week[1]);
+  expect(Engine.moons(cal, 0, at(175 - 360 / 7))[0].label).toBe(week[6]);
+  expect(Engine.moons(cal, 0, at(0))[0].label).toBe(Engine.moons(cal, 0, at(360))[0].label);
+  // regions of a campaign made before: a band of days ahead still counts, and a preset land with neither takes the preset's
+  expect(Engine.moons(cal, 0, { name: "Ralios", settings: { moon_shift: 1 } })[0].label).toBe(week[1]);
+  expect(Engine.moons(cal, 0, { name: "Pent", settings: {} })[0].label).toBe(week[5]);
+  expect(Engine.moons(cal, 0, { name: "Dagori Inkarth & the Shadows Dance", settings: {} })[0].label).toBe(week[6]);
   const full = Engine.toAbs(cal, 1625, 0, 6), black = Engine.toAbs(cal, 1625, 0, 3);
   expect([Engine.moons(cal, full)[0].illum, Engine.moons(cal, black)[0].illum]).toEqual([1, 0]);
   // a campaign made from the preset before the Red Moon was marked still gets it, by its name and weekly cycle
