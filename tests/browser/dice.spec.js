@@ -437,6 +437,10 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   await expect(patterns).toHaveAttribute("aria-label", "Pattern: Warlock (animated)");
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "false");
   await patterns.click();
+  // each pattern's picture is drawn once the list is open (a few at a time, so the card opens at once), and the list
+  // has no scroll of its own: the card scrolls as one, and keeps the page still behind it
+  await expect(card.locator(".dice-pat-group .dice-skin-die:not([class*='die-look-'])")).toHaveCount(1);   // Plain has no picture
+  expect(await card.evaluate(c => [getComputedStyle(c).overflowY, getComputedStyle(c).overscrollBehaviorY, getComputedStyle(c.querySelector(".dice-pat-list")).overflowY])).toEqual(["auto", "contain", "visible"]);
   await expect(card.getByRole("button", { name: "Warlock (animated)", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(card.getByRole("button", { name: "Wood", exact: true })).toHaveAttribute("aria-pressed", "false");
   await patterns.click();

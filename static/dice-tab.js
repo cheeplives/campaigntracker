@@ -569,12 +569,19 @@
       const theme = D3.themeLook();
       // Pattern: a list that shows each pattern on a small die. A skin's pattern comes with its own colours, so it shows
       // in them and picking it sets them (they can still be changed after); every other pattern shows in the colours now.
-      const sample = look => {
-        const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
-        for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
+      // A pattern's picture is drawn pixel by pixel (D3.chipClass()), which for the whole list in new colours took a
+      // second or more: so a sample shows its colours at once and gets its picture a few at a time, after the card is up
+      // (and the list's only once the list is opened).
+      const later = [];
+      const picture = (d, look) => {
         const cls = D3.chipClass(look);
         if (cls) d.classList.add(cls);
         if (cls && D3.ANIMATED[look.tex]) d.classList.add('anim', `anim-${D3.ANIMATED[look.tex]}`);
+      };
+      const sample = (look, now = false) => {
+        const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
+        for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
+        if (now) picture(d, look); else later.push([d, look]);
         return d;
       };
       const lookFor = v => { const sk = D3.SKINS.find(([, , , t]) => t === v); return sk ? { body: sk[1], ink: sk[2], tex: v } : { ...shown, tex: v }; };
@@ -582,10 +589,14 @@
       const opt = (v, name) => {
         const on = (shown.tex || '') === v, look = on ? shown : lookFor(v);
         return el('button', { type: 'button', class: 'dice-pat-opt' + (on ? ' on' : ''), 'aria-pressed': String(on),
-          onclick: () => set(lookFor(v)) }, sample(look), el('span', {}, name));
+          onclick: () => set(lookFor(v)) }, listSample(look), el('span', {}, name));
       };
+      const inList = [];
+      const listSample = look => { const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
+        for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
+        inList.push([d, look]); return d; };
       const tex = KIT.menu({
-        label: [sample(shown), el('span', { class: 'dice-pat-name' }, shownName), el('span', { class: 'dice-pat-caret', 'aria-hidden': 'true' }, '▾')],
+        label: [sample(shown, true), el('span', { class: 'dice-pat-name' }, shownName), el('span', { class: 'dice-pat-caret', 'aria-hidden': 'true' }, '▾')],
         ariaLabel: `Pattern: ${shownName}`, cls: 'dice-pat', listCls: 'dice-pat-list', align: 'left',
         items: [el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Patterns' }, D3.TEXTURES.map(([v, l]) => opt(v, l)))],
       });
@@ -619,6 +630,18 @@
         el('label', { class: 'dice-look-row small' }, 'Dice stay on screen ', el('select', { class: 'dice-stay', 'aria-label': 'How long thrown dice stay on screen', disabled: !on3d.checked,
           onchange: e => D3.setStay(Number(e.target.value)) }, D3.STAYS.map(([v, l]) => el('option', { value: String(v), selected: v === D3.stay() }, l)))));
       if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
+      // the pictures still to draw, three a frame: the saved looks' now, the pattern list's when it is first opened
+      const drawn = lookCard.firstChild;
+      const fill = queue => {
+        const step = () => {
+          if (lookCard.firstChild !== drawn) return;           // the card was drawn again: these samples are gone
+          for (const [d, look] of queue.splice(0, 3)) picture(d, look);
+          if (queue.length) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      fill(later);
+      tex.addEventListener('toggle', () => { if (tex.open && inList.length) fill(inList); });
     }
     // Saved looks: colours and a pattern they made and want to come back to, kept on their account (at most 12)
     const myLooks = () => S.user?.prefs?.dice_looks || [];
