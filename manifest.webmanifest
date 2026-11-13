@@ -9,8 +9,8 @@
   "background_color": "#16140f",
   "theme_color": "#16140f",
   "icons": [
-    { "src": "static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "static/icons/almanac-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "static/icons/almanac-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "static/icons/almanac-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
