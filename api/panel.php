@@ -166,9 +166,9 @@ function owlbear_manifest(): void {
     $bare = fn(string $h) => preg_replace('/^www\./i', '', strtolower($h));
     $cfgHost = (string)(parse_url($base, PHP_URL_HOST) ?? '') . (parse_url($base, PHP_URL_PORT) ? ':' . parse_url($base, PHP_URL_PORT) : '');
     if ($base === '' || ($here !== '' && $bare($here) === $bare($cfgHost))) $base = ($https ? 'https' : 'http') . '://' . ($here ?: 'localhost') . $path;
-    $icon = "$base/static/icons/owlbear.svg";
+    $icon = "$base/static/icons/owlbear.svg?v=2";   // the number changes with the drawing, so Owlbear fetches it again
     header('Access-Control-Allow-Origin: *');
-    out(['name' => 'GM\'s Almanac', 'version' => '1.0.0', 'manifest_version' => 1,
+    out(['name' => 'GM\'s Almanac', 'version' => '1.1.0', 'manifest_version' => 1,
         'description' => 'The campaign right now: date, weather, moons, where the party is, notes and lore.',
         'author' => 'GM\'s Almanac', 'homepage_url' => "$base/", 'icon' => $icon,
         'action' => ['title' => 'GM\'s Almanac', 'icon' => $icon, 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);

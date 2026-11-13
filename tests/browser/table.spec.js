@@ -287,7 +287,7 @@ test.describe("panel links", () => {
     expect(m.description.length).toBeLessThanOrEqual(128);
     expect(m.action.popover).toMatch(/^https?:\/\/.+\/panel\.html$/);
     // its toolbar icon is a real file (Owlbear won't take a data: URL), at the address the manifest was asked on
-    expect(m.icon).toMatch(/^https?:\/\/.+\/static\/icons\/owlbear\.svg$/);
+    expect(m.icon).toMatch(/^https?:\/\/.+\/static\/icons\/owlbear\.svg\?v=2$/);
     expect(m.action.icon).toBe(m.icon);
     const ic = await request.get(m.icon);
     expect(ic.status()).toBe(200);
