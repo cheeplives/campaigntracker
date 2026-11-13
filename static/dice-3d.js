@@ -190,7 +190,7 @@
   /** The moving part of an animated pattern, drawn on its own tile and laid over the die as light it gives off: glitter
    * flakes, stars, the glowing cracks of embers. Black is "no light". */
   function glowLayer(look, size = 256) {
-    const k = keyOf(look);
+    const k = `${keyOf(look)}|${size}`;
     if (glows.has(k)) return glows.get(k);
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
@@ -401,12 +401,30 @@
       const st = { '--die-bg': look.body, '--die-ink': look.ink, '--die-edge': fr ? fr[0] : toHex(mix(hex(look.body), BLACK, 0.35)) };
       if (fr) st['--die-rim'] = '3px';
       if (GLOWING.has(look.tex)) st['--die-shine'] = `0 0 3px ${look.ink}, 0 0 7px ${look.ink}`;
-      if (look.tex) { try { st['--die-tex'] = `url(${pattern(look, 96).toDataURL('image/png')})`; } catch { /* a canvas that can't export: plain colour */ } }
-      // an animated pattern's moving layer, for the flat dice to sparkle, drift or glow too (style.css .looked.anim)
-      if (ANIMATED[look.tex]) { try { st['--die-glow'] = `url(${glowLayer(look).toDataURL('image/png')})`; } catch { /* still dice */ } }
       chips.set(k, st);
     }
     return chips.get(k);
+  }
+
+  let sheet = null;
+  const chipClasses = new Map();
+  /** The flat dice's pattern for a look, as a class: the pattern (and an animated pattern's moving layer) are pictures,
+   * written once into a stylesheet of their own rather than onto every roll in the log, where each copy of the long
+   * picture text was parsed again and slowed the page. '' for a plain look. */
+  function chipClass(look) {
+    if (!look?.tex) return '';
+    const k = keyOf(look);
+    if (!chipClasses.has(k)) {
+      let decl = '';
+      try { decl += `--die-tex: url(${pattern(look, 96).toDataURL('image/png')});`; } catch { /* a canvas that can't export: plain colour */ }
+      // an animated pattern's moving layer, for the flat dice to sparkle, drift or glow too (style.css .looked.anim)
+      if (ANIMATED[look.tex]) { try { decl += `--die-glow: url(${glowLayer(look, 64).toDataURL('image/png')});`; } catch { /* still dice */ } }
+      const name = `die-look-${chipClasses.size + 1}`;
+      if (!sheet) { sheet = document.createElement('style'); sheet.id = 'dice-looks'; document.head.append(sheet); }
+      sheet.append(`.${name} { ${decl} }\n`);
+      chipClasses.set(k, name);
+    }
+    return chipClasses.get(k);
   }
 
   // ------------------------------------------------------------ the shapes
@@ -615,7 +633,8 @@
     try {
       renderer = new T.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
     } catch { broken = true; canvas = null; return false; }
-    renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    // 1.5 at most: on a retina iPad, 2 drew nearly twice the pixels over the whole page for little sharper dice
+    renderer.setPixelRatio(Math.min(1.5, devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T.PCFShadowMap;
     scene = new T.Scene();
@@ -760,7 +779,8 @@
       const g = m.emissiveMap;
       // fire that moves: its picture is redrawn for this moment and sent to the GPU again
       const live = lives.get(g);
-      if (live) { live(t); g.needsUpdate = true; m.emissiveIntensity = 1 + 0.15 * Math.sin(t * 11) * Math.sin(t * 6.1); continue; }
+      // at most 24 new pictures a second: smooth enough for flames, and each one is a whole texture sent to the GPU
+      if (live) { if (t - (m.userData.drawn ?? -1) >= 1 / 24) { m.userData.drawn = t; live(t); g.needsUpdate = true; } m.emissiveIntensity = 1 + 0.15 * Math.sin(t * 11) * Math.sin(t * 6.1); continue; }
       // strong enough to see in the second or two the dice rest before they fade (the flat dice's CSS is the yardstick)
       if (m.userData.anim === 'sparkle') {
         if (t - lastSpark > 0.12) { g.offset.set(Math.random(), Math.random()); lastSpark = t; }
@@ -855,7 +875,7 @@
     canvas.classList.add('on');
     return new Promise(resolve => {
       const t0 = performance.now();
-      let landed = false, landedAt = 0;
+      let landed = false, landedAt = 0, lastDraw = 0;
       current = { dice, done: v => resolve(v) };
       const q = new T.Quaternion(), qs = new T.Quaternion(), Y = new T.Vector3(0, 1, 0);
       const frame = now => {
@@ -873,6 +893,9 @@
           qs.setFromAxisAngle(Y, d.spin * (1 - e) * (1 - e));
           d.m.quaternion.copy(q).multiply(qs).multiply(d.end);
         }
+        // once they have landed, dice that only shimmer or burn are drawn 30 times a second, not 60
+        if (landed && now - lastDraw < 30) { raf = requestAnimationFrame(frame); return; }
+        lastDraw = now;
         animate(dice, t);
         renderer.render(scene, camera);
         if (all && !landed) {
@@ -946,5 +969,5 @@
     return { text: faceText(f, labels, sides), flat: Math.max(...ys), upright: -up.z };
   }
 
-  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, SKINS, FRAMES, GLOWING, can, available, enabled, setEnabled, STAYS, stay, setStay, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
+  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, SKINS, FRAMES, GLOWING, chipClass, can, available, enabled, setEnabled, STAYS, stay, setStay, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
 })(window);

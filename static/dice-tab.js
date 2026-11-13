@@ -245,11 +245,13 @@
       return loading;
     }
     /** Add rolls from the server to the log; animate them when they are news. */
+    let drawnAt = 0;
     function take(list, news) {
       const known = new Set(rolls.map(r => r.id));
-      let toss = null;
+      let toss = null, added = 0;
       for (const r of list) {
         if (known.has(r.id)) continue;
+        added++;
         if (r.mine && S.user) r.look = myLook();     // what this page has just picked, even before the account has it
         rolls.push(r);
         if (news) fresh.add(r.id);
@@ -263,7 +265,9 @@
         if (!re) throw3d(toss);
         else if (target) { fresh.add(target.id); throw3d(target, new Set(re.dice)); }
       }
-      draw();
+      // nothing new: the log stays as it is (rebuilding every roll in it each poll froze the page for half a second
+      // with a long log), except once a minute so "2 min ago" keeps up
+      if (added || Date.now() - drawnAt > 60000) draw();
       if (isOpen()) markSeen();
     }
     /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
@@ -290,6 +294,7 @@
       const shown = rolls.filter(r => !rerollOf(r)).reverse();
       if (!shown.length) { log.replaceChildren(); return; }
       log.replaceChildren(...shown.map((r, k) => entry(r, k === 0)));
+      drawnAt = Date.now();
       fresh.clear();
     }
     const when = at => {
@@ -567,7 +572,9 @@
       const sample = look => {
         const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
         for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
-        if (D3.ANIMATED[look.tex]) d.classList.add('anim', `anim-${D3.ANIMATED[look.tex]}`);
+        const cls = D3.chipClass(look);
+        if (cls) d.classList.add(cls);
+        if (cls && D3.ANIMATED[look.tex]) d.classList.add('anim', `anim-${D3.ANIMATED[look.tex]}`);
         return d;
       };
       const lookFor = v => { const sk = D3.SKINS.find(([, , , t]) => t === v); return sk ? { body: sk[1], ink: sk[2], tex: v } : { ...shown, tex: v }; };

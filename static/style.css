@@ -2397,6 +2397,8 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 @keyframes die-drift { to { background-position: 40px 20px, center, 0 0; } }
 @keyframes die-flicker { 0%, 100% { filter: brightness(1); } 30% { filter: brightness(1.25) saturate(1.2); } 60% { filter: brightness(.92); } 80% { filter: brightness(1.15); } }
 @keyframes die-glow { from { filter: brightness(.9); } to { filter: brightness(1.25) saturate(1.2); } }
+/* only the newest roll's dice keep moving: dozens of moving dice down the log made the whole page slow */
+.dice-e:not(.latest) .looked.anim .die { animation: none; }
 @media (prefers-reduced-motion: reduce) { .looked.anim .die, .dice-skin-die.anim { animation: none; } }
 .looked .die.hit { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #3f9a5a; }
 .looked .die.miss { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #c04848; }
