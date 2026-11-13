@@ -954,6 +954,24 @@ try {
                 $prefs['dice_look'] = $look;
             }
         }
+        // dice_looks: [{ name, body, ink, tex }], looks they saved to come back to (the 🎨 card's Saved looks), at most 12.
+        // Each is checked as dice_look is, with a name of up to 30 characters. An empty list or null forgets them all.
+        if (array_key_exists('dice_looks', body())) {
+            $dls = p('dice_looks');
+            if ($dls === null || $dls === []) unset($prefs['dice_looks']);
+            else {
+                if (!is_array($dls) || !array_is_list($dls)) fail('Saved looks are a list');
+                if (count($dls) > 12) fail('12 saved looks is the most');
+                $keep = [];
+                foreach ($dls as $l) {
+                    $look = dice_look($l);
+                    $name = is_array($l) && is_string($l['name'] ?? null) ? trim(preg_replace('/\s+/u', ' ', $l['name'])) : '';
+                    if (!$look || $name === '' || mb_strlen($name) > 30) fail('Each saved look needs a name of up to 30 characters, a colour for the dice and one for the numbers');
+                    $keep[] = ['name' => $name] + $look;
+                }
+                $prefs['dice_looks'] = $keep;
+            }
+        }
         // tour: { state: 'on'|'off', seen: [ids] }, the welcome tutorial (static/tour.js): whether it shows, and which pages'
         // tips they have been through, so each shows once. Skip tutorial sends 'off'; the Account page turns it back on with
         // nothing seen. Null forgets it, so the site's default (config 'tutorial') applies again.

@@ -422,27 +422,44 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   const card = pp.getByRole("dialog", { name: "Your dice" });
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Emerald" }).click();
-  // Pattern opens a list of every choice, each drawn on a small die: skins (their own colours) and patterns (in yours)
+  // Pattern opens a list of every pattern, each drawn on a small die
   const patterns = card.locator(".dice-pat > summary");
-  const pick = async (group, name) => {
+  const pick = async name => {
     await patterns.click();
-    await card.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).click();
+    await card.getByRole("group", { name: "Patterns" }).getByRole("button", { name, exact: true }).click();
   };
-  await pick("Patterns in your colours", "Wood");
+  await pick("Wood");
   await expect(patterns).toHaveAttribute("aria-label", "Pattern: Wood");
   await expect(card.locator(".dice-pat-list")).toBeHidden();
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
-  // a skin sets the colours and the pattern in one tap, and the list shows it as picked
-  await pick("Skins", "Warlock");
-  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Warlock");
+  // a skin's pattern comes with its own colours: picking it sets them, and the list shows it as picked
+  await pick("Warlock (animated)");
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Warlock (animated)");
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "false");
   await patterns.click();
-  await expect(card.getByRole("group", { name: "Skins" }).getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("button", { name: "Warlock (animated)", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("button", { name: "Wood", exact: true })).toHaveAttribute("aria-pressed", "false");
   await patterns.click();
-  // back to Emerald on wood: a colour keeps the pattern, so the skin's own pattern stays until wood is picked
+  // its colours can still be changed: Emerald keeps the Warlock pattern
   await card.getByRole("button", { name: "Emerald" }).click();
-  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Eldritch sigils (animated)");
-  await pick("Patterns in your colours", "Wood");
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Warlock (animated)");
+  await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
+  await pick("Wood");
+  // a look of their own, saved to come back to: it shows under Saved, puts the dice back in it, and can be forgotten
+  await card.getByRole("button", { name: "☆ Save this look" }).click();
+  const named = pp.getByRole("dialog", { name: "Save this look" });
+  await named.getByRole("textbox").fill("Forest");
+  await named.getByRole("button", { name: "Save" }).click();
+  const saved = card.getByRole("group", { name: "Saved looks" });
+  await expect(saved.getByRole("button", { name: "Forest", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("button", { name: "☆ Save this look" })).toBeDisabled();
+  await pick("Warlock (animated)");
+  await expect(saved.getByRole("button", { name: "Forest", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await saved.getByRole("button", { name: "Forest", exact: true }).click();
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Wood");
+  await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
+  await saved.getByRole("button", { name: "Forget Forest" }).click();
+  await expect(saved.getByRole("button", { name: "Forest", exact: true })).toHaveCount(0);
   await card.getByRole("button", { name: "Close" }).click();
   await expect(card).toBeHidden();
 

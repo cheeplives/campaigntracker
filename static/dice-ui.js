@@ -147,7 +147,9 @@
     return res.results.map((one, k) => {
       const row = el('div', { class: chip ? 'dice-terms looked' : 'dice-terms' });
       if (chip) for (const [p, v] of Object.entries(chip)) row.style.setProperty(p, v);
-      if (chip?.['--die-glow']) row.classList.add('anim', `anim-${root.Dice3D.ANIMATED[look.tex]}`);
+      const cls = chip ? root.Dice3D.chipClass(look) : '';
+      if (cls) row.classList.add(cls);
+      if (cls && root.Dice3D.ANIMATED[look.tex]) row.classList.add('anim', `anim-${root.Dice3D.ANIMATED[look.tex]}`);
       if (res.repeat) row.append(el('span', { class: 'dice-go-n small muted' }, `#${k + 1} = ${one.total}`));
       one.terms.forEach((t, i) => {
         // a tagged term ("2d6[Athletics]") says where its dice came from, each source in its own colour
