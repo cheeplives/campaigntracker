@@ -934,6 +934,11 @@ button.link.danger { color: var(--bad-text); font-size: 1rem; }
 .ledger-total { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: flex-end; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
 .ledger-total.over strong { color: var(--bad-text); }
 dialog.kit-dialog.hold-dialog { width: min(640px, calc(100vw - 32px)); }
+/* Regions: New region and Edit open the region's form here; the row it saved is picked out for a moment afterwards */
+dialog.kit-dialog.region-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.region-dialog [hidden] { display: none; }
+.listrow[data-region] { transition: background-color .8s ease; }
+.listrow.just-saved { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); transition: none; }
 /* At the Table's Pass time dialog: Skip ahead, then the rests and travel it leads to */
 dialog.kit-dialog.pt-dialog { width: min(480px, calc(100vw - 32px)); }
 .pt-dialog fieldset { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; padding: 8px 12px 12px; }
