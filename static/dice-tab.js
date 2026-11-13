@@ -562,19 +562,32 @@
       const swatch = (look, name, current, reset) => el('button', { type: 'button', class: 'dice-sw' + (current ? ' on' : ''), 'aria-label': name, 'aria-pressed': String(!!current), 'data-tip': name,
         style: { background: look.body, color: look.ink }, onclick: () => set(reset ? null : { ...look, tex: cur?.tex || '' }) }, '6');
       const theme = D3.themeLook();
-      // a skin: its colours and pattern in one tap (the colours can still be changed after)
-      const skin = ([name, b, i, t]) => {
-        const look = { body: b, ink: i, tex: t }, on = !!cur && cur.body === b && cur.ink === i && (cur.tex || '') === t;
-        const die = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
-        for (const [p, v] of Object.entries(D3.chip(look) || {})) die.style.setProperty(p, v);
-        return el('button', { type: 'button', class: 'dice-skin' + (on ? ' on' : ''), 'aria-pressed': String(on), onclick: () => set(look) }, die, name);
+      // Pattern: a list that shows each choice on a small die. Skins first (each its own colours and pattern in one tap;
+      // the colours can still be changed after), then the patterns alone, shown in the colours picked now.
+      const sample = look => {
+        const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
+        for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
+        if (D3.ANIMATED[look.tex]) d.classList.add('anim', `anim-${D3.ANIMATED[look.tex]}`);
+        return d;
       };
+      const curSkin = cur && D3.SKINS.find(([, b, i, t]) => cur.body === b && cur.ink === i && (cur.tex || '') === t);
+      const texName = v => (D3.TEXTURES.find(([x]) => x === v) || ['', 'Plain'])[1];
+      const shownName = curSkin ? curSkin[0] : texName(shown.tex || '');
+      const opt = (look, name, on) => el('button', { type: 'button', class: 'dice-pat-opt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+        onclick: () => set(look) }, sample(look), el('span', {}, name));
+      const tex = KIT.menu({
+        label: [sample(shown), el('span', { class: 'dice-pat-name' }, shownName), el('span', { class: 'dice-pat-caret', 'aria-hidden': 'true' }, '▾')],
+        ariaLabel: `Pattern: ${shownName}`, cls: 'dice-pat', listCls: 'dice-pat-list', align: 'left',
+        items: [
+          el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Skins' }, el('p', { class: 'dice-pat-h', 'aria-hidden': 'true' }, 'Skins'),
+            D3.SKINS.map(([n, b, i, t]) => opt({ body: b, ink: i, tex: t }, n, curSkin?.[0] === n))),
+          el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Patterns in your colours' }, el('p', { class: 'dice-pat-h', 'aria-hidden': 'true' }, 'Patterns in your colours'),
+            D3.TEXTURES.map(([v, l]) => opt({ ...shown, tex: v }, l, !curSkin && (shown.tex || '') === v)))],
+      });
       const body = el('input', { type: 'color', value: shown.body, 'aria-label': 'Colour of the dice',
         onchange: e => set({ body: e.target.value, ink: D3.inkFor(e.target.value), tex: shown.tex || '' }) });
       const ink = el('input', { type: 'color', value: shown.ink, 'aria-label': 'Colour of the numbers',
         onchange: e => set({ ...shown, ink: e.target.value }) });
-      const tex = el('select', { 'aria-label': 'Pattern', onchange: e => set({ ...shown, tex: e.target.value }) },
-        D3.TEXTURES.map(([v, l]) => el('option', { value: v, selected: v === (shown.tex || '') }, l)));
       const still = el('canvas', { class: 'dice-look-3d', width: '192', height: '192', 'aria-hidden': 'true' });
       const flat = el('div', { class: 'dice-look-flat', 'aria-hidden': 'true' });
       const res = { results: [{ terms: [{ src: 'd20', sides: 20, dice: [{ v: 20, rolls: [20], rerolled: [] }] }, { src: 'd6', sides: 6, dice: [{ v: 3, rolls: [3], rerolled: [] }, { v: 6, rolls: [6], rerolled: [] }] }], total: 29 }] };
@@ -589,12 +602,12 @@
         el('div', { class: 'dice-look-grid' },
           el('div', { class: 'dice-look-pre' }, still, flat),
           el('div', {},
-            el('fieldset', { class: 'dice-skins' }, el('legend', {}, 'Skins'), ...D3.SKINS.map(skin)),
             el('div', { class: 'dice-sws', role: 'group', 'aria-label': 'Dice colours' },
               swatch(theme, 'The theme\'s colours', !cur, true), ...D3.SWATCHES.map(([b, i, n]) => swatch({ body: b, ink: i }, n, cur && cur.body === b && cur.ink === i))),
             el('div', { class: 'dice-look-row' },
-              el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')),
-            el('label', { class: 'dice-look-row' }, 'Pattern ', tex))),
+              el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')))),
+        // under the preview and colours, across the card, so its list of choices has room for several columns
+        el('div', { class: 'dice-pat-row' }, el('span', { class: 'dice-pat-label', 'aria-hidden': 'true' }, 'Pattern'), tex),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
           gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null),
         el('label', { class: 'dice-look-row small' }, 'Dice stay on screen ', el('select', { class: 'dice-stay', 'aria-label': 'How long thrown dice stay on screen', disabled: !on3d.checked,

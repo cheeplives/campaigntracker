@@ -24,11 +24,12 @@
     ['carbon', 'Carbon fibre'], ['ice', 'Cracked ice'], ['lava', 'Lava'],
     ['glitter', 'Glitter (animated)'], ['galaxy', 'Galaxy (animated)'], ['ember', 'Embers (animated)'],
     // the skins: a pattern with a frame round each face or numbers that glow (SKINS below gives each its colours)
-    ['gilded', 'Gilded frame'], ['shield', 'Shield: planks and steel'], ['moss', 'Mossy wood'], ['leopard', 'Leopard print'],
-    ['pinstripe', 'Pinstripe gloss'], ['grove', 'Glowing grove (animated)'], ['eldritch', 'Eldritch sigils (animated)'],
+    ['gilded', 'Gilded frame (animated)'], ['shield', 'Shield: planks and steel'], ['moss', 'Mossy wood (animated)'], ['leopard', 'Leopard print'],
+    ['pinstripe', 'Pinstripe gloss (animated)'], ['grove', 'Glowing grove (animated)'], ['eldritch', 'Eldritch sigils (animated)'],
     ['fire', 'Wildfire (animated)'], ['magma', 'Molten core (animated)']];
   /** The patterns that move, and what moves. */
-  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow', grove: 'glow', eldritch: 'pulse', fire: 'flicker', magma: 'glow' };
+  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow', grove: 'glow', eldritch: 'pulse', fire: 'flicker', magma: 'glow',
+    gilded: 'shine', pinstripe: 'shine', moss: 'drift' };
   /** Patterns with a frame round each face: [the frame's colour, its width as a share of a face]. */
   const FRAMES = { gilded: ['#d9ae48', 0.2], shield: ['#a9b0b8', 0.24], leopard: ['#f7f3ee', 0.16], pinstripe: ['#e4b852', 0.16] };
   /** Patterns whose numbers glow, lit from within like the pattern's own light. */
@@ -186,6 +187,24 @@
       g.putImageData(img, 0, 0);
     } else if (look.tex === 'eldritch') {
       sigils(g, size, toHex(mix(hex(look.ink), WHITE, 0.25)), 1);
+    } else if (look.tex === 'gilded' || look.tex === 'pinstripe') {
+      // a glint: one soft diagonal band of light, wrapping at the tile's edges, slid across the die (animate())
+      const img = g.getImageData(0, 0, size, size), px = img.data;
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const d = ((x + y) / size) % 1, a = Math.pow(Math.max(0, 1 - Math.abs(d - 0.5) * 9), 2) * 0.85, o = (y * size + x) * 4;
+        px[o] = 255 * a; px[o + 1] = 236 * a; px[o + 2] = 190 * a;
+      }
+      g.putImageData(img, 0, 0);
+    } else if (look.tex === 'moss') {
+      // fireflies: a few soft green-gold lights that drift over the moss
+      for (let i = 0; i < 14; i++) {
+        const x = S() * size, y = S() * size, r = size * (0.012 + S() * 0.01);
+        for (const [ox, oy] of [[0, 0], [-size, 0], [size, 0], [0, -size], [0, size]]) {
+          const grd = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r * 3);
+          grd.addColorStop(0, '#f4ffb0'); grd.addColorStop(0.35, 'rgba(190,240,90,0.6)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = grd; g.beginPath(); g.arc(x + ox, y + oy, r * 3, 0, Math.PI * 2); g.fill();
+        }
+      }
     }
     glows.set(k, cv);
     return cv;
@@ -679,6 +698,9 @@
       } else if (m.userData.anim === 'drift') {
         g.offset.set(t * 0.07, t * 0.03);
         m.emissiveIntensity = 1 + 0.6 * Math.sin(t * 4.1) * Math.sin(t * 2.3);
+      } else if (m.userData.anim === 'shine') {
+        g.offset.set((t * 0.3) % 1, 0);
+        m.emissiveIntensity = 1;
       } else if (m.userData.anim === 'pulse') {
         m.emissiveIntensity = 0.45 + 0.9 * (0.5 + 0.5 * Math.sin(t * 2.2));
       } else if (m.userData.anim === 'flicker') {

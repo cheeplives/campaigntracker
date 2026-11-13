@@ -2304,10 +2304,19 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .dice-sws { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
 .dice-sw { margin: 0; width: 30px; height: 30px; padding: 0; border-radius: var(--radius); font: 600 .9rem var(--disp); border: 2px solid transparent; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25); }
 .dice-sw.on { border-color: var(--text); }
-/* Skins: a ready-made colour and pattern each, shown as a small die in it with its name. */
-.dice-skins { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; padding: 0; border: 0; }
-.dice-skins legend { padding: 0; margin-bottom: 4px; font-size: .85rem; color: var(--dim); }
-.dice-skin { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 2px 8px 2px 2px; font-size: .85rem; }
+/* Pattern (🎨): a button showing the pattern on a small die, opening a list of every choice drawn the same way. The list
+   opens in the card's flow rather than over it, since the card scrolls and would cut a floating list off. */
+.dice-pat-row { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 8px; }
+.dice-pat-label { padding-top: 7px; }
+.dice-pat { display: block; flex: 1; min-width: 0; }
+.dice-pat > summary { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; margin: 0; padding: 3px 8px 3px 3px; }
+.dice-pat-name { flex: 1; text-align: left; }
+.dice-pat-caret { font-size: .7em; opacity: .8; }
+.dice-pat > .dice-pat-list { position: static; margin-top: 4px; max-height: 300px; overflow-y: auto; box-shadow: none; gap: 8px; }
+.dice-pat-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px; }
+.dice-pat-h { grid-column: 1 / -1; margin: 0; font-size: .85rem; color: var(--dim); }
+.dice-pat-opt { display: flex; align-items: center; gap: 6px; margin: 0; padding: 2px 6px 2px 2px; font-size: .85rem; text-align: left; white-space: normal; line-height: 1.15; }
+.dice-pat-opt .dice-skin-die { flex: none; }
 .dice-skin-die { width: 24px; height: 24px; border-radius: var(--radius); display: inline-grid; place-items: center; font: 700 .75rem var(--disp);
   background: var(--die-tex, none) center / 40px, var(--die-bg); color: var(--die-ink); box-shadow: inset 0 0 0 var(--die-rim, 1px) var(--die-edge);
   text-shadow: var(--die-shine, 0 0 2px var(--die-bg)); }
@@ -2372,17 +2381,19 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .looked .die { background: var(--die-tex, none) center / 64px, var(--die-bg); color: var(--die-ink); box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), inset 0 0 0 var(--die-rim, 1px) var(--die-edge);
   text-shadow: var(--die-shine, 0 0 3px color-mix(in srgb, var(--die-bg) 80%, transparent)); }
 /* Animated patterns on the flat dice: the moving layer (--die-glow) over the pattern, lit like light. */
-.looked.anim .die { background: var(--die-glow) 0 0 / 40px, var(--die-tex, none) center / 64px, var(--die-bg); background-blend-mode: screen, normal, normal; }
-.looked.anim-sparkle .die { animation: die-sparkle 1s steps(6) infinite; }
-.looked.anim-drift .die { animation: die-drift 14s linear infinite; }
-.looked.anim-glow .die { animation: die-glow 2.4s ease-in-out infinite alternate; }
-.looked.anim-pulse .die { animation: die-glow 1.6s ease-in-out infinite alternate; }
-.looked.anim-flicker .die { animation: die-flicker .9s steps(5) infinite; }
+.looked.anim .die, .dice-skin-die.anim { background: var(--die-glow) 0 0 / 40px, var(--die-tex, none) center / 64px, var(--die-bg); background-blend-mode: screen, normal, normal; }
+.looked.anim-sparkle .die, .dice-skin-die.anim-sparkle { animation: die-sparkle 1s steps(6) infinite; }
+.looked.anim-drift .die, .dice-skin-die.anim-drift { animation: die-drift 14s linear infinite; }
+.looked.anim-glow .die, .dice-skin-die.anim-glow { animation: die-glow 2.4s ease-in-out infinite alternate; }
+.looked.anim-pulse .die, .dice-skin-die.anim-pulse { animation: die-glow 1.6s ease-in-out infinite alternate; }
+.looked.anim-shine .die, .dice-skin-die.anim-shine { animation: die-shine 3s linear infinite; }
+.looked.anim-flicker .die, .dice-skin-die.anim-flicker { animation: die-flicker .9s steps(5) infinite; }
 @keyframes die-sparkle { to { background-position: 97px 61px, center, 0 0; } }
+@keyframes die-shine { to { background-position: 40px 0, center, 0 0; } }
 @keyframes die-drift { to { background-position: 40px 20px, center, 0 0; } }
 @keyframes die-flicker { 0%, 100% { filter: brightness(1); } 30% { filter: brightness(1.25) saturate(1.2); } 60% { filter: brightness(.92); } 80% { filter: brightness(1.15); } }
 @keyframes die-glow { from { filter: brightness(.9); } to { filter: brightness(1.25) saturate(1.2); } }
-@media (prefers-reduced-motion: reduce) { .looked.anim .die { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .looked.anim .die, .dice-skin-die.anim { animation: none; } }
 .looked .die.hit { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #3f9a5a; }
 .looked .die.miss { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px #c04848; }
 .looked .die.boom { box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25), 0 0 0 2px var(--accent); }

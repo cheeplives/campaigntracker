@@ -422,17 +422,27 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   const card = pp.getByRole("dialog", { name: "Your dice" });
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Emerald" }).click();
-  await card.getByRole("combobox", { name: "Pattern" }).selectOption("wood");
+  // Pattern opens a list of every choice, each drawn on a small die: skins (their own colours) and patterns (in yours)
+  const patterns = card.locator(".dice-pat > summary");
+  const pick = async (group, name) => {
+    await patterns.click();
+    await card.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).click();
+  };
+  await pick("Patterns in your colours", "Wood");
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Wood");
+  await expect(card.locator(".dice-pat-list")).toBeHidden();
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(async () => (await api(pp, "dice_rolls", undefined, cid)).status).toBe(200);
-  // a skin sets the colours and the pattern in one tap, and shows as picked
-  await card.getByRole("button", { name: "Warlock" }).click();
-  await expect(card.getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "true");
-  await expect(card.getByRole("combobox", { name: "Pattern" })).toHaveValue("eldritch");
+  // a skin sets the colours and the pattern in one tap, and the list shows it as picked
+  await pick("Skins", "Warlock");
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Warlock");
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "false");
+  await patterns.click();
+  await expect(card.getByRole("group", { name: "Skins" }).getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "true");
+  await patterns.click();
+  // back to Emerald on wood: a colour keeps the pattern, so the skin's own pattern stays until wood is picked
   await card.getByRole("button", { name: "Emerald" }).click();
-  await card.getByRole("combobox", { name: "Pattern" }).selectOption("wood");
-  await expect(card.getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "false");
+  await expect(patterns).toHaveAttribute("aria-label", "Pattern: Eldritch sigils (animated)");
+  await pick("Patterns in your colours", "Wood");
   await card.getByRole("button", { name: "Close" }).click();
   await expect(card).toBeHidden();
 
