@@ -393,7 +393,8 @@ const Sheets = (() => {
     const list = el('div', { class: 'template-grid' });
     const search = el('input', { type: 'search', placeholder: 'Name or game', 'aria-label': 'Search templates' });
     let seq = 0, timer = 0;
-    // Request a game: a name typed here reaches the site admin's Sheets tab. Shown only while requests are on.
+    // Request a game: a name typed here reaches the site admin's Sheets tab. Shown only while requests are on. It sits
+    // beside + New template in the page's header, so it is the same header button, outlined where that one is filled.
     const request = button('Request a game', async () => {
       const game = await promptDialog('Which game would you like a starter sheet for? The site admin sees every request, with how many people asked for each game.',
         { title: 'Request a game', value: search.value.trim(), placeholder: 'Game name, and edition if it matters', ok: 'Send request' });
@@ -403,7 +404,7 @@ const Sheets = (() => {
         const r = await ctx.post('game_request', { game: game.trim() });
         toast(r.already ? 'You have already asked for that game' : 'Request sent. Thanks!');
       } catch (err) { toast(err.message, true); }
-    }, '', { 'data-tip': 'Ask for a starter template for a game that isn\'t here yet' });
+    }, 'new-btn', { 'data-tip': 'Ask for a starter template for a game that isn\'t here yet' });
     request.style.display = 'none';
     const load = async () => {
       const n = ++seq;
