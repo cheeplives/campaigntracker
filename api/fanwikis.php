@@ -107,7 +107,7 @@ function fanwiki_http(string $url, string $accept = 'application/json'): array {
     $file = (string)(fanwiki_cfg()['stub'] ?? '');
     if ($file !== '') return ($stub ??= require $file)('GET', $url, []);
     $contact = trim((string)(image_cfg()['contact'] ?? ''));
-    return http_request('GET', $url, ['headers' => ['User-Agent: CampaignChronicle/1.0 (fan wiki lookups' . ($contact !== '' ? "; $contact" : '') . ')',
+    return http_request('GET', $url, ['headers' => ['User-Agent: GMsAlmanac/1.0 (fan wiki lookups' . ($contact !== '' ? "; $contact" : '') . ')',
         "Accept: $accept"], 'compress' => true, 'timeout' => 15]);
 }
 function fanwiki_json(string $url): array {

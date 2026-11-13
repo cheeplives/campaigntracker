@@ -55,7 +55,7 @@ const CalendarFile = (() => {
     let o;
     try { o = JSON.parse(text); } catch { throw new Error('That file is not JSON.'); }
     if (!plain(o)) throw new Error('That file does not hold a calendar.');
-    if (o.format !== undefined && o.format !== FORMAT) throw new Error('That file is not a Campaign Chronicle calendar.');
+    if (o.format !== undefined && o.format !== FORMAT) throw new Error('That file is not a GM\'s Almanac calendar.');
     if (o.format === FORMAT && Number(o.version) > VERSION) throw new Error('That calendar was exported by a newer version. Update this site to import it.');
     const c = o.format === FORMAT ? o.calendar : o;
     if (!plain(c) || !Array.isArray(c.months) || !c.months.length) throw new Error('That file has no months, so it is not a calendar.');

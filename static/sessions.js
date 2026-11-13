@@ -268,7 +268,7 @@
       for (const n of notes) L.push(`${'   '.repeat(Number(n.depth) || 0)}- ${String(n.text).replace(/\s+/g, ' ')}`);
       L.push('');
     }
-    L.push(`*Exported from Campaign Chronicle · ${gm ? 'GM' : 'player'} view · ${new Date().toISOString().slice(0, 10)}*`);
+    L.push(`*Exported from GM's Almanac · ${gm ? 'GM' : 'player'} view · ${new Date().toISOString().slice(0, 10)}*`);
     return L.join('\n') + '\n';
   }
   /** "Session 12 - A Locked Box.md", without characters a file name can't hold. */

@@ -1,4 +1,4 @@
-// Cross-browser test run for Campaign Chronicle. See tests/README.md.
+// Cross-browser test run for GM's Almanac. See tests/README.md.
 //
 // Same five engines/form factors as Sinless's suite, plus an iPad (Safari's
 // engine, touch, no hover) because the app is meant to work fully on one. The app needs PHP and

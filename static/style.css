@@ -1,4 +1,4 @@
-/* Campaign Chronicle — the GM Screen look: cardstock panels, serif headings in
+/* GM's Almanac — the GM Screen look: cardstock panels, serif headings in
  * sentence case (Spectral, body text in Atkinson Hyperlegible) over tapered stat-block rules, folder-divider tabs
  * and chunky calendar tiles, in warm parchment and brass by default.
  * Token names match Sinless's style.css (--bg --panel --panel-2 --line --text
@@ -89,7 +89,9 @@ h1 { font-size: 1.9rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; } h
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font: 600 1.55rem var(--disp); color: var(--text); }
-.brand::before { content: '⬢ '; color: var(--accent); }
+.about-logo { float: right; margin: 0 0 .5rem 1rem; }
+.brand::before { content: ''; display: inline-block; width: 1.1em; height: 1.1em; margin-right: .35em; vertical-align: -.16em;
+  background: var(--accent); -webkit-mask: url(icons/mark.svg) center / contain no-repeat; mask: url(icons/mark.svg) center / contain no-repeat; }
 #topnav { display: flex; gap: 4px 6px; align-items: center; flex-wrap: wrap; }
 /* A quiet bar: plain text links, the page you are on underlined in the accent, and your name with a caret. No pills, no
  * borders; the icons (Report, and light / dark when signed out) are bare. */

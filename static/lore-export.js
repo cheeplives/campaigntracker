@@ -70,7 +70,7 @@
     page('Encyclopedia', '.md');
     for (const e of entries) byId.set(e.id, { e, path: page(e.name, '.md') });
     const link = id => { const t = byId.get(id); return t ? `[${mdText(t.e.name)}](${mdHref(t.path)})` : null; };
-    const foot = `*Exported from Campaign Chronicle · ${opts.campaign} · ${opts.gm ? opts.gmOnly ? 'GM view, with GM-only notes' : 'GM view, without GM-only notes' : 'player view'} · ${opts.date}*`;
+    const foot = `*Exported from GM's Almanac · ${opts.campaign} · ${opts.gm ? opts.gmOnly ? 'GM view, with GM-only notes' : 'GM view, without GM-only notes' : 'player view'} · ${opts.date}*`;
     for (const e of entries) {
       const L = [`# ${e.name}`, ''];
       const about = [CATEGORIES[e.category], e.is_secret ? '🔒 GM only' : null, e.aliases?.length ? `Also called ${e.aliases.join(', ')}` : null,

@@ -1,4 +1,4 @@
-/* Campaign Chronicle — browser app (plain JS, no build step).
+/* GM's Almanac — browser app (plain JS, no build step).
  * All user-supplied text is inserted with textContent (via el()), never innerHTML. Rich text notes are rebuilt
  * element by element from an allow-list by RichText.view() (static/richtext.js).
  * Permissions are enforced by api/index.php; the UI only hides controls a role can't use.
@@ -837,7 +837,7 @@
   function viewLogin(providers) {
     const ret = encodeURIComponent(location.pathname + location.search + location.hash);
     mount(el('div', { class: 'card narrow auth-card' },
-      el('h1', {}, 'Campaign Chronicle'),
+      el('h1', {}, 'GM\'s Almanac'),
       el('p', { class: 'muted' }, 'Sign in to see your campaigns. It\'s the same Google or GitHub sign-in as Sinless.'),
       providers.length
         ? el('div', { class: 'auth-buttons' }, providers.map(p => el('a', { class: `button primary btn-oauth ${p}`, href: `api/auth/login.php?provider=${p}&return=${ret}` }, `Sign in with ${PROVIDER_LABEL[p] || p}`)))
@@ -902,7 +902,7 @@
     const pronIn = el('input', { name: 'pronouns', value: S.user.pronouns || '', maxlength: 40, placeholder: 'e.g. she/her', list: 'pronoun-ideas', 'aria-label': 'Pronouns' });
     const ideas = el('datalist', { id: 'pronoun-ideas' }, ['she/her', 'he/him', 'they/them', 'she/they', 'he/they', 'xe/xem', 'ze/hir', 'any pronouns'].map(v => el('option', { value: v })));
     const profile = el('form', { class: 'card narrow' }, el('h2', {}, 'Your name'),
-      el('p', { class: 'muted' }, `Signed in as ${S.user.email}.${S.user.provider_name ? ` Google or GitHub calls you ${S.user.provider_name}.` : ''} Set a name here and Chronicle calls you that instead, everywhere in the app.`),
+      el('p', { class: 'muted' }, `Signed in as ${S.user.email}.${S.user.provider_name ? ` Google or GitHub calls you ${S.user.provider_name}.` : ''} Set a name here and GM\'s Almanac calls you that instead, everywhere in the app.`),
       field('Name', nameIn, 'Leave it blank to use the name from Google or GitHub. A character name you set in a campaign still signs your notes there.'),
       field('Pronouns', pronIn, 'Shown beside your name on Members and Site Admin. Optional.'), ideas,
       el('button', { class: 'primary' }, 'Save name'));
@@ -1022,16 +1022,16 @@
             !self && u.status === 'approved' && !Number(u.is_admin) ? act('Revoke', () => post('user_status', { id: u.id, status: 'revoked' }), 'danger', 'Block their access. Their campaigns and notes stay') : null,
             !self ? act(legacy ? 'Delete' : 'Remove', async () => {
               if (!await confirmDialog(legacy ? `Delete ${u.display_name || u.email}? Their campaign memberships and notes' authorship go with it.`
-                : `Remove ${u.display_name || u.email} from Campaign Chronicle? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
+                : `Remove ${u.display_name || u.email} from GM's Almanac? They leave every campaign here, and asking again puts them back in the queue. Their Sinless account isn't touched.`,
                 { ok: legacy ? 'Delete' : 'Remove', danger: true })) return false;
               await post('user_delete', { id: u.id });
-            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off Campaign Chronicle and out of its campaigns. Their Sinless account stays') : null))));
+            }, 'danger', legacy ? 'Delete this account. Their campaign memberships go with it' : 'Take them off GM\'s Almanac and out of its campaigns. Their Sinless account stays') : null))));
     };
     const pending = users.filter(u => u.status === 'pending').length;
     mount(adminHead('users'), el('div', { class: 'card' }, el('h2', {}, 'Users'),
       pending ? el('p', {}, `${pending} ${pending === 1 ? 'person is' : 'people are'} waiting for approval.`) : null,
       el('div', { class: 'tbl-wrap' }, el('table', { class: 'tbl users' }, el('tr', {}, el('th', {}, 'Name'), el('th', {}, 'Email'), el('th', {}, 'Status'), el('th', {}, el('span', { class: 'visually-hidden' }, 'Actions'))), users.map(row)))),
-      el('p', { class: 'muted pad' }, 'Everyone who has signed in to Campaign Chronicle is listed here, after their first sign-in. Approving someone here lets them into Chronicle only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
+      el('p', { class: 'muted pad' }, 'Everyone who has signed in to GM\'s Almanac is listed here, after their first sign-in. Approving someone here lets them into GM\'s Almanac only: Sinless keeps its own approvals, even for the same Google or GitHub account. Approve them, then a GM adds them from the Members tab of a campaign. Admins are set in the server config (admin_identities).'));
   }
   /** Site Admin's Sheets tab: load the starter templates, and the games people asked for with Request a game. */
   async function viewAdminSheets() {
@@ -1722,8 +1722,8 @@
   }
   function welcomeSteps() {
     return [
-      { title: 'Welcome to Campaign Chronicle', text: [
-        'Chronicle keeps a tabletop campaign in one place: its calendar and weather, what happened each session, the party\'s characters and gear, and everything the party has learned about the world.',
+      { title: 'Welcome to GM\'s Almanac', text: [
+        'GM\'s Almanac keeps a tabletop campaign in one place: its calendar and weather, what happened each session, the party\'s characters and gear, and everything the party has learned about the world.',
         'These tips point out the parts of each page the first time you open it. Next moves on, Escape closes the tips for this page, and Skip tutorial turns them all off. Your Account page can turn them back on.'] },
       { at: '#app .new-btn', title: 'Start a campaign', text: 'Make a campaign of your own here. You pick its calendar, its regions and its options, and you are its GM. To play in someone else\'s, ask its GM to add you on their Members tab, and it shows up in this list.' },
       { at: '#app .camplist .camp-row', optional: true, title: 'Your campaigns', text: 'Every campaign you play in or run. Open one by its name. The star beside it keeps it at the top of the list, and a GM\'s menu at the end of the row copies or deletes it.' },
@@ -1742,7 +1742,7 @@
   }
   function accountSteps() {
     return [
-      { at: '#app form:first-of-type', title: 'Your account', text: 'Set the name and pronouns Chronicle calls you by, and the units you see temperatures, distances and speeds in.' },
+      { at: '#app form:first-of-type', title: 'Your account', text: 'Set the name and pronouns GM\'s Almanac calls you by, and the units you see temperatures, distances and speeds in.' },
       { at: '#app .tour-card-account', optional: true, title: 'This tutorial', text: 'Turn the tutorial back on here after skipping it, or start it again from the beginning.' },
     ];
   }
@@ -7106,8 +7106,9 @@
     const list = items => el('ul', {}, items.filter(Boolean).map(i => el('li', {}, ...[i].flat())));
     mount(
       el('div', { class: 'card about' },
-        el('h1', {}, 'About Campaign Chronicle'),
-        p('Campaign Chronicle is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
+        el('img', { class: 'about-logo', src: 'static/icons/logo-engraved.svg', alt: '', width: 96, height: 96 }),
+        el('h1', {}, 'About GM\'s Almanac'),
+        p('GM\'s Almanac is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
           'This page lists where every built-in figure comes from: the sample speeds and distances in the travel planner, the climate baselines behind the weather, and the calendar presets.'),
         p('Open sources come first: Wikipedia articles (CC BY-SA 4.0, which in turn cite national weather services, NOAA, NASA and the like), ',
           'NASA, JPL and other US government pages (public domain), UK government statistics (Open Government Licence) and openly licensed papers. ',
@@ -7678,7 +7679,7 @@
         full.notes ? RichText.view(full.notes, 'html', 'tv-notes') : el('p', { class: 'muted small' }, 'Nothing written about it yet'),
         el('div', { class: 'row' },
           btn('📝 Add a note', () => { onNote?.(); const n = view.querySelector('.tv-note'); n?.setEntry(full); n?.scrollIntoView({ block: 'nearest' }); n?.querySelector('textarea')?.focus(); }, 'small'),
-          el('a', { class: 'button small', href: (PANEL ? 'index.html' : '') + `#/c/${S.camp.id}/encyclopedia/${full.id}`, target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null }, PANEL ? 'Open in Chronicle ↗' : 'Open the entry')),
+          el('a', { class: 'button small', href: (PANEL ? 'index.html' : '') + `#/c/${S.camp.id}/encyclopedia/${full.id}`, target: PANEL ? '_blank' : null, rel: PANEL ? 'noopener' : null }, PANEL ? 'Open in GM\'s Almanac ↗' : 'Open the entry')),
         hits.length > 1 ? el('p', { class: 'small muted' }, `Also: ${hits.slice(1, 6).map(e => e.name).join(', ')}`) : null));
     };
     let t = 0;
@@ -7785,7 +7786,7 @@
           el('p', {}, 'Copy the key into the program. You won\'t see it again.'), shown,
           el('p', { class: 'small muted' }, 'Programs send it in the X-Chronicle-Key header, for example:'),
           el('pre', { class: 'small api-example' }, `curl -H "X-Chronicle-Key: ${key}" \\\n  "${url}?a=campaign"`),
-          el('p', { class: 'small muted' }, 'What it can do is in docs/API.md in Campaign Chronicle\'s code. Revoke it here whenever you like.'),
+          el('p', { class: 'small muted' }, 'What it can do is in docs/API.md in the GM\'s Almanac code. Revoke it here whenever you like.'),
           el('div', { class: 'kit-dialog-actions' },
             btn('Copy', async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
@@ -7843,9 +7844,9 @@
   function panelAsk(why) {
     S.camp = null;
     const input = el('input', { placeholder: 'https://…/panel.html#k=…', 'aria-label': 'Panel link', autocomplete: 'off' });
-    const f = el('form', { class: 'card panel-ask' }, el('h2', {}, 'Campaign Chronicle'),
+    const f = el('form', { class: 'card panel-ask' }, el('h2', {}, 'GM\'s Almanac'),
       why ? el('p', { class: 'error' }, why) : null,
-      el('p', {}, 'Paste your panel link. Make one in Chronicle: open the campaign, then At the Table → Use in a VTT or on stream → New panel link.'),
+      el('p', {}, 'Paste your panel link. Make one in GM\'s Almanac: open the campaign, then At the Table → Use in a VTT or on stream → New panel link.'),
       input, el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Open')));
     f.addEventListener('submit', ev => {
       ev.preventDefault();
@@ -7872,7 +7873,7 @@
       panelStamp = Date.now();
     } catch (e) {
       if (e.status === 401) return;   // api() has asked for a new link
-      mount(el('div', { class: 'card' }, el('h2', {}, 'Can\'t reach Chronicle'), el('p', {}, e.message), btn('Try again', () => panelBoot(), 'primary')));
+      mount(el('div', { class: 'card' }, el('h2', {}, 'Can\'t reach GM\'s Almanac'), el('p', {}, e.message), btn('Try again', () => panelBoot(), 'primary')));
     }
   }
   let panelStamp = 0;
@@ -7944,7 +7945,7 @@
     return (routeRun = routeRun.then(() => (seq === routeSeq ? (drawn = location.hash, routeTo()) : null)).catch(err => console.error(err))
       .then(() => { Undo.reapply(); diceSync(); fillJumpLinks(); keepPlace(); if (drawn) { noteRecent(drawn); namePage(); maybeTour(); } }));
   }
-  // Each page gets its own title in the browser's tab and history ("Calendar · Waterdeep · Campaign Chronicle"), which is
+  // Each page gets its own title in the browser's tab and history ("Calendar · Waterdeep · GM's Almanac"), which is
   // also what a screen reader reads first. After a move to another page, focus goes to the page's main content (unless the
   // page put it somewhere itself, as a form does), so the keyboard starts there rather than back at the top of the site, and
   // the new title is announced.
@@ -7960,7 +7961,7 @@
     const own = heading ? KIT.noIcons(heading.textContent).replace(/\s+/g, ' ').trim() : '';
     const day = dayHead ? KIT.noIcons(dayHead.textContent).replace(/\s+/g, ' ').trim() : '';
     const bits = parts[0] === 'c' && S.camp ? [tabLabel || day || 'Day', S.camp.name] : [own];
-    const title = [...new Set(bits.filter(Boolean)), 'Campaign Chronicle'].join(' · ');
+    const title = [...new Set(bits.filter(Boolean)), 'GM\'s Almanac'].join(' · ');
     document.title = title;
     if (namedHash === null || namedHash === location.hash) { namedHash = location.hash; return; }   // the first page, or the same one drawn again
     namedHash = location.hash;
@@ -8083,7 +8084,7 @@
     // The skip link jumps past the top bar and the campaign's tabs. It can't be a plain #app link, as the address after
     // # is the page here, so it moves focus itself.
     $('.skip-link')?.addEventListener('click', e => { e.preventDefault(); const m = app(); m.focus(); m.scrollIntoView(); });
-    $('#version').textContent = `Campaign Chronicle build ${APP_VERSION}`;
+    $('#version').textContent = `GM's Almanac build ${APP_VERSION}`;
     $('#version').before(el('a', { href: '#/about', class: 'small', 'data-tip': 'Where the travel speeds, climates and calendars come from' }, 'About & sources'), ' · ');
     // Makes the app installable in Chrome and Edge (with manifest.webmanifest). Needs HTTPS, or localhost.
     if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});

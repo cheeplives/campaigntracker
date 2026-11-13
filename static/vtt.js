@@ -98,7 +98,7 @@
     if (!(ppg > 0)) fail('Set grid squares first (Scale → Grid squares)');
     const r = n => +n.toFixed(4);
     return JSON.stringify({
-      format: 0.3, software: 'Campaign Chronicle',
+      format: 0.3, software: 'GM\'s Almanac',
       resolution: { map_origin: { x: r(-(+map.grid_offset_x || 0) / ppg), y: r(-(+map.grid_offset_y || 0) / ppg) },
         map_size: { x: r(map.width / ppg), y: r(map.height / ppg) }, pixels_per_grid: ppg },
       line_of_sight: [], objects_line_of_sight: [], portals: [], environment: { baked_lighting: true, ambient_light: 'ffffffff' }, lights: [],

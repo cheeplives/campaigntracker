@@ -1,6 +1,6 @@
 ---
 name: sheet-from-pdf
-description: Turn a character sheet PDF into a Campaign Chronicle sheet template (a starter file in db/starter-templates/), laid out like the PDF. Use when asked to make, convert or import a template from a character sheet PDF.
+description: Turn a character sheet PDF into a GM's Almanac sheet template (a starter file in db/starter-templates/), laid out like the PDF. Use when asked to make, convert or import a template from a character sheet PDF.
 ---
 
 # A sheet template from a PDF

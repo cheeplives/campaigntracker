@@ -51,11 +51,11 @@ test("the tutorial walks a newcomer through each page once, and Skip tutorial tu
   await expect(tour(page)).toHaveCount(0);
   await turnOn(page);
   await expect(tour(page)).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Welcome to Campaign Chronicle" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Welcome to GM's Almanac" })).toBeVisible();
   await expect(nextBtn(page)).toBeFocused();
   await expect(tour(page).getByRole("button", { name: "Back" })).toBeHidden();
   const titles = await walk(page);
-  expect(titles).toEqual(expect.arrayContaining(["Welcome to Campaign Chronicle", "Start a campaign", "Your campaigns", "Your account"]));
+  expect(titles).toEqual(expect.arrayContaining(["Welcome to GM's Almanac", "Start a campaign", "Your campaigns", "Your account"]));
   await expect.poll(() => prefsTour(page)).toEqual({ state: "on", seen: ["welcome"] });
 
   // Once only: the list again shows nothing.
@@ -101,7 +101,7 @@ test("the tutorial walks a newcomer through each page once, and Skip tutorial tu
 
   // The Account page says it is off, and turns it back on from the start.
   await turnOn(page);
-  await expect(page.getByRole("dialog", { name: "Welcome to Campaign Chronicle" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Welcome to GM's Almanac" })).toBeVisible();
   expect(await prefsTour(page)).toEqual({ state: "on", seen: [] });
   await page.keyboard.press("Escape");
   await page.goto("index.html#/account");

@@ -640,7 +640,7 @@
             if (missing.length) out.push({ path: 'files/MISSING.txt', data: `These files could not be fetched when the campaign was exported:\n\n${missing.join('\n')}\n` });
           }
           const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
-          saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} (Campaign Chronicle ${date}).zip`);
+          saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} (GM's Almanac ${date}).zip`);
           d.close();
           toast(missing.length ? `Exported, but ${missing.length} file${missing.length === 1 ? '' : 's'} could not be fetched (see files/MISSING.txt)` : 'Exported', !!missing.length);
         }));

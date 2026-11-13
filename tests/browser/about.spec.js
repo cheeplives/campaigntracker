@@ -7,7 +7,7 @@ test("About & sources: open signed out from the footer, with every travel sample
   const errors = watchErrors(page);
   await page.goto("index.html");
   await page.getByRole("link", { name: "About & sources" }).click();
-  await expect(page.getByRole("heading", { name: "About Campaign Chronicle" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "About GM's Almanac" })).toBeVisible();
   for (const h of ["Travel planner: sample speeds", "Travel planner: space", "Weather and climate", "Calendars and holidays", "Software and fonts", "No open source"]) {
     await expect(page.getByRole("heading", { name: h })).toBeVisible();
   }

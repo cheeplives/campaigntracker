@@ -5,7 +5,7 @@
 // show someone stale or another account's data, or an old build. So: requests to the API, scripts, styles and
 // everything else go straight to the network untouched, and the one thing kept is a small "you're offline" page,
 // shown when opening the app with no connection instead of the browser's own error.
-const CACHE = 'chronicle-offline-1';
+const CACHE = 'chronicle-offline-2';
 const OFFLINE = 'offline.html';
 
 self.addEventListener('install', (e) => {

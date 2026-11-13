@@ -110,7 +110,7 @@ function upgrade_steps(): array {
         ['035_route_terrain.sql', fn(PDO $p) => db_has_table($p, 'map_routes') && !db_has_column($p, 'map_routes', 'terrain_json'),
             'A saved route can now have a terrain for each leg, which Plan this trip takes into the travel time.'],
         ['036_user_profiles.sql', fn(PDO $p) => !db_has_table($p, 'user_profiles'),
-            'Everyone can now set the name and pronouns Chronicle calls them by on their Account page.'],
+            'Everyone can now set the name and pronouns GM\'s Almanac calls them by on their Account page.'],
         ['037_game_requests.sql', fn(PDO $p) => !db_has_table($p, 'game_requests'),
             'Sheet templates now has Request a game, and Site Admin a Sheets tab listing what people asked for, with a switch to turn requests off.'],
         ['038_dice_rolls.sql', fn(PDO $p) => !db_has_table($p, 'dice_rolls'),
@@ -219,7 +219,7 @@ function upgrade_database(PDO $pdo, string $root): array {
         }
         if ($needAccess) {
             run_sql_file($pdo, "$root/db/migrations/020_chronicle_access.sql");
-            $done[] = 'Campaign Chronicle now approves its own users, apart from Sinless; everyone kept the access they had.';
+            $done[] = 'GM\'s Almanac now approves its own users, apart from Sinless; everyone kept the access they had.';
         }
         return $done;
     } finally {

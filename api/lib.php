@@ -44,7 +44,7 @@ function setup_error(string $code, string $message, array $details = []): void {
     header('Content-Type: text/html; charset=utf-8');
     $e = fn($t) => htmlspecialchars((string) $t, ENT_QUOTES, 'UTF-8');
     echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-       . '<title>Setup problem — Campaign Chronicle</title><link rel="stylesheet" href="static/fonts.css"><link rel="stylesheet" href="static/style.css">'
+       . '<title>Setup problem — GM\'s Almanac</title><link rel="stylesheet" href="static/fonts.css"><link rel="stylesheet" href="static/style.css">'
        . '<main><div class="card narrow"><h1>Setup problem</h1><p>' . $e($message) . '</p>';
     if ($details) echo '<ul>' . implode('', array_map(fn($d) => '<li>' . $e($d) . '</li>', $details)) . '</ul>';
     echo '<p class="muted small">Error code: ' . $e($code) . '. See docs/DEPLOY.md.</p></div></main>';
@@ -521,7 +521,7 @@ function sign_in_identity(string $provider, array $identity): int {
 
 /**
  * Make sure user $userId has a say in Chronicle: an admin is approved; anyone else with no chronicle_access row gets a
- * 'pending' one, and the signup alert goes out, naming Campaign Chronicle, so it can't be mistaken for a Sinless
+ * 'pending' one, and the signup alert goes out, naming GM's Almanac, so it can't be mistaken for a Sinless
  * request. Someone already approved, waiting or revoked here is left as they are. $alert forces the alert (a brand
  * new account before migration 020, when there is no table to tell by).
  */
@@ -539,7 +539,7 @@ function chronicle_access_request(int $userId, bool $isAdmin, string $provider, 
   }
   if ($alert && !$isAdmin) {
     post_signup_webhook(sprintf(
-      "🆕 Campaign Chronicle access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Site Admin in Campaign Chronicle (not Sinless).",
+      "🆕 GM's Almanac access request\nName: %s\nEmail: %s\nProvider: %s\nApprove it under Site Admin in GM's Almanac (not Sinless).",
       $identity['name'] !== '' ? $identity['name'] : '(none)', $identity['email'], $provider));
   }
 }
@@ -603,14 +603,14 @@ function send_account_email(string $kind, string $toEmail, string $displayName):
   $name   = trim($displayName) !== '' ? trim($displayName) : 'there';
 
   if ($kind === 'revoked') {
-    $subject = (string) ($cfg['revoke_subject'] ?? 'Your Campaign Chronicle access was removed');
+    $subject = (string) ($cfg['revoke_subject'] ?? 'Your GM\'s Almanac access was removed');
     $body = "Hi $name,\n\n"
-          . "Your access to Campaign Chronicle has been removed by an administrator. "
+          . "Your access to GM's Almanac has been removed by an administrator. "
           . "Your notes are kept and will be there again if your access is restored.\n";
   } else {
-    $subject = (string) ($cfg['subject'] ?? 'Your Campaign Chronicle account is approved');
+    $subject = (string) ($cfg['subject'] ?? 'Your GM\'s Almanac account is approved');
     $body = "Hi $name,\n\n"
-          . "Your Campaign Chronicle account has been approved. Sign in here:\n\n"
+          . "Your GM's Almanac account has been approved. Sign in here:\n\n"
           . "  $appUrl\n";
   }
   send_site_email("account email ($kind)", $toEmail, $subject, $body);
@@ -628,9 +628,9 @@ function send_invite_email(string $toEmail, string $campaignName, string $invite
   $camp = $one($campaignName, 150);
   $who  = $one($inviterName, 150);
   $as   = $role === 'gm' ? 'a co-GM' : 'a player';
-  $subject = (string) ($cfg['invite_subject'] ?? 'You\'re invited to a campaign on Campaign Chronicle');
+  $subject = (string) ($cfg['invite_subject'] ?? 'You\'re invited to a campaign on GM\'s Almanac');
   $body = "Hi,\n\n"
-        . ($who !== '' ? "$who has" : 'A GM has') . " invited you to join the campaign \"$camp\" on Campaign Chronicle as $as.\n\n"
+        . ($who !== '' ? "$who has" : 'A GM has') . " invited you to join the campaign \"$camp\" on GM's Almanac as $as.\n\n"
         . "Open this link and sign in with Google or GitHub to join:\n\n"
         . "  $link\n\n"
         . "If you're new to the site, an administrator approves your account first, and you join the campaign as soon as they do.\n"
