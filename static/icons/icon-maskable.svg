@@ -1,16 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- The favicon's crescent and star on a full-bleed panel, for the installed
-       app's icon: Android and ChromeOS crop it to a circle or squircle, so the
-       artwork sits inside the middle 80% (the maskable safe zone). -->
+  <!-- The favicon's almanac cover on a full-bleed panel, for the installed app's icon: Android and ChromeOS crop it
+       to a circle or squircle, so the artwork sits inside the middle 80% (the maskable safe zone). -->
   <defs>
-    <mask id="crescent">
-      <rect width="64" height="64" fill="#fff"/>
-      <circle cx="39" cy="27" r="15" fill="#000"/>
-    </mask>
+    <mask id="hole"><rect width="64" height="64" fill="#fff"/><circle cx="14" cy="14" r="4" fill="#000"/></mask>
+    <mask id="crescent"><rect width="64" height="64" fill="#fff"/><circle cx="40" cy="29" r="12" fill="#000"/></mask>
   </defs>
-  <rect width="64" height="64" fill="#211e17"/>
-  <g transform="translate(32 32) scale(0.72) translate(-32.5 -32.5)">
-    <circle cx="29" cy="34" r="19" fill="#d9a441" mask="url(#crescent)"/>
-    <path d="M46 12l2.4 6.6L55 21l-6.6 2.4L46 30l-2.4-6.6L37 21l6.6-2.4z" fill="#ece4d2"/>
+  <rect width="64" height="64" fill="#16140f"/>
+  <g transform="translate(32 32) scale(0.68) translate(-32 -32)">
+    <g mask="url(#hole)">
+      <rect x="2" y="2" width="60" height="60" rx="10" fill="#211e17" stroke="#d9a441" stroke-width="3"/>
+      <rect x="8" y="8" width="48" height="48" rx="4" fill="none" stroke="#d9a441" stroke-width="1.25"/>
+    </g>
+    <circle cx="14" cy="14" r="5.4" fill="none" stroke="#d9a441" stroke-width="1.6"/>
+    <circle cx="31" cy="35" r="15" fill="#d9a441" mask="url(#crescent)"/>
+    <path d="M45 15.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5-5.5-2 5.5-2z" fill="#ece4d2"/>
   </g>
 </svg>
