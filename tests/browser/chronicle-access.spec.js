@@ -1,4 +1,4 @@
-// Campaign Chronicle approves its own users, apart from Sinless, though both share the users table (one Google or GitHub
+// GM's Almanac approves its own users, apart from Sinless, though both share the users table (one Google or GitHub
 // sign-in for both): users.status is Sinless's, chronicle_access is Chronicle's. See db/migrations/020_chronicle_access.sql.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");

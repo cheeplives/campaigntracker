@@ -144,7 +144,8 @@
   }
 
   // ------------------------------------------------------------ one file
-  const FOOT = /^\*Exported from Campaign Chronicle\b.*\*\s*$/;
+  // exports made before the rename to GM's Almanac still say Campaign Chronicle
+  const FOOT = /^\*Exported from (?:GM's Almanac|Campaign Chronicle)\b.*\*\s*$/;
   /** Our own export's "*Person · 🔒 GM only · Also called A, B · Tags: x, y*" line, read back; null when the line isn't one. */
   function aboutLine(line) {
     const m = /^\*([^*]+)\*\s*$/.exec(line.trim());
@@ -232,7 +233,7 @@
     const read = [];
     for (const f of files) {
       const e = readFile(f);
-      if (/: Encyclopedia$/.test(e.name) && f.text.includes('*Exported from Campaign Chronicle')) { skipped.index++; continue; }
+      if (/: Encyclopedia$/.test(e.name) && /\*Exported from (?:GM's Almanac|Campaign Chronicle)\b/.test(f.text)) { skipped.index++; continue; }
       read.push(e);
     }
     const byPath = new Map(), byName = new Map(), entries = [];

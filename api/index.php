@@ -1,6 +1,6 @@
 <?php
 /**
- * Campaign Chronicle — JSON API for campaign data.
+ * GM's Almanac — JSON API for campaign data.
  * Every request: api/index.php?a=<action>[&cid=<campaign id>...]
  * POST bodies are JSON and must carry the X-CSRF-Token header.
  * Sign-in lives in api/auth/ (Google/GitHub, shared with Sinless); every action
@@ -853,7 +853,7 @@ try {
     if (cfg('test_login') && ($_SERVER['HTTP_X_TEST_THROW'] ?? '') === '1') throw new RuntimeException('test exception');
     // The code below assumes every migration has run (deploy.sh runs them), so an install that is behind says so plainly
     // instead of failing on a missing table or column halfway through an action.
-    if (!schema_current(db(), dirname(__DIR__))) json_error(503, 'needs_upgrade', "This Chronicle's database needs an upgrade: run deploy.sh on the server, or open install.php and press Install or upgrade.");
+    if (!schema_current(db(), dirname(__DIR__))) json_error(503, 'needs_upgrade', "This GM's Almanac database needs an upgrade: run deploy.sh on the server, or open install.php and press Install or upgrade.");
     if ($spec['who'] === 'admin') need_admin();
     elseif ($spec['who'] === 'gm') need_gm(cid());
     elseif ($spec['who'] === 'member') role(cid());

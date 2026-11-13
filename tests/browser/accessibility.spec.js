@@ -84,15 +84,15 @@ test("each page has its own title, and moving to another page puts focus on its 
   await signIn(page, ADMIN);
   const cid = await campaignWithThings(page);
   await page.goto(`index.html#/c/${cid}/table`);
-  await expect(page).toHaveTitle("At the Table · Saltmarsh · Campaign Chronicle");
+  await expect(page).toHaveTitle("At the Table · Saltmarsh · GM's Almanac");
   await goTab(page, "Calendar");
-  await expect(page).toHaveTitle("Calendar · Saltmarsh · Campaign Chronicle");
+  await expect(page).toHaveTitle("Calendar · Saltmarsh · GM's Almanac");
   await expect(page.locator("#app")).toBeFocused();
-  await expect(page.locator("#page-announcer")).toHaveText("Calendar · Saltmarsh · Campaign Chronicle");
+  await expect(page.locator("#page-announcer")).toHaveText("Calendar · Saltmarsh · GM's Almanac");
   // the tab you are on is marked as the current page for a screen reader, not only by its colour
   await expect(page.locator("nav.tabs a[aria-current=page]")).toHaveText(/Calendar/);
   await page.goto("index.html#/account");
-  await expect(page).toHaveTitle("Account · Campaign Chronicle");
+  await expect(page).toHaveTitle("Account · GM's Almanac");
 });
 
 test("the skip link is the first stop for Tab and jumps to the page's content", async ({ page }, testInfo) => {

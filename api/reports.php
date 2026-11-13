@@ -74,7 +74,7 @@ function report_issue(array $r): array {
         $line('Reported', $r['created_at'] . ' (server time)'),
     ]);
     $quote = implode("\n", array_map(fn($l) => '> ' . $l, explode("\n", str_replace("\r", '', $r['message']))));
-    $body = "Reported from Campaign Chronicle's Report button (Site Admin, Reports, #{$r['id']}"
+    $body = "Reported with the Report button in GM's Almanac (Site Admin, Reports, #{$r['id']}"
         . ($r['has_shot'] ? ', with a screenshot there' : '') . ").\n\n$quote\n\n### Details\n" . implode("\n", $details);
     $list = function (string $k, string $head) use ($c): string {
         $items = array_slice(array_values(array_filter((array)($c[$k] ?? []), 'is_array')), -10);
@@ -153,7 +153,7 @@ function reports_action(string $action): void {
             }
             $payload = json_encode(['title' => $issue['title'], 'body' => $issue['body'], 'labels' => $gh['labels']], JSON_UNESCAPED_UNICODE);
             $opts = ['post_fields' => $payload, 'timeout' => 15, 'headers' => ['Accept: application/vnd.github+json', 'Content-Type: application/json',
-                'Authorization: Bearer ' . $gh['token'], 'X-GitHub-Api-Version: 2022-11-28', 'User-Agent: CampaignChronicle/1.0']];
+                'Authorization: Bearer ' . $gh['token'], 'X-GitHub-Api-Version: 2022-11-28', 'User-Agent: GMsAlmanac/1.0']];
             $url = "https://api.github.com/repos/{$gh['repo']}/issues";
             $res = $gh['stub'] !== '' ? (require $gh['stub'])('POST', $url, $opts) : http_request('POST', $url, $opts);
             $made = json_decode($res['body'], true);

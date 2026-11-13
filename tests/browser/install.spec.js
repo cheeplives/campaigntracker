@@ -10,7 +10,7 @@ test("Install: the page links a manifest with a name, a start page in scope and 
   const res = await request.get(href);
   expect(res.ok()).toBe(true);
   const m = await res.json();
-  expect(m.name).toBe("Campaign Chronicle");
+  expect(m.name).toBe("GM's Almanac");
   expect(m.display).toBe("standalone");
   expect(m.start_url).toBe("./");
   expect(m.scope).toBe("./");

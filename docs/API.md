@@ -1,4 +1,4 @@
-# Campaign Chronicle API
+# GM's Almanac API
 
 For programs that sit beside a campaign, such as a Foundry VTT module, a Discord bot or your own script. They can read
 the campaign's date, weather, moons, the party's whereabouts and the Encyclopedia. With a read-and-write key, they can
@@ -9,12 +9,12 @@ also pass time and add notes and events.
 A member makes a key in the campaign, under **At the Table → Use in a VTT or on stream → New API key…**, and picks:
 
 - **Read only:** only the read actions below.
-- **Read and write:** the write actions too. Each still checks GM or player as Chronicle does. For example, only a GM
+- **Read and write:** the write actions too. Each still checks GM or player as GM's Almanac does. For example, only a GM
   can pass time, and a player adds an event only where the GM allows it.
 
 A key acts as the member who made it. It sees exactly what they see in that one campaign, and nothing in their other
 campaigns. It stops working when it is revoked (by its maker, or by any GM of the campaign) or when its maker leaves
-the campaign. The key is shown once. Chronicle keeps only its SHA-256 hash.
+the campaign. The key is shown once. GM's Almanac keeps only its SHA-256 hash.
 
 ## Requests
 
@@ -38,7 +38,7 @@ curl -H "X-Chronicle-Key: $KEY" -H "Content-Type: application/json" \
 
 ## Dates, shifts and weather
 
-Chronicle counts time in **shifts** from the campaign's start. `current_shift` is where the campaign is now. A day has
+GM's Almanac counts time in **shifts** from the campaign's start. `current_shift` is where the campaign is now. A day has
 `E.slotsPerDay(calendar)` shifts (4, 2 or the calendar's hours), so the day is `Math.floor(current_shift / spd)`
 (`abs_day`) and the shift within it is `current_shift % spd`.
 
@@ -55,7 +55,7 @@ E.fmtDate(cal, day);                       // "Dawn" is E.shiftNames(cal)[campai
 E.moons(cal, day);                         // [{ name, label, icon, illum }]
 ```
 
-The weather a GM's Chronicle has rolled for a day is stored with it: read it with `day`. A player's key gets only the
+The weather GM's Almanac has rolled for a day is stored with it: read it with `day`. A player's key gets only the
 shifts that have come round so far, unless the GM lets players see future weather.
 
 ## Read actions
@@ -84,5 +84,5 @@ shifts that have come round so far, unless the GM lets players see future weathe
 | `entry_note_add` | `{ id, body, gm_only? }` | anyone | Adds a paragraph at the end of an Encyclopedia entry's public notes, or its GM notes when a GM sends `gm_only: true`. |
 | `event_save` | `{ abs_day, title, body?, shift?, end_day?, shift_end?, is_secret? }` (with `id` to change one) | GM, or players where the campaign allows | Adds or changes an event. |
 
-These actions are the same ones Chronicle's own pages use, so new fields may appear in answers. Fields are not renamed
+These actions are the same ones GM's Almanac's own pages use, so new fields may appear in answers. Fields are not renamed
 or removed without a note in this file.

@@ -1,4 +1,4 @@
-/* kit.js — small shared UI kit, written to be identical in Campaign Chronicle
+/* kit.js — small shared UI kit, written to be identical in GM's Almanac
  * and Sinless: the DOM builder, toasts, tooltips that also work on touch
  * screens, and in-page confirm/prompt/alert dialogs that replace the browser's
  * blocking confirm(), prompt() and alert().
@@ -38,7 +38,7 @@ const KIT = (() => {
   }
 
   // ------------------------------------------------------------ icons
-  /* When the page has loaded static/icons.js (Campaign Chronicle does; Sinless doesn't, and gets plain text), el()
+  /* When the page has loaded static/icons.js (GM's Almanac does; Sinless doesn't, and gets plain text), el()
    * draws each emoji in a label as its icon: '🔒 GM only' becomes the padlock icon then " GM only". The same picture
    * on every device, in the text's colour. Tooltips (data-tip) are drawn the same way. Where a picture can't go (an
    * <option>, a title, a placeholder, an aria-label) the emoji is left out instead. icon('lock') makes one directly. */

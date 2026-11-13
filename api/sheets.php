@@ -149,7 +149,7 @@ function template_out(array $t): array {
     $me = me();
     $mine = $t['author_id'] !== null && (int)$t['author_id'] === $me['id'];
     return ['id' => (int)$t['id'], 'name' => $t['name'], 'game' => $t['game'], 'edition' => $t['edition'],
-        'author' => $t['author_id'] === null ? ($t['starter_key'] !== null ? 'Campaign Chronicle' : 'Someone') : (string)$t['author'],
+        'author' => $t['author_id'] === null ? ($t['starter_key'] !== null ? 'GM\'s Almanac' : 'Someone') : (string)$t['author'],
         'mine' => $mine, 'can_edit' => $mine || $me['is_admin'], 'is_listed' => (bool)$t['is_listed'], 'version' => (int)$t['version'],
         'uses' => (int)$t['uses'], 'forks' => (int)$t['forks'],
         'forked_from' => $t['forked_from_id'] !== null ? ['id' => (int)$t['forked_from_id'], 'name' => $t['forked_from_name']] : null,
@@ -238,7 +238,7 @@ function templates_action(string $action): void {
             // each call holds a PHP worker for up to 15 seconds on a third party's server: a modest cap per account
             rate_limit('sheet_import', (string)$me['id'], 10, 60);
             $r = http_request('GET', $get, ['timeout' => 15, 'compress' => true, 'max_bytes' => 5_000_000,
-                'headers' => ['Accept: application/json', 'User-Agent: CampaignChronicle/1.0']]);
+                'headers' => ['Accept: application/json', 'User-Agent: GMsAlmanac/1.0']]);
             $json = $r['status'] === 200 ? json_decode($r['body'], true) : null;
             if (!is_array($json) || (isset($json['success']) && !$json['success']))
                 fail(str_contains($get, 'dndbeyond') ? "D&D Beyond didn't send that character. Its privacy must be Public (in the character's Home > Manage > Character Privacy)" : "Pathbuilder didn't send that character. Check the link from its Export JSON", 502);

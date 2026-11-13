@@ -1,4 +1,4 @@
-# Deploying Campaign Chronicle (SSH + git)
+# Deploying GM's Almanac (SSH + git)
 
 Runbook for an install next to Sinless on the same domain, for example
 `https://www.discreteinfinity.com/chronicle/` beside `/sinless/`. It follows
@@ -11,9 +11,9 @@ the server pulls from GitHub, and secrets live above the web root.
 - PHP 8 with `pdo_mysql` and `curl`: `php -m | grep -Ei 'pdo_mysql|curl'`.
 - A MySQL database. Either a new one, or **Sinless's database** if you want one
   account list (one sign-in) for both apps. Each app still approves its own users:
-  Chronicle's approvals are in `chronicle_access`, apart from Sinless's. The `users` and
+  GM's Almanac's approvals are in `chronicle_access`, apart from Sinless's. The `users` and
   `rate_limits` tables are identical in the two apps, and no other table names
-  overlap. Only share it on a **fresh** Chronicle install; an existing install
+  overlap. Only share it on a **fresh** GM's Almanac install; an existing install
   keeps its own database (see Upgrading below).
 
 ## One-time setup
@@ -46,7 +46,7 @@ The callback is `https://www.discreteinfinity.com/chronicle/api/auth/callback.ph
 - **Google:** open Sinless's OAuth client in Google Cloud Console and add this
   URL as a second *Authorized redirect URI*. One client serves both apps.
 - **GitHub:** OAuth apps allow one callback each, so register a second OAuth app
-  for Chronicle with this callback and use its id and secret.
+  for GM's Almanac with this callback and use its id and secret.
 
 ### Create the tables
 
@@ -181,7 +181,7 @@ backup or a migration fails, deploy.sh ends with *NOT done* and says why; fix
 that and run `php tools/migrate.php` again.
 
 The app expects every migration to have run. Until they have (say, a pull without
-deploy.sh, or a migration that failed), every page answers *This Chronicle's database
+deploy.sh, or a migration that failed), every page answers *This GM's Almanac database
 needs an upgrade* instead of half working, so run `php tools/migrate.php` (or
 install.php) and reload.
 

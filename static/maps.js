@@ -1462,7 +1462,7 @@ const MapsTab = (() => {
       }, '', 'The map as a Foundry scene with its pins as Notes (Import Data). Export the picture too: Foundry keeps it separate');
       d.append(el('h3', {}, `Export ${map.name}`),
         el('div', { class: 'row' }, asPicture, asUvtt, asFoundry),
-        hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in Chronicle: Universal VTT has no place for them.')
+        hasGrid ? el('p', { class: 'small muted' }, 'Pins and routes stay in GM\'s Almanac: Universal VTT has no place for them.')
           : el('p', { class: 'small' }, 'Set grid squares first (⚙ → Set scale… → Grid squares) to export a Universal VTT file.'),
         el('div', { class: 'kit-dialog-actions' }, btn('Close', () => d.close())));
       d.addEventListener('close', () => d.remove());

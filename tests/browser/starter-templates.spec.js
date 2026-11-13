@@ -1,5 +1,5 @@
 // The starter library: one JSON file per game in db/starter-templates/, each a valid layout with the source it was
-// built from, loaded (and loaded again after changes) by a site admin. They show "Campaign Chronicle" as author;
+// built from, loaded (and loaded again after changes) by a site admin. They show "GM's Almanac" as author;
 // anyone can fork one, nobody but an admin can change one.
 const fs = require("fs"), path = require("path");
 const { test, expect } = require("@playwright/test");
@@ -59,7 +59,7 @@ test("Starter templates load, and loading again updates", async ({ page, browser
   expect((await api(pp, "starter_templates_load", {})).status).toBe(403);
   const list = (await pp.request.get("api/index.php?a=templates")).ok() && (await (await pp.request.get("api/index.php?a=templates")).json()).templates;
   const starter = list.find(t => t.starter);
-  expect(starter.author).toBe("Campaign Chronicle");
+  expect(starter.author).toBe("GM's Almanac");
   expect(starter.can_edit).toBe(false);
   expect((await api(pp, "template_save", { id: starter.id, version: starter.version, name: "Mine now", game: starter.game, layout: { sections: [] } })).status).toBe(403);
   const fork = await api(pp, "template_fork", { id: starter.id });

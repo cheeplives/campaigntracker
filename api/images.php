@@ -37,7 +37,7 @@ function image_http(string $method, string $url, array $opts = []): array {
     $file = (string)(image_cfg()['stub'] ?? '');
     if ($file !== '') return ($stub ??= require $file)($method, $url, $opts);
     $contact = trim((string)(image_cfg()['contact'] ?? ''));
-    $ua = 'CampaignChronicle/1.0' . ($contact !== '' ? " ($contact)" : '');
+    $ua = 'GMsAlmanac/1.0' . ($contact !== '' ? " ($contact)" : '');
     $opts['headers'] = array_merge(["User-Agent: $ua", 'Accept: application/json'], $opts['headers'] ?? []);
     $opts['compress'] = true;                             // DeviantArt refuses clients that don't take gzip
     return http_request($method, $url, $opts);
@@ -151,7 +151,7 @@ function image_json_all(array $reqs): array {
         return $out;
     }
     $contact = trim((string)(image_cfg()['contact'] ?? ''));
-    $ua = 'CampaignChronicle/1.0' . ($contact !== '' ? " ($contact)" : '');
+    $ua = 'GMsAlmanac/1.0' . ($contact !== '' ? " ($contact)" : '');
     $mh = curl_multi_init();
     $hs = $bodies = [];
     foreach ($reqs as $k => [$url, $opts]) {
@@ -220,7 +220,7 @@ const ARTIC_FIELDS = 'id,title,artist_title,artist_id,image_id,is_public_domain'
 const MET = 'https://collectionapi.metmuseum.org';
 function artic_headers(): array {
     $contact = trim((string)(image_cfg()['contact'] ?? ''));
-    return ['AIC-User-Agent: CampaignChronicle' . ($contact !== '' ? " ($contact)" : '')];
+    return ['AIC-User-Agent: GMsAlmanac' . ($contact !== '' ? " ($contact)" : '')];
 }
 function artic_item(array $r, string $iiif): ?array {
     if (empty($r['is_public_domain']) || !preg_match('/^[0-9a-f-]{36}$/i', (string)($r['image_id'] ?? ''))) return null;
@@ -607,7 +607,7 @@ function image_download(string $url, int $max): string {
         curl_setopt_array($ch, [
             CURLOPT_RESOLVE => ["$host:443:" . reset($ips)], CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 20,
-            CURLOPT_HTTPHEADER => ['User-Agent: CampaignChronicle/1.0', 'Accept: image/*'], CURLOPT_HEADER => false,
+            CURLOPT_HTTPHEADER => ['User-Agent: GMsAlmanac/1.0', 'Accept: image/*'], CURLOPT_HEADER => false,
             CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use ($fh, &$got, $max) { $got += strlen($chunk); return $got > $max ? -1 : fwrite($fh, $chunk); },
         ]);
         curl_exec($ch);

@@ -121,7 +121,7 @@ const DayExport = (() => {
       }
     }
 
-    L.push(`*Exported from Campaign Chronicle · ${gm ? 'GM' : 'player'} view · ${new Date().toISOString().slice(0, 10)}*`);
+    L.push(`*Exported from GM's Almanac · ${gm ? 'GM' : 'player'} view · ${new Date().toISOString().slice(0, 10)}*`);
     return L.join('\n') + '\n';
   }
 

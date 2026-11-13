@@ -130,7 +130,7 @@ test("a GM downloads the whole campaign as a zip; a player can't", async ({ page
   const dialog = page.getByRole("dialog", { name: "Export the whole campaign" });
   await expect(dialog.getByLabel("Include the pictures and files (a bigger download)")).toBeChecked();
   const [dl] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Download" }).click()]);
-  expect(dl.suggestedFilename()).toMatch(/^Whole .* \(Campaign Chronicle \d{4}-\d\d-\d\d\)\.zip$/);
+  expect(dl.suggestedFilename()).toMatch(/^Whole .* \(GM's Almanac \d{4}-\d\d-\d\d\)\.zip$/);
   const zip = unzip(fs.readFileSync(await dl.path()));
   await expect(dialog).toBeHidden();
   await expect(page.locator("#toast")).toHaveText("Exported");

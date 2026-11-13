@@ -83,10 +83,10 @@ return [
   // invitation's link (Members tab); with this off, the GM copies the link instead.
   'approval_email' => [
     'enabled'        => false,
-    'from'           => 'Campaign Chronicle <noreply@example.com>',
-    'subject'        => 'Your Campaign Chronicle account is approved',
-    'revoke_subject' => 'Your Campaign Chronicle access was removed',
-    'invite_subject' => "You're invited to a campaign on Campaign Chronicle",
+    'from'           => 'GM\'s Almanac <noreply@example.com>',
+    'subject'        => 'Your GM\'s Almanac account is approved',
+    'revoke_subject' => 'Your GM\'s Almanac access was removed',
+    'invite_subject' => "You're invited to a campaign on GM's Almanac",
     // 'reply_to' => 'you@example.com',   // optional
   ],
 

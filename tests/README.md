@@ -1,6 +1,6 @@
 # Cross-browser tests
 
-Automated checks that Campaign Chronicle behaves the same in **Chromium**
+Automated checks that GM's Almanac behaves the same in **Chromium**
 (Chrome, Edge), **Firefox** and **WebKit** (Safari, and every browser on
 iPhone/iPad), on desktop, phone and iPad-sized screens. Set up the same way as
 Sinless's suite, with PHP and MySQL added because this app has a server.
@@ -25,8 +25,8 @@ screenshots and a trace (open with `npx playwright show-trace <trace.zip>`).
 
 ## What's covered
 
-- **chronicle-access**: Chronicle approves its own users apart from Sinless: an account approved for Sinless asks
-  for Chronicle on its first sign-in here and waits; approving, revoking or removing someone in Chronicle leaves
+- **chronicle-access**: GM's Almanac approves its own users apart from Sinless: an account approved for Sinless asks
+  for GM's Almanac on its first sign-in here and waits; approving, revoking or removing someone in GM's Almanac leaves
   their Sinless access and shared account alone; migration 020 carries everyone's access over as it was.
 - **hardening**: an exception that isn't a database one still answers JSON (`server_error`), never PHP's HTML page; an
   outbound reply larger than its cap is refused, with or without a Content-Length; `X-Forwarded-For` is believed only

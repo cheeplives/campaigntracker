@@ -36,7 +36,7 @@ def fetch(name):
     """A file from OpenGameArt's files folder, downloaded once into DL."""
     path = os.path.join(DL, name)
     if not os.path.exists(path):
-        req = urllib.request.Request(FILES + name, headers={'User-Agent': 'CampaignChronicle-build/1.0'})
+        req = urllib.request.Request(FILES + name, headers={'User-Agent': 'GMsAlmanac-build/1.0'})
         with urllib.request.urlopen(req, timeout=120) as r, open(path + '.part', 'wb') as f:
             shutil.copyfileobj(r, f)
         os.replace(path + '.part', path)

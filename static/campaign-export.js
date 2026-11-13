@@ -43,7 +43,7 @@
     const day = d => E.fmtDate(cal, Number(d));
     const slot = s => E.fmtShift(cal, Number(s));
     const shiftName = s => (s === null || s === undefined || s === '' ? '' : E.shiftNames(cal)[Number(s)] || '');
-    const foot = `*Exported from Campaign Chronicle · ${camp.name} · GM view, with GM-only notes · ${opts.date}*`;
+    const foot = `*Exported from GM's Almanac · ${camp.name} · GM view, with GM-only notes · ${opts.date}*`;
     const out = [], fetch = [];
     const page = (path, lines) => out.push({ path, data: lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n\n' + foot + '\n' });
     const byId = t => new Map(rows(t).map(r => [Number(r.id), r]));
@@ -279,7 +279,7 @@
       ['Rests and downtime', rows('downtimes').length, 'Downtime.md'], ['Maps', rows('maps').length, 'Maps.md'], ['Pictures and files', fetch.length, 'files']];
     const R = [`# ${camp.name}`, ''];
     if (has(camp.description)) R.push(text(camp.description), '');
-    R.push(`Everything in this campaign, exported from Campaign Chronicle on ${opts.date}. It is the GM's copy: GM-only entries, notes and paragraphs are in it, marked 🔒.`, '',
+    R.push(`Everything in this campaign, exported from GM's Almanac on ${opts.date}. It is the GM's copy: GM-only entries, notes and paragraphs are in it, marked 🔒.`, '',
       `The campaign had reached ${slot(camp.current_shift)}.`, '', '## What is here', '',
       ...counts.filter(c => c[1]).map(([label, n, path]) => `- ${label}: ${n}, ${/\.md$/.test(path) ? `in [${path.replace(/\.md$/, '')}](${mdHref(path)})` : `in the \`${path}\` folder`}`), '',
       '## The files', '',

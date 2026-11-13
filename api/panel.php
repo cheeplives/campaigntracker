@@ -67,24 +67,24 @@ function panel_gate(string $action, array $spec): void {
     $what = $api ? 'API key' : 'panel link';
     if ($api && ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '') json_error(401, 'bad_panel_link', 'Send an API key or a panel link, not both.');
     $code = (string)($api ? $_SERVER['HTTP_X_CHRONICLE_KEY'] : $_SERVER['HTTP_X_CHRONICLE_PANEL']);
-    if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', "That $what isn't right. Make a new one in Chronicle.");
+    if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', "That $what isn't right. Make a new one in GM's Almanac.");
     $st = db()->prepare('SELECT * FROM connection_keys WHERE token_hash=? AND revoked_at IS NULL');
     $st->execute([hash('sha256', $code)]);
     $link = $st->fetch();
     // a key only works in its own header: a panel link is no API key, and an API key no panel link
-    if (!$link || !in_array($link['scope'], $api ? ['api'] : PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', "That $what was revoked, or never existed. Make a new one in Chronicle.");
+    if (!$link || !in_array($link['scope'], $api ? ['api'] : PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', "That $what was revoked, or never existed. Make a new one in GM's Almanac.");
     $write = $link['scope'] === 'panel' || ($link['scope'] === 'api' && !empty((dec($link['options_json'] ?? null) ?: [])['write']));
     // what each kind may call is marked 'panel' or 'key' in api/actions.php; 'write' needs a link or key that may change
     $may = $spec[$api ? 'key' : 'panel'] ?? null;
     if ($may === null || ($may === 'write' && !$write)) json_error(401, 'panel_not_allowed', $api ? ($may === 'write' ? 'This API key is read-only.' : 'An API key can\'t do that.')
-        : 'A panel link can\'t do that. Open Chronicle itself.');
+        : 'A panel link can\'t do that. Open GM\'s Almanac itself.');
     rate_limit('panel', 'k' . $link['id'], (int)(cfg('limits', [])['panel_per_minute'] ?? 240), 60);
     $GLOBALS['panel_link'] = $link;
     if ($link['scope'] === 'public_panel') {
         // It stops with the GM who made it: once they are no longer a GM here (or an admin), nobody vouches for it.
         $st = db()->prepare("SELECT 1 FROM users u WHERE u.id=? AND (u.is_admin=1 OR EXISTS (SELECT 1 FROM campaign_members m WHERE m.user_id=u.id AND m.campaign_id=? AND m.role='gm'))");
         $st->execute([(int)$link['created_by'], (int)$link['campaign_id']]);
-        if (!$st->fetchColumn()) json_error(401, 'bad_panel_link', 'The GM who made this panel link no longer runs the campaign. Make a new one in Chronicle.');
+        if (!$st->fetchColumn()) json_error(401, 'bad_panel_link', 'The GM who made this panel link no longer runs the campaign. Make a new one in GM\'s Almanac.');
         $GLOBALS['panel_user'] = ['id' => 0, 'is_admin' => 0, 'status' => 'approved', 'display_name' => 'Public panel', 'email' => '', 'provider' => 'panel'];
     } else {
         $st = db()->prepare('SELECT * FROM users WHERE id=?');
@@ -168,8 +168,8 @@ function owlbear_manifest(): void {
     if ($base === '' || ($here !== '' && $bare($here) === $bare($cfgHost))) $base = ($https ? 'https' : 'http') . '://' . ($here ?: 'localhost') . $path;
     $icon = "$base/static/icons/owlbear.svg";
     header('Access-Control-Allow-Origin: *');
-    out(['name' => 'Campaign Chronicle', 'version' => '1.0.0', 'manifest_version' => 1,
+    out(['name' => 'GM\'s Almanac', 'version' => '1.0.0', 'manifest_version' => 1,
         'description' => 'The campaign right now: date, weather, moons, where the party is, notes and lore.',
-        'author' => 'Campaign Chronicle', 'homepage_url' => "$base/", 'icon' => $icon,
-        'action' => ['title' => 'Campaign Chronicle', 'icon' => $icon, 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
+        'author' => 'GM\'s Almanac', 'homepage_url' => "$base/", 'icon' => $icon,
+        'action' => ['title' => 'GM\'s Almanac', 'icon' => $icon, 'popover' => "$base/panel.html", 'width' => 420, 'height' => 720]]);
 }

@@ -70,7 +70,7 @@
     const moons = [];
     for (const m of c.moons || []) {
       if (E.isRedMoon(m)) { lost.push(`${m.name} follows the weekday and the region, which Seasons & Stars can't do.`); continue; }
-      if (m.erratic) lost.push(`${m.name} wanders in Chronicle; in Seasons & Stars it keeps a steady ${m.cycle}-day cycle.`);
+      if (m.erratic) lost.push(`${m.name} wanders in GM's Almanac; in Seasons & Stars it keeps a steady ${m.cycle}-day cycle.`);
       const cycle = Number(m.cycle) || 28;
       let first = null;
       for (let k = 0; k < 50 && !first; k++) first = ssDate(Math.floor(Number(m.ref || 0)) + Math.round(k * cycle));
@@ -115,13 +115,13 @@
     }
     const list = set => [...set].join(', ');
     if (festival.size) lost.push(`Holidays on festival days (${list(festival)}) aren't events there; the festival days themselves are in the calendar by name.`);
-    if (other.size) lost.push(`Holidays left out, as Seasons & Stars can't repeat them the way Chronicle does: ${list(other)}.`);
+    if (other.size) lost.push(`Holidays left out, as Seasons & Stars can't repeat them the way GM's Almanac does: ${list(other)}.`);
     if ((c.eras || []).length) lost.push('Eras are left out: Seasons & Stars numbers the years straight on.');
 
     const day = Math.floor(Number(camp.current_shift || 0) / E.slotsPerDay(c));
     const calendar = {
       id: `chronicle-${slug(name)}`,
-      translations: { en: { label: name, description: `Exported from Campaign Chronicle (${camp.name}).` } },
+      translations: { en: { label: name, description: `Exported from GM's Almanac (${camp.name}).` } },
       year: { epoch: y0, currentYear: E.fromAbs(c, day).year, prefix: '', suffix: '', startDay: E.mod(c.weekdayOffset, weekdays.length) },
       leapYear,
       months: regular.map(x => ({ name: x.m.name, days: Math.max(1, Number(x.m.days) || 0) })),

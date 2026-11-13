@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Campaign Chronicle",
-  "short_name": "Chronicle",
+  "name": "GM's Almanac",
+  "short_name": "GM's Almanac",
   "description": "Calendar, weather, travel and notes for tabletop campaigns.",
   "start_url": "./",
   "scope": "./",

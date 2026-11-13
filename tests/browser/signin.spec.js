@@ -7,7 +7,7 @@ const { watchErrors, expectNoErrors, person, ADMIN, signIn, api, approve, sql, m
 test("signed out: shows the sign-in card with both providers", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto("index.html#/c/1/calendar");
-  await expect(page.getByRole("heading", { name: "Campaign Chronicle" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "GM's Almanac" })).toBeVisible();
   const google = page.getByRole("link", { name: "Sign in with Google" });
   await expect(google).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in with GitHub" })).toBeVisible();
