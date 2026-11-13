@@ -2561,7 +2561,8 @@ h2, h3, h4 { text-transform: none; letter-spacing: .01em; }
 button.primary, .button.primary { font: 650 .95rem var(--body); text-transform: none; letter-spacing: 0; }
 button.small.primary, .button.small.primary { font-size: .85rem; }
 /* Every + New button (New map, New character, New clock, New event...) is the same button wherever it is: one font, size
- * and height, filled on a page's header and outlined inside a box At the Table. Page headers put it at the right of the title. */
+ * and height, filled on a page's header and outlined inside a box At the Table. Page headers put it at the right of the title.
+ * Another button beside it in a header (Request a game on Sheet templates) takes this class too, outlined, so the pair match. */
 button.new-btn, .button.new-btn { font: 650 .875rem/1.25 var(--body); text-transform: none; letter-spacing: 0; padding: 6px 14px; min-height: 32px;
   white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 button.daybox-toggle { font: 600 1.45rem var(--disp); text-transform: none; letter-spacing: .01em; }
