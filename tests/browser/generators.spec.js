@@ -90,6 +90,9 @@ test("every encounter fills its slots, fits the choices, and rerolls one part at
         const text = Enc.text(c);
         if (/[{}]|undefined|null|NaN/.test(text)) bad.push(text);
         if (c.esc.length !== 2 || c.esc[0] === c.esc[1]) bad.push(`two escalations: ${text}`);
+        // off the ground (space lanes, a spaceport, deep space, orbit, an asteroid field) only space cards are dealt
+        const space = ["lanes", "port", "deep", "orbit", "belt"];
+        if (space.includes(where) && !c.tpl.where.split(" ").some(w => space.includes(w))) bad.push(`a ground card in space: ${where} ${c.title}`);
         if (![c.situation, c.twist, c.gain, ...c.esc].every(x => /^[A-Z0-9"'].*[.!?]$/.test(x))) bad.push(`sentences: ${text}`);
         if (tone && c.tone !== tone) bad.push(`tone ${tone}: ${text}`);
         if (/Iron Combine|Gallows Rock|Ada Quill/.test(text)) named++;
