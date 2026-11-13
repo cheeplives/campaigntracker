@@ -5866,14 +5866,14 @@
   function viewRegions() {
     const cur = settings().current_region;
     const list = el('div', { class: 'card' }, el('div', { class: 'row spread' }, el('h2', {}, 'Regions'),
-      isGM() ? btn('+ New region', () => list.after(regionForm()), 'primary new-btn', 'Add a place with its own climate, light source and terrain') : null),
-      S.regions.map(r => el('div', { class: 'listrow' },
+      isGM() ? btn('+ New region', () => regionDialog(), 'primary new-btn', 'Add a place with its own climate, light source and terrain') : null),
+      S.regions.map(r => el('div', { class: 'listrow', 'data-region': r.id },
         el('div', {}, el('strong', {}, r.name), r.id === Number(cur) ? el('span', { class: 'nowtag', 'data-tip': 'New days are rolled with this region\'s weather' }, 'PARTY IS HERE') : null,
           el('div', { class: 'muted small', 'data-tip': lightSummary(r) }, regionSummary(r)), r.description ? el('div', { class: 'small pre' }, r.description) : null),
         isGM() ? el('div', { class: 'actions' },
           r.id !== Number(cur) ? btn('Party is here', async () => { await setCurrentRegion(r.id); await ensureWeather(today(), today()); toast(`Party moved to ${r.name}`); await loadCampaign(S.camp.id, true); route(); }, 'small',
             'Move the party here. Days from now on use this region\'s climate, light and terrain') : null,
-          btn('Edit', () => list.after(regionForm(r)), 'small', 'Change this region\'s climate, light and terrain'),
+          btn('Edit', () => regionDialog(r), 'small', 'Change this region\'s climate, light and terrain'),
           moreMenu(r.name, btn('Delete…', async () => {
             if (!await confirmDialog(`Delete region ${r.name}? Days recorded there keep their weather.`)) return;
             await post('region_delete', { id: r.id }, S.camp.id); await loadCampaign(S.camp.id, true); route();
@@ -6026,7 +6026,10 @@
     }
     return select(opts, String(b), { name: 'moon_bearing' });
   }
-  function regionForm(r = { settings: {} }) {
+  /** A region's climate, light and terrain in a dialog: New region makes one and Edit changes one. Once saved the list
+   * is drawn again with that region scrolled into view and picked out for a moment, so a new one is easy to find. */
+  function regionDialog(r = { settings: {} }) {
+    hideTip();
     const s = r.settings || {};
     const climate = climateSelect(s.climate || 'temperate', { name: 'climate' });
     const custom = el('textarea', { name: 'custom_climate', rows: 8, class: 'mono',
@@ -6055,9 +6058,13 @@
     const lightLv = lightLevels(lv);
     const syncLight = () => lightLv.classList.toggle('off', lightSel.value !== 'artificial');
     lightSel.addEventListener('change', syncLight); syncLight();
-    const f = el('form', { class: 'card' }, el('h3', {}, r.id ? `Edit ${r.name}` : 'New region'),
+    const title = r.id ? `Edit ${r.name}` : 'New region';
+    const name = el('input', { name: 'name', maxlength: 150, value: r.name || '', required: true });
+    const err = el('p', { class: 'bad small', hidden: true });
+    const save = el('button', { class: 'primary', type: 'submit' }, r.id ? 'Save region' : 'Add region');
+    const f = el('form', { novalidate: true }, el('h3', {}, title),
       el('div', { class: 'grid2' },
-        field('Name', el('input', { name: 'name', value: r.name || '', required: true })),
+        field('Name', name),
         field('Climate', climate, null, CLIMATE_TIP),
         field('Hemisphere', select([['north', 'Northern'], ['south', 'Southern']], s.hemisphere || cal().hemisphere || 'north', { name: 'hemisphere' }),
           `Seasons flip when this differs from the calendar's (${cal().hemisphere === 'south' ? 'southern' : 'northern'}) hemisphere`),
@@ -6069,23 +6076,40 @@
           'The Red Moon hangs over Glamour and its phases sweep round it as wedges, once a week, so lands in different directions from it see different phases on the same day. Pick the way this region lies from Glamour') : null),
       customWrap, builder, baselineWrap,
       field('Description', el('textarea', { name: 'description', rows: 2, value: r.description || '' })),
-      el('div', { class: 'row' }, el('button', { class: 'primary small' }, 'Save region'), btn('Cancel', () => f.remove(), 'small')));
-    f.addEventListener('submit', async e => {
+      err,
+      el('div', { class: 'kit-dialog-actions' }, save, el('button', { type: 'button', onclick: () => d.close() }, 'Cancel')));
+    const d = el('dialog', { class: 'kit-dialog region-dialog', 'aria-label': title }, f);
+    d.addEventListener('close', () => d.remove());
+    const fail = (msg, box) => { err.textContent = msg; err.hidden = false; box?.focus(); };
+    f.addEventListener('submit', busy(save, async e => {
       e.preventDefault();
+      err.hidden = true;
       const v = formData(f);
+      if (!v.name.trim()) return fail('Give the region a name.', name);
       const settingsOut = { climate: v.climate, hemisphere: v.hemisphere, lighting: v.lighting, terrain_mod: Number(v.terrain_mod),
         light_levels: [0, 1, 2, 3].map(i => Math.max(0, Math.min(5, Number(v[`lv${i}`]) || 0))),
         ...(v.moon_bearing !== undefined ? (v.moon_bearing === 'full' ? { moon_shift: 'full' } : { moon_bearing: Number(v.moon_bearing) || 0 }) : {}) };
       if (v.climate === 'custom') {
-        try { settingsOut.custom_climate = JSON.parse(v.custom_climate); } catch { return toast('Custom climate is not valid JSON', true); }
+        try { settingsOut.custom_climate = JSON.parse(v.custom_climate); } catch { return fail('Custom climate is not valid JSON.', custom); }
       }
       if (v.climate === 'koppen_custom') settingsOut.custom_climate = builder.getClimate();
+      let id;
       try {
-        await post('region_save', { id: r.id, name: v.name, description: v.description, settings: settingsOut }, S.camp.id);
-        await loadCampaign(S.camp.id, true); route();
-      } catch (err) { toast(err.message, true); }
-    });
-    return f;
+        ({ id } = await post('region_save', { id: r.id, name: v.name, description: v.description, settings: settingsOut }, S.camp.id));
+      } catch (x) { return fail(x.message); }
+      d.close();
+      toast(r.id ? `${v.name.trim()} saved` : `${v.name.trim()} added`);
+      await loadCampaign(S.camp.id, true); await route();
+      const row = document.querySelector(`.listrow[data-region="${id}"]`);
+      if (row) {
+        row.classList.add('just-saved');
+        row.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        setTimeout(() => row.classList.remove('just-saved'), 2500);
+      }
+    }));
+    document.body.append(d);
+    d.showModal();
+    name.focus();
   }
 
   // ------------------------------------------------------------ holidays tab

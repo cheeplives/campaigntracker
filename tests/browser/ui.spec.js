@@ -27,6 +27,48 @@ test("deleting asks in an in-page dialog, and Cancel keeps the item", async ({ p
   expectNoErrors(errors);
 });
 
+test("New region opens a dialog, and the region it adds joins the list", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Rina");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page);
+  await page.goto(`index.html#/c/${cid}/regions`);
+  const rows = page.locator(".listrow");
+  await expect(rows).toHaveCount(1);
+  // Cancel leaves the list as it was
+  await page.getByRole("button", { name: "+ New region" }).click();
+  let dialog = page.getByRole("dialog", { name: "New region" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Name", { exact: true })).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rows).toHaveCount(1);
+  // a nameless region is refused in the dialog
+  await page.getByRole("button", { name: "+ New region" }).click();
+  dialog = page.getByRole("dialog", { name: "New region" });
+  await dialog.getByRole("button", { name: "Add region" }).click();
+  await expect(dialog).toContainText("Give the region a name.");
+  await dialog.getByLabel("Name", { exact: true }).fill("Whitewater Marsh");
+  await dialog.getByLabel("Terrain visibility modifier").selectOption("-1");
+  await dialog.getByRole("button", { name: "Add region" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rows).toHaveCount(2);
+  const added = rows.filter({ hasText: "Whitewater Marsh" });
+  await expect(added).toContainText("Terrain -1");
+  await expect(added).toBeInViewport();
+  // Edit opens the same dialog, filled in
+  await added.getByRole("button", { name: "Edit" }).click();
+  dialog = page.getByRole("dialog", { name: "Edit Whitewater Marsh" });
+  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue("Whitewater Marsh");
+  await dialog.getByLabel("Name", { exact: true }).fill("Black Marsh");
+  await dialog.getByRole("button", { name: "Save region" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rows.filter({ hasText: "Black Marsh" })).toHaveCount(1);
+  await expect(rows).toHaveCount(2);
+  expectNoErrors(errors);
+});
+
 test("the theme toggle switches light/dark and is remembered", async ({ page }) => {
   await page.goto("index.html");
   const html = page.locator("html");
