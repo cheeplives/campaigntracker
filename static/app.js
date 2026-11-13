@@ -7106,6 +7106,7 @@
     const list = items => el('ul', {}, items.filter(Boolean).map(i => el('li', {}, ...[i].flat())));
     mount(
       el('div', { class: 'card about' },
+        el('img', { class: 'about-logo', src: 'static/icons/logo-engraved.svg', alt: '', width: 96, height: 96 }),
         el('h1', {}, 'About GM\'s Almanac'),
         p('GM\'s Almanac is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
           'This page lists where every built-in figure comes from: the sample speeds and distances in the travel planner, the climate baselines behind the weather, and the calendar presets.'),
