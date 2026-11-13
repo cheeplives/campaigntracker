@@ -1497,6 +1497,8 @@
       licence: 'Apache 2.0', url: 'https://github.com/mozilla/pdf.js' },
     three: { title: 'three.js 0.186.1 3D graphics, for the 3D dice (static/vendor/three)', by: 'Ricardo Cabello (mrdoob) and the three.js authors',
       licence: 'MIT', url: 'https://github.com/mrdoob/three.js' },
+    diceSkins: { title: 'Themed Dice Skins, a Baldur\'s Gate 3 mod (inspiration only)', by: 'Sir William Snugglepuff, on Nexus Mods',
+      licence: 'Ideas only, nothing copied; the mod lets its assets be used with credit, but not in anything sold', url: 'https://www.nexusmods.com/baldursgate3/mods/2118' },
     htmlToImage: { title: 'html-to-image 1.11.13, the Report button\'s screenshot of the page (static/vendor/html-to-image)', by: 'W.Y. and the html-to-image contributors',
       licence: 'MIT', url: 'https://github.com/bubkoo/html-to-image' },
     spectral: { title: 'Spectral typeface (via Fontsource), the headings', by: 'Production Type', licence: 'SIL Open Font License 1.1',

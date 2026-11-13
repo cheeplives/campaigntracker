@@ -7161,6 +7161,7 @@
             extLink({ url: 'https://www.anthropic.com/legal/commercial-terms', title: 'Anthropic\'s commercial terms' }), ' the names it returns belong to the GM. The GM approves each one before it is pinned.'],
           ['Reading a PDF to draft a character sheet template (in your browser; the PDF is never uploaded): ', cite('pdfjs'), '.'],
           ['The 3D dice on the die roller: ', cite('three'), '. The dice shapes, the numbers on them and the dice patterns (marble, wood, stone and the rest) are drawn in your browser by this app; no picture files are used.'],
+          ['The idea for the dice skins (Paladin, Warlock, Druid, Fire, Lava, Shield, Leopard and Pink pinstripe): ', cite('diceSkins'), '. Only the ideas are borrowed; the skins are drawn by this app, and none of the mod\'s files or pictures are used.'],
           ['The screenshot the Report (!) button offers, taken in your browser and sent only with the report, to the site admins: ', cite('htmlToImage'), '.'],
           'Send to GitHub on Site Admin\'s Reports tab opens an issue on the app\'s GitHub repository, only when a site admin presses it. The issue carries the report\'s text and page details, never who sent it or the screenshot.',
           ['Typefaces, self-hosted: ', cite('spectral'), ' and ', cite('atkinson'), '.'],

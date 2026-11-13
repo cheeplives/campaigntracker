@@ -425,6 +425,14 @@ test("a player picks their dice colours and pattern, everyone sees their rolls i
   await card.getByRole("combobox", { name: "Pattern" }).selectOption("wood");
   await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => (await api(pp, "dice_rolls", undefined, cid)).status).toBe(200);
+  // a skin sets the colours and the pattern in one tap, and shows as picked
+  await card.getByRole("button", { name: "Warlock" }).click();
+  await expect(card.getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("combobox", { name: "Pattern" })).toHaveValue("eldritch");
+  await expect(card.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "false");
+  await card.getByRole("button", { name: "Emerald" }).click();
+  await card.getByRole("combobox", { name: "Pattern" }).selectOption("wood");
+  await expect(card.getByRole("button", { name: "Warlock" })).toHaveAttribute("aria-pressed", "false");
   await card.getByRole("button", { name: "Close" }).click();
   await expect(card).toBeHidden();
 

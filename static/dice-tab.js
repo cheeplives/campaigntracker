@@ -562,6 +562,13 @@
       const swatch = (look, name, current, reset) => el('button', { type: 'button', class: 'dice-sw' + (current ? ' on' : ''), 'aria-label': name, 'aria-pressed': String(!!current), 'data-tip': name,
         style: { background: look.body, color: look.ink }, onclick: () => set(reset ? null : { ...look, tex: cur?.tex || '' }) }, '6');
       const theme = D3.themeLook();
+      // a skin: its colours and pattern in one tap (the colours can still be changed after)
+      const skin = ([name, b, i, t]) => {
+        const look = { body: b, ink: i, tex: t }, on = !!cur && cur.body === b && cur.ink === i && (cur.tex || '') === t;
+        const die = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
+        for (const [p, v] of Object.entries(D3.chip(look) || {})) die.style.setProperty(p, v);
+        return el('button', { type: 'button', class: 'dice-skin' + (on ? ' on' : ''), 'aria-pressed': String(on), onclick: () => set(look) }, die, name);
+      };
       const body = el('input', { type: 'color', value: shown.body, 'aria-label': 'Colour of the dice',
         onchange: e => set({ body: e.target.value, ink: D3.inkFor(e.target.value), tex: shown.tex || '' }) });
       const ink = el('input', { type: 'color', value: shown.ink, 'aria-label': 'Colour of the numbers',
@@ -582,6 +589,7 @@
         el('div', { class: 'dice-look-grid' },
           el('div', { class: 'dice-look-pre' }, still, flat),
           el('div', {},
+            el('fieldset', { class: 'dice-skins' }, el('legend', {}, 'Skins'), ...D3.SKINS.map(skin)),
             el('div', { class: 'dice-sws', role: 'group', 'aria-label': 'Dice colours' },
               swatch(theme, 'The theme\'s colours', !cur, true), ...D3.SWATCHES.map(([b, i, n]) => swatch({ body: b, ink: i }, n, cur && cur.body === b && cur.ink === i))),
             el('div', { class: 'dice-look-row' },

@@ -22,9 +22,25 @@
   const TEXTURES = [['', 'Plain'], ['marble', 'Marble'], ['wood', 'Wood'], ['stone', 'Stone'], ['stars', 'Starfield'],
     ['metal', 'Brushed metal'], ['speckle', 'Speckled'], ['swirl', 'Resin swirl'], ['pearl', 'Pearl'], ['scales', 'Dragon scales'],
     ['carbon', 'Carbon fibre'], ['ice', 'Cracked ice'], ['lava', 'Lava'],
-    ['glitter', 'Glitter (animated)'], ['galaxy', 'Galaxy (animated)'], ['ember', 'Embers (animated)']];
+    ['glitter', 'Glitter (animated)'], ['galaxy', 'Galaxy (animated)'], ['ember', 'Embers (animated)'],
+    // the skins: a pattern with a frame round each face or numbers that glow (SKINS below gives each its colours)
+    ['gilded', 'Gilded frame'], ['shield', 'Shield: planks and steel'], ['moss', 'Mossy wood'], ['leopard', 'Leopard print'],
+    ['pinstripe', 'Pinstripe gloss'], ['grove', 'Glowing grove (animated)'], ['eldritch', 'Eldritch sigils (animated)'],
+    ['fire', 'Wildfire (animated)'], ['magma', 'Molten core (animated)']];
   /** The patterns that move, and what moves. */
-  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow' };
+  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow', grove: 'glow', eldritch: 'pulse', fire: 'flicker', magma: 'glow' };
+  /** Patterns with a frame round each face: [the frame's colour, its width as a share of a face]. */
+  const FRAMES = { gilded: ['#d9ae48', 0.2], shield: ['#a9b0b8', 0.24], leopard: ['#f7f3ee', 0.16], pinstripe: ['#e4b852', 0.16] };
+  /** Patterns whose numbers glow, lit from within like the pattern's own light. */
+  const GLOWING = new Set(['grove', 'eldritch', 'fire', 'magma']);
+  /** Ready-made looks, one tap for colours and pattern together: [name, body, ink, tex]. The ideas (a paladin's gold and
+   * white, a warlock's trinket, druid wood and moss, fire, lava, a shield, leopard print, glossy pink pinstripes) come from
+   * the "Themed Dice Skins" Baldur's Gate 3 mod by Sir William Snugglepuff; nothing of the mod's is used, every skin is
+   * drawn here. */
+  const SKINS = [['Paladin', '#f3eee2', '#6e4c0c', 'gilded'], ['Warlock', '#2b1a44', '#d9b8ff', 'eldritch'],
+    ['Druid', '#6e4a2a', '#f1f5d8', 'moss'], ['Druid, glowing', '#4f3520', '#c9ff9e', 'grove'], ['Fire', '#7c2108', '#ffe39a', 'fire'],
+    ['Lava', '#2b2521', '#ffb44a', 'magma'], ['Shield', '#8c5b2f', '#f4f1ea', 'shield'], ['Leopard', '#e597bd', '#3a1426', 'leopard'],
+    ['Pink pinstripe', '#dc4f93', '#fbe2a0', 'pinstripe']];
   /** Colours offered first on the picker (any colour can still be chosen). [body, ink, name] */
   const SWATCHES = [['#f3ecdc', '#2b2418', 'Ivory'], ['#1d1d22', '#f2f2f2', 'Black'], ['#a3222d', '#fff4e0', 'Crimson'],
     ['#1f4fa3', '#ffffff', 'Royal blue'], ['#1e7a4c', '#fff6d8', 'Emerald'], ['#5b2a86', '#f4d27a', 'Amethyst'],
@@ -97,6 +113,35 @@
       return [a, b];
     };
   }
+  /** How hot a spot of fire is (0..1): tongues of flame rising, wrapping at the tile's edges like the rest. */
+  const flame = (f, f2, u, v) => {
+    const t = 0.5 + 0.5 * Math.sin((v * 2 + f(u, v) * 1.8 + f2(u * 2, v) * 0.6) * Math.PI * 2);
+    return Math.max(0, Math.min(1, t * (0.55 + f2(u, v) * 0.9)));
+  };
+  /** Rings and rune strokes, scattered (the warlock's trinket): drawn on the pattern faintly and on its glow brightly. */
+  function sigils(g, size, colour, alpha) {
+    const S = rng(53);
+    g.save();
+    g.strokeStyle = colour; g.globalAlpha = alpha; g.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const x = S() * size, y = S() * size, r = size * (0.06 + S() * 0.07);
+      g.lineWidth = Math.max(1, size / 180);
+      // each sigil drawn at the tile's edges too, so it wraps without a seam
+      for (const [ox, oy] of [[0, 0], [-size, 0], [size, 0], [0, -size], [0, size]]) {
+        const cx = x + ox, cy = y + oy;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+        g.beginPath(); g.arc(cx, cy, r * 0.62, 0, Math.PI * 2); g.stroke();
+        const n = 3 + Math.floor(S() * 3), turn = S() * Math.PI;
+        g.beginPath();
+        for (let j = 0; j <= n; j++) {
+          const a = turn + j * (Math.PI * 2 / n) * (n % 2 ? 2 : 1), px = cx + Math.cos(a) * r * 0.62, py = cy + Math.sin(a) * r * 0.62;
+          j ? g.lineTo(px, py) : g.moveTo(px, py);
+        }
+        g.stroke();
+      }
+    }
+    g.restore();
+  }
   const glows = new Map();
   /** The moving part of an animated pattern, drawn on its own tile and laid over the die as light it gives off: glitter
    * flakes, stars, the glowing cracks of embers. Black is "no light". */
@@ -129,6 +174,18 @@
         px[o] = 255 * ridge; px[o + 1] = 110 * ridge; px[o + 2] = 20 * ridge;
       }
       g.putImageData(img, 0, 0);
+    } else if (look.tex === 'grove' || look.tex === 'magma' || look.tex === 'fire') {
+      // grove: glowing veins through the wood; lava: the molten cracks; fire: the hottest tongues of flame
+      const img = g.getImageData(0, 0, size, size), px = img.data, f = fbm(7, 4, 5), f2 = fbm(19, 8, 4);
+      const hot = look.tex === 'grove' ? [150, 255, 110] : [255, 130, 30];
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const u = x / size, v = y / size, o = (y * size + x) * 4;
+        const a = look.tex === 'fire' ? Math.pow(flame(f, f2, u, v), 4) : Math.pow(1 - Math.abs(2 * (look.tex === 'grove' ? f2 : f)(u, v) - 1), look.tex === 'grove' ? 26 : 60);
+        px[o] = hot[0] * a; px[o + 1] = hot[1] * a; px[o + 2] = hot[2] * a;
+      }
+      g.putImageData(img, 0, 0);
+    } else if (look.tex === 'eldritch') {
+      sigils(g, size, toHex(mix(hex(look.ink), WHITE, 0.25)), 1);
     }
     glows.set(k, cv);
     return cv;
@@ -149,8 +206,9 @@
       const img = g.createImageData(size, size), px = img.data;
       const f = fbm(7, 4, 5), f2 = fbm(19, 8, 4), R = rng(3);
       const light = mix(body, WHITE, 0.55), dark = mix(body, BLACK, 0.45);
-      const cells = look.tex === 'ice' ? voronoi(23, 18) : null;
-      const HOT = [255, 140, 40];
+      const cells = look.tex === 'ice' ? voronoi(23, 18) : look.tex === 'leopard' ? voronoi(29, 46) : null;
+      const moss = fbm(29, 3, 5);
+      const HOT = [255, 140, 40], GOLD = [214, 170, 70], MOSS = [86, 122, 44];
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
           const u = x / size, v = y / size;
@@ -201,6 +259,46 @@
             // dark rock with glowing cracks (embers: the cracks glow in the animated layer as well)
             const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 22);
             c = mix(mix(body, BLACK, 0.6), mix(HOT, WHITE, 0.15), ridge);
+          } else if (look.tex === 'gilded') {
+            // polished ivory with faint gold veins
+            const vein = Math.pow(1 - Math.abs(Math.sin((u * 1.5 + v + f(u, v) * 1.3) * Math.PI * 3)), 16);
+            c = mix(mix(body, WHITE, 0.1 + f2(u, v) * 0.2), GOLD, vein * 0.45);
+          } else if (look.tex === 'shield') {
+            // four upright planks, each its own grain, with dark seams between them
+            const p = Math.floor(u * 4), pu = u * 4 - p, sh = [0.13, 0.57, 0.31, 0.79][p];
+            const r = ((v + sh) * 9 + f(pu * 0.2 + sh, v) * 1.6) % 1, ring = Math.pow(Math.sin(r * Math.PI), 0.7);
+            c = mix(mix(dark, body, 0.35 + ring * 0.65), mix(body, BLACK, 0.25), f2(pu * 0.1 + sh, v) * 0.4);
+            c = mix(c, BLACK, Math.pow(Math.max(0, 1 - Math.min(pu, 1 - pu) * 30), 2) * 0.75);
+          } else if (look.tex === 'moss' || look.tex === 'grove') {
+            // wood grain under patches of moss (glowing grove: green veins of light through it as well)
+            const r = (v * 7 + f(u * 0.25, v) * 2.2) % 1, ring = Math.pow(Math.sin(r * Math.PI), 0.6);
+            c = mix(mix(dark, body, ring), mix(body, BLACK, 0.2), f2(u, v * 0.1) * 0.5);
+            const m = Math.max(0, Math.min(1, (moss(u, v) - 0.44) * 5));
+            c = mix(c, mix(MOSS, mix(MOSS, BLACK, 0.45), f2(u * 2, v * 2)), m * 0.9);
+            if (look.tex === 'grove') c = mix(c, [150, 255, 110], Math.pow(1 - Math.abs(2 * f2(u, v) - 1), 26));
+          } else if (look.tex === 'leopard') {
+            // soft fur, and rosettes: a broken dark ring round a spot a little darker than the fur
+            const [d1, d2] = cells(u, v), n = f(u, v), fur = mix(body, mix(body, WHITE, 0.25), f2(u * 3, v * 3) * 0.6);
+            const rad = 0.034 + n * 0.02, ring = d1 > rad * 0.55 && d1 < rad && (d2 - d1) > 0.012 && f2(u * 4, v * 4) > 0.36;
+            c = ring ? mix([40, 22, 16], body, 0.12) : d1 < rad * 0.55 ? mix(fur, [150, 70, 50], 0.28) : fur;
+          } else if (look.tex === 'pinstripe') {
+            // glossy panels with fine light stripes
+            const st = (u * 14) % 1, line = st < 0.09 ? 1 : 0;
+            c = mix(mix(body, WHITE, 0.05 + 0.12 * (0.5 + 0.5 * Math.cos((u + v) * Math.PI * 2))), WHITE, line * 0.55);
+          } else if (look.tex === 'eldritch') {
+            // dark smoke with violet light curling through it (the sigils are drawn on top, below)
+            const n = Math.pow(f(u, v), 2);
+            c = mix(mix(body, BLACK, 0.5), mix(body, [170, 100, 255], 0.55), n * 1.3);
+          } else if (look.tex === 'fire') {
+            // a burning surface: dark coals under rising tongues of orange and yellow flame
+            const h = flame(f, f2, u, v);
+            c = mix(mix(body, BLACK, 0.45), [255, 120, 20], Math.min(1, h * 1.3));
+            c = mix(c, [255, 230, 120], Math.pow(h, 5));
+          } else if (look.tex === 'magma') {
+            // charred rock, and molten cracks running through it
+            const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 60);
+            const rock = mix(mix(body, BLACK, 0.35), mix(body, WHITE, 0.12), Math.max(0, Math.min(1, (f2(u, v) - 0.35) * 2)));
+            c = mix(rock, mix(HOT, [255, 220, 120], ridge), Math.min(1, ridge * 1.4));
           } else if (look.tex === 'galaxy') {
             const n = Math.pow(f(u, v), 1.8), m = f2(u * 0.5, v * 0.5);
             c = mix(mix(body, BLACK, 0.78), mix(mix(body, [120, 60, 200], 0.4), WHITE, 0.1), n * 1.5);
@@ -227,6 +325,7 @@
           g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
         }
       }
+      if (look.tex === 'eldritch') sigils(g, size, look.ink, 0.35);
     }
     patterns.set(k, cv);
     return cv;
@@ -237,7 +336,10 @@
     if (!look) return null;
     const k = keyOf(look);
     if (!chips.has(k)) {
-      const st = { '--die-bg': look.body, '--die-ink': look.ink, '--die-edge': toHex(mix(hex(look.body), BLACK, 0.35)) };
+      const fr = FRAMES[look.tex];
+      const st = { '--die-bg': look.body, '--die-ink': look.ink, '--die-edge': fr ? fr[0] : toHex(mix(hex(look.body), BLACK, 0.35)) };
+      if (fr) st['--die-rim'] = '3px';
+      if (GLOWING.has(look.tex)) st['--die-shine'] = `0 0 3px ${look.ink}, 0 0 7px ${look.ink}`;
       if (look.tex) { try { st['--die-tex'] = `url(${pattern(look, 96).toDataURL('image/png')})`; } catch { /* a canvas that can't export: plain colour */ } }
       // an animated pattern's moving layer, for the flat dice to sparkle, drift or glow too (style.css .looked.anim)
       if (ANIMATED[look.tex]) { try { st['--die-glow'] = `url(${glowLayer(look).toDataURL('image/png')})`; } catch { /* still dice */ } }
@@ -370,15 +472,16 @@
   // ------------------------------------------------------------ drawing a die's faces
   /** The picture wrapped on one shape: the look's pattern under every face, each face's number in the middle. Returns
    * the canvas and where each face sits on it (uv). */
-  function atlas(sh, look, labels) {
+  function atlas(sh, look, labels, glow = false) {
     const F = sh.faces.length, cols = Math.ceil(Math.sqrt(F)), rows = Math.ceil(F / cols);
     const size = F > 8 ? 1024 : 512, cell = Math.floor(size / Math.max(cols, rows));
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const g = cv.getContext('2d');
-    g.fillStyle = g.createPattern(pattern(look), 'repeat');
-    g.fillRect(0, 0, size, size);
-    const ink = look.ink, edge = toHex(mix(hex(look.body), BLACK, 0.35));
+    // glow: the picture of the light the die gives off (its numbers, and the pattern's own light), black elsewhere
+    if (glow) { g.fillStyle = '#000'; g.fillRect(0, 0, size, size); if (ANIMATED[look.tex]) { g.globalAlpha = 0.6; g.fillStyle = g.createPattern(glowLayer(look), 'repeat'); g.fillRect(0, 0, size, size); g.globalAlpha = 1; } }
+    else { g.fillStyle = g.createPattern(pattern(look), 'repeat'); g.fillRect(0, 0, size, size); }
+    const ink = look.ink, frame = FRAMES[look.tex], edge = toHex(mix(hex(look.body), BLACK, 0.35));
     const uv = [];
     sh.faces.forEach((f, k) => {
       const cx = (k % cols + 0.5) * cell, cy = (Math.floor(k / cols) + 0.5) * cell;
@@ -387,14 +490,21 @@
       const s = (cell * 0.47) / rad;
       const px = loc.map(([x, y]) => [cx + x * s, cy - y * s]);
       uv.push(px.map(([x, y]) => [x / size, 1 - y / size]));
-      // a darker rim along the edges, for depth
-      g.save();
-      g.beginPath(); px.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
-      g.clip();
-      g.strokeStyle = edge; g.globalAlpha = 0.55; g.lineWidth = cell * 0.05; g.stroke();
-      g.restore();
-      // the number (a d4: each corner's number at that corner)
       const inr = Math.min(...px.map((a, i) => { const b = px[(i + 1) % px.length]; const ex = b[0] - a[0], ey = b[1] - a[1]; return Math.abs((cx - a[0]) * ey - (cy - a[1]) * ex) / Math.hypot(ex, ey); }));
+      // a darker rim along the edges, for depth, or the skin's frame: a band of its colour with a dark inner line
+      if (!glow) {
+        g.save();
+        g.beginPath(); px.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
+        g.clip();
+        if (frame) {
+          const w = inr * frame[1] * 1.8;   // by the face's size, so a d20's small faces keep room for their numbers
+          g.strokeStyle = toHex(mix(hex(frame[0]), BLACK, 0.55)); g.lineWidth = w; g.stroke();
+          g.strokeStyle = frame[0]; g.lineWidth = w * 0.82; g.stroke();
+          g.strokeStyle = toHex(mix(hex(frame[0]), WHITE, 0.45)); g.globalAlpha = 0.7; g.lineWidth = w * 0.18; g.stroke();
+        } else { g.strokeStyle = edge; g.globalAlpha = 0.55; g.lineWidth = cell * 0.05; g.stroke(); }
+        g.restore();
+      }
+      // the number (a d4: each corner's number at that corner)
       g.fillStyle = ink;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       const font = px => `700 ${Math.round(px)}px ${getComputedStyle(document.documentElement).getPropertyValue('--disp').trim() || 'system-ui'}, system-ui, sans-serif`;
@@ -487,9 +597,17 @@
       map.colorSpace = T.SRGBColorSpace;
       map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       const metal = look.tex === 'metal';
-      const shiny = ['marble', 'pearl', 'ice', 'glitter', 'galaxy'].includes(look.tex);
+      const shiny = ['marble', 'pearl', 'ice', 'glitter', 'galaxy', 'gilded', 'pinstripe'].includes(look.tex);
       const mat = new T.MeshStandardMaterial({ map, roughness: metal || look.tex === 'carbon' ? 0.32 : shiny ? 0.26 : 0.42, metalness: metal ? 0.35 : look.tex === 'pearl' ? 0.12 : 0.02 });
-      if (ANIMATED[look.tex]) {
+      if (GLOWING.has(look.tex)) {
+        // numbers that glow: the light (numbers and the pattern's own) drawn over the same faces, and pulsed (animate())
+        const glow = new T.CanvasTexture(atlas(sh, look, labels, true).cv);
+        glow.colorSpace = T.SRGBColorSpace;
+        mat.emissiveMap = glow;
+        mat.emissive.setRGB(1, 1, 1);
+        mat.emissiveIntensity = 0.9;
+        if (ANIMATED[look.tex]) mat.userData.anim = ANIMATED[look.tex];
+      } else if (ANIMATED[look.tex]) {
         // the moving layer: its own tile, repeated over the die, lit from within and changed each frame (animate())
         const glow = new T.CanvasTexture(glowLayer(look));
         glow.colorSpace = T.SRGBColorSpace;
@@ -561,6 +679,10 @@
       } else if (m.userData.anim === 'drift') {
         g.offset.set(t * 0.07, t * 0.03);
         m.emissiveIntensity = 1 + 0.6 * Math.sin(t * 4.1) * Math.sin(t * 2.3);
+      } else if (m.userData.anim === 'pulse') {
+        m.emissiveIntensity = 0.45 + 0.9 * (0.5 + 0.5 * Math.sin(t * 2.2));
+      } else if (m.userData.anim === 'flicker') {
+        m.emissiveIntensity = 1 + 0.35 * Math.sin(t * 13) * Math.sin(t * 7.3) + 0.2 * Math.sin(t * 23.1);
       } else {
         m.emissiveIntensity = 0.25 + 1.1 * (0.5 + 0.5 * Math.sin(t * 3.2) * Math.sin(t * 1.3 + 1));
       }
@@ -732,5 +854,5 @@
     return { text: faceText(f, labels, sides), flat: Math.max(...ys), upright: -up.z };
   }
 
-  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, can, available, enabled, setEnabled, STAYS, stay, setStay, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
+  root.Dice3D = { TEXTURES, ANIMATED, SWATCHES, SKINS, FRAMES, GLOWING, can, available, enabled, setEnabled, STAYS, stay, setStay, themeLook, inkFor, pattern, chip, plan, toss, still, stop, shape, topAfter, LABELS: { FUDGE, D3, TENS, UNITS } };
 })(window);
