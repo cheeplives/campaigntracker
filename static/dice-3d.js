@@ -120,19 +120,25 @@
     return Math.max(0, Math.min(1, t * (0.55 + f2(u, v) * 0.9)));
   };
   /** Rings and rune strokes, scattered (the warlock's trinket): drawn on the pattern faintly and on its glow brightly. */
-  function sigils(g, size, colour, alpha) {
+  function sigils(g, size, colour, alpha, rot = 0) {
     const S = rng(53);
     g.save();
     g.strokeStyle = colour; g.globalAlpha = alpha; g.lineCap = 'round';
     for (let i = 0; i < 7; i++) {
-      const x = S() * size, y = S() * size, r = size * (0.06 + S() * 0.07);
-      g.lineWidth = Math.max(1, size / 180);
+      const x = S() * size, y = S() * size, r = size * (0.1 + S() * 0.07);
+      g.lineWidth = Math.max(1, size / 130);
       // each sigil drawn at the tile's edges too, so it wraps without a seam
       for (const [ox, oy] of [[0, 0], [-size, 0], [size, 0], [0, -size], [0, size]]) {
         const cx = x + ox, cy = y + oy;
         g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
         g.beginPath(); g.arc(cx, cy, r * 0.62, 0, Math.PI * 2); g.stroke();
-        const n = 3 + Math.floor(S() * 3), turn = S() * Math.PI;
+        // rot turns each sigil about its centre (the animated layer), every other one the other way
+        const n = 3 + Math.floor(S() * 3), turn = S() * Math.PI + rot * (i % 2 ? -1 : 1) * (0.6 + (i % 3) * 0.25);
+        // a bright arc riding round the outer ring, so the turning shows even at a glance
+        g.save(); g.lineWidth = Math.max(2, size / 50);
+        g.beginPath(); g.arc(cx, cy, r, turn, turn + 1.1); g.stroke();
+        g.beginPath(); g.arc(cx, cy, r, turn + Math.PI, turn + Math.PI + 0.5); g.stroke();
+        g.restore();
         g.beginPath();
         for (let j = 0; j <= n; j++) {
           const a = turn + j * (Math.PI * 2 / n) * (n % 2 ? 2 : 1), px = cx + Math.cos(a) * r * 0.62, py = cy + Math.sin(a) * r * 0.62;
@@ -144,48 +150,88 @@
     g.restore();
   }
   let heat = null;
-  /** Soft patches of heat, 0.2 to 1, that slide along a lava die's cracks so the molten rock seems to flow. */
+  /** Soft patches of heat, near 0 to 1, that slide along a lava die's cracks so the molten rock seems to flow. */
   function heatTile(size = 256) {
     if (heat) return heat;
     heat = document.createElement('canvas');
     heat.width = heat.height = size;
     const g = heat.getContext('2d'), img = g.createImageData(size, size), px = img.data, f = fbm(61, 3, 3);
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-      const v = 255 * (0.2 + 0.8 * Math.max(0, Math.min(1, (f(x / size, y / size) - 0.3) * 2.2))), o = (y * size + x) * 4;
+      const v = 255 * (0.03 + 0.97 * Math.pow(Math.max(0, Math.min(1, (f(x / size, y / size) - 0.32) * 2.8)), 1.2)), o = (y * size + x) * 4;
       px[o] = px[o + 1] = px[o + 2] = v; px[o + 3] = 255;
     }
     g.putImageData(img, 0, 0);
     return heat;
   }
-  /** The moving light of the fire patterns, redrawn each frame on a tile of its own: fire's flames rise up the die (two
-   * layers at different speeds, so they shift as they climb); lava's and embers' cracks stay put while patches of heat
-   * flow along them. Returns { cv, draw(t) }. */
+  /** A soft round light, drawn once and stamped many times (glitter flakes, fireflies). */
+  function glint(colour, r) {
+    const c = document.createElement('canvas');
+    c.width = c.height = Math.ceil(r * 2);
+    const g = c.getContext('2d'), grd = g.createRadialGradient(r, r, 0, r, r, r);
+    grd.addColorStop(0, colour); grd.addColorStop(0.35, colour); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 1; g.fillStyle = grd; g.fillRect(0, 0, r * 2, r * 2);
+    return c;
+  }
+  /** The moving light of an animated pattern, redrawn as the die sits on a tile of its own, so the pattern itself moves
+   * rather than only brightening: fire's flames rise (two layers at different speeds, so they shift as they climb);
+   * lava's and embers' cracks and the grove's veins stay put while patches of light flow along them; the warlock's
+   * sigils turn; glitter flakes twinkle one by one; fireflies wander and blink. Returns { cv, draw(t) }. */
   function liveTile(look, size = 256) {
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const g = cv.getContext('2d'), src = glowLayer(look, size), pat = g.createPattern(src, 'repeat');
     const wrap = x => ((x % size) + size) % size;
+    const layer = (pt, dx, dy, a, op) => {
+      g.save(); g.globalAlpha = a; g.globalCompositeOperation = op; g.translate(wrap(dx) - size, wrap(dy) - size);
+      g.fillStyle = pt; g.fillRect(0, 0, size * 2, size * 2); g.restore();
+    };
+    // a light drawn where it is and again across any edge it hangs over, so the tile still wraps without a seam
+    const stamp = (img, x, y, a) => {
+      if (a <= 0.01) return;
+      g.globalAlpha = Math.min(1, a);
+      const h = img.width / 2;
+      for (const ox of [0, -size, size]) for (const oy of [0, -size, size]) {
+        const px = wrap(x) + ox, py = wrap(y) + oy;
+        if (px + h > 0 && px - h < size && py + h > 0 && py - h < size) g.drawImage(img, px - h, py - h);
+      }
+    };
+    const S = rng(97);
+    const sprites = look.tex === 'glitter' ? [glint('#ffffff', 6), glint(toHex(mix(hex(look.body), WHITE, 0.7)), 6)]
+      : look.tex === 'moss' ? [glint('#f4ffb0', size * 0.055)] : [];
+    const motes = Array.from({ length: look.tex === 'glitter' ? 170 : look.tex === 'moss' ? 22 : 0 },
+      () => ({ x: S() * size, y: S() * size, p: S() * Math.PI * 2, q: S() * Math.PI * 2, k: 0.5 + S() * 1.5, s: S() < 0.5 ? 0 : 1 }));
     const draw = t => {
       g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
       g.fillStyle = '#000'; g.fillRect(0, 0, size, size);
-      const layer = (pt, dx, dy, a, op) => {
-        g.save(); g.globalAlpha = a; g.globalCompositeOperation = op; g.translate(wrap(dx) - size, wrap(dy) - size);
-        g.fillStyle = pt; g.fillRect(0, 0, size * 2, size * 2); g.restore();
-      };
       if (look.tex === 'fire') {
         layer(pat, 0, -t * 0.32 * size, 0.85, 'lighter');
         layer(pat, size * 0.37, -t * 0.55 * size, 0.55, 'lighter');
+      } else if (look.tex === 'eldritch') {
+        sigils(g, size, toHex(mix(hex(look.ink), WHITE, 0.25)), 0.75 + 0.25 * Math.sin(t * 2.2), t * 1.6);
+      } else if (look.tex === 'glitter') {
+        g.globalCompositeOperation = 'lighter';
+        for (const m of motes) stamp(sprites[m.s], m.x, m.y, Math.pow(Math.max(0, Math.sin(t * (2 + m.k * 3) + m.p)), 6));
+      } else if (look.tex === 'moss') {
+        g.globalCompositeOperation = 'lighter';
+        for (const m of motes) {
+          const x = m.x + Math.sin(t * 0.7 * m.k + m.p) * size * 0.06, y = m.y + Math.cos(t * 0.5 * m.k + m.q) * size * 0.05 - t * size * 0.02;
+          stamp(sprites[0], x, y, 0.25 + 1.1 * Math.max(0, Math.sin(t * 1.6 * m.k + m.q)));
+        }
       } else {
+        // lava, embers, the grove: the cracks or veins, lit only where a patch of heat or light is passing
         g.drawImage(src, 0, 0);
-        layer(g.createPattern(heatTile(size), 'repeat'), t * 0.09 * size, t * 0.05 * size, 1, 'multiply');
-        layer(g.createPattern(heatTile(size), 'repeat'), -t * 0.06 * size + size * 0.5, t * 0.08 * size, 0.6, 'multiply');
+        g.globalCompositeOperation = 'lighter'; g.drawImage(src, 0, 0);   // twice: white-hot where the light passes
+        const hp = g.createPattern(heatTile(size), 'repeat');
+        layer(hp, t * 0.3 * size, t * 0.12 * size, 1, 'multiply');
+        layer(hp, -t * 0.2 * size + size * 0.5, t * 0.24 * size, 0.85, 'multiply');
       }
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     };
     draw(0);
     return { cv, draw };
   }
-  /** Fire patterns whose light moves across the die, not only brightens. */
-  const LIVE = new Set(['fire', 'magma', 'ember']);
+  /** Animated patterns whose picture moves across the die, redrawn as it sits (liveTile()), not only brightened. */
+  const LIVE = new Set(['fire', 'magma', 'ember', 'grove', 'eldritch', 'glitter', 'moss']);
   const glows = new Map();
   /** The moving part of an animated pattern, drawn on its own tile and laid over the die as light it gives off: glitter
    * flakes, stars, the glowing cracks of embers. Black is "no light". */
@@ -214,7 +260,7 @@
     } else if (look.tex === 'ember') {
       const img = g.getImageData(0, 0, size, size), px = img.data, f = fbm(7, 4, 5);
       for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-        const ridge = Math.pow(1 - Math.abs(2 * f(x / size, y / size) - 1), 22), o = (y * size + x) * 4;
+        const ridge = Math.pow(1 - Math.abs(2 * f(x / size, y / size) - 1), 14), o = (y * size + x) * 4;
         px[o] = 255 * ridge; px[o + 1] = 110 * ridge; px[o + 2] = 20 * ridge;
       }
       g.putImageData(img, 0, 0);
@@ -224,7 +270,7 @@
       const hot = look.tex === 'grove' ? [150, 255, 110] : [255, 130, 30];
       for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
         const u = x / size, v = y / size, o = (y * size + x) * 4;
-        const a = look.tex === 'fire' ? Math.pow(flame(f, f2, u, v), 4) : Math.pow(1 - Math.abs(2 * (look.tex === 'grove' ? f2 : f)(u, v) - 1), look.tex === 'grove' ? 26 : 60);
+        const a = look.tex === 'fire' ? Math.pow(flame(f, f2, u, v), 4) : Math.pow(1 - Math.abs(2 * (look.tex === 'grove' ? f2 : f)(u, v) - 1), look.tex === 'grove' ? 14 : 24);
         px[o] = hot[0] * a; px[o + 1] = hot[1] * a; px[o + 2] = hot[2] * a;
       }
       g.putImageData(img, 0, 0);
@@ -234,8 +280,8 @@
       // a glint: one soft diagonal band of light, wrapping at the tile's edges, slid across the die (animate())
       const img = g.getImageData(0, 0, size, size), px = img.data;
       for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-        const d = ((x + y) / size) % 1, a = Math.pow(Math.max(0, 1 - Math.abs(d - 0.5) * 9), 2) * 0.85, o = (y * size + x) * 4;
-        px[o] = 255 * a; px[o + 1] = 236 * a; px[o + 2] = 190 * a;
+        const d = ((x + y) / size) % 1, a = Math.pow(Math.max(0, 1 - Math.abs(d - 0.5) * 6), 1.5), o = (y * size + x) * 4;
+        px[o] = 255 * a; px[o + 1] = (look.tex === 'gilded' ? 205 : 230) * a; px[o + 2] = (look.tex === 'gilded' ? 110 : 200) * a;
       }
       g.putImageData(img, 0, 0);
     } else if (look.tex === 'moss') {
@@ -320,7 +366,8 @@
           } else if (look.tex === 'lava' || look.tex === 'ember') {
             // dark rock with glowing cracks (embers: the cracks glow in the animated layer as well)
             const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 22);
-            c = mix(mix(body, BLACK, 0.6), mix(HOT, WHITE, 0.15), ridge);
+            // embers' cracks drawn dull here: the moving light layer brings them alight a patch at a time
+            c = mix(mix(body, BLACK, 0.6), look.tex === 'ember' ? mix(HOT, BLACK, 0.55) : mix(HOT, WHITE, 0.15), ridge);
           } else if (look.tex === 'gilded') {
             // polished ivory with faint gold veins
             const vein = Math.pow(1 - Math.abs(Math.sin((u * 1.5 + v + f(u, v) * 1.3) * Math.PI * 3)), 16);
@@ -337,7 +384,7 @@
             c = mix(mix(dark, body, ring), mix(body, BLACK, 0.2), f2(u, v * 0.1) * 0.5);
             const m = Math.max(0, Math.min(1, (moss(u, v) - 0.44) * 5));
             c = mix(c, mix(MOSS, mix(MOSS, BLACK, 0.45), f2(u * 2, v * 2)), m * 0.9);
-            if (look.tex === 'grove') c = mix(c, [150, 255, 110], Math.pow(1 - Math.abs(2 * f2(u, v) - 1), 26));
+            if (look.tex === 'grove') c = mix(c, [60, 110, 45], Math.pow(1 - Math.abs(2 * f2(u, v) - 1), 14));
           } else if (look.tex === 'leopard') {
             // soft fur, and rosettes: a broken dark ring round a spot a little darker than the fur
             const [d1, d2] = cells(u, v), n = f(u, v), fur = mix(body, mix(body, WHITE, 0.25), f2(u * 3, v * 3) * 0.6);
@@ -359,7 +406,9 @@
             // charred rock, and molten cracks running through it
             const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 60);
             const rock = mix(mix(body, BLACK, 0.35), mix(body, WHITE, 0.12), Math.max(0, Math.min(1, (f2(u, v) - 0.35) * 2)));
-            c = mix(rock, mix(HOT, [255, 220, 120], ridge), Math.min(1, ridge * 1.4));
+            // the cracks are dull, cooling rock here: the moving light layer is what makes them run molten
+            const vein = Math.pow(1 - Math.abs(2 * n - 1), 24);
+            c = mix(rock, mix(HOT, BLACK, 0.5), Math.min(1, vein * 1.2));
           } else if (look.tex === 'galaxy') {
             const n = Math.pow(f(u, v), 1.8), m = f2(u * 0.5, v * 0.5);
             c = mix(mix(body, BLACK, 0.78), mix(mix(body, [120, 60, 200], 0.4), WHITE, 0.1), n * 1.5);
@@ -686,13 +735,15 @@
         // glowing numbers over moving fire: each frame the moving tile is laid over the faces and the numbers on top
         const tile = liveTile(look), nums = atlas(sh, look, labels, 'numbers').cv;
         const cv2 = document.createElement('canvas');
-        cv2.width = cv2.height = nums.width;
+        cv2.width = cv2.height = Math.min(512, nums.width);   // half a d20's atlas: redrawn often, so kept small
         const g2 = cv2.getContext('2d');
         const draw = t => {
           tile.draw(t);
           g2.globalCompositeOperation = 'source-over'; g2.globalAlpha = 1;
-          g2.fillStyle = g2.createPattern(tile.cv, 'repeat'); g2.fillRect(0, 0, cv2.width, cv2.height);
-          g2.globalCompositeOperation = 'lighter'; g2.drawImage(nums, 0, 0);
+          // scaled with the canvas, so the light still lines up with the pattern's cracks and veins underneath
+          const k = cv2.width / nums.width;
+          g2.save(); g2.scale(k, k); g2.fillStyle = g2.createPattern(tile.cv, 'repeat'); g2.fillRect(0, 0, nums.width, nums.width); g2.restore();
+          g2.globalCompositeOperation = 'lighter'; g2.drawImage(nums, 0, 0, cv2.width, cv2.height);
         };
         draw(0);
         const glow = new T.CanvasTexture(cv2);
@@ -717,7 +768,7 @@
         glow.colorSpace = T.SRGBColorSpace;
         if (tile) lives.set(glow, tile.draw);
         glow.wrapS = glow.wrapT = T.RepeatWrapping ?? 1000;
-        const rep = look.tex === 'ember' ? 1 : 2;   // fewer repeats, bigger flakes and stars: big enough to see move
+        const rep = look.tex === 'ember' || ANIMATED[look.tex] === 'shine' ? 1 : 2;   // fewer repeats, bigger flakes and stars: big enough to see move
         glow.repeat.set(rep, rep);
         mat.emissiveMap = glow;
         mat.emissive.setRGB(1, 1, 1);
@@ -789,8 +840,9 @@
         g.offset.set(t * 0.07, t * 0.03);
         m.emissiveIntensity = 1 + 0.6 * Math.sin(t * 4.1) * Math.sin(t * 2.3);
       } else if (m.userData.anim === 'shine') {
-        g.offset.set((t * 0.3) % 1, 0);
-        m.emissiveIntensity = 1;
+        // one broad glint sweeping across the whole die about every two seconds
+        g.offset.set((t * 0.45) % 1, 0);
+        m.emissiveIntensity = 1.5;
       } else if (m.userData.anim === 'pulse') {
         m.emissiveIntensity = 0.45 + 0.9 * (0.5 + 0.5 * Math.sin(t * 2.2));
       } else if (m.userData.anim === 'flicker') {
