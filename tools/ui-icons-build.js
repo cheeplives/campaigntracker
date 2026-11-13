@@ -25,6 +25,7 @@ const OWN = {
   question: 'M256 32a224 224 0 1 0 0 448 224 224 0 0 0 0-448zm0 360a28 28 0 1 1 0-56 28 28 0 0 1 0 56zm34-118c-14 9-16 14-16 30h-48c0-34 10-50 34-66 17-11 26-18 26-36 0-18-14-30-30-30-18 0-32 13-32 34h-48c0-46 34-80 80-80 44 0 78 30 78 74 0 38-20 58-44 74z',
   exclaim: 'M256 32a224 224 0 1 0 0 448 224 224 0 0 0 0-448zm-30 80h60l-10 190h-40zm30 300a30 30 0 1 1 0-60 30 30 0 0 1 0 60z',
   square: 'M96 96h320v320H96z',
+  area: 'M256 40 466 194 386 452H126L46 194zm0 62L104 213l56 177h192l56-177z',   // a pentagon's outline: an area drawn on a map
   cloud: 'M128 400a96 96 0 0 1-12-191 120 120 0 0 1 226-46 100 100 0 0 1 118 98 70 70 0 0 1-12 139z',
   letters: 'M150 112h52l102 288h-54l-24-72H124l-24 72H46zm-12 172h76l-38-116zm218-60c54 0 86 26 86 74v102h-46v-22c-14 18-34 28-60 28-42 0-70-24-70-60 0-40 30-62 86-62h44c0-22-14-34-42-34-20 0-38 6-56 18l-18-34c22-14 48-22 76-22zm-14 140c24 0 44-12 50-32v-20h-38c-28 0-40 8-40 26 0 16 12 26 28 26z',
   clipboard: 'M200 48h112v40h72v376H128V88h72zm24 40v32h64V88zm-56 40v296h176V128h-40v32H208v-32zm40 80h96v32h-96zm0 72h96v32h-96z',
@@ -181,6 +182,7 @@ const ICONS = [
   ['monster', 'lorc/dragon-head', 'Monster', '🐉'],
   ['crown', 'lorc/crown', 'Royal seat', '👑'],
   ['treasure', 'delapouite/coins', 'Treasure', '💰'],
+  ['area', 'area', 'Area', '⬠'],
   ['unknown', 'question', 'Unknown', '❓'],
   ['important', 'exclaim', 'Important', '❗'],
   ['star', 'delapouite/stars-stack', 'Star', '⭐'],

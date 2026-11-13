@@ -672,6 +672,29 @@ CREATE TABLE IF NOT EXISTS map_routes (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Areas drawn on a map (db/migrations/053_map_areas.sql): a closed outline with a name and a colour. entry_id: the
+-- Encyclopedia entry it is; region_id: the weather region it is, which the party's main group takes inside it (the
+-- smallest area holding a point wins). is_secret: GM only.
+CREATE TABLE IF NOT EXISTS map_areas (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  map_id INT UNSIGNED NOT NULL,
+  campaign_id INT UNSIGNED NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  points_json TEXT NOT NULL,                     -- [[x, y], ...] in the map's pixels, 3 to 500 points, closed back to the first
+  color VARCHAR(7) NULL,                         -- #rrggbb; null: the theme's area colour
+  entry_id INT UNSIGNED NULL,
+  region_id INT UNSIGNED NULL,
+  is_secret TINYINT(1) NOT NULL DEFAULT 0,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_area_map (map_id),
+  FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (entry_id) REFERENCES encyclopedia_entries(id) ON DELETE SET NULL,
+  FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tokens (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,

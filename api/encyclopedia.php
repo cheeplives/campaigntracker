@@ -526,29 +526,30 @@ function encyclopedia_action(string $action): void {
                 save_event_tags($cid, $event, [['name' => 'Revealed']]);
             }
             db()->commit();
-        } elseif (in_array($kind, ['map', 'pin', 'route'], true)) { // a GM-only map, pin or route shown to the players
+        } elseif (in_array($kind, ['map', 'pin', 'route', 'area'], true)) { // a GM-only map, pin or route shown to the players
             $sql = ['map' => "SELECT m.name, m.name AS map_name, m.is_secret FROM maps m WHERE m.campaign_id=? AND m.id=?",
                 'pin' => "SELECT COALESCE(NULLIF(p.label, ''), e.name, v.title, 'a pin') AS name, m.name AS map_name, p.is_secret FROM map_pins p JOIN maps m ON m.id=p.map_id
                     LEFT JOIN encyclopedia_entries e ON e.id=p.entry_id LEFT JOIN events v ON v.id=p.event_id WHERE p.campaign_id=? AND p.id=?",
-                'route' => "SELECT r.name, m.name AS map_name, r.is_secret FROM map_routes r JOIN maps m ON m.id=r.map_id WHERE r.campaign_id=? AND r.id=?"][$kind];
+                'route' => "SELECT r.name, m.name AS map_name, r.is_secret FROM map_routes r JOIN maps m ON m.id=r.map_id WHERE r.campaign_id=? AND r.id=?",
+                'area' => "SELECT a.name, m.name AS map_name, a.is_secret FROM map_areas a JOIN maps m ON m.id=a.map_id WHERE a.campaign_id=? AND a.id=?"][$kind];
             $st = db()->prepare($sql);
             $st->execute([$cid, $id]);
             $row = $st->fetch() ?: fail(ucfirst($kind) . ' not found', 404);
             if (!(int)$row['is_secret']) fail("That $kind is already public", 409, 'public');
             db()->beginTransaction();
-            $table = ['map' => 'maps', 'pin' => 'map_pins', 'route' => 'map_routes'][$kind];
+            $table = ['map' => 'maps', 'pin' => 'map_pins', 'route' => 'map_routes', 'area' => 'map_areas'][$kind];
             db()->prepare("UPDATE `$table` SET is_secret=0 WHERE campaign_id=? AND id=?")->execute([$cid, $id]);
             if (p('log')) {
                 $c = campaign_row($cid);
                 $today = floordiv((int)$c['current_shift'], camp_spd($c));
-                $title = $kind === 'map' ? "Revealed: the map {$row['name']}" : ($kind === 'route' ? "Revealed: the route {$row['name']} on {$row['map_name']}" : "Revealed: {$row['name']} on {$row['map_name']}");
+                $title = $kind === 'map' ? "Revealed: the map {$row['name']}" : ($kind === 'pin' ? "Revealed: {$row['name']} on {$row['map_name']}" : "Revealed: the $kind {$row['name']} on {$row['map_name']}");
                 db()->prepare('INSERT INTO events (abs_day, title, body, is_secret, campaign_id, created_by) VALUES (?,?,?,0,?,?)')
                     ->execute([$today, mb_substr($title, 0, 200), null, $cid, me()['id']]);
                 $event = (int)db()->lastInsertId();
                 save_event_tags($cid, $event, [['name' => 'Revealed']]);
             }
             db()->commit();
-        } else fail('Pick an entry, an event, a day, a map, a pin or a route');
+        } else fail('Pick an entry, an event, a day, a map, a pin, a route or an area');
         out(['ok' => true, 'event_id' => $event]);
 
     case 'entries_add':

@@ -702,6 +702,7 @@ const CAMPAIGN_COPY = [
     ['tokens', 'key' => 'token', 'maps' => ['entry_id' => 'encyclopedia'], 'later' => ['image_id' => 'attachments']],
     ['map_pins', 'maps' => ['map_id' => 'map', 'child_map_id' => 'map', 'entry_id' => 'encyclopedia', 'event_id' => 'events']],
     ['map_routes', 'maps' => ['map_id' => 'map']],
+    ['map_areas', 'maps' => ['map_id' => 'map', 'entry_id' => 'encyclopedia', 'region_id' => 'regions']],
     ['party_groups', 'key' => 'group', 'maps' => ['region_id' => 'regions', 'map_id' => 'map', 'token_id' => 'token']],
     ['party_trail', 'maps' => ['group_id' => 'group', 'map_id' => 'map']],
     // Files last: each hangs off an entry, tome, session, map or token copied above, and gets its own copy on disk.
@@ -1137,7 +1138,7 @@ try {
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
-            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'quest_links' => (object)quest_links($cid, $isGm), 'maps_index' => maps_index($cid, $isGm),
+            'encyclopedia_tags' => entry_tags($cid), 'entry_fields' => entry_fields(dec($c['settings_json'])), 'quest_links' => (object)quest_links($cid, $isGm), 'maps_index' => maps_index($cid, $isGm), 'areas_index' => areas_index($cid, $isGm),
             'viewing_as_player' => !empty($GLOBALS['viewing_as_player'])]
             + ($isGm ? ['open_session' => ($o = open_session($cid)) ? session_out($o, false, true) : null] : []));
 
@@ -2004,7 +2005,7 @@ try {
         $isGm = role($cid) === 'gm';
         $m = map_row($cid, int_in($_GET['id'] ?? null, 1), $isGm);
         // the party's trail: every group's that has been on this map, as a player can see this map
-        out(['map' => map_out($m), 'parent' => map_parent($cid, (int)$m['id'], $isGm), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm),
+        out(['map' => map_out($m), 'parent' => map_parent($cid, (int)$m['id'], $isGm), 'pins' => map_pins_visible($cid, (int)$m['id'], $isGm), 'routes' => map_routes_visible($cid, (int)$m['id'], $isGm), 'areas' => map_areas_visible($cid, (int)$m['id'], $isGm),
             'groups' => array_values(array_filter(party_groups($cid, $isGm), fn($g) => $g['map_id'] === (int)$m['id'])),
             // a group hidden from the maps hides its trail from players too
             'trail' => trail_on_map((int)$m['id'], array_map(fn($g) => $g['id'], array_filter(party_groups($cid, $isGm), fn($g) => $isGm || $g['map_display'] !== 'hidden')))]);
@@ -2035,8 +2036,8 @@ try {
     case 'group_move': // GMs: id, map_id (null to take it off the maps), x, y
         $cid = cid();
         need_gm($cid);
-        group_move($cid);
-        out(['ok' => true, 'groups' => party_groups($cid)]);
+        $entered = group_move($cid);
+        out(['ok' => true, 'groups' => party_groups($cid), 'entered' => $entered]);
 
     case 'party_on_map': // character (its id) and on_map: its token shows around its group's marker. A GM any; a player their own
         $cid = cid();
@@ -2109,6 +2110,20 @@ try {
         $cid = cid();
         need_gm($cid);
         out(['ok' => true, 'route' => route_save($cid)]);
+
+    case 'area_save': // GMs: id (to change one), map_id, name, points [[x, y], ...] (3 or more), color, entry_id, region_id, is_secret
+        $cid = cid();
+        need_gm($cid);
+        out(['ok' => true, 'area' => area_save($cid)]);
+
+    case 'area_delete':
+        $cid = cid();
+        need_gm($cid);
+        $st = db()->prepare('DELETE FROM map_areas WHERE id=? AND campaign_id=?');
+        $st->execute([int_in(p('id'), 1), $cid]);
+        if (!$st->rowCount()) fail('Area not found', 404);
+        touch_campaign($cid);
+        out(['ok' => true]);
 
     case 'route_delete':
         $cid = cid();

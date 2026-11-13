@@ -143,6 +143,8 @@ function upgrade_steps(): array {
             'Every character sheet can now have a Holdings page of the character\'s own funds, gear and holdings, laid out like Party → Holdings.'],
         ['052_party_vehicles.sql', fn(PDO $p) => db_has_table($p, 'holdings') && !db_has_column($p, 'holdings', 'party_group_id'),
             'The party\'s vehicles can now travel with a group: drag one onto a group on Party → Groups, and it goes where the group goes.'],
+        ['053_map_areas.sql', fn(PDO $p) => db_has_table($p, 'maps') && !db_has_table($p, 'map_areas'),
+            'Maps can now have areas: draw an outline, name it, and tie it to an Encyclopedia entry or a weather region, so the party\'s weather changes as it crosses in.'],
     ];
 }
 
