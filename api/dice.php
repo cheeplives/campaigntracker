@@ -28,7 +28,7 @@ const DICE_REROLL_DICE = 100;
 const DICE_ENGINES = [1];
 /** The built-in patterns a player can put on their dice (TEXTURES in static/dice-3d.js, which draws them). */
 const DICE_TEXTURES = ['', 'marble', 'wood', 'stone', 'stars', 'metal', 'speckle', 'swirl', 'pearl', 'scales', 'carbon', 'ice', 'lava',
-    'glitter', 'galaxy', 'ember'];
+    'glitter', 'galaxy', 'ember', 'gilded', 'shield', 'moss', 'leopard', 'pinstripe', 'grove', 'eldritch', 'fire', 'magma'];
 
 /** How a player's dice look, checked: { body, ink, tex }, or null if it isn't one. */
 function dice_look($l): ?array {

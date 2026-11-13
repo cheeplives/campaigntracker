@@ -92,6 +92,13 @@ test("a player's dice colours: kept on their account, sent with each of their ro
   expect((await api(page, "dice_roll", { expr: "1d20", engine: Dice.VERSION }, cid)).status).toBe(200);
   let rolls = (await api(page, "dice_rolls", undefined, cid)).json.rolls;
   expect(rolls[rolls.length - 1].look).toEqual({ body: "#1e7a4c", ink: "#fff6d8", tex: "wood" });
+  // every pattern the picker offers, the skins' among them, is one the server keeps; each skin's pattern is one of them
+  const offered = D3.TEXTURES.map(([v]) => v);
+  for (const [, , , tex] of D3.SKINS) expect(offered).toContain(tex);
+  for (const tex of offered) {
+    const r = await api(page, "prefs_save", { dice_look: { body: "#112233", ink: "#ffffff", tex } });
+    expect(r.status, tex).toBe(200);
+  }
   // back to the theme's dice
   expect((await api(page, "prefs_save", { dice_look: null })).json.prefs.dice_look).toBeUndefined();
   rolls = (await api(page, "dice_rolls", undefined, cid)).json.rolls;
