@@ -134,6 +134,11 @@ test("the favicon and touch icon are linked and served as images", async ({ page
     expect(res.ok(), href).toBe(true);
     expect(res.headers()["content-type"], href).toMatch(/^image\//);
   }
+  // and every drawn icon is a picture the browser can actually draw (a stray "--" in an SVG comment makes it blank)
+  for (const svg of ["favicon.svg", "mark.svg", "logo-engraved.svg", "icon-maskable.svg", "owlbear.svg"]) {
+    const width = await page.evaluate(src => new Promise(done => { const i = new Image(); i.onload = () => done(i.naturalWidth); i.onerror = () => done(0); i.src = src; }), `static/icons/${svg}`);
+    expect(width, svg).toBeGreaterThan(0);
+  }
 });
 
 test("on an iPad in portrait the tabs are a drawer: » slides them out over the page, picking one slides them back", async ({ page, browser }) => {
