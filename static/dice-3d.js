@@ -21,20 +21,20 @@
    * that sparkles, stars that drift and twinkle inside the die, embers that glow. */
   const TEXTURES = [['', 'Plain'], ['marble', 'Marble'], ['wood', 'Wood'], ['stone', 'Stone'], ['stars', 'Starfield'],
     ['metal', 'Brushed metal'], ['speckle', 'Speckled'], ['swirl', 'Resin swirl'], ['pearl', 'Pearl'], ['scales', 'Dragon scales'],
-    ['carbon', 'Carbon fibre'], ['ice', 'Cracked ice'], ['lava', 'Lava'],
+    ['carbon', 'Carbon fibre'], ['ice', 'Cracked ice'], ['lava', 'Cooled lava'],
     ['glitter', 'Glitter (animated)'], ['galaxy', 'Galaxy (animated)'], ['ember', 'Embers (animated)'],
-    // the skins: a pattern with a frame round each face or numbers that glow (SKINS below gives each its colours)
-    ['gilded', 'Gilded frame (animated)'], ['shield', 'Shield: planks and steel'], ['moss', 'Mossy wood (animated)'], ['leopard', 'Leopard print'],
-    ['pinstripe', 'Pinstripe gloss (animated)'], ['grove', 'Glowing grove (animated)'], ['eldritch', 'Eldritch sigils (animated)'],
-    ['fire', 'Wildfire (animated)'], ['magma', 'Molten core (animated)']];
+    // the skins: a pattern that comes with its own colours (SKINS below), often a frame round each face or numbers that glow
+    ['gilded', 'Paladin (animated)'], ['eldritch', 'Warlock (animated)'], ['moss', 'Druid (animated)'], ['grove', 'Druid, glowing (animated)'],
+    ['fire', 'Fire (animated)'], ['magma', 'Lava (animated)'], ['shield', 'Shield'], ['leopard', 'Leopard'], ['pinstripe', 'Pink pinstripe (animated)']];
   /** The patterns that move, and what moves. */
-  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'glow', grove: 'glow', eldritch: 'pulse', fire: 'flicker', magma: 'glow',
+  const ANIMATED = { glitter: 'sparkle', galaxy: 'drift', ember: 'flow', grove: 'glow', eldritch: 'pulse', fire: 'flicker', magma: 'flow',
     gilded: 'shine', pinstripe: 'shine', moss: 'drift' };
   /** Patterns with a frame round each face: [the frame's colour, its width as a share of a face]. */
   const FRAMES = { gilded: ['#d9ae48', 0.2], shield: ['#a9b0b8', 0.24], leopard: ['#f7f3ee', 0.16], pinstripe: ['#e4b852', 0.16] };
   /** Patterns whose numbers glow, lit from within like the pattern's own light. */
   const GLOWING = new Set(['grove', 'eldritch', 'fire', 'magma']);
-  /** Ready-made looks, one tap for colours and pattern together: [name, body, ink, tex]. The ideas (a paladin's gold and
+  /** The skins' own colours: picking one of these patterns sets them too (the colours can be changed after). [name, body,
+   * ink, tex]. The ideas (a paladin's gold and
    * white, a warlock's trinket, druid wood and moss, fire, lava, a shield, leopard print, glossy pink pinstripes) come from
    * the "Themed Dice Skins" Baldur's Gate 3 mod by Sir William Snugglepuff; nothing of the mod's is used, every skin is
    * drawn here. */
@@ -143,6 +143,49 @@
     }
     g.restore();
   }
+  let heat = null;
+  /** Soft patches of heat, 0.2 to 1, that slide along a lava die's cracks so the molten rock seems to flow. */
+  function heatTile(size = 256) {
+    if (heat) return heat;
+    heat = document.createElement('canvas');
+    heat.width = heat.height = size;
+    const g = heat.getContext('2d'), img = g.createImageData(size, size), px = img.data, f = fbm(61, 3, 3);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const v = 255 * (0.2 + 0.8 * Math.max(0, Math.min(1, (f(x / size, y / size) - 0.3) * 2.2))), o = (y * size + x) * 4;
+      px[o] = px[o + 1] = px[o + 2] = v; px[o + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return heat;
+  }
+  /** The moving light of the fire patterns, redrawn each frame on a tile of its own: fire's flames rise up the die (two
+   * layers at different speeds, so they shift as they climb); lava's and embers' cracks stay put while patches of heat
+   * flow along them. Returns { cv, draw(t) }. */
+  function liveTile(look, size = 256) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d'), src = glowLayer(look, size), pat = g.createPattern(src, 'repeat');
+    const wrap = x => ((x % size) + size) % size;
+    const draw = t => {
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+      g.fillStyle = '#000'; g.fillRect(0, 0, size, size);
+      const layer = (pt, dx, dy, a, op) => {
+        g.save(); g.globalAlpha = a; g.globalCompositeOperation = op; g.translate(wrap(dx) - size, wrap(dy) - size);
+        g.fillStyle = pt; g.fillRect(0, 0, size * 2, size * 2); g.restore();
+      };
+      if (look.tex === 'fire') {
+        layer(pat, 0, -t * 0.32 * size, 0.85, 'lighter');
+        layer(pat, size * 0.37, -t * 0.55 * size, 0.55, 'lighter');
+      } else {
+        g.drawImage(src, 0, 0);
+        layer(g.createPattern(heatTile(size), 'repeat'), t * 0.09 * size, t * 0.05 * size, 1, 'multiply');
+        layer(g.createPattern(heatTile(size), 'repeat'), -t * 0.06 * size + size * 0.5, t * 0.08 * size, 0.6, 'multiply');
+      }
+    };
+    draw(0);
+    return { cv, draw };
+  }
+  /** Fire patterns whose light moves across the die, not only brightens. */
+  const LIVE = new Set(['fire', 'magma', 'ember']);
   const glows = new Map();
   /** The moving part of an animated pattern, drawn on its own tile and laid over the die as light it gives off: glitter
    * flakes, stars, the glowing cracks of embers. Black is "no light". */
@@ -309,10 +352,9 @@
             const n = Math.pow(f(u, v), 2);
             c = mix(mix(body, BLACK, 0.5), mix(body, [170, 100, 255], 0.55), n * 1.3);
           } else if (look.tex === 'fire') {
-            // a burning surface: dark coals under rising tongues of orange and yellow flame
+            // a burning surface: dark coals with a dull red glow (the bright flames rise over it in the moving layer)
             const h = flame(f, f2, u, v);
-            c = mix(mix(body, BLACK, 0.45), [255, 120, 20], Math.min(1, h * 1.3));
-            c = mix(c, [255, 230, 120], Math.pow(h, 5));
+            c = mix(mix(body, BLACK, 0.5), [190, 70, 15], Math.min(1, h * 0.8));
           } else if (look.tex === 'magma') {
             // charred rock, and molten cracks running through it
             const n = f(u, v), ridge = Math.pow(1 - Math.abs(2 * n - 1), 60);
@@ -498,7 +540,8 @@
     cv.width = cv.height = size;
     const g = cv.getContext('2d');
     // glow: the picture of the light the die gives off (its numbers, and the pattern's own light), black elsewhere
-    if (glow) { g.fillStyle = '#000'; g.fillRect(0, 0, size, size); if (ANIMATED[look.tex]) { g.globalAlpha = 0.6; g.fillStyle = g.createPattern(glowLayer(look), 'repeat'); g.fillRect(0, 0, size, size); g.globalAlpha = 1; } }
+    // ('numbers': the numbers alone, for a die whose pattern light is laid under them afresh each frame)
+    if (glow) { g.fillStyle = '#000'; g.fillRect(0, 0, size, size); if (glow === true && ANIMATED[look.tex]) { g.globalAlpha = 0.6; g.fillStyle = g.createPattern(glowLayer(look), 'repeat'); g.fillRect(0, 0, size, size); g.globalAlpha = 1; } }
     else { g.fillStyle = g.createPattern(pattern(look), 'repeat'); g.fillRect(0, 0, size, size); }
     const ink = look.ink, frame = FRAMES[look.tex], edge = toHex(mix(hex(look.body), BLACK, 0.35));
     const uv = [];
@@ -555,6 +598,8 @@
   }
   let renderer = null, scene, camera, sun, floor, canvas = null, raf = 0, fadeTimer = 0, current = null, preview = null;
   const geos = new Map(), mats = new Map();
+  /** The fire patterns' moving light: each emissive texture that is redrawn every frame, and how (liveTile()). */
+  const lives = new WeakMap();
   /** Whether this browser can draw WebGL 2 at all, asked once without three.js (which logs an error when it can't). */
   let gl2 = null;
   function available() {
@@ -618,7 +663,27 @@
       const metal = look.tex === 'metal';
       const shiny = ['marble', 'pearl', 'ice', 'glitter', 'galaxy', 'gilded', 'pinstripe'].includes(look.tex);
       const mat = new T.MeshStandardMaterial({ map, roughness: metal || look.tex === 'carbon' ? 0.32 : shiny ? 0.26 : 0.42, metalness: metal ? 0.35 : look.tex === 'pearl' ? 0.12 : 0.02 });
-      if (GLOWING.has(look.tex)) {
+      if (GLOWING.has(look.tex) && LIVE.has(look.tex)) {
+        // glowing numbers over moving fire: each frame the moving tile is laid over the faces and the numbers on top
+        const tile = liveTile(look), nums = atlas(sh, look, labels, 'numbers').cv;
+        const cv2 = document.createElement('canvas');
+        cv2.width = cv2.height = nums.width;
+        const g2 = cv2.getContext('2d');
+        const draw = t => {
+          tile.draw(t);
+          g2.globalCompositeOperation = 'source-over'; g2.globalAlpha = 1;
+          g2.fillStyle = g2.createPattern(tile.cv, 'repeat'); g2.fillRect(0, 0, cv2.width, cv2.height);
+          g2.globalCompositeOperation = 'lighter'; g2.drawImage(nums, 0, 0);
+        };
+        draw(0);
+        const glow = new T.CanvasTexture(cv2);
+        glow.colorSpace = T.SRGBColorSpace;
+        lives.set(glow, draw);
+        mat.emissiveMap = glow;
+        mat.emissive.setRGB(1, 1, 1);
+        mat.emissiveIntensity = 1;
+        mat.userData.anim = ANIMATED[look.tex];
+      } else if (GLOWING.has(look.tex)) {
         // numbers that glow: the light (numbers and the pattern's own) drawn over the same faces, and pulsed (animate())
         const glow = new T.CanvasTexture(atlas(sh, look, labels, true).cv);
         glow.colorSpace = T.SRGBColorSpace;
@@ -628,8 +693,10 @@
         if (ANIMATED[look.tex]) mat.userData.anim = ANIMATED[look.tex];
       } else if (ANIMATED[look.tex]) {
         // the moving layer: its own tile, repeated over the die, lit from within and changed each frame (animate())
-        const glow = new T.CanvasTexture(glowLayer(look));
+        const tile = LIVE.has(look.tex) ? liveTile(look) : null;
+        const glow = new T.CanvasTexture(tile ? tile.cv : glowLayer(look));
         glow.colorSpace = T.SRGBColorSpace;
+        if (tile) lives.set(glow, tile.draw);
         glow.wrapS = glow.wrapT = T.RepeatWrapping ?? 1000;
         const rep = look.tex === 'ember' ? 1 : 2;   // fewer repeats, bigger flakes and stars: big enough to see move
         glow.repeat.set(rep, rep);
@@ -691,6 +758,9 @@
       if (!m.userData.anim || seen.has(m.emissiveMap)) continue;
       seen.add(m.emissiveMap);
       const g = m.emissiveMap;
+      // fire that moves: its picture is redrawn for this moment and sent to the GPU again
+      const live = lives.get(g);
+      if (live) { live(t); g.needsUpdate = true; m.emissiveIntensity = 1 + 0.15 * Math.sin(t * 11) * Math.sin(t * 6.1); continue; }
       // strong enough to see in the second or two the dice rest before they fade (the flat dice's CSS is the yardstick)
       if (m.userData.anim === 'sparkle') {
         if (t - lastSpark > 0.12) { g.offset.set(Math.random(), Math.random()); lastSpark = t; }

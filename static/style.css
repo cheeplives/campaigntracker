@@ -2314,9 +2314,11 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .dice-pat-caret { font-size: .7em; opacity: .8; }
 .dice-pat > .dice-pat-list { position: static; margin-top: 4px; max-height: 300px; overflow-y: auto; box-shadow: none; gap: 8px; }
 .dice-pat-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px; }
-.dice-pat-h { grid-column: 1 / -1; margin: 0; font-size: .85rem; color: var(--dim); }
 .dice-pat-opt { display: flex; align-items: center; gap: 6px; margin: 0; padding: 2px 6px 2px 2px; font-size: .85rem; text-align: left; white-space: normal; line-height: 1.15; }
 .dice-pat-opt .dice-skin-die { flex: none; }
+.dice-saved { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.dice-saved-one { display: inline-flex; align-items: center; gap: 2px; }
+.dice-saved > button { margin: 0; }
 .dice-skin-die { width: 24px; height: 24px; border-radius: var(--radius); display: inline-grid; place-items: center; font: 700 .75rem var(--disp);
   background: var(--die-tex, none) center / 40px, var(--die-bg); color: var(--die-ink); box-shadow: inset 0 0 0 var(--die-rim, 1px) var(--die-edge);
   text-shadow: var(--die-shine, 0 0 2px var(--die-bg)); }
@@ -2387,8 +2389,10 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 .looked.anim-glow .die, .dice-skin-die.anim-glow { animation: die-glow 2.4s ease-in-out infinite alternate; }
 .looked.anim-pulse .die, .dice-skin-die.anim-pulse { animation: die-glow 1.6s ease-in-out infinite alternate; }
 .looked.anim-shine .die, .dice-skin-die.anim-shine { animation: die-shine 3s linear infinite; }
-.looked.anim-flicker .die, .dice-skin-die.anim-flicker { animation: die-flicker .9s steps(5) infinite; }
+.looked.anim-flicker .die, .dice-skin-die.anim-flicker { animation: die-flicker .9s steps(5) infinite, die-rise 2.4s linear infinite; }
+.looked.anim-flow .die, .dice-skin-die.anim-flow { animation: die-glow 2.4s ease-in-out infinite alternate, die-drift 9s linear infinite; }
 @keyframes die-sparkle { to { background-position: 97px 61px, center, 0 0; } }
+@keyframes die-rise { to { background-position: 0 -40px, center, 0 0; } }
 @keyframes die-shine { to { background-position: 40px 0, center, 0 0; } }
 @keyframes die-drift { to { background-position: 40px 20px, center, 0 0; } }
 @keyframes die-flicker { 0%, 100% { filter: brightness(1); } 30% { filter: brightness(1.25) saturate(1.2); } 60% { filter: brightness(.92); } 80% { filter: brightness(1.15); } }

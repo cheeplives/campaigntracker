@@ -562,27 +562,25 @@
       const swatch = (look, name, current, reset) => el('button', { type: 'button', class: 'dice-sw' + (current ? ' on' : ''), 'aria-label': name, 'aria-pressed': String(!!current), 'data-tip': name,
         style: { background: look.body, color: look.ink }, onclick: () => set(reset ? null : { ...look, tex: cur?.tex || '' }) }, '6');
       const theme = D3.themeLook();
-      // Pattern: a list that shows each choice on a small die. Skins first (each its own colours and pattern in one tap;
-      // the colours can still be changed after), then the patterns alone, shown in the colours picked now.
+      // Pattern: a list that shows each pattern on a small die. A skin's pattern comes with its own colours, so it shows
+      // in them and picking it sets them (they can still be changed after); every other pattern shows in the colours now.
       const sample = look => {
         const d = el('span', { class: 'dice-skin-die', 'aria-hidden': 'true' }, '20');
         for (const [p, v] of Object.entries(D3.chip(look) || {})) d.style.setProperty(p, v);
         if (D3.ANIMATED[look.tex]) d.classList.add('anim', `anim-${D3.ANIMATED[look.tex]}`);
         return d;
       };
-      const curSkin = cur && D3.SKINS.find(([, b, i, t]) => cur.body === b && cur.ink === i && (cur.tex || '') === t);
-      const texName = v => (D3.TEXTURES.find(([x]) => x === v) || ['', 'Plain'])[1];
-      const shownName = curSkin ? curSkin[0] : texName(shown.tex || '');
-      const opt = (look, name, on) => el('button', { type: 'button', class: 'dice-pat-opt' + (on ? ' on' : ''), 'aria-pressed': String(on),
-        onclick: () => set(look) }, sample(look), el('span', {}, name));
+      const lookFor = v => { const sk = D3.SKINS.find(([, , , t]) => t === v); return sk ? { body: sk[1], ink: sk[2], tex: v } : { ...shown, tex: v }; };
+      const shownName = (D3.TEXTURES.find(([x]) => x === (shown.tex || '')) || ['', 'Plain'])[1];
+      const opt = (v, name) => {
+        const on = (shown.tex || '') === v, look = on ? shown : lookFor(v);
+        return el('button', { type: 'button', class: 'dice-pat-opt' + (on ? ' on' : ''), 'aria-pressed': String(on),
+          onclick: () => set(lookFor(v)) }, sample(look), el('span', {}, name));
+      };
       const tex = KIT.menu({
         label: [sample(shown), el('span', { class: 'dice-pat-name' }, shownName), el('span', { class: 'dice-pat-caret', 'aria-hidden': 'true' }, '▾')],
         ariaLabel: `Pattern: ${shownName}`, cls: 'dice-pat', listCls: 'dice-pat-list', align: 'left',
-        items: [
-          el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Skins' }, el('p', { class: 'dice-pat-h', 'aria-hidden': 'true' }, 'Skins'),
-            D3.SKINS.map(([n, b, i, t]) => opt({ body: b, ink: i, tex: t }, n, curSkin?.[0] === n))),
-          el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Patterns in your colours' }, el('p', { class: 'dice-pat-h', 'aria-hidden': 'true' }, 'Patterns in your colours'),
-            D3.TEXTURES.map(([v, l]) => opt({ ...shown, tex: v }, l, !curSkin && (shown.tex || '') === v)))],
+        items: [el('div', { class: 'dice-pat-group', role: 'group', 'aria-label': 'Patterns' }, D3.TEXTURES.map(([v, l]) => opt(v, l)))],
       });
       const body = el('input', { type: 'color', value: shown.body, 'aria-label': 'Colour of the dice',
         onchange: e => set({ body: e.target.value, ink: D3.inkFor(e.target.value), tex: shown.tex || '' }) });
@@ -608,21 +606,59 @@
               el('label', {}, body, ' Dice'), el('label', {}, ink, ' Numbers')))),
         // under the preview and colours, across the card, so its list of choices has room for several columns
         el('div', { class: 'dice-pat-row' }, el('span', { class: 'dice-pat-label', 'aria-hidden': 'true' }, 'Pattern'), tex),
+        savedLooks(cur, sample),
         el('label', { class: 'dice-look-row small' }, on3d, ' Throw 3D dice on this device',
           gmFlat ? el('span', { class: 'muted' }, ' (the GM has set flat dice for this campaign)') : no3d ? el('span', { class: 'muted' }, ' (this browser can\'t draw 3D)') : slow ? el('span', { class: 'muted' }, ' (off: this device asks for less motion)') : null),
         el('label', { class: 'dice-look-row small' }, 'Dice stay on screen ', el('select', { class: 'dice-stay', 'aria-label': 'How long thrown dice stay on screen', disabled: !on3d.checked,
           onchange: e => D3.setStay(Number(e.target.value)) }, D3.STAYS.map(([v, l]) => el('option', { value: String(v), selected: v === D3.stay() }, l)))));
       if (D3.enabled() && !slow && !no3d) D3.still(still, shown).then(ok => { still.hidden = !ok; }); else still.hidden = true;
     }
+    // Saved looks: colours and a pattern they made and want to come back to, kept on their account (at most 12)
+    const myLooks = () => S.user?.prefs?.dice_looks || [];
+    const same = (a, b) => !!a && !!b && a.body === b.body && a.ink === b.ink && (a.tex || '') === (b.tex || '');
+    async function putLooks(list) {
+      try {
+        const r = await post('prefs_save', { dice_looks: list });
+        if (S.user) S.user.prefs = withMyLook(r.prefs);
+      } catch (x) { toast(x.message, true); }
+      drawLook();
+    }
+    function savedLooks(cur, sample) {
+      const list = myLooks();
+      const saveBtn = el('button', { type: 'button', class: 'small', disabled: !cur || list.length >= 12 || list.some(l => same(l, cur)),
+        'data-tip': !cur ? 'Pick colours or a pattern first' : list.length >= 12 ? '12 saved looks is the most' : null,
+        onclick: async () => {
+          const name = await ask('A name for this look:', { title: 'Save this look', value: `My dice ${list.length + 1}`, ok: 'Save' });
+          if (name === null || !name.trim()) return;
+          putLooks([...list, { name: name.trim().slice(0, 30), body: cur.body, ink: cur.ink, tex: cur.tex || '' }]);
+        } }, '☆ Save this look');
+      return el('div', { class: 'dice-pat-row dice-saved-row' }, el('span', { class: 'dice-pat-label', 'aria-hidden': 'true' }, 'Saved'),
+        el('div', { class: 'dice-saved', role: 'group', 'aria-label': 'Saved looks' },
+          list.map((l, i) => el('span', { class: 'dice-saved-one' },
+            el('button', { type: 'button', class: 'dice-pat-opt' + (same(l, cur) ? ' on' : ''), 'aria-pressed': String(same(l, cur)),
+              onclick: () => { setLook({ body: l.body, ink: l.ink, tex: l.tex }); drawLook(); } }, sample(l), el('span', {}, l.name)),
+            el('button', { type: 'button', class: 'link small', 'aria-label': `Forget ${l.name}`, 'data-tip': `Forget ${l.name}`,
+              onclick: () => putLooks(list.filter((_, j) => j !== i)) }, '✕'))),
+          list.length ? null : el('span', { class: 'small muted' }, 'None yet: make a look, then save it here.'),
+          saveBtn));
+    }
     /** Keep a new look: at once on this page, and on the account a moment later (so a run of changes is one save). */
+    // the look picked last on this page: a save's answer can come back after a newer pick, and must not undo it
+    let lookNow;
+    const withMyLook = prefs => {
+      const p = { ...prefs };
+      if (lookNow !== undefined) { if (lookNow) p.dice_look = lookNow; else delete p.dice_look; }
+      return p;
+    };
     function setLook(look) {
+      lookNow = look;
       if (S.user) S.user.prefs = { ...(S.user.prefs || {}), dice_look: look };
       if (!look && S.user?.prefs) delete S.user.prefs.dice_look;
       for (const r of rolls) if (r.mine) r.look = look;
       draw();
       clearTimeout(lookTimer);
       lookTimer = setTimeout(async () => {
-        try { const r = await post('prefs_save', { dice_look: look }); if (S.user) S.user.prefs = r.prefs; } catch (x) { toast(x.message, true); }
+        try { const r = await post('prefs_save', { dice_look: look }); if (S.user) S.user.prefs = withMyLook(r.prefs); } catch (x) { toast(x.message, true); }
       }, 500);
     }
 

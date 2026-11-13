@@ -99,6 +99,14 @@ test("a player's dice colours: kept on their account, sent with each of their ro
     const r = await api(page, "prefs_save", { dice_look: { body: "#112233", ink: "#ffffff", tex } });
     expect(r.status, tex).toBe(200);
   }
+  // saved looks: a named list of real looks, at most 12; an empty list forgets them
+  const look = { name: "Forest", body: "#1e7a4c", ink: "#fff6d8", tex: "wood" };
+  for (const bad of [[{ ...look, name: "" }], [{ ...look, tex: "plasma" }], [{ ...look, name: "x".repeat(31) }], Array(13).fill(look), { a: look }])
+    expect((await api(page, "prefs_save", { dice_looks: bad })).status).toBe(400);
+  const kept = await api(page, "prefs_save", { dice_looks: [look, { ...look, name: "  Ash  ", body: "#1D1D22" }] });
+  expect(kept.status).toBe(200);
+  expect(kept.json.prefs.dice_looks).toEqual([look, { ...look, name: "Ash", body: "#1d1d22" }]);
+  expect((await api(page, "prefs_save", { dice_looks: [] })).json.prefs.dice_looks).toBeUndefined();
   // back to the theme's dice
   expect((await api(page, "prefs_save", { dice_look: null })).json.prefs.dice_look).toBeUndefined();
   rolls = (await api(page, "dice_rolls", undefined, cid)).json.rolls;
