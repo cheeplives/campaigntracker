@@ -19,6 +19,9 @@ test("requests from Sheet templates reach Site Admin's Sheets tab, counted by ga
   // Ada asks from the library: what she searched for is offered as the name.
   await page.goto("index.html#/templates");
   await page.getByLabel("Search templates").fill(game);
+  // It sits beside + New template in the page's header and is the same button there, only outlined: one font, size and height.
+  const look = l => l.evaluate(b => { const s = getComputedStyle(b); return [s.fontFamily, s.fontWeight, s.fontSize, Math.round(b.getBoundingClientRect().height)]; });
+  expect(await look(page.getByRole("button", { name: "Request a game" }))).toEqual(await look(page.getByRole("button", { name: "+ New template" })));
   await page.getByRole("button", { name: "Request a game" }).click();
   const box = page.getByRole("dialog").getByRole("textbox");
   await expect(box).toHaveValue(game);
