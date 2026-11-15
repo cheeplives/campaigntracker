@@ -149,6 +149,8 @@ input, select, textarea, button, .button {
 textarea { width: 100%; resize: vertical; }
 /* a box to type in or pick from is as tall as a button beside it */
 input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]), select { min-height: var(--ctl-h); padding-top: 6px; padding-bottom: 6px; }
+/* Safari draws a select taller than its padding says, so a one-line select is given the height outright */
+select:not([multiple]):not([size]) { height: var(--ctl-h); box-sizing: border-box; }
 input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-color: var(--accent); }
 input[type=color] { padding: 2px; height: 36px; width: 60px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
