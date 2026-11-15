@@ -1487,6 +1487,8 @@
     // software and fonts bundled with the app
     quill: { title: 'Quill 2 rich text editor (static/vendor/quill)', by: 'Slab and the Quill contributors', licence: 'BSD 3-Clause',
       url: 'https://github.com/slab/quill' },
+    owlbear: { title: 'Owlbear Rodeo SDK 3.1.0 (static/vendor/owlbear)', by: 'Owlbear Rodeo', licence: 'MIT',
+      url: 'https://github.com/owlbear-rodeo/sdk' },
     leaflet: { title: 'Leaflet 1.9.4 map viewer (static/vendor/leaflet)', by: 'Volodymyr Agafonkin and the Leaflet contributors', licence: 'BSD 2-Clause',
       url: 'https://github.com/Leaflet/Leaflet' },
     tesseract: { title: 'Tesseract.js 7.0.0 and tesseract.js-core 7.0.0 text recognition (static/vendor/tesseract)', by: 'Jerome Wu, Balearica and the Tesseract.js contributors; the Tesseract OCR engine by Google and its contributors',
