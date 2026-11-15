@@ -75,6 +75,13 @@ test("Tokens: game icons, a genre's starter set and a search, each credited to i
   const dlg = page.locator("dialog.gi-dialog");
   await expect(dlg.locator(".gi-cell")).toHaveCount(12);
   await expect(dlg.locator(".gi-cell").first()).toContainText("Party ship");
+  // the other genres' sets: ten in all, a dozen tokens each
+  await expect(dlg.getByLabel("Genre").locator("option")).toHaveCount(10);
+  await dlg.getByLabel("Genre").selectOption("pirates");
+  await expect(dlg.locator(".gi-cell")).toHaveCount(12);
+  await expect(dlg.locator(".gi-cell").first()).toContainText("Party ship");
+  await expect(dlg.locator('.gi-cell[data-icon="lorc/sea-serpent"]')).toContainText("Sea serpent");
+  await expect(dlg.getByRole("status")).toContainText("The Pirates and high seas starter set.");
   await dlg.getByLabel("Genre").selectOption("fantasy");
   await expect(dlg.locator(".gi-cell").first()).toContainText("Adventuring party");
   await dlg.getByRole("button", { name: "Add all 12" }).click();

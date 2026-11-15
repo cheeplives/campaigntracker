@@ -13,7 +13,8 @@ const TokensTab = (() => {
   // and the browser draws it white on its kind's colour and uploads the picture as a new token, credited to its artist.
   const ICONS = 'static/vendor/game-icons/';
   const KIND_COLOURS = { party: '#b07a1c', character: '#3f5f8f', creature: '#9a3a2c', object: '#5f6b3a' };
-  // A dozen ready-made tokens for each setting genre (Settings → genre): [kind, icon, name].
+  // A dozen ready-made tokens for each genre: [kind, icon, name]. The first three are the campaign genres (Settings → genre),
+  // whose set the dialog opens on; the rest are for other kinds of game.
   const STARTERS = {
     fantasy: [['party', 'delapouite/knight-banner', 'Adventuring party'], ['character', 'lorc/visored-helm', 'Warrior'],
       ['character', 'delapouite/wizard-face', 'Wizard'], ['character', 'darkzaitzev/hooded-assassin', 'Rogue'], ['character', 'delapouite/sun-priest', 'Priest'],
@@ -28,7 +29,39 @@ const TokensTab = (() => {
       ['character', 'delapouite/cyborg-face', 'Cyborg'], ['character', 'delapouite/robot-helmet', 'Robot'], ['creature', 'lorc/alien-stare', 'Alien'],
       ['creature', 'delapouite/alien-bug', 'Xeno bug'], ['creature', 'delapouite/delivery-drone', 'Drone'], ['creature', 'delapouite/battle-mech', 'Mech'],
       ['object', 'delapouite/laser-turret', 'Turret'], ['object', 'delapouite/cargo-crate', 'Cargo crate'], ['object', 'sbed/medical-pack', 'Medkit']],
+    horror: [['party', 'delapouite/old-lantern', 'Investigators'], ['character', 'lorc/fedora', 'Investigator'], ['character', 'cathelineau/nun-face', 'Nun'],
+      ['character', 'lorc/cultist', 'Cultist'], ['character', 'lorc/mad-scientist', 'Mad scientist'], ['creature', 'lorc/ghost', 'Ghost'],
+      ['creature', 'delapouite/vampire-dracula', 'Vampire'], ['creature', 'lorc/werewolf', 'Werewolf'], ['creature', 'delapouite/mummy-head', 'Mummy'],
+      ['creature', 'delapouite/floating-tentacles', 'Eldritch horror'], ['object', 'lorc/coffin', 'Coffin'], ['object', 'delapouite/spell-book', 'Forbidden tome']],
+    postapoc: [['party', 'delapouite/truck', 'Convoy'], ['character', 'lorc/gas-mask', 'Scavenger'], ['character', 'carl-olsen/brutal-helm', 'Raider'],
+      ['character', 'caro-asercion/warlord-helmet', 'Warlord'], ['character', 'delapouite/flamethrower-soldier', 'Flamer'], ['creature', 'delapouite/shambling-zombie', 'Ghoul'],
+      ['creature', 'delapouite/rat', 'Giant rat'], ['creature', 'lorc/scorpion', 'Giant scorpion'], ['creature', 'delapouite/tracked-robot', 'War robot'],
+      ['object', 'delapouite/water-gallon', 'Clean water'], ['object', 'skoll/oil-drum', 'Fuel drum'], ['object', 'lorc/radioactive', 'Radiation']],
+    western: [['party', 'delapouite/old-wagon', 'Wagon'], ['character', 'andymeneely/police-badge', 'Sheriff'], ['character', 'delapouite/bandit', 'Outlaw'],
+      ['character', 'delapouite/outback-hat', 'Cowhand'], ['character', 'lorc/top-hat', 'Gambler'], ['character', 'delapouite/pilgrim-hat', 'Preacher'],
+      ['creature', 'delapouite/horse-head', 'Horse'], ['creature', 'delapouite/rattlesnake', 'Rattlesnake'], ['creature', 'delapouite/bison', 'Bison'],
+      ['object', 'delapouite/dynamite', 'Dynamite'], ['object', 'delapouite/wanted-reward', 'Wanted poster'], ['object', 'delapouite/gold-nuggets', 'Gold']],
+    superhero: [['party', 'delapouite/cape', 'Hero team'], ['character', 'lorc/domino-mask', 'Masked hero'], ['character', 'delapouite/strong-man', 'Bruiser'],
+      ['character', 'delapouite/quick-man', 'Speedster'], ['character', 'lorc/brainstorm', 'Psychic'], ['character', 'delapouite/overlord-helm', 'Supervillain'],
+      ['creature', 'delapouite/robber-mask', 'Henchman'], ['creature', 'delapouite/mecha-mask', 'Giant robot'], ['creature', 'lorc/dinosaur-rex', 'Kaiju'],
+      ['creature', 'delapouite/ufo', 'Alien invaders'], ['object', 'delapouite/time-dynamite', 'Doomsday device'], ['object', 'lorc/floating-crystal', 'Power crystal']],
+    cyberpunk: [['party', 'delapouite/aero-bike', 'Crew ride'], ['character', 'darkzaitzev/ninja-head', 'Street samurai'], ['character', 'delapouite/vr-headset', 'Netrunner'],
+      ['character', 'delapouite/custodian-helmet', 'Corp security'], ['character', 'delapouite/hoodie', 'Ganger'], ['character', 'lorc/android-mask', 'Android'],
+      ['creature', 'delapouite/spider-bot', 'Spider bot'], ['creature', 'delapouite/delivery-drone', 'Security drone'], ['creature', 'delapouite/mecha-head', 'Combat mech'],
+      ['object', 'lorc/microchip', 'Data chip'], ['object', 'delapouite/server-rack', 'Server'], ['object', 'delapouite/cyber-eye', 'Cyber implant']],
+    steampunk: [['party', 'skoll/zeppelin', 'Airship'], ['character', 'delapouite/steampunk-goggles', 'Inventor'], ['character', 'delapouite/lorgnette', 'Aristocrat'],
+      ['character', 'delapouite/diving-helmet', 'Diver'], ['character', 'skoll/brodie-helmet', 'Soldier'], ['creature', 'lorc/vintage-robot', 'Automaton'],
+      ['creature', 'lorc/robot-golem', 'Clockwork golem'], ['creature', 'lorc/raven', 'Raven'], ['object', 'lorc/clockwork', 'Clockwork'], ['object', 'lorc/gears', 'Gears'],
+      ['object', 'delapouite/steam', 'Steam vent'], ['object', 'delapouite/cuckoo-clock', 'Clock']],
+    pirates: [['party', 'lorc/galleon', 'Party ship'], ['character', 'delapouite/pirate-captain', 'Pirate captain'], ['character', 'delapouite/pirate-hook', 'Buccaneer'],
+      ['character', 'delapouite/captain-hat-profile', 'Navy officer'], ['character', 'delapouite/lucky-fisherman', 'Fisher'], ['creature', 'lorc/parrot-head', 'Parrot'],
+      ['creature', 'delapouite/shark-fin', 'Shark'], ['creature', 'lorc/sea-serpent', 'Sea serpent'], ['creature', 'lorc/pirate-skull', 'Skeleton crew'],
+      ['object', 'lorc/treasure-map', 'Treasure map'], ['object', 'lorc/cannon', 'Cannon'], ['object', 'delapouite/pirate-flag', 'Pirate flag']],
   };
+  // The starter sets' names: the campaign's three genres first, then the sets for other kinds of game.
+  const SET_NAMES = { horror: 'Horror', postapoc: 'Post-apocalypse', western: 'Wild West', superhero: 'Superhero', cyberpunk: 'Cyberpunk',
+    steampunk: 'Steampunk', pirates: 'Pirates and high seas' };
+  const setNames = genres => ({ ...genres, ...SET_NAMES });
   let iconIndex = null;
   /** The set's index (every icon as "artist/name", and the artists), fetched the first time it is needed. */
   function loadIcons() {
@@ -179,7 +212,7 @@ const TokensTab = (() => {
       const added = new Set();
       let picked = null;   // { id, kind?, name? }
       const q = el('input', { type: 'search', placeholder: 'Search icons: goblin, sword, ship…', 'aria-label': 'Search the game icons', autocomplete: 'off', class: 'grow' });
-      const genreSel = select(Object.entries(ctx.genres), ctx.genre(), { 'aria-label': 'Genre' });
+      const genreSel = select(Object.entries(setNames(ctx.genres)), ctx.genre(), { 'aria-label': 'Genre' });
       const results = el('div', { class: 'gi-grid', role: 'list' });
       const note = el('p', { class: 'small muted', role: 'status' });
       const name = el('input', { maxlength: 100, 'aria-label': 'Token name', placeholder: 'Pick an icon' });
@@ -187,7 +220,8 @@ const TokensTab = (() => {
       const preview = el('span', { class: 'gi-face gi-preview' });
       const credit = el('span', { class: 'small muted' });
       const addOne = el('button', { type: 'button', class: 'primary', disabled: true }, 'Add token');
-      const addAll = btn('Add all 12', () => addSet(), 'small primary', 'Add every token of this starter set that isn\'t added yet');
+      const addAll = btn('Add all', () => addSet(), 'small primary', 'Add every token of this starter set that isn\'t added yet');
+      const sets = setNames(ctx.genres);
       const starters = () => STARTERS[genreSel.value].map(([kind, id, nm]) => ({ id, kind, name: nm }));
       const artistOf = id => index.artists[id.split('/')[0]];
       const faceFor = (id, colour) => el('span', { class: 'gi-face', style: { background: colour } }, el('img', { src: `${ICONS}svg/${id}.svg`, alt: '', loading: 'lazy' }));
@@ -202,9 +236,10 @@ const TokensTab = (() => {
         const shown = term ? findIcons(index, term) : null;
         addAll.style.display = genreSel.parentElement.style.display = term ? 'none' : '';   // a starter set only while not searching
         const items = shown ? shown.slice(0, 120).map(id => ({ id })) : starters();
+        if (!shown) addAll.textContent = `Add all ${items.length}`;
         results.replaceChildren(...(items.length ? items.map(cell) : [el('p', { class: 'muted' }, 'No icon has that in its name. Try a shorter word, like "orc" or "gun".')]));
         note.textContent = shown ? (shown.length > 120 ? `Showing 120 of ${shown.length}. Type more to narrow it down.` : `${shown.length} found.`)
-          : `The ${ctx.genres[genreSel.value]} starter set. Search for any of the ${index.icons.length.toLocaleString()} icons.`;
+          : `The ${sets[genreSel.value]} starter set. Search for any of the ${index.icons.length.toLocaleString()} icons.`;
       }
       function pick(it) {
         picked = it;
@@ -327,7 +362,7 @@ const TokensTab = (() => {
       el('div', { class: 'row spread' }, el('h2', {}, 'Tokens'),
         el('div', { class: 'row' }, el('label', { class: 'button small primary file-add', 'data-tip': 'Pick pictures (JPEG, PNG, GIF, WebP): each becomes a token named after its file' }, input, 'Upload tokens…'),
           btn('Find Image…', () => findFor(null), 'small', 'Search open picture libraries for a token picture'),
-          btn('Game icons…', gameIcons, 'small', 'Pick from over 4,000 game-icons.net icons, or add a starter set for the genre'))),
+          btn('Game icons…', gameIcons, 'small', 'Pick from over 4,000 game-icons.net icons, or add a starter set for one of ten genres'))),
       el('p', { class: 'muted small' }, 'Round pictures for the party\'s groups (their marker on a map), the players\' characters (the Members tab) and the Encyclopedia\'s entries (the entry\'s page and its pins on a map). Players see a token\'s picture only where it is used, and never a 🔒 GM-only one.'),
       el('div', { class: 'row' }, search, kind), status, grid));
   }
