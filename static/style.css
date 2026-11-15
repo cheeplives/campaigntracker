@@ -2431,6 +2431,42 @@ body.dice-float .dice-panel { top: calc(var(--topbar-h, 56px) + 10px); right: 12
 /* While the 3D dice are in the air the newest roll's result waits for them to land. */
 .dice-e.landing .dice-e-out, .dice-e.landing .dice-terms { visibility: hidden; }
 .dice-e.landing .dice-e-main::after { content: 'Rolling…'; font-size: .85rem; color: var(--dim); }
+/* A critical as it lands (dice-tab.js cheer()): rays and flecks burst behind a plate with the result, over the top of
+   the log, then fade. Gold is a critical, as on its die's ring (.die.crit); red a critical failure, which shakes and
+   whose flecks fall. Floating, so it has a shadow. Reduced motion: it shows and goes, nothing moving. */
+.dice-cheer { --cheer: #c99a1a; position: absolute; z-index: 4; inset: 0 0 auto; height: 210px; display: grid; place-items: center;
+  overflow: hidden; cursor: pointer; animation: dice-cheer-out 3.2s ease-in forwards; }
+.dice-cheer.is-fumble { --cheer: #b8322a; }
+.dice-cheer[hidden] { display: none; }
+.dice-cheer-rays { position: absolute; inset: 0; color: var(--cheer); opacity: .42; animation: dice-cheer-rays 3.2s ease-out forwards; }
+.dice-cheer-rays svg { width: 100%; height: 100%; fill: currentColor; }
+.dice-cheer.is-fumble .dice-cheer-rays { opacity: .26; animation-name: dice-cheer-rays-fail; }
+.dice-cheer-fleck { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px; background: var(--cheer); opacity: 0;
+  transform: rotate(45deg); animation: dice-cheer-fleck .9s var(--t) cubic-bezier(.2, .7, .3, 1) forwards; }
+.dice-cheer.is-fumble .dice-cheer-fleck { width: 6px; height: 10px; animation-name: dice-cheer-fall; animation-duration: 1.2s; }
+.dice-cheer-plate { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 220px; max-width: calc(100% - 40px);
+  padding: 12px 22px 14px; background: var(--panel); border: 3px solid var(--cheer); border-radius: var(--radius); text-align: center;
+  box-shadow: 0 14px 34px -12px rgb(0 0 0 / .6); animation: dice-cheer-pop .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+.dice-cheer.is-fumble .dice-cheer-plate { animation: dice-cheer-pop .35s ease-out both, dice-cheer-shake .5s .35s ease-in-out both; }
+.dice-cheer-icon { color: var(--cheer); font-size: 2.1rem; line-height: 1; animation: dice-cheer-spin .9s .15s ease-out both; }
+.dice-cheer.is-fumble .dice-cheer-icon { animation: none; }
+.dice-cheer-head { font: 700 2.2rem/1.1 var(--disp); color: var(--text); }
+.dice-cheer-sub { color: var(--dim); overflow-wrap: anywhere; }
+.dice-cheer-sub b { font: 600 1.15rem var(--disp); color: var(--text); }
+@keyframes dice-cheer-out { 0%, 85% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes dice-cheer-pop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes dice-cheer-rays { 0% { transform: scale(.2) rotate(-20deg); } 30% { transform: scale(1.05) rotate(0); } 100% { transform: scale(1.15) rotate(25deg); } }
+@keyframes dice-cheer-rays-fail { 0% { transform: scale(.2); } 25% { transform: scale(1); } 100% { transform: scale(1); } }
+@keyframes dice-cheer-spin { 0% { transform: rotate(-180deg) scale(0); } 70% { transform: rotate(15deg) scale(1.3); } 100% { transform: none; } }
+@keyframes dice-cheer-shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-7px) rotate(-1.5deg); } 40%, 80% { transform: translateX(7px) rotate(1.5deg); } }
+@keyframes dice-cheer-fleck { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) rotate(45deg); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d) - 40px)) rotate(225deg); } }
+@keyframes dice-cheer-fall { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-30px); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(-30px) rotate(calc(-1 * var(--a))) translateY(120px) rotate(70deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .dice-cheer, .dice-cheer-rays, .dice-cheer-plate, .dice-cheer.is-fumble .dice-cheer-plate, .dice-cheer-icon { animation: none; }
+  .dice-cheer-fleck { display: none; }
+}
 @keyframes dice-tumble { 0% { transform: rotate(0); } 50% { transform: rotate(14deg) scale(.92); } 100% { transform: rotate(0); } }
 .dice-foot { padding: 10px 14px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex: none; max-height: 60%; overflow-y: auto; overscroll-behavior: contain; }
 .dice-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }

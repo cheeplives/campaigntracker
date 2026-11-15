@@ -139,12 +139,14 @@
     const lookBtn = el('button', { type: 'button', class: 'dice-look-b', 'aria-label': 'Your dice: colours and 3D', 'aria-expanded': 'false', 'data-tip': 'Your dice: their colours, their pattern and 3D' }, '🎨');
     const lookCard = el('div', { class: 'dice-help dice-look', hidden: true, role: 'dialog', 'aria-label': 'Your dice' });
     lookBtn.addEventListener('click', () => showLook(lookCard.hidden));
+    // A critical gets a moment of its own over the top of the log as it lands (cheer()); a tap puts it away.
+    const cheerBox = el('div', { class: 'dice-cheer', hidden: true, 'aria-hidden': 'true', onclick: () => endCheer() });
     const panel = el('section', { class: 'dice-panel', hidden: true, role: 'region', 'aria-label': 'Dice roller' },
       el('div', { class: 'dice-head' }, el('h2', {}, '🎲 Dice'), sub,
         lookBtn, pinBtn,
         el('button', { type: 'button', class: 'dice-x', 'aria-label': 'Close the dice roller', 'data-tip': 'Close. The log keeps everyone\'s rolls', onclick: () => setOpen(false) }, '✕')),
       el('div', { class: 'dice-foot' }, modes, sysBox, freeBox, err, savedRow),
-      el('div', { class: 'dice-body' }, log, help, lookCard));
+      el('div', { class: 'dice-body' }, log, cheerBox, help, lookCard));
     document.body.append(fab, panel);
 
     fab.addEventListener('click', () => setOpen(true));
@@ -213,6 +215,7 @@
         stopPoll();
         showLook(false);
         D3?.stop();
+        endCheer();
         fab.focus({ preventScroll: true });
       }
     }
@@ -260,31 +263,80 @@
       }
       rolls.sort((a, b) => a.id - b.id);
       if (rolls.length > 200) rolls = rolls.slice(-200);
+      let landed = null;      // the roll just made (or rerolled), cheered once its dice are down
       if (toss && isOpen() && toss.id === rolls[rolls.length - 1].id) {
         const re = rerollOf(toss), target = re && rolls.find(x => x.id === re.id);
-        if (!re) throw3d(toss);
-        else if (target) { fresh.add(target.id); throw3d(target, new Set(re.dice)); }
+        if (!re) landed = toss;
+        else if (target) { fresh.add(target.id); landed = target; }
+        if (landed && throw3d(landed, re ? new Set(re.dice) : null)) landed = null;   // cheered as the 3D dice land
       }
       // nothing new: the log stays as it is (rebuilding every roll in it each poll froze the page for half a second
       // with a long log), except once a minute so "2 min ago" keeps up
       if (added || Date.now() - drawnAt > 60000) draw();
+      if (landed) cheer(landed);
       if (isOpen()) markSeen();
     }
-    /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land. */
+    /** Throw a roll's dice in 3D over the page, in its roller's colours; its result in the log shows once they land
+     * (and a critical is cheered then). False if they weren't thrown. */
     function throw3d(r, only = null) {
-      if (!D3 || r.seed === null || settings?.flat) return;     // the GM can make the dice flat for the whole table
+      if (!D3 || r.seed === null || settings?.flat) return false;     // the GM can make the dice flat for the whole table
       let res;
-      try { res = Dice.roll(r.expr, r.seed, rerollsFor(r)); } catch { return; }
-      if (!D3.can(res, only)) return;
+      try { res = Dice.roll(r.expr, r.seed, rerollsFor(r)); } catch { return false; }
+      if (!D3.can(res, only)) return false;
       landingId = r.id;
       const done = () => {
         if (landingId !== r.id) return;
         landingId = 0;
         const li = log.querySelector(`[data-id="${r.id}"]`);
         li?.classList.remove('landing');
+        cheer(r);
       };
       D3.toss(res, r.look, only).then(done, done);
       setTimeout(done, 4000);      // never leave a result hidden
+      return true;
+    }
+
+    /** A critical success or failure (the Critical or Botch tier of the campaign's dice system, its own or the
+     * criticals turned on under More options): a burst over the top of the log with the result, gold for a critical and
+     * red for a critical failure, for a few seconds. With reduced motion it simply shows and goes, nothing moving. The
+     * log entry under it already says the same to a screen reader, so the burst is hidden from one. */
+    let cheerTimer = 0;
+    function cheer(r) {
+      if (!r || r.seed === null || !isOpen()) return;
+      let o;
+      try { o = DiceUI.outcome(Dice.roll(r.expr, r.seed, rerollsFor(r)), { table: sysNow?.table }); } catch { return; }
+      if (o.tier !== 'crit' && o.tier !== 'botch') return;
+      const good = o.tier === 'crit';
+      const head = good ? 'Critical!' : 'Critical failure';
+      const words = /^critical (success|failure)$/i.test(o.words) ? '' : o.words;
+      const RAYS = 16, sparks = good ? 18 : 12;
+      const rays = Array.from({ length: RAYS }, (_, k) => {
+        const a = (k / RAYS) * Math.PI * 2, w = Math.PI / RAYS * (k % 2 ? 0.35 : 0.55), far = k % 2 ? 150 : 200;
+        const pt = (ang, d) => `${(Math.cos(ang) * d).toFixed(1)},${(Math.sin(ang) * d).toFixed(1)}`;
+        return `<path d="M${pt(a - w, 18)} L${pt(a, far)} L${pt(a + w, 18)}Z"/>`;
+      }).join('');
+      const burst = el('span', { class: 'dice-cheer-rays' });
+      burst.innerHTML = `<svg viewBox="-200 -200 400 400" preserveAspectRatio="xMidYMid slice">${rays}</svg>`;
+      const flecks = Array.from({ length: sparks }, (_, k) => {
+        const a = (k / sparks) * 360 + (k % 3) * 7;
+        return el('i', { class: 'dice-cheer-fleck', style: `--a:${a}deg;--d:${70 + (k % 4) * 22}px;--t:${(k % 5) * 40}ms` });
+      });
+      cheerBox.replaceChildren(burst, ...flecks,
+        el('div', { class: 'dice-cheer-plate' },
+          el('span', { class: 'dice-cheer-icon' }, KIT.icon(good ? 'star' : 'danger')),
+          el('b', { class: 'dice-cheer-head' }, head),
+          el('span', { class: 'dice-cheer-sub' }, el('b', {}, String(o.big)), words ? ` · ${words}` : '')));
+      cheerBox.className = `dice-cheer ${good ? 'is-crit' : 'is-fumble'}`;
+      cheerBox.hidden = true;
+      void cheerBox.offsetWidth;      // start its animation over if one is still showing
+      cheerBox.hidden = false;
+      clearTimeout(cheerTimer);
+      cheerTimer = setTimeout(endCheer, reduced() ? 3000 : 3200);
+    }
+    function endCheer() {
+      clearTimeout(cheerTimer);
+      cheerBox.hidden = true;
+      cheerBox.replaceChildren();
     }
     function draw() {
       if (!rolls.length) {
