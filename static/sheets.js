@@ -336,7 +336,7 @@ const Sheets = (() => {
     } catch (err) { toast(err.message, true); }
   }
   /** The buttons for a template: Use, Fork, and Edit for its author. */
-  const actions = t => el('div', { class: 'row' },
+  const actions = t => el('div', { class: 'row card-foot' },
     button('Use', () => useTemplate(t).catch(err => toast(err.message, true)), 'small primary', { 'data-tip': 'Make a character with this sheet in one of your campaigns' }),
     button('Fork', () => fork(t), 'small', { 'data-tip': 'Make your own copy to change. The original stays as it is' }),
     t.can_edit ? button('Edit', () => (location.hash = `#/templates/${t.id}/edit`), 'small') : null);

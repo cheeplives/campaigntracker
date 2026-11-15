@@ -24,6 +24,7 @@
   --bg: #16140f; --panel: #211e17; --panel-2: #2a261d; --line: #3d372a;
   --text: #ece4d2; --dim: #a39a85; --accent: #d9a441; --on-accent: #1a1408;
   --bad: #d0604d; --secret: #8b5cc4; --ok: #6fb37a;
+  --ctl-h: 36px; --ctl-h-sm: 28px;   /* one height for every control in a row: regular and small (44px on a touch screen) */
   --radius: 6px; --disp: Spectral, Georgia, serif; --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
   --mono: ui-monospace, Menlo, Consolas, monospace;
   /* panels barely warmed by the accent, closed divider tabs, labels between the text and dim colours */
@@ -120,6 +121,9 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-dir
 .card { background: var(--stock); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px; }
 /* A card inside a card is just a ruled box: no second fill */
 .card .card { background: transparent; }
+/* A card's buttons sit along its bottom, so a row of cards side by side has its buttons in one line, however much each
+ * card says above them. The card is a flex column (as the template, character and map cards are); this row is its last. */
+.card-foot, .row.card-foot { margin-top: auto; padding-top: 6px; }
 .card.narrow { max-width: 460px; margin: 30px auto; width: 100%; }
 /* The New campaign form holds the seasons editor, a row of six boxes per season, so it gets more room than a sign-in card */
 .card.narrow.form-wide { max-width: 760px; }
@@ -143,17 +147,26 @@ input, select, textarea, button, .button {
   font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; max-width: 100%;
 }
 textarea { width: 100%; resize: vertical; }
+/* a box to type in or pick from is as tall as a button beside it */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]), select { min-height: var(--ctl-h); padding-top: 6px; padding-bottom: 6px; }
 input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-color: var(--accent); }
 input[type=color] { padding: 2px; height: 36px; width: 60px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-button, .button { cursor: pointer; display: inline-block; font-weight: 500; }
+/* Buttons, the visual lexicon: every button is set in Spectral (--disp) and is one of two sizes, regular (--ctl-h, 36px)
+ * or small (--ctl-h-sm, 28px), so any row of buttons lines up. Kinds: outlined (the default, Spectral 600), primary
+ * (filled with the accent and bold, Spectral 700: a page's or dialog's main action), danger (outlined in red), link
+ * (bare). A page's + New button is a regular button like any other: filled in a page header, outlined inside a box. */
+button, .button { cursor: pointer; display: inline-block; box-sizing: border-box; font: 600 1rem/1.2 var(--disp); text-transform: none; letter-spacing: 0; text-decoration: none; }
+/* the standard buttons take the standard height; a one-off control (a tag, a chip, a toolbar icon) keeps its own size */
+button:not([class]), button[class=""], button.primary, button.small, button.danger, button.new-btn, button[class="on"], .button { min-height: var(--ctl-h); padding: 8px 14px; }
 button:hover, .button:hover { border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: wait; }
-button.primary, .button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font: 600 1.05rem var(--disp); padding: 6px 16px; }
-button.small.primary { font-size: .95rem; padding: 4px 12px; }
+button.primary, .button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 button.danger { color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
-button.small, .button.small { padding: 4px 9px; font-size: .85rem; }
-button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; }
+button.small, .button.small { min-height: var(--ctl-h-sm); padding: 5px 10px; font-size: .88rem; }
+button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; min-height: 0; }
+/* an <a> or <label> drawn as a button centres its words the way a <button> does */
+a.button:not([hidden]), label.button:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
 /* a picked toggle: tinted with the accent and edged in it, the text in the text colour (Lamplight keeps solid accent
    for the one main action on a page) */
 button.on { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--text); border-color: var(--accent); }
@@ -1726,7 +1739,7 @@ body.group-dragging, body.group-dragging * { cursor: grabbing !important; user-s
 .template-card .template-name { font: 600 1.2rem var(--disp); }
 .template-edition { display: flex; align-items: center; gap: 8px; }
 .template-edition select { flex: 1; min-width: 0; }
-.template-edition-body { display: flex; flex-direction: column; gap: 4px; }
+.template-edition-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .template-forks ul { margin: 0; padding-left: 1.2em; }
 .sheet-ed { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; }
 @media (max-width: 760px) { .sheet-ed { grid-template-columns: 1fr; } }
@@ -2561,13 +2574,8 @@ dialog.kit-dialog.history-dialog[open] { display: flex; }
 h2, h3, h4 { text-transform: none; letter-spacing: .01em; }
 .tabs a { font: 600 .98rem var(--body); text-transform: none; letter-spacing: 0; }
 :root[data-scheme="console"] .tabs a { font-family: var(--mono); }
-button.primary, .button.primary { font: 650 .95rem var(--body); text-transform: none; letter-spacing: 0; }
-button.small.primary, .button.small.primary { font-size: .85rem; }
-/* Every + New button (New map, New character, New clock, New event...) is the same button wherever it is: one font, size
- * and height, filled on a page's header and outlined inside a box At the Table. Page headers put it at the right of the title.
- * Another button beside it in a header (Request a game on Sheet templates) takes this class too, outlined, so the pair match. */
-button.new-btn, .button.new-btn { font: 650 .875rem/1.25 var(--body); text-transform: none; letter-spacing: 0; padding: 6px 14px; min-height: 32px;
-  white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+/* + New buttons (New map, New character, New clock...) are regular buttons (see Buttons, at the top); they only keep to one line */
+button.new-btn, .button.new-btn { white-space: nowrap; }
 button.daybox-toggle { font: 600 1.45rem var(--disp); text-transform: none; letter-spacing: .01em; }
 
 /* rows that go at once on a delete, while its Undo waits */
@@ -2596,7 +2604,8 @@ body:has(#undo-toast.show) #toast { bottom: var(--undo-clear, 84px); }
 /* A touch screen (an iPad first): small buttons are at least 44px tall, so a finger finds them. The Legend's rows are
  * full-width already and stay as they are, so every tab still fits on an iPad held sideways. */
 @media (pointer: coarse) {
-  button.small, .button.small { min-height: 44px; padding-left: 12px; padding-right: 12px; }
+  :root { --ctl-h: 44px; --ctl-h-sm: 44px; }   /* every button and box is finger-sized, so a row of them still lines up */
+  button.small, .button.small { padding-left: 12px; padding-right: 12px; }
   a.button.small:not([hidden]), label.button.small:not([hidden]), summary.button.small { display: inline-flex; align-items: center; justify-content: center; }
   summary.button.small::-webkit-details-marker { display: none; }
   button.link.small { min-height: 0; }
@@ -2727,7 +2736,7 @@ main > nav.tabs.tucked .tab-search-kbd { display: none; }
  * they are a little taller, but not the full 44px, so the card stays slim over the map. */
 .mpc-actions { gap: 6px; }
 .mpc-actions button, .mpc-actions button.small { min-width: 0; min-height: 0; padding: 3px 10px; border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--panel); box-shadow: none; color: var(--text); font: 500 .78rem/1.3 var(--body); cursor: pointer; }
+  background: var(--panel); box-shadow: none; color: var(--text); font: 600 .8rem/1.3 var(--disp); cursor: pointer; }
 .mpc-actions button:hover { text-decoration: none; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
 .mpc-actions button.danger { margin-left: 0; color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .mpc-actions button.danger:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--panel)); }
