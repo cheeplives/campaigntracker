@@ -7653,7 +7653,7 @@
     };
     return dayBox('quests', 'Active quests', { folded: true, summary: active.length ? `${active.length} active` : 'None active',
       tip: 'Encyclopedia entries in the Quest Category whose Status is Active. Change a quest\'s Status on its entry',
-      actions: [el('a', { class: 'button small', href: `#/c/${S.camp.id}/encyclopedia?cat=quest` }, 'All quests')] },
+      actions: [el('a', { class: 'button', href: `#/c/${S.camp.id}/encyclopedia?cat=quest` }, 'All quests')] },
       el('div', { class: 'quest-list' }, active.length ? active.map(row) : el('p', { class: 'muted small' }, 'No quest is Active.')));
   }
   async function loadTableEntries() {

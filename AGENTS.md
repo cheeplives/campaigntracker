@@ -11,7 +11,7 @@
 
 The look is "Lamplight": quiet surfaces, one accent, and type doing most of the work. Keep new screens in it.
 
-- **Type:** headings use Spectral (`--disp`) and everything else uses Atkinson Hyperlegible (`--body`), both served
+- **Type:** headings and buttons use Spectral (`--disp`) and everything else uses Atkinson Hyperlegible (`--body`), both served
   from `static/fonts`. Write titles and labels in sentence case, never all capitals.
 - **Colour:** use the theme tokens in `static/style.css` (`--bg`, `--panel`, `--panel-2`, `--line`, `--text`, `--dim`,
   `--accent`, `--label`) rather than raw colours, so all five schemes and both modes follow. Don't change `--ok`,
@@ -19,6 +19,11 @@ The look is "Lamplight": quiet surfaces, one accent, and type doing most of the 
 - **One accent:** fill a button with the accent only for the page's main action. A picked toggle, tab or row gets an
   accent tint with an accent edge, and its text stays in the text colour. Headings and labels never use the accent
   colour.
+- **Buttons:** every button is set in Spectral, in one of two sizes: regular (`--ctl-h`, 36px) or small (`--ctl-h-sm`,
+  28px); both are 44px on a touch screen. Kinds: outlined (the default, Spectral 600), `primary` (filled, Spectral 700),
+  `danger`, `link`. Use these classes rather than a new button style, so a row of buttons always matches; buttons side
+  by side in one row are the same size. Boxes to type in are the regular height too. A card's buttons go in a
+  `.card-foot` row at its bottom, so cards side by side line their buttons up.
 - **Edges:** a coloured side or top edge must mean something (GM-only, NPC, GM or player clock). Don't add one for
   decoration. The tapered rule under a title is the one ornament.
 - **Surfaces:** keep panels flat, with a 1px `--line` border and the shared `--radius`. Use no gradients and no glow,

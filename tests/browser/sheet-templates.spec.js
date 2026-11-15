@@ -57,6 +57,18 @@ test("Templates: build one by hand, save it, and find it in the library", async 
   await expect(card).toContainText("Used by 0");
   await expect(card).toContainText("0 forks");
   await expect(card.getByRole("button", { name: "Edit" })).toBeVisible();
+
+  // Every card's buttons sit along its bottom, so cards side by side have theirs in one line however much each says
+  // (a second one with a long name, so it wraps and that card says more than this one)
+  const other = await api(page, "template_save", { name: `Hand Made too, with a name long enough to wrap onto a second line ${who.id}`, game: "Test RPG",
+    layout: { sections: [{ key: "s", title: "S", fields: [{ key: "a", label: "A", type: "text" }] }] } });
+  expect(other.status, JSON.stringify(other.json)).toBe(200);
+  await page.reload();
+  await page.getByLabel("Search templates").fill(`${who.id}`);
+  await expect(page.locator(".template-card")).toHaveCount(2);
+  const gaps = await page.locator(".template-card").evaluateAll(cards => cards.map(c =>
+    Math.round(c.getBoundingClientRect().bottom - c.querySelector(".card-foot").getBoundingClientRect().bottom)));
+  expect(new Set(gaps).size, `space under each card's buttons: ${gaps}`).toBe(1);
 });
 
 test("Templates: fork someone else's and edit the fork; theirs has no Edit", async ({ page, browser }) => {

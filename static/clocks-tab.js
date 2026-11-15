@@ -223,7 +223,7 @@
       const add = S.viewAs ? null : btn('+ New clock', async () => { const c = await clockDialog(); if (c) { clocks.unshift(c); list.querySelector('p.muted')?.remove(); list.prepend(row(c)); sum.textContent = summary(); } },
         'new-btn', 'Make a clock. GMs and players can both make them');
       const box = dayBox('clocks', 'Clocks', { folded: true, tip: 'Clocks that are running: press a segment, or − and +, to fill one you made (a GM fills any). All of them are on the Clocks tab', summary: summary(),
-        actions: [add, el('a', { class: 'button small', href: href() }, 'All clocks')] }, list);
+        actions: [add, el('a', { class: 'button', href: href() }, 'All clocks')] }, list);
       const sum = box.querySelector('.daybox-sum');
       return box;
     }
