@@ -341,7 +341,7 @@
       // button carries a count of the filters in force, and the chips under it say what they are. Open stays open while
       // you move between entries (st), and closes again on a new visit.
       const fcount = el('span', { class: 'count-badge enc-fcount', hidden: true });
-      const filterBtn = el('button', { type: 'button', class: 'button small enc-filterbtn', 'aria-expanded': String(!!st.filtersOpen), 'aria-controls': 'enc-filters',
+      const filterBtn = el('button', { type: 'button', class: 'button enc-filterbtn', 'aria-expanded': String(!!st.filtersOpen), 'aria-controls': 'enc-filters',
         'data-tip': 'Narrow the list: characters, Category, tags and connections',
         onclick: () => { st.filtersOpen = !st.filtersOpen; filters.hidden = !st.filtersOpen; filterBtn.setAttribute('aria-expanded', String(!!st.filtersOpen)); } },
         'Filters ', fcount, el('span', { 'aria-hidden': 'true' }, ' ▾'));
