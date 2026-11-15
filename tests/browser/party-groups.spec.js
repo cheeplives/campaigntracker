@@ -721,7 +721,8 @@ test("Party: when the last one leaves a split-off group, it asks to merge it", a
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(from.x + 30, from.y + 30, { steps: 4 });
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  // dropped near the bottom of The party's card, the part still on screen on a phone with the Scouts card below it
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height - 30, { steps: 8 });
   await page.mouse.up();
   await asked.getByRole("button", { name: "Merge" }).click();
   await expect(page.locator(".group-card")).toHaveCount(1);
