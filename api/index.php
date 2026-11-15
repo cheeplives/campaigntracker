@@ -28,6 +28,7 @@ require __DIR__ . '/dice.php';
 require __DIR__ . '/sessions.php';
 require __DIR__ . '/reports.php';
 require __DIR__ . '/panel.php';
+require __DIR__ . '/webhooks.php';
 require __DIR__ . '/upgrade.php';
 require __DIR__ . '/export.php';
 // Fan wikis: a module of its own, which the kill switch (tools/fanwiki-kill-switch.sh --all) can remove.
@@ -1167,6 +1168,35 @@ try {
         $st->execute([$cid]);
         out(['changed' => (string)$st->fetchColumn(), 'last_roll' => dice_last_seen($cid, role($cid) === 'gm')]);
 
+    case 'changes': // for programs: what has changed since a 'changed' stamp, as far as this member may see it
+        $cid = cid();
+        $isGm = role($cid) === 'gm';
+        $since = (string)($_GET['since'] ?? '');
+        if (!preg_match('/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/', $since)) fail('since must be a stamp from changed, like 2026-01-31 18:05:00');
+        $c = campaign_row($cid);
+        // Rows saved in the stamp's own second are given again (>=), so nothing saved late in that second is missed.
+        $rows = function (string $sql) use ($cid, $since): array {
+            $st = db()->prepare($sql);
+            $st->execute([$cid, $since]);
+            return $st->fetchAll();
+        };
+        $ints = fn(array $rows, array $keys) => array_map(function ($r) use ($keys) {
+            foreach ($keys as $k) if ($r[$k] !== null) $r[$k] = (int)$r[$k];
+            return $r;
+        }, $rows);
+        out(['changed' => (string)$c['updated_at'], 'since' => $since, 'current_shift' => (int)$c['current_shift'],
+            'entries' => $ints($rows('SELECT id, name, category, updated_at FROM encyclopedia_entries WHERE campaign_id=? AND updated_at>=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY updated_at, id LIMIT 500'), ['id']),
+            'events' => $ints($rows('SELECT id, title, abs_day, shift, updated_at FROM events WHERE campaign_id=? AND updated_at>=?' . ($isGm ? '' : ' AND is_secret=0') . ' ORDER BY updated_at, id LIMIT 500'), ['id', 'abs_day', 'shift']),
+            'clocks' => $ints($rows('SELECT id, name, updated_at FROM clocks WHERE campaign_id=? AND updated_at>=?' . ($isGm ? '' : " AND visibility<>'secret'") . ' ORDER BY updated_at, id LIMIT 500'), ['id']),
+            'sessions' => $ints($rows('SELECT id, number, title, updated_at FROM play_sessions WHERE campaign_id=? AND updated_at>=?' . ($isGm ? '' : ' AND is_published=1') . ' ORDER BY updated_at, id LIMIT 500'), ['id', 'number'])]);
+
+    // ===== Discord channels ===== (api/webhooks.php)
+    case 'webhooks':
+    case 'webhook_save':
+    case 'webhook_test':
+    case 'webhook_delete':
+        webhooks_action($action);
+
     case 'owlbear_manifest': // anyone: Owlbear Rodeo reads it from its own page when a GM or player adds the extension
         owlbear_manifest();
 
@@ -1275,7 +1305,12 @@ try {
     case 'set_time':
         $cid = cid(); need_gm($cid);
         $shift = int_in(p('current_shift'));
+        $was = (int)campaign_row($cid)['current_shift'];
         db()->prepare('UPDATE campaigns SET current_shift=? WHERE id=?')->execute([$shift, $cid]);
+        // label: the new date and shift in words ("Dusk, 3 Firstmonth 1492"), which the calendar maths in the browser
+        // (static/engine.js) works out; it is only for the campaign's Discord channels
+        $label = trim((string)str_in(p('label'), 200));
+        if ($shift !== $was) webhook_say($cid, 'time', $label !== '' ? 'It is now ' . webhook_plain($label, 200) . '.' : ($shift > $was ? 'Time has passed.' : 'The clock was turned back.'));
         out(['ok' => true, 'current_shift' => $shift]);
 
     // ===== members =====
@@ -1788,6 +1823,7 @@ try {
         }
         if (array_key_exists('tags', body())) save_event_tags($cid, $id, p('tags'));
         db()->commit();
+        if (!$old && !$secret) webhook_say($cid, 'event', 'New event: ' . webhook_plain($title, 200));
         out(['ok' => true, 'id' => $id]);
 
     case 'event_delete':

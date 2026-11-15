@@ -252,8 +252,12 @@ function sessions_action(string $action): void {
     case 'session_end': // GMs: the open session (or the one named) ends on the current shift
         $cid = cid();
         need_gm($cid);
+        $st = db()->prepare('SELECT number, title FROM play_sessions WHERE campaign_id=? AND last_day IS NULL' . (p('id') ? ' AND id=?' : ''));
+        $st->execute(p('id') ? [$cid, int_in(p('id'), 1)] : [$cid]);
+        $ending = $st->fetchAll();
         if (p('id')) sessions_end_all($cid, (int)session_row($cid, int_in(p('id'), 1))['id']);
         else sessions_end_all($cid);
+        foreach ($ending as $e) webhook_say($cid, 'session', 'Session ' . (int)$e['number'] . (trim((string)$e['title']) !== '' ? ': ' . webhook_plain((string)$e['title'], 150) : '') . ' has ended.');
         out(['ok' => true]);
 
     case 'session_shift_add': // GMs: a shift for the session to take in; one inside its run is already covered

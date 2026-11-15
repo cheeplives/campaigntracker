@@ -798,16 +798,20 @@
       const gm = isGM();
       const fmt = el('select', { 'aria-label': 'Format' },
         el('option', { value: 'md' }, 'Markdown pages and pictures (.zip): Obsidian, wikis, Owlbear notes, anything'),
-        el('option', { value: 'foundry' }, 'Foundry VTT journal and pictures (.zip)'));
+        el('option', { value: 'foundry' }, 'Foundry VTT journal and pictures (.zip)'),
+        el('option', { value: 'roll20' }, 'Roll20 handouts (.txt, for the GM\'s Almanac Import Mod script)'));
       const which = el('select', { 'aria-label': 'Which entries' },
         el('option', { value: 'all' }, `Every entry (${all.length})`),
         shown.length !== all.length ? el('option', { value: 'shown' }, `The ${shown.length} the search and filters show`) : null);
       const gmOnly = gm ? el('input', { type: 'checkbox' }) : null;
       const how = el('p', { class: 'small muted' });
       const status = el('p', { class: 'small muted', 'aria-live': 'polite' });
-      const drawHow = () => how.replaceChildren(fmt.value === 'foundry'
+      const drawHow = () => how.replaceChildren(...(fmt.value === 'roll20' ? [
+        'Each entry becomes a Roll20 handout, linked to the others; GM-only entries and notes go where only the GM sees them. It needs the ',
+        el('a', { href: 'static/vtt/roll20-almanac-import.js', target: '_blank', rel: 'noopener' }, 'GM\'s Almanac Import script'),
+        ' added to the game once (Settings → Mod (API) Scripts → New Script; the game\'s creator needs Roll20 Pro). Then: make a handout named Almanac Import, paste this file\'s text into its GM Notes, save, and type !almanac import in the chat. Importing again updates the same handouts. Pictures don\'t come over.'] : [fmt.value === 'foundry'
         ? 'In Foundry: make a journal entry, right-click it and choose Import Data, then pick the .json file from the zip. Upload the zip\'s chronicle folder to Foundry\'s User Data (in the File Browser, or by copying it into the Data folder) so the pictures show. GM-only entries and notes are hidden from players there too.'
-        : 'One page per entry, linked to each other, with an Encyclopedia page listing them all. Open the folder as an Obsidian vault, or paste a page into any wiki or VTT note.');
+        : 'One page per entry, linked to each other, with an Encyclopedia page listing them all. Open the folder as an Obsidian vault, or paste a page into any wiki or VTT note.']));
       fmt.addEventListener('change', drawHow);
       drawHow();
       const go = el('button', { type: 'button', class: 'primary' }, 'Download');
@@ -826,6 +830,13 @@
         const withGm = !!gmOnly?.checked;
         const list = LoreExport.pick(loreEntries(which.value === 'shown' ? shown : all, conns), { gmOnly: withGm });
         if (!list.length) throw new Error('There are no entries to export.');
+        const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
+        const date = new Date().toISOString().slice(0, 10);
+        if (fmt.value === 'roll20') {   // one text file to paste into a handout: no pictures, so nothing to fetch
+          saveFile(new Blob([LoreExport.roll20(list, { campaign: S.camp.name, gmOnly: withGm, date }) + '\n'], { type: 'text/plain' }), `${base} Encyclopedia for Roll20.txt`);
+          d.close();
+          return;
+        }
         const pictures = LoreExport.plan(list);
         const out = [], folder = fmt.value === 'foundry' ? `${LoreExport.foundryFolder(S.camp.name)}/` : '';
         let done = 0;
@@ -835,8 +846,6 @@
           if (!res.ok) throw new Error(`Couldn't fetch ${p.file.name} (${res.status})`);
           out.push({ path: folder + p.path, data: new Uint8Array(await res.arrayBuffer()) });
         }
-        const base = S.camp.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Campaign';
-        const date = new Date().toISOString().slice(0, 10);
         if (fmt.value === 'foundry') out.unshift({ path: `${base} Encyclopedia (Foundry journal).json`, data: JSON.stringify(LoreExport.foundry(list, pictures, { campaign: S.camp.name, gmOnly: withGm }), null, 2) + '\n' });
         else out.unshift(...LoreExport.markdown(list, pictures, { campaign: S.camp.name, gm, gmOnly: withGm, toMarkdown: RichText.toMarkdown, date }).files.map(f => ({ path: f.path, data: f.text })));
         saveFile(new Blob([LoreExport.zip(out)], { type: 'application/zip' }), `${base} Encyclopedia${fmt.value === 'foundry' ? ' for Foundry' : ''}.zip`);

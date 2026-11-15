@@ -433,7 +433,8 @@
     const d0 = Math.floor(from / spd()), d1 = Math.floor(to / spd());
     // transit days use the travel region (or wherever the party was), arrival day uses the new region
     if (n > 0 && d1 > d0 + 1) await ensureWeather(d0 + 1, d1 - 1, travelRegionId || settings().current_region);
-    await post('set_time', { current_shift: to }, S.camp.id);
+    // label: the new date in words, for the campaign's Discord channels (the server has no calendar maths)
+    await post('set_time', { current_shift: to, label: `${shiftNames()[E.mod(to, spd())]}, ${E.fmtDate(cal(), Math.floor(to / spd()))}` }, S.camp.id);
     S.camp.current_shift = to;
     // the party arrives once the clock is there, so the arrival day (even one already rolled) takes the new region and
     // the day they left keeps its own
@@ -7180,6 +7181,7 @@
         list([
           ['The notes editor: ', cite('quill'), '.'],
           ['The map viewer on the Maps tab: ', cite('leaflet'), '.'],
+          ['The panel inside Owlbear Rodeo (sharing with the room, the time notification, the token lookup): ', cite('owlbear'), '. Loaded only when Owlbear Rodeo shows the panel.'],
           ['Scan for names on a map, Read here (in your browser; the picture is never sent anywhere): ', cite('tesseract'), ', reading with ', cite('tessdata'), '.'],
           ['Scan for names on a map, Read with Claude: only when a GM picks it, their browser sends the map\'s picture to ', extLink({ url: 'https://www.anthropic.com/', title: 'Anthropic' }),
             '\'s API with the GM\'s own API key, and Claude (', (typeof MapScan !== 'undefined' ? MapScan.MODEL : 'claude-opus-5-5'), ') reads the place names on it. Under ',
@@ -7731,7 +7733,56 @@
       btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
       el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href),
         copyButton(new URL('api/index.php?a=owlbear_manifest', panelBase()).href, 'Owlbear Rodeo address'), ' under Extensions → Add custom extension.')));
+    if (isGM()) box.append(await discordBox(box));
     return box;
+  }
+  const DISCORD_EVENTS = [['time', 'Time passing'], ['event', 'New events'], ['clock', 'Clocks filling'], ['session', 'Sessions ending']];
+  /** GMs: the Discord channels the campaign posts to, inside the box above. */
+  async function discordBox(box) {
+    const cid = S.camp.id;
+    const r = await api('webhooks', { query: { cid } }).catch(() => ({ ready: false, webhooks: [] }));
+    const again = async () => box.replaceWith(await tableLinksBox());
+    const wrap = el('div', { class: 'tv-discord' }, el('h4', {}, 'Discord',
+      tip('Post a line to a Discord channel when time passes, an event is added, a clock everyone can read fills, or a session ends. Only what every player may see is posted')));
+    if (!r.ready) { wrap.append(el('p', { class: 'muted small' }, 'Discord channels need a database update: run install.php.')); return wrap; }
+    const what = w => DISCORD_EVENTS.filter(([k]) => w.events.includes(k)).map(([, t]) => t.toLowerCase()).join(', ');
+    wrap.append(r.webhooks.length ? el('div', {}, r.webhooks.map(w => el('div', { class: 'listrow tv-link' },
+      el('div', {}, el('strong', {}, w.label), el('span', { class: 'small muted' }, ` · ${what(w)} · ${w.off ? 'switched off after failing 10 times; Test to turn it back on' : w.last_error ? `last try failed: ${w.last_error}` : w.last_sent_at ? `last posted ${w.last_sent_at}` : 'nothing posted yet'}`)),
+      el('div', { class: 'row' },
+        btn('Test', async () => { try { await post('webhook_test', { id: w.id }, cid); toast('Posted a test line to the channel'); } catch (e) { toast(e.message, true); } await again(); }, 'small'),
+        btn('Edit', () => discordDialog(again, w), 'small'),
+        btn('Remove', async () => {
+          if (!await confirmDialog(`Stop posting to "${w.label}"?`, { ok: 'Remove', danger: true })) return;
+          try { await post('webhook_delete', { id: w.id }, cid); toast('Channel removed'); await again(); } catch (e) { toast(e.message, true); }
+        }, 'small'))))) : el('p', { class: 'muted small' }, 'No Discord channels yet.'),
+      el('div', { class: 'row' }, btn('Add Discord channel…', () => discordDialog(again), 'small')));
+    return wrap;
+  }
+  function discordDialog(again, w) {
+    const label = el('input', { maxlength: 80, value: w?.label || '', placeholder: 'e.g. #campaign-log', 'aria-label': 'Label' });
+    const url = el('input', { maxlength: 400, type: 'url', placeholder: w ? `${w.address} (leave empty to keep)` : 'https://discord.com/api/webhooks/…', 'aria-label': 'Webhook address' });
+    const ticks = DISCORD_EVENTS.map(([k, t]) => [k, el('input', { type: 'checkbox', checked: w ? w.events.includes(k) : true }), t]);
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': w ? 'Edit Discord channel' : 'Add Discord channel' });
+    const form = el('form', { method: 'dialog' }, el('h3', {}, w ? 'Edit Discord channel' : 'Add Discord channel'),
+      field('Label', label, 'So you know which channel it is'),
+      field('Webhook address', url, 'In Discord: Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL'),
+      el('fieldset', { class: 'tv-discord-what' }, el('legend', {}, 'Post about'), ticks.map(([, box, t]) => el('label', { class: 'small' }, box, ` ${t}`))),
+      el('p', { class: 'small muted' }, 'Only what every player may see is posted: no secret events, no vague or secret clocks.'),
+      el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, w ? 'Save' : 'Add channel'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
+    d.append(form);
+    form.addEventListener('submit', async ev => {
+      if (ev.submitter?.value !== 'ok') return;
+      ev.preventDefault();
+      try {
+        await post('webhook_save', { id: w?.id, label: label.value.trim(), url: url.value.trim(), events: ticks.filter(([, box]) => box.checked).map(([k]) => k) }, S.camp.id);
+        d.close();
+        toast(w ? 'Channel saved' : 'Channel added. Press Test to post a line to it');
+        await again();
+      } catch (e) { toast(e.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
   }
   function newPanelLink(box) {
     const label = el('input', { maxlength: 80, placeholder: isGM() ? 'e.g. Owlbear, or Twitch overlay' : 'e.g. Owlbear on my laptop', 'aria-label': 'Label' });
@@ -7804,6 +7855,11 @@
   // code comes in the address (#k=…) or is pasted once, and is kept in this frame's own storage.
   const PANEL_KEY = 'chronicle-panel-code';
   let panelCodeNow = '';
+  // Inside Owlbear Rodeo (static/owlbear.js): a GM can share a Public link with the room, which a player's panel there
+  // uses when it has no link of its own. panelShared: this panel is on the room's link; panelRoomCode: what the room
+  // shares now; panelOwnOnly: the player asked for their own link, so the room's isn't taken again.
+  const OBRX = PANEL && typeof AlmanacOwlbear !== 'undefined' && AlmanacOwlbear.active ? AlmanacOwlbear : null;
+  let panelShared = false, panelRoomCode = '', panelOwnOnly = false, panelObrWired = false;
   const codeIn = s => (String(s || '').match(/(?:^|[#&?]k=|^)([0-9a-f]{64})(?:$|[&\s])/) || [])[1] || '';
   function readPanelCode() {
     const h = new URLSearchParams(location.hash.slice(1));
@@ -7838,6 +7894,7 @@
   }
   function forgetPanelCode() {
     panelCodeNow = '';
+    panelShared = false;
     try { localStorage.removeItem(PANEL_KEY); } catch { /* nothing kept */ }
   }
   const panelOverlay = () => new URLSearchParams(location.hash.slice(1)).get('overlay') === '1' || new URLSearchParams(location.search).get('overlay') === '1' || !!S.panel?.link?.overlay;
@@ -7847,7 +7904,9 @@
     const f = el('form', { class: 'card panel-ask' }, el('h2', {}, 'GM\'s Almanac'),
       why ? el('p', { class: 'error' }, why) : null,
       el('p', {}, 'Paste your panel link. Make one in GM\'s Almanac: open the campaign, then At the Table → Use in a VTT or on stream → New panel link.'),
-      input, el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Open')));
+      input, el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Open'),
+        OBRX && panelRoomCode ? btn('Use the room\'s panel', () => { panelOwnOnly = false; panelBoot(); }, '', 'The campaign as your GM shared it with this Owlbear Rodeo room') : null),
+      OBRX && !panelRoomCode ? el('p', { class: 'small muted' }, 'No link? Your GM can share the campaign with this Owlbear Rodeo room, and it will open here by itself.') : null);
     f.addEventListener('submit', ev => {
       ev.preventDefault();
       const code = codeIn(input.value.trim());
@@ -7859,11 +7918,63 @@
     mount(f);
     input.focus();
   }
+  /** Owlbear Rodeo: listen to the room once, and learn what it shares. */
+  async function panelOwlbear() {
+    if (!OBRX || !(await OBRX.ready)) return;
+    panelRoomCode = await OBRX.shared().catch(() => '');
+    if (panelObrWired) return;
+    panelObrWired = true;
+    OBRX.on('refresh', () => panelPoll());
+    OBRX.on('lookup', name => panelLookup(name));
+    OBRX.on('shared', code => {
+      const was = panelRoomCode;
+      panelRoomCode = code;
+      if (code === was) return;
+      // a panel on the room's link follows it (or goes back to asking when the GM stops sharing); one waiting for a
+      // link takes the room's as it appears; a panel on its own link only redraws its footer
+      if (panelShared || (!panelCodeNow && code && !panelOwnOnly)) { panelCodeNow = ''; panelShared = false; panelBoot(); }
+      else if (S.camp) viewTable();
+    });
+  }
+  let panelLookupWaiting = '';
+  /** Look a name up in the panel's Encyclopedia box (Owlbear's right-click on a token). */
+  function panelLookup(name) {
+    const input = document.querySelector('.table-view input[type=search]');
+    if (!input) { panelLookupWaiting = name; return; }
+    panelLookupWaiting = '';
+    input.value = name;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.scrollIntoView({ block: 'center' });
+  }
+  /** GM, in Owlbear: put a Public panel link in the room, so players' panels there open by themselves. */
+  async function panelShareRoom() {
+    const pasted = await promptDialog('Paste a Public panel link for this campaign. Make one in GM\'s Almanac: At the Table → Use in a VTT or on stream → New panel link → Public. Everyone in this Owlbear Rodeo room will see what every player sees, read-only.',
+      { title: 'Share with this room', placeholder: 'https://…/panel.html#k=…', ok: 'Share' });
+    if (pasted === null) return;
+    const code = codeIn(pasted.trim());
+    if (!code) return toast('That isn\'t a panel link', true);
+    try {
+      // only a Public link goes in the room: everyone there can read it, and a personal one acts as its maker
+      const res = await fetch('api/index.php?a=panel_whoami', { credentials: 'omit', headers: { Accept: 'application/json', 'X-Chronicle-Panel': code } });
+      const who = await res.json();
+      if (!res.ok) return toast(who.message || 'That panel link doesn\'t work', true);
+      if (who.link?.scope !== 'public_panel') return toast('That is a personal link, which acts as you. Make a Public one to share', true);
+      if (who.campaign_id !== S.camp.id) return toast('That link is for another campaign', true);
+      await OBRX.share(code);
+      panelRoomCode = code;
+      toast('Shared: players who open GM\'s Almanac in this room now see the campaign');
+      viewTable();
+    } catch (e) { toast(e.message, true); }
+  }
   async function panelBoot() {
     panelCodeNow ||= readPanelCode();
+    await panelOwlbear();
+    if (!panelCodeNow && panelRoomCode && !panelOwnOnly) { panelCodeNow = panelRoomCode; panelShared = true; }
     if (!panelCodeNow) return panelAsk();
     try {
       const who = await api('panel_whoami');
+      // a room may only share a Public link; anything else someone put there is not taken
+      if (panelShared && who.link?.scope !== 'public_panel') { panelOwnOnly = true; forgetPanelCode(); return panelAsk(); }
       S.panel = who;
       S.user = { id: who.link?.user_id || 0, display_name: who.name || '', prefs: {} };
       document.documentElement.classList.toggle('panel-overlay', panelOverlay());
@@ -7871,6 +7982,7 @@
       S.reminders = (await api('reminders', { query: { cid: who.campaign_id } }).catch(() => ({ reminders: [] }))).reminders;
       await viewTable();
       panelStamp = Date.now();
+      if (panelLookupWaiting) panelLookup(panelLookupWaiting);
     } catch (e) {
       if (e.status === 401) return;   // api() has asked for a new link
       mount(el('div', { class: 'card' }, el('h2', {}, 'Can\'t reach GM\'s Almanac'), el('p', {}, e.message), btn('Try again', () => panelBoot(), 'primary')));
@@ -7891,7 +8003,15 @@
           }, 'small', `Changes are off while ${panelEmbedder()} shows this panel`)
           : el('span', {}, 'Read only here: this browser doesn\'t say which site shows the panel'))
       : null;
-    return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago, writes,
+    // Owlbear Rodeo: a GM shares a Public link with the room; a player on the room's link can switch to their own
+    const room = !OBRX ? null : OBRX.isGM()
+      ? (panelRoomCode
+        ? btn('Stop sharing with this room', async () => { try { await OBRX.share(''); panelRoomCode = ''; toast('No longer shared with this room'); if (panelShared) { forgetPanelCode(); panelAsk(); } else viewTable(); } catch (e) { toast(e.message, true); } }, 'small', 'Players\' panels in this Owlbear Rodeo room stop opening by themselves')
+        : btn('Share with this room…', () => panelShareRoom(), 'small', 'Put a Public panel link in this Owlbear Rodeo room, so players who open GM\'s Almanac here see the campaign without pasting anything'))
+      : null;
+    if (panelShared) return el('div', { class: 'panel-foot small muted' }, el('span', {}, 'Public panel · shared with this room by the GM'), ago, room,
+      btn('Use my own link', () => { panelOwnOnly = true; forgetPanelCode(); panelAsk(); }, 'small', 'Paste your own panel link to see your character\'s side and add notes'));
+    return el('div', { class: 'panel-foot small muted' }, el('span', {}, `${who} · via panel link`), ago, writes, room,
       btn('Forget this link', async () => { if (await confirmDialog('Forget this panel link on this device? You\'ll need to paste it again.')) { forgetPanelCode(); panelAsk(); } }, 'small'));
   }
   /** The panel follows the campaign: when a GM changes it (passes time, say), it redraws, unless a note is being typed. */
@@ -7902,10 +8022,13 @@
       const [r, rem] = await Promise.all([api('changed', { query: { cid: S.camp.id } }), api('reminders', { query: { cid: S.camp.id } })]);
       const typing = [...document.querySelectorAll('.table-view textarea, .table-view input')].some(i => i.value && i === document.activeElement) || !!document.querySelector('.table-view textarea')?.value;
       if ((r.changed !== S.camp.changed || rem.current_shift !== S.camp.current_shift) && !typing) {
+        const moved = rem.current_shift !== S.camp.current_shift;
         await loadCampaign(S.camp.id, true);
         S.reminders = rem.reminders;
         await viewTable();
         panelStamp = Date.now();
+        // Owlbear Rodeo: say the new date over the map, and have the room's other panels look now
+        if (moved && OBRX) OBRX.timePassed(`It is now ${shiftNames()[E.mod(nowShift(), spd())]}, ${E.fmtDate(cal(), today())}.`);
       }
       const ago = document.querySelector('.panel-ago');
       if (ago) { const m = Math.round((Date.now() - panelStamp) / 60000); ago.textContent = m < 1 ? '↻ just now' : `↻ ${m} min ago`; }

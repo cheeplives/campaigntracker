@@ -1933,6 +1933,9 @@ button.sheet-portrait { cursor: pointer; }
 .tv-note textarea, .tv-sec input[type=search], .tv-entry-pick input { width: 100%; box-sizing: border-box; }
 .tv-links .tv-link { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .tv-links code { word-break: break-all; }
+.tv-discord { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.tv-discord h4 { margin: 0 0 6px; }
+.tv-discord-what { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
 /* At the Table in Chronicle: wider, with the big box for the clock's shift between the shift before and the one after */
 .table-view.tv-wide { max-width: 1180px; }
 .tv-wide .tv-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }

@@ -37,6 +37,8 @@ return [
   'github_reports' => ['repo' => 'example/chronicle', 'token' => 'stub', 'labels' => ['bug'], 'stub' => __DIR__ . '/github-stub.php'],
   // Account and invite emails go to this file (one JSON line each) instead of mail(); campaign.spec.js reads it.
   'approval_email' => ['enabled' => true, 'from' => 'Chronicle <noreply@example.test>', 'test_outbox' => sys_get_temp_dir() . '/chronicle-test-outbox.jsonl'],
+  // Discord channels' posts go to this file (one JSON line each) instead of Discord; webhooks.spec.js reads it.
+  'webhooks' => ['test_outbox' => sys_get_temp_dir() . '/chronicle-test-webhooks.jsonl'],
   'rate_limit_enabled' => true,
   'allow_install' => false,
   // Turns on tests/support/login.php. Never set this in a real config.

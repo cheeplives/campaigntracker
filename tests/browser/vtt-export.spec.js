@@ -149,3 +149,94 @@ test("Settings downloads the calendar for Seasons & Stars and says what date to 
   expect(cal.weekdays.length).toBeGreaterThan(0);
   expectNoErrors(errors);
 });
+
+// ---------------------------------------------------------------- Roll20
+// Roll20 itself can't run here: the Mod script (static/vtt/roll20-almanac-import.js) runs under Node against a stand-in
+// for the handful of Roll20 calls it makes.
+const vm = require("vm"), path = require("path");
+function roll20Game() {
+  const objs = new Map(), chat = [], ready = [], handlers = {};
+  let n = 0;
+  const handout = props => {
+    const o = { id: `-H${++n}`, props: { ...props }, async: {},
+      get(k, cb) { if (cb) cb(o.async[k] || ""); else return o.props[k]; },
+      set(k, v) { if (typeof k === "object") Object.assign(o.props, k); else if (k === "notes" || k === "gmnotes") o.async[k] = v; else o.props[k] = v; } };
+    objs.set(o.id, o);
+    return o;
+  };
+  const ctx = { state: {}, log() {}, setTimeout: fn => fn(),
+    on(ev, fn) { if (ev === "ready") ready.push(fn); else handlers[ev] = fn; },
+    findObjs: q => [...objs.values()].filter(o => o.props.name === q.name),
+    getObj: (t, id) => objs.get(id), createObj: (t, props) => handout(props),
+    sendChat: (who, text) => chat.push(text), playerIsGM: id => id === "gm" };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "..", "static", "vtt", "roll20-almanac-import.js"), "utf8"), ctx);
+  ready.forEach(f => f());
+  return { objs, chat, handout, say: (content, playerid = "gm") => handlers["chat:message"]({ type: "api", content, playerid, who: "Someone" }),
+    named: name => [...objs.values()].filter(o => o.props.name === name) };
+}
+
+test("the Encyclopedia exports for Roll20, and the Mod script makes linked handouts of it, GM-only things kept from players", async ({ page, browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "the file is the same whatever the browser");
+  const errors = watchErrors(page);
+  const { cid } = await campaign(page, browser);
+  await page.goto(`index.html#/c/${cid}/encyclopedia`);
+  const get = async gmOnly => {
+    await pressMore(page, "Encyclopedia", "Export…");
+    const d = page.getByRole("dialog", { name: "Export the Encyclopedia" });
+    await d.getByLabel("Format").selectOption("roll20");
+    await expect(d.getByRole("link", { name: "GM's Almanac Import script" })).toHaveAttribute("href", "static/vtt/roll20-almanac-import.js");
+    if (gmOnly) await d.getByLabel(/Include GM-only/).check();
+    const [dl] = await Promise.all([page.waitForEvent("download"), d.getByRole("button", { name: "Download" }).click()]);
+    await expect(d).toHaveCount(0);
+    expect(dl.suggestedFilename()).toMatch(/Encyclopedia for Roll20\.txt$/);
+    return fs.readFileSync(await dl.path(), "utf8");
+  };
+  expect((await page.request.get("static/vtt/roll20-almanac-import.js")).status()).toBe(200);
+
+  // without GM-only things: nothing secret is in the file at all
+  const open = await get(false);
+  expect(open).toMatch(/^ALMANAC1:[A-Za-z0-9+/=]+\n$/);
+  const plain = Buffer.from(open.trim().slice(9), "base64").toString("utf8");
+  for (const s of ["Cult of Change", "The cult meets here", "Plague in spring"]) expect(plain, s).not.toContain(s);
+
+  // with them, pasted into a handout the way Roll20's editor leaves it (wrapped in tags, broken over lines)
+  const full = (await get(true)).trim();
+  const game = roll20Game();
+  game.say("!almanac import");
+  expect(game.chat.pop()).toContain('There is no handout named "Almanac Import"');
+  game.say("!almanac import", "player");
+  expect(game.chat.pop()).toContain("Only the GM");
+  const src = game.handout({ name: "Almanac Import" });
+  src.async.gmnotes = "<p>not it</p>";
+  game.say("!almanac import");
+  expect(game.chat.pop()).toContain("doesn't hold a GM's Almanac export");
+  src.async.gmnotes = `<p>${full.slice(0, 80)}</p>\n<p>${full.slice(80, 400)}<br>${full.slice(400)}&nbsp;</p>`;
+  game.say("!almanac import");
+  expect(game.chat.pop()).toContain("Done: 3 new handouts, 0 updated.");
+
+  const [altdorf] = game.named("Altdorf"), [gunther] = game.named("Gunther"), [cult] = game.named("Cult of Change");
+  expect(altdorf.props.inplayerjournals).toBe("all");
+  expect(cult.props.inplayerjournals).toBe("");
+  // players read the notes; the GM-only paragraph, the GM notes and the link to the secret entry are in GM Notes only
+  expect(altdorf.async.notes).toContain("Seat of the <strong>Emperor</strong>.");
+  expect(altdorf.async.notes).toContain(`Has resident <a href="http://journal.roll20.net/handout/${gunther.id}">Gunther</a>`);
+  for (const s of ["The cult meets here", "Plague in spring", "Cult of Change", cult.id]) expect(altdorf.async.notes, s).not.toContain(s);
+  expect(altdorf.async.gmnotes).toContain("The cult meets here");
+  expect(altdorf.async.gmnotes).toContain("Plague in spring");
+  expect(altdorf.async.gmnotes).toContain(`<a href="http://journal.roll20.net/handout/${cult.id}">Cult of Change</a>`);
+  expect(gunther.async.notes).toContain(`Resident of <a href="http://journal.roll20.net/handout/${altdorf.id}">Altdorf</a>`);
+
+  // again: the same handouts are updated, not doubled; --hidden keeps all of them from players; forget starts afresh
+  game.say("!almanac import --hidden");
+  expect(game.chat.pop()).toContain("Done: 0 new handouts, 3 updated.");
+  expect(game.named("Altdorf")).toHaveLength(1);
+  expect(altdorf.props.inplayerjournals).toBe("");
+  game.say("!almanac forget");
+  game.say("!almanac import Almanac Import");
+  expect(game.chat.pop()).toContain("Done: 3 new handouts, 0 updated.");
+  expect(game.named("Altdorf")).toHaveLength(2);
+  game.say("!almanac");
+  expect(game.chat.pop()).toContain("!almanac import");
+  await expectNoErrors(errors);
+});

@@ -1,5 +1,5 @@
 /* lore-export.js — the Encyclopedia as files for a virtual tabletop or a wiki: a zip of Markdown pages with their
- * pictures, a Foundry VTT journal, and one entry as a handout to paste into Roll20, Owlbear or anything else.
+ * pictures, a Foundry VTT journal, the text Roll20's importer script reads, and one entry as a handout to paste into Roll20, Owlbear or anything else.
  *
  * Plain script, no build step, and no page needed: app.js hands it the entries the Encyclopedia tab already received
  * (so a player's export holds only what that player can see) and the pictures' bytes, and gets back text and bytes.
@@ -213,7 +213,46 @@
       .filter(Boolean).join('\n');
   }
 
-  const api = { CATEGORIES, pick, plan, markdown, foundry, foundryFolder, zip, crc32, handout, creditLine };
+  // ------------------------------------------------------------ Roll20
+  /** Text as base64 (UTF-8), in a browser or under Node. */
+  function toBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  const ROLL20_MARK = 'ALMANAC1:';
+  /** The Roll20 export: the text a GM pastes into a handout for the GM's Almanac Import Mod script
+   * (static/vtt/roll20-almanac-import.js), which makes a handout of each entry. Roll20's handout editor rewrites what is
+   * pasted into it, so the entries travel as base64 after a mark the script looks for. Each entry carries the HTML for
+   * the handout's notes (what players read) and for its GM Notes: Roll20 can't hide part of a handout, so with gmOnly a
+   * GM-only paragraph is moved out of the notes into the GM Notes, above the entry's own GM notes. Connections are
+   * {{almanac:ID|Name}} marks, which the script turns into links once it knows each handout's id. Pictures stay
+   * behind: a Mod can only use pictures already in a Roll20 library. */
+  function roll20(entries, { campaign, gmOnly = false, date = '' }) {
+    const names = new Map(entries.map(e => [e.id, e.name]));
+    const mark = id => `{{almanac:${id}|${esc(names.get(id)).replace(/[{}|]/g, '')}}}`;
+    const out = entries.map(e => {
+      const about = [CATEGORIES[e.category], e.aliases?.length ? `Also called ${e.aliases.join(', ')}` : null, e.tags?.length ? `Tags: ${e.tags.map(t => t.name).join(', ')}` : null].filter(Boolean);
+      const secrets = [];
+      const notes = String(e.notes || '').replace(/<aside>([\s\S]*?)<\/aside>/g, (m, inner) => { secrets.push(`<p>${inner}</p>`); return ''; });
+      const links = e.links.filter(l => names.has(l.to));
+      // a connection to a GM-only entry is the GM's too: its link would name a handout players can't see
+      const secretTo = new Set(entries.filter(x => x.is_secret).map(x => x.id));
+      const gmLink = l => l.is_secret || secretTo.has(l.to);
+      const open = links.filter(l => !gmLink(l)), hidden = links.filter(gmLink);
+      const list = ls => `<ul>${ls.map(l => `<li>${esc(l.label)} ${mark(l.to)}${has(l.note) ? `: ${esc(l.note)}` : ''}</li>`).join('')}</ul>`;
+      const html = [about.length ? `<p><em>${esc(about.join(' · '))}</em></p>` : '',
+        e.fields?.length ? `<p>${e.fields.map(f => `<strong>${esc(f.label)}:</strong> ${esc(f.value)}`).join(' · ')}</p>` : '',
+        notes, open.length ? `<h3>Connections</h3>${list(open)}` : ''].filter(Boolean).join('\n');
+      const gm = gmOnly ? [secrets.length ? `<h3>GM-only paragraphs</h3>${secrets.join('')}` : '', e.gm_notes || '',
+        hidden.length ? `<h3>GM-only connections</h3>${list(hidden)}` : ''].filter(Boolean).join('\n') : '';
+      return { id: e.id, name: String(e.name).slice(0, 200), secret: !!e.is_secret, html, gm };
+    });
+    return ROLL20_MARK + toBase64(JSON.stringify({ format: 'gms-almanac-roll20', version: 1, campaign, exported: date, entries: out }));
+  }
+
+  const api = { CATEGORIES, pick, plan, markdown, foundry, foundryFolder, zip, crc32, handout, creditLine, roll20, ROLL20_MARK };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.LoreExport = api;
 })(typeof window !== 'undefined' ? window : globalThis);
