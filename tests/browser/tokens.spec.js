@@ -75,8 +75,14 @@ test("Tokens: game icons, a genre's starter set and a search, each credited to i
   const dlg = page.locator("dialog.gi-dialog");
   await expect(dlg.locator(".gi-cell")).toHaveCount(12);
   await expect(dlg.locator(".gi-cell").first()).toContainText("Party ship");
-  // the other genres' sets: ten in all, a dozen tokens each
-  await expect(dlg.getByLabel("Genre").locator("option")).toHaveCount(10);
+  // the other genres' sets (ten in all, a dozen tokens each), then the sets for a world map in any genre
+  await expect(dlg.getByLabel("Genre").locator('optgroup[label="Genres"] option')).toHaveCount(10);
+  await expect(dlg.getByLabel("Genre").locator("option")).toHaveCount(14);
+  await dlg.getByLabel("Genre").selectOption("shops");
+  await expect(dlg.locator(".gi-cell", { hasText: "Blacksmith" })).toHaveCount(1);
+  await expect(dlg.getByRole("button", { name: "Add all 25" })).toBeVisible();
+  await dlg.getByLabel("Genre").selectOption("markers");
+  await expect(dlg.locator(".gi-cell").first()).toContainText("Red dot");
   await dlg.getByLabel("Genre").selectOption("pirates");
   await expect(dlg.locator(".gi-cell")).toHaveCount(12);
   await expect(dlg.locator(".gi-cell").first()).toContainText("Party ship");
@@ -107,8 +113,18 @@ test("Tokens: game icons, a genre's starter set and a search, each credited to i
   await dlg.getByLabel("Kind").selectOption("object");
   await dlg.getByRole("button", { name: "Add token" }).click();
   await expect(page.locator(".token-card")).toHaveCount(13);
+
+  // a map marker from a set for any genre: an object token, drawn on the marker's own colour
+  await dlg.getByLabel("Search the game icons").fill("");
+  await dlg.getByLabel("Genre").selectOption("markers");
+  await dlg.locator(".gi-cell", { hasText: "Blue dot" }).click();
+  await expect(dlg.getByLabel("Kind")).toHaveValue("object");
+  await expect(dlg.locator(".gi-preview")).toHaveCSS("background-color", "rgb(63, 95, 143)");
+  await dlg.getByRole("button", { name: "Add token" }).click();
+  await expect(page.locator(".token-card")).toHaveCount(14);
   await dlg.getByRole("button", { name: "Close" }).click();
   list = await tokens(page, cid);
+  expect(list.find(t => t.name === "Blue dot")).toMatchObject({ kind: "object", credit: { author: "Delapouite" } });
   const hoard = list.find(t => t.name === "Hoard");
   expect(hoard.kind).toBe("object");
   expect(hoard.credit.author).toBe("Skoll");
@@ -125,7 +141,7 @@ test("Tokens: game icons, a genre's starter set and a search, each credited to i
   expect((await send({ icon: "lorc/no-such-icon" })).status()).toBe(400);
   expect((await send({ icon: "../../api/config" })).status()).toBe(400);
   expect((await send({ kind: "dragon" })).status()).toBe(400);
-  expect((await tokens(page, cid)).length).toBe(13);
+  expect((await tokens(page, cid)).length).toBe(14);
   expectNoErrors(errors);
 });
 

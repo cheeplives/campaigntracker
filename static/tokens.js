@@ -58,10 +58,49 @@ const TokensTab = (() => {
       ['creature', 'delapouite/shark-fin', 'Shark'], ['creature', 'lorc/sea-serpent', 'Sea serpent'], ['creature', 'lorc/pirate-skull', 'Skeleton crew'],
       ['object', 'lorc/treasure-map', 'Treasure map'], ['object', 'lorc/cannon', 'Cannon'], ['object', 'delapouite/pirate-flag', 'Pirate flag']],
   };
-  // The starter sets' names: the campaign's three genres first, then the sets for other kinds of game.
-  const SET_NAMES = { horror: 'Horror', postapoc: 'Post-apocalypse', western: 'Wild West', superhero: 'Superhero', cyberpunk: 'Cyberpunk',
+  // Sets for any genre, for marking places on a world map: [icon, name, colour]. Each is an object token, drawn on its
+  // own colour (a marker's colour, or its set's) instead of the object colour, so the kinds of place tell apart.
+  const MAP_COLOURS = { red: '#9a3a2c', blue: '#3f5f8f', gold: '#b07a1c', green: '#5f6b3a', purple: '#6b4a8a', grey: '#4f5a66', black: '#2b2b2b',
+    teal: '#2f6f73', building: '#6a5040', transit: '#2f6f73', shop: '#6b4a8a' };
+  const mapSet = (colour, list) => list.map(([id, nm, c, scale]) => ['object', id, nm, MAP_COLOURS[c || colour], scale]);
+  const DOT = 0.45;   // a dot or a square: the shape drawn small, so it reads as a dot on its colour rather than a white disc
+  const MAP_SETS = {
+    markers: mapSet('red', [['delapouite/plain-circle', 'Red dot', 'red', DOT], ['delapouite/plain-circle', 'Blue dot', 'blue', DOT],
+      ['delapouite/plain-circle', 'Gold dot', 'gold', DOT], ['delapouite/plain-circle', 'Green dot', 'green', DOT], ['delapouite/plain-circle', 'Purple dot', 'purple', DOT],
+      ['delapouite/plain-square', 'Grey square', 'grey', DOT], ['delapouite/circle', 'Ring', 'black'], ['delapouite/triangle-target', 'Triangle', 'teal'],
+      ['skoll/allied-star', 'Capital', 'gold'], ['delapouite/round-star', 'Star', 'blue'], ['delapouite/star-formation', 'Stars', 'purple'], ['lorc/flying-flag', 'Red flag'], ['lorc/flying-flag', 'Blue flag', 'blue'],
+      ['lorc/flying-flag', 'Green flag', 'green'], ['lorc/black-flag', 'Black flag', 'black'], ['delapouite/checkered-flag', 'Finish', 'grey'],
+      ['delapouite/flag-objective', 'Objective', 'gold'], ['delapouite/position-marker', 'Pin'], ['lorc/targeting', 'Target'],
+      ['lorc/cross-mark', 'X marks the spot', 'gold'], ['lorc/skull-crossed-bones', 'Danger', 'black'], ['lorc/hazard-sign', 'Hazard', 'gold'], ['lorc/compass', 'Compass', 'teal']]),
+    buildings: mapSet('building', [['delapouite/house', 'House'], ['delapouite/huts-village', 'Village'], ['caro-asercion/medieval-village-01', 'Town'],
+      ['delapouite/modern-city', 'City'], ['lorc/castle', 'Castle'], ['delapouite/indian-palace', 'Palace'], ['lorc/stone-tower', 'Tower'], ['delapouite/watchtower', 'Watchtower'],
+      ['delapouite/military-fort', 'Fort'], ['delapouite/barracks', 'Barracks'], ['delapouite/medieval-gate', 'Gate'], ['heavenly-dog/defensive-wall', 'Wall'],
+      ['delapouite/church', 'Church'], ['delapouite/greek-temple', 'Temple'], ['delapouite/shinto-shrine', 'Shrine'], ['delapouite/graveyard', 'Graveyard'],
+      ['delapouite/ancient-ruins', 'Ruins'], ['delapouite/castle-ruins', 'Ruined castle'], ['delapouite/great-pyramid', 'Pyramid'], ['delapouite/obelisk', 'Monument'],
+      ['delapouite/cave-entrance', 'Cave'], ['delapouite/dungeon-gate', 'Dungeon'], ['delapouite/gold-mine', 'Mine'], ['delapouite/barn', 'Farm'],
+      ['delapouite/windmill', 'Windmill'], ['caro-asercion/water-mill', 'Water mill'], ['delapouite/lighthouse', 'Lighthouse'], ['delapouite/stone-bridge', 'Bridge'],
+      ['delapouite/well', 'Well'], ['delapouite/camping-tent', 'Camp'], ['delapouite/oasis', 'Oasis'], ['delapouite/factory', 'Factory'],
+      ['delapouite/warehouse', 'Warehouse'], ['delapouite/theater', 'Theatre'], ['sbed/arena', 'Arena'], ['lorc/magic-portal', 'Portal']]),
+    transit: mapSet('transit', [['delapouite/road', 'Road'], ['delapouite/crossroad', 'Crossroads'], ['delapouite/direction-sign', 'Signpost'],
+      ['delapouite/stable', 'Stable'], ['delapouite/caravan', 'Caravan'], ['delapouite/old-wagon', 'Wagon'], ['delapouite/railway', 'Railway'],
+      ['delapouite/steam-locomotive', 'Train station'], ['delapouite/subway', 'Subway'], ['caro-asercion/bus-stop', 'Bus stop'], ['delapouite/gas-pump', 'Fuel station'],
+      ['delapouite/mechanic-garage', 'Garage'], ['delapouite/harbor-dock', 'Harbour'], ['delapouite/wooden-pier', 'Pier'], ['delapouite/sailboat', 'Ferry'],
+      ['lorc/anchor', 'Anchorage'], ['delapouite/airplane-departure', 'Airport'], ['delapouite/helicopter', 'Helipad'], ['skoll/zeppelin', 'Airship dock'],
+      ['delapouite/space-shuttle', 'Spaceport'], ['lorc/teleport', 'Teleporter']]),
+    shops: mapSet('shop', [['delapouite/shop', 'Shop'], ['delapouite/shopping-bag', 'General store'], ['delapouite/shopping-cart', 'Market'],
+      ['delapouite/tavern-sign', 'Inn'], ['lorc/beer-stein', 'Tavern'], ['delapouite/wine-bottle', 'Wine merchant'], ['delapouite/bread', 'Bakery'],
+      ['lorc/meat-cleaver', 'Butcher'], ['delapouite/fish-bucket', 'Fishmonger'], ['lorc/anvil', 'Blacksmith'], ['delapouite/chest-armor', 'Armourer'],
+      ['lorc/crossed-swords', 'Weaponsmith'], ['delapouite/bow-arrow', 'Bowyer'], ['delapouite/clothes', 'Tailor'], ['lorc/cut-diamond', 'Jeweller'],
+      ['lorc/standing-potion', 'Alchemist'], ['delapouite/herbs-bundle', 'Herbalist'], ['lorc/crystal-ball', 'Magic shop'], ['delapouite/bookshelf', 'Bookshop'],
+      ['lorc/quill-ink', 'Scribe'], ['lorc/treasure-map', 'Map maker'], ['delapouite/two-coins', 'Moneylender'], ['delapouite/bank', 'Bank'],
+      ['lorc/hospital-cross', 'Healer'], ['delapouite/post-office', 'Post office']]),
+  };
+  Object.assign(STARTERS, MAP_SETS);
+  // The starter sets' names, in the order the picker lists them: the campaign's three genres, other genres, then any genre's.
+  const GENRE_SETS = { horror: 'Horror', postapoc: 'Post-apocalypse', western: 'Wild West', superhero: 'Superhero', cyberpunk: 'Cyberpunk',
     steampunk: 'Steampunk', pirates: 'Pirates and high seas' };
-  const setNames = genres => ({ ...genres, ...SET_NAMES });
+  const MAP_SET_NAMES = { markers: 'Map markers', buildings: 'Buildings and structures', transit: 'Transit and travel', shops: 'Shops and services' };
+  const setNames = genres => ({ ...genres, ...GENRE_SETS, ...MAP_SET_NAMES });
   let iconIndex = null;
   /** The set's index (every icon as "artist/name", and the artists), fetched the first time it is needed. */
   function loadIcons() {
@@ -78,8 +117,8 @@ const TokensTab = (() => {
     const starts = id => id.split('/')[1].split('-').some(p => p.startsWith(words[0]));
     return hits.sort((a, b) => starts(b) - starts(a));
   }
-  /** Draw icon `id` white on a disc of `colour` and return it as a 256-pixel PNG. */
-  async function drawIcon(id, colour) {
+  /** Draw icon `id` white on a disc of `colour` (at `scale` of its usual size) and return it as a 256-pixel PNG. */
+  async function drawIcon(id, colour, scale = 1) {
     const res = await fetch(`${ICONS}svg/${id}.svg`, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(`The icon ${iconName(id)} couldn't be loaded`);
     // an explicit size, so every browser draws it at the size asked (an SVG with only a viewBox has none of its own)
@@ -92,7 +131,8 @@ const TokensTab = (() => {
     const g = c.getContext('2d');
     g.fillStyle = colour; g.fillRect(0, 0, 256, 256);
     g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.arc(128, 100, 150, 0, Math.PI * 2); g.fill();
-    g.drawImage(img, 38, 38, 180, 180);
+    const size = 180 * scale;
+    g.drawImage(img, (256 - size) / 2, (256 - size) / 2, size, size);
     return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error('The icon couldn\'t be drawn')), 'image/png'));
   }
 
@@ -212,7 +252,8 @@ const TokensTab = (() => {
       const added = new Set();
       let picked = null;   // { id, kind?, name? }
       const q = el('input', { type: 'search', placeholder: 'Search icons: goblin, sword, ship…', 'aria-label': 'Search the game icons', autocomplete: 'off', class: 'grow' });
-      const genreSel = select(Object.entries(setNames(ctx.genres)), ctx.genre(), { 'aria-label': 'Genre' });
+      const group = (label, names) => el('optgroup', { label }, Object.entries(names).map(([v, l]) => el('option', { value: v, selected: v === ctx.genre() }, l)));
+      const genreSel = el('select', { 'aria-label': 'Genre' }, group('Genres', { ...ctx.genres, ...GENRE_SETS }), group('Any genre: world map', MAP_SET_NAMES));
       const results = el('div', { class: 'gi-grid', role: 'list' });
       const note = el('p', { class: 'small muted', role: 'status' });
       const name = el('input', { maxlength: 100, 'aria-label': 'Token name', placeholder: 'Pick an icon' });
@@ -222,14 +263,17 @@ const TokensTab = (() => {
       const addOne = el('button', { type: 'button', class: 'primary', disabled: true }, 'Add token');
       const addAll = btn('Add all', () => addSet(), 'small primary', 'Add every token of this starter set that isn\'t added yet');
       const sets = setNames(ctx.genres);
-      const starters = () => STARTERS[genreSel.value].map(([kind, id, nm]) => ({ id, kind, name: nm }));
+      const starters = () => STARTERS[genreSel.value].map(([kind, id, nm, colour, scale]) => ({ id, kind, name: nm, colour, scale }));
+      /** The colour a token is drawn on: a starter's own colour while it keeps its kind, else its kind's. */
+      const colourOf = (it, kind) => (it?.colour && it.kind === kind ? it.colour : KIND_COLOURS[kind]);
       const artistOf = id => index.artists[id.split('/')[0]];
-      const faceFor = (id, colour) => el('span', { class: 'gi-face', style: { background: colour } }, el('img', { src: `${ICONS}svg/${id}.svg`, alt: '', loading: 'lazy' }));
+      const iconImg = (id, scale, attrs = {}) => el('img', { src: `${ICONS}svg/${id}.svg`, alt: '', ...attrs, style: scale ? { transform: `scale(${scale})` } : null });
+      const faceFor = (id, colour, scale) => el('span', { class: 'gi-face', style: { background: colour } }, iconImg(id, scale, { loading: 'lazy' }));
       function cell(it) {
         const a = artistOf(it.id);
         return el('button', { type: 'button', class: 'gi-cell', role: 'listitem', 'aria-pressed': String(picked?.id === it.id && picked?.name === it.name), 'data-icon': it.id,
           'data-tip': `${iconName(it.id)} by ${a?.name || 'unknown'}`, onclick: () => pick(it) },
-          faceFor(it.id, KIND_COLOURS[it.kind || kindSel.value]), el('span', { class: 'gi-label' }, added.has(it.name ?? it.id) ? '✓ ' : '', it.name || iconName(it.id)));
+          faceFor(it.id, colourOf(it, it.kind || kindSel.value), it.scale), el('span', { class: 'gi-label' }, added.has(it.name ?? it.id) ? '✓ ' : '', it.name || iconName(it.id)));
       }
       function list() {
         const term = q.value.trim();
@@ -251,11 +295,11 @@ const TokensTab = (() => {
         paint(); list();
       }
       function paint() {
-        preview.style.background = KIND_COLOURS[kindSel.value];
-        preview.replaceChildren(picked ? el('img', { src: `${ICONS}svg/${picked.id}.svg`, alt: '' }) : el('span', { 'aria-hidden': 'true' }, '?'));
+        preview.style.background = colourOf(picked, kindSel.value);
+        preview.replaceChildren(picked ? iconImg(picked.id, picked.scale) : el('span', { 'aria-hidden': 'true' }, '?'));
       }
-      async function make(id, nm, kind) {
-        const png = await drawIcon(id, KIND_COLOURS[kind]);
+      async function make(id, nm, kind, colour = KIND_COLOURS[kind], scale = 1) {
+        const png = await drawIcon(id, colour, scale);
         await upload(ctx, new File([png], `${id.split('/')[1]}.png`, { type: 'image/png' }), { name: nm, kind, icon: id });
         added.add(nm); added.add(id);
       }
@@ -265,7 +309,7 @@ const TokensTab = (() => {
         addAll.disabled = true;
         for (const it of todo) {
           note.textContent = `Adding ${it.name} (${done + 1} of ${todo.length})…`;
-          try { await make(it.id, it.name, it.kind); done++; } catch (err) { toast(`${it.name}: ${err.message}`, true); }
+          try { await make(it.id, it.name, it.kind, colourOf(it, it.kind), it.scale); done++; } catch (err) { toast(`${it.name}: ${err.message}`, true); }
         }
         addAll.disabled = false;
         if (done) { toast(done === 1 ? 'Token added' : `${done} tokens added`); await refresh(); }
@@ -276,7 +320,7 @@ const TokensTab = (() => {
         const nm = name.value.trim();
         if (!nm) return toast('Give the token a name', true);
         addOne.disabled = true;
-        try { await make(picked.id, nm, kindSel.value); toast(`Added ${nm}`); await refresh(); list(); } catch (err) { toast(err.message, true); }
+        try { await make(picked.id, nm, kindSel.value, colourOf(picked, kindSel.value), picked.scale); toast(`Added ${nm}`); await refresh(); list(); } catch (err) { toast(err.message, true); }
         addOne.disabled = false;
       });
       kindSel.addEventListener('change', () => { paint(); if (q.value.trim()) list(); });
@@ -287,7 +331,7 @@ const TokensTab = (() => {
       paint();
       d.append(el('h3', {}, 'Game icons'),
         el('p', { class: 'small muted' }, 'Icons from ', el('a', { href: 'https://game-icons.net/', target: '_blank', rel: 'noopener noreferrer' }, 'game-icons.net'),
-          ', drawn white on the colour of their kind. Each token keeps its artist\'s credit.'),
+          ', drawn white on the colour of their kind (a map marker or place, on its own colour). Each token keeps its artist\'s credit.'),
         el('div', { class: 'row' }, q, el('label', { class: 'inline gi-genre' }, 'Starter set ', genreSel), addAll),
         note, results,
         el('div', { class: 'gi-pick row' }, preview, el('div', { class: 'gi-pick-fields' }, el('div', { class: 'row' }, name, kindSel), credit), addOne),
@@ -362,7 +406,7 @@ const TokensTab = (() => {
       el('div', { class: 'row spread' }, el('h2', {}, 'Tokens'),
         el('div', { class: 'row' }, el('label', { class: 'button small primary file-add', 'data-tip': 'Pick pictures (JPEG, PNG, GIF, WebP): each becomes a token named after its file' }, input, 'Upload tokens…'),
           btn('Find Image…', () => findFor(null), 'small', 'Search open picture libraries for a token picture'),
-          btn('Game icons…', gameIcons, 'small', 'Pick from over 4,000 game-icons.net icons, or add a starter set for one of ten genres'))),
+          btn('Game icons…', gameIcons, 'small', 'Pick from over 4,000 game-icons.net icons, or add a starter set: one for each of ten genres, and map markers, buildings, transit and shops for any'))),
       el('p', { class: 'muted small' }, 'Round pictures for the party\'s groups (their marker on a map), the players\' characters (the Members tab) and the Encyclopedia\'s entries (the entry\'s page and its pins on a map). Players see a token\'s picture only where it is used, and never a 🔒 GM-only one.'),
       el('div', { class: 'row' }, search, kind), status, grid));
   }
