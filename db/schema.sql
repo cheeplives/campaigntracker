@@ -951,3 +951,21 @@ CREATE TABLE IF NOT EXISTS connection_keys (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Discord channels (054): a webhook address a GM pasted, which the campaign posts to when time passes, an event is
+-- added, a clock fills or a session ends (api/webhooks.php). Never copied or exported with the campaign.
+CREATE TABLE IF NOT EXISTS campaign_webhooks (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT UNSIGNED NOT NULL,
+  label VARCHAR(80) NOT NULL,
+  url VARCHAR(400) NOT NULL,
+  events_json TEXT NOT NULL,
+  created_by BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_sent_at DATETIME NULL,
+  last_error VARCHAR(190) NULL,
+  fails INT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_campaign (campaign_id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

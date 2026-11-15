@@ -433,7 +433,8 @@
     const d0 = Math.floor(from / spd()), d1 = Math.floor(to / spd());
     // transit days use the travel region (or wherever the party was), arrival day uses the new region
     if (n > 0 && d1 > d0 + 1) await ensureWeather(d0 + 1, d1 - 1, travelRegionId || settings().current_region);
-    await post('set_time', { current_shift: to }, S.camp.id);
+    // label: the new date in words, for the campaign's Discord channels (the server has no calendar maths)
+    await post('set_time', { current_shift: to, label: `${shiftNames()[E.mod(to, spd())]}, ${E.fmtDate(cal(), Math.floor(to / spd()))}` }, S.camp.id);
     S.camp.current_shift = to;
     // the party arrives once the clock is there, so the arrival day (even one already rolled) takes the new region and
     // the day they left keeps its own
@@ -7731,7 +7732,56 @@
       btn('New API key…', () => newApiKey(box), 'small', 'A key for a program, such as a Foundry VTT module, a Discord bot or your own script, to read this campaign (and, if you allow it, pass time and add notes) as you'),
       el('span', { class: 'small muted' }, 'Owlbear Rodeo: add ', el('code', {}, new URL('api/index.php?a=owlbear_manifest', panelBase()).href),
         copyButton(new URL('api/index.php?a=owlbear_manifest', panelBase()).href, 'Owlbear Rodeo address'), ' under Extensions → Add custom extension.')));
+    if (isGM()) box.append(await discordBox(box));
     return box;
+  }
+  const DISCORD_EVENTS = [['time', 'Time passing'], ['event', 'New events'], ['clock', 'Clocks filling'], ['session', 'Sessions ending']];
+  /** GMs: the Discord channels the campaign posts to, inside the box above. */
+  async function discordBox(box) {
+    const cid = S.camp.id;
+    const r = await api('webhooks', { query: { cid } }).catch(() => ({ ready: false, webhooks: [] }));
+    const again = async () => box.replaceWith(await tableLinksBox());
+    const wrap = el('div', { class: 'tv-discord' }, el('h4', {}, 'Discord',
+      tip('Post a line to a Discord channel when time passes, an event is added, a clock everyone can read fills, or a session ends. Only what every player may see is posted')));
+    if (!r.ready) { wrap.append(el('p', { class: 'muted small' }, 'Discord channels need a database update: run install.php.')); return wrap; }
+    const what = w => DISCORD_EVENTS.filter(([k]) => w.events.includes(k)).map(([, t]) => t.toLowerCase()).join(', ');
+    wrap.append(r.webhooks.length ? el('div', {}, r.webhooks.map(w => el('div', { class: 'listrow tv-link' },
+      el('div', {}, el('strong', {}, w.label), el('span', { class: 'small muted' }, ` · ${what(w)} · ${w.off ? 'switched off after failing 10 times; Test to turn it back on' : w.last_error ? `last try failed: ${w.last_error}` : w.last_sent_at ? `last posted ${w.last_sent_at}` : 'nothing posted yet'}`)),
+      el('div', { class: 'row' },
+        btn('Test', async () => { try { await post('webhook_test', { id: w.id }, cid); toast('Posted a test line to the channel'); } catch (e) { toast(e.message, true); } await again(); }, 'small'),
+        btn('Edit', () => discordDialog(again, w), 'small'),
+        btn('Remove', async () => {
+          if (!await confirmDialog(`Stop posting to "${w.label}"?`, { ok: 'Remove', danger: true })) return;
+          try { await post('webhook_delete', { id: w.id }, cid); toast('Channel removed'); await again(); } catch (e) { toast(e.message, true); }
+        }, 'small'))))) : el('p', { class: 'muted small' }, 'No Discord channels yet.'),
+      el('div', { class: 'row' }, btn('Add Discord channel…', () => discordDialog(again), 'small')));
+    return wrap;
+  }
+  function discordDialog(again, w) {
+    const label = el('input', { maxlength: 80, value: w?.label || '', placeholder: 'e.g. #campaign-log', 'aria-label': 'Label' });
+    const url = el('input', { maxlength: 400, type: 'url', placeholder: w ? `${w.address} (leave empty to keep)` : 'https://discord.com/api/webhooks/…', 'aria-label': 'Webhook address' });
+    const ticks = DISCORD_EVENTS.map(([k, t]) => [k, el('input', { type: 'checkbox', checked: w ? w.events.includes(k) : true }), t]);
+    const d = el('dialog', { class: 'kit-dialog', 'aria-label': w ? 'Edit Discord channel' : 'Add Discord channel' });
+    const form = el('form', { method: 'dialog' }, el('h3', {}, w ? 'Edit Discord channel' : 'Add Discord channel'),
+      field('Label', label, 'So you know which channel it is'),
+      field('Webhook address', url, 'In Discord: Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL'),
+      el('fieldset', { class: 'tv-discord-what' }, el('legend', {}, 'Post about'), ticks.map(([, box, t]) => el('label', { class: 'small' }, box, ` ${t}`))),
+      el('p', { class: 'small muted' }, 'Only what every player may see is posted: no secret events, no vague or secret clocks.'),
+      el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, w ? 'Save' : 'Add channel'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
+    d.append(form);
+    form.addEventListener('submit', async ev => {
+      if (ev.submitter?.value !== 'ok') return;
+      ev.preventDefault();
+      try {
+        await post('webhook_save', { id: w?.id, label: label.value.trim(), url: url.value.trim(), events: ticks.filter(([, box]) => box.checked).map(([k]) => k) }, S.camp.id);
+        d.close();
+        toast(w ? 'Channel saved' : 'Channel added. Press Test to post a line to it');
+        await again();
+      } catch (e) { toast(e.message, true); }
+    });
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d);
+    d.showModal();
   }
   function newPanelLink(box) {
     const label = el('input', { maxlength: 80, placeholder: isGM() ? 'e.g. Owlbear, or Twitch overlay' : 'e.g. Owlbear on my laptop', 'aria-label': 'Label' });

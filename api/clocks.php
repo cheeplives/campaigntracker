@@ -68,6 +68,10 @@ function clock_one(int $cid, bool $isGm, int $id): array {
 /** Note a fill or empty of clock $id. */
 function clock_tick_log(int $cid, int $id, int $delta, int $after): void {
     if ($delta === 0) return;
+    // the campaign's Discord channels hear about a clock everyone can read (not a vague or secret one, nor one put away)
+    $st = db()->prepare("SELECT name, segments FROM clocks WHERE id=? AND visibility='shown' AND archived=0");
+    $st->execute([$id]);
+    if ($c = $st->fetch()) webhook_say($cid, 'clock', 'Clock: ' . webhook_plain((string)$c['name'], 120) . " is at $after of " . (int)$c['segments'] . ($after >= (int)$c['segments'] ? ' (full)' : '') . '.');
     db()->prepare('INSERT INTO clock_ticks (campaign_id, clock_id, delta, filled_after, abs_shift, user_id) VALUES (?,?,?,?,?,?)')
         ->execute([$cid, $id, $delta, $after, (int)campaign_row($cid)['current_shift'], me()['id'] ?: null]);
 }

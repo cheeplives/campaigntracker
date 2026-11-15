@@ -65,6 +65,7 @@ shifts that have come round so far, unless the GM lets players see future weathe
 | `panel_whoami` | | `{ campaign_id, role, name, link }`: who the key acts as (`role` is `gm` or `player`) and the key's label and access. |
 | `campaign` | | `{ campaign: { id, name, calendar, settings, current_shift, seed? }, role, regions, holidays, members, encyclopedia, … }`. `seed` (for generating weather) is there for a GM, or when players may see future weather. Members carry no emails. |
 | `changed` | | `{ changed }`: a time stamp that moves when a GM changes the campaign, passing time included. Poll it cheaply, then re-read. |
+| `changes` | `since` (a `changed` stamp, `YYYY-MM-DD HH:MM:SS`) | `{ changed, since, current_shift, entries: [{ id, name, category, updated_at }], events: [{ id, title, abs_day, shift, updated_at }], clocks: [{ id, name, updated_at }], sessions: [{ id, number, title, updated_at }] }`: what was added or saved at or after the stamp, as far as the key's member may see it (up to 500 of each). Keep the `changed` it answers as your next `since`. Something deleted is not listed, so re-read a list when you need to notice removals. |
 | `day` | `d` (an `abs_day`) | `{ day: { abs_day, region_id, weather, notes, locations, … } \| null, shifts, shift_notes, events, today }`. |
 | `days` | `from`, `to` (`abs_day`s) | The days in a range, with their weather, shifts, events and note previews. |
 | `events` | | Every event the key's member may see: `{ events: [{ id, abs_day, end_day, shift, shift_end, title, body, … }] }`. |
@@ -74,15 +75,25 @@ shifts that have come round so far, unless the GM lets players see future weathe
 | `maps` | | `{ maps: [...] }`. |
 | `map` | `id` | One map with its pins and routes. |
 | `clocks` | | `{ clocks: [{ id, name, description, segments, filled, visibility, by_gm, entry, archived, ticks, … }] }`. A player's key never gets secret clocks, and gets `filled: null` and no `ticks` on a vague clock someone else made. |
+| `dice_rolls` | | The table's dice log as the key's member sees it: `{ rolls: [{ id, expr, seed, engine, visibility, … }], … }`. A roll's dice come from its `expr` and `seed` with `static/dice.js` (`Dice.roll`), the same plain script the pages use. |
 
 ## Write actions (read-and-write keys)
 
 | Action | Body | Who | Does |
 | --- | --- | --- | --- |
-| `set_time` | `{ current_shift }` | GM | Moves the campaign's clock to that shift. To pass time, read `current_shift` and add to it. |
+| `set_time` | `{ current_shift, label? }` | GM | Moves the campaign's clock to that shift. To pass time, read `current_shift` and add to it. `label` is the new date in words ("Dusk, 3 Firstmonth 1492", from `E.shiftNames` and `E.fmtDate`); the campaign's Discord channels post it. |
 | `shift_note_add` | `{ abs_day, shift, body }` | anyone | Adds a note to a shift, signed as the key's member. |
 | `entry_note_add` | `{ id, body, gm_only? }` | anyone | Adds a paragraph at the end of an Encyclopedia entry's public notes, or its GM notes when a GM sends `gm_only: true`. |
 | `event_save` | `{ abs_day, title, body?, shift?, end_day?, shift_end?, is_secret? }` (with `id` to change one) | GM, or players where the campaign allows | Adds or changes an event. |
+| `clock_tick` | `{ id, by? }` | the clock's maker, or a GM | Fills a clock by `by` segments (1 unless given; negative empties), stopping at empty and full. Answers `{ clock }`. |
+| `dice_roll` | `{ expr, visibility? }` | anyone | Rolls in the table's dice log (`2d6+3`, or anything the roller's **?** card lists). The server picks the seed; read the result from `dice_rolls`. `visibility` is `all`, `gm` or `blind`, where the campaign lets the roller choose. |
+| `pin_save` | `{ map_id, x, y, label, note? }` (with `id` to change one) | anyone; GMs also `kind` (`note`, `entry`, `event`), `entry_id`, `event_id`, `is_secret` | Adds or changes a pin on a map. `x` and `y` are in the map picture's pixels. A player changes only their own note pins. |
+
+## Discord
+
+A GM can have the campaign post to a Discord channel with no program at all: **At the Table → Use in a VTT or on stream
+→ Add Discord channel…** takes the channel's webhook address and posts a line when time passes, an event is added, a
+clock everyone can read fills, or a session ends. Only what every player may see is posted.
 
 These actions are the same ones GM's Almanac's own pages use, so new fields may appear in answers. Fields are not renamed
 or removed without a note in this file.

@@ -6,7 +6,7 @@
  * which the browser fetches one by one through ?a=file.
  *
  * Left out: the members and their accounts (people are named, never identified: user ids become names in `people`),
- * where files are kept on disk, edit history, API keys, panel links and invitations.
+ * where files are kept on disk, edit history, API keys, panel links, Discord channels and invitations.
  */
 declare(strict_types=1);
 

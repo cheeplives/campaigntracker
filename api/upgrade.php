@@ -145,6 +145,8 @@ function upgrade_steps(): array {
             'The party\'s vehicles can now travel with a group: drag one onto a group on Party → Groups, and it goes where the group goes.'],
         ['053_map_areas.sql', fn(PDO $p) => db_has_table($p, 'maps') && !db_has_table($p, 'map_areas'),
             'Maps can now have areas: draw an outline, name it, and tie it to an Encyclopedia entry or a weather region, so the party\'s weather changes as it crosses in.'],
+        ['054_campaign_webhooks.sql', fn(PDO $p) => !db_has_table($p, 'campaign_webhooks'),
+            'A campaign can now post to a Discord channel when time passes, an event is added, a clock fills or a session ends (At the Table → Use in a VTT or on stream).'],
     ];
 }
 

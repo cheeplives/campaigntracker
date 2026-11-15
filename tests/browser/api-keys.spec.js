@@ -147,3 +147,41 @@ test("a member makes an API key at the table, sees it once with how to send it, 
   await expect(page.locator(".tv-link")).toContainText("Foundry module · API key, read and write");
   expectNoErrors(errors);
 });
+
+test.describe("API keys: clocks, dice, pins and what changed", () => {
+  test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "chromium", "the server answers the same whatever the browser"));
+
+  test("a read-and-write key fills a clock, rolls dice, and changes lists what moved since a stamp", async ({ page, browser, playwright }) => {
+    const { cid, pp } = await table(page, browser, "KeyMore");
+    const bare = await playwright.request.newContext({ baseURL: BASE });
+    const k = await makeKey(page, cid, { write: true }), ro = await makeKey(page, cid), pk = await makeKey(pp, cid);
+    const clock = (await api(page, "clock_save", { name: "Siege", segments: 6, filled: 1, visibility: "shown" }, cid)).json.clock;
+    const hidden = (await api(page, "clock_save", { name: "Betrayal", segments: 4, filled: 0, visibility: "secret" }, cid)).json.clock;
+    expect((await api(page, "event_save", { abs_day: 2, title: "Seen" }, cid)).status).toBe(200);
+    expect((await api(page, "event_save", { abs_day: 2, title: "Unseen", is_secret: true }, cid)).status).toBe(200);
+
+    const tick = await keyCall(bare, k.code, "clock_tick", { body: { id: clock.id, by: 2 } });
+    expect(tick.status, JSON.stringify(tick.json)).toBe(200);
+    expect(tick.json.clock.filled).toBe(3);
+    expect((await keyCall(bare, ro.code, "clock_tick", { body: { id: clock.id } })).status).toBe(401);
+
+    const roll = await keyCall(bare, k.code, "dice_roll", { body: { expr: "2d6+1" } });
+    expect(roll.status, JSON.stringify(roll.json)).toBe(200);
+    expect((await keyCall(bare, ro.code, "dice_rolls")).status).toBe(200);
+    expect((await keyCall(bare, ro.code, "dice_roll", { body: { expr: "1d20" } })).status).toBe(401);
+
+    // changes: a GM's key gets everything saved since the stamp, a player's key nothing secret
+    expect((await keyCall(bare, ro.code, "changes")).status).toBe(400);
+    const all = await keyCall(bare, ro.code, "changes", { query: { since: "2000-01-01 00:00:00" } });
+    expect(all.status, JSON.stringify(all.json)).toBe(200);
+    expect(typeof all.json.current_shift).toBe("number");
+    expect(all.json.changed).toMatch(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/);
+    expect(all.json.events.map(e => e.title).sort()).toEqual(["Seen", "Unseen"]);
+    expect(all.json.clocks.map(c => c.id).sort()).toEqual([clock.id, hidden.id].sort());
+    const mine = await keyCall(bare, pk.code, "changes", { query: { since: "2000-01-01 00:00:00" } });
+    expect(mine.json.events.map(e => e.title)).toEqual(["Seen"]);
+    expect(mine.json.clocks.map(c => c.id)).toEqual([clock.id]);
+    const none = await keyCall(bare, ro.code, "changes", { query: { since: "2999-01-01 00:00:00" } });
+    expect(none.json).toMatchObject({ entries: [], events: [], clocks: [], sessions: [] });
+  });
+});
