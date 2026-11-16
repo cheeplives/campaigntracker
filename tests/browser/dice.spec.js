@@ -787,3 +787,70 @@ test("a saved roll picked before the roller has loaded stays picked once it load
   await expect.poll(async () => (await api(page, "dice_rolls", undefined, cid)).json.rolls.filter(r => r.expr === "8d6 # fireball").length).toBe(1);
   expectNoErrors(errors);
 });
+
+test("a critical makes a show as it lands: a gold burst for a critical, a red one that shakes for a critical failure", async ({ browser }) => {
+  // The service worker would see the page's requests first, and in WebKit page.route() then never fakes them.
+  const page = await (await newContext(browser, { serviceWorkers: "block" })).newPage();
+  const errors = watchErrors(page);
+  const gm = person("Gwen");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Dice cheer ${gm.id}`);
+  const s = (await api(page, "campaign", undefined, cid)).json;
+  const settings = { ...(s.campaign?.settings || {}), dice: { player_vis: "all", keep: 100, flat: true, system: { id: "d20", game: "dnd5e", params: { tn: 15, crit: 20, fumble: true, margin: 0 } } } };
+  expect((await api(page, "campaign_update", { settings }, cid)).status).toBe(200);
+  // the server picks each roll's seed: the page is handed one whose d20 lands on the face wanted
+  let face = 20;
+  const seedFor = expr => {
+    for (let k = 0; ; k++) {
+      const seed = (k.toString(16) + "c0ffee").padStart(32, "0");
+      if (Dice.roll(expr, seed).results[0].terms[0].dice[0].v === face) return seed;
+    }
+  };
+  const fake = r => (r && r.seed ? { ...r, seed: seedFor(r.expr) } : r);
+  await page.route(/[?&]a=dice_rolls?(&|$)/, async route => {
+    const res = await route.fetch();
+    const body = await res.json();
+    if (body.roll) body.roll = fake(body.roll);
+    if (body.rolls) body.rolls = body.rolls.map(fake);
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.goto(`index.html#/c/${cid}/table`);
+  await openDice(page);
+  const cheer = page.locator(".dice-cheer");
+  await expect(cheer).toBeHidden();
+
+  await page.locator(".dice-sys-go").click();
+  await expect(cheer).toBeVisible();
+  await expect(cheer).toHaveClass(/is-crit/);
+  await expect(cheer.locator(".dice-cheer-head")).toHaveText("Critical!");
+  await expect(cheer.locator(".dice-cheer-sub b")).toHaveText(await page.locator(".dice-e.latest .dice-e-out b").textContent());
+  await expect(cheer.locator(".dice-cheer-fleck").first()).toHaveCSS("animation-name", "dice-cheer-fleck");
+  await expect(cheer).toHaveAttribute("aria-hidden", "true");          // the log entry says it to a screen reader
+  await expect(page.locator(".dice-e.latest .dice-e-out small.tier")).toHaveText("Critical success");
+  await expect(cheer).toBeHidden({ timeout: 6000 });                   // it goes by itself
+
+  // a critical failure: red, and it shakes; a tap puts it away
+  face = 1;
+  await page.locator(".dice-sys-go").click();
+  await expect(cheer).toHaveClass(/is-fumble/);
+  await expect(cheer.locator(".dice-cheer-head")).toHaveText("Critical failure");
+  await expect(cheer.locator(".dice-cheer-plate")).toHaveCSS("animation-name", /dice-cheer-shake/);
+  await cheer.click();
+  await expect(cheer).toBeHidden();
+
+  // an ordinary roll makes no show
+  face = 12;
+  await page.locator(".dice-sys-go").click();
+  await expect(page.locator(".dice-e.latest .dice-e-out small.tier")).toHaveText("Failure");
+  await expect(cheer).toBeHidden();
+
+  // reduced motion: it still shows, with nothing moving
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  face = 20;
+  await page.locator(".dice-sys-go").click();
+  await expect(cheer).toBeVisible();
+  await expect(cheer.locator(".dice-cheer-plate")).toHaveCSS("animation-name", "none");
+  await expect(cheer.locator(".dice-cheer-fleck").first()).toBeHidden();
+  expectNoErrors(errors);
+});
