@@ -3802,8 +3802,8 @@
     search.addEventListener('input', () => { st.q = search.value; draw(); });
     when.addEventListener('change', () => { st.when = when.value; draw(); });
     order.addEventListener('change', () => { st.order = order.value; draw(); });
-    const asList = btn('List', () => setView(false), 'small', 'Every event as a list, oldest or newest first');
-    const asTl = btn('Timeline', () => setView(true), 'small', 'The events along the calendar, in lanes by tag: zoom from an era down to a day and drag to move along');
+    const asList = btn('List', () => setView(false), '', 'Every event as a list, oldest or newest first');
+    const asTl = btn('Timeline', () => setView(true), '', 'The events along the calendar, in lanes by tag: zoom from an era down to a day and drag to move along');
     const setView = on => {
       asTimeline = on;
       rememberEvTimeline(on);
@@ -6472,7 +6472,7 @@
       el('span', { class: 'lbl' }, 'Activities', tip(anyone ? 'Tick what the party does, then pick who does each one: its players, and its characters with no player'
         : 'Tick what the party does. Add players on the Members tab, or tick Travels with the party on a character, to put them on activities')),
       list,
-      el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'small primary', 'Add your own activity to this card')),
+      el('div', { class: 'row' }, customIn, btn('+ Add', addCustom, 'primary', 'Add your own activity to this card')),
       el('div', { class: 'grid2' }, field('Notes (players can see and edit)', notes), field('GM notes 🔒', gmn, null, 'Only GMs ever see these')),
       el('div', { class: 'row' }, save, moreMenu(x.title || `this ${k.label.toLowerCase()}`, del)));
     return card;
@@ -6605,7 +6605,7 @@
    * saves it and puts the new line in. */
   function addLine(placeholder, label, tipText, add) {
     const box = el('input', { maxlength: 200, placeholder, 'aria-label': label });
-    const go = btn('+ Add', null, 'small primary', tipText);
+    const go = btn('+ Add', null, 'primary', tipText);
     go.addEventListener('click', busy(null, async () => {
       const typed = box.value;
       if (!typed.trim()) { box.focus(); toast('Type a name first', true); return; }
@@ -7039,7 +7039,7 @@
         } catch (err) { toast(err.message, true); }
       };
       q.addEventListener('input', () => { clearTimeout(timer); renderList(); timer = setTimeout(search, 250); });
-      const f = el('form', { class: 'row' }, q, role, el('button', { class: 'small' }, 'Add by email'));
+      const f = el('form', { class: 'row' }, q, role, el('button', {}, 'Add by email'));
       f.addEventListener('submit', async e => {
         e.preventDefault();
         const v = q.value.trim();
@@ -7588,7 +7588,7 @@
       barFolded = !barFolded;
       try { localStorage.setItem(barKey, barFolded ? 'folded' : 'open'); } catch { /* this visit only */ }
       syncBarFold();
-    }, 'small tv-bar-fold');
+    }, 'tv-bar-fold');
     const syncBarFold = () => {
       bar.classList.toggle('folded', barFolded);
       barFold.replaceChildren(...KIT.withIcons(barFolded ? '🧰' : '⟩'));

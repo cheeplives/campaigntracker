@@ -719,7 +719,7 @@
           if (!await confirmDialog('Replace this campaign\'s calendar with the preset? Stored days keep their absolute day numbers.')) return;
           await post('campaign_update', { calendar: { ...E.PRESETS[presetSel.value].calendar, timeMode: E.timeMode(c) } }, S.camp.id);
           await loadCampaign(S.camp.id, true); route();
-        }, 'small'), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
+        }, ''), 'Swap in the preset\'s months, weekdays, moons and seasons. Days, events and regions stay')),
         el('div', { class: 'row' },
           btn('⬇ Export calendar', () => CalendarFile.download(S.camp, S.holidays), 'small',
             'Download this calendar and its holidays as a JSON file, to keep as a backup or to start another campaign on it (New campaign → Import calendar from file). Days, events and notes are not in it'),
@@ -764,7 +764,7 @@
             btn('Clear the roll log…', async () => {
               if (!await confirmDialog('Delete every roll in this campaign\'s roll log, for everyone? This can\'t be undone.', { ok: 'Clear the log', danger: true })) return;
               try { await post('dice_clear', {}, S.camp.id); toast('The roll log is empty'); } catch (err) { toast(err.message, true); }
-            }, 'small danger', 'Delete every roll in the log, for everyone')));
+            }, 'danger', 'Delete every roll in the log, for everyone')));
         form.addEventListener('submit', async e => {
           e.preventDefault();
           const v = formData(form);
@@ -804,7 +804,7 @@
           el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save fields'),
             btn('Back to the built-in fields', async () => {
               if (await confirmDialog('Put every Category back to its built-in fields? What entries hold is kept, and shows again under a field of the same name.', { ok: 'Use the built-in fields' })) await save(null);
-            }, 'small', 'Forget this campaign\'s own fields and use the ones the app comes with')));
+            }, '', 'Forget this campaign\'s own fields and use the ones the app comes with')));
         form.addEventListener('submit', async ev => {
           ev.preventDefault();
           const fields = Object.fromEntries(boxes.map(([k, box]) => [k, parse(box.value)]));

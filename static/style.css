@@ -149,6 +149,8 @@ input, select, textarea, button, .button {
 textarea { width: 100%; resize: vertical; }
 /* a box to type in or pick from is as tall as a button beside it */
 input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]), select { min-height: var(--ctl-h); padding-top: 6px; padding-bottom: 6px; }
+/* Safari draws a select taller than its padding says, so a one-line select is given the height outright */
+select:not([multiple]):not([size]) { height: var(--ctl-h); box-sizing: border-box; }
 input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-color: var(--accent); }
 input[type=color] { padding: 2px; height: 36px; width: 60px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -156,15 +158,17 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
  * or small (--ctl-h-sm, 28px), so any row of buttons lines up. Kinds: outlined (the default, Spectral 600), primary
  * (filled with the accent and bold, Spectral 700: a page's or dialog's main action), danger (outlined in red), link
  * (bare). A page's + New button is a regular button like any other: filled in a page header, outlined inside a box. */
-button, .button { cursor: pointer; display: inline-block; box-sizing: border-box; font: 600 1rem/1.2 var(--disp); text-transform: none; letter-spacing: 0; text-decoration: none; }
+button, .button { cursor: pointer; display: inline-block; box-sizing: border-box; font-family: var(--disp); font-weight: 600; text-transform: none; letter-spacing: 0; text-decoration: none; }
 /* the standard buttons take the standard height; a one-off control (a tag, a chip, a toolbar icon) keeps its own size */
-button:not([class]), button[class=""], button.primary, button.small, button.danger, button.new-btn, button[class="on"], .button { min-height: var(--ctl-h); padding: 8px 14px; }
+button:not([class]), button[class=""], button.primary, button.small, button.danger, button.new-btn, button[class="on"], .button { min-height: var(--ctl-h); padding: 8px 14px; font-size: 1rem; line-height: 1.2; }
 button:hover, .button:hover { border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: wait; }
 button.primary, .button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 button.danger { color: var(--bad-text); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 button.small, .button.small { min-height: var(--ctl-h-sm); padding: 5px 10px; font-size: .88rem; }
 button.link { background: none; border: 0; color: var(--accent); padding: 0 4px; min-height: 0; }
+/* an icon in a button never makes it taller than the buttons beside it */
+button .ico, .button .ico { margin-block: -2px; }
 /* an <a> or <label> drawn as a button centres its words the way a <button> does */
 a.button:not([hidden]), label.button:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
 /* a picked toggle: tinted with the accent and edged in it, the text in the text colour (Lamplight keeps solid accent
@@ -2147,7 +2151,7 @@ select.vis.vis-select option { background: var(--panel); color: var(--text); tex
 .tv-bar > button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--text); border-color: var(--accent); }
 .tv-bar.folded > :not(.tv-bar-fold) { display: none; }
 .tv-dock:has(.tv-bar.folded) { left: auto; right: 74px; transform: none; }   /* folded: one button in the corner, by ↑ */
-.tv-bar-fold { margin: 0; min-width: 36px; }
+.tv-bar-fold { margin: 0; min-width: 36px; min-height: var(--ctl-h); padding: 8px 12px; font-size: 1rem; line-height: 1.2; }
 .tv-bar:not(.folded) .tv-bar-fold { margin-left: 2px; }
 .tv-bar-gap { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
 .tv-bar-pop { width: min(560px, calc(100vw - 110px)); max-height: 60vh; overflow: auto; padding: 12px; background: var(--panel); }
