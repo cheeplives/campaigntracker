@@ -215,3 +215,98 @@ test("the Events tab's Reminders half lists every reminder, filters it, and adds
   expectNoErrors(errors);
   expectNoErrors(perrors);
 });
+
+test("a reminder set to every shift pops up At the Table on each shift until dismissed, and can be marked done", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Tamsin"), player = person("Ulf");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Repeating reminders ${gm.id}`); // now: Dawn of day 2 (shift 8)
+  const pctx = await newContext(browser);
+  const pp = await pctx.newPage();
+  await signIn(pp, player);
+  await approve(browser, player.email);
+  expect((await api(page, "member_add", { email: player.email, role: "player" }, cid)).status).toBe(200);
+  const mine = async p => (await api(p, "reminders", undefined, cid)).json.reminders;
+
+  // Set from At the Table's Reminders box, starting on the next shift, every shift until dismissed.
+  await page.goto(`index.html#/c/${cid}`);
+  await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
+  await page.locator("[data-box=table-reminders]").getByText("Reminders", { exact: true }).first().click();
+  await page.locator("[data-box=table-reminders]").getByRole("button", { name: "+ New reminder" }).click();
+  const form = page.locator("form.reminder");
+  await form.getByLabel("Title").fill("Torches burn down");
+  await form.getByLabel("How often").selectOption("shift");
+  await form.getByRole("button", { name: "Add reminder" }).click();
+  await expect(page.getByText("Reminder saved")).toBeVisible();
+  expect(sql(`SELECT due_shift, repeat_every FROM reminders WHERE campaign_id = ${cid}`).trim()).toBe("9\tshift");
+  await expect(page.locator(".event.reminder")).toContainText("Midday · every shift · Waiting");
+
+  // End shift: it pops up At the Table. Got it puts it away for this shift only, even across a reload.
+  const dlg = page.locator("dialog.reminder-dialog");
+  const endShift = name => page.locator(".tv-bar").getByRole("button", { name }).click();
+  await endShift(/^End Dawn/);
+  await page.getByRole("button", { name: "Not now" }).click();   // no session open: asked once in this browser
+  await expect(dlg).toContainText("Torches burn down");
+  await expect(dlg).toContainText("Every shift from");
+  await dlg.getByRole("button", { name: "Got it" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(async () => (await mine(page))[0].seen_shift).toBe(9);
+  await page.reload();
+  await expect(page.locator(".tabs a.on")).toHaveText("At the Table");
+  await page.waitForTimeout(500);
+  await expect(dlg).toHaveCount(0);
+  // the badge up top still lists it while it is going
+  await expect(page.locator(".tv-rem-chip")).toContainText("1 reminder");
+
+  // The next shift it is back; its own Dismiss stops it for good (for this GM).
+  await endShift(/^End Midday/);
+  await expect(dlg).toContainText("Torches burn down");
+  await dlg.locator(".reminder").getByRole("button", { name: "Dismiss" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(async () => (await mine(page))[0].dismissed).toBe(true);
+  await endShift(/^End Dusk/);
+  await expect(page.locator(".tv-rem-chip")).toHaveCount(0);
+  await page.waitForTimeout(500);
+  await expect(dlg).toHaveCount(0);
+
+  // A shared one: a player dismisses it for themselves from the list; the GM marks it done for everyone.
+  expect((await api(page, "reminder_save", { title: "Wandering monsters", due_shift: 12, repeat_every: "shift", audience: "all" }, cid)).status).toBe(200);
+  expect((await api(page, "reminder_save", { title: "Rations", due_shift: 12, repeat_every: "shift", audience: "all" }, cid)).status).toBe(200);
+  expect((await api(pp, "reminder_done", { id: (await mine(pp))[0].id }, cid)).status).toBe(404); // a player can't mark the GM's done
+  await endShift(/^End Overnight/);
+  await expect(dlg).toContainText("2 reminders");
+  await dlg.locator(".reminder", { hasText: "Rations" }).getByRole("button", { name: "✓ Mark done" }).click();
+  await expect(dlg).toContainText("Reminder");
+  await expect(dlg).not.toContainText("Rations");
+  await dlg.getByRole("button", { name: "Remind me later" }).click();
+  const rations = (await mine(pp)).find(x => x.title === "Rations");
+  expect([rations.done, rations.due]).toEqual([true, false]);
+
+  await pp.goto(`index.html#/c/${cid}/events/reminders`);
+  const pdlg = pp.locator("dialog.reminder-dialog");
+  await expect(pdlg).toContainText("Wandering monsters");
+  await expect(pdlg).not.toContainText("Rations");
+  await pdlg.getByRole("button", { name: "Remind me later" }).click();
+  const row = pp.locator(".remrow", { hasText: "Wandering monsters" });
+  await expect(row).toContainText("every shift · Due");
+  await expect(row.getByRole("button", { name: "✓ Mark done" })).toHaveCount(0);
+  await row.getByRole("button", { name: "Dismiss" }).click();
+  await expect(pp.getByText("Reminder dismissed")).toBeVisible();
+  await expect(pp.locator(".remrow", { hasText: "Wandering monsters" })).toContainText("Dismissed");
+  await expect(pp.locator(".remrow", { hasText: "Rations" })).toContainText("Done");
+  await pp.getByLabel("Which reminders").selectOption("done");
+  await expect(pp.locator(".remrow")).toHaveCount(1);
+
+  // The GM reopens Rations from the list: it pops up again.
+  await page.goto(`index.html#/c/${cid}/events/reminders`);   // Remind me later still holds on this page load
+  await expect(page.locator(".remrow", { hasText: "Rations" })).toContainText("Done");
+  await page.locator(".remrow", { hasText: "Rations" }).getByRole("button", { name: "Reopen" }).click();
+  await expect(page.getByText("Reminder reopened")).toBeVisible();
+  await expect(page.locator(".remrow", { hasText: "Rations" })).toContainText("Due");
+  await page.reload();
+  await expect(dlg).toContainText("Rations");
+  await expect(dlg).toContainText("Wandering monsters");
+  expectNoErrors(errors);
+  await pctx.close();
+});

@@ -118,6 +118,7 @@ const ACTIONS = [
     'reminder_save' => ['who' => 'member'],
     'reminder_delete' => ['who' => 'member'],
     'reminder_dismiss' => ['who' => 'member'],
+    'reminder_done' => ['who' => 'member'],
     'encyclopedia' => ['get' => true, 'who' => 'member', 'panel' => 'read', 'key' => 'read'],
     'encyclopedia_sources' => ['get' => true, 'who' => 'member'],
     'entry_save' => ['who' => 'member', 'touch' => true],

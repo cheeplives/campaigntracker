@@ -1975,6 +1975,7 @@ try {
     case 'reminder_save':
     case 'reminder_delete':
     case 'reminder_dismiss':
+    case 'reminder_done':
         reminders_action($action);
 
     // ===== the Encyclopedia ===== (api/encyclopedia.php)
