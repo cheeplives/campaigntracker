@@ -341,14 +341,18 @@ CREATE TABLE IF NOT EXISTS holding_storage (
 
 -- Reminders on the calendar. due_shift is an absolute shift (abs_day * shifts per day + shift);
 -- the reminder pops up for everyone it is meant for once the campaign clock reaches it.
+-- repeat_every (055): once, or shift: it pops up again on every shift from due_shift on until dismissed or done.
 -- audience: me (only whoever made it), gm (the campaign's GMs), all (everyone in the campaign).
+-- done_at (055): marked done by whoever may change it, which stops it for everyone; NULL while live.
 CREATE TABLE IF NOT EXISTS reminders (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   campaign_id INT UNSIGNED NOT NULL,
   due_shift BIGINT NOT NULL,
+  repeat_every VARCHAR(8) NOT NULL DEFAULT 'once',
   title VARCHAR(200) NOT NULL,
   body TEXT,
   audience VARCHAR(8) NOT NULL DEFAULT 'me',
+  done_at DATETIME NULL,
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -357,10 +361,12 @@ CREATE TABLE IF NOT EXISTS reminders (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Who has dismissed a reminder that popped up, so it doesn't pop up for them again.
+-- Who has dismissed a reminder that popped up, so it doesn't pop up for them again. seen_shift (055): NULL is
+-- dismissed for good; a shift is a repeating reminder seen on that shift, which comes back once the clock moves on.
 CREATE TABLE IF NOT EXISTS reminder_dismissals (
   reminder_id INT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
+  seen_shift BIGINT NULL,
   PRIMARY KEY (reminder_id, user_id),
   FOREIGN KEY (reminder_id) REFERENCES reminders(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

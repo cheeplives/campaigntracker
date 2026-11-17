@@ -738,6 +738,8 @@ button.dt-member.on { background: color-mix(in srgb, var(--accent) 16%, var(--bg
 .reminder-dialog .reminder-list { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; margin-bottom: 14px; }
 .reminder-dialog .reminder { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
 .reminder-dialog .reminder p { margin: 4px 0; }
+.reminder-dialog .reminder-acts { margin-top: 6px; gap: 6px; }
+.event.reminder.done h4 { color: var(--dim); }
 
 /* seasons */
 .season { display: inline-block; font: 600 .9rem var(--disp); padding: 1px 8px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel-2); white-space: nowrap; }

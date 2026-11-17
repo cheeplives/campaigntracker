@@ -229,7 +229,7 @@
     if (rows('reminders').length) {
       const L = [`# ${camp.name}: Reminders`, ''];
       for (const r of [...rows('reminders')].sort((a, b) => Number(a.due_shift) - Number(b.due_shift)))
-        L.push(`- **${mdText(r.title)}**${r.audience === 'gm' ? ' 🔒' : ''}, due ${slot(r.due_shift)}${has(r.body) ? `: ${text(r.body).replace(/\n+/g, ' ')}` : ''}`);
+        L.push(`- **${mdText(r.title)}**${r.audience === 'gm' ? ' 🔒' : ''}, due ${slot(r.due_shift)}${r.repeat_every === 'shift' ? ', then every shift until dismissed' : ''}${has(r.done_at) ? ' (done)' : ''}${has(r.body) ? `: ${text(r.body).replace(/\n+/g, ' ')}` : ''}`);
       page('Reminders.md', L);
     }
     if (rows('clocks').length) {

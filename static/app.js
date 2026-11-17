@@ -282,9 +282,24 @@
 
   // ------------------------------------------------------------ reminders
   // A reminder sits on a day and shift (or hour) of the calendar and pops up once the campaign clock reaches it,
-  // for everyone it is meant for, until each of them dismisses it. Every page load in a campaign checks, and so
-  // does the change poll, so a player sees it when the GM passes time without having to refresh.
+  // for everyone it is meant for, until each of them dismisses it. One set to repeat pops up again on every shift
+  // after that, until dismissed. Whoever may change a reminder can mark it done, which stops it for everyone. Every
+  // page load in a campaign checks (At the Table's End shift and Pass time too), and so does the change poll, so a
+  // player sees it when the GM passes time without having to refresh.
   const REMINDER_AUDIENCES = [['me', 'Just me'], ['gm', 'The GMs'], ['all', 'Everyone']];
+  const reminderRepeats = () => [['once', 'Once'], ['shift', `Every ${word()} until dismissed`]];
+  const repeats = x => x.repeat_every === 'shift';
+  /** A reminder's state for this person: waiting (the clock hasn't reached it), due, dismissed (by them) or done (for everyone). */
+  const reminderState = x => (x.done ? 'done' : !x.due ? 'waiting' : x.dismissed ? 'dismissed' : 'due');
+  /** [label, tip] for a reminder's state. */
+  function reminderStateText(x) {
+    return {
+      waiting: ['Waiting', `Pops up when the clock reaches ${E.fmtShift(cal(), x.due_shift)}${repeats(x) ? `, then every ${word()} until dismissed` : ''}`],
+      due: ['Due', repeats(x) ? `Pops up every ${word()} until you dismiss it or it is marked done` : 'The clock has reached it and you haven\'t dismissed it yet'],
+      dismissed: ['Dismissed', 'You have dismissed this one'],
+      done: ['Done', 'Marked done: it no longer pops up for anyone'],
+    }[reminderState(x)];
+  }
   const AUDIENCE_TEXT = { me: 'Only you', gm: 'GMs only', all: 'Everyone' };
   const snoozed = new Set(); // "id@clock": Remind me later was pressed; it pops up again once the clock moves
   let reminderOpen = false;
@@ -301,32 +316,73 @@
   /** Show the reminders the clock has reached that this person hasn't dismissed (or put off at this time). */
   function popDueReminders({ reminders, current_shift: clock }) {
     if (reminderOpen || PANEL) return;
-    const due = reminders.filter(x => x.due && !x.dismissed && !snoozed.has(`${x.id}@${clock}`));
+    // a repeating one seen on this shift stays away until the clock moves on
+    const due = reminders.filter(x => x.due && !x.dismissed && !(x.seen_shift !== null && x.seen_shift >= clock) && !snoozed.has(`${x.id}@${clock}`));
     if (due.length) reminderDialog(due, clock);
   }
+  /** The pop-up of reminders due now. Dismiss (Got it, when some repeat) stops the one-off ones for this person and
+   * puts the repeating ones away until the next shift; Remind me later puts them all away until the clock moves.
+   * With several, or a repeating one, each has its own Dismiss, and whoever may change a shared one can mark it done. */
   function reminderDialog(list, clock) {
     hideTip();
     reminderOpen = true;
     const cid = S.camp.id;
-    const d = el('dialog', { class: 'kit-dialog reminder-dialog', 'aria-label': 'Reminders' },
+    const left = new Set(list);
+    let d;
+    const drop = (x, row) => {
+      left.delete(x);
+      row.remove();
+      if (!left.size) { d.returnValue = 'handled'; d.close(); }
+      else syncFoot();
+    };
+    const rowFor = x => {
+      const row = el('div', { class: 'reminder' + (repeats(x) ? ' repeats' : '') },
+        el('strong', {}, x.title),
+        el('div', { class: 'small muted' }, repeats(x) ? `Every ${word()} from ${E.fmtShift(cal(), x.due_shift)}, until dismissed` : E.fmtShift(cal(), x.due_shift)),
+        x.body ? el('p', { class: 'pre' }, x.body) : null,
+        el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · from `, byline(x)));
+      const acts = [];
+      if (list.length > 1 || repeats(x)) {
+        acts.push(btn('Dismiss', async () => {
+          try { await post('reminder_dismiss', { ids: [x.id] }, cid); x.dismissed = true; drop(x, row); } catch (e) { toast(e.message, true); }
+        }, 'small', repeats(x) ? `Stop it popping up for you on every ${word()}` : 'Stop it popping up for you'));
+      }
+      if (canEditReminder(x) && x.audience !== 'me') {
+        acts.push(btn('✓ Mark done', async () => {
+          try { await post('reminder_done', { id: x.id, done: true }, cid); x.done = true; x.due = false; drop(x, row); } catch (e) { toast(e.message, true); }
+        }, 'small', `Stop it popping up for ${x.audience === 'gm' ? 'every GM' : 'everyone'}`));
+      }
+      if (acts.length) row.append(el('div', { class: 'row reminder-acts' }, acts));
+      return row;
+    };
+    const okBtn = el('button', { value: 'dismiss', class: 'primary', type: 'submit', autofocus: true });
+    const laterBtn = el('button', { value: 'later', type: 'submit', 'data-tip': 'It pops up again once the clock moves on' }, 'Remind me later');
+    const title = el('h3', {});
+    const syncFoot = () => {
+      title.textContent = left.size === 1 ? '🔔 Reminder' : `🔔 ${left.size} reminders`;
+      const some = [...left].some(repeats);
+      okBtn.textContent = some ? 'Got it' : 'Dismiss';
+      okBtn.dataset.tip = some ? `${[...left].every(repeats) ? '' : 'Dismisses the one-off reminders. '}The ones that repeat come back next ${word()}` : 'Stop it popping up for you';
+    };
+    d = el('dialog', { class: 'kit-dialog reminder-dialog', 'aria-label': 'Reminders' },
       el('form', { method: 'dialog' },
-        el('h3', {}, list.length === 1 ? '🔔 Reminder' : `🔔 ${list.length} reminders`),
-        el('div', { class: 'reminder-list' }, list.map(x => el('div', { class: 'reminder' },
-          el('strong', {}, x.title),
-          el('div', { class: 'small muted' }, E.fmtShift(cal(), x.due_shift)),
-          x.body ? el('p', { class: 'pre' }, x.body) : null,
-          el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · from `, byline(x))))),
-        el('div', { class: 'kit-dialog-actions' },
-          el('button', { value: 'dismiss', class: 'primary', type: 'submit', autofocus: true }, 'Dismiss'),
-          el('button', { value: 'later', type: 'submit' }, 'Remind me later'))));
+        title,
+        el('div', { class: 'reminder-list' }, list.map(rowFor)),
+        el('div', { class: 'kit-dialog-actions' }, okBtn, laterBtn)));
+    syncFoot();
     d.addEventListener('cancel', () => { d.returnValue = 'later'; });
     d.addEventListener('close', async () => {
       d.remove();
       reminderOpen = false;
-      if (d.returnValue !== 'dismiss') { list.forEach(x => snoozed.add(`${x.id}@${clock}`)); return; }
+      const rest = [...left];
+      if (d.returnValue === 'handled' || !rest.length) return;
+      if (d.returnValue !== 'dismiss') { rest.forEach(x => snoozed.add(`${x.id}@${clock}`)); return; }
+      const once = rest.filter(x => !repeats(x)), again = rest.filter(repeats);
       try {
-        await post('reminder_dismiss', { ids: list.map(x => x.id) }, cid);
-        list.forEach(x => (x.dismissed = true));
+        if (once.length) await post('reminder_dismiss', { ids: once.map(x => x.id) }, cid);
+        if (again.length) await post('reminder_dismiss', { ids: again.map(x => x.id), seen: 1 }, cid);
+        once.forEach(x => (x.dismissed = true));
+        again.forEach(x => (x.seen_shift = clock));
       } catch (e) { toast(e.message, true); }
     });
     document.body.append(d);
@@ -2293,12 +2349,13 @@
     }, r.events.length ? r.events.map(e => eventView(e, d)) : el('p', { class: 'muted' }, 'No events on this day.'));
 
     // --- reminders
-    const rems = dayReminders(d);
+    // today's also lists the repeating ones started on an earlier day that are still popping up
+    const rems = [...(d === today() ? S.reminders.filter(x => repeats(x) && x.due && !x.dismissed && x.due_shift < d * spd()) : []), ...dayReminders(d)];
     const remBox = dayBox(key('reminders'), 'Reminders', {
       folded: table,
-      tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it`,
+      tip: `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it. One set to repeat pops up on every ${word()} after that too`,
       actions: btn('+ New reminder', () => openBox(remBox).append(reminderForm(d)), 'new-btn', `Have something pop up when the campaign reaches a ${word()} of this day`),
-    }, rems.length ? rems.map(x => reminderView(x, d)) : el('p', { class: 'muted' }, 'No reminders on this day.'));
+    }, rems.length ? rems.map(x => reminderView(x, Math.floor(x.due_shift / spd()))) : el('p', { class: 'muted' }, 'No reminders on this day.'));
 
     return clean([
       // At the Table's block over the big box holds all of this, with ✎ Day for the editor
@@ -3503,18 +3560,39 @@
   }
 
   const canEditReminder = x => x.created_by === S.user.id || (isGM() && x.audience !== 'me');
+  /** A reminder's buttons: Dismiss (for this person, while it is due), and for whoever may change it Mark done (or
+   * Reopen), Edit and, under ⋯, Delete. box is what Edit swaps for the form and Delete takes away. */
+  function reminderActions(x, box, d) {
+    const cid = S.camp.id, edit = canEditReminder(x);
+    const acts = [];
+    // a reminder of your own: Mark done says it all
+    if (x.due && !x.dismissed && !(edit && x.audience === 'me')) {
+      acts.push(btn('Dismiss', async () => {
+        try { await post('reminder_dismiss', { ids: [x.id] }, cid); toast('Reminder dismissed'); route(); } catch (e) { toast(e.message, true); }
+      }, 'small', repeats(x) ? `Stop it popping up for you on every ${word()}` : 'Stop it popping up for you'));
+    }
+    if (edit) {
+      acts.push(x.done
+        ? btn('Reopen', async () => {
+          try { await post('reminder_done', { id: x.id, done: false }, cid); toast('Reminder reopened'); route(); } catch (e) { toast(e.message, true); }
+        }, 'small', 'It pops up again, for everyone who dismissed it too, once the clock has reached it')
+        : btn('✓ Mark done', async () => {
+          try { await post('reminder_done', { id: x.id, done: true }, cid); toast('Reminder marked done'); route(); } catch (e) { toast(e.message, true); }
+        }, 'small', x.audience === 'me' ? 'Finished with: it stops popping up' : `Finished with: it stops popping up for ${x.audience === 'gm' ? 'every GM' : 'everyone'}`));
+      acts.push(btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
+        moreMenu(x.title, btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder')));
+    }
+    return acts.length ? el('div', { class: 'row' }, acts) : null;
+  }
   function reminderView(x, d) {
-    const state = !x.due ? ['Waiting', `Pops up when the clock reaches ${E.fmtShift(cal(), x.due_shift)}`]
-      : x.dismissed ? ['Dismissed', 'You have read this one'] : ['Due', 'The clock has reached it and you haven\'t dismissed it yet'];
-    const box = el('div', { class: 'event reminder' + (x.due ? ' due' : ''), 'data-undo': `reminder_delete:${x.id}` },
+    const [label, tipText] = reminderStateText(x);
+    const box = el('div', { class: 'event reminder' + (x.due && !x.dismissed ? ' due' : '') + (x.done ? ' done' : ''), 'data-undo': `reminder_delete:${x.id}` },
       el('div', { class: 'row spread' },
         el('h4', {}, '🔔 ', linked(x.title)),
-        el('small', { class: 'muted' }, shiftNames()[E.mod(x.due_shift, spd())], ' · ', el('span', { 'data-tip': state[1] }, state[0]))),
+        el('small', { class: 'muted' }, shiftNames()[E.mod(x.due_shift, spd())], repeats(x) ? ` · every ${word()}` : '', ' · ', el('span', { 'data-tip': tipText }, label))),
       x.body ? el('p', { class: 'pre' }, linked(x.body)) : null,
-      el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
-      canEditReminder(x) ? el('div', { class: 'row' },
-        btn('Edit', () => box.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-        moreMenu(x.title, btn('Delete', () => undoDelete(box, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null);
+      el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)));
+    box.append(reminderActions(x, box, d) || '');
     return box;
   }
 
@@ -3525,10 +3603,12 @@
     const day = datePicker(Math.floor(at / n));
     const slot = select(names.map((nm, i) => [i, nm]), E.mod(at, n), { name: 'slot', 'aria-label': Word() });
     const audience = isGM() ? select(REMINDER_AUDIENCES, x.audience || 'me', { name: 'audience' }) : null;
+    const often = select(reminderRepeats(), x.repeat_every || 'once', { name: 'repeat_every' });
     const f = el('form', { class: 'event editing reminder' },
       el('div', { class: 'grid2' },
         field('Title', el('input', { name: 'title', value: x.title || '', required: true, maxlength: 200, placeholder: 'e.g. The ransom is due' })),
         field('When', el('span', { class: 'row' }, day, slot), null, `It pops up once the campaign clock reaches this ${word()}`),
+        field('How often', often, null, `Once: it pops up when the clock gets there. Every ${word()} until dismissed: it pops up again on every ${word()} after that, until you dismiss it or mark it done`),
         isGM() ? field('Who sees it', audience, null, 'Just me: only you. The GMs: every GM of this campaign. Everyone: the players too')
           : el('p', { class: 'muted small' }, 'Only you see your reminders.')),
       field('Details', el('textarea', { name: 'body', rows: 3, value: x.body || '' })),
@@ -3538,7 +3618,7 @@
       const v = formData(f), due = day.getAbs() * n + Number(slot.value);
       if (due <= nowShift() && due !== x.due_shift) { toast(`Pick a ${word()} after now: the clock has already passed that one`, true); return; }
       try {
-        await post('reminder_save', { id: x.id, title: v.title, body: v.body, due_shift: due, audience: audience ? audience.value : 'me' }, S.camp.id);
+        await post('reminder_save', { id: x.id, title: v.title, body: v.body, due_shift: due, repeat_every: often.value, audience: audience ? audience.value : 'me' }, S.camp.id);
         toast('Reminder saved'); route();
         offerNouns([{ text: `${v.title}\n${v.body}`, title: true, secret: isGM() && audience.value !== 'all', label: `reminder "${v.title}"` }]);
       } catch (err) { toast(err.message, true); }
@@ -3840,12 +3920,12 @@
     const { reminders } = await loadReminders();
     const st = vs().reminders || (vs().reminders = { q: '', state: 'all', who: 'any', order: 'asc' });
     const c = cal(), n = spd(), d0 = today();
-    const stateOf = x => (!x.due ? 'waiting' : x.dismissed ? 'dismissed' : 'due');
+    const stateOf = reminderState;
     const hay = new Map(reminders.map(x => [x, [x.title, x.body, x.author, x.player].filter(Boolean).join('\n').toLowerCase()]));
 
     const search = el('input', { type: 'search', value: st.q, placeholder: 'Search titles and details', 'aria-label': 'Search reminders' });
-    const state = select([['all', 'All reminders'], ['waiting', 'Still to come'], ['due', 'Due, not dismissed'], ['dismissed', 'Dismissed']], st.state,
-      { 'aria-label': 'Which reminders', 'data-tip': 'Every reminder, only those the clock hasn\'t reached yet, those it has that you haven\'t dismissed, or those you have' });
+    const state = select([['all', 'All reminders'], ['waiting', 'Still to come'], ['due', 'Due, not dismissed'], ['dismissed', 'Dismissed'], ['done', 'Done']], st.state,
+      { 'aria-label': 'Which reminders', 'data-tip': 'Every reminder, only those the clock hasn\'t reached yet, those it has that you haven\'t dismissed, those you have, or those marked done' });
     const who = isGM() ? select([['any', 'For anyone'], ...REMINDER_AUDIENCES], st.who, { 'aria-label': 'Who sees it', 'data-tip': 'Only reminders kept for yourself, for the GMs, or for everyone' }) : null;
     const order = select([['asc', 'Soonest first'], ['desc', 'Latest first']], st.order, { 'aria-label': 'Order' });
     const count = el('p', { class: 'small muted', 'aria-live': 'polite' });
@@ -3855,19 +3935,16 @@
     const row = (x, words) => {
       const d = Math.floor(x.due_shift / n), s = stateOf(x);
       const when = d < d0 ? 'past' : d > d0 ? 'future' : 'now';
-      const label = { waiting: 'Waiting', due: 'Due', dismissed: 'Dismissed' }[s];
-      const tipText = { waiting: `Pops up when the clock reaches ${E.fmtShift(c, x.due_shift)}`, due: 'The clock has reached it and you haven\'t dismissed it yet', dismissed: 'You have read this one' }[s];
+      const [label, tipText] = reminderStateText(x);
       const r = el('div', { class: `listrow evrow remrow ${when} ${s}`, 'data-undo': `reminder_delete:${x.id}` },
         el('div', { class: 'evwhen' },
           el('a', { href: `#/c/${S.camp.id}/day/${d}`, 'data-tip': 'Open this day' }, E.fmtDate(c, d, { noWeekday: true })),
-          el('div', { class: 'small muted' }, shiftNames()[E.mod(x.due_shift, n)], ' · ', el('span', { class: `remstate ${s}`, 'data-tip': tipText }, label))),
+          el('div', { class: 'small muted' }, shiftNames()[E.mod(x.due_shift, n)], repeats(x) ? ` · every ${word()}` : '', ' · ', el('span', { class: `remstate ${s}`, 'data-tip': tipText }, label))),
         el('div', { class: 'evbody' },
           el('h4', {}, '🔔 ', words.length ? markWords(x.title, words) : linked(x.title)),
           x.body ? el('p', { class: 'small pre' }, words.length ? markWords(x.body, words) : linked(x.body)) : null,
-          el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x)),
-          canEditReminder(x) ? el('div', { class: 'row' },
-            btn('Edit', () => r.replaceWith(reminderForm(d, x)), 'small', 'Change this reminder'),
-            moreMenu(x.title, btn('Delete', () => undoDelete(r, `Deleted the reminder "${shortText(x.title)}"`, 'reminder_delete', { id: x.id }), 'small danger', 'Delete this reminder'))) : null));
+          el('small', { class: 'muted' }, `${AUDIENCE_TEXT[x.audience] || ''} · added by `, byline(x))));
+      r.querySelector('.evbody').append(reminderActions(x, r, d) || '');
       return r;
     };
     const draw = () => {
@@ -3889,7 +3966,7 @@
       `Have something pop up when the campaign reaches a ${word()}: set it on any day`);
     mount(...campaignHeader('events'), el('div', { class: 'card' },
       el('div', { class: 'row evhead' }, eventsSubtabs('reminders'), add),
-      el('p', { class: 'small muted' }, `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it.`),
+      el('p', { class: 'small muted' }, `A reminder pops up once the campaign clock reaches its ${word()}, for whoever it is for, until they dismiss it. One set to repeat pops up on every ${word()} after that, until dismissed or marked done.`),
       adder,
       el('div', { class: 'row evfilters' }, search, state, who, order),
       count, list));
