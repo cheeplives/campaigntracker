@@ -7166,6 +7166,18 @@
     }).catch(() => body.closest('section')?.remove());
     return section('Starter templates', body);
   }
+  // The About page offers a way back to the page it was opened from (the footer link is on every page). Kept for the tab,
+  // so it survives a reload of the About page.
+  const ABOUT_FROM = 'chronicle.aboutFrom';
+  function rememberAboutFrom(e) {
+    if (!location.hash.startsWith('#/about')) return;
+    const from = new URL(e.oldURL).hash;
+    if (from.startsWith('#/about')) return;
+    try { sessionStorage.setItem(ABOUT_FROM, from || '#/'); } catch { /* no way back offered then */ }
+  }
+  function aboutFrom() {
+    try { return sessionStorage.getItem(ABOUT_FROM); } catch { return null; }
+  }
   function viewAbout() {
     const MODE = { overland: 'Overland', sea: 'Sea and river', air: 'Air' };
     const speedRows = Object.entries(E.SPEEDS).flatMap(([m, groups]) => groups.flatMap(g => g.items.map(([label, kmh, , src]) => [MODE[m], label, `${kmh}`, cite(src)])));
@@ -7185,6 +7197,7 @@
     mount(
       el('div', { class: 'card about' },
         el('img', { class: 'about-logo', src: 'static/icons/logo-engraved.svg', alt: '', width: 96, height: 96 }),
+        S.user && aboutFrom() ? el('a', { href: aboutFrom(), class: 'small about-back' }, '← Back to the page you were on') : null,
         el('h1', {}, 'About GM\'s Almanac'),
         p('GM\'s Almanac is a tracker for tabletop campaigns: an in-game calendar, weather, moons, visibility, events and a travel planner. ',
           'This page lists where every built-in figure comes from: the sample speeds and distances in the travel planner, the climate baselines behind the weather, and the calendar presets.'),
@@ -8176,7 +8189,8 @@
   const places = new Map();
   let placeHash = null, placeShot = null, placeNav = false;
   const tabOf = h => (h || '').split('?')[0].split('/').slice(0, 4).join('/');
-  addEventListener('hashchange', () => {   // runs before the new page is drawn: the old one is still there to measure
+  addEventListener('hashchange', e => {   // runs before the new page is drawn: the old one is still there to measure
+    rememberAboutFrom(e);
     placeNav = true;
     if (placeHash) places.set(placeHash, placeShot = { y: scrollY, lists: [...document.querySelectorAll('.lp-list')].map(l => l.scrollTop) });
   });
