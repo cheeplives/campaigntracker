@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS campaign_invites (
   token CHAR(32) NULL,                              -- the invite link's code (#/join/<token>), migration 045
   invited_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NULL,                         -- when it can no longer be taken up (057); inviting the address again starts it over
   PRIMARY KEY (campaign_id, email),
   KEY ix_invite_email (email),
   UNIQUE KEY ux_invite_token (token),
@@ -908,7 +909,8 @@ CREATE TABLE IF NOT EXISTS sheet_characters (
   on_map TINYINT(1) NOT NULL DEFAULT 1,              -- its token shows around its group's marker when the group shows tokens (049)
   sheet_public TINYINT(1) NOT NULL DEFAULT 1,
   portrait_id INT UNSIGNED NULL,                    -- its portrait (043): one of its entry's pictures (attachments.id); NULL: the entry's first picture
-  template_version INT UNSIGNED NOT NULL,
+  template_version INT UNSIGNED NOT NULL,           -- the template version its layout was copied from
+  layout MEDIUMTEXT NULL,                            -- its own copy of the template's layout (056), so a template change waits for its player or GM; NULL: the template's
   field_values MEDIUMTEXT NOT NULL,
   field_stamps MEDIUMTEXT NOT NULL,
   hidden TEXT NOT NULL,
@@ -950,6 +952,7 @@ CREATE TABLE IF NOT EXISTS connection_keys (
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_used_at DATETIME NULL,
+  expires_at DATETIME NULL,                         -- when an API key stops working (058); NULL: until it is revoked (every panel link)
   revoked_at DATETIME NULL,
   UNIQUE KEY uq_token (token_hash),
   KEY idx_campaign (campaign_id),

@@ -149,6 +149,12 @@ function upgrade_steps(): array {
             'A campaign can now post to a Discord channel when time passes, an event is added, a clock fills or a session ends (At the Table → Use in a VTT or on stream).'],
         ['055_reminder_repeat.sql', fn(PDO $p) => db_has_table($p, 'reminders') && !db_has_column($p, 'reminders', 'repeat_every'),
             'Reminders can now repeat every shift until dismissed, and be marked done.'],
+        ['056_character_layouts.sql', fn(PDO $p) => db_has_table($p, 'sheet_characters') && !db_has_column($p, 'sheet_characters', 'layout'),
+            'A character sheet now keeps its own copy of its template, so a change to a template waits for the sheet\'s player or a GM to take it.'],
+        ['057_invite_expiry.sql', fn(PDO $p) => db_has_table($p, 'campaign_invites') && !db_has_column($p, 'campaign_invites', 'expires_at'),
+            'An invitation to a campaign now lasts 14 days (inviting the address again starts it over), and one waiting from before lasts 14 days from now.'],
+        ['058_key_expiry.sql', fn(PDO $p) => db_has_table($p, 'connection_keys') && !db_has_column($p, 'connection_keys', 'expires_at'),
+            'A new API key now lasts a year unless you pick otherwise, and your Account page lists every panel link and API key you have. Keys made before this stay until revoked.'],
     ];
 }
 

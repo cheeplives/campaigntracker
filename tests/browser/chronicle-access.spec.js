@@ -95,3 +95,29 @@ test("migration 020 carries everyone's access over as it was", () => {
     sql(`DROP DATABASE IF EXISTS ${db}`);
   }
 });
+
+test("an admin is one the config names: the flag alone, as from Sinless or an old listing, gives nothing here", async ({ page, browser }) => {
+  // an account whose users.is_admin is set (it is an admin in Sinless, or was listed here once) but which
+  // admin_identities doesn't name
+  const who = person("Flagged");
+  await signIn(page, who);
+  await approve(browser, who.email);
+  const id = (await (await page.request.get("api/auth/me.php")).json()).id;
+  sql(`UPDATE users SET is_admin = 1 WHERE id = ${id}`);
+  expect((await (await page.request.get("api/auth/me.php")).json()).is_admin).toBe(false);
+  expect((await api(page, "users")).status).toBe(403);
+  // nor are they a GM of other people's campaigns
+  const gp = await (await newContext(browser)).newPage();
+  const gm = person("Owner");
+  await signIn(gp, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(gp, `Not theirs ${gm.id}`);
+  expect((await api(page, "campaign", undefined, cid)).status).toBe(403);
+  // the real admin sees them as an ordinary account, and can revoke them
+  const ap = await (await newContext(browser)).newPage();
+  await signIn(ap, ADMIN);
+  const row = (await api(ap, "users")).json.users.find(u => Number(u.id) === Number(id));
+  expect(Number(row.is_admin)).toBe(0);
+  expect((await api(ap, "user_status", { id, status: "revoked" })).status).toBe(200);
+  expect(access(id)).toBe("revoked");
+});

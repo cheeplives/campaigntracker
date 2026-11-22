@@ -162,7 +162,7 @@
         if (message.length < 3) { form.querySelector('.report-error').textContent = 'Say what went wrong first.'; box.focus(); return; }
         send.disabled = true; send.textContent = 'Sending…';
         try {
-          await post('report_send', { message, page: location.href.slice(0, 500), context: info, shot: keepShot.checked ? shot : null });
+          await post('report_send', { message, page: location.href.replace(/#\/join\/[0-9a-f]+/i, '#/join/…').slice(0, 500), context: info, shot: keepShot.checked ? shot : null });
           d.close();
           toast('Report sent. Thank you!');
         } catch (err) {
@@ -209,6 +209,15 @@
       };
       const toGithub = r => act(r.status === 'github' ? 'Send to GitHub again' : 'Send to GitHub', async () => {
         // Opened now, while the click still counts, so Safari doesn't block it; pointed at GitHub once the server answers.
+        // With a token the issue is opened from here with nobody reading it on GitHub first, so the exact text is shown
+        // and confirmed now. (Without one, GitHub's own page shows it before Submit.)
+        if (github.direct) {
+          const pv = await post('report_github', { id: r.id, preview: true });
+          const ok = await confirmDialog(el('span', {}, `This is what goes to ${pv.repo}, where anyone who can see the repository's issues can read it. Check it holds nothing private.`,
+            el('span', { class: 'pre report-preview', tabindex: '0', role: 'group', 'aria-label': 'The issue\'s text' }, `${pv.title}\n\n${pv.body}`)),
+            { title: 'Send this to GitHub?', ok: 'Send to GitHub' });
+          if (!ok) return false;
+        }
         const tab = github.direct ? null : window.open('', '_blank');
         try {
           const res = await post('report_github', { id: r.id });

@@ -59,6 +59,9 @@ return [
   // Identities here are auto-approved AND flagged admin on first sign-in, so the
   // owner can get in and approve everyone else. Match either the verified email
   // or the "provider:provider_user_id" form (e.g. "github:1432").
+  // An account is a site admin only while it is listed here: take a line out and that account
+  // is an ordinary one from its next request (and can then be revoked on Site Admin). Keep your
+  // own line in, spelled as the email you sign in with, or you lose Site Admin until you put it back.
   'admin_identities' => [
     // 'you@gmail.com',
     // 'github:0000000',
@@ -207,6 +210,7 @@ return [
     'campaigns_per_account' => 50,     // campaigns a person may create (or copy) of their own
     'write_mb_per_day'      => 50,     // what one account may save in a day, uploads aside (they have uploads.user_mb)
     'invites_per_day'       => 50,     // campaign invitations (and so invite emails) one GM may send in a day
+    'key_fresh_minutes'     => 10,     // making a panel link or an API key asks for a sign-in within this many minutes (0: never asks)
     'days_per_campaign'     => 40000,  // days with weather or notes, about a century
     'shifts_per_campaign'   => 200000, // shifts with an activity
     'events_per_campaign'   => 20000,

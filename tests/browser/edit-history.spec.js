@@ -74,9 +74,19 @@ test("saves are kept, joined when close together, restorable, GM-only and forgot
   sql(`INSERT INTO content_versions (campaign_id, kind, ref_id, data, saved_by, baseline) VALUES ${rows}`);
   ageAll();
   await ok("entry_save", { id: old, name: "Ilse", notes: "<p>Newest</p>" });
+  // ... and with them the last version a GM saved before those, so a run of other people's saves never pushes it out
   versions = await list("entry", old);
-  expect(versions).toHaveLength(50);
+  expect(versions).toHaveLength(51);
   expect((await got(versions[0].id)).version.data.notes).toBe("<p>Newest</p>");
+  expect((await got(versions[50].id)).version.data.notes).toBe("<p>New words</p>");
+
+  // a line added to an entry's notes from At the Table is a version too
+  const noted = (await ok("entry_save", { name: "Noted", notes: "<p>Before</p>" })).id;
+  ageAll();
+  await ok("entry_note_add", { id: noted, body: "A line from the table" });
+  versions = await list("entry", noted);
+  expect(versions).toHaveLength(2);
+  expect((await got(versions[1].id)).version.data.notes).toBe("<p>Before</p>");
 
   // revealing a secret paragraph is a version too
   const sec = (await ok("entry_save", { name: "Vault", notes: "<p>Open</p>" })).id;

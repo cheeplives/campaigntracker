@@ -60,27 +60,42 @@ function report_get(int $id): array {
     return report_row($r);
 }
 
-/** The issue GitHub gets: a title from the first line of the report, and the details that help fix it, not who sent it. */
+/** A page address without what it shouldn't carry anywhere: an invite link's code lets whoever reads it join. */
+function report_page(string $page): string {
+    return (string)preg_replace('~#/join/[0-9a-f]+~i', '#/join/…', $page);
+}
+/** The issue GitHub gets: a title from the first line of the report, and the details that help fix it, not who sent it.
+ * Everything in it was typed by the reporter or sent by their page, and the repository's issues may be public, so none
+ * of it is left to act as Markdown there: the message and the lists go in code fences longer than any run of backticks
+ * inside them, each detail is a code span, and the title's @ can't name anyone. No mention, link, picture or HTML of
+ * the reporter's making reaches GitHub as anything but text. */
 function report_issue(array $r): array {
+    $fenced = function (string $text): string {
+        preg_match_all('/`+/', $text, $m);
+        $fence = str_repeat('`', max(3, ($m[0] ? max(array_map('strlen', $m[0])) : 0) + 1));
+        return "$fence\n$text\n$fence";
+    };
+    $code = fn(string $v): string => '`' . trim(str_replace('`', "'", (string)preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $v))) . '`';
     $first = trim((string)strtok(str_replace("\r", '', $r['message']), "\n"));
+    $first = str_replace(['@', '#'], ["@\u{200B}", "#\u{200B}"], $first);   // a title is plain text, but names nobody and links no issue
     $title = 'Report: ' . (mb_strlen($first) > 80 ? rtrim(mb_substr($first, 0, 79)) . '…' : $first);
     $c = (array)$r['context'];
-    $line = fn(string $k, $v) => $v === null || $v === '' || $v === [] ? null : "- **$k:** " . (is_scalar($v) ? (string)$v : json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-    $page = preg_replace('~^https?://[^/#]+~i', '', (string)$r['page']);   // the address on this site, not the site's host
+    $line = fn(string $k, $v) => $v === null || $v === '' || $v === [] ? null : "- **$k:** " . $code(is_scalar($v) ? (string)$v : json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    $page = report_page((string)preg_replace('~^https?://[^/#]+~i', '', (string)$r['page']));   // the address on this site, not the site's host
     $details = array_filter([
         $line('Page', $page), $line('Build', $c['build'] ?? null), $line('Browser', $c['browser'] ?? null),
         $line('Screen', $c['screen'] ?? null), $line('Theme', $c['theme'] ?? null),
         $line('Campaign role', is_array($c['campaign'] ?? null) ? ($c['campaign']['role'] ?? null) : null), $line('Online', isset($c['online']) ? ($c['online'] ? 'yes' : 'no') : null),
         $line('Reported', $r['created_at'] . ' (server time)'),
     ]);
-    $quote = implode("\n", array_map(fn($l) => '> ' . $l, explode("\n", str_replace("\r", '', $r['message']))));
+    $quote = $fenced(str_replace("\r", '', $r['message']));
     $body = "Reported with the Report button in GM's Almanac (Site Admin, Reports, #{$r['id']}"
         . ($r['has_shot'] ? ', with a screenshot there' : '') . ").\n\n$quote\n\n### Details\n" . implode("\n", $details);
-    $list = function (string $k, string $head) use ($c): string {
+    $list = function (string $k, string $head) use ($c, $fenced): string {
         $items = array_slice(array_values(array_filter((array)($c[$k] ?? []), 'is_array')), -10);
         if (!$items) return '';
-        return "\n\n### $head\n```\n" . implode("\n", array_map(fn($e) => mb_substr(implode(' · ', array_map(
-            fn($x) => is_scalar($x) ? (string)$x : json_encode($x, JSON_UNESCAPED_UNICODE), array_values($e))), 0, 400), $items)) . "\n```";
+        return "\n\n### $head\n" . $fenced(implode("\n", array_map(fn($e) => mb_substr((string)preg_replace('/[\x00-\x1f\x7f]+/u', ' ', implode(' · ', array_map(
+            fn($x) => is_scalar($x) ? (string)$x : json_encode($x, JSON_UNESCAPED_UNICODE), array_values($e)))), 0, 400), $items)));
     };
     $body .= $list('errors', 'Recent errors in the page') . $list('requests', 'Recent failed requests');
     return ['title' => $title, 'body' => mb_substr($body, 0, 6000)];
@@ -92,7 +107,7 @@ function reports_action(string $action): void {
         case 'report_send': // anyone signed in: message, page, context {…}, shot (data: URL, optional)
             $message = trim((string)str_in(p('message'), 5000, false));
             if (mb_strlen($message) < 3) fail('Say what went wrong');
-            $page = (string)str_in(p('page'), 500);
+            $page = report_page((string)str_in(p('page'), 500));
             [$shot, $mime] = report_shot(p('shot'));
             $context = report_context(p('context', []));
             rate_limit('report', (string)$me['id'], 20, 86400, 1, 'That is a lot of reports for one day. Thank you! Try again tomorrow');
@@ -144,6 +159,8 @@ function reports_action(string $action): void {
             $gh = github_reports_cfg();
             if ($gh['repo'] === '') fail('Set github_reports.repo in the server config to the repository issues go to (owner/name)');
             $issue = report_issue($r);
+            // preview: the exact title and text, for the admin to read before it leaves the site (the page asks first)
+            if (p('preview')) out(['ok' => true, 'title' => $issue['title'], 'body' => $issue['body'], 'repo' => $gh['repo']]);
             if ($gh['token'] === '') {
                 // No token: the admin's browser opens GitHub's new issue page filled in, and they press Submit there.
                 $url = "https://github.com/{$gh['repo']}/issues/new?" . http_build_query(array_filter([

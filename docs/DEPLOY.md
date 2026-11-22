@@ -35,7 +35,8 @@ Set at minimum:
 - `db`: host, name, user, password.
 - `base_url`: `https://www.discreteinfinity.com/chronicle` (no trailing slash).
 - `oauth.google` / `oauth.github`: client id and secret. Leave one blank to hide its button.
-- `admin_identities`: your sign-in email (or `github:<id>`), so your first sign-in is approved as admin.
+- `admin_identities`: your sign-in email (or `github:<id>`), so your first sign-in is approved as admin. An account
+  is a site admin only while it is listed: take it out and it is an ordinary account from its next request.
 - Optional: `approval_webhook_url` (Discord/Slack ping on new sign-ups) and
   `approval_email` (email people when approved or revoked), as in Sinless.
 

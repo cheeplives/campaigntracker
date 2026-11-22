@@ -131,11 +131,35 @@
     }
   }
 
-  /** The GM's Anthropic API key, kept in this browser only (never sent to this site's server). set(null) forgets it. */
+  /** The GM's Anthropic API key, kept in this browser only (never sent to this site's server). It is kept for this
+   * tab (sessionStorage) unless they ask for it to be remembered on the device (localStorage). set(null) forgets it.
+   * It belongs to the account that saved it: claim(id), on every sign-in, forgets a key another account left here,
+   * and signing out forgets it too (signOut in app.js). */
+  const OWNER_STORE = `${KEY_STORE}.user`;
+  const stores = () => { const out = []; for (const s of ['sessionStorage', 'localStorage']) { try { out.push(window[s]); } catch { /* blocked */ } } return out; };
   const apiKey = {
-    get() { try { return localStorage.getItem(KEY_STORE) || ''; } catch { return ''; } },
-    set(v) {
-      try { if (v) localStorage.setItem(KEY_STORE, v); else localStorage.removeItem(KEY_STORE); return true; } catch { return false; }
+    get() { for (const s of stores()) { try { const v = s.getItem(KEY_STORE); if (v) return v; } catch { /* blocked */ } } return ''; },
+    /** Whether the key is kept past this tab. */
+    remembered() { try { return !!localStorage.getItem(KEY_STORE); } catch { return false; } },
+    set(v, { remember = false, user = null } = {}) {
+      try {
+        for (const s of stores()) { s.removeItem(KEY_STORE); s.removeItem(OWNER_STORE); }
+        if (!v) return true;
+        const s = remember ? localStorage : sessionStorage;
+        s.setItem(KEY_STORE, v);
+        if (user != null) s.setItem(OWNER_STORE, String(user));
+        return true;
+      } catch { return false; }
+    },
+    claim(user) {
+      for (const s of stores()) {
+        try {
+          if (!s.getItem(KEY_STORE)) continue;
+          const owner = s.getItem(OWNER_STORE);
+          if (owner === null) s.setItem(OWNER_STORE, String(user));   // saved before keys had an owner: whoever is here now
+          else if (owner !== String(user)) { s.removeItem(KEY_STORE); s.removeItem(OWNER_STORE); }
+        } catch { /* blocked */ }
+      }
     },
   };
 

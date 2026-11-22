@@ -111,7 +111,7 @@
     }
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
-    if (!res.ok) { noteFail(res.status, data.error || data.message); throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status }); }
+    if (!res.ok) { noteFail(res.status, data.error || data.message); throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status, code: data.error }); }
     if (body) ownWrite();
     return data;
   }
@@ -887,6 +887,9 @@
   async function signOut() {
     await fetch('api/auth/logout.php', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': S.csrf } }).catch(() => {});
     S.user = null; S.camp = null; S.pending = null;
+    // nothing of theirs stays for whoever uses this browser next: the Anthropic key, and a panel link pasted here
+    if (typeof MapScan !== 'undefined') MapScan.apiKey.set(null);
+    try { localStorage.removeItem('chronicle-panel-code'); } catch { /* nothing kept */ }
     location.hash = '#/';
     boot();
   }
@@ -921,18 +924,28 @@
   const JOIN_KEY = 'chronicle.join';
   /** An invitation's link: this site's page, #/join/<its code>. */
   const inviteUrl = token => `${location.origin}${location.pathname}#/join/${token}`;
-  /** #/join/<code>: an invite link. Signed in and approved (boot sees to that), they join its campaign and go to it. */
+  /** #/join/<code>: an invite link. Signed in and approved (boot sees to that), they are shown which campaign it is for
+   * and join it when they say so: a link someone was sent never joins them to anything by being opened. */
   async function viewJoin(token) {
     try { localStorage.removeItem(JOIN_KEY); } catch { /* nothing kept */ }
-    mount(el('div', { class: 'card narrow' }, el('p', { class: 'muted' }, 'Joining the campaign…')));
-    try {
-      const r = await post('invite_accept', { token });
-      toast(`Welcome to ${r.name}`);
-      location.replace(`#/c/${r.cid}`);
-    } catch (err) {
-      mount(el('div', { class: 'card narrow' }, el('h2', {}, 'This invite link doesn\'t work'), el('p', {}, err.message),
-        el('a', { href: '#/' }, 'Go to your campaigns')));
-    }
+    const broken = err => mount(el('div', { class: 'card narrow' }, el('h2', {}, 'This invite link doesn\'t work'), el('p', {}, err.message),
+      el('a', { href: '#/' }, 'Go to your campaigns')));
+    mount(el('div', { class: 'card narrow' }, el('p', { class: 'muted' }, 'Opening the invitation…')));
+    let info;
+    try { info = await api('invite_info', { query: { token } }); } catch (err) { return broken(err); }
+    const join = btn('Join', async () => {
+      join.disabled = true;
+      try {
+        const r = await post('invite_accept', { token });
+        toast(`Welcome to ${r.name}`);
+        location.replace(`#/c/${r.cid}`);
+      } catch (err) { broken(err); }
+    }, 'primary');
+    mount(el('div', { class: 'card narrow join-card' }, el('h2', {}, `Join ${info.name}?`),
+      el('p', {}, info.member ? 'You are already in this campaign. Joining uses up the invitation and takes you there.'
+        : info.role === 'gm' ? 'You are invited to help run this campaign as a co-GM.' : 'You are invited to this campaign as a player.'),
+      el('p', { class: 'muted small' }, `The other people in it will see your name${S.user?.display_name ? ` (${S.user.display_name})` : ''}, and its GMs will see the email you sign in with.`),
+      el('div', { class: 'card-foot row' }, join, btn('Not now', () => { location.hash = '#/'; }))));
   }
   /** A dialog showing an invitation's link with a Copy button: the GM sends it to them however they like. */
   function showInviteLink(email, token, emailed) {
@@ -985,7 +998,8 @@
       try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
     // The GM's own Anthropic API key, for Scan for names on a map. Kept in this browser only: never sent to this site's
-    // server, only from the browser straight to Anthropic when they scan.
+    // server, only from the browser straight to Anthropic when they scan. For this tab unless they ask for it to be
+    // remembered on the device, and forgotten when they sign out.
     let scanner = null;
     if (typeof MapScan !== 'undefined') {
       const has = () => !!MapScan.apiKey.get();
@@ -994,23 +1008,49 @@
       const forget = btn('Remove key', () => {
         MapScan.apiKey.set(null); keyIn.placeholder = 'sk-ant-…'; show(); toast('Key removed from this browser');
       });
-      const show = () => { state.textContent = has() ? 'A key is saved in this browser.' : 'No key saved in this browser.'; forget.style.display = has() ? '' : 'none'; };
+      const remember = el('input', { type: 'checkbox', name: 'remember', checked: MapScan.apiKey.remembered() });
+      const show = () => { state.textContent = !has() ? 'No key saved in this browser.' : MapScan.apiKey.remembered() ? 'A key is saved in this browser.' : 'A key is saved in this browser, until you close this tab or sign out.'; forget.style.display = has() ? '' : 'none'; };
       scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Your Anthropic key'),
         el('p', { class: 'muted' }, 'Two things can have Claude do the reading, using your own Anthropic API key, so they are billed to your Anthropic account: Scan for names on a map (a few cents a scan) and Draft from transcript on a session (about 20 cents a game night). Create a key at ',
           el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'),
-        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you use it from. When you scan or draft, your browser sends the map\'s picture or the transcript, with the key, straight to Anthropic.'),
-        field('Anthropic API key', keyIn), state,
+        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you use it from. When you scan or draft, your browser sends the map\'s picture or the transcript, with the key, straight to Anthropic. Signing out removes it.'),
+        field('Anthropic API key', keyIn),
+        el('label', { class: 'small' }, remember, ' Remember it on this device. Leave this off on a computer you share: the key then lasts until you close this tab'), state,
         el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save key'), forget));
       scanner.addEventListener('submit', e => {
         e.preventDefault();
         const v = keyIn.value.trim();
         if (!v) return toast('Paste your API key first', true);
         if (!/^sk-ant-[\w-]{20,}$/.test(v)) return toast('That doesn\'t look like an Anthropic API key (they start with sk-ant-)', true);
-        if (!MapScan.apiKey.set(v)) return toast('This browser won\'t store it (private browsing, or site data blocked)', true);
+        if (!MapScan.apiKey.set(v, { remember: remember.checked, user: S.user.id })) return toast('This browser won\'t store it (private browsing, or site data blocked)', true);
         keyIn.value = ''; keyIn.placeholder = 'Saved. Paste a new key to replace it'; show(); toast('Key saved in this browser');
       });
       show();
     }
+    // Every panel link and API key of theirs, in all their campaigns: each acts as them until it is revoked, signed out
+    // or not, so this is where one they didn't make gets noticed and stopped.
+    const keys = el('section', { class: 'card narrow account-keys', 'aria-labelledby': 'account-keys-h' });
+    const drawKeys = async () => {
+      const r = await api('my_keys').catch(() => ({ links: [] }));
+      const revoke = async body => {
+        try { await post('my_keys_revoke', body); toast(body.all ? 'Every link and key is revoked' : 'Revoked'); } catch (err) { toast(err.message, true); }
+        drawKeys();
+      };
+      keys.replaceChildren(el('h2', { id: 'account-keys-h' }, 'Panel links and API keys'),
+        el('p', { class: 'muted' }, 'Each of these acts as you in one campaign, and keeps working after you sign out, until you revoke it. If you see one you didn\'t make, revoke it.'),
+        r.links.length ? el('div', {}, r.links.map(k => el('div', { class: 'listrow tv-link' },
+          el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${k.campaign} · ${keyKindText(k)} · made ${k.created_at.slice(0, 10)} · ${keyUseText(k)}`)),
+          btn('Revoke', async () => {
+            if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
+            revoke({ id: k.id });
+          }, 'small'))))
+          : el('p', { class: 'muted small' }, 'You have none. They are made on a campaign\'s At the Table page, under Use in a VTT or on stream.'),
+        r.links.length > 1 ? el('div', { class: 'card-foot row' }, btn('Revoke all', async () => {
+          if (!await confirmDialog(`Revoke all ${r.links.length} links and keys? Every panel and program using one stops working at once.`, { ok: 'Revoke all', danger: true })) return;
+          revoke({ all: true });
+        }, 'danger')) : null);
+    };
+    drawKeys();
     // The welcome tutorial: back on after Skip tutorial, from the start again, or off (prefs.tour)
     const tutorial = el('section', { class: 'card narrow tour-card-account', 'aria-labelledby': 'tour-account-h' });
     const drawTutorial = () => {
@@ -1032,7 +1072,7 @@
           : btn('Turn the tutorial back on', setTour('on', true), 'primary')));
     };
     drawTutorial();
-    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, tutorial, scanner);
+    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, keys, tutorial, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -1166,11 +1206,11 @@
           starButton(c, draw),
           el('div', { class: 'camp-main' }, el('a', { href: `#/c/${c.id}` }, el('strong', {}, c.name), roleBadge(c.role)),
             c.description ? el('p', { class: 'muted' }, c.description) : null),
-          // Only a GM can copy (a copy holds the secrets) or delete one.
+          // Only a GM can copy one (a copy holds the secrets), and only its owner can delete it.
           c.role === 'gm' ? el('div', { class: 'camp-actions' }, moreMenu(c.name,
             btn('Copy…', () => copyCampaign(c), 'small', 'Make a new campaign of your own from this one: everything in it, or just its calendar and setup'),
-            el('hr'),
-            btn('Delete…', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first'))) : null)))
+            c.can_delete ? el('hr') : null,
+            c.can_delete ? btn('Delete…', () => deleteCampaign(c), 'small danger', 'Permanently delete the campaign and everything in it. Asks you to type DELETE first') : null)) : null)))
         : el('p', { class: 'muted' }, 'No campaigns yet. Create one to get started.')));
     draw();
   }
@@ -4454,6 +4494,7 @@
     };
     opts = { ...opts, refresh };
     const mine = f => isGM() || opts.manageAny || f.created_by === S.user.id;
+    const owns = f => isGM() || f.created_by === S.user.id;   // removing can't be undone: whoever added it, and the GMs
     const hidden = f => f.is_secret || opts.secret;
     const isPic = f => f.kind === 'image' || f.kind === 'embed';
     const pics = files.filter(isPic), docs = files.filter(f => !isPic(f));
@@ -4492,7 +4533,7 @@
       el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
       el('small', { class: 'muted' }, ` ${fileSize(f.size)}`), f.caption ? el('span', { class: 'small' }, ` · ${f.caption}`) : null,
       mine(f) ? btn('✎', () => fileEdit(f, opts), 'link small', 'Change the caption') : null,
-      mine(f) ? btn('×', () => fileDelete(f, opts), 'link small', `Remove ${f.name}`) : null))) : null;
+      owns(f) ? btn('×', () => fileDelete(f, opts), 'link small', `Remove ${f.name}`) : null))) : null;
     const box = el('section', { class: 'enc-files' },
       el('div', { class: 'row spread' }, el('h4', {}, 'Pictures and files', tip(opts.secret ? 'GM only, like the entry. Pictures show here; other files download'
           : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
@@ -4615,7 +4656,7 @@
         f.embed ? el('a', { class: 'button small', href: f.embed.url, target: '_blank', rel: 'noopener noreferrer' }, 'View on DeviantArt')
           : el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
         opts.mine(f) ? btn('✎ Caption', () => fileEdit(f, opts, () => d.close()), 'small') : null,
-        opts.mine(f) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
+        (isGM() || f.created_by === S.user.id) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
         btn('Close', () => d.close(), 'small primary')]));
     };
     const d = el('dialog', { class: 'kit-dialog file-viewer', 'aria-label': 'Picture' }, stage, zoomBar, cap, tools);
@@ -7054,11 +7095,13 @@
     const card = el('div', { class: 'card' }, el('h2', {}, 'Members'),
       S.members.map(m => {
         const self = Number(m.id) === S.user.id;
+        const ownerActs = S.camp.owner_id == null || S.camp.owner_id === S.user.id || !!S.user.is_admin;
         const sheet = sheetOf(m);
         const canLink = (self || isGM()) && !sheet && typeof Sheets !== 'undefined';
         return el('div', { class: 'listrow member' },
           el('div', { class: 'who' }, m.token_url && typeof TokensTab !== 'undefined' ? TokensTab.face(el, m.token_url, m.character_name || m.display_name) : null, el('strong', {}, m.display_name || m.email), m.pronouns ? el('span', { class: 'pronouns muted' }, ` (${m.pronouns})`) : null, m.email ? el('span', { class: 'muted' }, ` (${m.email})`) : null,
-            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player')),
+            el('span', { class: `role ${m.role}`, 'data-tip': m.role === 'gm' ? 'Can pass time, edit everything and see secrets' : 'Sees the calendar, adds notes, and adds events if allowed' }, m.role === 'gm' ? 'GM' : 'Player'),
+            Number(m.id) === S.camp.owner_id ? el('span', { class: 'role owner', 'data-tip': 'The campaign is theirs: only they can delete it, leave it or hand it to another GM' }, 'Owner') : null),
           // The character sits centred between the player and the buttons, larger than the rest of the row.
           el('div', { class: 'member-char' }, el('span', { class: 'lbl' }, 'Character'),
             sheet ? el('a', { class: 'charname', href: `#/c/${S.camp.id}/characters/${sheet.id}`, 'data-tip': 'Open their character sheet' }, sheet.name)
@@ -7076,8 +7119,13 @@
               canLink && (linkable(m).length || linkableEntries(m).length) ? btn('Link a character…', () => linkSheet(m).catch(err => toast(err.message, true)), 'small', 'Match them up with a character: a sheet on the Characters tab, or a Person in the Encyclopedia') : null,
               canLink ? btn('Make a sheet', () => Sheets.newCharacter({ name: m.character_name || '', owner_id: m.id }).catch(err => toast(err.message, true)),
                 'small', 'Give this character a sheet on the Characters tab, with this name') : null,
+              // the owner (any GM once the owner has gone, or a site admin) hands the campaign to another of its GMs
+              isGM() && ownerActs && m.role === 'gm' && Number(m.id) !== S.camp.owner_id ? btn('Make owner', async () => {
+                if (!await confirmDialog(`Make ${m.display_name} the owner of this campaign? Only its owner can delete it, and only they can remove the owner. You stay a GM.`, { ok: 'Make owner' })) return;
+                try { await post('campaign_owner_set', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
+              }, 'small', 'Hand the campaign to this GM: they become the one who can delete it') : null,
               el('hr'),
-              isGM() ? btn('Remove', async () => {
+              isGM() && (Number(m.id) !== S.camp.owner_id || self || S.user?.is_admin) ? btn('Remove', async () => {
                 if (!await confirmDialog(`Remove ${m.display_name} from this campaign?`)) return;
                 try { await post('member_remove', { user_id: m.id }, S.camp.id); await loadCampaign(S.camp.id, true); route(); } catch (err) { toast(err.message, true); }
               }, 'small danger', 'Take them out of this campaign. Their account stays') : null)));
@@ -7128,7 +7176,8 @@
       // Invitations by email not taken up yet: they become members when that person, approved, next signs in.
       if (S.invites.length) card.append(el('h3', {}, 'Invited'), ...S.invites.map(i => el('div', { class: 'listrow member invite' },
         el('div', { class: 'who' }, el('strong', {}, i.email), el('span', { class: `role ${i.role}` }, i.role === 'gm' ? 'GM' : 'Player'),
-          el('span', { class: 'muted small', 'data-tip': 'They join when they open their invite link, or sign in with this email' }, ' waiting to join')),
+          i.expired ? el('span', { class: 'muted small', 'data-tip': 'An invitation lasts 14 days. Copy invite link starts it again, with the same link' }, ' ran out')
+            : el('span', { class: 'muted small', 'data-tip': i.role === 'gm' ? 'They join when they sign in with this email. Their invite link only works for this address' : 'They join when they open their invite link, or sign in with this email' }, ' waiting to join')),
         el('div', { class: 'actions' }, btn('Copy invite link', async () => {
           try { showInviteLink(i.email, (await post('invite_link', { email: i.email }, S.camp.id)).token, false); } catch (err) { toast(err.message, true); }
         }, 'small', 'Show the link that lets them join, to send them yourself'), btn('Cancel invitation', async () => {
@@ -7814,9 +7863,8 @@
     const r = await api('panel_links', { query: { cid } }).catch(() => ({ ready: false, links: [] }));
     const box = el('section', { class: 'card tv-links' }, el('h3', {}, 'Use in a VTT or on stream',
       tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen: make a panel link, then paste it there once. Or give a program (a Foundry module, a bot) an API key. Each sees what you see, and can be revoked here at any time')));
-    const kindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
     const list = el('div', {}, r.links.length ? r.links.map(k => el('div', { class: 'listrow tv-link' },
-      el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${kindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}`)),
+      el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${keyKindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${keyUseText(k)}`)),
       btn('Revoke', async () => {
         if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
         try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
@@ -7828,6 +7876,11 @@
     if (isGM()) box.append(await discordBox(box));
     return box;
   }
+  /** A panel link or API key in a list: what kind it is, and when it was last used and stops. */
+  const keyKindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
+  const keyUseText = k => `${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}${k.expires_at ? ` · works until ${k.expires_at.slice(0, 10)}` : ''}`;
+  /** Making a link or key failed: being asked to sign in again stays up to be read; anything else is a toast. */
+  const keyError = e => (e.code === 'sign_in_again' ? alertDialog(e.message, { title: 'Sign in again first' }) : toast(e.message, true));
   const DISCORD_EVENTS = [['time', 'Time passing'], ['event', 'New events'], ['clock', 'Clocks filling'], ['session', 'Sessions ending']];
   /** GMs: the Discord channels the campaign posts to, inside the box above. */
   async function discordBox(box) {
@@ -7901,7 +7954,7 @@
             btn('Copy', async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
         box.replaceWith(await tableLinksBox());
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { keyError(e); }
     });
     d.addEventListener('close', () => d.remove());
     document.body.append(d);
@@ -7912,9 +7965,11 @@
   function newApiKey(box) {
     const label = el('input', { maxlength: 80, placeholder: 'e.g. Foundry module, or Discord bot', 'aria-label': 'Label' });
     const access = select([['read', 'Read only: the date, weather, Encyclopedia and the like'], ['write', isGM() ? 'Read and write: also pass time, add notes and events' : 'Read and write: also add notes and events']], 'read', { 'aria-label': 'Access' });
+    const lasts = select([['365', 'A year'], ['90', '90 days'], ['30', '30 days'], ['0', 'Until I revoke it']], '365', { 'aria-label': 'Lasts' });
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New API key' });
     const form = el('form', { method: 'dialog' }, el('h3', {}, 'New API key'),
       field('Label', label, 'So you know which program has it'), field('Access', access),
+      field('Lasts', lasts, 'The key stops working after this, and the program needs a new one. You can revoke it sooner'),
       el('p', { class: 'small muted' }, 'The key acts as you: it sees what you see in this campaign, and nothing in your other campaigns.'),
       el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, 'Make key'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
     d.append(form);
@@ -7922,7 +7977,7 @@
       if (ev.submitter?.value !== 'ok') return;
       ev.preventDefault();
       try {
-        const r = await post('panel_link_create', { scope: 'api', label: label.value.trim(), write: access.value === 'write' }, S.camp.id);
+        const r = await post('panel_link_create', { scope: 'api', label: label.value.trim(), write: access.value === 'write', days: Number(lasts.value) }, S.camp.id);
         const key = r.link.code, url = new URL('api/index.php', panelBase()).href;
         const shown = el('input', { readonly: true, value: key, 'aria-label': 'API key', onfocus: e => e.target.select() });
         form.replaceChildren(el('h3', {}, `"${r.link.label}" is ready`),
@@ -7934,7 +7989,7 @@
             btn('Copy', async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
         box.replaceWith(await tableLinksBox());
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { keyError(e); }
     });
     d.addEventListener('close', () => d.remove());
     document.body.append(d);
@@ -8285,6 +8340,7 @@
     }
     const first = !S.user;
     S.user = { ...data, id: Number(data.id) };
+    if (typeof MapScan !== 'undefined') MapScan.apiKey.claim(S.user.id);   // a key another account left in this browser is forgotten
     // A theme saved on the account wins over this device's, so it follows them between devices.
     if (S.user.prefs?.scheme && S.user.prefs.scheme !== currentScheme()) applyScheme(S.user.prefs.scheme);
     if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);

@@ -136,6 +136,22 @@ function role(int $cid): string {
     return $cache[$cid] = $r;
 }
 function need_gm(int $cid): void { if (role($cid) !== 'gm') fail('Only the GM can do that', 403); }
+/** The campaign's owner: whoever made it (or was handed it, campaign_owner_set), while they are still one of its GMs.
+ * null once they are not, and then any GM stands in. Only the owner deletes the campaign, or removes or demotes the owner. */
+function campaign_owner(int $cid): ?int {
+    $st = db()->prepare("SELECT m.user_id FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=c.created_by AND m.role='gm' WHERE c.id=?");
+    $st->execute([$cid]);
+    $id = $st->fetchColumn();
+    return $id === false ? null : (int)$id;
+}
+function need_owner(int $cid): void {
+    need_gm($cid);
+    $owner = campaign_owner($cid);
+    if ($owner !== null && $owner !== me()['id'] && !me()['is_admin']) fail('Only the campaign\'s owner can do that', 403, 'not_owner');
+}
+/** How long an invitation (and its link) can be taken up. Inviting the address again starts it over. */
+const INVITE_DAYS = 14;
+const INVITE_LIVE_SQL = '(expires_at IS NULL OR expires_at > NOW())';
 /** Row $id of $table if it is campaign $cid's, or fail 404 with $missing; also when $hidden($row) says this member may
  * not see it (a secret one, for a player). $table is always a name from the code, never from the request. */
 function row_of(string $table, int $cid, int $id, string $missing, ?callable $hidden = null): array {
@@ -627,14 +643,29 @@ function claim_invites(?int $cid = null): bool {
     $email = mb_strtolower(trim((string)$u['email']));
     if ($email === '') return false;
     $only = $cid !== null ? ' AND campaign_id=' . $cid : '';
-    $st = db()->prepare("SELECT campaign_id, role FROM campaign_invites WHERE email=?$only");
+    $st = db()->prepare("SELECT campaign_id, role FROM campaign_invites WHERE email=?$only AND " . INVITE_LIVE_SQL);
     $st->execute([$email]);
     $rows = $st->fetchAll();
     if (!$rows) return false;
     $ins = db()->prepare('INSERT IGNORE INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?)');
-    foreach ($rows as $r) $ins->execute([(int)$r['campaign_id'], $u['id'], $r['role']]);
-    db()->prepare("DELETE FROM campaign_invites WHERE email=?$only")->execute([$email]);
+    $del = db()->prepare('DELETE FROM campaign_invites WHERE email=? AND campaign_id=?');
+    foreach ($rows as $r) { $ins->execute([(int)$r['campaign_id'], $u['id'], $r['role']]); $del->execute([$email, (int)$r['campaign_id']]); }
     return true;
+}
+/** The invitation behind an invite link's code, for the signed-in account to take up, or fail: gone, run out, or an
+ * invitation to be a co-GM (who sees every secret and can change everything) opened by another address than the one
+ * the GM invited, so a forwarded or leaked link doesn't hand the campaign over. */
+function invite_row(string $token): array {
+    rate_limit('invite_accept', 'u' . me()['id'], 30, 3600);
+    if (!preg_match('/^[0-9a-f]{32}$/', $token)) fail('That invite link is not complete. Copy the whole link and try again.', 404, 'invite_gone');
+    $st = db()->prepare('SELECT campaign_id, email, role, NOT ' . INVITE_LIVE_SQL . ' AS expired FROM campaign_invites WHERE token=?');
+    $st->execute([$token]);
+    $inv = $st->fetch();
+    if (!$inv) fail('This invite link has already been used or was cancelled. Ask your GM for a new one.', 404, 'invite_gone');
+    if ((int)$inv['expired']) fail('This invite link has run out. Ask your GM to invite you again.', 404, 'invite_gone');
+    if ($inv['role'] === 'gm' && mb_strtolower(trim((string)me()['email'])) !== $inv['email'])
+        fail('This invitation to help run the campaign was sent to another address. Sign in with that address, or ask the GM to invite the one you sign in with.', 403, 'invite_other');
+    return $inv;
 }
 /** The code of campaign $cid's invitation to $email (its link is index.html#/join/<code>), or null if there is none. */
 function invite_token(int $cid, string $email): ?string {
@@ -1009,13 +1040,19 @@ try {
     // Admin rights come only from admin_identities in the config (or a migrated account).
     case 'users':
         need_admin();
-        out(['users' => db()->query(has_access_table()
+        $rows = db()->query(has_access_table()
             ? "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
-               COALESCE(a.status, u.status) AS status, u.is_admin, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
+               COALESCE(a.status, u.status) AS status, u.is_admin, u.provider_user_id, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
                FROM users u LEFT JOIN chronicle_access a ON a.user_id=u.id WHERE a.user_id IS NOT NULL OR u.provider='legacy'
                ORDER BY COALESCE(a.status, u.status) = 'pending' DESC, display_name"
             : "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
-               u.status, u.is_admin, u.created_at, u.last_login_at FROM users u ORDER BY u.status = 'pending' DESC, display_name")->fetchAll()]);
+               u.status, u.is_admin, u.provider_user_id, u.created_at, u.last_login_at FROM users u ORDER BY u.status = 'pending' DESC, display_name")->fetchAll();
+        // an admin is one the config still names (is_site_admin), whatever the flag in the table says
+        out(['users' => array_map(function ($r) {
+            $r['is_admin'] = is_site_admin($r) ? 1 : 0;
+            unset($r['provider_user_id']);
+            return $r;
+        }, $rows)]);
 
     case 'user_status':
         $admin = need_admin();
@@ -1024,11 +1061,11 @@ try {
         $status = p('status');
         if (!in_array($status, ['approved', 'revoked'], true)) fail('Status must be approved or revoked');
         if ($id === $admin['id']) fail("You can't change your own access");
-        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, u.status, u.is_admin FROM users u WHERE u.id=?');
+        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, u.status, u.is_admin, u.provider, u.provider_user_id FROM users u WHERE u.id=?');
         $st->execute([$id]);
         $t = $st->fetch();
         if (!$t) fail('User not found', 404);
-        if ($status === 'revoked' && (int)$t['is_admin']) fail("Admins can't be revoked here. Remove them from admin_identities first.");
+        if ($status === 'revoked' && is_site_admin($t)) fail("Admins can't be revoked here. Remove them from admin_identities first.");
         if (chronicle_status($t) === $status) out(['ok' => true]);
         // Only their access to Chronicle: users.status is Sinless's.
         if (has_access_table()) db()->prepare('INSERT INTO chronicle_access (user_id, status, approved_at) VALUES (?, ?, IF(?=\'approved\', NOW(), NULL))
@@ -1100,6 +1137,7 @@ try {
     case 'characters':
     case 'character':
     case 'character_create':
+    case 'character_template_update':
     case 'character_field':
     case 'character_values':
     case 'character_save':
@@ -1114,11 +1152,17 @@ try {
         $u = me();
         claim_invites();   // a GM's invitation by email, waiting for this account
         // member says whether they belong to it (an admin is shown every campaign as GM); character_name is theirs there.
+        $owner = "(SELECT o.user_id FROM campaign_members o WHERE o.campaign_id=c.id AND o.user_id=c.created_by AND o.role='gm')";
         $st = db()->prepare($u['is_admin']
-            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.active_character_id, m.user_id IS NOT NULL AS member FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
-            : 'SELECT c.id, c.name, c.description, m.role, m.character_name, m.active_character_id, 1 AS member FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name');
+            ? "SELECT c.id, c.name, c.description, COALESCE(m.role, 'gm') AS role, COALESCE(m.character_name, '') AS character_name, m.active_character_id, m.user_id IS NOT NULL AS member, $owner AS owner_id FROM campaigns c LEFT JOIN campaign_members m ON m.campaign_id=c.id AND m.user_id=? ORDER BY c.name"
+            : "SELECT c.id, c.name, c.description, m.role, m.character_name, m.active_character_id, 1 AS member, $owner AS owner_id FROM campaigns c JOIN campaign_members m ON m.campaign_id=c.id WHERE m.user_id=? ORDER BY c.name");
         $st->execute([$u['id']]);
-        out(['campaigns' => array_map(fn($r) => ['member' => (bool)(int)$r['member']] + $r, $st->fetchAll())]);
+        // can_delete: its owner (any GM once the owner has gone), or a site admin
+        out(['campaigns' => array_map(function ($r) use ($u) {
+            $owner = $r['owner_id'];
+            unset($r['owner_id']);
+            return ['member' => (bool)(int)$r['member'], 'can_delete' => $r['role'] === 'gm' && ($u['is_admin'] || $owner === null || (int)$owner === $u['id'])] + $r;
+        }, $st->fetchAll())]);
 
     case 'campaign':
         $cid = cid();
@@ -1129,6 +1173,7 @@ try {
             'id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'],
             'calendar' => dec($c['calendar_json']), 'settings' => (object)(dec($c['settings_json']) ?: []),
             'current_shift' => (int)$c['current_shift'], 'changed' => (string)$c['updated_at'],
+            'owner_id' => campaign_owner($cid),
         ];
         // The weather engine rolls every future day from the seed, so a player who may not see future weather
         // doesn't get it: their page uses the shifts the GM's browser saves with each day's weather instead.
@@ -1151,9 +1196,9 @@ try {
         $members = array_map(fn($m) => $m + ['token_url' => $tokenUrls['member'][(int)$m['id']] ?? null], $members);
         $invites = [];
         if ($isGm && !api_request()) {
-            $st = db()->prepare('SELECT email, role, created_at FROM campaign_invites WHERE campaign_id=? ORDER BY email');
+            $st = db()->prepare('SELECT email, role, created_at, NOT ' . INVITE_LIVE_SQL . ' AS expired FROM campaign_invites WHERE campaign_id=? ORDER BY email');
             $st->execute([$cid]);
-            $invites = $st->fetchAll();
+            $invites = array_map(fn($i) => ['expired' => (bool)(int)$i['expired']] + $i, $st->fetchAll());
         }
         out(['campaign' => $camp, 'role' => $role, 'regions' => $regions, 'holidays' => $holidays, 'members' => $members, 'invites' => $invites, 'tags' => campaign_tags($cid),
             'encyclopedia' => entry_index($cid, $isGm, $tokenUrls['entry']), 'encyclopedia_ignored' => ignored_terms($cid, $role),
@@ -1216,6 +1261,14 @@ try {
         $cid = cid();
         $isGm = role($cid) === 'gm';
         out(['ok' => true, 'link' => panel_link_create($cid, $isGm)]);
+
+    case 'my_keys': // every link and key of yours, in all your campaigns (the Account page)
+        me();
+        out(['links' => my_keys_list()]);
+
+    case 'my_keys_revoke':
+        me();
+        out(['ok' => true, 'revoked' => my_keys_revoke()]);
 
     case 'panel_link_revoke':
         $cid = cid();
@@ -1280,7 +1333,7 @@ try {
         out(['ok' => true]);
 
     case 'campaign_delete':
-        $cid = cid(); need_gm($cid);
+        $cid = cid(); need_owner($cid);
         if (p('confirm') !== 'DELETE') fail('Confirmation missing');
         attachments_purge($cid);
         db()->prepare('DELETE FROM campaigns WHERE id=?')->execute([$cid]);
@@ -1343,6 +1396,7 @@ try {
         // campaign itself, so a GM can invite someone before they have signed up.
         $cid = cid(); need_gm($cid);
         $role = p('role') === 'gm' ? 'gm' : 'player';
+        $owner = campaign_owner($cid);
         if (p('user_id') !== null) {
             // Picked from the list: only people the GM already plays with (anyone, for a site admin), as that list offers,
             // so account ids can't be tried one by one.
@@ -1362,7 +1416,9 @@ try {
                 // Inviting the same address again sends the email again. A day's invitation emails are capped per
                 // GM, so the site can't be used to send mail to anyone at all in bulk.
                 if ($max = limit_of('invites_per_day', 50)) rate_limit('invite', 'u' . me()['id'], $max, 86400, 1, 'You have sent a lot of invitations today. The rest can wait until tomorrow');
-                db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, token, invited_by) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role), token=COALESCE(token, VALUES(token))')
+                // the invitation lasts INVITE_DAYS; inviting the address again starts that over, with the same link
+                db()->prepare('INSERT INTO campaign_invites (campaign_id, email, role, token, invited_by, expires_at) VALUES (?,?,?,?,?, NOW() + INTERVAL ' . INVITE_DAYS . ' DAY)
+                    ON DUPLICATE KEY UPDATE role=VALUES(role), token=COALESCE(token, VALUES(token)), expires_at=VALUES(expires_at)')
                     ->execute([$cid, $email, $role, bin2hex(random_bytes(16)), me()['id']]);
                 $token = invite_token($cid, $email);
                 $st = db()->prepare('SELECT name FROM campaigns WHERE id=?');
@@ -1372,7 +1428,17 @@ try {
             }
             db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $email]);
         }
+        // adding someone who is already here changes their role: only the owner stops being a GM by their own hand
+        if ($owner !== null && (int)$uid === $owner && $role !== 'gm' && $owner !== me()['id'] && !me()['is_admin']) fail('Only the campaign\'s owner can change their own role', 403, 'not_owner');
         db()->prepare('INSERT INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role)')->execute([$cid, $uid, $role]);
+        out(['ok' => true]);
+
+    case 'campaign_owner_set':
+        // The owner hands the campaign to another of its GMs (a site admin can too, and any GM once the owner has gone).
+        $cid = cid(); need_owner($cid);
+        $uid = int_in(p('user_id'), 1);
+        if (member_role($cid, $uid) !== 'gm') fail('Pick one of this campaign\'s GMs', 404);
+        db()->prepare('UPDATE campaigns SET created_by=? WHERE id=?')->execute([$uid, $cid]);
         out(['ok' => true]);
 
     case 'invite_link':
@@ -1381,21 +1447,26 @@ try {
         $cid = cid(); need_gm($cid);
         $email = mb_strtolower(trim((string)str_in(p('email'), 191, false)));
         db()->prepare('UPDATE campaign_invites SET token=? WHERE campaign_id=? AND email=? AND token IS NULL')->execute([bin2hex(random_bytes(16)), $cid, $email]);
+        // a GM asking for the link of one that ran out starts it again
+        db()->prepare('UPDATE campaign_invites SET expires_at=NOW() + INTERVAL ' . INVITE_DAYS . ' DAY WHERE campaign_id=? AND email=? AND NOT ' . INVITE_LIVE_SQL)->execute([$cid, $email]);
         $token = invite_token($cid, $email);
         if ($token === null) fail('That invitation has been taken up or cancelled', 404);
         out(['token' => $token]);
+
+    case 'invite_info':
+        // What an invite link is for, so the page can ask before anyone joins: the campaign's name and the role.
+        // Nothing changes here. Tries share invite_accept's limit.
+        $inv = invite_row((string)($_GET['token'] ?? ''));
+        $st = db()->prepare('SELECT name FROM campaigns WHERE id=?');
+        $st->execute([(int)$inv['campaign_id']]);
+        out(['name' => $st->fetchColumn(), 'role' => $inv['role'], 'member' => member_role((int)$inv['campaign_id'], me()['id']) !== null]);
 
     case 'invite_accept':
         // Someone opened an invite link, signed in and approved: they join the campaign as the invitation says, whatever
         // email they signed in with, and the invitation (and so the link) is used up. Already a member, they stay as
         // they are. The code is 128 random bits, so links can't be guessed; tries are rate-limited all the same.
-        rate_limit('invite_accept', 'u' . me()['id'], 30, 3600);
-        $token = (string)str_in(p('token'), 64, false);
-        if (!preg_match('/^[0-9a-f]{32}$/', $token)) fail('That invite link is not complete. Copy the whole link and try again.', 404, 'invite_gone');
-        $st = db()->prepare('SELECT campaign_id, email, role FROM campaign_invites WHERE token=?');
-        $st->execute([$token]);
-        $inv = $st->fetch();
-        if (!$inv) fail('This invite link has already been used or was cancelled. Ask your GM for a new one.', 404, 'invite_gone');
+        // An invitation to be a co-GM is only for the address it was sent to (invite_row).
+        $inv = invite_row((string)str_in(p('token'), 64, false));
         $cid = (int)$inv['campaign_id'];
         db()->prepare('INSERT IGNORE INTO campaign_members (campaign_id, user_id, role) VALUES (?,?,?)')->execute([$cid, me()['id'], $inv['role']]);
         db()->prepare('DELETE FROM campaign_invites WHERE campaign_id=? AND email=?')->execute([$cid, $inv['email']]);
@@ -1417,6 +1488,7 @@ try {
         $isGmTarget->execute([$cid, $uid]);
         $was = $isGmTarget->fetchColumn();
         if ($was === 'gm' && (int)$st->fetchColumn() === 0) fail('A campaign needs at least one GM');
+        if ($uid === campaign_owner($cid) && $uid !== me()['id'] && !me()['is_admin']) fail('Only the campaign\'s owner can leave it or hand it on', 403, 'not_owner');
         db()->prepare('DELETE FROM campaign_members WHERE campaign_id=? AND user_id=?')->execute([$cid, $uid]);
         party_remove_member($cid, $uid, $was === 'player');
         db()->prepare('UPDATE tokens SET member_id=NULL WHERE campaign_id=? AND member_id=?')->execute([$cid, $uid]);   // their token is free for another

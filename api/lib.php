@@ -309,6 +309,21 @@ function chronicle_status(array $user): string {
   return (string) ($st->fetchColumn() ?: 'pending');
 }
 
+/** Whether an account's identity is one the config names in admin_identities (its email, or provider:id), as
+ * sign_in_identity() matches them. With none named, every account counts: there is nothing to check against. */
+function admin_listed(array $user): bool {
+  $admins = array_map('strtolower', (array) cfg('admin_identities', []));
+  if (!$admins) return true;
+  return in_array(strtolower((string) ($user['email'] ?? '')), $admins, true)
+      || in_array(strtolower(($user['provider'] ?? '') . ':' . ($user['provider_user_id'] ?? '')), $admins, true);
+}
+/** Whether an account is a site admin now: it was made one (users.is_admin, set at its first sign-in) and the config
+ * still names it. Taking an identity out of admin_identities ends its admin rights at the next request, here and for
+ * any link or key it made. */
+function is_site_admin(array $user): bool {
+  return (int) ($user['is_admin'] ?? 0) === 1 && admin_listed($user);
+}
+
 /** Current user row (or null), its status being their standing in Chronicle. Cached per request. */
 function current_user(): ?array {
   static $u = false;
@@ -319,7 +334,7 @@ function current_user(): ?array {
   $st = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
   $st->execute([$_SESSION['user_id']]);
   $row = $st->fetch();
-  if ($row) $row['status'] = chronicle_status($row);
+  if ($row) { $row['status'] = chronicle_status($row); $row['is_admin'] = is_site_admin($row) ? 1 : 0; }
   return $u = ($row ? with_profile($row) : null);
 }
 
@@ -489,7 +504,7 @@ function sign_in_identity(string $provider, array $identity): int {
     $pdo->prepare('UPDATE users SET email = ?, display_name = ?, avatar_url = ?, last_login_at = NOW() WHERE id = ?')
         ->execute([$identity['email'], $identity['name'], $identity['avatar'], $user['id']]);
     // Someone with an account from Sinless asks for Chronicle the first time they sign in here.
-    chronicle_access_request((int) $user['id'], $isAdmin || (int) $user['is_admin'], $provider, $identity);
+    chronicle_access_request((int) $user['id'], $isAdmin || ((int) $user['is_admin'] && !$admins), $provider, $identity);
     return (int) $user['id'];
   }
 
@@ -614,6 +629,20 @@ function send_account_email(string $kind, string $toEmail, string $displayName):
           . "  $appUrl\n";
   }
   send_site_email("account email ($kind)", $toEmail, $subject, $body);
+}
+
+/** Tell someone a panel link or an API key was just made on their account, so one made by anybody else is noticed.
+ * Through the same 'approval_email' settings as the account emails, and off with them. */
+function send_key_email(string $toEmail, string $displayName, string $kind, string $label, string $campaignName): void {
+  $one = fn(string $v, int $max) => mb_substr(trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $v)), 0, $max);
+  $name = trim($displayName) !== '' ? $one($displayName, 150) : 'there';
+  $appUrl = rtrim((string) cfg('base_url', ''), '/') . '/#/account';
+  $body = "Hi $name,\n\n"
+        . "$kind \"" . $one($label, 80) . "\" was just made on your GM's Almanac account, for the campaign \"" . $one($campaignName, 150) . "\".\n\n"
+        . "If that was you, there is nothing to do.\n"
+        . "If it wasn't, revoke it on your Account page, which lists every link and key you have:\n\n"
+        . "  $appUrl\n";
+  send_site_email('key email', $toEmail, "$kind made on your GM's Almanac account", $body);
 }
 
 /** Email someone a GM invited to a campaign its invite link (index.html#/join/<token>). Sent through the same
