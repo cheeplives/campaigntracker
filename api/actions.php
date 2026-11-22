@@ -70,6 +70,8 @@ const ACTIONS = [
     'panel_links' => ['get' => true, 'who' => 'member'],
     'panel_link_create' => ['who' => 'member'],
     'panel_link_revoke' => ['who' => 'member'],
+    'my_keys' => ['get' => true, 'who' => 'account'],
+    'my_keys_revoke' => ['who' => 'account'],
     'campaign_create' => ['who' => 'account'],
     'campaign_update' => ['who' => 'gm', 'touch' => true],
     'campaign_delete' => ['who' => 'gm'],

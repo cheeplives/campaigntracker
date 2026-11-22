@@ -34,6 +34,81 @@ async function keyCall(request, key, action, { query = {}, body, header = "X-Chr
 test.describe("API keys", () => {
   test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "chromium", "the server answers the same whatever the browser"));
 
+  test("a key lasts a year unless its maker picks otherwise, and stops when it runs out", async ({ page, browser, playwright }) => {
+    const { cid } = await table(page, browser, "KeyAge");
+    const bare = await playwright.request.newContext({ baseURL: BASE });
+    const k = await makeKey(page, cid);
+    const days = Number(sql(`SELECT DATEDIFF(expires_at, NOW()) FROM connection_keys WHERE id=${k.id}`).trim());
+    expect(days).toBeGreaterThanOrEqual(364);
+    expect(days).toBeLessThanOrEqual(365);
+    expect(k.expires_at).toBeTruthy();
+    expect((await makeKey(page, cid, { days: 0 })).expires_at).toBeNull();
+    expect((await api(page, "panel_link_create", { scope: "api", label: "Odd", days: 7 }, cid)).status).toBe(400);
+    // a panel link doesn't run out
+    expect((await api(page, "panel_link_create", { scope: "panel", label: "Owlbear" }, cid)).json.link.expires_at).toBeNull();
+    expect((await keyCall(bare, k.code, "campaign")).status).toBe(200);
+    sql(`UPDATE connection_keys SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE id=${k.id}`);
+    const gone = await keyCall(bare, k.code, "campaign");
+    expect(gone.status).toBe(401);
+    expect(gone.json.message).toContain("ran out");
+    expect((await api(page, "panel_links", undefined, cid)).json.links.map(l => l.id)).not.toContain(k.id);
+    await bare.dispose();
+  });
+
+  test("making a key or a personal link asks for a recent sign-in", async ({ page, browser }) => {
+    const gm = person("StaleGM");
+    await signIn(page, gm);
+    await approve(browser, gm.email);
+    const cid = await makeCampaign(page, `Stale ${gm.id}`);
+    // the same account, in a session that began an hour ago
+    const old = await (await newContext(browser)).newPage();
+    await signIn(old, { ...gm, signed_in_ago: 3600 });
+    for (const scope of ["api", "panel"]) {
+      const r = await api(old, "panel_link_create", { scope, label: "Late" }, cid);
+      expect(r.status, scope).toBe(403);
+      expect(r.json.error).toBe("sign_in_again");
+    }
+    // a public link shows only what every player sees, so it isn't held back
+    expect((await api(old, "panel_link_create", { scope: "public_panel", label: "Stream" }, cid)).status).toBe(200);
+    // signed in again, it works
+    await signIn(old, gm);
+    expect((await api(old, "panel_link_create", { scope: "api", label: "Now" }, cid)).status).toBe(200);
+  });
+
+  test("the account lists every link and key of yours across campaigns, and revokes one or all", async ({ page, browser, playwright }) => {
+    const { cid, gm, pp } = await table(page, browser, "KeyMine");
+    const second = await makeCampaign(page, `Second ${gm.id}`);
+    const bare = await playwright.request.newContext({ baseURL: BASE });
+    const a = await makeKey(page, cid, { label: "First" }), b = await makeKey(page, second, { label: "Other", write: true });
+    const pub = (await api(page, "panel_link_create", { scope: "public_panel", label: "Stream" }, cid)).json.link;
+    const theirs = await makeKey(pp, cid, { label: "Player's" });
+    const mine = (await api(page, "my_keys")).json.links;
+    expect(mine.map(l => l.label).sort()).toEqual(["First", "Other", "Stream"]);
+    expect(mine.find(l => l.id === b.id)).toMatchObject({ campaign_id: second, campaign: `Second ${gm.id}`, write: true });
+    expect(JSON.stringify(mine)).not.toContain(a.code);
+    // nobody revokes another person's from here
+    expect((await api(pp, "my_keys_revoke", { id: a.id })).status).toBe(404);
+    expect((await api(page, "my_keys_revoke", { id: a.id })).json).toMatchObject({ revoked: 1 });
+    expect((await keyCall(bare, a.code, "campaign")).status).toBe(401);
+    expect((await keyCall(bare, b.code, "campaign")).status).toBe(200);
+    expect((await api(page, "my_keys_revoke", { all: true })).json).toMatchObject({ revoked: 2 });
+    expect((await keyCall(bare, b.code, "campaign")).status).toBe(401);
+    expect((await api(page, "my_keys")).json.links).toEqual([]);
+    expect((await keyCall(bare, theirs.code, "campaign")).status).toBe(200);
+    expect(pub.id).toBeGreaterThan(0);
+
+    // the Account page shows them, with Revoke
+    const c = await makeKey(page, cid, { label: "On the page" });
+    await page.goto("index.html#/account");
+    const row = page.locator(".account-keys .listrow").filter({ hasText: "On the page" });
+    await expect(row).toContainText(`KeyMine ${gm.id}`);
+    await row.getByRole("button", { name: "Revoke" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Revoke" }).click();
+    await expect(page.locator(".account-keys")).toContainText("You have none");
+    expect((await keyCall(bare, c.code, "campaign")).status).toBe(401);
+    await bare.dispose();
+  });
+
   test("a read-only key reads its own campaign as its maker, with no one's email, and changes nothing", async ({ page, browser, playwright }) => {
     const { cid, gm, player, pp } = await table(page, browser, "KeyRead");
     const other = await makeCampaign(page, `Other ${gm.id}`);

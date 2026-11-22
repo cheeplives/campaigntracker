@@ -952,6 +952,7 @@ CREATE TABLE IF NOT EXISTS connection_keys (
   created_by BIGINT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_used_at DATETIME NULL,
+  expires_at DATETIME NULL,                         -- when an API key stops working (058); NULL: until it is revoked (every panel link)
   revoked_at DATETIME NULL,
   UNIQUE KEY uq_token (token_hash),
   KEY idx_campaign (campaign_id),

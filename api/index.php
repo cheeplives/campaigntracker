@@ -1040,13 +1040,19 @@ try {
     // Admin rights come only from admin_identities in the config (or a migrated account).
     case 'users':
         need_admin();
-        out(['users' => db()->query(has_access_table()
+        $rows = db()->query(has_access_table()
             ? "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
-               COALESCE(a.status, u.status) AS status, u.is_admin, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
+               COALESCE(a.status, u.status) AS status, u.is_admin, u.provider_user_id, COALESCE(a.requested_at, u.created_at) AS created_at, u.last_login_at
                FROM users u LEFT JOIN chronicle_access a ON a.user_id=u.id WHERE a.user_id IS NOT NULL OR u.provider='legacy'
                ORDER BY COALESCE(a.status, u.status) = 'pending' DESC, display_name"
             : "SELECT u.id, u.provider, u.email, " . user_name_sql() . " AS display_name, u.display_name AS provider_name, " . user_pronouns_sql() . " AS pronouns,
-               u.status, u.is_admin, u.created_at, u.last_login_at FROM users u ORDER BY u.status = 'pending' DESC, display_name")->fetchAll()]);
+               u.status, u.is_admin, u.provider_user_id, u.created_at, u.last_login_at FROM users u ORDER BY u.status = 'pending' DESC, display_name")->fetchAll();
+        // an admin is one the config still names (is_site_admin), whatever the flag in the table says
+        out(['users' => array_map(function ($r) {
+            $r['is_admin'] = is_site_admin($r) ? 1 : 0;
+            unset($r['provider_user_id']);
+            return $r;
+        }, $rows)]);
 
     case 'user_status':
         $admin = need_admin();
@@ -1055,11 +1061,11 @@ try {
         $status = p('status');
         if (!in_array($status, ['approved', 'revoked'], true)) fail('Status must be approved or revoked');
         if ($id === $admin['id']) fail("You can't change your own access");
-        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, u.status, u.is_admin FROM users u WHERE u.id=?');
+        $st = db()->prepare('SELECT u.id, u.email, ' . user_name_sql() . ' AS display_name, u.status, u.is_admin, u.provider, u.provider_user_id FROM users u WHERE u.id=?');
         $st->execute([$id]);
         $t = $st->fetch();
         if (!$t) fail('User not found', 404);
-        if ($status === 'revoked' && (int)$t['is_admin']) fail("Admins can't be revoked here. Remove them from admin_identities first.");
+        if ($status === 'revoked' && is_site_admin($t)) fail("Admins can't be revoked here. Remove them from admin_identities first.");
         if (chronicle_status($t) === $status) out(['ok' => true]);
         // Only their access to Chronicle: users.status is Sinless's.
         if (has_access_table()) db()->prepare('INSERT INTO chronicle_access (user_id, status, approved_at) VALUES (?, ?, IF(?=\'approved\', NOW(), NULL))
@@ -1255,6 +1261,14 @@ try {
         $cid = cid();
         $isGm = role($cid) === 'gm';
         out(['ok' => true, 'link' => panel_link_create($cid, $isGm)]);
+
+    case 'my_keys': // every link and key of yours, in all your campaigns (the Account page)
+        me();
+        out(['links' => my_keys_list()]);
+
+    case 'my_keys_revoke':
+        me();
+        out(['ok' => true, 'revoked' => my_keys_revoke()]);
 
     case 'panel_link_revoke':
         $cid = cid();

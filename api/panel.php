@@ -24,6 +24,10 @@ declare(strict_types=1);
 const PANEL_SCOPES = ['panel', 'public_panel'];
 /** Every kind of link or key a member can make. */
 const KEY_SCOPES = ['panel', 'public_panel', 'api'];
+/** How long a new API key lasts, in days, when its maker doesn't say (058); 0 is until revoked. Panel links don't run out. */
+const KEY_DAYS = [0, 30, 90, 365];
+const KEY_DAYS_DEFAULT = 365;
+const KEY_LIVE_SQL = '(expires_at IS NULL OR expires_at > NOW())';
 /** Whether this request came from the panel or a program, with a link code or an API key instead of the session. */
 function panel_request(): bool {
     return ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '' || api_request();
@@ -68,11 +72,11 @@ function panel_gate(string $action, array $spec): void {
     if ($api && ($_SERVER['HTTP_X_CHRONICLE_PANEL'] ?? '') !== '') json_error(401, 'bad_panel_link', 'Send an API key or a panel link, not both.');
     $code = (string)($api ? $_SERVER['HTTP_X_CHRONICLE_KEY'] : $_SERVER['HTTP_X_CHRONICLE_PANEL']);
     if (!preg_match('/^[0-9a-f]{64}$/', $code)) json_error(401, 'bad_panel_link', "That $what isn't right. Make a new one in GM's Almanac.");
-    $st = db()->prepare('SELECT * FROM connection_keys WHERE token_hash=? AND revoked_at IS NULL');
+    $st = db()->prepare('SELECT * FROM connection_keys WHERE token_hash=? AND revoked_at IS NULL AND ' . KEY_LIVE_SQL);
     $st->execute([hash('sha256', $code)]);
     $link = $st->fetch();
     // a key only works in its own header: a panel link is no API key, and an API key no panel link
-    if (!$link || !in_array($link['scope'], $api ? ['api'] : PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', "That $what was revoked, or never existed. Make a new one in GM's Almanac.");
+    if (!$link || !in_array($link['scope'], $api ? ['api'] : PANEL_SCOPES, true)) json_error(401, 'bad_panel_link', "That $what was revoked, ran out, or never existed. Make a new one in GM's Almanac.");
     $write = $link['scope'] === 'panel' || ($link['scope'] === 'api' && !empty((dec($link['options_json'] ?? null) ?: [])['write']));
     // what each kind may call is marked 'panel' or 'key' in api/actions.php; 'write' needs a link or key that may change
     $may = $spec[$api ? 'key' : 'panel'] ?? null;
@@ -82,15 +86,17 @@ function panel_gate(string $action, array $spec): void {
     $GLOBALS['panel_link'] = $link;
     if ($link['scope'] === 'public_panel') {
         // It stops with the GM who made it: once they are no longer a GM here (or an admin), nobody vouches for it.
-        $st = db()->prepare("SELECT 1 FROM users u WHERE u.id=? AND (u.is_admin=1 OR EXISTS (SELECT 1 FROM campaign_members m WHERE m.user_id=u.id AND m.campaign_id=? AND m.role='gm'))");
-        $st->execute([(int)$link['created_by'], (int)$link['campaign_id']]);
-        if (!$st->fetchColumn()) json_error(401, 'bad_panel_link', 'The GM who made this panel link no longer runs the campaign. Make a new one in GM\'s Almanac.');
+        $st = db()->prepare("SELECT u.*, EXISTS (SELECT 1 FROM campaign_members m WHERE m.user_id=u.id AND m.campaign_id=? AND m.role='gm') AS runs_it FROM users u WHERE u.id=?");
+        $st->execute([(int)$link['campaign_id'], (int)$link['created_by']]);
+        $maker = $st->fetch();
+        if (!$maker || !((int)$maker['runs_it'] || is_site_admin($maker))) json_error(401, 'bad_panel_link', 'The GM who made this panel link no longer runs the campaign. Make a new one in GM\'s Almanac.');
         $GLOBALS['panel_user'] = ['id' => 0, 'is_admin' => 0, 'status' => 'approved', 'display_name' => 'Public panel', 'email' => '', 'provider' => 'panel'];
     } else {
         $st = db()->prepare('SELECT * FROM users WHERE id=?');
         $st->execute([(int)$link['user_id']]);
         $u = $st->fetch();
         if (!$u) json_error(401, 'bad_panel_link', 'That panel link\'s account is gone.');
+        $u['is_admin'] = is_site_admin($u) ? 1 : 0;
         $st = db()->prepare('SELECT 1 FROM campaign_members WHERE campaign_id=? AND user_id=?');
         $st->execute([(int)$link['campaign_id'], (int)$u['id']]);
         if (!(int)$u['is_admin'] && !$st->fetchColumn()) json_error(401, 'bad_panel_link', "You are no longer in this campaign, so its $what stopped working.");
@@ -108,13 +114,13 @@ function panel_link_out(array $k): array {
     $o = dec($k['options_json'] ?? null) ?: [];
     return ['id' => (int)$k['id'], 'scope' => $k['scope'], 'label' => $k['label'], 'overlay' => !empty($o['overlay']), 'write' => !empty($o['write']),
         'user_id' => $k['user_id'] !== null ? (int)$k['user_id'] : null, 'maker' => $k['maker'] ?? null,
-        'created_at' => $k['created_at'], 'last_used_at' => $k['last_used_at']];
+        'created_at' => $k['created_at'], 'last_used_at' => $k['last_used_at'], 'expires_at' => $k['expires_at'] ?? null];
 }
 /** Campaign $cid's links that this member manages: their own, and every one for a GM. */
 function panel_links_list(int $cid, bool $isGm): array {
     $st = db()->prepare('SELECT k.*, ' . AUTHOR_SQL . ' AS maker FROM connection_keys k LEFT JOIN users u ON u.id=k.created_by
         LEFT JOIN campaign_members m ON m.campaign_id=k.campaign_id AND m.user_id=k.created_by
-        WHERE k.campaign_id=? AND k.revoked_at IS NULL' . ($isGm ? '' : ' AND k.created_by=?') . ' ORDER BY k.id');
+        WHERE k.campaign_id=? AND k.revoked_at IS NULL AND ' . str_replace('expires_at', 'k.expires_at', KEY_LIVE_SQL) . ($isGm ? '' : ' AND k.created_by=?') . ' ORDER BY k.id');
     $st->execute($isGm ? [$cid] : [$cid, me()['id']]);
     return array_map('panel_link_out', $st->fetchAll());
 }
@@ -125,14 +131,30 @@ function panel_link_create(int $cid, bool $isGm): array {
     if ($scope === 'public_panel' && !$isGm) fail('Only a GM can make a public panel link', 403);
     $label = trim((string)str_in(p('label'), 80, false));
     if ($label === '') $label = ['public_panel' => 'Public panel', 'api' => 'API key'][$scope] ?? 'My panel';
-    $st = db()->prepare('SELECT COUNT(*) FROM connection_keys WHERE campaign_id=? AND created_by=? AND revoked_at IS NULL');
+    // A key or a personal link acts as its maker for as long as it lasts, signed out or not, so making one asks for a
+    // sign-in within the last few minutes (limits.key_fresh_minutes, 0 for no check): a session someone else got hold
+    // of for a moment can't be turned into access that outlasts it.
+    $fresh = limit_of('key_fresh_minutes', 10);
+    if ($scope !== 'public_panel' && $fresh && time() - (int)($_SESSION['created'] ?? 0) > $fresh * 60)
+        fail("To make a link or a key, sign in again first: it has been more than $fresh minutes since you signed in. Sign out, sign back in, and make it then.", 403, 'sign_in_again');
+    $days = KEY_DAYS_DEFAULT;
+    if ($scope === 'api' && p('days') !== null) {
+        $days = int_in(p('days'), 0);
+        if (!in_array($days, KEY_DAYS, true)) fail('Pick how long the key lasts');
+    }
+    $st = db()->prepare('SELECT COUNT(*) FROM connection_keys WHERE campaign_id=? AND created_by=? AND revoked_at IS NULL AND ' . KEY_LIVE_SQL);
     $st->execute([$cid, me()['id']]);
     if ((int)$st->fetchColumn() >= 20) fail('You have 20 panel links and API keys in this campaign already. Revoke some first');
     $code = bin2hex(random_bytes(32));
     $options = $scope === 'public_panel' && p('overlay') ? ['overlay' => true] : ($scope === 'api' && p('write') ? ['write' => true] : null);
-    db()->prepare('INSERT INTO connection_keys (campaign_id, user_id, scope, label, token_hash, options_json, created_by) VALUES (?,?,?,?,?,?,?)')
+    db()->prepare('INSERT INTO connection_keys (campaign_id, user_id, scope, label, token_hash, options_json, created_by, expires_at) VALUES (?,?,?,?,?,?,?,' . ($scope === 'api' && $days ? "NOW() + INTERVAL $days DAY" : 'NULL') . ')')
         ->execute([$cid, $scope === 'public_panel' ? null : me()['id'], $scope, $label, hash('sha256', $code), $options ? json_encode($options) : null, me()['id']]);
     $id = (int)db()->lastInsertId();
+    if ($scope !== 'public_panel') {
+        $st = db()->prepare('SELECT name FROM campaigns WHERE id=?');
+        $st->execute([$cid]);
+        send_key_email((string)me()['email'], (string)(me()['display_name'] ?? ''), $scope === 'api' ? 'An API key' : 'A panel link', $label, (string)$st->fetchColumn());
+    }
     $st = db()->prepare('SELECT * FROM connection_keys WHERE id=?');
     $st->execute([$id]);
     return panel_link_out($st->fetch()) + ['code' => $code];
@@ -145,6 +167,23 @@ function panel_link_revoke(int $cid, bool $isGm): void {
     if ($by === false) fail('Link not found', 404);
     if (!$isGm && (int)$by !== me()['id']) fail('You can only revoke your own links', 403);
     db()->prepare('UPDATE connection_keys SET revoked_at=CURRENT_TIMESTAMP WHERE id=?')->execute([int_in(p('id'), 1)]);
+}
+
+/** Every live link and key this account made or that acts as it, in all its campaigns: the Account page's list. */
+function my_keys_list(): array {
+    $st = db()->prepare('SELECT k.*, c.name AS campaign FROM connection_keys k JOIN campaigns c ON c.id=k.campaign_id
+        WHERE (k.created_by=? OR k.user_id=?) AND k.revoked_at IS NULL AND ' . str_replace('expires_at', 'k.expires_at', KEY_LIVE_SQL) . ' ORDER BY c.name, k.id');
+    $st->execute([me()['id'], me()['id']]);
+    return array_map(fn($k) => panel_link_out($k) + ['campaign_id' => (int)$k['campaign_id'], 'campaign' => $k['campaign']], $st->fetchAll());
+}
+/** Revoke one of them (id), or all of them at once. Returns how many stopped. */
+function my_keys_revoke(): int {
+    $one = p('id') !== null ? ' AND id=' . int_in(p('id'), 1) : '';
+    if ($one === '' && !p('all')) fail('Pick a link or key to revoke');
+    $st = db()->prepare("UPDATE connection_keys SET revoked_at=CURRENT_TIMESTAMP WHERE (created_by=? OR user_id=?) AND revoked_at IS NULL$one");
+    $st->execute([me()['id'], me()['id']]);
+    if ($one !== '' && !$st->rowCount()) fail('Link not found', 404);
+    return $st->rowCount();
 }
 
 /**

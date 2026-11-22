@@ -207,6 +207,7 @@ return [
     'campaigns_per_account' => 50,     // campaigns a person may create (or copy) of their own
     'write_mb_per_day'      => 50,     // what one account may save in a day, uploads aside (they have uploads.user_mb)
     'invites_per_day'       => 50,     // campaign invitations (and so invite emails) one GM may send in a day
+    'key_fresh_minutes'     => 10,     // making a panel link or an API key asks for a sign-in within this many minutes (0: never asks)
     'days_per_campaign'     => 40000,  // days with weather or notes, about a century
     'shifts_per_campaign'   => 200000, // shifts with an activity
     'events_per_campaign'   => 20000,

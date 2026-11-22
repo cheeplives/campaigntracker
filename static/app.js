@@ -111,7 +111,7 @@
     }
     // Signed out, or access changed while the page was open: go back through the gate.
     if (res.status === 401 || data.error === 'not_approved') { S.user = null; boot(); }
-    if (!res.ok) { noteFail(res.status, data.error || data.message); throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status }); }
+    if (!res.ok) { noteFail(res.status, data.error || data.message); throw Object.assign(new Error(data.message || data.error || `Error ${res.status}`), { status: res.status, code: data.error }); }
     if (body) ownWrite();
     return data;
   }
@@ -1021,6 +1021,30 @@
       });
       show();
     }
+    // Every panel link and API key of theirs, in all their campaigns: each acts as them until it is revoked, signed out
+    // or not, so this is where one they didn't make gets noticed and stopped.
+    const keys = el('section', { class: 'card narrow account-keys', 'aria-labelledby': 'account-keys-h' });
+    const drawKeys = async () => {
+      const r = await api('my_keys').catch(() => ({ links: [] }));
+      const revoke = async body => {
+        try { await post('my_keys_revoke', body); toast(body.all ? 'Every link and key is revoked' : 'Revoked'); } catch (err) { toast(err.message, true); }
+        drawKeys();
+      };
+      keys.replaceChildren(el('h2', { id: 'account-keys-h' }, 'Panel links and API keys'),
+        el('p', { class: 'muted' }, 'Each of these acts as you in one campaign, and keeps working after you sign out, until you revoke it. If you see one you didn\'t make, revoke it.'),
+        r.links.length ? el('div', {}, r.links.map(k => el('div', { class: 'listrow tv-link' },
+          el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${k.campaign} · ${keyKindText(k)} · made ${k.created_at.slice(0, 10)} · ${keyUseText(k)}`)),
+          btn('Revoke', async () => {
+            if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
+            revoke({ id: k.id });
+          }, 'small'))))
+          : el('p', { class: 'muted small' }, 'You have none. They are made on a campaign\'s At the Table page, under Use in a VTT or on stream.'),
+        r.links.length > 1 ? el('div', { class: 'card-foot row' }, btn('Revoke all', async () => {
+          if (!await confirmDialog(`Revoke all ${r.links.length} links and keys? Every panel and program using one stops working at once.`, { ok: 'Revoke all', danger: true })) return;
+          revoke({ all: true });
+        }, 'danger')) : null);
+    };
+    drawKeys();
     // The welcome tutorial: back on after Skip tutorial, from the start again, or off (prefs.tour)
     const tutorial = el('section', { class: 'card narrow tour-card-account', 'aria-labelledby': 'tour-account-h' });
     const drawTutorial = () => {
@@ -1042,7 +1066,7 @@
           : btn('Turn the tutorial back on', setTour('on', true), 'primary')));
     };
     drawTutorial();
-    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, tutorial, scanner);
+    mount(el('h1', { class: 'visually-hidden' }, 'Account'), profile, prefs, keys, tutorial, scanner);
   }
 
   const STATUS_LABEL = { pending: 'Waiting for approval', approved: 'Approved', revoked: 'Access removed' };
@@ -7830,9 +7854,8 @@
     const r = await api('panel_links', { query: { cid } }).catch(() => ({ ready: false, links: [] }));
     const box = el('section', { class: 'card tv-links' }, el('h3', {}, 'Use in a VTT or on stream',
       tip('Show this page beside your virtual tabletop (an Owlbear Rodeo extension, a Foundry window), on a stream or a shared screen: make a panel link, then paste it there once. Or give a program (a Foundry module, a bot) an API key. Each sees what you see, and can be revoked here at any time')));
-    const kindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
     const list = el('div', {}, r.links.length ? r.links.map(k => el('div', { class: 'listrow tv-link' },
-      el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${kindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}`)),
+      el('div', {}, el('strong', {}, k.label), el('span', { class: 'small muted' }, ` · ${keyKindText(k)}${isGM() && k.maker ? ` · made by ${k.maker}` : ''} · ${keyUseText(k)}`)),
       btn('Revoke', async () => {
         if (!await confirmDialog(`Revoke "${k.label}"? Anywhere it is pasted stops working at once.`, { ok: 'Revoke', danger: true })) return;
         try { await post('panel_link_revoke', { id: k.id }, cid); toast('Link revoked'); box.replaceWith(await tableLinksBox()); } catch (e) { toast(e.message, true); }
@@ -7844,6 +7867,11 @@
     if (isGM()) box.append(await discordBox(box));
     return box;
   }
+  /** A panel link or API key in a list: what kind it is, and when it was last used and stops. */
+  const keyKindText = k => (k.scope === 'api' ? `API key, ${k.write ? 'read and write' : 'read-only'}` : k.scope === 'public_panel' ? `Public${k.overlay ? ', overlay' : ''}` : 'Personal');
+  const keyUseText = k => `${k.last_used_at ? `last used ${k.last_used_at}` : 'not used yet'}${k.expires_at ? ` · works until ${k.expires_at.slice(0, 10)}` : ''}`;
+  /** Making a link or key failed: being asked to sign in again stays up to be read; anything else is a toast. */
+  const keyError = e => (e.code === 'sign_in_again' ? alertDialog(e.message, { title: 'Sign in again first' }) : toast(e.message, true));
   const DISCORD_EVENTS = [['time', 'Time passing'], ['event', 'New events'], ['clock', 'Clocks filling'], ['session', 'Sessions ending']];
   /** GMs: the Discord channels the campaign posts to, inside the box above. */
   async function discordBox(box) {
@@ -7917,7 +7945,7 @@
             btn('Copy', async () => { try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
         box.replaceWith(await tableLinksBox());
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { keyError(e); }
     });
     d.addEventListener('close', () => d.remove());
     document.body.append(d);
@@ -7928,9 +7956,11 @@
   function newApiKey(box) {
     const label = el('input', { maxlength: 80, placeholder: 'e.g. Foundry module, or Discord bot', 'aria-label': 'Label' });
     const access = select([['read', 'Read only: the date, weather, Encyclopedia and the like'], ['write', isGM() ? 'Read and write: also pass time, add notes and events' : 'Read and write: also add notes and events']], 'read', { 'aria-label': 'Access' });
+    const lasts = select([['365', 'A year'], ['90', '90 days'], ['30', '30 days'], ['0', 'Until I revoke it']], '365', { 'aria-label': 'Lasts' });
     const d = el('dialog', { class: 'kit-dialog', 'aria-label': 'New API key' });
     const form = el('form', { method: 'dialog' }, el('h3', {}, 'New API key'),
       field('Label', label, 'So you know which program has it'), field('Access', access),
+      field('Lasts', lasts, 'The key stops working after this, and the program needs a new one. You can revoke it sooner'),
       el('p', { class: 'small muted' }, 'The key acts as you: it sees what you see in this campaign, and nothing in your other campaigns.'),
       el('div', { class: 'kit-dialog-actions' }, el('button', { class: 'primary', value: 'ok' }, 'Make key'), el('button', { value: 'cancel', formnovalidate: true }, 'Cancel')));
     d.append(form);
@@ -7938,7 +7968,7 @@
       if (ev.submitter?.value !== 'ok') return;
       ev.preventDefault();
       try {
-        const r = await post('panel_link_create', { scope: 'api', label: label.value.trim(), write: access.value === 'write' }, S.camp.id);
+        const r = await post('panel_link_create', { scope: 'api', label: label.value.trim(), write: access.value === 'write', days: Number(lasts.value) }, S.camp.id);
         const key = r.link.code, url = new URL('api/index.php', panelBase()).href;
         const shown = el('input', { readonly: true, value: key, 'aria-label': 'API key', onfocus: e => e.target.select() });
         form.replaceChildren(el('h3', {}, `"${r.link.label}" is ready`),
@@ -7950,7 +7980,7 @@
             btn('Copy', async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { shown.select(); toast('Press Ctrl+C (⌘C) to copy', true); } }, 'primary'),
             el('button', { value: 'done' }, 'Done')));
         box.replaceWith(await tableLinksBox());
-      } catch (e) { toast(e.message, true); }
+      } catch (e) { keyError(e); }
     });
     d.addEventListener('close', () => d.remove());
     document.body.append(d);

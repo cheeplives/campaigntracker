@@ -4,7 +4,9 @@
  * with a made-up identity, so the browser tests can cover new, pending,
  * approved, admin and migrated accounts without a real Google or GitHub login.
  *
- *   POST tests/support/login.php  {provider, id, email, name}
+ *   POST tests/support/login.php  {provider, id, email, name, signed_in_ago?}
+ *
+ * signed_in_ago: seconds, to stand for a session that began that long ago (making a key asks for a recent sign-in).
  *
  * Refuses unless the config sets 'test_login' => true AND the request comes
  * from this machine. On a real site it is unreachable anyway: .htaccess 404s tests/.
@@ -23,4 +25,5 @@ $uid = sign_in_identity($provider, [
   'avatar' => '',
 ]);
 session_login($uid);
+if (isset($b['signed_in_ago'])) $_SESSION['created'] = time() - (int) $b['signed_in_ago'];
 json_out(['id' => $uid, 'csrf' => csrf_token()]);
