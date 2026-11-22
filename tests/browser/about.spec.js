@@ -76,3 +76,21 @@ test("About & sources: the dice button never covers the footer on a campaign pag
   }
   expectNoErrors(errors);
 });
+
+// The About page leads back to the page it was opened from, even after a reload, not only to the campaign list.
+test("About & sources: a link leads back to the page it was opened from", async ({ page, browser }) => {
+  const errors = watchErrors(page);
+  const gm = person("Bo");
+  await signIn(page, gm);
+  await approve(browser, gm.email);
+  const cid = await makeCampaign(page, `Back ${gm.id}`);
+  await page.goto(`index.html#/c/${cid}/calendar`);
+  await page.locator(".footer").getByRole("link", { name: "About & sources" }).click();
+  await expect(page.getByRole("heading", { name: "About GM's Almanac" })).toBeVisible();
+  await page.reload();
+  const back = page.getByRole("link", { name: "Back to the page you were on" });
+  await expect(back).toHaveAttribute("href", `#/c/${cid}/calendar`);
+  await back.click();
+  await expect(page).toHaveURL(new RegExp(`#/c/${cid}/calendar$`));
+  expectNoErrors(errors);
+});
