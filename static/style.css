@@ -2084,6 +2084,33 @@ button.tv-side:hover, button.tv-side:focus-visible { border-style: solid; border
 .map-scan-way { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
 .map-scan-way p { margin: 2px 0 0; }
 .map-scan-way > :last-child { flex: none; }
+/* Draft from transcript (sessions-tab.js): pick a file, say who each speaker is, then tick what to keep of the draft */
+dialog.kit-dialog.tx-dialog { width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; overflow-wrap: anywhere; }
+.tx-dialog progress { width: 100%; accent-color: var(--accent); }
+.tx-dialog textarea { margin: 10px 0 6px; }
+.tx-note { padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.tx-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
+.tx-speaker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 4px 12px; align-items: center; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.tx-speaker-who { display: flex; flex-direction: column; min-width: 0; }
+.tx-speaker select { width: 100%; }
+.tx-sample { grid-column: 1 / -1; margin: 0; font-style: italic; }
+.tx-agree { margin: 10px 0 4px; align-items: flex-start; }
+.tx-review { display: flex; flex-direction: column; gap: 8px; max-height: min(56vh, 620px); overflow-y: auto; margin: 8px 0; }
+.tx-part { padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.tx-part > summary { cursor: pointer; }
+.tx-part > p { margin: 4px 0 0; }
+.tx-all { gap: 12px; margin: 2px 0 4px; }
+.tx-rows { display: flex; flex-direction: column; }
+.tx-row { display: grid; grid-template-columns: auto 3.2em minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.tx-row.tx-para > span { grid-column: 2 / -1; }
+.tx-row.tx-indent > span { padding-left: 1.4em; }
+.tx-row input[type=checkbox] { width: 18px; height: 18px; margin: 0; align-self: start; position: relative; top: 2px; }
+.tx-at { font-variant-numeric: tabular-nums; }
+.chip.tx-kind { margin-left: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--line); font-weight: 400; }
+.tx-again { margin: 8px 0 4px; flex-wrap: nowrap; }
+.tx-again input { flex: 1; min-width: 0; }
+@media (max-width: 560px) { .tx-speaker { grid-template-columns: minmax(0, 1fr); } .tx-again { flex-wrap: wrap; } }
+@media (pointer: coarse) { .tx-row { padding: 9px 0; } .tx-row input[type=checkbox] { width: 22px; height: 22px; } }
 .map-label-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .map-label-form input { flex: 1 1 14rem; min-width: 0; }
 .map-label-form small { flex-basis: 100%; }
