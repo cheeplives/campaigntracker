@@ -67,8 +67,9 @@ test("About & sources: the dice button never covers the footer on a campaign pag
   await expect(version).toContainText("GM's Almanac build");
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const f = await fab.boundingBox();
-  // nor the table's action bar, which floats over the middle of the foot of the screen
-  const bar = await page.locator(".tv-dock").boundingBox();
+  // nor, on a phone, the table's action bar, which floats over the foot of the screen (wider, room for it after the page
+  // would pull the Legend's sticky rail off the screen)
+  const bar = page.viewportSize().width <= 560 ? await page.locator(".tv-dock").boundingBox() : null;
   for (const part of [link, version]) {
     const b = await part.boundingBox();
     expect(b.x + b.width).toBeLessThan(f.x);

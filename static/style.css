@@ -831,10 +831,10 @@ dialog.framer-dialog { width: min(400px, calc(100vw - 32px)); }
 /* on a phone, room under the page for the dice button, so the last row of a page can always be scrolled out from under
    it (wider screens have the Legend's sticky rail, which would scroll away into extra room after the page) */
 @media (max-width: 560px) { body:has(.dice-fab:not([hidden])) .footer { padding-bottom: 140px; } }
-/* At the table the action bar floats over the foot of the screen (two rows deep on an iPad held upright), so the footer
-   keeps clear of it there too, unless the bar is folded into the corner. A phone stacks the bar up to four rows deep. */
-body:has(.tv-dock .tv-bar:not(.folded)) .footer { padding-bottom: 140px; }
-@media (max-width: 700px) { body:has(.tv-dock .tv-bar:not(.folded)) .footer { padding-bottom: 260px; } }
+/* At the table the action bar floats over the foot of the screen, up to four rows deep on a phone, so there the footer
+   keeps clear of it too, unless the bar is folded into the corner. Not wider: room after the page would pull the Legend's
+   sticky rail up off the screen at the bottom of the page. */
+@media (max-width: 560px) { body:has(.tv-dock .tv-bar:not(.folded)) .footer { padding-bottom: 260px; } }
 .tbl-wrap { overflow-x: auto; }
 .tbl.users td { vertical-align: top; overflow-wrap: anywhere; }
 .admin-head { padding-bottom: 0; } .admin-head h1 { margin: 0 0 8px; }
