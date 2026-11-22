@@ -759,3 +759,27 @@ test("a GM adds a character sheet to a Person entry", async ({ page, browser }) 
   await expect(page.getByRole("heading", { name: "Captain Vey", exact: true })).toBeVisible();
   await expect(page.getByLabel("PC or NPC")).toHaveValue("npc");
 });
+
+test("a player guessing at GM-only entries' names learns little: no entry is named back, and the tries run out", async ({ page, browser }, info) => {
+  test.skip(info.project.name !== "chromium", "the server answers the same whatever the browser");
+  const { cid, pp } = await gmAndPlayer(page, browser, "Guess");
+  expect((await api(page, "entry_save", { name: "The Hidden King", aliases: ["Oswin"], is_secret: true }, cid)).status).toBe(200);
+  const mine = (await api(pp, "entry_save", { name: "My notes" }, cid)).json.id;
+  // an other name that is a GM-only entry's alias: refused without naming that entry
+  const alias = await api(pp, "entry_save", { id: mine, name: "My notes", aliases: ["Oswin"] }, cid);
+  expect(alias.status).toBe(409);
+  expect(JSON.stringify(alias.json)).not.toContain("Hidden King");
+  expect(alias.json.message).toBe("Pick another name");
+  // four more tries, and then no name of theirs changes in this campaign today, taken or not
+  for (let i = 0; i < 4; i++) expect((await api(pp, "entry_save", { name: "The Hidden King" }, cid)).status).toBe(409);
+  for (const name of ["The Hidden King", `Free ${Date.now()}`]) {
+    const r = await api(pp, "entry_save", { name }, cid);
+    expect(r.status, name).toBe(429);
+    expect(r.json.message).toContain("again tomorrow");
+  }
+  expect((await api(pp, "character_create", { template_id: 1, name: "The Hidden King" }, cid)).status).not.toBe(409);
+  // the GM is told plainly, and is never held up
+  const gm = await api(page, "entry_save", { name: "Oswin" }, cid);
+  expect(gm.status).toBe(409);
+  expect(gm.json.message).toContain("The Hidden King");
+});

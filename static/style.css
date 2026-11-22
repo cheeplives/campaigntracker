@@ -866,6 +866,7 @@ dialog.kit-dialog.report-dialog { width: min(560px, calc(100vw - 32px)); max-hei
 .report-status.open { color: var(--accent); border-color: var(--accent); }
 .report-status.github { color: var(--ok-text); border-color: var(--ok); }
 .report-msg { margin: 6px 0; }
+.report-preview { display: block; margin-top: 10px; padding: 8px 10px; max-height: 45vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); font-size: .85rem; overflow-wrap: anywhere; }
 .report-thumb { display: inline-block; margin: 6px 0 2px; }
 .report-thumb img { display: block; max-width: min(100%, 360px); max-height: 220px; border: 1px solid var(--line); border-radius: var(--radius); }
 .report-actions { margin-top: 8px; }

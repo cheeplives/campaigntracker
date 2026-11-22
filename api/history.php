@@ -63,10 +63,18 @@ function history_record(int $cid, string $kind, int $ref, bool $alone = false): 
         return;
     }
     db()->prepare('INSERT INTO content_versions (campaign_id, kind, ref_id, data, saved_by) VALUES (?,?,?,?,?)')->execute([$cid, $kind, $ref, $data, $me]);
-    // the newest HISTORY_KEEP stay: everything older than the one at that place goes
-    db()->prepare('DELETE FROM content_versions WHERE campaign_id=? AND kind=? AND ref_id=? AND id < (
-        SELECT id FROM (SELECT id FROM content_versions WHERE campaign_id=? AND kind=? AND ref_id=? ORDER BY id DESC LIMIT 1 OFFSET ' . (HISTORY_KEEP - 1) . ') keep)')
-        ->execute([$cid, $kind, $ref, $cid, $kind, $ref]);
+    // the newest HISTORY_KEEP stay: everything older than the one at that place goes, except the last of those a GM
+    // saved (or the one from before history began), so a run of saves by a player never pushes out the last version a
+    // GM can vouch for
+    $st = db()->prepare('SELECT id FROM content_versions WHERE campaign_id=? AND kind=? AND ref_id=? ORDER BY id DESC LIMIT 1 OFFSET ' . (HISTORY_KEEP - 1));
+    $st->execute([$cid, $kind, $ref]);
+    $cut = $st->fetchColumn();
+    if ($cut === false) return;
+    $st = db()->prepare("SELECT MAX(v.id) FROM content_versions v LEFT JOIN campaign_members m ON m.campaign_id=v.campaign_id AND m.user_id=v.saved_by
+        WHERE v.campaign_id=? AND v.kind=? AND v.ref_id=? AND v.id < ? AND (v.baseline=1 OR m.role='gm')");
+    $st->execute([$cid, $kind, $ref, $cut]);
+    $keep = (int)$st->fetchColumn();
+    db()->prepare('DELETE FROM content_versions WHERE campaign_id=? AND kind=? AND ref_id=? AND id < ? AND id <> ?')->execute([$cid, $kind, $ref, $cut, $keep]);
 }
 
 /** Forget an item's versions, when the item itself is deleted. */

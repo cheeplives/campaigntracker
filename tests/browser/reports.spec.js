@@ -69,7 +69,15 @@ test("the ! button sends a report with a screenshot, and Site Admin's Reports ta
   await expect(card).toBeVisible();
 
   // Send to GitHub opens the issue (here, the stub) without the sender's name or the screenshot, and links it.
+  // The admin reads exactly what will go before it does.
   await card.getByRole("button", { name: "Send to GitHub" }).click();
+  const ask = ap.getByRole("dialog", { name: "Send this to GitHub?" });
+  await expect(ask.locator(".report-preview")).toContainText(note);
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(card).toBeVisible();
+  expect(sql(`SELECT status FROM site_reports WHERE id=${id}`).trim()).toBe("open");
+  await card.getByRole("button", { name: "Send to GitHub" }).click();
+  await ask.getByRole("button", { name: "Send to GitHub" }).click();
   await expect(ap.getByText("Issue opened on GitHub")).toBeVisible();
   await expect(card).toHaveCount(0);
   const sent = fs.readFileSync(path.join(os.tmpdir(), "chronicle-github-stub.log"), "utf8").trim().split("\n").map(l => JSON.parse(l))

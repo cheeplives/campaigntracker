@@ -165,7 +165,11 @@ function aliases_in($list, int $cid, string $ownName, ?int $ownId): ?string {
         if (isset($seen[$k])) continue;
         $seen[$k] = true;
         $same = entry_named($cid, $n);
-        if ($same && (int)$same['id'] !== $ownId) fail("\"$n\" is already a name of \"{$same['name']}\"", 409);
+        if ($same && (int)$same['id'] !== $ownId) {
+            // a player isn't told which GM-only entry has the name, or that one does beyond "taken"
+            if ((int)($same['is_secret'] ?? 0) && role($cid) !== 'gm') secret_name_taken($cid);
+            fail("\"$n\" is already a name of \"{$same['name']}\"", 409);
+        }
         $out[] = $n;
     }
     return $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : null;
@@ -193,6 +197,22 @@ function entry_by_name(int $cid, string $name): ?array {
     $st = db()->prepare('SELECT id, name, is_secret FROM encyclopedia_entries WHERE campaign_id=? AND name=?');
     $st->execute([$cid, $name]);
     return $st->fetch() ?: null;
+}
+/** A player may run into the name of a GM-only entry this many times a day in one campaign. "Pick another name" has to
+ * be said (two entries can't share a name), and it tells them an entry they can't see has that name, so the tries are
+ * few: past them, a player changes no names in the campaign until tomorrow, taken or not, and learns nothing more. */
+const SECRET_NAME_TRIES = 5;
+/** Call before checking a player's new name against the campaign's entries. */
+function secret_name_guard(int $cid): void {
+    if (role($cid) === 'gm' || !cfg('rate_limit_enabled', true)) return;
+    $st = db()->prepare("SELECT hits FROM rate_limits WHERE bucket='secret_name' AND id=? AND window_start=?");
+    $st->execute(["c$cid:u" . me()['id'], (int)(floor(time() / 86400) * 86400)]);
+    if ((int)$st->fetchColumn() >= SECRET_NAME_TRIES) fail('You have tried several names that are already taken. You can name and rename things here again tomorrow, or ask your GM', 429, 'rate_limited');
+}
+/** A player's name is a GM-only entry's: count the try, and say only that the name won't do. */
+function secret_name_taken(int $cid, string $code = ''): void {
+    rate_limit('secret_name', "c$cid:u" . me()['id'], SECRET_NAME_TRIES + 1, 86400);
+    fail('Pick another name', 409, $code);
 }
 /** The entry of campaign $cid that $name is the name or an alias of (any case), secret or not, or null. */
 function entry_named(int $cid, string $name): ?array {
@@ -379,7 +399,11 @@ function encyclopedia_action(string $action): void {
         $old = $id ? entry_row($cid, $id, $role) : null;
         $name = entry_name(p('name'));
         $same = entry_named($cid, $name);
-        if ($same && (int)$same['id'] !== $id) fail($isGm || !(int)$same['is_secret'] ? "\"$name\" is already a name of \"{$same['name']}\"" : 'Pick another name', 409);
+        if (!$old || $name !== $old['name'] || array_key_exists('aliases', body())) secret_name_guard($cid);
+        if ($same && (int)$same['id'] !== $id) {
+            if (!$isGm && (int)$same['is_secret']) secret_name_taken($cid);
+            fail("\"$name\" is already a name of \"{$same['name']}\"", 409);
+        }
         $aliases = array_key_exists('aliases', body()) ? aliases_in(p('aliases'), $cid, $name, $id) : ($old['aliases_json'] ?? null);
         $rich = fn(string $k) => array_key_exists($k, body()) ? (rich_html_clean((string)str_in(p($k), 200000)) ?: null) : ($old[$k] ?? null);
         $notes = $rich('notes');
@@ -604,7 +628,9 @@ function encyclopedia_action(string $action): void {
         if ($text === '') fail('Note is empty');
         $para = '<p>' . nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'), false) . '</p>';
         $col = $role === 'gm' && p('gm_only') ? 'gm_notes' : 'notes';
+        history_before($cid, 'entry', (int)$e['id']);
         db()->prepare("UPDATE encyclopedia_entries SET $col=?" . entry_bump() . ' WHERE id=?')->execute([rich_html_clean((string)$e[$col] . $para), $e['id']]);
+        history_record($cid, 'entry', (int)$e['id']);
         out(['ok' => true, 'id' => (int)$e['id']]);
 
     case 'entry_delete':

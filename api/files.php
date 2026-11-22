@@ -22,8 +22,8 @@ const UPLOAD_TYPES = [
 const ATTACHMENTS_PER_PARENT = 50;
 
 /** The thing a file hangs off, checked: this member must be able to see it (or it fails as not found). secret: only
- * GMs may see it, so its files are GM only too; manage_any: every member may change or remove its files, not only
- * whoever uploaded them and the GMs; gm_adds: only GMs may add files to it. */
+ * GMs may see it, so its files are GM only too; manage_any: every member may change its files (their captions), not only
+ * whoever uploaded them and the GMs, though removing one stays with those (file_delete); gm_adds: only GMs may add files to it. */
 function attachment_parent(int $cid, string $type, int $id, string $role): array {
     switch ($type) {
         case 'encyclopedia':
@@ -403,7 +403,9 @@ function files_action(string $action): void {
         $cid = cid();
         $role = role($cid);
         $a = attachment_row($cid, int_in(p('id'), 1), $role);
-        if (!attachment_mine($a, $role)) fail('Only a GM can remove a file someone else added', 403);
+        // removing can't be undone, so even where every member may change a file (the Library), only whoever added it and
+        // the GMs take it away
+        if ($role !== 'gm' && ($a['created_by'] === null || (int)$a['created_by'] !== me()['id'])) fail('Only a GM can remove a file someone else added', 403);
         attachment_remove($cid, (int)$a['id']);
         if ($a['parent_type'] === 'map')   // a map whose picture this was goes back to having none
             db()->prepare('UPDATE maps SET image_id=NULL, width=NULL, height=NULL WHERE image_id=? AND campaign_id=?')->execute([$a['id'], $cid]);

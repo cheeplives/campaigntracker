@@ -425,8 +425,12 @@ function character_names_sync(int $entryId): void {
 /** A name for a character's entry that no other entry of the campaign has (but $exceptEntry). */
 function character_name_in(int $cid, $v, bool $isGm, ?int $exceptEntry = null): string {
     $name = entry_name($v);
+    secret_name_guard($cid);
     $e = entry_by_name($cid, $name);
-    if ($e && (int)$e['id'] !== $exceptEntry) fail($isGm || !(int)$e['is_secret'] ? 'An entry is already called that. Pick another name, or add a sheet to that entry' : 'Pick another name', 409, 'name_taken');
+    if ($e && (int)$e['id'] !== $exceptEntry) {
+        if (!$isGm && (int)$e['is_secret']) secret_name_taken($cid, 'name_taken');
+        fail('An entry is already called that. Pick another name, or add a sheet to that entry', 409, 'name_taken');
+    }
     return $name;
 }
 /** Member $uid's character name in campaign $cid, as the Members tab shows it (empty for none). */

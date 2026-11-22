@@ -212,7 +212,7 @@ test("anyone in the campaign adds pictures to a tome and takes them off, and del
   await expect(page.locator(".lib-form .file-pic img")).toHaveCount(1);
   const files = (await (await page.request.get(`api/index.php?a=tome&cid=${cid}&id=${t.id}`)).json()).tome.files;
   expect(files.map(f => f.name)).toEqual(["beastman.png"]);
-  // A GM's file on a tome can be taken off by a player, as with the tome itself.
+  // A GM's file on a tome can't be taken off by a player (removing can't be undone); the player's own can.
   const gmFile = await (async () => {
     const me = await (await page.request.get("api/auth/me.php")).json();
     const res = await page.request.post(`api/index.php?a=file_upload&cid=${cid}`, { headers: { "X-CSRF-Token": me.csrf },
@@ -220,7 +220,8 @@ test("anyone in the campaign adds pictures to a tome and takes them off, and del
     expect(res.status()).toBe(200);
     return (await res.json()).file;
   })();
-  expect((await api(pp, "file_delete", { id: gmFile.id }, cid)).status).toBe(200);
+  expect((await api(pp, "file_delete", { id: gmFile.id }, cid)).status).toBe(403);
+  expect((await api(page, "file_delete", { id: gmFile.id }, cid)).status).toBe(200);
   // Deleting the tome takes its files with it.
   expect((await api(page, "tome_delete", { id: t.id }, cid)).status).toBe(200);
   expect(sql(`SELECT COUNT(*) FROM attachments WHERE parent_type='library' AND parent_id=${t.id}`).trim()).toBe("0");

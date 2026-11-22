@@ -887,6 +887,9 @@
   async function signOut() {
     await fetch('api/auth/logout.php', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': S.csrf } }).catch(() => {});
     S.user = null; S.camp = null; S.pending = null;
+    // nothing of theirs stays for whoever uses this browser next: the Anthropic key, and a panel link pasted here
+    if (typeof MapScan !== 'undefined') MapScan.apiKey.set(null);
+    try { localStorage.removeItem('chronicle-panel-code'); } catch { /* nothing kept */ }
     location.hash = '#/';
     boot();
   }
@@ -995,7 +998,8 @@
       try { S.user.prefs = (await post('prefs_save', { units: v || null })).prefs; toast('Preferences saved'); } catch (err) { toast(err.message, true); }
     });
     // The GM's own Anthropic API key, for Scan for names on a map. Kept in this browser only: never sent to this site's
-    // server, only from the browser straight to Anthropic when they scan.
+    // server, only from the browser straight to Anthropic when they scan. For this tab unless they ask for it to be
+    // remembered on the device, and forgotten when they sign out.
     let scanner = null;
     if (typeof MapScan !== 'undefined') {
       const has = () => !!MapScan.apiKey.get();
@@ -1004,19 +1008,21 @@
       const forget = btn('Remove key', () => {
         MapScan.apiKey.set(null); keyIn.placeholder = 'sk-ant-…'; show(); toast('Key removed from this browser');
       });
-      const show = () => { state.textContent = has() ? 'A key is saved in this browser.' : 'No key saved in this browser.'; forget.style.display = has() ? '' : 'none'; };
+      const remember = el('input', { type: 'checkbox', name: 'remember', checked: MapScan.apiKey.remembered() });
+      const show = () => { state.textContent = !has() ? 'No key saved in this browser.' : MapScan.apiKey.remembered() ? 'A key is saved in this browser.' : 'A key is saved in this browser, until you close this tab or sign out.'; forget.style.display = has() ? '' : 'none'; };
       scanner = el('form', { class: 'card narrow' }, el('h2', {}, 'Map scanner'),
         el('p', { class: 'muted' }, 'Scan for names on a map can have Claude read the place names, using your own Anthropic API key, so the scans are billed to your Anthropic account (a few cents each). Create a key at ',
           el('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'), '.'),
-        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you scan from. When you scan, your browser sends the map\'s picture and the key straight to Anthropic.'),
-        field('Anthropic API key', keyIn), state,
+        el('p', { class: 'muted small' }, 'The key is saved in this browser only, never on this site\'s server, so add it on each device you scan from. When you scan, your browser sends the map\'s picture and the key straight to Anthropic. Signing out removes it.'),
+        field('Anthropic API key', keyIn),
+        el('label', { class: 'small' }, remember, ' Remember it on this device. Leave this off on a computer you share: the key then lasts until you close this tab'), state,
         el('div', { class: 'row' }, el('button', { class: 'primary' }, 'Save key'), forget));
       scanner.addEventListener('submit', e => {
         e.preventDefault();
         const v = keyIn.value.trim();
         if (!v) return toast('Paste your API key first', true);
         if (!/^sk-ant-[\w-]{20,}$/.test(v)) return toast('That doesn\'t look like an Anthropic API key (they start with sk-ant-)', true);
-        if (!MapScan.apiKey.set(v)) return toast('This browser won\'t store it (private browsing, or site data blocked)', true);
+        if (!MapScan.apiKey.set(v, { remember: remember.checked, user: S.user.id })) return toast('This browser won\'t store it (private browsing, or site data blocked)', true);
         keyIn.value = ''; keyIn.placeholder = 'Saved. Paste a new key to replace it'; show(); toast('Key saved in this browser');
       });
       show();
@@ -4488,6 +4494,7 @@
     };
     opts = { ...opts, refresh };
     const mine = f => isGM() || opts.manageAny || f.created_by === S.user.id;
+    const owns = f => isGM() || f.created_by === S.user.id;   // removing can't be undone: whoever added it, and the GMs
     const hidden = f => f.is_secret || opts.secret;
     const isPic = f => f.kind === 'image' || f.kind === 'embed';
     const pics = files.filter(isPic), docs = files.filter(f => !isPic(f));
@@ -4526,7 +4533,7 @@
       el('a', { href: `${f.url}&dl=1`, download: f.name, 'data-tip': `Download ${f.name}` }, '📄 ', f.name),
       el('small', { class: 'muted' }, ` ${fileSize(f.size)}`), f.caption ? el('span', { class: 'small' }, ` · ${f.caption}`) : null,
       mine(f) ? btn('✎', () => fileEdit(f, opts), 'link small', 'Change the caption') : null,
-      mine(f) ? btn('×', () => fileDelete(f, opts), 'link small', `Remove ${f.name}`) : null))) : null;
+      owns(f) ? btn('×', () => fileDelete(f, opts), 'link small', `Remove ${f.name}`) : null))) : null;
     const box = el('section', { class: 'enc-files' },
       el('div', { class: 'row spread' }, el('h4', {}, 'Pictures and files', tip(opts.secret ? 'GM only, like the entry. Pictures show here; other files download'
           : 'Everyone in the campaign can see these, except any marked 🔒 GM only. Pictures show here; other files download')),
@@ -4649,7 +4656,7 @@
         f.embed ? el('a', { class: 'button small', href: f.embed.url, target: '_blank', rel: 'noopener noreferrer' }, 'View on DeviantArt')
           : el('a', { class: 'button small', href: `${f.url}&dl=1`, download: f.name }, 'Download'),
         opts.mine(f) ? btn('✎ Caption', () => fileEdit(f, opts, () => d.close()), 'small') : null,
-        opts.mine(f) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
+        (isGM() || f.created_by === S.user.id) ? btn('Remove', async () => { if (await fileDelete(f, opts)) d.close(); }, 'small danger') : null,
         btn('Close', () => d.close(), 'small primary')]));
     };
     const d = el('dialog', { class: 'kit-dialog file-viewer', 'aria-label': 'Picture' }, stage, zoomBar, cap, tools);
@@ -8331,6 +8338,7 @@
     }
     const first = !S.user;
     S.user = { ...data, id: Number(data.id) };
+    if (typeof MapScan !== 'undefined') MapScan.apiKey.claim(S.user.id);   // a key another account left in this browser is forgotten
     // A theme saved on the account wins over this device's, so it follows them between devices.
     if (S.user.prefs?.scheme && S.user.prefs.scheme !== currentScheme()) applyScheme(S.user.prefs.scheme);
     if (first && new URLSearchParams(location.search).has('auth_error')) history.replaceState(null, '', location.pathname + location.hash);

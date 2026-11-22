@@ -298,6 +298,12 @@ test("Scan for names: with no key, Read with Claude points to the account page, 
   page.on("request", r => { if (r.url().includes("127.0.0.1") && (r.postData() || "").includes("sk-ant-")) toServer.push(r.url()); });
   await card.getByLabel("Anthropic API key").fill(KEY);
   await card.getByRole("button", { name: "Save key" }).click();
+  // kept for this tab unless they ask for it to be remembered on the device
+  await expect(card.getByRole("status")).toHaveText("A key is saved in this browser, until you close this tab or sign out.");
+  expect(await page.evaluate(() => [localStorage.getItem("chronicle.anthropicKey"), sessionStorage.getItem("chronicle.anthropicKey")])).toEqual([null, KEY]);
+  await card.getByPlaceholder("Saved. Paste a new key to replace it").fill(KEY);
+  await card.getByLabel(/Remember it on this device/).check();
+  await card.getByRole("button", { name: "Save key" }).click();
   await expect(card.getByRole("status")).toHaveText("A key is saved in this browser.");
   await expect(card.getByLabel("Anthropic API key")).toHaveValue("");   // not shown again
   expect(await page.evaluate(() => localStorage.getItem("chronicle.anthropicKey"))).toBe(KEY);
@@ -308,6 +314,24 @@ test("Scan for names: with no key, Read with Claude points to the account page, 
   await d.getByRole("button", { name: "Cancel" }).click();
   await page.goto("index.html#/account");
   await card.getByRole("button", { name: "Remove key" }).click();
+  await expect(card.getByRole("status")).toHaveText("No key saved in this browser.");
+  expect(await page.evaluate(() => localStorage.getItem("chronicle.anthropicKey"))).toBe(null);
+  // signing out forgets a remembered key, and a panel link pasted in this browser
+  await card.getByLabel("Anthropic API key").fill(KEY);
+  await card.getByLabel(/Remember it on this device/).check();
+  await card.getByRole("button", { name: "Save key" }).click();
+  await expect(card.getByRole("status")).toHaveText("A key is saved in this browser.");
+  await page.evaluate(() => localStorage.setItem("chronicle-panel-code", "a".repeat(64)));
+  await page.getByLabel(/^Account menu for /).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("link", { name: /Google/ })).toBeVisible();
+  expect(await page.evaluate(() => [localStorage.getItem("chronicle.anthropicKey"), sessionStorage.getItem("chronicle.anthropicKey"), localStorage.getItem("chronicle-panel-code")])).toEqual([null, null, null]);
+  // a key another account left behind (its session ran out without signing out) is forgotten at the next sign-in
+  await page.evaluate(k => { localStorage.setItem("chronicle.anthropicKey", k); localStorage.setItem("chronicle.anthropicKey.user", "999999999"); }, KEY);
+  const next = person("Next");
+  await signIn(page, next);
+  await approve(browser, next.email);
+  await page.goto("index.html#/account");
   await expect(card.getByRole("status")).toHaveText("No key saved in this browser.");
   expect(await page.evaluate(() => localStorage.getItem("chronicle.anthropicKey"))).toBe(null);
   expectNoErrors(errors);
